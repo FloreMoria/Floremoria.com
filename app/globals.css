@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+    --color-fm-bg: #FFFFFF;
+    --color-fm-text: #2B2B2B;
+    --color-fm-muted: #6F6F6F;
+    --color-fm-section: #FDFDFD;
+
+    /* Base Accents */
+    --color-fm-gold: #C0A062;
+    --color-fm-gold-soft: #F5EFEB;
+    --color-fm-green: #6C8E7B;
+    --color-fm-green-soft: #E2E8E4;
+
+    /* Legacy mapping */
+    --color-fm-rose: #C0A062;
+    --color-fm-rose-soft: #F5EFEB;
+
+    --color-fm-cta: #C0A062;
+    --color-fm-cta-hover: #A58954;
+    --color-fm-cta-soft: #F5EFEB;
+
+    --font-body: var(--font-inter);
+    --font-display: var(--font-manrope);
+    --font-script: var(--font-great-vibes);
+}
+
+body {
+    background-color: var(--color-fm-bg);
+    color: var(--color-fm-text);
+}
+
+/* -----------------------------------------------------------------
+   SISTEMA DI THEMING CONDIZIONALE: SYSTEM-CLEAN (Lab Operativo)
+   ----------------------------------------------------------------- */
+.theme-system-clean {
+    /* Base Neutral Reset */
+    --color-fm-bg: #FFFFFF;
+    --color-fm-text: #1A1A1A;
+    --color-fm-muted: #6B7280;
+    --color-fm-section: #FFFFFF;
+
+    /* Override Primary Actions with Light Blue (Tailwind Blue-500) */
+    --color-fm-gold: #3B82F6;
+    --color-fm-gold-soft: #EFF6FF;
+    --color-fm-green: #3B82F6;
+    --color-fm-green-soft: #EFF6FF;
+    --color-fm-rose: #3B82F6;
+    --color-fm-rose-soft: #EFF6FF;
+    --color-fm-cta: #3B82F6;
+    --color-fm-cta-hover: #2563EB;
+    --color-fm-cta-soft: #EFF6FF;
+}
+
+/* Disabilita il Glassmorphism sotto System-Clean */
+.theme-system-clean .backdrop-blur-xl,
+.theme-system-clean .backdrop-blur-md,
+.theme-system-clean .backdrop-blur-sm,
+.theme-system-clean .backdrop-blur {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Forza i background semi-trasparenti a background solidi e rimuove border opachi */
+.theme-system-clean .bg-white\/60,
+.theme-system-clean .bg-white\/80,
+.theme-system-clean .bg-white\/90 {
+    background-color: #FFFFFF !important;
+}
+
+.theme-system-clean .border-white\/60,
+.theme-system-clean .border-white\/20,
+.theme-system-clean .border-fm-gold\/30,
+.theme-system-clean .border-black\/5 {
+    border-color: #E5E7EB !important;
+}
+
+.theme-system-clean .shadow-2xl,
+.theme-system-clean .shadow-xl {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}

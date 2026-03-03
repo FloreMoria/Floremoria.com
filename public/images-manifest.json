@@ -1,0 +1,31 @@
+{
+  "Bouquet": {
+    "images": [],
+    "coverImage": null
+  },
+  "Funerale": {
+    "images": [],
+    "coverImage": null
+  },
+  "Lumino": {
+    "images": [
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-1.png",
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-2.jpg",
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-3.jpg",
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-4.png",
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-5.jpg",
+      "/images/products/Lumino/floremoria-lumini-per-le-tombe-6.jpeg"
+    ],
+    "coverImage": "/images/products/Lumino/floremoria-lumini-per-le-tombe-1.png"
+  },
+  "Messaggio": {
+    "images": [
+      "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-1.jpg",
+      "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-2.jpg",
+      "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-3.jpeg",
+      "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-4.jpg",
+      "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-5.jpg"
+    ],
+    "coverImage": "/images/products/Messaggio/floremoria-messaggi-gratis-per-le-tombe-1.jpg"
+  }
+}

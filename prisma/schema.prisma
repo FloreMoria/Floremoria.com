@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// 1. UTENTI E RUOLI (RBAC DINAMICO)
+// -------------------------------------------------------------
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // Es. "Fiorista Como", "Marketing Manager"
+  description String?
+  isSystem    Boolean  @default(false) // Impedisce l'eliminazione dei ruoli built-in come SUPER_ADMIN
+  
+  // Matrice permessi salvata in JSON per massima flessibilità
+  // Es: { "LOGISTICS": {"view_orders": true, "change_status": true}, "CATALOG": {"edit_prices": false} }
+  permissions Json     @default("{}")
+  
+  users       User[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  
+  // Relazione al Ruolo Dinamico
+  roleId    String?
+  role      Role?     @relation(fields: [roleId], references: [id])
+  roleExpiresAt DateTime?
+  
+  // Mantenimento retrocompatibilità se serve, disabilitato in favore di roleId
+  // role      UserRole  @default(CUSTOMER) 
+  
+  // Per fioristi e partner
+  company   String?
+  phone     String?
+  vatNumber String?
+  
+  orders    Order[]   // Ordini effettuati se cliente, o gestiti se fiorista
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+// -------------------------------------------------------------
+// 2. ORDINI E TRANSAZIONI
+// -------------------------------------------------------------
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  DELIVERING
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  status          OrderStatus @default(PENDING)
+  
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  // Dati Defunto e Consegna
+  deceasedName    String
+  cemeteryName    String
+  cemeteryCity    String
+  gravePosition   String?
+  deliveryDate    DateTime?
+  ticketMessage   String?     // Messaggio per il biglietto
+  customerPhone   String?     // Per chat Whatsapp rapida
+  
+  // Dati Acquirente
+  buyerFullName   String?
+  buyerCity       String?
+  buyerCountry    String?
+  isRecurring     Boolean     @default(false)
+
+  // Dettagli Prezzo (in cents per evitare float issues)
+  totalPriceCents Int
+  currency        String      @default("EUR")
+  
+  // Prove visive della consegna reale (Cloud Storage URLs)
+  photos          String[]    @default([])
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+  
+  // Relazione Prodotti
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int     @default(1)
+  priceCents Int
+}
+
+// -------------------------------------------------------------
+// 3. CATALOGO PRODOTTI E CATEGORIE
+// -------------------------------------------------------------
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  products  Product[]
+}
+
+model Product {
+  id               String         @id @default(cuid())
+  categoryId       String
+  category         Category       @relation(fields: [categoryId], references: [id])
+  name             String
+  slug             String         @unique
+  shortDescription String?
+  description      String?
+  basePriceCents   Int
+  currency         String         @default("EUR")
+  isBouquet        Boolean        @default(true) // Novità per architettura
+  mediaUrl         String?        // Copertina principale rapida
+  isActive         Boolean        @default(true)
+  sortOrder        Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+  
+  images           ProductImage[]
+  orderItems       OrderItem[]
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -------------------------------------------------------------
+// 4. MARKETING, BLOG & REFERRAL
+// -------------------------------------------------------------
+enum OfferType {
+  PERCENT
+  FIXED
+}
+
+model Offer {
+  id        String    @id @default(cuid())
+  name      String
+  code      String?   @unique // Es. sconto univoco
+  type      OfferType
+  value     Int
+  startsAt  DateTime?
+  endsAt    DateTime?
+  isActive  Boolean   @default(true)
+  rulesJson Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   // Formato HTML o Markdown supportato
+  coverImage  String?
+  isPublished Boolean  @default(false)
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model NewsletterLog {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?
+  createdAt DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// 5. PARTNER / FIORISTI
+// -------------------------------------------------------------
+model Partner {
+  id             String   @id @default(cuid())
+  name           String   // Nome Fiorista / Negozio
+  coverageArea   String?  // Area di Copertura (Città o Provincia)
+  whatsappNumber     String?  // Contatto Rapido (WhatsApp / Telefono)
+  address        String?  // Indirizzo
+  iban String?  // IBAN/PayPal
+  activeOrders   Int      @default(0) // Ordini Attivi (Contatore)
+  adminRating    Float    @default(5.0) // Valutazione Admin (Es. 4.8)
+  internalNotes  String?  // Note Interne (Admin Only)
+  isActive       Boolean  @default(true) // Stato (Attivo / Pausa)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+}

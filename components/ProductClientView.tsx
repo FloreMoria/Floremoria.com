@@ -216,7 +216,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         <div className="w-full aspect-[4/5] bg-gray-50 rounded-3xl shadow-sm border border-white/20 flex items-center justify-center text-fm-muted text-lg relative overflow-hidden transition-all duration-300">
                             {mainImage ? (
                                 <>
-                                    {(() => { console.log("Tentativo caricamento immagine MAIN per:", product.slug, "Path:", mainImage); return null; })()}
+
                                     <Image
                                         src={mainImage}
                                         alt={buildProductAlt(product, { context: 'main', municipalityName: comune })}
@@ -240,7 +240,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                             onClick={() => handleThumbnailClick(imgSrc)}
                                             className={`w-full aspect-square rounded-xl relative overflow-hidden bg-gray-50 flex items-center justify-center text-sm text-fm-muted cursor-pointer transition-all hover:opacity-80 border-2 ${isActive ? 'border-fm-gold opacity-100' : 'border-transparent hover:border-fm-gold'} shadow-sm`}
                                         >
-                                            {(() => { console.log("Tentativo caricamento immagine THUMBNAIL per:", product.slug, "Path:", imgSrc); return null; })()}
+
                                             <Image
                                                 src={imgSrc}
                                                 alt={buildProductAlt(product, { context: 'gallery', imageIndex: i, municipalityName: comune })}

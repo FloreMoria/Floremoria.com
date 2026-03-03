@@ -26,7 +26,7 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
             <Link href={productUrl} className="w-full h-[85%] relative bg-gray-50 flex items-center justify-center text-center overflow-hidden rounded-t-[24px] cursor-pointer group-hover:opacity-40 transition-opacity duration-500">
                 {!hasError ? (
                     <>
-                        {(() => { console.log("Tentativo caricamento immagine per:", product.slug, "Path:", imgSrc); return null; })()}
+
                         <Image
                             src={imgSrc}
                             alt={buildProductAlt(product, { context: 'card', municipalityName: comuneName })}

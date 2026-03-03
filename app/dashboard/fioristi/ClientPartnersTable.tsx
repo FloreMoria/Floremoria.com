@@ -28,6 +28,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+        deletedAt: null,
     });
 
     const openDrawer = (partner?: Partner) => {
@@ -47,6 +48,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 isActive: true,
                 createdAt: new Date(),
                 updatedAt: new Date(),
+                deletedAt: null,
             });
         }
         setIsDrawerOpen(true);

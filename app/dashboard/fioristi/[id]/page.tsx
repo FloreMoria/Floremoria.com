@@ -47,6 +47,28 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         <div className="text-amber-700 font-bold">{partner.adminRating.toFixed(1)} / 5.0</div>
                     </div>
                 </div>
+
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Dati Fiscali e Fatturazione</h2>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+                        <div>
+                            <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Partita IVA</div>
+                            <div className="text-gray-900 font-semibold font-mono">{partner.vatNumber || '-'}</div>
+                        </div>
+                        <div>
+                            <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Codice Fiscale</div>
+                            <div className="text-gray-900 font-semibold font-mono">{partner.taxCode || '-'}</div>
+                        </div>
+                        <div>
+                            <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Codice SDI</div>
+                            <div className="text-gray-900 font-semibold font-mono uppercase">{partner.sdiCode || '-'}</div>
+                        </div>
+                        <div>
+                            <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Indirizzo PEC</div>
+                            <div className="text-blue-600 font-semibold truncate" title={partner.pecAddress || ''}>{partner.pecAddress || '-'}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Iniezione Moduli Interattivi */}

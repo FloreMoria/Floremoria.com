@@ -7,7 +7,7 @@ export async function PUT(request: Request, context: any) {
         const body = await request.json();
 
         // Remove structural properties that Prisma doesn't need for updates
-        const { id: _, createdAt, updatedAt, ...updateData } = body;
+        const { id: _, createdAt, updatedAt, deletedAt, ...updateData } = body;
 
         // TODO: In futuro, per i dati sensibili, implementare qui il salvataggio
         // di un AuditLog prima di eseguire l'update per mantenere lo snapshot.

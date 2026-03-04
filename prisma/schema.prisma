@@ -214,7 +214,11 @@ model Partner {
   coverageArea   String?  // Area di Copertura (Città o Provincia)
   whatsappNumber     String?  // Contatto Rapido (WhatsApp / Telefono)
   address        String?  // Indirizzo
-  iban String?  // IBAN/PayPal
+  iban           String?  // IBAN/PayPal
+  vatNumber      String?  // Partita IVA
+  taxCode        String?  // Codice Fiscale
+  sdiCode        String?  // Codice Destinatario SDI (7 caratteri)
+  pecAddress     String?  // Indirizzo PEC
   activeOrders   Int      @default(0) // Ordini Attivi (Contatore)
   adminRating    Float    @default(5.0) // Valutazione Admin (Es. 4.8)
   internalNotes  String?  // Note Interne (Admin Only)

@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, createdAt, updatedAt, ...data } = body;
+        const { id, createdAt, updatedAt, deletedAt, ...data } = body;
 
         const partner = await prisma.partner.create({
             data: {

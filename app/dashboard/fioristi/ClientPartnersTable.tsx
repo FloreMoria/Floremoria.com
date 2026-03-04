@@ -22,6 +22,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         whatsappNumber: '',
         address: '',
         iban: '',
+        vatNumber: '',
+        taxCode: '',
+        sdiCode: '',
+        pecAddress: '',
         activeOrders: 0,
         adminRating: 5.0,
         internalNotes: '',
@@ -42,6 +46,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 whatsappNumber: '',
                 address: '',
                 iban: '',
+                vatNumber: '',
+                taxCode: '',
+                sdiCode: '',
+                pecAddress: '',
                 activeOrders: 0,
                 adminRating: 5.0,
                 internalNotes: '',
@@ -78,10 +86,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             if (res.ok) {
                 const savedItem = await res.json();
                 if (isUpdate) {
-                    setPartners(prev => prev.map(p => p.id === savedItem.id ? savedItem : p));
+                    setPartners((prev: Partner[]) => prev.map(p => p.id === savedItem.id ? savedItem : p));
                 } else {
-                    setPartners(prev => [savedItem, ...prev]);
-                    setFormData(prev => ({ ...prev, id: savedItem.id }));
+                    setPartners((prev: Partner[]) => [savedItem, ...prev]);
+                    setFormData((prev: Partner) => ({ ...prev, id: savedItem.id }));
                 }
                 setIsSuccess(true);
                 setTimeout(() => setIsSuccess(false), 2500);
@@ -99,7 +107,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         e.stopPropagation();
         const newActiveState = !partner.isActive;
         // Optimistic UI Update
-        setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, isActive: newActiveState } : p));
+        setPartners((prev: Partner[]) => prev.map(p => p.id === partner.id ? { ...p, isActive: newActiveState } : p));
 
         try {
             await fetch(`/api/dashboard/partners/${partner.id}`, {
@@ -109,7 +117,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             });
         } catch {
             // Revert on fail
-            setPartners(prev => prev.map(p => p.id === partner.id ? { ...p, isActive: !newActiveState } : p));
+            setPartners((prev: Partner[]) => prev.map(p => p.id === partner.id ? { ...p, isActive: !newActiveState } : p));
         }
     };
 
@@ -331,6 +339,60 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         onChange={e => setFormData({ ...formData, iban: e.target.value })}
                                         placeholder="IT00 X0000 0000 0000 0000 0000"
                                         className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Dati Fiscali e Fatturazione */}
+                        <div className="space-y-5 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                            <h4 className="flex items-center gap-2 font-bold text-blue-800 uppercase tracking-wide border-b border-blue-200 pb-2">
+                                <FileText size={16} className="text-blue-600" /> Dati Fiscali e Fatturazione
+                            </h4>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Partita IVA</label>
+                                    <input
+                                        type="text"
+                                        value={formData.vatNumber || ''}
+                                        onChange={e => setFormData({ ...formData, vatNumber: e.target.value })}
+                                        placeholder="Es. 01234567890"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Codice Fiscale</label>
+                                    <input
+                                        type="text"
+                                        value={formData.taxCode || ''}
+                                        onChange={e => setFormData({ ...formData, taxCode: e.target.value })}
+                                        placeholder="Es. RSSMRA..."
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Codice SDI (7 Caratteri)</label>
+                                    <input
+                                        type="text"
+                                        maxLength={7}
+                                        value={formData.sdiCode || ''}
+                                        onChange={e => setFormData({ ...formData, sdiCode: e.target.value.toUpperCase() })}
+                                        placeholder="Es. M5UXCR1"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono uppercase"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Indirizzo PEC</label>
+                                    <input
+                                        type="email"
+                                        value={formData.pecAddress || ''}
+                                        onChange={e => setFormData({ ...formData, pecAddress: e.target.value })}
+                                        placeholder="email@pec.it"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                     />
                                 </div>
                             </div>

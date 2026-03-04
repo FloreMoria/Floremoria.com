@@ -127,28 +127,28 @@ export default function CheckoutPage() {
                             <div className="border border-gray-200 rounded-xl p-5 flex flex-col items-center text-center space-y-4 hover:border-fm-cta-soft transition-colors bg-gray-50/50">
                                 <div className="w-16 h-16 bg-fm-section rounded-full flex items-center justify-center text-2xl shadow-sm">🕯️</div>
                                 <div>
-                                    <h4 className="font-semibold text-fm-text">Lumino votivo</h4>
+                                    <h4 className="font-semibold text-fm-text">Lumino</h4>
                                     <p className="text-sm text-fm-muted">Luce accesa in vetro</p>
-                                    <p className="font-bold text-fm-rose mt-1">€12.00</p>
+                                    <p className="font-bold text-fm-rose mt-1">€3.49</p>
                                 </div>
                                 {cart.some(i => i.productId === '5') ? (
                                     <button onClick={() => removeAccessory('5')} className="w-full py-2 bg-gray-200 text-fm-text rounded-lg text-sm font-medium hover:bg-gray-300">Rimuovi</button>
                                 ) : (
-                                    <button onClick={() => addAccessory('5', 'Lumino Votivo', 1200)} className="w-full py-2 bg-white border border-gray-300 text-fm-text rounded-lg text-sm font-medium hover:border-fm-cta hover:text-fm-cta shadow-sm">Aggiungi</button>
+                                    <button onClick={() => addAccessory('5', 'Lumino', 349)} className="w-full py-2 bg-white border border-gray-300 text-fm-text rounded-lg text-sm font-medium hover:border-fm-cta hover:text-fm-cta shadow-sm">Aggiungi</button>
                                 )}
                             </div>
                             {/* Messaggio */}
                             <div className="border border-gray-200 rounded-xl p-5 flex flex-col items-center text-center space-y-4 hover:border-fm-cta-soft transition-colors bg-gray-50/50">
                                 <div className="w-16 h-16 bg-fm-section rounded-full flex items-center justify-center text-2xl shadow-sm">✉️</div>
                                 <div>
-                                    <h4 className="font-semibold text-fm-text">Biglietto personalizzato</h4>
+                                    <h4 className="font-semibold text-fm-text">Messaggio</h4>
                                     <p className="text-sm text-fm-muted">Stampa plastificata</p>
-                                    <p className="font-bold text-fm-rose mt-1">€9.00</p>
+                                    <p className="font-bold text-fm-rose mt-1">€2.49</p>
                                 </div>
                                 {cart.some(i => i.productId === '6') ? (
                                     <button onClick={() => removeAccessory('6')} className="w-full py-2 bg-gray-200 text-fm-text rounded-lg text-sm font-medium hover:bg-gray-300">Rimuovi</button>
                                 ) : (
-                                    <button onClick={() => addAccessory('6', 'Biglietto plastificato', 900)} className="w-full py-2 bg-white border border-gray-300 text-fm-text rounded-lg text-sm font-medium hover:border-fm-cta hover:text-fm-cta shadow-sm">Aggiungi</button>
+                                    <button onClick={() => addAccessory('6', 'Messaggio', 249)} className="w-full py-2 bg-white border border-gray-300 text-fm-text rounded-lg text-sm font-medium hover:border-fm-cta hover:text-fm-cta shadow-sm">Aggiungi</button>
                                 )}
                             </div>
                         </div>

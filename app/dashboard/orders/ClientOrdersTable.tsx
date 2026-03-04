@@ -297,31 +297,28 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                 </div>
             </div >
 
-            {/* OVERLAY SFONDO DRAWER */}
-            {
-                selectedOrder && (
-                    <div
-                        className="fixed inset-0 bg-white/30 backdrop-blur-sm z-40 transition-opacity"
-                        onClick={closeDrawer}
-                    ></div>
-                )
-            }
+
 
             {/* ORDER DETAIL DRAWER */}
-            <div className={`fixed top-0 right-0 h-full w-full md:max-w-[35vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${selectedOrder ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-16 h-[calc(100vh-4rem)] w-[50vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${selectedOrder ? 'translate-x-0' : 'translate-x-full'}`}>
                 {selectedOrder && (
                     <>
                         {/* Drawer Header */}
-                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                             <div>
                                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Dettaglio Ordine</div>
                                 <h3 className="text-xl font-display font-semibold text-gray-900">
-                                    #{selectedOrder.id.substring(selectedOrder.id.length - 6).toUpperCase()}
+                                    Ordine #{selectedOrder.id.substring(selectedOrder.id.length - 6).toUpperCase()} - {selectedOrder.buyerFullName || selectedOrder.deceasedName}
                                 </h3>
                             </div>
-                            <button onClick={closeDrawer} className="p-2 bg-white rounded-full text-gray-400 hover:text-black hover:bg-gray-200 shadow-sm transition-all border border-gray-100">
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button className="!bg-blue-600 !text-white !font-bold py-2 px-6 rounded-md shadow-sm hover:!bg-blue-700 transition-all flex items-center gap-2">
+                                    SALVA
+                                </button>
+                                <button onClick={closeDrawer} className="p-2.5 bg-white rounded-full text-gray-400 hover:text-black hover:bg-gray-200 shadow-sm transition-all border border-gray-100">
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Drawer Body - Scrollable */}

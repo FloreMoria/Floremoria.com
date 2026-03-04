@@ -128,7 +128,7 @@ export default function CheckoutPage() {
                                 <div className="w-16 h-16 bg-fm-section rounded-full flex items-center justify-center text-2xl shadow-sm">🕯️</div>
                                 <div>
                                     <h4 className="font-semibold text-fm-text">Lumino</h4>
-                                    <p className="text-sm text-fm-muted">Luce accesa in vetro</p>
+                                    <p className="text-sm text-fm-muted">Tieni acceso il ricordo</p>
                                     <p className="font-bold text-fm-rose mt-1">€3.49</p>
                                 </div>
                                 {cart.some(i => i.productId === '5') ? (
@@ -142,7 +142,7 @@ export default function CheckoutPage() {
                                 <div className="w-16 h-16 bg-fm-section rounded-full flex items-center justify-center text-2xl shadow-sm">✉️</div>
                                 <div>
                                     <h4 className="font-semibold text-fm-text">Messaggio</h4>
-                                    <p className="text-sm text-fm-muted">Stampa plastificata</p>
+                                    <p className="text-sm text-fm-muted">Comunica il tuo amore</p>
                                     <p className="font-bold text-fm-rose mt-1">€2.49</p>
                                 </div>
                                 {cart.some(i => i.productId === '6') ? (

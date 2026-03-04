@@ -332,7 +332,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? 'Modifica' : 'Nuovo'}</div>
                         <h3 className="text-xl font-display font-semibold text-gray-900 flex items-center gap-2">
-                            <Package size={20} className="text-fm-gold" /> PRODOTTO
+                            <Package size={20} className="text-fm-gold" /> {categories.find(c => c.id === formData.categoryId)?.name ? `CATEGORIA: ${categories.find(c => c.id === formData.categoryId)?.name.toUpperCase()}` : 'PRODOTTO'}
                         </h3>
                     </div>
 
@@ -430,7 +430,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 Categoria di Appartenenza
                                 {!isCreatingCategory && (
                                     <button type="button" onClick={() => setIsCreatingCategory(true)} className="text-fm-gold hover:text-yellow-600 normal-case flex items-center gap-1">
-                                        <Plus size={12} /> Nuova Pagina
+                                        <Plus size={12} /> Nuova Categoria
                                     </button>
                                 )}
                             </label>

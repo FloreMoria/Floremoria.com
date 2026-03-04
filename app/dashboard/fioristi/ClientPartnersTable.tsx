@@ -363,27 +363,31 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Partita IVA</label>
                                     <input
                                         type="text"
+                                        maxLength={11}
                                         value={formData.vatNumber || ''}
-                                        onChange={e => setFormData({ ...formData, vatNumber: e.target.value })}
+                                        onChange={e => setFormData({ ...formData, vatNumber: e.target.value.replace(/\D/g, '') })}
                                         placeholder="Es. 01234567890"
-                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                                     />
+                                    <p className="mt-1.5 text-[10px] text-gray-400 font-medium">es. 01234567890 (11 numeri)</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Codice Fiscale</label>
                                     <input
                                         type="text"
+                                        maxLength={16}
                                         value={formData.taxCode || ''}
-                                        onChange={e => setFormData({ ...formData, taxCode: e.target.value })}
+                                        onChange={e => setFormData({ ...formData, taxCode: e.target.value.toUpperCase() })}
                                         placeholder="Es. RSSMRA..."
-                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono uppercase"
                                     />
+                                    <p className="mt-1.5 text-[10px] text-gray-400 font-medium">16 caratteri o 11 numeri se società</p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Codice SDI (7 Caratteri)</label>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Codice SDI</label>
                                     <input
                                         type="text"
                                         maxLength={7}
@@ -392,6 +396,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         placeholder="Es. M5UXCR1"
                                         className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono uppercase"
                                     />
+                                    <p className="mt-1.5 text-[10px] text-gray-400 font-medium">es. M5UXCR1 (7 caratteri)</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Indirizzo PEC</label>
@@ -402,6 +407,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         placeholder="email@pec.it"
                                         className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                     />
+                                    <p className="mt-1.5 text-[10px] text-gray-400 font-medium">es. fiorista@pec.it</p>
                                 </div>
                             </div>
                         </div>

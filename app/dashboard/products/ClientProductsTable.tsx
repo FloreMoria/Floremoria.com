@@ -323,10 +323,16 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                 </div>
             </div>
 
-            {/* OVERLAY RIMOSSO (Non-blocking interaction) */}
+            {/* OVERLAY SFONDO DRAWER (Invisibile per click-to-close) */}
+            {isDrawerOpen && (
+                <div
+                    className="fixed inset-0 z-40"
+                    onClick={closeDrawer}
+                ></div>
+            )}
 
             {/* CREATOR DRAWER */}
-            <div className={`fixed right-0 top-16 h-[calc(100vh-4rem)] w-[50vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-[50vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 {/* Drawer Header - CON TASTO SALVA */}
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                     <div>

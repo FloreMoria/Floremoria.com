@@ -17,7 +17,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
     const [formData, setFormData] = useState<Partner>({
         id: '',
-        name: '',
+        shopName: '',
+        ownerName: '',
         coverageArea: '',
         whatsappNumber: '',
         address: '',
@@ -41,7 +42,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         } else {
             setFormData({
                 id: '',
-                name: '',
+                shopName: '',
+                ownerName: '',
                 coverageArea: '',
                 whatsappNumber: '',
                 address: '',
@@ -121,7 +123,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         }
     };
 
-    const sortedPartners = [...partners].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedPartners = [...partners].sort((a, b) => a.shopName.localeCompare(b.shopName));
 
     return (
         <div className="relative fade-in">
@@ -171,7 +173,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                             <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
                                                 <UserCircle2 size={24} className="text-gray-400" />
                                             </div>
-                                            <div className="font-semibold text-gray-900">{partner.name}</div>
+                                            <div className="flex flex-col">
+                                                <div className="font-semibold text-gray-900">{partner.shopName}</div>
+                                                <div className="text-xs text-gray-500 font-medium">{partner.ownerName}</div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="py-3 px-4">
@@ -248,11 +253,12 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? 'Modifica Fiorista' : 'Nuovo Fiorista'}</div>
                         {formData.id ? (
-                            <Link href={`/dashboard/fioristi/${formData.id}`} className="group flex items-center gap-2 transition-colors cursor-pointer" title="Apri Dossier Completo">
-                                <h3 className="text-xl font-display font-semibold text-gray-900 group-hover:text-blue-600 flex items-center gap-2 transition-colors">
-                                    <Building2 size={20} className="text-fm-gold group-hover:text-blue-500 transition-colors" />
-                                    DOSSIER COMPLETO <span className="text-xs ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 opacity-0 group-hover:opacity-100 transition-opacity">Apri ↳</span>
-                                </h3>
+                            <Link href={`/dashboard/fioristi/${formData.id}`} className="group flex flex-col gap-0.5 transition-colors cursor-pointer" title="Apri Dossier Completo">
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    {formData.ownerName}
+                                    <span className="text-xs ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Apri ↳</span>
+                                </h2>
+                                <p className="text-gray-500 font-medium flex items-center gap-1.5"><Building2 size={13} className="text-fm-gold" /> {formData.shopName}</p>
                             </Link>
                         ) : (
                             <h3 className="text-xl font-display font-semibold text-gray-900 flex items-center gap-2">
@@ -294,16 +300,30 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nome Negozio / Fiorista</label>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nome Negozio</label>
                                     <input
                                         type="text"
                                         required
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Es. Fioreria Rossi"
+                                        value={formData.shopName || ''}
+                                        onChange={e => setFormData({ ...formData, shopName: e.target.value })}
+                                        placeholder="Le Rose di Como..."
                                         className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Titolare / Fiorista</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.ownerName || ''}
+                                        onChange={e => setFormData({ ...formData, ownerName: e.target.value })}
+                                        placeholder="Nome e Cognome..."
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Numero WhatsApp (Es. +39...)</label>
                                     <div className="relative">

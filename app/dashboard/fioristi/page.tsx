@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export default async function PartnersPage() {
     const partners = await prisma.partner.findMany({
         where: { deletedAt: null },
-        orderBy: { name: 'asc' }
+        orderBy: { shopName: 'asc' },
     });
 
     return (

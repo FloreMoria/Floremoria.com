@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import ClientFloristDossier from './ClientFloristDossier';
 
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
@@ -24,9 +24,13 @@ export default async function FloristDossierPage({ params }: { params: { id: str
             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-8">
                 <div className="flex justify-between items-start mb-6">
                     <div>
-                        <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">{partner.name}</h1>
-                        <p className="text-gray-500 font-medium">Archivio storico delle consegne e gestione file associati a questo Fiorista.</p>
+                        <h1 className="text-3xl font-display font-bold text-gray-900 mb-1">{partner.ownerName}</h1>
+                        <p className="text-gray-500 font-medium text-lg mb-2">{partner.shopName}</p>
+                        <p className="text-gray-400 text-sm">Archivio storico delle consegne e gestione file associati a questo Fiorista.</p>
                     </div>
+                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                        <Download size={15} className="text-gray-500" /> Scarica Scheda
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6">

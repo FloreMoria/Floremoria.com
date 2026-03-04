@@ -210,7 +210,8 @@ model NewsletterLog {
 // -------------------------------------------------------------
 model Partner {
   id             String   @id @default(cuid())
-  name           String   // Nome Fiorista / Negozio
+  shopName       String   // Nome Negozio
+  ownerName      String   // Nome Titolare / Fiorista
   coverageArea   String?  // Area di Copertura (Città o Provincia)
   whatsappNumber     String?  // Contatto Rapido (WhatsApp / Telefono)
   address        String?  // Indirizzo

@@ -332,7 +332,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? 'Modifica' : 'Nuovo'}</div>
                         <h3 className="text-xl font-display font-semibold text-gray-900 flex items-center gap-2">
-                            <Package size={20} className="text-fm-gold" /> {categories.find(c => c.id === formData.categoryId)?.name ? `CATEGORIA: ${categories.find(c => c.id === formData.categoryId)?.name.toUpperCase()}` : 'PRODOTTO'}
+                            <Package size={20} className="text-fm-gold" /> {formData.name ? formData.name.toUpperCase() : 'PRODOTTO'}
                         </h3>
                     </div>
 
@@ -358,8 +358,8 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                 </div>
 
                 {/* Drawer Body - Form */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-sm">
-                    <form id="productForm" onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar text-sm">
+                    <form id="productForm" onSubmit={handleSubmit} className="space-y-5">
 
                         {/* Immagine Upload Drag & Drop */}
                         <div>
@@ -472,7 +472,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 value={formData.shortDescription || ''}
                                 onChange={e => setFormData({ ...formData, shortDescription: e.target.value })}
                                 placeholder="Composizione floreale adatta per..."
-                                className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all min-h-[100px] resize-none"
+                                className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all min-h-[80px] resize-none"
                             />
                         </div>
 

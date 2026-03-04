@@ -322,7 +322,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                         </div>
 
                         {/* Drawer Body - Scrollable */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
 
                             {/* FLOW STATO */}
                             <div className="space-y-3">
@@ -344,12 +344,19 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                             </div>
 
                             {/* MESSAGGIO BIGLIETTO */}
-                            <div className="p-5 bg-orange-50/50 border border-orange-100 rounded-2xl relative">
-                                <MessageSquare size={24} className="text-orange-300 absolute top-5 right-5 opacity-50" />
-                                <h4 className="text-sm font-semibold text-orange-900 mb-2">Messaggio per il biglietto</h4>
-                                <p className="text-orange-800 text-sm italic font-serif leading-relaxed">
-                                    {selectedOrder.ticketMessage ? `"${selectedOrder.ticketMessage}"` : 'Nessun biglietto.'}
-                                </p>
+                            <div className="space-y-2">
+                                <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                    <MessageSquare size={16} className="text-gray-400" /> Messaggio per il biglietto
+                                </h4>
+                                {selectedOrder.ticketMessage ? (
+                                    <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl relative">
+                                        <p className="text-orange-800 text-sm italic font-serif leading-relaxed">
+                                            "{selectedOrder.ticketMessage}"
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-gray-500 italic pl-1">Nessun messaggio.</div>
+                                )}
                             </div>
 
                             {/* ASSEGNAZIONE FIORISTA */}

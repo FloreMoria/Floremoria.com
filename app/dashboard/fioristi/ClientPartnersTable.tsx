@@ -267,8 +267,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 </div>
 
                 {/* Body Form */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar text-sm pb-10">
-                    <form id="partnerForm" onSubmit={handleSubmit} className="space-y-8">
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar text-sm pb-10">
+                    <form id="partnerForm" onSubmit={handleSubmit} className="space-y-5">
 
                         {/* Sezione Pubblica / Operativa */}
                         <div className="space-y-5">

@@ -38,6 +38,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         <TopNavLink href="/dashboard/orders" label="Ordini" />
                         <TopNavLink href="/dashboard/products" label="Prodotti" />
                         <TopNavLink href="/dashboard/fioristi" label="Fioristi" />
+                        <TopNavLink href="/dashboard/fornitori" label="Fornitori" />
                         <TopNavLink href="/dashboard/settings/roles" label="Impostazioni" />
                     </nav>
                 </div>

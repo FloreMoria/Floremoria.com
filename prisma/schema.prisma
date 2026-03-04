@@ -229,3 +229,25 @@ model Partner {
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime?
 }
+
+// -------------------------------------------------------------
+// 6. FORNITORI / SUPPLIERS
+// -------------------------------------------------------------
+model Supplier {
+  id             String   @id @default(cuid())
+  companyName    String   // Nome dell'azienda fornitrice
+  category       String   // Categoria merceologica / settore
+  contactName    String?  // Nome del referente umano
+  vatNumber      String?  // Partita IVA
+  taxCode        String?  // Codice Fiscale
+  sdiCode        String?  // Codice Destinatario SDI
+  pecAddress     String?  // Indirizzo PEC
+  iban           String?  // IBAN
+  paypalEmail    String?  // Indirizzo PayPal
+  internalNotes  String?  // Note interne (Admin only)
+  isActive       Boolean  @default(true) // Stato operativo
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime? // Soft-delete
+}

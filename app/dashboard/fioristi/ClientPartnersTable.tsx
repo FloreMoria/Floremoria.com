@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Partner } from '@prisma/client';
-import { Edit2, Building2, UserCircle2, X, Check, MapPin, CreditCard, MessageCircle, FileText, Star } from 'lucide-react';
+import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star } from 'lucide-react';
 import Link from 'next/link';
 
 interface Props {
@@ -130,12 +130,20 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">
                     {partners.length} Fioristi Operativi
                 </div>
-                <button
-                    onClick={() => openDrawer()}
-                    className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-full text-[14px] font-semibold tracking-wide shadow-md hover:scale-105 transition-all"
-                >
-                    <Building2 size={16} /> Registra Fiorista
-                </button>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                        <Filter size={15} className="text-gray-500" /> Filtri avanzati
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                        <Download size={15} className="text-gray-500" /> Scarica CSV
+                    </button>
+                    <button
+                        onClick={() => openDrawer()}
+                        className="flex items-center gap-2 bg-black text-white px-5 py-2 rounded-full text-[14px] font-semibold tracking-wide shadow-md hover:scale-105 transition-all ml-2"
+                    >
+                        <Building2 size={16} /> Registra Fiorista
+                    </button>
+                </div>
             </div>
 
             {/* Partner Table (Full Width) */}
@@ -234,7 +242,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             )}
 
             {/* CREATOR DRAWER */}
-            <div className={`fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-[50vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-16 bottom-0 w-[50vw] bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 {/* Header DEDICATO */}
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                     <div>

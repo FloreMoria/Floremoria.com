@@ -306,7 +306,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
             )}
 
             {/* ORDER DETAIL DRAWER */}
-            <div className={`fixed right-0 top-16 bottom-0 w-[50vw] bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${selectedOrder ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed top-16 right-0 w-[50vw] h-[calc(100vh-4rem)] bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${selectedOrder ? 'translate-x-0' : 'translate-x-full'}`}>
                 {selectedOrder && (
                     <>
                         {/* Drawer Header */}

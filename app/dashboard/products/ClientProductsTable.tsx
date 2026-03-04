@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Image as ImageIcon, Check, X, Tag, Euro, Package, XCircle, Filter, Download } from 'lucide-react';
 import Image from 'next/image';
+import { exportToCSV } from '@/lib/utils';
 
 interface Category {
     id: string;
@@ -35,6 +36,11 @@ export default function ClientProductsTable({ initialProducts, initialCategories
     // Creating category inline state
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
+
+    // Filters state
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterStatus, setFilterStatus] = useState('ALL');
 
     // Form state
     const [formData, setFormData] = useState({
@@ -227,7 +233,22 @@ export default function ClientProductsTable({ initialProducts, initialCategories
 
         // 2. Sort by Price Ascending (Lowest to Highest)
         return a.basePriceCents - b.basePriceCents;
+    }).filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(filterSearch.toLowerCase()) || (p.shortDescription || '').toLowerCase().includes(filterSearch.toLowerCase());
+        const matchStatus = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && p.isActive) || (filterStatus === 'INACTIVE' && !p.isActive);
+        return matchSearch && matchStatus;
     });
+
+    const handleExportCSV = () => {
+        const exportData = sortedProducts.map(p => ({
+            ID: p.id,
+            Nome: p.name,
+            Categoria: p.category?.name || 'Nessuna',
+            PrezzoEURO: (p.basePriceCents / 100).toFixed(2),
+            Stato: p.isActive ? 'Attivo' : 'Inattivo'
+        }));
+        exportToCSV(exportData, 'prodotti_export.csv');
+    };
 
     return (
         <div className="relative">
@@ -237,10 +258,10 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                     {products.length} Prodotti nel Catalogo
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                        <Filter size={15} className="text-gray-500" /> Filtri avanzati
+                    <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold transition-colors shadow-sm ${showFilters ? 'bg-gray-100 text-black shadow-inner' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                        <Filter size={15} className={`${showFilters ? 'text-black' : 'text-gray-500'}`} /> Filtri avanzati
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                         <Download size={15} className="text-gray-500" /> Scarica CSV
                     </button>
                     <button
@@ -251,6 +272,26 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                     </button>
                 </div>
             </div>
+
+            {/* Pannello Filtri Expandibile */}
+            {showFilters && (
+                <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 mb-6 animate-in fade-in slide-in-from-top-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ricerca Testuale</label>
+                            <input type="text" placeholder="Nome prodotto o descrizione..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stato Globale</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
+                                <option value="ALL">Tutti gli stati</option>
+                                <option value="ACTIVE">Solo Attivi (Pubblici)</option>
+                                <option value="INACTIVE">Solo Inattivi (Bozze)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Prodotti Table (Full Width) */}
             <div className="bg-white border text-left border-gray-200 rounded-3xl shadow-sm overflow-hidden">

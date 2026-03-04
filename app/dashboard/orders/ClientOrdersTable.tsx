@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Download, Filter, MoreHorizontal, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity } from 'lucide-react';
 import Image from 'next/image';
+import { exportToCSV } from '@/lib/utils';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -83,29 +84,22 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
     });
 
     const handleExportCSV = () => {
-        const headers = ['Data', 'ID Ordine', 'Acquirente', 'Telefono', 'Origine Citta', 'Origine Nazione', 'Prodotto', 'Prezzo', 'Comune Destinazione', 'Cimitero', 'Ricorrente', 'Fiorista', 'Stato'];
-        const csvRows = [headers.join(',')];
-        filteredOrders.forEach(o => {
-            const dateStr = new Date(o.createdAt).toLocaleDateString('it-IT');
-            const idStr = o.id.substring(o.id.length - 6).toUpperCase();
-            const mainItem = o.items?.[0]?.product?.name || 'Composizione';
-            const price = (o.totalPriceCents / 100).toFixed(2);
-            const r = [
-                `"${dateStr}"`, `"${idStr}"`, `"${o.buyerFullName || 'Sconosciuto'}"`, `"${o.customerPhone || ''}"`,
-                `"${o.buyerCity || ''}"`, `"${o.buyerCountry || ''}"`, `"${mainItem}"`, `"${price} €"`,
-                `"${o.cemeteryCity || ''}"`, `"${o.cemeteryName || ''}"`, `"${o.isRecurring ? 'Si' : 'No'}"`,
-                `"${o.user?.company || o.user?.name || 'Nessuno'}"`, `"${statusMap[o.status as keyof typeof statusMap]?.label || o.status}"`
-            ];
-            csvRows.push(r.join(','));
-        });
-        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "FloreMoria_Ordini.csv";
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const exportData = filteredOrders.map(o => ({
+            'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
+            'ID Ordine': o.id.substring(o.id.length - 6).toUpperCase(),
+            'Acquirente': o.buyerFullName || 'Sconosciuto',
+            'Telefono': o.customerPhone || '',
+            'Origine Citta': o.buyerCity || '',
+            'Origine Nazione': o.buyerCountry || '',
+            'Prodotto': o.items?.[0]?.product?.name || 'Composizione',
+            'Prezzo': `${(o.totalPriceCents / 100).toFixed(2)} €`,
+            'Comune Destinazione': o.cemeteryCity || '',
+            'Cimitero': o.cemeteryName || '',
+            'Ricorrente': o.isRecurring ? 'Si' : 'No',
+            'Fiorista': o.user?.company || o.user?.name || 'Nessuno',
+            'Stato': (statusMap as any)[o.status]?.label || o.status
+        }));
+        exportToCSV(exportData, 'FloreMoria_Ordini.csv');
     };
 
     // Gestione mock up cambio status

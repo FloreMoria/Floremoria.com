@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <div className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}>
 
             {/* Top Navbar */}
-            <header className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0">
+            <header className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 print:hidden">
 
                 <div className="flex items-center gap-8">
                     {/* Brand */}

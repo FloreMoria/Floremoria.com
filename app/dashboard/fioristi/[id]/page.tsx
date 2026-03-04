@@ -1,8 +1,9 @@
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ClientFloristDossier from './ClientFloristDossier';
+import ClientPrintButton from './ClientPrintButton';
 
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
     const { id } = await params;
@@ -28,9 +29,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         <p className="text-gray-500 font-medium text-lg mb-2">{partner.shopName}</p>
                         <p className="text-gray-400 text-sm">Archivio storico delle consegne e gestione file associati a questo Fiorista.</p>
                     </div>
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                        <Download size={15} className="text-gray-500" /> Scarica Scheda
-                    </button>
+                    <ClientPrintButton />
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6">

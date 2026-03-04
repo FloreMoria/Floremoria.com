@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Partner } from '@prisma/client';
 import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star } from 'lucide-react';
 import Link from 'next/link';
+import { exportToCSV } from '@/lib/utils';
 
 interface Props {
     initialPartners: Partner[];
@@ -14,6 +15,11 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // Filters state
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterStatus, setFilterStatus] = useState('ALL');
 
     const [formData, setFormData] = useState<Partner>({
         id: '',
@@ -123,7 +129,24 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         }
     };
 
-    const sortedPartners = [...partners].sort((a, b) => a.shopName.localeCompare(b.shopName));
+    const sortedPartners = [...partners].sort((a, b) => a.shopName.localeCompare(b.shopName)).filter(p => {
+        const matchSearch = p.shopName.toLowerCase().includes(filterSearch.toLowerCase()) || p.ownerName.toLowerCase().includes(filterSearch.toLowerCase()) || (p.coverageArea || '').toLowerCase().includes(filterSearch.toLowerCase());
+        const matchStatus = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && p.isActive) || (filterStatus === 'INACTIVE' && !p.isActive);
+        return matchSearch && matchStatus;
+    });
+
+    const handleExportCSV = () => {
+        const exportData = sortedPartners.map(p => ({
+            ID: p.id,
+            Negozio: p.shopName,
+            Titolare: p.ownerName,
+            Area: p.coverageArea || 'Non definita',
+            WhatsApp: p.whatsappNumber || '-',
+            OrdiniAttivi: p.activeOrders,
+            Stato: p.isActive ? 'Attivo' : 'Pausa'
+        }));
+        exportToCSV(exportData, 'fioristi_export.csv');
+    };
 
     return (
         <div className="relative fade-in">
@@ -133,10 +156,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     {partners.length} Fioristi Operativi
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                        <Filter size={15} className="text-gray-500" /> Filtri avanzati
+                    <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold transition-colors shadow-sm ${showFilters ? 'bg-gray-100 text-black shadow-inner' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                        <Filter size={15} className={`${showFilters ? 'text-black' : 'text-gray-500'}`} /> Filtri avanzati
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                         <Download size={15} className="text-gray-500" /> Scarica CSV
                     </button>
                     <button
@@ -147,6 +170,26 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     </button>
                 </div>
             </div>
+
+            {/* Pannello Filtri Expandibile */}
+            {showFilters && (
+                <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 mb-6 animate-in fade-in slide-in-from-top-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ricerca Testuale</label>
+                            <input type="text" placeholder="Nome negozio, titolare o area..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stato Operativo</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
+                                <option value="ALL">Tutti gli stati</option>
+                                <option value="ACTIVE">Solo Operativi (Attivi)</option>
+                                <option value="INACTIVE">Solo In Pausa (Inattivi)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Partner Table (Full Width) */}
             <div className="bg-white border text-left border-gray-200 rounded-3xl shadow-sm overflow-hidden">

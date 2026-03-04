@@ -80,6 +80,9 @@ model Order {
   ticketMessage   String?     // Messaggio per il biglietto
   customerPhone   String?     // Per chat Whatsapp rapida
   
+  funeralDate     DateTime?
+  additionalInstructions String?     // Note specifiche per la consegna
+  
   // Dati Acquirente
   buyerFullName   String?
   buyerCity       String?

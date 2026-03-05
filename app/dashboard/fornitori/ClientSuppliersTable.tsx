@@ -242,7 +242,9 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                                 </tr>
                             ) : (
                                 sortedSuppliers.map(supplier => {
-                                    const isForeign = (supplier.iban && !supplier.iban.toUpperCase().startsWith('IT')) || (supplier.vatNumber && !supplier.vatNumber.toUpperCase().startsWith('IT'));
+                                    const isItaly = (supplier.iban && supplier.iban.toUpperCase().startsWith('IT')) || (supplier.vatNumber && supplier.vatNumber.toUpperCase().startsWith('IT'));
+                                    const hasAnyData = supplier.iban || supplier.vatNumber;
+                                    const isForeign = hasAnyData ? !isItaly : false;
 
                                     return (
                                         <tr key={supplier.id} onClick={() => openDrawer(supplier)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">

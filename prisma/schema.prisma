@@ -241,6 +241,8 @@ model Supplier {
   companyName    String   // Nome dell'azienda fornitrice
   category       String   // Categoria merceologica / settore
   contactName    String?  // Nome del referente umano
+  email          String?  // Email diretta
+  phone          String?  // Telefono diretto
   vatNumber      String?  // Partita IVA
   taxCode        String?  // Codice Fiscale
   sdiCode        String?  // Codice Destinatario SDI

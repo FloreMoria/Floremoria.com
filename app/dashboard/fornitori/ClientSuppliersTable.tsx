@@ -26,6 +26,8 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
         companyName: '',
         category: '',
         contactName: '',
+        email: '',
+        phone: '',
         vatNumber: '',
         taxCode: '',
         sdiCode: '',
@@ -48,6 +50,8 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                 companyName: '',
                 category: '',
                 contactName: '',
+                email: '',
+                phone: '',
                 vatNumber: '',
                 taxCode: '',
                 sdiCode: '',
@@ -117,6 +121,32 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
             }
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+        const newStatus = !currentStatus;
+        try {
+            // Optimistic update
+            setSuppliers(prev => prev.map(s => s.id === id ? { ...s, isActive: newStatus } : s));
+
+            const supplierToUpdate = suppliers.find(s => s.id === id);
+            if (!supplierToUpdate) return;
+
+            const res = await fetch(`/api/dashboard/suppliers/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...supplierToUpdate, isActive: newStatus })
+            });
+
+            if (!res.ok) {
+                // Revert on failure
+                setSuppliers(prev => prev.map(s => s.id === id ? { ...s, isActive: currentStatus } : s));
+                alert("Errore nell'aggiornamento dello stato");
+            }
+        } catch (error) {
+            console.error(error);
+            setSuppliers(prev => prev.map(s => s.id === id ? { ...s, isActive: currentStatus } : s));
         }
     };
 
@@ -196,8 +226,9 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
                                 <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Azienda & Categoria</th>
-                                <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Referente</th>
+                                <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Tipo</th>
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Metodo Pagamento</th>
+                                <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contatti</th>
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Stato</th>
                                 <th className="py-4 px-4"></th>
                             </tr>
@@ -205,51 +236,80 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                         <tbody className="divide-y divide-gray-100/50">
                             {sortedSuppliers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center text-gray-500 font-medium">
+                                    <td colSpan={6} className="py-12 text-center text-gray-500 font-medium">
                                         Nessun fornitore in rubrica. Inizia aggiungendo il primo.
                                     </td>
                                 </tr>
                             ) : (
-                                sortedSuppliers.map(supplier => (
-                                    <tr key={supplier.id} onClick={() => openDrawer(supplier)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">
-                                        <td className="py-4 px-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-                                                    <Briefcase size={20} className="text-gray-400" />
+                                sortedSuppliers.map(supplier => {
+                                    const isForeign = (supplier.iban && !supplier.iban.toUpperCase().startsWith('IT')) || (supplier.vatNumber && !supplier.vatNumber.toUpperCase().startsWith('IT'));
+
+                                    return (
+                                        <tr key={supplier.id} onClick={() => openDrawer(supplier)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                                                        <Briefcase size={20} className="text-gray-400" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <div className="font-semibold text-gray-900">{supplier.companyName}</div>
+                                                        <div className="text-xs text-gray-500 font-medium">{supplier.category}</div>
+                                                        {supplier.contactName && <div className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1"><UserCircle2 size={10} /> {supplier.contactName}</div>}
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <div className="font-semibold text-gray-900">{supplier.companyName}</div>
-                                                    <div className="text-xs text-gray-500 font-medium">{supplier.category}</div>
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                {isForeign ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border uppercase tracking-wider bg-rose-50 text-rose-600 border-rose-200">
+                                                        <Globe size={10} /> Estero
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border uppercase tracking-wider bg-gray-50 text-gray-500 border-gray-200">
+                                                        Italia
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex flex-col gap-1.5 min-w-[120px]">
+                                                    {supplier.iban ? (
+                                                        <div className="flex items-center gap-1.5 text-[11px] bg-blue-50/50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100 font-mono" title={supplier.iban}><CreditCard size={12} /> {supplier.iban.substring(0, 10)}...</div>
+                                                    ) : supplier.paypalEmail ? (
+                                                        <div className="flex items-center gap-1.5 text-[11px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full border border-sky-100 font-mono"><Mail size={12} /> PayPal</div>
+                                                    ) : <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold flex items-center gap-1"><X size={10} /> Nessun Dato</span>}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex flex-col gap-1 text-sm font-medium text-gray-600">
-                                                {supplier.contactName ? <span className="flex items-center gap-1.5"><UserCircle2 size={13} className="text-gray-400" /> {supplier.contactName}</span> : <span className="text-gray-400 italic">Non inserito</span>}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex flex-col gap-1.5 min-w-[120px]">
-                                                {supplier.iban ? (
-                                                    <div className="flex items-center gap-1.5 text-[11px] bg-blue-50/50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100 font-mono" title={supplier.iban}><CreditCard size={12} /> {supplier.iban.substring(0, 10)}...</div>
-                                                ) : supplier.paypalEmail ? (
-                                                    <div className="flex items-center gap-1.5 text-[11px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full border border-sky-100 font-mono"><Mail size={12} /> PayPal</div>
-                                                ) : <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold flex items-center gap-1"><X size={10} /> Nessun Dato</span>}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 text-center">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg border uppercase tracking-wider shadow-sm transition-colors ${supplier.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
-                                                {supplier.isActive ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> : <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>}
-                                                {supplier.isActive ? 'ATTIVO' : 'PAUSA'}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 text-right">
-                                            <button onClick={(e) => { e.stopPropagation(); openDrawer(supplier); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                <Edit2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex flex-col gap-1 text-sm font-medium">
+                                                    {supplier.email ? (
+                                                        <a href={`mailto:${supplier.email}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-blue-600 hover:underline">
+                                                            <Mail size={12} className="text-blue-400" /> {supplier.email}
+                                                        </a>
+                                                    ) : <span className="text-[11px] text-gray-400 italic">No Email</span>}
+
+                                                    {supplier.phone ? (
+                                                        <a href={`tel:${supplier.phone}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-gray-600 hover:text-black">
+                                                            <Phone size={12} className="text-gray-400" /> {supplier.phone}
+                                                        </a>
+                                                    ) : <span className="text-[11px] text-gray-400 italic">No Tel</span>}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(supplier.id, supplier.isActive); }}
+                                                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border uppercase tracking-wider shadow-sm transition-all hover:scale-105 active:scale-95 ${supplier.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 hover:border-orange-300'}`}
+                                                >
+                                                    {supplier.isActive ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> : <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>}
+                                                    {supplier.isActive ? 'ATTIVO' : 'PAUSA'}
+                                                </button>
+                                            </td>
+                                            <td className="py-3 px-4 text-right">
+                                                <button onClick={(e) => { e.stopPropagation(); openDrawer(supplier); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -262,8 +322,8 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? 'Modifica Fornitore' : 'Nuovo Fornitore'}</div>
-                        <h3 className="text-xl font-display font-semibold text-gray-900 flex items-center gap-2">
-                            <Building2 size={20} className="text-fm-gold" /> DOSSIER FORNITORE
+                        <h3 className="text-xl font-display font-bold text-gray-900 flex items-center gap-2">
+                            <Building2 size={20} className="text-fm-gold" /> DOSSIER FORNITORE {formData.companyName ? <span className="text-gray-400 mx-1">-</span> : ''} <span className="text-black">{formData.companyName}</span>
                         </h3>
                     </div>
 
@@ -319,8 +379,41 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                                             value={formData.contactName || ''}
                                             onChange={e => setFormData({ ...formData, contactName: e.target.value })}
                                             placeholder="Mario Rossi"
-                                            className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                            className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50/50"
                                         />
+                                    </div>
+                                </div>
+
+                                <h4 className="text-[12px] font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2 mb-3 pt-2">
+                                    <Phone size={13} className="text-gray-400" /> Contatti Diretti Azienda
+                                </h4>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Email</label>
+                                        <div className="relative">
+                                            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                type="email"
+                                                value={formData.email || ''}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value.toLowerCase() })}
+                                                placeholder="info@azienda.com"
+                                                className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Telefono</label>
+                                        <div className="relative">
+                                            <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={formData.phone || ''}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                placeholder="+39 02 123456"
+                                                className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

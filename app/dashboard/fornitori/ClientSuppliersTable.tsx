@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Supplier } from '@prisma/client';
+import { Supplier, PaymentStatus } from '@prisma/client';
 import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
@@ -20,6 +20,7 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
     const [showFilters, setShowFilters] = useState(false);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
+    const [filterPayment, setFilterPayment] = useState('ALL');
 
     const [formData, setFormData] = useState<Supplier>({
         id: '',
@@ -35,6 +36,7 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
         iban: '',
         paypalEmail: '',
         internalNotes: '',
+        paymentStatus: 'UNPAID',
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -59,6 +61,7 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                 iban: '',
                 paypalEmail: '',
                 internalNotes: '',
+                paymentStatus: 'UNPAID',
                 isActive: true,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -150,12 +153,38 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
         }
     };
 
+    const handlePaymentToggle = async (id: string, currentStatus: PaymentStatus) => {
+        const nextStatus: PaymentStatus = currentStatus === 'UNPAID' ? 'PROCESSING' : currentStatus === 'PROCESSING' ? 'PAID' : 'UNPAID';
+
+        try {
+            setSuppliers(prev => prev.map(s => s.id === id ? { ...s, paymentStatus: nextStatus } : s));
+
+            const supplierToUpdate = suppliers.find(s => s.id === id);
+            if (!supplierToUpdate) return;
+
+            const res = await fetch(`/api/dashboard/suppliers/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...supplierToUpdate, paymentStatus: nextStatus })
+            });
+
+            if (!res.ok) {
+                setSuppliers(prev => prev.map(s => s.id === id ? { ...s, paymentStatus: currentStatus } : s));
+                alert("Errore nell'aggiornamento dello stato pagamento");
+            }
+        } catch (error) {
+            console.error(error);
+            setSuppliers(prev => prev.map(s => s.id === id ? { ...s, paymentStatus: currentStatus } : s));
+        }
+    };
+
     const sortedSuppliers = [...suppliers].sort((a, b) => a.companyName.localeCompare(b.companyName)).filter(s => {
         const matchSearch = s.companyName.toLowerCase().includes(filterSearch.toLowerCase()) ||
             (s.contactName || '').toLowerCase().includes(filterSearch.toLowerCase()) ||
             s.category.toLowerCase().includes(filterSearch.toLowerCase());
         const matchStatus = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && s.isActive) || (filterStatus === 'INACTIVE' && !s.isActive);
-        return matchSearch && matchStatus;
+        const matchPayment = filterPayment === 'ALL' || s.paymentStatus === filterPayment;
+        return matchSearch && matchStatus && matchPayment;
     });
 
     const handleExportCSV = () => {
@@ -166,7 +195,8 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
             Referente: s.contactName || '-',
             P_IVA: s.vatNumber || '-',
             IBAN: s.iban || '-',
-            Stato: s.isActive ? 'Attivo' : 'Inattivo'
+            StatoOperativo: s.isActive ? 'Attivo' : 'Inattivo',
+            StatoPagamento: s.paymentStatus === 'UNPAID' ? 'Da Pagare' : s.paymentStatus === 'PROCESSING' ? 'In Pagamento' : 'Pagato'
         }));
         exportToCSV(exportData, 'fornitori_export.csv');
     };
@@ -215,6 +245,15 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                                 <option value="INACTIVE">Solo In Pausa (Inattivi)</option>
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stato Pagamenti</label>
+                            <select value={filterPayment} onChange={e => setFilterPayment(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
+                                <option value="ALL">Tutti i pagamenti</option>
+                                <option value="UNPAID">Solo Da Pagare</option>
+                                <option value="PROCESSING">Solo In Pagamento</option>
+                                <option value="PAID">Solo Pagati</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             )}
@@ -229,6 +268,7 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Tipo</th>
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Metodo Pagamento</th>
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contatti</th>
+                                <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Valuta</th>
                                 <th className="py-4 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Stato</th>
                                 <th className="py-4 px-4"></th>
                             </tr>
@@ -236,7 +276,7 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                         <tbody className="divide-y divide-gray-100/50">
                             {sortedSuppliers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="py-12 text-center text-gray-500 font-medium">
+                                    <td colSpan={7} className="py-12 text-center text-gray-500 font-medium">
                                         Nessun fornitore in rubrica. Inizia aggiungendo il primo.
                                     </td>
                                 </tr>
@@ -297,10 +337,22 @@ export default function ClientSuppliersTable({ initialSuppliers }: Props) {
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(supplier.id, supplier.isActive); }}
-                                                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border uppercase tracking-wider shadow-sm transition-all hover:scale-105 active:scale-95 ${supplier.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 hover:border-orange-300'}`}
+                                                    onClick={(e) => { e.stopPropagation(); handlePaymentToggle(supplier.id, supplier.paymentStatus); }}
+                                                    className={`inline-flex items-center justify-center px-3 py-1.5 text-[11px] font-bold rounded-full uppercase tracking-wider transition-all hover:scale-105 active:scale-95 ${supplier.paymentStatus === 'UNPAID' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
+                                                        supplier.paymentStatus === 'PROCESSING' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' :
+                                                            'bg-green-100 text-green-700 hover:bg-green-200'
+                                                        }`}
                                                 >
-                                                    {supplier.isActive ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> : <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>}
+                                                    {supplier.paymentStatus === 'UNPAID' ? 'Da Pagare' :
+                                                        supplier.paymentStatus === 'PROCESSING' ? 'In Pagamento' : 'Pagato'}
+                                                </button>
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(supplier.id, supplier.isActive); }}
+                                                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-lg border uppercase tracking-wider shadow-sm transition-all hover:scale-105 active:scale-95 ${supplier.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300'}`}
+                                                >
+                                                    {supplier.isActive ? <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> : <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>}
                                                     {supplier.isActive ? 'ATTIVO' : 'PAUSA'}
                                                 </button>
                                             </td>

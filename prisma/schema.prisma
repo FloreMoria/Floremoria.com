@@ -64,6 +64,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PROCESSING
+  PAID
+}
+
 model Order {
   id              String      @id @default(cuid())
   status          OrderStatus @default(PENDING)
@@ -227,6 +233,7 @@ model Partner {
   adminRating    Float    @default(5.0) // Valutazione Admin (Es. 4.8)
   internalNotes  String?  // Note Interne (Admin Only)
   isActive       Boolean  @default(true) // Stato (Attivo / Pausa)
+  paymentStatus  PaymentStatus @default(UNPAID)
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -251,6 +258,7 @@ model Supplier {
   paypalEmail    String?  // Indirizzo PayPal
   internalNotes  String?  // Note interne (Admin only)
   isActive       Boolean  @default(true) // Stato operativo
+  paymentStatus  PaymentStatus @default(UNPAID)
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

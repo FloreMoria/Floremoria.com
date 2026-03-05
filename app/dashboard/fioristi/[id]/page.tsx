@@ -9,7 +9,19 @@ export default async function FloristDossierPage({ params }: { params: { id: str
     const { id } = await params;
 
     const partner = await prisma.partner.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+            orders: {
+                include: {
+                    items: {
+                        include: {
+                            product: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            }
+        }
     });
 
     if (!partner) {
@@ -75,7 +87,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
             </div>
 
             {/* Iniezione Moduli Interattivi */}
-            <ClientFloristDossier partner={partner} />
+            <ClientFloristDossier partner={partner} orders={partner.orders} />
         </div>
     );
 }

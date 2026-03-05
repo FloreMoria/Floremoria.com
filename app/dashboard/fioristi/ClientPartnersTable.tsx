@@ -20,7 +20,6 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     const [showFilters, setShowFilters] = useState(false);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
-    const [filterPayment, setFilterPayment] = useState('ALL');
 
     const [formData, setFormData] = useState<Partner>({
         id: '',
@@ -132,37 +131,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         }
     };
 
-    const handlePaymentToggle = async (id: string, currentStatus: PaymentStatus, e: React.MouseEvent) => {
-        e.stopPropagation();
-        const nextStatus: PaymentStatus = currentStatus === 'UNPAID' ? 'PROCESSING' : currentStatus === 'PROCESSING' ? 'PAID' : 'UNPAID';
-
-        try {
-            setPartners(prev => prev.map(p => p.id === id ? { ...p, paymentStatus: nextStatus } : p));
-
-            const partnerToUpdate = partners.find(p => p.id === id);
-            if (!partnerToUpdate) return;
-
-            const res = await fetch(`/api/dashboard/partners/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...partnerToUpdate, paymentStatus: nextStatus })
-            });
-
-            if (!res.ok) {
-                setPartners(prev => prev.map(p => p.id === id ? { ...p, paymentStatus: currentStatus } : p));
-                alert("Errore nell'aggiornamento dello stato pagamento");
-            }
-        } catch (error) {
-            console.error(error);
-            setPartners(prev => prev.map(p => p.id === id ? { ...p, paymentStatus: currentStatus } : p));
-        }
-    };
-
     const sortedPartners = [...partners].sort((a, b) => a.shopName.localeCompare(b.shopName)).filter(p => {
         const matchSearch = p.shopName.toLowerCase().includes(filterSearch.toLowerCase()) || p.ownerName.toLowerCase().includes(filterSearch.toLowerCase()) || (p.coverageArea || '').toLowerCase().includes(filterSearch.toLowerCase());
         const matchStatus = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && p.isActive) || (filterStatus === 'INACTIVE' && !p.isActive);
-        const matchPayment = filterPayment === 'ALL' || p.paymentStatus === filterPayment;
-        return matchSearch && matchStatus && matchPayment;
+        return matchSearch && matchStatus;
     });
 
     const handleExportCSV = () => {
@@ -217,15 +189,6 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                 <option value="INACTIVE">Solo In Pausa (Inattivi)</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stato Pagamenti</label>
-                            <select value={filterPayment} onChange={e => setFilterPayment(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
-                                <option value="ALL">Tutti i pagamenti</option>
-                                <option value="UNPAID">Solo Da Pagare</option>
-                                <option value="PROCESSING">Solo In Pagamento</option>
-                                <option value="PAID">Solo Pagati</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
             )}
@@ -239,14 +202,15 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Nome Fiorista / Negozio</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Area di Copertura</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Contatto Rapido</th>
-                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Pagamento</th>
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Ordini Attivi</th>
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Rating Admin</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Stato</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-24">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {sortedPartners.length === 0 ? (
-                                <tr><td colSpan={6} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
+                                <tr><td colSpan={7} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
                             ) : sortedPartners.map(partner => (
                                 <tr key={partner.id} onClick={() => openDrawer(partner)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">
                                     <td className="py-3 px-4">
@@ -280,16 +244,15 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         )}
                                     </td>
                                     <td className="py-3 px-4 text-center">
-                                        <button
-                                            onClick={(e) => handlePaymentToggle(partner.id, partner.paymentStatus, e)}
-                                            className={`inline-flex items-center justify-center px-3 py-1.5 text-[11px] font-bold rounded-full uppercase tracking-wider transition-all hover:scale-105 active:scale-95 ${partner.paymentStatus === 'UNPAID' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
-                                                partner.paymentStatus === 'PROCESSING' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' :
-                                                    'bg-green-100 text-green-700 hover:bg-green-200'
-                                                }`}
-                                        >
-                                            {partner.paymentStatus === 'UNPAID' ? 'Da Pagare' :
-                                                partner.paymentStatus === 'PROCESSING' ? 'In Pagamento' : 'Pagato'}
-                                        </button>
+                                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold border border-gray-200">
+                                            {partner.activeOrders}
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-4 text-center">
+                                        <div className="inline-flex items-center gap-1 font-semibold text-gray-800">
+                                            <Star size={14} className="text-[#D4AF37]" fill="currentColor" />
+                                            {partner.adminRating.toFixed(1)}
+                                        </div>
                                     </td>
                                     <td className="py-3 px-4 text-center">
                                         <div className="flex items-center justify-center gap-2">

@@ -108,6 +108,11 @@ model Order {
   
   // Relazione Prodotti
   items           OrderItem[]
+
+  // Assegnazione Fiorista Locale
+  partnerId       String?
+  partner         Partner?    @relation(fields: [partnerId], references: [id])
+  partnerPaymentStatus PaymentStatus @default(UNPAID)
 }
 
 model OrderItem {
@@ -234,6 +239,9 @@ model Partner {
   internalNotes  String?  // Note Interne (Admin Only)
   isActive       Boolean  @default(true) // Stato (Attivo / Pausa)
   paymentStatus  PaymentStatus @default(UNPAID)
+  
+  // Ordini presi in carico
+  orders         Order[]
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

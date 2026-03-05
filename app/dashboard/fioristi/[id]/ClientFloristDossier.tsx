@@ -8,26 +8,19 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 
+import { PaymentStatus, OrderStatus } from '@prisma/client';
+
 interface DossierProps {
     partner: Partner;
+    orders: any[];
 }
 
-// Mock Orders
-const MOCK_ORDERS = [
-    { id: '#1024', date: '2026-03-01', product: 'Bouquet Tributo Eterno', amount: 89.90, status: 'Consegnato' },
-    { id: '#1029', date: '2026-03-02', product: 'Cuscino Luce Serena', amount: 145.00, status: 'In Attesa' },
-    { id: '#1033', date: '2026-03-03', product: 'Corona Memoria', amount: 250.00, status: 'Problema' }
-];
+export default function ClientFloristDossier({ partner, orders: initialOrders }: DossierProps) {
+    const [orders, setOrders] = useState(initialOrders);
 
-// Mock Photos
-const MOCK_PHOTOS = [
-    { id: '1', url: 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?q=80&w=400&auto=format&fit=crop', date: '2026-03-01', orderId: '#1024' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?q=80&w=400&auto=format&fit=crop', date: '2026-03-01', orderId: '#1024' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1542458872-9b266391d171?q=80&w=400&auto=format&fit=crop', date: '2026-02-28', orderId: '#0998' }
-];
-
-export default function ClientFloristDossier({ partner }: DossierProps) {
-    const [photos, setPhotos] = useState(MOCK_PHOTOS);
+    // We will extract photos directly from orders
+    const allPhotos = orders.flatMap(o => (o.photos || []).map((url: string, index: number) => ({ id: `${o.id}-${index}`, url, orderId: `#${o.id.slice(-5).toUpperCase()}` })));
+    const [photos, setPhotos] = useState(allPhotos);
     const [isDragging, setIsDragging] = useState(false);
 
     // Lightbox State
@@ -52,21 +45,56 @@ export default function ClientFloristDossier({ partner }: DossierProps) {
         alert('Foto ricevute nel sistema (Mockup Dropzone)');
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: OrderStatus) => {
         switch (status) {
-            case 'Consegnato': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-            case 'In Attesa': return 'text-amber-700 bg-amber-50 border-amber-200';
-            case 'Problema': return 'text-red-700 bg-red-50 border-red-200';
+            case 'COMPLETED': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+            case 'DELIVERING': return 'text-amber-700 bg-amber-50 border-amber-200';
+            case 'CANCELLED': return 'text-red-700 bg-red-50 border-red-200';
+            case 'PENDING':
+            case 'ACCEPTED':
+            case 'IN_PROGRESS': return 'text-blue-700 bg-blue-50 border-blue-200';
             default: return 'text-gray-700 bg-gray-50 border-gray-200';
         }
     };
 
-    const getStatusIcon = (status: string) => {
+    const getStatusIcon = (status: OrderStatus) => {
         switch (status) {
-            case 'Consegnato': return <CheckCircle2 size={14} className="text-emerald-500" />;
-            case 'In Attesa': return <Calendar size={14} className="text-amber-500" />;
-            case 'Problema': return <AlertCircle size={14} className="text-red-500" />;
-            default: return null;
+            case 'COMPLETED': return <CheckCircle2 size={14} className="text-emerald-500" />;
+            case 'DELIVERING': return <AlertCircle size={14} className="text-amber-500" />; // Or delivery icon
+            case 'PENDING':
+            case 'ACCEPTED':
+            case 'IN_PROGRESS': return <Calendar size={14} className="text-blue-500" />;
+            default: return <AlertCircle size={14} className="text-gray-500" />;
+        }
+    };
+
+    const translateStatus = (status: OrderStatus) => {
+        switch (status) {
+            case 'COMPLETED': return 'Consegnato';
+            case 'DELIVERING': return 'In Consegna';
+            case 'IN_PROGRESS': return 'In Lavorazione';
+            case 'ACCEPTED': return 'Accettato';
+            case 'PENDING': return 'In Attesa';
+            case 'CANCELLED': return 'Annullato';
+            default: return status;
+        }
+    };
+
+    const handlePaymentToggle = async (orderId: string, currentStatus: PaymentStatus) => {
+        const nextStatus = currentStatus === 'UNPAID' ? 'PROCESSING' : currentStatus === 'PROCESSING' ? 'PAID' : 'UNPAID';
+
+        try {
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, partnerPaymentStatus: nextStatus } : o));
+            const res = await fetch(`/api/dashboard/orders/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerPaymentStatus: nextStatus })
+            });
+            if (!res.ok) throw new Error('Failed to update');
+        } catch (error) {
+            console.error(error);
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, partnerPaymentStatus: currentStatus } : o));
+            alert("Errore nell'aggiornamento del pagamento");
         }
     };
 
@@ -78,14 +106,14 @@ export default function ClientFloristDossier({ partner }: DossierProps) {
     return (
         <div className="space-y-12 pb-24">
 
-            {/* GRID LAYOUT: Orders (Left) + Gallery (Right) */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* GRID LAYOUT: Orders (Full) then Gallery (Full) */}
+            <div className="flex flex-col gap-12">
 
                 {/* ---------------- STORICO ORDINI ---------------- */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                         <Package size={20} className="text-blue-500" />
-                        Storico Ordini Recenti
+                        Registro Consegne
                     </h2>
 
                     <div className="bg-white border text-left border-gray-200 rounded-2xl shadow-sm overflow-hidden">
@@ -93,31 +121,71 @@ export default function ClientFloristDossier({ partner }: DossierProps) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-500">
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider">ID Ordine</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider">Data Consegna</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider">Prodotto/i</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider text-right">Importo</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider text-center">Stato</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">ID Ordine</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Utente</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Defunto</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Consegna</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider min-w-[150px]">Prodotto/i</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-right">Prezzo al Fiorista</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Foto</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Stato Ordine</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Pagamento</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {MOCK_ORDERS.map((order) => (
-                                        <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group cursor-default">
-                                            <td className="py-3 px-4 font-bold text-gray-900">{order.id}</td>
-                                            <td className="py-3 px-4 text-gray-600">{order.date}</td>
-                                            <td className="py-3 px-4 font-medium text-gray-800">{order.product}</td>
-                                            <td className="py-3 px-4 text-right font-semibold text-gray-900">
-                                                <span className="flex items-center justify-end gap-0.5">
-                                                    <Euro size={14} />{order.amount.toFixed(2)}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 text-center">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${getStatusColor(order.status)}`}>
-                                                    {getStatusIcon(order.status)} {order.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {orders.length === 0 ? (
+                                        <tr><td colSpan={9} className="p-8 text-center text-gray-500">Nessun ordine assegnato a questo fiorista.</td></tr>
+                                    ) : (
+                                        orders.map((order) => {
+                                            const netEarned = Math.floor((order.totalPriceCents / 100) * 0.65);
+                                            const productList = order.items?.map((i: any) => i.product?.name).join(', ') || '-';
+                                            const hasPhoto = order.photos && order.photos.length > 0;
+
+                                            return (
+                                                <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
+                                                    <td className="py-3 px-4 font-bold text-gray-900 text-xs">#{order.id.slice(-6).toUpperCase()}</td>
+                                                    <td className="py-3 px-4 text-gray-800 text-xs font-medium">{order.buyerFullName || order.customerPhone || 'Anonimo'}</td>
+                                                    <td className="py-3 px-4 text-gray-600 font-medium text-xs">{order.deceasedName || '-'}</td>
+                                                    <td className="py-3 px-4 text-gray-600 text-[11px] leading-tight max-w-[120px]">
+                                                        <div className="font-semibold text-gray-800">{order.cemeteryCity || '-'}</div>
+                                                        <div>{order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'Da definire'}</div>
+                                                    </td>
+                                                    <td className="py-3 px-4 font-medium text-gray-800 text-xs truncate max-w-[200px]" title={productList}>{productList}</td>
+                                                    <td className="py-3 px-4 text-right font-semibold text-gray-900 whitespace-nowrap">
+                                                        <span className="flex items-center justify-end gap-0.5 text-sm">
+                                                            <Euro size={14} className="text-fm-gold" />{netEarned.toFixed(2)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center">
+                                                        {hasPhoto ? (
+                                                            <button onClick={() => setSelectedPhoto(order.photos[0])} className="w-8 h-8 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center border border-gray-200 mx-auto transition-colors">
+                                                                <ImagePlus size={14} className="text-gray-600" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center">
+                                                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border ${getStatusColor(order.status)} whitespace-nowrap`}>
+                                                            {getStatusIcon(order.status)} {translateStatus(order.status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handlePaymentToggle(order.id, order.partnerPaymentStatus || 'UNPAID'); }}
+                                                            className={`inline-flex items-center justify-center px-2.5 py-1.5 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all hover:scale-105 active:scale-95 whitespace-nowrap shadow-sm border ${(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300' :
+                                                                    order.partnerPaymentStatus === 'PROCESSING' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300' :
+                                                                        'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                                                                }`}
+                                                        >
+                                                            {(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'Da Pagare' :
+                                                                order.partnerPaymentStatus === 'PROCESSING' ? 'In Pagamento' : 'Pagato'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
                                 </tbody>
                             </table>
                         </div>

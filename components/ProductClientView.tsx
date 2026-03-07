@@ -50,14 +50,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const [nome, setNome] = useState('');
-    const [cognome, setCognome] = useState('');
-    const [dataNascita, setDataNascita] = useState('');
-    const [dataMorte, setDataMorte] = useState('');
     const [dataConsegna, setDataConsegna] = useState('');
-    const [note, setNote] = useState('');
     const [customMessage, setCustomMessage] = useState('');
     const [variantColor, setVariantColor] = useState('Rosso');
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     // Mappatura dinamica per il colore del Bouquet delle rose
     useEffect(() => {
@@ -85,12 +81,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             if (savedStr) {
                 const parsed = JSON.parse(savedStr);
                 if (parsed.comune && !initialComune) setComune(parsed.comune);
-                if (parsed.nome) setNome(parsed.nome);
-                if (parsed.cognome) setCognome(parsed.cognome);
-                if (parsed.dataNascita) setDataNascita(parsed.dataNascita);
-                if (parsed.dataMorte) setDataMorte(parsed.dataMorte);
                 if (parsed.dataConsegna) setDataConsegna(parsed.dataConsegna);
-                if (parsed.note) setNote(parsed.note);
                 if (parsed.customMessage) setCustomMessage(parsed.customMessage);
             }
         } catch (e) {
@@ -100,9 +91,9 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     }, []);
 
     useEffect(() => {
-        const dataToSave = { comune, nome, cognome, dataNascita, dataMorte, dataConsegna, note, customMessage };
+        const dataToSave = { comune, dataConsegna, customMessage };
         localStorage.setItem('fm_checkout_data', JSON.stringify(dataToSave));
-    }, [comune, nome, cognome, dataNascita, dataMorte, dataConsegna, note, customMessage]);
+    }, [comune, dataConsegna, customMessage]);
 
     // Gallery state
     const hasImages = product.images && product.images.length > 0;
@@ -176,7 +167,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 priceCents: Math.round(product.price * 100),
                 qty: qty,
                 customData: {
-                    comune, nome, cognome, dataNascita, dataMorte, dataConsegna, note,
+                    comune, dataConsegna,
                     ...(product.slug === 'bouquet-di-rose' ? { variantColor } : {}),
                     ...(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' ? { customMessage } : {})
                 }
@@ -255,17 +246,9 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             </div>
                         )}
                     </div>
-
-                    {/* BLOCCO COPY SEO */}
-                    <div>
-                        <h2 className="text-2xl font-display font-semibold text-fm-text mb-4">
-                            Descrizione dell&apos;omaggio floreale
-                        </h2>
-                        <div className="text-[17px] text-fm-text opacity-80 font-body leading-relaxed whitespace-pre-line bg-gray-50/50 p-6 md:p-8 rounded-[20px] border border-gray-100 shadow-sm">
-                            {product.descriptionSEO || product.description}
-                        </div>
-                    </div>
                 </div>
+
+
 
                 {/* DX: Title, Price, Optionals, Form, Button */}
                 <div className="lg:w-[55%]">
@@ -279,11 +262,8 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <p className="text-3xl font-display font-semibold text-fm-gold tracking-tight">
                                 €{product.price.toFixed(2)}
                             </p>
-                            <p className="text-[14px] text-fm-muted font-medium pt-0">
+                            <p className="text-[14px] text-fm-muted font-medium pt-0 mb-4">
                                 Prezzo tutto incluso. {product.isBouquet ? 'Consegna gratuita, nessun' : 'Nessun'} costo nascosto.
-                            </p>
-                            <p className="text-lg text-fm-muted font-body leading-relaxed pt-2">
-                                {product.description}
                             </p>
                             <p className="text-[13px] text-fm-muted/80 italic pt-1 leading-snug">
                                 Le foto sono indicative: la composizione può variare leggermente per garantire sempre freschezza e qualità.
@@ -350,58 +330,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                         </ul>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-fm-text">Nome defunto <span className="text-fm-rose">*</span></label>
-                                        <input
-                                            type="text"
-                                            placeholder="Mario"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
-                                            value={nome}
-                                            onChange={(e) => setNome(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-semibold text-fm-text">Cognome defunto <span className="text-fm-rose">*</span></label>
-                                        <input
-                                            type="text"
-                                            placeholder="Rossi"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
-                                            value={cognome}
-                                            onChange={(e) => setCognome(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
 
-                                {/* Campi opzionali Date */}
-                                <div className="pt-2">
-                                    <details className="group">
-                                        <summary className="cursor-pointer text-sm font-medium text-fm-cta hover:text-fm-cta-hover transition-colors list-none inline-flex items-center gap-1 select-none">
-                                            <span>+ Aggiungi dati per omonimia</span>
-                                            <span className="text-fm-muted font-normal">(opzionale)</span>
-                                        </summary>
-                                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-fm-muted">Data nascita</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
-                                                    value={dataNascita}
-                                                    onChange={(e) => setDataNascita(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-fm-muted">Data morte</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
-                                                    value={dataMorte}
-                                                    onChange={(e) => setDataMorte(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </details>
-                                </div>
 
                                 <div className="space-y-2 pt-2 border-t border-gray-100">
                                     <label className="block text-sm font-semibold text-fm-text mt-4">Data di consegna preferita <span className="text-fm-rose">*</span></label>
@@ -434,15 +363,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                     </div>
                                 )}
 
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-semibold text-fm-text">Note aggiuntive <span className="text-fm-muted font-normal text-xs">(Opzionale)</span></label>
-                                    <textarea
-                                        placeholder="Se conosci la posizione esatta della tomba (es. Campo V, Fila 10, N° 4) scrivilo qui..."
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors min-h-[90px] resize-none"
-                                        value={note}
-                                        onChange={(e) => setNote(e.target.value)}
-                                    ></textarea>
-                                </div>
+
                             </div>
 
                             <div className="pt-6 border-t border-gray-100">
@@ -466,6 +387,84 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                     </div>
                 </div>
             </div>
+
+            {/* 2.5) DESCRIZIONE FULL-WIDTH (SEO & DETAILS) AL CENTRO A "T" */}
+            <section className="w-full max-w-[900px] mx-auto mt-12 md:mt-16 pt-10 md:pt-12 pb-12 px-6 lg:px-12 bg-[#FAF9F6] border border-[#E2DFD3] shadow-sm rounded-[24px] relative overflow-hidden text-center">
+                {/* Paper Texture Overlay */}
+                <div
+                    className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply"
+                    style={{
+                        backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")'
+                    }}>
+                </div>
+
+                <div className="relative z-10">
+                    <h2 className="text-3xl lg:text-4xl font-serif font-medium text-gray-900 mb-6 tracking-tight">
+                        Dettagli della Composizione
+                    </h2>
+
+                    {/* Impact Sentence & Toggle Button */}
+                    <div className="mb-6">
+                        <p className="text-[17px] lg:text-[19px] text-gray-800 font-sans font-medium leading-relaxed mx-auto mb-6">
+                            Un gesto di pura eleganza per onorare il ricordo, curato dai migliori fioristi della tua zona con consegna garantita.
+                        </p>
+
+                        {!isDescriptionExpanded && (
+                            <button
+                                onClick={() => setIsDescriptionExpanded(true)}
+                                className="inline-flex items-center gap-2 text-fm-gold hover:text-yellow-600 font-semibold transition-colors duration-200"
+                            >
+                                Leggi ancora...
+                                <svg className="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* SEO / AEO Expanded Content (Visible to bots, styled with max-height/opacity for users) */}
+                    <div
+                        className={`overflow-hidden transition-all duration-700 ease-in-out ${isDescriptionExpanded ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0 m-0'}`}
+                        aria-hidden={!isDescriptionExpanded}
+                    >
+                        <div className="text-[16px] lg:text-[17px] text-gray-700 font-sans leading-relaxed text-left max-w-3xl mx-auto space-y-6">
+                            <h3 className="text-2xl font-serif font-medium text-gray-900 mt-4 mb-3">
+                                L&apos;eccellenza dell&apos;artigianato floreale locale per {product.name}
+                            </h3>
+
+                            <p className="whitespace-pre-line">
+                                {product.descriptionSEO || product.description}
+                            </p>
+
+                            <p>
+                                <strong>Alta Qualità e Stagionalità:</strong> Ogni omaggio floreale viene scrupolosamente preparato partendo da fiori freschi, rigorosamente selezionati. Attraverso una rete capillare di fioristi professionisti locali, ci assicuriamo che la composizione rispetti sempre l&apos;armonia estetica scelta, adattandosi con grazia alla stagionalità.
+                            </p>
+
+                            <p>
+                                <strong>Vicinanza alla tua comunità:</strong> Supportiamo le reti di artigiani di {comune || 'zona'}, abbattendo i tempi di trasporto. Questo garantisce consegne al cimitero puntuali, rispettose e in una condizione di assoluta eccellenza floreale.
+                            </p>
+
+                            <p>
+                                <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo profondamente l&apos;importanza della memoria. Subito dopo la posa formale della composizione sulla tomba nel luogo della cerimonia funebre, il fiorista incaricato ti invierà la foto cristallina del tuo pensiero direttamente su WhatsApp. Una rassicurazione immediata e trasparente che il tuo pensiero è giunto a destinazione con la dignità che merita.
+                            </p>
+
+                            {isDescriptionExpanded && (
+                                <div className="text-center pt-8">
+                                    <button
+                                        onClick={() => setIsDescriptionExpanded(false)}
+                                        className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 font-medium transition-colors duration-200"
+                                    >
+                                        Mostra meno
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {/* 3) UNIFIED TRUST & HOW IT WORKS SECTION (Desktop + Mobile) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-6 lg:pt-8 w-full max-w-5xl mx-auto">

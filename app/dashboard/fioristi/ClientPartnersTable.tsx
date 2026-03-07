@@ -25,6 +25,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         id: '',
         shopName: '',
         ownerName: '',
+        uniqueCode: null,
+        province: '',
         coverageArea: '',
         whatsappNumber: '',
         address: '',
@@ -51,6 +53,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 id: '',
                 shopName: '',
                 ownerName: '',
+                uniqueCode: null,
+                province: '',
                 coverageArea: '',
                 whatsappNumber: '',
                 address: '',
@@ -140,8 +144,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     const handleExportCSV = () => {
         const exportData = sortedPartners.map(p => ({
             ID: p.id,
+            Codice: p.uniqueCode || '-',
             Negozio: p.shopName,
             Titolare: p.ownerName,
+            Provincia: p.province || '-',
             Area: p.coverageArea || 'Non definita',
             WhatsApp: p.whatsappNumber || '-',
             OrdiniAttivi: p.activeOrders,
@@ -199,6 +205,8 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Codice</th>
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Provincia</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Nome Fiorista / Negozio</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Area di Copertura</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Contatto Rapido</th>
@@ -213,6 +221,12 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                 <tr><td colSpan={7} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
                             ) : sortedPartners.map(partner => (
                                 <tr key={partner.id} onClick={() => openDrawer(partner)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">
+                                    <td className="py-3 px-4">
+                                        <div className="font-mono text-xs font-bold bg-gray-100 px-2 py-1 rounded-md text-gray-700 whitespace-nowrap">{partner.uniqueCode || 'N/D'}</div>
+                                    </td>
+                                    <td className="py-3 px-4">
+                                        <div className="font-bold text-gray-800 text-sm">{partner.province || 'XX'}</div>
+                                    </td>
                                     <td className="py-3 px-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
@@ -296,7 +310,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 {/* Header DEDICATO */}
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                     <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? 'Modifica Fiorista' : 'Nuovo Fiorista'}</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{formData.id ? `Modifica Fiorista / ${formData.uniqueCode || 'N/D'}` : 'Nuovo Fiorista'}</div>
                         {formData.id ? (
                             <Link href={`/dashboard/fioristi/${formData.id}`} className="group flex flex-col gap-0.5 transition-colors cursor-pointer" title="Apri Dossier Completo">
                                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -304,6 +318,9 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                     <span className="text-xs ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Apri ↳</span>
                                 </h2>
                                 <p className="text-gray-500 font-medium flex items-center gap-1.5"><Building2 size={13} className="text-fm-gold" /> {formData.shopName}</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                    <span className="font-bold">Codice:</span> {formData.uniqueCode || '-'} | <span className="font-bold">Provincia:</span> {formData.province || '-'}
+                                </p>
                             </Link>
                         ) : (
                             <h3 className="text-xl font-display font-semibold text-gray-900 flex items-center gap-2">
@@ -369,6 +386,18 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Provincia [OBBLIGATORIO]</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={2}
+                                        value={formData.province || ''}
+                                        onChange={e => setFormData({ ...formData, province: e.target.value.toUpperCase() })}
+                                        placeholder="Es. RM, MI, CO"
+                                        className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-500 transition-all font-bold uppercase"
+                                    />
+                                </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Numero WhatsApp (Es. +39...)</label>
                                     <div className="relative">

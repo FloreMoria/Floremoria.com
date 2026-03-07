@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { generatePartnerCode } from '@/lib/codeGenerator';
 
 export async function PUT(request: Request, context: any) {
     try {
@@ -9,16 +10,31 @@ export async function PUT(request: Request, context: any) {
         // Remove structural properties that Prisma doesn't need for updates
         const { id: _, createdAt, updatedAt, deletedAt, ...updateData } = body;
 
-        // TODO: In futuro, per i dati sensibili, implementare qui il salvataggio
-        // di un AuditLog prima di eseguire l'update per mantenere lo snapshot.
+        let uniqueCode = updateData.uniqueCode;
+
+        // Fetch original to compare province if we need to regenerate
+        const original = await prisma.partner.findUnique({ where: { id } });
+
+        if (!uniqueCode && original && !original.uniqueCode) {
+            uniqueCode = await generatePartnerCode(updateData.province || original.province);
+        } else if (updateData.province && original && original.province !== updateData.province) {
+            // Re-generate if province changes
+            uniqueCode = await generatePartnerCode(updateData.province);
+        }
+
+        const dataToUpdate = {
+            ...updateData,
+            activeOrders: Number(updateData.activeOrders ?? 0),
+            adminRating: Number(updateData.adminRating ?? 5)
+        };
+
+        if (uniqueCode) {
+            dataToUpdate.uniqueCode = uniqueCode;
+        }
 
         const partner = await prisma.partner.update({
             where: { id },
-            data: {
-                ...updateData,
-                activeOrders: Number(updateData.activeOrders ?? 0),
-                adminRating: Number(updateData.adminRating ?? 5)
-            }
+            data: dataToUpdate
         });
 
         return NextResponse.json(partner);

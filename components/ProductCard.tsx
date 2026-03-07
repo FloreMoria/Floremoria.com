@@ -23,7 +23,7 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
 
     return (
         <article className="bg-white rounded-[24px] shadow-sm border border-gray-100 hover:shadow-2xl transition-shadow flex flex-col h-[500px] min-h-[500px] hover:z-50 relative group">
-            <Link href={productUrl} className="w-full h-[85%] relative bg-gray-50 flex items-center justify-center text-center overflow-hidden rounded-t-[24px] cursor-pointer group-hover:opacity-40 transition-opacity duration-500">
+            <Link href={productUrl} className="w-full h-[85%] relative bg-gray-50 flex items-center justify-center text-center overflow-hidden rounded-t-[24px] cursor-pointer group-hover:opacity-70 transition-opacity duration-500">
                 {!hasError ? (
                     <>
 
@@ -47,7 +47,7 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
                     </div>
                 )}
             </Link>
-            <div className="h-[15%] w-full flex items-center justify-between px-5 bg-white/90 backdrop-blur-xl border-t border-gray-100/50 rounded-b-[24px] group-hover:opacity-40 transition-opacity duration-500">
+            <div className="h-[15%] w-full flex items-center justify-between px-5 bg-white/90 backdrop-blur-xl border-t border-gray-100/50 rounded-b-[24px] z-10 relative">
                 <div className="flex flex-col min-w-0 pr-4 py-1">
                     <h3 className="text-[18px] font-display font-bold text-gray-900 tracking-tight truncate">
                         {product.name}

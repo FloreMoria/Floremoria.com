@@ -138,3 +138,28 @@ Nessun Alt viene scritto fisicamente stringa per stringa. Tutte le img inyectano
     - **Database & Security (Data Retention Policy):** L'intera piattaforma adotta una politica di **Soft-Delete** su tutti i modelli e le entità principali (`Product`, `Partner`, `Category`, `Order`, `Offer`). I record non vengono mai distrutti fisicamente dal database (`prisma.delete` deprecato nei controller); in loro vece, il backend aggiorna il flag `deletedAt = new Date()`. Tutte le endpoint di lettura (`GET`) sono state schermate per filtrare forzatamente ignorando le righe escluse (`where: { deletedAt: null }`).
     - **Asset Sicurezza Frontend:** Il template ammette temporaneamente stringhe di dominio esterne come `images.unsplash.com` inserendole formalmente nella whitelist (array `remotePatterns` di `next.config.ts`), impedendo falle relative a "Unconfigured Host" per mock-up in assenza di webhook in stage.
     - **Moduli Stabilizzati:** Sviluppata e validata la tabella interattiva "Catalogo Prodotti" (con logiche automatiche: priorità di sort dei FIORI sulle tombe rispetto agli accessori/lumini e gestione status in-line). Generata e raffinata la "Gestione Fioristi" (WhatsApp-Ready) includendo CRUD dedicato alla rete partner e Drawer d'ispezione con Route Dinamica al "Dossier Completo" (`/dashboard/fioristi/[id]`), allestito per acquisire file media asincroni via Dropzone Frontend e Webhook WhatsApp Backend.
+
+---
+
+## 7. FONDAMENTA IMMUTABILI E REGOLE DI BUSINESS (Marzo 2026)
+*(Da considerare come stato "Stabile" del sistema per tutte le sessioni IA e Dev)*
+
+### 7.1 ARCHITETTURA IDENTIFICATIVI
+- **Codici Partner:** Lunghezza fissa 9 caratteri. `FS-[SIGLA_PROV]-[001]` per i fioristi; `FN-[ISO_NAZIONE]-[001]` per i fornitori.
+- **Codici Ordine:** Formato `[PREFISSO]-[PROV]-[YY]-[001]`. Prefissi: `FF` (Funerale), `FT` (Tombe), `FA` (Animali), `FP` (Enti).
+
+### 7.2 LOGICA FINANZIARIA (Fonte: CSV "Tabella prezzi e margini FloreMoria")
+- **Wholesale Fiorista:** Prezzo fisso d'acquisto basato sulla colonna "Compenso Fiorista" (circa 65% del lordo).
+- **Partner Referral:** Commissione 10% (arrotondata per eccesso all'Euro) solo su categoria `FF`. Referral ID attivo: `f067beff-e351-4484-81b2-5b16bdf27801`.
+- **Margine Pieno SRL:** Costo fiorista impostato a 0.00€ per: **Lumino**, **Nastro commemorativo** e **Messaggio** (servizi inclusi nel prezzo di vendita).
+- **Arrotondamenti:** Fiorista (difetto), Partner (eccesso).
+
+### 7.3 FUNNEL DI CHECKOUT & LOGISTICA
+- **Vincoli Orari:** Consegna permessa esclusivamente tra le 09:00 e le 17:00.
+- **Lead Time:** Blocco calendario minimo: +48 ore per `FT`; +6 ore lavorative per `FF` (considerando apertura ore 08:00).
+- **Integrazione Geografica:** Google Places API attiva per autocompletamento e validazione automatica (Provincia) rigorosamente recintata su Italia (`country: "it"`).
+- **UX Abbonamento:** Step 4 "Mantieni vivo il ricordo" con promessa di "2 foto mensili". Opzione "Acquisto Singolo" pre-selezionata di default ("Safe default").
+
+### 7.4 DASHBOARD OVERVIEW (Layout Ibrido)
+- **Sezione Operativa (Top):** KPI in tempo reale (Ordini, Margine SRL, % Foto caricate), Heatmap provinciale per densità visiva, Alert ordini critici (< 6h dalla consegna senza foto).
+- **Sezione Strategica (Bottom):** Analisi sorgenti traffico (Diretto vs Partner), Tabella debiti provvigionali verso Referral (Liquidazione Mensile), monitoraggio MRR (Monthly Recurring Revenue). All'atto del render, utilizza logica Ibrida (Dati server passati ai grafici Recharts su Client Component).

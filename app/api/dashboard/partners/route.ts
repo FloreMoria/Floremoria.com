@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { generatePartnerCode } from '@/lib/codeGenerator';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { id, createdAt, updatedAt, deletedAt, ...data } = body;
 
+        let uniqueCode = data.uniqueCode;
+        if (!uniqueCode) {
+            uniqueCode = await generatePartnerCode(data.province);
+        }
+
         const partner = await prisma.partner.create({
             data: {
                 ...data,
+                uniqueCode,
                 activeOrders: Number(data.activeOrders || 0),
                 adminRating: Number(data.adminRating || 5)
             }

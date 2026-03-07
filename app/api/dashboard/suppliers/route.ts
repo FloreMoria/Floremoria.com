@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { generateSupplierCode } from '@/lib/codeGenerator';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { id, createdAt, updatedAt, deletedAt, ...data } = body;
 
+        let uniqueCode = data.uniqueCode;
+        if (!uniqueCode) {
+            uniqueCode = await generateSupplierCode();
+        }
+
         const supplier = await prisma.supplier.create({
-            data: data
+            data: {
+                ...data,
+                uniqueCode
+            }
         });
 
         return NextResponse.json(supplier);

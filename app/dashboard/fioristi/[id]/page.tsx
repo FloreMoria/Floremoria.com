@@ -29,25 +29,24 @@ export default async function FloristDossierPage({ params }: { params: { id: str
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-6 py-10 pb-20 fade-in">
+        <div className="w-full px-4 md:px-8 py-10 pb-20 fade-in">
             <Link href="/dashboard/fioristi" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-6 font-medium">
                 <ArrowLeft size={16} /> Torna a Fioristi
             </Link>
 
             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-8">
                 <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-3xl font-display font-bold text-gray-900 mb-1">{partner.ownerName}</h1>
-                        <p className="text-gray-500 font-medium text-lg mb-2">{partner.shopName}</p>
-                        <p className="text-gray-400 text-sm">Archivio storico delle consegne e gestione file associati a questo Fiorista.</p>
-                    </div>
+                    <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">DOSSIER FIORISTA - {partner.uniqueCode || 'N/D'}</h1>
+                    <h2 className="text-xl font-bold text-gray-800 mb-1">{partner.ownerName}</h2>
+                    <p className="text-gray-500 font-medium text-lg mb-2">{partner.shopName}</p>
+                    <p className="text-gray-400 text-sm">Archivio storico delle consegne e gestione file associati a questo Fiorista.</p>
                     <ClientPrintButton />
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6">
                     <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100">
-                        <div className="font-semibold text-gray-900 mb-0.5">Area Operativa</div>
-                        <div className="text-gray-600 font-medium">{partner.coverageArea || 'Non definita'}</div>
+                        <div className="font-semibold text-gray-900 mb-0.5">Area Operativa / Prov.</div>
+                        <div className="text-gray-600 font-medium">{partner.coverageArea || 'Non definita'} <span className="font-bold ml-1 text-black">({partner.province || 'XX'})</span></div>
                     </div>
                     <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
                         <div className="font-semibold text-emerald-900 mb-0.5">WhatsApp / Contact</div>

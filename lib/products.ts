@@ -48,29 +48,30 @@ const productsRaw: Omit<Product, 'images'>[] = [
         name: "Kalonche (pianta in vaso)",
         slug: "kalonche",
         price: 37.99,
-        description: "Elegante pianta di Kalonche (Kalanchoe) per un ricordo duraturo e fiorito, adatta alla cerimonia funebre.",
+        description: "Pianta fiorita per un omaggio curato dai fioristi locali.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "La pianta di Kalonche è nota per la sua eleganza e semplicità. Un omaggio floreale resistente e duraturo ideale per le cerimonie funebri e le camere ardenti."
+        descriptionSEO: "Resistenza, colore e sobrietà. Una pianta fiorita pensata per un omaggio che resti nel tempo, curata dai fioristi locali per garantire vigore e bellezza. Verifica fotografica della consegna su WhatsApp."
     },
     {
         id: "f2",
         name: "Margherite/Gerbere (pianta in vaso)",
         slug: "margherite-gerbere",
         price: 39.99,
-        description: "Vaso con fresche e delicate Margherite o Gerbere.",
+        description: "Un omaggio duraturo e luminoso, simbolo di purezza e semplicità.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "Composizione in vaso con fiori semplici ma profondamente affettuosi come le margherite e le gerbere. La loro purezza rappresenta un tributo sincero e addolcisce il momento del lutto."
+        descriptionSEO: "La vita che continua nel ricordo attraverso una pianta curata. Un omaggio duraturo e luminoso, simbolo di purezza e semplicità. Ideale per una presenza costante nel luogo del ricordo. Foto della posa inclusa."
     },
     {
         id: "f3",
         name: "Bouquet Rispetto e Vicinanza",
         slug: "bouquet-rispetto-vicinanza",
         price: 39.99,
-        description: "Un pensiero delicato per esprimere profondo rispetto e vicinanza in momenti difficili.",
+        description: "Omaggio essenziale e composto per un saluto discreto.",
         isBouquet: true,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Omaggio essenziale e composto per un saluto discreto. Fiori freschi di stagione scelti per la loro sobrietà ed eleganza naturale. Un gesto autentico di memoria con foto della consegna su WhatsApp."
     },
     {
         id: "c4",
@@ -107,84 +108,90 @@ const productsRaw: Omit<Product, 'images'>[] = [
         name: "Bouquet Cordoglio Sincero",
         slug: "bouquet-cordoglio-sincero",
         price: 49.99,
-        description: "Un mazzo di fiori freschi per ricordare con affetto i propri cari.",
+        description: "Un bouquet delicato e fresco, perfetto per trasmettere vicinanza sincera.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "Il Bouquet Cordoglio Sincero è un omaggio floreale delicato, pensato per esprimere affetto, vicinanza e rispetto nel ricordo di una persona cara.\n\nOgni bouquet viene realizzato dal fiorista locale in base alla stagionalità e alla disponibilità nella zona di consegna, garantendo freschezza e armonia."
+        descriptionSEO: "La forza della semplicità in un pensiero che parla al cuore. Un bouquet delicato e fresco, perfetto per trasmettere vicinanza sincera alla famiglia nel momento del lutto. Conferma fotografica via WhatsApp."
     },
     {
         id: "b2",
         name: "Bouquet Omaggio Solenne",
         slug: "bouquet-omaggio-solenne",
         price: 69.99,
-        description: "Composizione floreale speciale, curata in ogni minimo dettaglio.",
+        description: "Sobrietà e distinzione in un bouquet di alta qualità.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "L'Omaggio Solenne è una composizione floreale curata in ogni minimo dettaglio, pensata per esprimere vicinanza e rispetto nel ricordo di una persona cara."
+        descriptionSEO: "Sobrietà e distinzione in un bouquet di alta qualità. Fiori stagionali selezionati per un saluto dignitoso e composto. La scelta ideale per esprimere stima e rispetto. Foto della consegna inclusa su WhatsApp."
     },
     {
         id: "b3",
         name: "Bouquet Memoria Eterna",
         slug: "bouquet-memoria-imperituri",
         price: 89.99,
-        description: "Un tributo eterno e maestoso per onorare una memoria preziosa.",
+        description: "Fiori nobili scelti per un ricordo che sfida il tempo.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "Il Tributo Eterno è un omaggio floreale maestoso, pensato per onorare una memoria preziosa ed esprimere profondo rispetto e vicinanza."
+        descriptionSEO: "Fiori nobili scelti per un ricordo che sfida il tempo. Una composizione ricca ed elegante, pensata per un tributo di alto profilo. Artigianalità locale e freschezza garantita con verifica fotografica su smartphone."
     },
     {
         id: "f4",
         name: "Nastro commemorativo",
         slug: "nastro-commemorativo",
         price: 14.99,
-        description: "Nastro in raso per un messaggio duraturo allegato alle composizioni.",
+        description: "Il tuo ultimo messaggio impresso con eleganza su nastro.",
         isBouquet: false,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Il tuo ultimo messaggio impresso con eleganza. Un nastro personalizzato con scritte artigianali per rendere unico il tuo tributo. Un dettaglio di valore che completa ogni omaggio floreale con dignità e rispetto."
     },
     {
         id: "f5",
         name: "Set Ceri/Candele",
         slug: "set-ceri",
         price: 24.99,
-        description: "Set di ceri o candele eleganti da accompagnare ai riti funebri.",
+        description: "Una luce delicata che accompagna il ricordo.",
         isBouquet: false,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Una luce delicata che accompagna il ricordo. Set di ceri sobri, ideali per creare un'atmosfera di pace, preghiera e silenzio. Un complemento essenziale consegnato con cura e conferma del servizio garantita."
     },
     {
         id: "f6",
         name: "Cuscino",
         slug: "cuscino",
         price: 129.99,
-        description: "Cuscino floreale adagiato, maestoso ed estremamente curato.",
+        description: "Un omaggio classico e rassicurante che esprime dolcezza e vicinanza.",
         isBouquet: true,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Un omaggio classico e rassicurante che esprime dolcezza e vicinanza. Questa composizione distesa, dall'armonia cromatica curata, è ideale per un messaggio di profondo cordoglio. Foto della posa inviata via WhatsApp."
     },
     {
         id: "f7",
         name: "Piramide",
         slug: "piramide",
         price: 139.99,
-        description: "Composizione floreale imponente e verticale a forma di piramide.",
+        description: "Composizione solenne a sviluppo verticale, simbolo di elevazione e rispetto.",
         isBouquet: true,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Composizione solenne a sviluppo verticale, simbolo di elevazione e rispetto. Un equilibrio perfetto di forme e colori stagionali curato da mani esperte. Un omaggio di forte impatto visivo con verifica fotografica garantita."
     },
     {
         id: "f8",
         name: "Copribara",
         slug: "copribara",
         price: 189.99,
-        description: "Elegante stesura di fiori a copertura totale per la massima onorificenza.",
+        description: "Eleganza e solennità per l'ultimo saluto con una copertura floreale completa.",
         isBouquet: true,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Eleganza e solennità per l'ultimo saluto. Una copertura floreale completa, composta con fiori freschi selezionati per dignità e bellezza. Creata artigianalmente per onorare il feretro. Conferma fotografica via WhatsApp inclusa."
     },
     {
         id: "f9",
         name: "Cuore / Corona",
         slug: "cuore-corona",
         price: 199.99,
-        description: "Tributo solenne di altissimo artigianato floreale lavorato a corona o cuore.",
+        description: "Il massimo tributo di affetto e onore. Una composizione prestigiosa simbolo di amore infinito.",
         isBouquet: true,
-        category: 'funerale'
+        category: 'funerale',
+        descriptionSEO: "Il massimo tributo di affetto e onore. Una composizione prestigiosa simbolo di amore infinito, realizzata con fiori d'eccellenza dai nostri fioristi locali. Riceverai la foto della consegna direttamente su WhatsApp come garanzia del servizio."
     }
 ];
 

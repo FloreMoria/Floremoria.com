@@ -86,7 +86,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
     const handleExportCSV = () => {
         const exportData = filteredOrders.map(o => ({
             'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
-            'ID Ordine': o.id.substring(o.id.length - 6).toUpperCase(),
+            'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
             'Acquirente': o.buyerFullName || 'Sconosciuto',
             'Telefono': o.customerPhone || '',
             'Origine Citta': o.buyerCity || '',
@@ -191,6 +191,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Data e N° Ordine</th>
+                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">Foto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Defunto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Acquirente</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Origine</th>
@@ -206,7 +207,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                         <tbody className="divide-y divide-gray-100">
                             {filteredOrders.length === 0 && (
                                 <tr>
-                                    <td colSpan={11} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
+                                    <td colSpan={12} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
                                 </tr>
                             )}
                             {filteredOrders.map(order => {
@@ -221,7 +222,16 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                                             <div suppressHydrationWarning className="text-gray-500 text-[11px] uppercase tracking-wider mb-0.5 whitespace-nowrap">
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
-                                            <div className="font-bold text-black text-[14px]">#{order.id.substring(order.id.length - 6).toUpperCase()}</div>
+                                            <div className="font-bold text-black text-[14px]">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
+                                        </td>
+                                        <td className="py-3 px-3 text-center align-middle">
+                                            {order.photos && order.photos.length > 0 ? (
+                                                <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm mx-auto">
+                                                    <Image src={order.photos[0]} alt="Foto Consegna" fill className="object-cover" />
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">-</span>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3">
                                             <div className="font-bold text-gray-900 leading-tight break-words">{order.deceasedName || 'Non specificato'}</div>
@@ -313,7 +323,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                             <div>
                                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Dettaglio Ordine</div>
                                 <h3 className="text-xl font-display font-semibold text-gray-900">
-                                    Ordine #{selectedOrder.id.substring(selectedOrder.id.length - 6).toUpperCase()} - {selectedOrder.buyerFullName || selectedOrder.deceasedName}
+                                    {selectedOrder.orderNumber || `Ordine #${selectedOrder.id.substring(selectedOrder.id.length - 6).toUpperCase()}`} - {selectedOrder.buyerFullName || selectedOrder.deceasedName}
                                 </h3>
                             </div>
                             <div className="flex items-center gap-3">

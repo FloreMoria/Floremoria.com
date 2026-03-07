@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Partner } from '@prisma/client';
 import {
-    Download, Trash2, Send, Maximize2,
-    ImagePlus, Package, Calendar, Euro, AlertCircle, CheckCircle2, X
+    Download, Maximize2,
+    Package, Calendar, Euro, AlertCircle, CheckCircle2, X
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -18,32 +18,8 @@ interface DossierProps {
 export default function ClientFloristDossier({ partner, orders: initialOrders }: DossierProps) {
     const [orders, setOrders] = useState(initialOrders);
 
-    // We will extract photos directly from orders
-    const allPhotos = orders.flatMap(o => (o.photos || []).map((url: string, index: number) => ({ id: `${o.id}-${index}`, url, orderId: `#${o.id.slice(-5).toUpperCase()}` })));
-    const [photos, setPhotos] = useState(allPhotos);
-    const [isDragging, setIsDragging] = useState(false);
-
     // Lightbox State
     const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-
-    // Drag & Drop Handlers
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        // In a real app we'd process e.dataTransfer.files
-        alert('Foto ricevute nel sistema (Mockup Dropzone)');
-    };
 
     const getStatusColor = (status: OrderStatus) => {
         switch (status) {
@@ -98,11 +74,6 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
         }
     };
 
-    const deletePhoto = (id: string) => {
-        setPhotos(prev => prev.filter(p => p.id !== id));
-        setShowDeleteConfirm(null);
-    };
-
     return (
         <div className="space-y-12 pb-24">
 
@@ -127,7 +98,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Consegna</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider min-w-[150px]">Prodotto/i</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-right">Prezzo al Fiorista</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Foto</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Foto Consegna (WA Ready)</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Stato Ordine</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Pagamento</th>
                                     </tr>
@@ -156,13 +127,16 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                                             <Euro size={14} className="text-fm-gold" />{netEarned.toFixed(2)}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-4 text-center">
+                                                    <td className="py-3 px-4 text-center align-middle">
                                                         {hasPhoto ? (
-                                                            <button onClick={() => setSelectedPhoto(order.photos[0])} className="w-8 h-8 rounded bg-gray-100 hover:bg-gray-200 flex items-center justify-center border border-gray-200 mx-auto transition-colors">
-                                                                <ImagePlus size={14} className="text-gray-600" />
+                                                            <button onClick={(e) => { e.stopPropagation(); setSelectedPhoto(order.photos[0]); }} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-fm-gold transition-all mx-auto group block">
+                                                                <Image src={order.photos[0]} alt="Foto Consegna" fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
+                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                                    <Maximize2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                </div>
                                                             </button>
                                                         ) : (
-                                                            <span className="text-gray-400">-</span>
+                                                            <span className="text-gray-400 text-xs">-</span>
                                                         )}
                                                     </td>
                                                     <td className="py-3 px-4 text-center">
@@ -174,8 +148,8 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handlePaymentToggle(order.id, order.partnerPaymentStatus || 'UNPAID'); }}
                                                             className={`inline-flex items-center justify-center px-2.5 py-1.5 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all hover:scale-105 active:scale-95 whitespace-nowrap shadow-sm border ${(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300' :
-                                                                    order.partnerPaymentStatus === 'PROCESSING' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300' :
-                                                                        'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                                                                order.partnerPaymentStatus === 'PROCESSING' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300' :
+                                                                    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
                                                                 }`}
                                                         >
                                                             {(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'Da Pagare' :
@@ -192,120 +166,36 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                     </div>
                 </div>
 
-                {/* ---------------- OMNICHANNEL PHOTO GALLERY ---------------- */}
-                <div className="space-y-4">
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <ImagePlus size={20} className="text-fm-gold" />
-                        Galleria Foto di Consegna (WhatsApp Ready)
-                    </h2>
-
-                    {/* Dropzone */}
-                    <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        className={`w-full border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50'}`}
-                    >
-                        <ImagePlus size={32} className={`mb-3 transition-colors ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-                        <p className={`font-semibold text-sm transition-colors ${isDragging ? 'text-blue-700' : 'text-gray-700'}`}>
-                            Trascina le foto di consegna qui
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1 font-medium text-center">
-                            Oppure in futuro verranno scaricate automaticamente<br />dai Webhook di WhatsApp del fiorista.
-                        </p>
-                    </div>
-
-                    {/* Photo Grid */}
-                    {photos.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4">
-                            {photos.map((photo) => (
-                                <div key={photo.id} className="relative group aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-                                    <Image
-                                        src={photo.url}
-                                        alt={`Foto ${photo.id}`}
-                                        fill
-                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                    />
-
-                                    {/* Action Overlay */}
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3">
-                                        <div className="flex justify-between items-start">
-                                            <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded border border-white/30 text-white text-[10px] font-bold tracking-wider">
-                                                {photo.orderId}
-                                            </span>
-                                            <button
-                                                onClick={() => setSelectedPhoto(photo.url)}
-                                                className="p-1.5 bg-white/20 hover:bg-white text-white hover:text-black rounded-lg transition-colors backdrop-blur-md"
-                                                title="Espandi"
-                                            >
-                                                <Maximize2 size={16} />
-                                            </button>
-                                        </div>
-
-                                        <div className="flex items-center justify-center gap-2 mt-auto">
-                                            <button
-                                                onClick={() => alert(`Download trigger per ${photo.url}`)}
-                                                className="p-2 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-colors backdrop-blur-md border border-white/20"
-                                                title="Scarica"
-                                            >
-                                                <Download size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => setShowDeleteConfirm(photo.id)}
-                                                className="p-2 bg-white/10 hover:bg-red-500 text-white rounded-full transition-colors backdrop-blur-md border border-white/20"
-                                                title="Elimina"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => alert('Modulo Inoltro WhatsApp Manuale')}
-                                                className="p-2 bg-white/10 hover:bg-blue-500 text-white rounded-full transition-colors backdrop-blur-md border border-white/20"
-                                                title="Inoltra Manualmente via WA"
-                                            >
-                                                <Send size={16} className="-ml-0.5" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Delete Confirmation Popup Overlay */}
-                                    {showDeleteConfirm === photo.id && (
-                                        <div className="absolute inset-0 bg-red-600/90 z-10 flex flex-col items-center justify-center p-4 text-center">
-                                            <AlertCircle size={32} className="text-white mb-2" />
-                                            <p className="text-white text-xs font-bold mb-3">Eliminare defintivamente?</p>
-                                            <div className="flex gap-2 w-full">
-                                                <button onClick={() => deletePhoto(photo.id)} className="flex-1 bg-white text-red-600 rounded py-1.5 text-xs font-bold hover:bg-red-50">SÌ</button>
-                                                <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 bg-red-700 text-white rounded py-1.5 text-xs font-bold hover:bg-red-800">NO</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                            Nessuna foto associata a questo partner.
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Modal Lightbox (Full Screen) */}
             {selectedPhoto && (
                 <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedPhoto(null)}>
                     <button
-                        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-colors backdrop-blur-md border border-white/20"
+                        className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-full transition-colors backdrop-blur-md border border-white/20 z-[110]"
                         onClick={(e) => { e.stopPropagation(); setSelectedPhoto(null); }}
                     >
                         <X size={24} />
                     </button>
-                    <div className="relative w-full max-w-5xl h-full max-h-[85vh] rounded-xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <Image
-                            src={selectedPhoto}
-                            alt="Ingrandimento Foto Consegna"
-                            fill
-                            className="object-contain"
-                            quality={100}
-                        />
+                    <div className="relative flex flex-col items-center w-full max-w-5xl h-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="relative w-full h-full rounded-xl overflow-hidden shadow-2xl mb-6">
+                            <Image
+                                src={selectedPhoto}
+                                alt="Ingrandimento Foto Consegna"
+                                fill
+                                className="object-contain"
+                                quality={100}
+                            />
+                        </div>
+                        <button
+                            onClick={() => {
+                                alert(`Download avviato per: ${selectedPhoto}`);
+                            }}
+                            className="flex-shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-transform hover:scale-105 z-[110]"
+                        >
+                            <Download size={20} />
+                            Scarica per WhatsApp
+                        </button>
                     </div>
                 </div>
             )}

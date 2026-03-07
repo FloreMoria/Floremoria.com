@@ -72,6 +72,7 @@ enum PaymentStatus {
 
 model Order {
   id              String      @id @default(cuid())
+  orderNumber     String?     @unique // Es. FM-O-26-001
   status          OrderStatus @default(PENDING)
   
   userId          String?
@@ -81,6 +82,7 @@ model Order {
   deceasedName    String
   cemeteryName    String
   cemeteryCity    String
+  deliveryProvince String?     @db.VarChar(2) // Provincia (es. MI)
   gravePosition   String?
   deliveryDate    DateTime?
   ticketMessage   String?     // Messaggio per il biglietto
@@ -224,8 +226,10 @@ model NewsletterLog {
 // -------------------------------------------------------------
 model Partner {
   id             String   @id @default(cuid())
+  uniqueCode     String?  @unique // Es. FS-MI-001
   shopName       String   // Nome Negozio
   ownerName      String   // Nome Titolare / Fiorista
+  province       String?  @db.VarChar(2) // Provincia (es. MI, CO)
   coverageArea   String?  // Area di Copertura (Città o Provincia)
   whatsappNumber     String?  // Contatto Rapido (WhatsApp / Telefono)
   address        String?  // Indirizzo
@@ -253,6 +257,7 @@ model Partner {
 // -------------------------------------------------------------
 model Supplier {
   id             String   @id @default(cuid())
+  uniqueCode     String?  @unique // Es. FN-IT-001
   companyName    String   // Nome dell'azienda fornitrice
   category       String   // Categoria merceologica / settore
   contactName    String?  // Nome del referente umano
@@ -271,4 +276,24 @@ model Supplier {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime? // Soft-delete
+  
+  // Fatture passive del fornitore
+  invoices       SupplierInvoice[]
+}
+
+model SupplierInvoice {
+  id             String        @id @default(cuid())
+  supplierId     String
+  supplier       Supplier      @relation(fields: [supplierId], references: [id])
+  
+  invoiceNumber  String
+  invoiceDate    DateTime
+  reason         String        // Causale fattura
+  amount         Decimal
+  paymentDetails String?       // IBAN o PayPal del fornitore
+  status         PaymentStatus @default(UNPAID)
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
 }

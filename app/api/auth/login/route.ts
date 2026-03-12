@@ -15,7 +15,7 @@ export async function POST(request: Request) {
                 value: 'SUPER_ADMIN',
                 httpOnly: true,
                 path: '/',
-                secure: process.env.NODE_ENV === 'production',
+                secure: process.env.NODE_ENV === 'production' && !request.url.includes('localhost'),
                 maxAge: 60 * 60 * 24 * 7 // 1 settimana
             });
 

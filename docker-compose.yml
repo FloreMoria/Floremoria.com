@@ -1,4 +1,15 @@
 services:
+  web:
+    build: .
+    container_name: floremoria_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://floremoria:floremoria_pw@db:5432/floremoria?schema=public
+      - ADMIN_API_KEY=change-me
+    depends_on:
+      - db
   db:
     image: postgres:16-alpine
     container_name: floremoria_db

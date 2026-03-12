@@ -303,11 +303,12 @@ model SupplierInvoice {
 // -------------------------------------------------------------
 model FloremoriaLog {
   id              Int      @id @default(autoincrement())
-  sessionDate     DateTime @map("data_sessione")
+  sessionDate     DateTime @default(now()) @db.Date @map("data_sessione")
   tag             String?  @db.VarChar(50)
   topic           String?  @map("titolo_argomento") @db.VarChar(255)
-  content         String?  @map("contenuto_log") @db.Text
-  createdAt       DateTime @default(now()) @map("timestamp")
+  shortSummary    String?  @map("riassunto_breve") @db.Text
+  keyPrompt       String?  @map("prompt_chiave") @db.Text
+  searchVector    Unsupported("tsvector")? @map("search_vector")
 
   @@map("floremoria_logs")
 }

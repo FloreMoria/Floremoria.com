@@ -2,13 +2,22 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, History, Terminal, Info, Clock, Archive } from 'lucide-react';
+import { Search, History, Terminal, Info, Clock, Archive, Copy, Check } from 'lucide-react';
 import { FloremoriaLog } from '@prisma/client';
 
 export default function ClientLogsTable({ initialLogs, initialQuery }: { initialLogs: FloremoriaLog[], initialQuery: string }) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState(initialQuery);
     const [selectedLog, setSelectedLog] = useState<FloremoriaLog | null>(null);
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (selectedLog?.keyPrompt) {
+            navigator.clipboard.writeText(selectedLog.keyPrompt);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
 
     const handleSearch = (e: FormEvent) => {
         e.preventDefault();
@@ -162,9 +171,21 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                             {selectedLog.keyPrompt && (
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
-                                    <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
-                                        {selectedLog.keyPrompt}
-                                    </pre>
+                                    <div className="relative group">
+                                        <button 
+                                            onClick={handleCopy}
+                                            className="absolute top-3 right-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-colors flex items-center gap-2 focus:outline-none"
+                                        >
+                                            {isCopied ? (
+                                                <><Check size={14} className="text-emerald-400" /><span className="text-xs font-bold text-emerald-400">Copiato!</span></>
+                                            ) : (
+                                                <><Copy size={14} /><span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Copia testo</span></>
+                                            )}
+                                        </button>
+                                        <pre className="bg-[#0D1117] border border-slate-800 text-slate-300 p-5 pt-14 rounded-xl text-[13px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                            {selectedLog.keyPrompt}
+                                        </pre>
+                                    </div>
                                 </div>
                             )}
                         </div>

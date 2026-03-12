@@ -5,7 +5,7 @@ import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, CartesianAxis
 } from 'recharts';
 import { AreaChart, Area } from 'recharts';
-import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info } from 'lucide-react';
+import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info, Copy, Check } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 
@@ -14,6 +14,15 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
     const [darkMode, setDarkMode] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (latestLog?.keyPrompt) {
+            navigator.clipboard.writeText(latestLog.keyPrompt);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
 
     useEffect(() => {
         setIsMounted(true);
@@ -449,9 +458,21 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             {latestLog.keyPrompt && (
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
-                                    <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
-                                        {latestLog.keyPrompt}
-                                    </pre>
+                                    <div className="relative group">
+                                        <button 
+                                            onClick={handleCopy}
+                                            className="absolute top-3 right-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-colors flex items-center gap-2 focus:outline-none z-10"
+                                        >
+                                            {isCopied ? (
+                                                <><Check size={14} className="text-emerald-400" /><span className="text-xs font-bold text-emerald-400">Copiato!</span></>
+                                            ) : (
+                                                <><Copy size={14} /><span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Copia testo</span></>
+                                            )}
+                                        </button>
+                                        <pre className="bg-[#0D1117] border border-slate-800 text-slate-300 p-5 pt-14 rounded-xl text-[13px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                            {latestLog.keyPrompt}
+                                        </pre>
+                                    </div>
                                 </div>
                             )}
                         </div>

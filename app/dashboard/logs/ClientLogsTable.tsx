@@ -8,6 +8,7 @@ import { FloremoriaLog } from '@prisma/client';
 export default function ClientLogsTable({ initialLogs, initialQuery }: { initialLogs: FloremoriaLog[], initialQuery: string }) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState(initialQuery);
+    const [selectedLog, setSelectedLog] = useState<FloremoriaLog | null>(null);
 
     const handleSearch = (e: FormEvent) => {
         e.preventDefault();
@@ -59,7 +60,11 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                                 </tr>
                             ) : (
                                 initialLogs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors group">
+                                    <tr 
+                                        key={log.id} 
+                                        onClick={() => setSelectedLog(log)}
+                                        className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                                    >
                                         <td className="py-4 px-6 text-sm whitespace-nowrap align-top">
                                             <div className="font-semibold text-gray-900 border border-gray-200 px-3 py-1.5 rounded-lg inline-flex shadow-sm bg-white">
                                                 {new Date(log.sessionDate).toLocaleDateString('it-IT')}
@@ -92,6 +97,53 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                     </table>
                 </div>
             </div>
+
+            {/* Modal for Full Log Details */}
+            {selectedLog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in" onClick={() => setSelectedLog(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-slate-50">
+                            <div>
+                                <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">
+                                    Dettaglio Sessione • {new Date(selectedLog.sessionDate).toLocaleDateString('it-IT')}
+                                </div>
+                                <h3 className="text-xl font-display font-bold text-slate-900">{selectedLog.topic}</h3>
+                                {selectedLog.tag && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {selectedLog.tag.split(',').map((t: string) => t.trim()).map((tag: string, i: number) => (
+                                            <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-700">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={() => setSelectedLog(null)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Info size={16} /> Riassunto Breve</h4>
+                                <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    {selectedLog.shortSummary || 'Nessun riassunto fornito.'}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
+                                <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                    {selectedLog.keyPrompt || 'Nessun dettaglio tecnico fornito.'}
+                                </pre>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+                            <button onClick={() => setSelectedLog(null)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

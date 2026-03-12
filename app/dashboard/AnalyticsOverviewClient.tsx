@@ -5,7 +5,7 @@ import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, CartesianAxis
 } from 'recharts';
 import { AreaChart, Area } from 'recharts';
-import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck } from 'lucide-react';
+import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
     const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -150,10 +151,41 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                 <div className="mb-8 p-4 bg-slate-50 border-l-4 border-slate-800 rounded-r-lg shadow-sm">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">
-                          Ultima Sessione Operativa {latestLog ? `- ${new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}` : ''}
-                      </p>
-                      <h3 className="text-lg font-serif text-slate-800">{latestLog ? `${latestLog.tag}: ${latestLog.topic}` : '#BRANDING: Consolidamento Watermark & 4x4'}</h3>
+                      <button 
+                          onClick={() => latestLog && setIsLogModalOpen(true)}
+                          className="text-xs uppercase tracking-widest text-slate-500 font-bold hover:text-fm-gold transition-colors flex items-center gap-2 group cursor-pointer text-left focus:outline-none"
+                      >
+                          ULTIMA SESSIONE OPERATIVA {latestLog ? `- ${new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}` : ''}
+                          <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                      <h3 className="text-lg font-serif text-slate-800 mt-1">{latestLog ? latestLog.topic : 'Consolidamento Watermark & 4x4'}</h3>
+                      
+                      {latestLog?.tag && (
+                          <div className="mt-2 mb-3 flex flex-wrap gap-2">
+                              {latestLog.tag.split(',').map((t: string) => t.trim()).map((tag: string, i: number) => {
+                                  // Assegna colori pastello circolarmente: Slate, Sage, Navy
+                                  const pastelClasses = [
+                                      'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
+                                      'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200', // Sage approximation
+                                      'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200' // Navy approximation
+                                  ];
+                                  const colorClass = pastelClasses[i % pastelClasses.length];
+                                  return (
+                                      <button 
+                                          key={i} 
+                                          onClick={(e) => {
+                                              e.preventDefault();
+                                              router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
+                                          }}
+                                          className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${colorClass}`}
+                                      >
+                                          {tag}
+                                      </button>
+                                  );
+                              })}
+                          </div>
+                      )}
+                      
                       <p className="text-sm text-slate-600 italic">"{latestLog ? latestLog.shortSummary : 'Nessun log recente registrato.'}"</p>
                     </div>
                     
@@ -337,6 +369,68 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                 </div>
 
             </div>
+
+            {/* Modal for Full Log Details */}
+            {isLogModalOpen && latestLog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in" onClick={() => setIsLogModalOpen(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-slate-50">
+                            <div>
+                                <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">
+                                    Dettaglio Sessione • {new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}
+                                </div>
+                                <h3 className="text-xl font-display font-bold text-slate-900">{latestLog.topic}</h3>
+                                {latestLog.tag && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {latestLog.tag.split(',').map((t: string) => t.trim()).map((tag: string, i: number) => {
+                                            const pastelClasses = [
+                                                'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
+                                                'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200',
+                                                'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                                            ];
+                                            const colorClass = pastelClasses[i % pastelClasses.length];
+                                            return (
+                                                <button 
+                                                    key={i} 
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
+                                                    }}
+                                                    className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${colorClass}`}
+                                                >
+                                                    {tag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={() => setIsLogModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Info size={16} /> Riassunto Breve</h4>
+                                <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    {latestLog.shortSummary || 'Nessun riassunto fornito.'}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
+                                <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                    {latestLog.keyPrompt || 'Nessun dettaglio tecnico fornito.'}
+                                </pre>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+                            <button onClick={() => setIsLogModalOpen(false)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                Chiudi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

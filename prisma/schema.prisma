@@ -308,6 +308,10 @@ model FloremoriaLog {
   topic           String?  @map("titolo_argomento") @db.VarChar(255)
   shortSummary    String?  @map("riassunto_breve") @db.Text
   keyPrompt       String?  @map("prompt_chiave") @db.Text
+  discussedPoints String?  @map("punti_discussi") @db.Text
+  achievedResults String?  @map("risultati_raggiunti") @db.Text
+  pendingTasks    String?  @map("in_completamento") @db.Text
+  criticalAlarms  String?  @map("allarmi_critici") @db.Text
   searchVector    Unsupported("tsvector")? @map("search_vector")
 
   @@map("floremoria_logs")

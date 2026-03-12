@@ -410,18 +410,50 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             </button>
                         </div>
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                            <div>
-                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Info size={16} /> Riassunto Breve</h4>
-                                <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                    {latestLog.shortSummary || 'Nessun riassunto fornito.'}
-                                </p>
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
-                                <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
-                                    {latestLog.keyPrompt || 'Nessun dettaglio tecnico fornito.'}
-                                </pre>
-                            </div>
+                            {(latestLog.shortSummary || latestLog.discussedPoints) && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">📝 Punti Discussi</h4>
+                                    <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                                        {latestLog.discussedPoints || latestLog.shortSummary}
+                                    </p>
+                                </div>
+                            )}
+
+                            {latestLog.achievedResults && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-emerald-700 mb-2 flex items-center gap-2">✅ Risultati Raggiunti</h4>
+                                    <p className="text-slate-600 leading-relaxed text-sm bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 whitespace-pre-wrap">
+                                        {latestLog.achievedResults}
+                                    </p>
+                                </div>
+                            )}
+
+                            {latestLog.pendingTasks && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-amber-700 mb-2 flex items-center gap-2">⏳ In Completamento (Task aperti)</h4>
+                                    <p className="text-slate-600 leading-relaxed text-sm bg-amber-50/50 p-4 rounded-xl border border-amber-100 whitespace-pre-wrap">
+                                        {latestLog.pendingTasks}
+                                    </p>
+                                </div>
+                            )}
+
+                            {latestLog.criticalAlarms && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-red-700 mb-2 flex items-center gap-2">🚨 ALLARMI CRITICI</h4>
+                                    <p className="text-red-800 leading-relaxed text-sm bg-red-100 p-4 rounded-xl border border-red-200 font-medium whitespace-pre-wrap">
+                                        {latestLog.criticalAlarms}
+                                    </p>
+                                </div>
+                            )}
+
+                            {latestLog.keyPrompt && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
+                                    <pre className="bg-slate-800 text-slate-200 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner">
+                                        {latestLog.keyPrompt}
+                                    </pre>
+                                </div>
+                            )}
                         </div>
                         <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                             <button onClick={() => setIsLogModalOpen(false)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">

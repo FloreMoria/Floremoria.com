@@ -131,7 +131,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
             <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
                 {/* HEAD */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-800/10 pb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-800/10 pb-4 mb-6">
                     <div>
                         <h1 className="text-3xl font-display font-bold tracking-tight">Analytics Dashboard</h1>
                         <p className={`${textMuted} text-[15px] mt-1 flex items-center gap-2`}>
@@ -141,6 +141,28 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                     <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-full border transition-all ${darkMode ? 'border-gray-700 hover:bg-gray-800 text-yellow-300' : 'border-gray-200 hover:bg-gray-100 text-gray-600'}`}>
                         {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
+                </div>
+
+                {/* Log Activity Bar - FloreMoria Style */}
+                <div className="mb-8 p-4 bg-slate-50 border-l-4 border-slate-800 rounded-r-lg shadow-sm">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">Ultima Sessione Operativa</p>
+                      <h3 className="text-lg font-serif text-slate-800">#BRANDING: Consolidamento Watermark & 4x4</h3>
+                      <p className="text-sm text-slate-600 italic">"Logo Outline 25%, Font 3, Focus su Categoria FT"</p>
+                    </div>
+                    
+                    <div className="relative flex items-center">
+                      <input 
+                        type="text" 
+                        placeholder="Cerca argomento o data..." 
+                        className="pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:ring-1 focus:ring-slate-400 outline-none w-64 text-black"
+                      />
+                      <svg className="w-4 h-4 absolute left-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
 
                 {/* KPI OPERATIONAL (Top Row) */}

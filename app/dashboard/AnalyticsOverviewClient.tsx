@@ -7,7 +7,10 @@ import {
 import { AreaChart, Area } from 'recharts';
 import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck } from 'lucide-react';
 
-export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], csvData = [] }: { ga4Data: any, initialOrders?: any[], csvData?: any[] }) {
+import { useRouter } from 'next/navigation';
+
+export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], csvData = [], latestLog }: { ga4Data: any, initialOrders?: any[], csvData?: any[], latestLog?: any }) {
+    const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
 
@@ -147,14 +150,21 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                 <div className="mb-8 p-4 bg-slate-50 border-l-4 border-slate-800 rounded-r-lg shadow-sm">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">Ultima Sessione Operativa</p>
-                      <h3 className="text-lg font-serif text-slate-800">#BRANDING: Consolidamento Watermark & 4x4</h3>
-                      <p className="text-sm text-slate-600 italic">"Logo Outline 25%, Font 3, Focus su Categoria FT"</p>
+                      <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">
+                          Ultima Sessione Operativa {latestLog ? `- ${new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}` : ''}
+                      </p>
+                      <h3 className="text-lg font-serif text-slate-800">{latestLog ? `${latestLog.tag}: ${latestLog.topic}` : '#BRANDING: Consolidamento Watermark & 4x4'}</h3>
+                      <p className="text-sm text-slate-600 italic">"{latestLog ? latestLog.shortSummary : 'Nessun log recente registrato.'}"</p>
                     </div>
                     
                     <div className="relative flex items-center">
                       <input 
                         type="text" 
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                router.push('/dashboard/logs?q=' + encodeURIComponent(e.currentTarget.value));
+                            }
+                        }}
                         placeholder="Cerca argomento o data..." 
                         className="pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:ring-1 focus:ring-slate-400 outline-none w-64 text-black"
                       />

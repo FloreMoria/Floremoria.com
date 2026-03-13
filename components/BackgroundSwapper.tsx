@@ -27,7 +27,7 @@ export default function BackgroundSwapper() {
     return (
         <>
             {/* HERO 1 */}
-            <div className={`fixed top-0 left-0 right-0 h-[75vh] lg:h-[85vh] z-0 transition-opacity duration-700 pointer-events-none ${activeHero === 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`fixed top-0 left-0 right-0 h-[100vh] z-0 transition-opacity duration-700 pointer-events-none ${activeHero === 1 ? 'opacity-100' : 'opacity-0'}`}>
                 <Image
                     src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
                     alt="Consegna fiori cimitero FloreMoria"
@@ -40,7 +40,7 @@ export default function BackgroundSwapper() {
             </div>
 
             {/* HERO 2 */}
-            <div className={`fixed top-0 left-0 right-0 h-[75vh] lg:h-[85vh] z-0 transition-opacity duration-700 pointer-events-none ${activeHero === 2 ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`fixed top-0 left-0 right-0 h-[100vh] z-0 transition-opacity duration-700 pointer-events-none ${activeHero === 2 ? 'opacity-100' : 'opacity-0'}`}>
                 <Image
                     src="/images/hero/fiori-sulle-tombe-servizio-home-italia.webp"
                     alt="Servizio Fiori in tutta Italia"

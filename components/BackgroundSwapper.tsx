@@ -32,7 +32,7 @@ export default function BackgroundSwapper() {
                     src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
                     alt="Consegna fiori cimitero FloreMoria"
                     fill
-                    className="object-contain object-center brightness-[1.05] saturate-[1.1]"
+                    className="object-cover object-top brightness-[1.05] saturate-[1.1]"
                     priority
                 />
                 {/* Nessuna ombra dura, solo luce. */}
@@ -45,7 +45,7 @@ export default function BackgroundSwapper() {
                     src="/images/hero/fiori-sulle-tombe-servizio-home-italia.webp"
                     alt="Servizio Fiori in tutta Italia"
                     fill
-                    className="object-contain object-center brightness-[1.05] saturate-[1.1]"
+                    className="object-cover object-top brightness-[1.05] saturate-[1.1]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/5"></div>
             </div>

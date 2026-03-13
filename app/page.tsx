@@ -23,7 +23,7 @@ export default function Home() {
       <div className="relative z-10 w-full pt-[72px]"> {/* pt-[72px] for navbar height */}
 
         {/* 1) HERO SECTION */}
-        <section className="w-full aspect-[1536/1024]">
+        <section className="w-full h-auto">
           <div className="text-center flex flex-col justify-start pt-12 lg:pt-20 max-w-4xl mx-auto px-4 drop-shadow-lg">
             <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
               <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">

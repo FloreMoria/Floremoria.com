@@ -8,6 +8,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://floremoria:floremoria_pw@db:5432/floremoria?schema=public
       - ADMIN_API_KEY=change-me
+      - FLOREMORIA_WEBHOOK_KEY=AG-88a4b29c-WEBHOOK-TOKEN
     depends_on:
       - db
   db:

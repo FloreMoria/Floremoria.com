@@ -17,21 +17,21 @@ export default function Home() {
   return (
     <div className="relative w-full bg-fm-bg">
       {/* 1) NATIVE HERO SECTION */}
-      <section className="relative w-full pt-[72px] grid grid-cols-1 grid-rows-1 justify-items-center">
-        {/* The Native Image */}
+      <section className="relative w-full pt-[72px]">
+        {/* The Native Image Dictating Height */}
         <Image
           src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
           alt="Consegna fiori cimitero FloreMoria"
           width={1536}
           height={1024}
-          className="col-start-1 row-start-1 w-full h-auto max-h-none object-contain block"
+          className="w-full h-auto max-h-none block"
           priority
         />
         {/* Subtle overlay for text readability */}
-        <div className="col-start-1 row-start-1 bg-gradient-to-b from-white/10 via-transparent to-black/5 pointer-events-none w-full h-full"></div>
+        <div className="absolute top-[72px] bottom-0 left-0 right-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent pointer-events-none z-10"></div>
 
-        {/* Text Overlay */}
-        <div className="col-start-1 row-start-1 flex flex-col justify-start items-center pt-8 md:pt-16 lg:pt-24 max-w-4xl px-4 drop-shadow-lg text-center w-full relative z-10">
+        {/* Text Overlay (Floats above image) */}
+        <div className="absolute top-[72px] left-0 right-0 flex flex-col justify-start items-center pt-8 md:pt-16 lg:pt-24 max-w-4xl mx-auto px-4 drop-shadow-lg text-center z-20">
           <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria

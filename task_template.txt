@@ -1,0 +1,8 @@
+TASK: [Titolo breve e chiaro, verbo+oggetto]
+DESCRIZIONE: [1-3 frasi che spiegano la feature / bug / refactor]
+CONTESTO: FloreMoria platform, repo: /Users/floremoria/Downloads/Floremoria_dot_com/floremoria, branch: main
+FILE COINVOLTI: [es. src/Controllers/OrderController.cs, Views/Home/Index.cshtml]
+VINCOLI: [es. compatibilità .NET 7, non modificare DB, non cancellare file webp]
+RISULTATO ATTESO: [es. endpoint POST /api/order returns 201, aggiungi test unitario X]
+TIMEBOX: [max 45 minuti su Antigravity; escalation a Cursor/Claude se >45m]
+COMMIT MSG SUGGERITO: feat: crea task_template — automatic

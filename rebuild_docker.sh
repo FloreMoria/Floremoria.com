@@ -3,4 +3,4 @@
 docker-compose down
 docker rmi floremoria-web:latest -f || true
 docker builder prune -f
-docker-compose --pull always --build -d
+docker-compose up --build -d

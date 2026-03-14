@@ -16,15 +16,21 @@ export default function Home() {
   return (
     <div className="relative w-full">
       {/* 1) HERO SECTION (FOTO 1: PRESENZA) */}
-      <section 
-        className="relative w-full h-[100vh] bg-fixed bg-cover bg-center flex flex-col justify-center items-center"
-        style={{ backgroundImage: `url('/images/hero/consegna-fiori-cimitero-home-floremoria.webp')` }}
-      >
-        {/* Subtle overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none z-0"></div>
+      <section className="relative w-full h-[100vh]">
+        {/* The Native Image completely opaque and natively sticky inside wrapper */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img 
+            src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp" 
+            alt="FloreMoria"
+            className="w-full h-[100vh] object-cover"
+            style={{ position: 'sticky', top: 0, left: 0, zIndex: -1, opacity: 1 }}
+          />
+          {/* Subtle overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none z-0"></div>
+        </div>
 
         {/* Text Overlay */}
-        <div className="relative z-10 w-full px-4 text-center mt-[72px]">
+        <div className="relative z-10 w-full h-full flex flex-col justify-center items-center px-4 pt-[72px] text-center">
           <TextParallax speed={-0.4} className="space-y-4 md:space-y-6 max-w-4xl mx-auto drop-shadow-lg">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria
@@ -40,12 +46,18 @@ export default function Home() {
       </section>
 
       {/* 2) SECOND SECTION (FOTO 2: CURA) */}
-      <section 
-        className="relative w-full min-h-[100vh] bg-fixed bg-cover bg-center"
-        style={{ backgroundImage: `url('/images/hero/fiori-sulle-tombe-servizio-home-italia.webp')` }}
-      >
-        {/* Soft overlay so the content blocks are readable over the background */}
-        <div className="absolute inset-0 bg-fm-bg/60 backdrop-blur-sm pointer-events-none z-0"></div>
+      <section className="relative w-full min-h-[100vh]">
+        {/* Same trick for the second image: it will become sticky and stop scrolling smoothly exactly as the section ends */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img 
+            src="/images/hero/fiori-sulle-tombe-servizio-home-italia.webp" 
+            alt="Servizi"
+            className="w-full h-[100vh] object-cover"
+            style={{ position: 'sticky', top: 0, left: 0, zIndex: -1, opacity: 1 }}
+          />
+          {/* Soft overlay so the content blocks are readable over the background */}
+          <div className="absolute inset-0 bg-fm-bg/80 backdrop-blur-sm pointer-events-none z-0"></div>
+        </div>
 
         {/* CONTAINER FOR PAGE CONTENT */}
         <div className="relative z-10 w-full pt-16 md:pt-24 pb-16 space-y-16 lg:space-y-32">

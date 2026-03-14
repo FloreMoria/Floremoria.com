@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import BackgroundSwapper from '@/components/BackgroundSwapper';
+import Image from 'next/image';
 import { products } from '@/lib/products';
 import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
@@ -15,32 +15,39 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="relative">
-      {/* 0) FIXED BACKGROUND HERO LAYER (SWAPPER) */}
-      <BackgroundSwapper />
+    <div className="relative w-full bg-fm-bg">
+      {/* 1) NATIVE HERO SECTION */}
+      <section className="relative w-full pt-[72px] grid grid-cols-1 grid-rows-1 justify-items-center">
+        {/* The Native Image */}
+        <Image
+          src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
+          alt="Consegna fiori cimitero FloreMoria"
+          width={1536}
+          height={1024}
+          className="col-start-1 row-start-1 w-full h-auto max-h-none object-contain block"
+          priority
+        />
+        {/* Subtle overlay for text readability */}
+        <div className="col-start-1 row-start-1 bg-gradient-to-b from-white/10 via-transparent to-black/5 pointer-events-none w-full h-full"></div>
 
-      {/* FOREGROUND CONTENT */}
-      <div className="relative z-10 w-full pt-[72px]"> {/* pt-[72px] for navbar height */}
+        {/* Text Overlay */}
+        <div className="col-start-1 row-start-1 flex flex-col justify-start items-center pt-8 md:pt-16 lg:pt-24 max-w-4xl px-4 drop-shadow-lg text-center w-full relative z-10">
+          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
+            <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
+              FloreMoria
+            </h1>
+            <h2 className="text-2xl md:text-3xl text-fm-rose-soft font-semibold tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              I fiori della memoria
+            </h2>
+            <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
+              Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo la foto sul tuo WhatsApp.
+            </p>
+          </TextParallax>
+        </div>
+      </section>
 
-        {/* 1) HERO SECTION */}
-        <section className="w-full h-auto">
-          <div className="text-center flex flex-col justify-start pt-12 lg:pt-20 max-w-4xl mx-auto px-4 drop-shadow-lg">
-            <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
-              <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
-                FloreMoria
-              </h1>
-              <h2 className="text-2xl md:text-3xl text-fm-rose-soft font-semibold tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                I fiori della memoria
-              </h2>
-              <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
-                Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo la foto sul tuo WhatsApp.
-              </p>
-            </TextParallax>
-          </div>
-        </section>
-
-        {/* CONTAINER SCROLLING OVER HERO */}
-        <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-32">
+      {/* CONTAINER FOR PAGE CONTENT */}
+      <div className="relative z-10 w-full pt-12 md:pt-16 pb-16 space-y-16 lg:space-y-32 bg-fm-bg">
 
           {/* (Trust Bar removed from here) */}
 
@@ -182,6 +189,5 @@ export default function Home() {
 
         </div>
       </div>
-    </div>
   );
 }

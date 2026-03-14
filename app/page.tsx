@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import Image from 'next/image';
 import { products } from '@/lib/products';
 import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
@@ -15,24 +14,18 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="relative w-full bg-fm-bg">
-      {/* 1) NATIVE HERO SECTION */}
-      <section className="relative w-full pt-[72px]">
-        {/* The Native Image Dictating Height */}
-        <Image
-          src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
-          alt="Consegna fiori cimitero FloreMoria"
-          width={1536}
-          height={1024}
-          className="w-full h-auto max-h-none block"
-          priority
-        />
+    <div className="relative w-full">
+      {/* 1) HERO SECTION (FOTO 1: PRESENZA) */}
+      <section 
+        className="relative w-full h-[100vh] bg-fixed bg-cover bg-center flex flex-col justify-center items-center"
+        style={{ backgroundImage: `url('/images/hero/consegna-fiori-cimitero-home-floremoria.webp')` }}
+      >
         {/* Subtle overlay for text readability */}
-        <div className="absolute top-[72px] bottom-0 left-0 right-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent pointer-events-none z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none z-0"></div>
 
-        {/* Text Overlay (Floats above image) */}
-        <div className="absolute top-[72px] left-0 right-0 flex flex-col justify-start items-center pt-8 md:pt-16 lg:pt-24 max-w-4xl mx-auto px-4 drop-shadow-lg text-center z-20">
-          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
+        {/* Text Overlay */}
+        <div className="relative z-10 w-full px-4 text-center mt-[72px]">
+          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6 max-w-4xl mx-auto drop-shadow-lg">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria
             </h1>
@@ -46,8 +39,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CONTAINER FOR PAGE CONTENT */}
-      <div className="relative z-10 w-full pt-12 md:pt-16 pb-16 space-y-16 lg:space-y-32 bg-fm-bg">
+      {/* 2) SECOND SECTION (FOTO 2: CURA) */}
+      <section 
+        className="relative w-full min-h-[100vh] bg-fixed bg-cover bg-center"
+        style={{ backgroundImage: `url('/images/hero/fiori-sulle-tombe-servizio-home-italia.webp')` }}
+      >
+        {/* Soft overlay so the content blocks are readable over the background */}
+        <div className="absolute inset-0 bg-fm-bg/60 backdrop-blur-sm pointer-events-none z-0"></div>
+
+        {/* CONTAINER FOR PAGE CONTENT */}
+        <div className="relative z-10 w-full pt-16 md:pt-24 pb-16 space-y-16 lg:space-y-32">
 
           {/* (Trust Bar removed from here) */}
 
@@ -188,6 +189,7 @@ export default function Home() {
           </section>
 
         </div>
-      </div>
+      </section>
+    </div>
   );
 }

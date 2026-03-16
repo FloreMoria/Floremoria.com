@@ -27,13 +27,13 @@ export default function BackgroundSwapper() {
     return (
         <>
             {/* HERO 1 */}
-            <div className={`absolute top-0 left-0 right-0 w-full aspect-auto z-0 transition-opacity duration-700 pointer-events-none overflow-visible ${activeHero === 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`fixed top-0 left-0 right-0 w-full aspect-auto z-0 transition-opacity duration-700 pointer-events-none overflow-visible ${activeHero === 1 ? 'opacity-100' : 'opacity-0'}`}>
                 <Image
                     src="/images/hero/consegna-fiori-cimitero-home-floremoria.webp"
                     alt="Consegna fiori cimitero FloreMoria"
                     width={1536}
                     height={1024}
-                    className="w-full h-auto object-contain brightness-[1.05] saturate-[1.1]"
+                    className="w-full h-[100vh] object-cover brightness-[1.05] saturate-[1.1]"
                     priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/5"></div>
@@ -46,7 +46,7 @@ export default function BackgroundSwapper() {
                     alt="Servizio Fiori in tutta Italia"
                     width={1536}
                     height={1024}
-                    className="w-full h-auto object-contain brightness-[1.05] saturate-[1.1]"
+                    className="w-full h-[100vh] object-cover brightness-[1.05] saturate-[1.1]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/5"></div>
             </div>

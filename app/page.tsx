@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import BackgroundSwapper from '@/components/BackgroundSwapper';
 import { products } from '@/lib/products';
 import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
@@ -6,7 +7,6 @@ import ProductCard from '@/components/ProductCard';
 import Button from '@/components/Button';
 import GoogleReviewsBar from '@/components/GoogleReviewsBar';
 import TextParallax from '@/components/TextParallax';
-import styles from './hero.module.css';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Invia fiori al cimitero in tutta Italia',
@@ -15,39 +15,30 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="relative w-full">
-      <section 
-        className={`${styles.heroSection} ${styles.parallax}`}
-        style={{ backgroundImage: `url('/images/hero/consegna-fiori-cimitero-home-floremoria.webp')` }}
-      >
-        {/* Subtle overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-transparent pointer-events-none z-0"></div>
+    <div className="relative">
+      {/* 0) FIXED BACKGROUND HERO LAYER (SWAPPER) */}
+      <BackgroundSwapper />
 
-        {/* Text Overlay */}
-        <div className="relative z-10 w-full px-4 text-center mt-[72px]">
-          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6 max-w-4xl mx-auto drop-shadow-lg">
+      {/* FOREGROUND CONTENT */}
+      <div className="relative z-10 w-full pt-[72px]"> {/* pt-[72px] for navbar height */}
+
+        {/* 1) HERO SECTION */}
+        <section className="text-center flex flex-col justify-start pt-12 lg:pt-20 h-[calc(60vh-72px)] lg:h-[calc(70vh-72px)] max-w-4xl mx-auto px-4 drop-shadow-lg">
+          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria
             </h1>
             <h2 className="text-2xl md:text-3xl text-fm-rose-soft font-semibold tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
               I fiori della memoria
             </h2>
-            <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/40 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
+            <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
               Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo la foto sul tuo WhatsApp.
             </p>
           </TextParallax>
-        </div>
-      </section>
+        </section>
 
-      <section 
-        className={`${styles.heroSection} ${styles.parallax}`}
-        style={{ backgroundImage: `url('/images/hero/fiori-sulle-tombe-servizio-home-italia.webp')` }}
-      >
-        {/* Soft overlay so the content blocks are readable over the background */}
-        <div className="absolute inset-0 bg-fm-bg/80 backdrop-blur-sm pointer-events-none z-0"></div>
-
-        {/* CONTAINER FOR PAGE CONTENT */}
-        <div className="relative z-10 w-full pt-16 md:pt-24 pb-16 space-y-16 lg:space-y-32">
+        {/* CONTAINER SCROLLING OVER HERO */}
+        <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-32">
 
           {/* (Trust Bar removed from here) */}
 
@@ -188,7 +179,7 @@ export default function Home() {
           </section>
 
         </div>
-      </section>
+      </div>
     </div>
   );
 }

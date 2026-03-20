@@ -100,7 +100,7 @@ async function getAnalyticsOverview() {
         };
 
     } catch (e: any) {
-        console.error("Errore GA4 fetch:", e.message);
+        // Errore GA4 silenzioso
         // Ritorniamo mock temporale se l'auth fallisce per via della chiave fasulla in dev:
         // Nella realtà non torneremmo dati mock, o torneremmo null. 
         // Ma per mostrare l'assessment e permettere lo sviluppo:

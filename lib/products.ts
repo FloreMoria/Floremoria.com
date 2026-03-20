@@ -84,14 +84,15 @@ const productsRaw: Omit<Product, 'images'>[] = [
         descriptionSEO: "Il Ricordo Affettuoso è un omaggio floreale delicato, pensato per esprimere affetto, vicinanza e rispetto nel ricordo di una persona cara.\n\nOgni bouquet viene realizzato dal fiorista locale in base alla stagionalità e alla disponibilità nella zona di consegna, garantendo freschezza e armonia."
     },
     {
-        id: "c5",
+        id: "FT-001",
         name: "Omaggio Speciale",
         slug: "bouquet-omaggio-speciale",
         price: 39.99,
         description: "Composizione floreale speciale, curata in ogni minimo dettaglio.",
         isBouquet: true,
         category: 'cimitero',
-        descriptionSEO: "L'Omaggio Speciale è una composizione floreale curata in ogni minimo dettaglio, pensata per esprimere vicinanza e rispetto nel ricordo di una persona cara."
+        descriptionSEO: "L'Omaggio Speciale è una composizione floreale curata in ogni minimo dettaglio, pensata per esprimere vicinanza e rispetto nel ricordo di una persona cara.",
+        coverImage: "/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp"
     },
     {
         id: "c6",
@@ -200,7 +201,7 @@ export const products: Product[] = productsRaw.map(p => {
     return {
         ...p,
         images: imagesArray,
-        coverImage: imagesArray.length > 0 ? imagesArray[0] : null
+        coverImage: p.coverImage || (imagesArray.length > 0 ? imagesArray[0] : null)
     };
 });
 

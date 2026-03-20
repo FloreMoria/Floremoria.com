@@ -8,6 +8,7 @@ import { AreaChart, Area } from 'recharts';
 import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info, Copy, Check } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
+import MissionControlHub from './MissionControlHub';
 
 export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], csvData = [], latestLog }: { ga4Data: any, initialOrders?: any[], csvData?: any[], latestLog?: any }) {
     const router = useRouter();
@@ -156,64 +157,79 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                     </button>
                 </div>
 
-                {/* Log Activity Bar - FloreMoria Style */}
-                <div className="mb-8 p-4 bg-slate-50 border-l-4 border-slate-800 rounded-r-lg shadow-sm">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <button 
-                          onClick={() => latestLog && setIsLogModalOpen(true)}
-                          className="text-xs uppercase tracking-widest text-slate-500 font-bold hover:text-fm-gold transition-colors flex items-center gap-2 group cursor-pointer text-left focus:outline-none"
-                      >
-                          ULTIMA SESSIONE OPERATIVA {latestLog ? `- ${new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}` : ''}
-                          <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
-                      <h3 className="text-lg font-serif text-slate-800 mt-1">{latestLog ? latestLog.topic : 'Consolidamento Watermark & 4x4'}</h3>
-                      
-                      {latestLog?.tag && (
-                          <div className="mt-2 mb-3 flex flex-wrap gap-2">
-                              {latestLog.tag.split(',').map((t: string) => t.trim()).map((tag: string, i: number) => {
-                                  // Assegna colori pastello circolarmente: Slate, Sage, Navy
-                                  const pastelClasses = [
-                                      'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
-                                      'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200', // Sage approximation
-                                      'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200' // Navy approximation
-                                  ];
-                                  const colorClass = pastelClasses[i % pastelClasses.length];
-                                  return (
-                                      <button 
-                                          key={i} 
-                                          onClick={(e) => {
-                                              e.preventDefault();
-                                              router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
-                                          }}
-                                          className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${colorClass}`}
-                                      >
-                                          {tag}
-                                      </button>
-                                  );
-                              })}
-                          </div>
-                      )}
-                      
-                      <p className="text-sm text-slate-600 italic">"{latestLog ? latestLog.shortSummary : 'Nessun log recente registrato.'}"</p>
-                    </div>
+                {/* ABOVE THE FOLD WRAPPER (Zero Scroll Dashboard Engine) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 lg:h-[85vh] lg:max-h-[900px]">
                     
-                    <div className="relative flex items-center">
-                      <input 
-                        type="text" 
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                router.push('/dashboard/logs?q=' + encodeURIComponent(e.currentTarget.value));
-                            }
-                        }}
-                        placeholder="Cerca argomento o data..." 
-                        className="pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm focus:ring-1 focus:ring-slate-400 outline-none w-64 text-black"
-                      />
-                      <svg className="w-4 h-4 absolute left-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
+                    {/* LEFT COL: Mission Control (65%) */}
+                    <div className="lg:col-span-2 h-full flex flex-col min-h-0">
+                        <MissionControlHub orders={initialOrders} />
                     </div>
-                  </div>
+
+                    {/* RIGHT COL: Verbali/Log (35%) */}
+                    <div className="lg:col-span-1 h-full min-h-0">
+                        {/* Log Activity Bar - Full height card */}
+                        <div className="h-full bg-slate-50 border-t-4 lg:border-t-0 lg:border-l-4 border-slate-800 rounded-2xl shadow-sm p-6 flex flex-col overflow-hidden">
+                            <div className="mb-4 shrink-0">
+                                <button 
+                                    onClick={() => latestLog && setIsLogModalOpen(true)}
+                                    className="text-xs uppercase tracking-widest text-slate-500 font-bold hover:text-fm-gold transition-colors flex items-center gap-2 group cursor-pointer text-left focus:outline-none"
+                                >
+                                    ULTIMA SESSIONE OPERATIVA {latestLog ? `- ${new Date(latestLog.sessionDate).toLocaleDateString('it-IT')}` : ''}
+                                    <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                                <h3 className="text-xl font-serif text-slate-800 mt-2 line-clamp-2">{latestLog ? latestLog.topic : 'Nessun verbale registrato'}</h3>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 pr-2">
+                                {latestLog?.tag && (
+                                    <div className="mb-4 flex flex-wrap gap-2">
+                                        {latestLog.tag.split(',').map((t: string) => t.trim()).map((tag: string, i: number) => {
+                                            const pastelClasses = [
+                                                'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
+                                                'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200',
+                                                'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                                            ];
+                                            const colorClass = pastelClasses[i % pastelClasses.length];
+                                            return (
+                                                <button 
+                                                    key={i} 
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
+                                                    }}
+                                                    className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${colorClass}`}
+                                                >
+                                                    {tag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                
+                                <p className="text-sm text-slate-600 italic whitespace-pre-wrap leading-relaxed">
+                                    "{latestLog ? latestLog.shortSummary : 'Nessun log recente registrato.'}"
+                                </p>
+                            </div>
+                            
+                            <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
+                                <div className="relative flex items-center">
+                                    <input 
+                                        type="text" 
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                router.push('/dashboard/logs?q=' + encodeURIComponent(e.currentTarget.value));
+                                            }
+                                        }}
+                                        placeholder="Cerca argomento o data..." 
+                                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-full text-sm focus:ring-1 focus:ring-slate-400 outline-none text-black shadow-inner"
+                                    />
+                                    <svg className="w-4 h-4 absolute left-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* KPI OPERATIONAL (Top Row) */}
@@ -331,49 +347,6 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-
-                {/* SANDBOX ORDER TABLE */}
-                <div className={`${cardClass} rounded-3xl p-6 md:p-8 border shadow-sm transition-colors mt-8`}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="font-bold text-lg flex items-center gap-2"><Activity className="text-blue-500" /> Ordini Sandbox Recenti</h3>
-                        <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded-full">Test Sandbox ({recentMarginOrders.length})</span>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className={`border-b text-xs uppercase tracking-wider ${darkMode ? 'border-gray-800 text-gray-500' : 'border-gray-100 text-gray-400'}`}>
-                                    <th className="pb-3 px-4 font-bold">Codice</th>
-                                    <th className="pb-3 px-4 font-bold">Data</th>
-                                    <th className="pb-3 px-4 font-bold">Prodotto</th>
-                                    <th className="pb-3 px-4 font-bold text-right">Margine SRL</th>
-                                    <th className="pb-3 px-4 font-bold text-center">Stato</th>
-                                </tr>
-                            </thead>
-                            <tbody className="text-sm">
-                                {recentMarginOrders.slice(0, 5).map((order, idx) => (
-                                    <tr key={idx} className={`border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${darkMode ? 'border-gray-800' : 'border-gray-50'}`}>
-                                        <td className="py-3 px-4 font-mono font-medium">{order.orderNumber}</td>
-                                        <td className={`py-3 px-4 ${textMuted}`}>{order.date}</td>
-                                        <td className="py-3 px-4 max-w-[200px] truncate" title={order.productNames}>{order.productNames}</td>
-                                        <td className="py-3 px-4 text-right font-bold text-emerald-600">€{(order.marginCents / 100).toFixed(2)}</td>
-                                        <td className="py-3 px-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${order.hasCommission ? 'bg-orange-500' : 'bg-emerald-500'}`} title={order.hasCommission ? 'Traffico Partner' : 'Traffico Diretto'}></span>
-                                                <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Sandbox</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {recentMarginOrders.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="py-8 text-center text-gray-400 italic">Nessun ordine sandbox trovato.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 

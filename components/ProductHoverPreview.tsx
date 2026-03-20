@@ -176,11 +176,11 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
                             </div>
                         </div>
                         <div className="space-y-2.5 mt-auto">
-                            <button onClick={handleSaveForLater} className="w-full h-10 border border-gray-200 text-fm-text text-[11px] font-bold rounded-lg hover:border-gray-300 hover:bg-white transition-colors uppercase tracking-wider shadow-sm">
-                                Salva per dopo
+                            <button onClick={handleSaveForLater} className="w-full h-10 border border-gray-200 text-fm-text text-[10px] font-bold rounded-lg hover:border-gray-300 hover:bg-white transition-colors uppercase tracking-widest shadow-sm">
+                                SALVA
                             </button>
-                            <button onClick={handleAddToCart} className="w-full h-10 bg-fm-gold text-white text-[11px] font-bold rounded-lg hover:brightness-110 transition-colors shadow-md uppercase tracking-wider px-1">
-                                AGGIUNGI AL CARRELLO
+                            <button onClick={handleAddToCart} className="w-full h-10 bg-fm-gold text-white text-[10px] font-bold rounded-lg hover:brightness-110 transition-colors shadow-md uppercase tracking-widest px-1">
+                                AGGIUNGI
                             </button>
                         </div>
                     </div>

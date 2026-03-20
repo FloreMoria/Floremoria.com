@@ -314,11 +314,16 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 <tr key={product.id} onClick={() => openDrawer(product)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
                                     <td className="py-3 px-4">
                                         <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                            {product.mediaUrl ? (
-                                                <Image src={product.mediaUrl} alt={product.name} width={40} height={40} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <ImageIcon size={16} className="text-gray-400" />
-                                            )}
+                                            {(() => {
+                                                if (product.id === 'FT-001') {
+                                                    console.log('FT-001 mediaUrl is exactly:', product.mediaUrl);
+                                                }
+                                                return product.mediaUrl ? (
+                                                    <Image src={product.mediaUrl} alt={product.name} width={40} height={40} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImageIcon size={16} className="text-gray-400" />
+                                                );
+                                            })()}
                                         </div>
                                     </td>
                                     <td className="py-3 px-4">
@@ -420,15 +425,49 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Immagine Principale</label>
                             <div className="flex flex-col gap-3">
-                                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-blue-500 hover:border-blue-400 transition-all cursor-pointer">
+                                <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-blue-500 hover:border-blue-400 transition-all cursor-pointer">
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept=".webp,.png,.jpg,.jpeg" 
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const catPrefix = formData.categoryId ? 'fiori-sulle-tombe' : 'nuova-cartella';
+                                                const sluggedName = formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'prodotto';
+                                                
+                                                // Create form data for actual DB upload endpoint
+                                                const uploadData = new FormData();
+                                                uploadData.append('file', file);
+                                                uploadData.append('slug', sluggedName);
+                                                uploadData.append('categorySlug', catPrefix);
+                                                
+                                                try {
+                                                    const res = await fetch('/api/upload', {
+                                                        method: 'POST',
+                                                        body: uploadData
+                                                    });
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setFormData({ ...formData, mediaUrl: data.url });
+                                                        alert('File caricato correttamente e percorso sincronizzato!');
+                                                    } else {
+                                                        alert('Errore durante l\'upload del file sul server.');
+                                                    }
+                                                } catch(err) {
+                                                    alert('Errore di connessione durante l\'upload.');
+                                                }
+                                            }
+                                        }} 
+                                    />
                                     {formData.mediaUrl ? (
                                         <Image src={formData.mediaUrl} alt="Preview" width={80} height={80} className="w-20 h-20 rounded-xl object-cover mb-2 border border-gray-200" />
                                     ) : (
                                         <ImageIcon size={32} className="mb-2 opacity-50" />
                                     )}
                                     <span className="text-[12px] font-semibold text-gray-700 mt-2">Trascina Immagine Qui o Clicca per Esplorare</span>
-                                    <span className="text-[10px] font-medium text-gray-400 mt-1 uppercase">Supporta Formati Immagine o Database</span>
-                                </div>
+                                    <span className="text-[10px] font-medium text-gray-400 mt-1 uppercase">Supporta formati .webp, .jpg, .png</span>
+                                </label>
                                 <input
                                     type="text"
                                     value={formData.mediaUrl}

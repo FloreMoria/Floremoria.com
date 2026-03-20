@@ -7,131 +7,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// -------------------------------------------------------------
-// 1. UTENTI E RUOLI (RBAC DINAMICO)
-// -------------------------------------------------------------
-
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique // Es. "Fiorista Como", "Marketing Manager"
+  name        String   @unique
   description String?
-  isSystem    Boolean  @default(false) // Impedisce l'eliminazione dei ruoli built-in come SUPER_ADMIN
-  
-  // Matrice permessi salvata in JSON per massima flessibilità
-  // Es: { "LOGISTICS": {"view_orders": true, "change_status": true}, "CATALOG": {"edit_prices": false} }
+  isSystem    Boolean  @default(false)
   permissions Json     @default("{}")
-  
-  users       User[]
-  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  users       User[]
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  
-  // Relazione al Ruolo Dinamico
-  roleId    String?
-  role      Role?     @relation(fields: [roleId], references: [id])
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  roleId        String?
+  company       String?
+  phone         String?
+  vatNumber     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   roleExpiresAt DateTime?
-  
-  // Mantenimento retrocompatibilità se serve, disabilitato in favore di roleId
-  // role      UserRole  @default(CUSTOMER) 
-  
-  // Per fioristi e partner
-  company   String?
-  phone     String?
-  vatNumber String?
-  
-  orders    Order[]   // Ordini effettuati se cliente, o gestiti se fiorista
-  
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-}
-
-// -------------------------------------------------------------
-// 2. ORDINI E TRANSAZIONI
-// -------------------------------------------------------------
-enum OrderStatus {
-  PENDING
-  ACCEPTED
-  IN_PROGRESS
-  DELIVERING
-  COMPLETED
-  CANCELLED
-}
-
-enum PaymentStatus {
-  UNPAID
-  PROCESSING
-  PAID
+  deletedAt     DateTime?
+  orders        Order[]
+  role          Role?     @relation(fields: [roleId], references: [id])
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String?     @unique // Es. FM-O-26-001
-  status          OrderStatus @default(PENDING)
-  
-  userId          String?
-  user            User?       @relation(fields: [userId], references: [id])
-  
-  // Dati Defunto e Consegna
-  deceasedName    String
-  cemeteryName    String
-  cemeteryCity    String
-  deliveryProvince String?     @db.VarChar(2) // Provincia (es. MI)
-  gravePosition   String?
-  deliveryDate    DateTime?
-  ticketMessage   String?     // Messaggio per il biglietto
-  customerPhone   String?     // Per chat Whatsapp rapida
-  
-  funeralDate     DateTime?
-  additionalInstructions String?     // Note specifiche per la consegna
-  
-  // Dati Acquirente
-  buyerFullName   String?
-  buyerCity       String?
-  buyerCountry    String?
-  isRecurring     Boolean     @default(false)
-
-  // Dettagli Prezzo (in cents per evitare float issues)
-  totalPriceCents Int
-  currency        String      @default("EUR")
-  
-  // Prove visive della consegna reale (Cloud Storage URLs)
-  photos          String[]    @default([])
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  deletedAt       DateTime?
-  
-  // Relazione Prodotti
-  items           OrderItem[]
-
-  // Assegnazione Fiorista Locale
-  partnerId       String?
-  partner         Partner?    @relation(fields: [partnerId], references: [id])
-  partnerPaymentStatus PaymentStatus @default(UNPAID)
+  id                     String        @id @default(cuid())
+  status                 OrderStatus   @default(PENDING)
+  userId                 String?
+  deceasedName           String
+  cemeteryName           String
+  cemeteryCity           String
+  gravePosition          String?
+  deliveryDate           DateTime?
+  totalPriceCents        Int
+  currency               String        @default("EUR")
+  photos                 String[]      @default([])
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  customerPhone          String?
+  ticketMessage          String?
+  buyerCity              String?
+  buyerCountry           String?
+  buyerFullName          String?
+  isRecurring            Boolean       @default(false)
+  deletedAt              DateTime?
+  additionalInstructions String?
+  funeralDate            DateTime?
+  partnerId              String?
+  partnerPaymentStatus   PaymentStatus @default(UNPAID)
+  orderNumber            String?       @unique
+  deliveryProvince       String?       @db.VarChar(2)
+  partner                Partner?      @relation(fields: [partnerId], references: [id])
+  user                   User?         @relation(fields: [userId], references: [id])
+  items                  OrderItem[]
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
-  
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  
-  quantity  Int     @default(1)
+  id         String  @id @default(cuid())
+  orderId    String
+  productId  String
+  quantity   Int     @default(1)
   priceCents Int
+  order      Order   @relation(fields: [orderId], references: [id])
+  product    Product @relation(fields: [productId], references: [id])
 }
 
-// -------------------------------------------------------------
-// 3. CATALOGO PRODOTTI E CATEGORIE
-// -------------------------------------------------------------
 model Category {
   id        String    @id @default(cuid())
   name      String
@@ -147,48 +91,39 @@ model Category {
 model Product {
   id               String         @id @default(cuid())
   categoryId       String
-  category         Category       @relation(fields: [categoryId], references: [id])
   name             String
   slug             String         @unique
   shortDescription String?
   description      String?
   basePriceCents   Int
   currency         String         @default("EUR")
-  isBouquet        Boolean        @default(true) // Novità per architettura
-  mediaUrl         String?        // Copertina principale rapida
   isActive         Boolean        @default(true)
   sortOrder        Int            @default(0)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  isBouquet        Boolean        @default(true)
+  mediaUrl         String?
   deletedAt        DateTime?
-  
-  images           ProductImage[]
   orderItems       OrderItem[]
+  category         Category       @relation(fields: [categoryId], references: [id])
+  images           ProductImage[]
 }
 
 model ProductImage {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   url       String
   alt       String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// -------------------------------------------------------------
-// 4. MARKETING, BLOG & REFERRAL
-// -------------------------------------------------------------
-enum OfferType {
-  PERCENT
-  FIXED
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 model Offer {
   id        String    @id @default(cuid())
   name      String
-  code      String?   @unique // Es. sconto univoco
+  code      String?   @unique
   type      OfferType
   value     Int
   startsAt  DateTime?
@@ -201,16 +136,16 @@ model Offer {
 }
 
 model Article {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String    @unique
   excerpt     String?
-  content     String   // Formato HTML o Markdown supportato
+  content     String
   coverImage  String?
-  isPublished Boolean  @default(false)
-  aiGenerated Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublished Boolean   @default(false)
+  aiGenerated Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 }
 
@@ -221,98 +156,101 @@ model NewsletterLog {
   createdAt DateTime @default(now())
 }
 
-// -------------------------------------------------------------
-// 5. PARTNER / FIORISTI
-// -------------------------------------------------------------
 model Partner {
-  id             String   @id @default(cuid())
-  uniqueCode     String?  @unique // Es. FS-MI-001
-  shopName       String   // Nome Negozio
-  ownerName      String   // Nome Titolare / Fiorista
-  province       String?  @db.VarChar(2) // Provincia (es. MI, CO)
-  coverageArea   String?  // Area di Copertura (Città o Provincia)
-  whatsappNumber     String?  // Contatto Rapido (WhatsApp / Telefono)
-  address        String?  // Indirizzo
-  iban           String?  // IBAN/PayPal
-  vatNumber      String?  // Partita IVA
-  taxCode        String?  // Codice Fiscale
-  sdiCode        String?  // Codice Destinatario SDI (7 caratteri)
-  pecAddress     String?  // Indirizzo PEC
-  activeOrders   Int      @default(0) // Ordini Attivi (Contatore)
-  adminRating    Float    @default(5.0) // Valutazione Admin (Es. 4.8)
-  internalNotes  String?  // Note Interne (Admin Only)
-  isActive       Boolean  @default(true) // Stato (Attivo / Pausa)
-  paymentStatus  PaymentStatus @default(UNPAID)
-  
-  // Ordini presi in carico
-  orders         Order[]
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id             String        @id @default(cuid())
+  coverageArea   String?
+  address        String?
+  activeOrders   Int           @default(0)
+  adminRating    Float         @default(5.0)
+  internalNotes  String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  iban           String?
+  whatsappNumber String?
   deletedAt      DateTime?
+  pecAddress     String?
+  sdiCode        String?
+  taxCode        String?
+  vatNumber      String?
+  ownerName      String
+  shopName       String
+  paymentStatus  PaymentStatus @default(UNPAID)
+  province       String?       @db.VarChar(2)
+  uniqueCode     String?       @unique
+  orders         Order[]
 }
 
-// -------------------------------------------------------------
-// 6. FORNITORI / SUPPLIERS
-// -------------------------------------------------------------
 model Supplier {
-  id             String   @id @default(cuid())
-  uniqueCode     String?  @unique // Es. FN-IT-001
-  companyName    String   // Nome dell'azienda fornitrice
-  category       String   // Categoria merceologica / settore
-  contactName    String?  // Nome del referente umano
-  email          String?  // Email diretta
-  phone          String?  // Telefono diretto
-  vatNumber      String?  // Partita IVA
-  taxCode        String?  // Codice Fiscale
-  sdiCode        String?  // Codice Destinatario SDI
-  pecAddress     String?  // Indirizzo PEC
-  iban           String?  // IBAN
-  paypalEmail    String?  // Indirizzo PayPal
-  internalNotes  String?  // Note interne (Admin only)
-  isActive       Boolean  @default(true) // Stato operativo
-  paymentStatus  PaymentStatus @default(UNPAID)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  deletedAt      DateTime? // Soft-delete
-  
-  // Fatture passive del fornitore
-  invoices       SupplierInvoice[]
+  id            String            @id @default(cuid())
+  companyName   String
+  category      String
+  contactName   String?
+  vatNumber     String?
+  taxCode       String?
+  sdiCode       String?
+  pecAddress    String?
+  iban          String?
+  paypalEmail   String?
+  internalNotes String?
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+  email         String?
+  phone         String?
+  paymentStatus PaymentStatus     @default(UNPAID)
+  uniqueCode    String?           @unique
+  invoices      SupplierInvoice[]
 }
 
 model SupplierInvoice {
   id             String        @id @default(cuid())
   supplierId     String
-  supplier       Supplier      @relation(fields: [supplierId], references: [id])
-  
   invoiceNumber  String
   invoiceDate    DateTime
-  reason         String        // Causale fattura
+  reason         String
   amount         Decimal
-  paymentDetails String?       // IBAN o PayPal del fornitore
+  paymentDetails String?
   status         PaymentStatus @default(UNPAID)
-  
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
+  supplier       Supplier      @relation(fields: [supplierId], references: [id])
 }
 
-// -------------------------------------------------------------
-// 7. SYSTEM LOGS
-// -------------------------------------------------------------
 model FloremoriaLog {
-  id              Int      @id @default(autoincrement())
-  sessionDate     DateTime @default(now()) @db.Date @map("data_sessione")
-  tag             String?  @db.VarChar(50)
-  topic           String?  @map("titolo_argomento") @db.VarChar(255)
-  shortSummary    String?  @map("riassunto_breve") @db.Text
-  keyPrompt       String?  @map("prompt_chiave") @db.Text
-  discussedPoints String?  @map("punti_discussi") @db.Text
-  achievedResults String?  @map("risultati_raggiunti") @db.Text
-  pendingTasks    String?  @map("in_completamento") @db.Text
-  criticalAlarms  String?  @map("allarmi_critici") @db.Text
+  id              Int                      @id @default(autoincrement())
+  sessionDate     DateTime                 @default(now()) @map("data_sessione") @db.Date
+  tag             String?                  @db.VarChar(50)
+  topic           String?                  @map("titolo_argomento") @db.VarChar(255)
+  keyPrompt       String?                  @map("prompt_chiave")
+  shortSummary    String?                  @map("riassunto_breve")
   searchVector    Unsupported("tsvector")? @map("search_vector")
+  criticalAlarms  String?                  @map("allarmi_critici")
+  pendingTasks    String?                  @map("in_completamento")
+  discussedPoints String?                  @map("punti_discussi")
+  achievedResults String?                  @map("risultati_raggiunti")
 
   @@map("floremoria_logs")
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DELIVERING
+}
+
+enum PaymentStatus {
+  UNPAID
+  PROCESSING
+  PAID
+}
+
+enum OfferType {
+  PERCENT
+  FIXED
 }

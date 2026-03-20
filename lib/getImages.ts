@@ -1,11 +1,11 @@
 const pathMapping: Record<string, string> = {
     // OMAGGI FLOREALI (Cimitero -> Bouquet)
-    "bouquet-ricordo-affettuoso": "images/products/Bouquet/Bouquet Ricordo Affettuoso",
-    "bouquet-omaggio-speciale": "images/products/Bouquet/Bouquet Omaggio Speciale",
-    "bouquet-tributo-eterno": "images/products/Bouquet/Bouquet Tributo Eterno",
-    "bouquet-di-rose": "images/products/Bouquet/Bouquet di rose",
-    "lumino": "images/products/Lumino",
-    "messaggio": "images/products/Messaggio",
+    "bouquet-ricordo-affettuoso": "images/products/fiori-sulle-tombe/bouquet-ricordo-affettuoso",
+    "bouquet-omaggio-speciale": "images/products/fiori-sulle-tombe/bouquet-omaggio-speciale",
+    "bouquet-tributo-eterno": "images/products/fiori-sulle-tombe/bouquet-tributo-eterno",
+    "bouquet-di-rose": "images/products/fiori-sulle-tombe/bouquet-di-rose",
+    "lumino": "images/products/fiori-sulle-tombe/lumino",
+    "messaggio": "images/products/fiori-sulle-tombe/messaggio",
 
     // PER IL FUNERALE
     "bouquet-cordoglio-sincero": "images/products/Funerale/bouquet-cordoglio-sincero",
@@ -64,7 +64,7 @@ export function getImagesFromFilesystem(slug: string): string[] {
         // Restituisce i primi 5 (1 cover + 4 gallery)
         return sortedFiles.slice(0, 5).map((f: string) => {
             // Encode the URL spaces because Next/Image requires proper URIs
-            return encodeURI(`/${physicalPath}/${f}`);
+            return `/${physicalPath}/${f}`;
         });
     } else {
         // Log richiesto per errore critico e debug strutturale

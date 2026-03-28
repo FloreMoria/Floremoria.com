@@ -224,13 +224,14 @@ model FloremoriaLog {
   sessionDate     DateTime                 @default(now()) @map("data_sessione") @db.Date
   tag             String?                  @db.VarChar(50)
   topic           String?                  @map("titolo_argomento") @db.VarChar(255)
-  keyPrompt       String?                  @map("prompt_chiave")
-  shortSummary    String?                  @map("riassunto_breve")
+  keyPrompt       String?                  @map("prompt_chiave") @db.Text
+  shortSummary    String?                  @map("riassunto_breve") @db.Text
   searchVector    Unsupported("tsvector")? @map("search_vector")
-  criticalAlarms  String?                  @map("allarmi_critici")
-  pendingTasks    String?                  @map("in_completamento")
-  discussedPoints String?                  @map("punti_discussi")
-  achievedResults String?                  @map("risultati_raggiunti")
+  criticalAlarms  String?                  @map("allarmi_critici") @db.Text
+  pendingTasks    String?                  @map("in_completamento") @db.Text
+  discussedPoints String?                  @map("punti_discussi") @db.Text
+  achievedResults String?                  @map("risultati_raggiunti") @db.Text
+  fullText        String?                  @map("testo_integrale") @db.Text
 
   @@map("floremoria_logs")
 }

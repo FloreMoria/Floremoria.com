@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, History, Terminal, Info, Clock, Archive, Copy, Check } from 'lucide-react';
+import { useState, FormEvent, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Search, History, Terminal, Info, Clock, Archive, Copy, Check, Filter } from 'lucide-react';
 import { FloremoriaLog } from '@prisma/client';
 
 export default function ClientLogsTable({ initialLogs, initialQuery }: { initialLogs: FloremoriaLog[], initialQuery: string }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const filterQuery = searchParams.get('filter') || '';
+    
     const [searchQuery, setSearchQuery] = useState(initialQuery);
-    const [selectedLog, setSelectedLog] = useState<FloremoriaLog | null>(null);
+    const [selectedLog, setSelectedLog] = useState<any | null>(null);
     const [isCopied, setIsCopied] = useState(false);
 
     const handleCopy = () => {
@@ -21,7 +24,11 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
 
     const handleSearch = (e: FormEvent) => {
         e.preventDefault();
-        router.push(`/dashboard/logs?q=${encodeURIComponent(searchQuery)}`);
+        router.push(`/logs?q=${encodeURIComponent(searchQuery)}`);
+    };
+
+    const clearFilter = () => {
+        router.push('/logs');
     };
 
     return (
@@ -41,10 +48,24 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Ricerca per tag, argomento o test..."
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm bg-white"
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-400 focus:border-slate-400 outline-none transition-all shadow-sm bg-white"
                     />
                 </form>
             </div>
+            
+            {(filterQuery || initialQuery) && (
+                <div className="flex items-center gap-3 bg-white p-3 px-5 border border-slate-200 rounded-xl shadow-sm w-fit">
+                    <Filter className="text-slate-400" size={16} />
+                    <span className="text-sm font-medium text-slate-600">
+                        {filterQuery ? (
+                            <>Visualizzazione tag: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{filterQuery}</strong></>
+                        ) : (
+                            <>Ricerca attiva: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{initialQuery}</strong></>
+                        )}
+                    </span>
+                    <button onClick={clearFilter} className="text-xs font-bold text-slate-400 hover:text-slate-700 uppercase tracking-widest ml-2 border-l pl-3">Rimuovi Filtro</button>
+                </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto w-full custom-scrollbar">
@@ -132,9 +153,19 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                             </button>
                         </div>
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                            {(selectedLog.shortSummary || selectedLog.discussedPoints) && (
+                            
+                            {selectedLog.fullText && (
                                 <div>
-                                    <h4 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">📝 Punti Discussi</h4>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2 border-b pb-2">📄 Testo Integrale</h4>
+                                    <p className="text-slate-800 leading-relaxed text-[15px] font-serif whitespace-pre-wrap">
+                                        {selectedLog.fullText}
+                                    </p>
+                                </div>
+                            )}
+
+                            {!selectedLog.fullText && (selectedLog.shortSummary || selectedLog.discussedPoints) && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2 border-b pb-2">📝 Punti Discussi / Riassunto</h4>
                                     <p className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
                                         {selectedLog.discussedPoints || selectedLog.shortSummary}
                                     </p>

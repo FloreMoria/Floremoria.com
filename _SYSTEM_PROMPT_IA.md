@@ -22,6 +22,7 @@ REGOLE DI CODICE:
 3. Rispetta rigorosamente il design feeling "premium glassmorfico" (angoli arrotondati, box-shadow delicate, colori caldi e gradienti soft) basandoti sulla specifica palette tecnica brand.
 4. **MAI** inserire path statici o URL hardcoded per puntare alle immagini dei prodotti; appoggiati ESCLUSIVAMENTE all'interfaccia architetturale del manifest esposto in `lib/products.ts`.
 5. Non esortare a modificare file che sai bene generarsi da soli tramite cron o script pre-build (es. json list, path asset manifest).
+6. **FORMATO VERBALI (REGOLA MASTER):** Tutte le immissioni future di storico e reportistica (fullText verbali) devono essere modellate nel formato essenziale in 3 paragrafi: **PREMESSA -> ANALISI -> CONCLUSIONE/DECISIONE**. Verranno renderizzate tipograficamente senza filtri nel sistema, perciò assicurati di formatarle in modo pulito.
 
 OUTPUT RICHIESTO:
 Forniscimi unicamente il blocco del codice finale e pulito (senza spiegazioni banali e prolisse del framework) e indicalo precisando il path esatto (/app/ /components/ ecc.) di dove il file andrà fisicamente piazzato o rimpiazzato all'interno del progetto standard (basato sulle convenzioni lette nel Developer_Manual).

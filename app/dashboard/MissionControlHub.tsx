@@ -48,10 +48,10 @@ export default function MissionControlHub({ orders }: { orders: any[] }) {
 
     const getColorClass = (state: string) => {
         switch(state) {
-            case 'green': return 'border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] bg-slate-50 text-slate-700 hover:bg-emerald-50';
-            case 'yellow': return 'border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.4)] bg-slate-50 text-slate-700 hover:bg-amber-50';
-            case 'red': return 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] bg-red-50 text-red-700 font-bold hover:bg-red-100';
-            default: return 'border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] bg-slate-50 text-slate-700 hover:bg-emerald-50'; // Default green
+            case 'green': return 'border-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.1)] bg-white text-slate-800 hover:bg-slate-50';
+            case 'yellow': return 'border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)] bg-white text-slate-800 hover:bg-amber-50';
+            case 'red': return 'border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)] bg-white text-red-700 font-bold hover:bg-red-50';
+            default: return 'border-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.1)] bg-white text-slate-800 hover:bg-slate-50'; // Default green
         }
     };
 
@@ -73,13 +73,13 @@ export default function MissionControlHub({ orders }: { orders: any[] }) {
     return (
         <div className="flex flex-col h-full gap-4 md:gap-6 fade-in min-h-0">
             {/* BUTTON GRIDS (5-4-5) */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl p-5 md:p-6 border border-gray-100 shadow-sm transition-colors shrink-0">
+            <div className="bg-white rounded-3xl p-5 md:p-6 border border-slate-200 shadow-sm shrink-0">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-2">
                         <LayoutGrid className="text-fm-cta" size={24} />
-                        <h3 className="font-display font-bold text-xl text-slate-800 dark:text-slate-100 uppercase tracking-wide">Command Center</h3>
+                        <h3 className="font-display font-bold text-xl text-slate-800 uppercase tracking-wide">Command Center</h3>
                     </div>
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-full">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sistema Operativo
                     </div>
                 </div>
@@ -101,18 +101,18 @@ export default function MissionControlHub({ orders }: { orders: any[] }) {
             </div>
 
             {/* REAL-TIME ORDER STREAM */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl p-4 md:p-6 border border-gray-100 shadow-sm transition-colors relative overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="bg-white rounded-3xl p-4 md:p-6 border border-slate-200 shadow-sm relative overflow-hidden flex flex-col flex-1 min-h-0">
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <div className="flex items-center gap-2">
                         <Activity className="text-blue-500" size={20} />
-                        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 uppercase">Live Orders Stream</h3>
+                        <h3 className="font-bold text-lg text-slate-800 uppercase">Live Orders Stream</h3>
                     </div>
                 </div>
 
                 <div className="overflow-y-auto custom-scrollbar flex-1 min-h-[150px] -mx-4 px-4 md:-mx-6 md:px-6">
                     <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-white dark:bg-gray-900 z-10">
-                            <tr className="border-b border-gray-100/50 text-[10px] uppercase tracking-widest text-gray-500">
+                        <thead className="sticky top-0 bg-white z-10">
+                            <tr className="border-b border-slate-100 text-[10px] uppercase tracking-widest text-slate-500">
                                 <th className="pb-3 px-4 font-bold">Stato / Alert</th>
                                 <th className="pb-3 px-4 font-bold">Data Ingresso</th>
                                 <th className="pb-3 px-4 font-bold">ID Ordine</th>
@@ -125,23 +125,23 @@ export default function MissionControlHub({ orders }: { orders: any[] }) {
                                 const hasIssue = order.status === 'PENDING' || order.additionalInstructions?.toLowerCase().includes('urgent');
                                 
                                 return (
-                                    <tr key={order.id} className={`border-b last:border-0 transition-colors ${hasIssue ? 'bg-red-50/40 hover:bg-red-50/80 border-red-100' : 'border-gray-50 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                                    <tr key={order.id} className={`border-b border-slate-50 last:border-0 transition-colors ${hasIssue ? 'bg-red-50/20 hover:bg-red-50/50' : 'hover:bg-slate-50/50'}`}>
                                         <td className="py-3 px-4">
                                             {hasIssue ? (
-                                                <div className="flex items-center gap-1.5 text-red-600 bg-red-100 rounded-lg px-2.5 py-1 w-max text-xs font-bold shadow-[0_0_8px_rgba(239,68,68,0.2)] uppercase">
+                                                <div className="flex items-center gap-1.5 text-red-600 bg-white border border-red-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
                                                     <AlertCircle size={14} /> Critical / Pending
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
+                                                <div className="flex items-center gap-1.5 text-emerald-600 bg-white border border-emerald-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
                                                     <CheckCircle2 size={14} /> Processed
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="py-3 px-4 text-gray-500 font-mono text-xs">
+                                        <td className="py-3 px-4 text-slate-500 font-mono text-xs">
                                             {new Date(order.createdAt).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
                                         </td>
-                                        <td className="py-3 px-4 font-mono font-medium">{order.orderNumber}</td>
-                                        <td className="py-3 px-4 truncate max-w-[250px] text-gray-700 dark:text-gray-300 font-medium">
+                                        <td className="py-3 px-4 font-mono font-medium text-slate-800">{order.orderNumber}</td>
+                                        <td className="py-3 px-4 truncate max-w-[250px] text-slate-700 font-medium">
                                             {order.cemeteryName} ({order.cemeteryCity})
                                         </td>
                                     </tr>

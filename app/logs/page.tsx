@@ -11,13 +11,22 @@ export const metadata = {
 export default async function SystemLogsPage({
     searchParams
 }: {
-    searchParams: { q?: string }
+    searchParams: { q?: string; filter?: string }
 }) {
-    const q = searchParams.q || '';
+    const resolvedParams = await Promise.resolve(searchParams);
+    const q = resolvedParams.q || '';
+    const filter = resolvedParams.filter || '';
 
     let logs: FloremoriaLog[] = [];
 
-    if (q) {
+    if (filter) {
+        logs = await prisma.floremoriaLog.findMany({
+            where: {
+                tag: { contains: filter, mode: 'insensitive' }
+            },
+            orderBy: { sessionDate: 'desc' }
+        });
+    } else if (q) {
         logs = await prisma.floremoriaLog.findMany({
             where: {
                 OR: [

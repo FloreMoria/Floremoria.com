@@ -155,11 +155,12 @@ export default async function AdminOverview() {
         orderBy: { createdAt: 'desc' }
     });
 
-    const latestLog = await prisma.floremoriaLog.findFirst({
+    const latestLogs = await prisma.floremoriaLog.findMany({
+        take: 10,
         orderBy: { sessionDate: 'desc' }
     });
 
     const csvData = loadCSV();
 
-    return <AnalyticsOverviewClient ga4Data={ga4Data} initialOrders={orders as any[]} csvData={csvData} latestLog={latestLog} />;
+    return <AnalyticsOverviewClient ga4Data={ga4Data} initialOrders={orders as any[]} csvData={csvData} latestLogs={latestLogs} />;
 }

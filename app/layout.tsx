@@ -114,7 +114,7 @@ export default function RootLayout({
 
   return (
     <html lang="it">
-      <body className={`${inter.variable} ${manrope.variable} ${greatVibes.variable} font-body bg-fm-bg text-fm-text min-h-screen flex flex-col`}>
+      <body className={`${inter.variable} ${manrope.variable} ${greatVibes.variable} font-body bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors min-h-screen flex flex-col`}>
         <ConditionalLayout footer={footerBlock}>
           {children}
         </ConditionalLayout>

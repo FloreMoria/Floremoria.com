@@ -7,13 +7,31 @@ import ProductCard from '@/components/ProductCard';
 import Button from '@/components/Button';
 import GoogleReviewsBar from '@/components/GoogleReviewsBar';
 import TextParallax from '@/components/TextParallax';
+import TrustBar from '@/components/TrustBar';
+import CarouselFotoConferme from '@/components/CarouselFotoConferme';
+import prisma from '@/lib/prisma';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Invia fiori al cimitero in tutta Italia',
   description: 'Consegna fiori sulle tombe e nei cimiteri in Italia tramite fioristi partner. Per ogni servizio riceverai una foto di conferma per rassicurarti.',
 };
 
-export default function Home() {
+export default async function Home() {
+  // 0. Recupero Dati Dinamici: Ultime Prove Fotografiche
+  let proofPhotos: string[] = [];
+  if (prisma.deliveryProof) {
+    try {
+      const proofs = await prisma.deliveryProof.findMany({
+        where: { status: 'COMPLETED', photoAfterUrl: { not: null } },
+        orderBy: { timestampAfter: 'desc' },
+        take: 3,
+        select: { photoAfterUrl: true }
+      });
+      proofPhotos = proofs.map((p: any) => p.photoAfterUrl).filter(Boolean) as string[];
+    } catch (e) {
+      console.error("Prisma fetch error (Carousel):", e);
+    }
+  }
   return (
     <div className="relative">
       {/* 0) FIXED BACKGROUND HERO LAYER (SWAPPER) */}
@@ -40,7 +58,9 @@ export default function Home() {
         {/* CONTAINER SCROLLING OVER HERO */}
         <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-32">
 
-          {/* (Trust Bar removed from here) */}
+          {/* 1.5) TRUST BAR HORIZONTAL MARQUEE */}
+          <TrustBar />
+
 
           {/* 2) SEARCH SECTION */}
           <section id="search-section" className="bg-white rounded-[30px] lg:rounded-[50px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border border-fm-rose-soft/30 scroll-mt-24 mx-4 xl:mx-auto">
@@ -72,7 +92,7 @@ export default function Home() {
 
               {/* Step 1 */}
               <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta font-display font-bold text-2xl shadow-sm border border-white">
+                <div className="w-20 h-20 rounded-full bg-[#E6F3EA] flex items-center justify-center text-[#2F6B43] font-display font-bold text-2xl shadow-sm border border-white">
                   1
                 </div>
                 <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ordina l&apos;omaggio</h3>
@@ -83,7 +103,7 @@ export default function Home() {
 
               {/* Step 2 */}
               <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-fm-rose-soft flex items-center justify-center text-fm-rose font-display font-bold text-2xl shadow-sm border border-white">
+                <div className="w-20 h-20 rounded-full bg-[#B3DABF] flex items-center justify-center text-[#1C472A] font-display font-bold text-2xl shadow-sm border border-white">
                   2
                 </div>
                 <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Il fiorista consegna</h3>
@@ -94,10 +114,10 @@ export default function Home() {
 
               {/* Step 3 */}
               <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-fm-section flex items-center justify-center text-fm-text font-display font-bold text-2xl shadow-sm border border-white">
+                <div className="w-20 h-20 rounded-full bg-[#2F6B43] flex items-center justify-center text-white font-display font-bold text-2xl shadow-md border border-white">
                   3
                 </div>
-                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ricevi la foto di conferma</h3>
+                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ricevi la foto</h3>
                 <p className="text-fm-muted font-body leading-relaxed">
                   Al termine, riceverai una foto del fiore posato, garantendoti la massima trasparenza.
                 </p>
@@ -155,12 +175,8 @@ export default function Home() {
                 </p>
               </div>
               <div className="w-full md:w-1/2 bg-white/40 p-8 lg:p-16 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/50">
-                {/* Placeholder visual element */}
-                <div className="w-full aspect-video md:aspect-square lg:aspect-video bg-white/60 rounded-xl border-2 border-dashed border-[#dcd2c6] flex items-center justify-center text-[#8e857b] font-display font-medium text-center p-6 shadow-sm">
-                  <span className="opacity-80">
-                    [ Placeholder Immagine: Collage di conferme visive ]
-                  </span>
-                </div>
+                {/* Componente Dinamico Foto Consegne */}
+                <CarouselFotoConferme photos={proofPhotos} />
               </div>
             </div>
           </section>

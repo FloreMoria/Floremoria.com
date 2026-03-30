@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { ArrowLeft, Terminal, LayoutList, CheckCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export const metadata = {
     title: 'Memoria Storica | Dettaglio Verbale | Floremoria',
@@ -10,10 +11,11 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function LogDetailPage({ params }: { params: { id: string } }) {
-    // Next.js 15+ async params unwrap fallback
-    const resolvedParams = await Promise.resolve(params);
-    const logId = parseInt(resolvedParams.id, 10);
+export default async function LogDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    noStore(); // Explicitly opt out of all Next.js caching
+
+    const { id } = await params;
+    const logId = parseInt(id, 10);
     
     if (isNaN(logId)) {
         notFound();
@@ -67,7 +69,7 @@ export default async function LogDetailPage({ params }: { params: { id: string }
                 <article className="max-w-none text-slate-800">
                     
                     {log.fullText ? (
-                        <div className="prose prose-lg max-w-none font-serif text-slate-800 whitespace-pre-wrap leading-relaxed">
+                        <div className="prose prose-slate max-w-none font-serif text-lg leading-relaxed text-slate-800 whitespace-pre-wrap">
                             {log.fullText}
                         </div>
                     ) : (

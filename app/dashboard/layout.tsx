@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
+import TopNavLink from '@/components/dashboard/TopNavLink';
 
 export const metadata = {
     title: 'FloreMoria Dashboard',
@@ -33,13 +34,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                     </Link>
 
                     {/* Primary Navigation */}
-                    <nav className="hidden md:flex items-center gap-1.5">
+                    <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full scroll-smooth">
                         <TopNavLink href="/dashboard" label="Overview" />
                         <TopNavLink href="/dashboard/orders" label="Ordini" />
+                        <TopNavLink href="/dashboard/users" label="Utenti" />
                         <TopNavLink href="/dashboard/products" label="Prodotti" />
                         <TopNavLink href="/dashboard/fioristi" label="Fioristi" />
                         <TopNavLink href="/dashboard/fornitori" label="Fornitori" />
-                        <TopNavLink href="/logs" label="Log di Sistema" />
+                        <TopNavLink href="/dashboard/logs" label="Log di Sistema" />
+                        <TopNavLink href="/dashboard/communications" label="Messaggi" />
                         <TopNavLink href="/dashboard/settings/roles" label="Impostazioni" />
                     </nav>
                 </div>
@@ -73,23 +76,4 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
         </div>
     );
-}
-
-// Sub-Component for Horizontal Navigation Links
-function TopNavLink({ href, label }: { href: string, label: string }) {
-    // In un'implementazione reale, usa usePathname per determinare isActive dinamicamente.
-    // Per ora, simuliamo usando un controllo rudimentale (o puoi passarlo come prop se vuoi).
-    const active = false; // Mock
-
-    return (
-        <Link
-            href={href}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${active
-                ? 'bg-black text-white shadow-sm'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100'
-                }`}
-        >
-            {label}
-        </Link>
-    )
 }

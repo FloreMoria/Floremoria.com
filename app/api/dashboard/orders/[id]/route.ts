@@ -6,16 +6,29 @@ export async function PUT(request: Request, context: any) {
         const { id } = await context.params;
         const body = await request.json();
 
-        // Extract partnerPaymentStatus
-        const { partnerPaymentStatus } = body;
+        // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
+        const safeData: any = {};
+        
+        const validKeys = [
+            'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
+            'gravePosition', 'deliveryDate', 'deceasedName', 
+            'deceasedBirthDate', 'deceasedDeathDate'
+        ];
 
-        if (!partnerPaymentStatus) {
-            return NextResponse.json({ error: 'Missing payment status' }, { status: 400 });
-        }
+        validKeys.forEach(k => {
+            if (body[k] !== undefined) {
+                // Parse se sono date ISO native inviate via HTTP JSON come stringhe
+                if ((k === 'deceasedBirthDate' || k === 'deceasedDeathDate' || k === 'deliveryDate') && body[k]) {
+                    safeData[k] = new Date(body[k]);
+                } else {
+                    safeData[k] = body[k];
+                }
+            }
+        });
 
         const updatedOrder = await prisma.order.update({
             where: { id },
-            data: { partnerPaymentStatus }
+            data: safeData
         });
 
         return NextResponse.json(updatedOrder);

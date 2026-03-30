@@ -212,7 +212,7 @@ export default function CheckoutPage() {
     };
 
     const isDeliveryValid = () => {
-        if (!deceasedName || !cemeteryName || deliveryProvince.length !== 2 || !deliveryDate || !gravePosition) return false;
+        if (!deceasedName || !cemeteryName || deliveryProvince.length !== 2 || !deliveryDate) return false;
         const d = new Date(deliveryDate);
         const h = d.getHours();
         const minDStr = getMinDeliveryDate();
@@ -375,8 +375,8 @@ export default function CheckoutPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Aiutaci a onorare il tuo caro: dacci indicazioni precise per l'individuazione della tomba o del loculo. *</label>
-                                    <textarea value={gravePosition} onChange={e => setGravePosition(e.target.value)} placeholder="Es. Campo 42, Fila 11, Loculo 3. Accanto all'ingresso Est." className="w-full h-20 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Aiutaci a trovarlo: ogni dettaglio guida il nostro gesto. (Opzionale)</label>
+                                    <textarea value={gravePosition} onChange={e => setGravePosition(e.target.value)} placeholder="Note libere (es. 100mt dopo la fontana, Fila 4...). Se non conosci la posizione precisa, lascia vuoto." className="w-full h-20 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
                                 </div>
 
                                 <div>

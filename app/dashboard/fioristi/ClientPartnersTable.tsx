@@ -2,26 +2,30 @@
 
 import { useState } from 'react';
 import { Partner, PaymentStatus } from '@prisma/client';
-import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star } from 'lucide-react';
+import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
 
+export type ExtendedPartner = Partner & { orders?: any[] };
+
 interface Props {
-    initialPartners: Partner[];
+    initialPartners: ExtendedPartner[];
 }
 
 export default function ClientPartnersTable({ initialPartners }: Props) {
-    const [partners, setPartners] = useState<Partner[]>(initialPartners);
+    const [partners, setPartners] = useState<ExtendedPartner[]>(initialPartners);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'ANAGRAFICA' | 'MISSIONI' | 'FINANZA'>('ANAGRAFICA');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
 
     // Filters state
     const [showFilters, setShowFilters] = useState(false);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
 
-    const [formData, setFormData] = useState<Partner>({
+    const [formData, setFormData] = useState<ExtendedPartner>({
         id: '',
         shopName: '',
         ownerName: '',
@@ -43,9 +47,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        orders: [],
     });
 
-    const openDrawer = (partner?: Partner) => {
+    const openDrawer = (partner?: ExtendedPartner) => {
         if (partner) {
             setFormData(partner);
         } else {
@@ -71,8 +76,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 deletedAt: null,
+                orders: [],
             });
         }
+        setActiveTab('ANAGRAFICA');
         setIsDrawerOpen(true);
     };
 
@@ -131,7 +138,59 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             });
         } catch {
             // Revert on fail
-            setPartners((prev: Partner[]) => prev.map(p => p.id === partner.id ? { ...p, isActive: !newActiveState } : p));
+            setPartners((prev: ExtendedPartner[]) => prev.map(p => p.id === partner.id ? { ...p, isActive: !newActiveState } : p));
+        }
+    };
+
+    const handleSaveOrderDetails = async (e: React.FormEvent, order: any) => {
+        e.preventDefault();
+        setSavingOrderId(order.id);
+        const form = e.target as HTMLFormElement;
+        const cemeteryName = (form.elements.namedItem('cemeteryName') as HTMLInputElement).value;
+        const gravePosition = (form.elements.namedItem('gravePosition') as HTMLInputElement).value;
+        const deliveryDate = (form.elements.namedItem('deliveryDate') as HTMLInputElement).value;
+
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cemeteryName, gravePosition, deliveryDate })
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                
+                // Aggiorniamo Form Data State
+                const updatedOrders = formData.orders?.map(o => o.id === order.id ? {...o, cemeteryName: updated.cemeteryName, gravePosition: updated.gravePosition, deliveryDate: updated.deliveryDate} : o) || [];
+                const updatedFormData = { ...formData, orders: updatedOrders };
+                setFormData(updatedFormData);
+                
+                // Aggiorniamo Master Table State
+                setPartners(prev => prev.map(p => p.id === formData.id ? updatedFormData : p));
+                
+                alert('Coordinate Missione aggiornate con successo!');
+            }
+        } catch {
+            alert('Errore aggiornamento missione');
+        } finally {
+            setSavingOrderId(null);
+        }
+    };
+
+    const togglePaymentStatus = async (order: any, newStatus: string) => {
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partnerPaymentStatus: newStatus })
+            });
+            if (res.ok) {
+                const updatedOrders = formData.orders?.map(o => o.id === order.id ? {...o, partnerPaymentStatus: newStatus} : o) || [];
+                const updatedFormData = { ...formData, orders: updatedOrders };
+                setFormData(updatedFormData);
+                setPartners(prev => prev.map(p => p.id === formData.id ? updatedFormData : p));
+            }
+        } catch {
+            alert('Errore stato pagamento');
         }
     };
 
@@ -350,9 +409,20 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     </div>
                 </div>
 
-                {/* Body Form */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar text-sm pb-10">
-                    <form id="partnerForm" onSubmit={handleSubmit} className="space-y-5">
+                {/* Body Tabs Nav forzato */}
+                <div className="flex items-center gap-6 px-6 pt-4 border-b border-gray-100 uppercase tracking-widest text-[11px] font-bold shrink-0">
+                    <button onClick={() => setActiveTab('ANAGRAFICA')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'ANAGRAFICA' ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>Anagrafica & Bot</button>
+                    <button onClick={() => setActiveTab('MISSIONI')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'MISSIONI' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>
+                        Ordini ({(formData.orders || []).length})
+                    </button>
+                    <button onClick={() => setActiveTab('FINANZA')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'FINANZA' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>Amministrazione</button>
+                </div>
+
+                {/* Body Content */}
+                <div className="flex-1 overflow-y-auto p-5 custom-scrollbar text-sm pb-10 bg-[#FAFAFA]">
+                    
+                    {/* TAB: ANAGRAFICA (E Nuovo Fiorista se id vuoto) */}
+                    <form id="partnerForm" onSubmit={handleSubmit} className={activeTab === 'ANAGRAFICA' ? 'space-y-5 block' : 'hidden'}>
 
                         {/* Sezione Pubblica / Operativa */}
                         <div className="space-y-5">
@@ -559,6 +629,213 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                         </div>
 
                     </form>
+
+                    {/* TAB: MISSIONI E PROVE VISIVE */}
+                    {activeTab === 'MISSIONI' && (
+                        <div className="space-y-6">
+                            {(formData.orders || []).length === 0 ? (
+                                <div className="text-center py-10 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                                    <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500 font-medium">Ancora nessun ordine assegnato a questo fiorista.</p>
+                                </div>
+                            ) : (
+                                (formData.orders || []).map((order) => {
+                                    const productName = order.items?.[0]?.product?.name || 'Prodotto Sconosciuto';
+                                    return (
+                                    <div key={order.id} className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden flex flex-col">
+                                        <div className="bg-blue-50/50 px-5 py-3 border-b border-blue-100 flex items-center justify-between">
+                                             <div>
+                                                 <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block">ID Ordine</span>
+                                                 <span className="font-mono font-bold text-gray-800">{order.orderNumber || order.id.slice(0,8).toUpperCase()}</span>
+                                             </div>
+                                             <div className="text-right flex flex-col items-end">
+                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Defunto</span>
+                                                 <span className="font-semibold text-gray-800">{order.deceasedName}</span>
+                                                 {(order.latitude && order.longitude) && (
+                                                     <a href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`} target="_blank" rel="noopener noreferrer" className="mt-2 text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-200 transition-colors flex items-center gap-1">
+                                                         📍 Apri Navigatore
+                                                     </a>
+                                                 )}
+                                             </div>
+                                        </div>
+
+                                        <div className="p-5 flex flex-col md:flex-row gap-6">
+                                             {/* Modulo Dati Estesi e Modifica Ordine */}
+                                             <div className="flex-1 space-y-5">
+                                                 
+                                                 {/* Box Info Ordine */}
+                                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <span className="text-[10px] uppercase font-bold text-gray-400 block mb-0.5">Prodotto Acquistato</span>
+                                                            <span className="text-sm font-semibold text-gray-900">{productName}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[10px] uppercase font-bold text-gray-400 block mb-0.5">Utente Appaltante</span>
+                                                            <span className="text-sm font-semibold text-gray-900">{order.buyerFullName || order.user?.name || 'Utente Sconosciuto'}</span>
+                                                        </div>
+                                                    </div>
+                                                    {(order.ticketMessage || order.additionalInstructions) && (
+                                                        <div className="pt-3 border-t border-gray-200/50 space-y-2">
+                                                            {order.ticketMessage && (
+                                                                <div className="flex gap-2">
+                                                                    <MessageCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                                                                    <p className="text-xs italic text-gray-600">"{order.ticketMessage}"</p>
+                                                                </div>
+                                                            )}
+                                                            {order.additionalInstructions && (
+                                                                <div className="flex gap-2">
+                                                                    <Check size={14} className="text-orange-500 shrink-0 mt-0.5" />
+                                                                    <p className="text-xs text-gray-600"><span className="font-semibold">Note:</span> {order.additionalInstructions}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                 </div>
+
+                                                 <form onSubmit={(e) => handleSaveOrderDetails(e, order)} className="space-y-4">
+                                                     <div className="grid grid-cols-2 gap-3">
+                                                         <div>
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Cimitero (Target)</label>
+                                                            <input type="text" name="cemeteryName" defaultValue={order.cemeteryName} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none" required />
+                                                         </div>
+                                                         <div>
+                                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Posizione Tomba</label>
+                                                            {!order.gravePosition ? (
+                                                                <div className="bg-orange-50 text-orange-700 text-xs p-2 rounded-lg border border-orange-200 font-medium">
+                                                                    ⚠️ Posizione incerta. Se presente, consulta il custode. Se assente, contatta l'assistenza per supporto telefonico.
+                                                                </div>
+                                                            ) : (
+                                                                <input type="text" name="gravePosition" defaultValue={order.gravePosition} className="w-full border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none bg-gray-50" />
+                                                            )}
+                                                         </div>
+                                                     </div>
+                                                     <div>
+                                                         <label className="text-[10px] font-bold text-gray-400 uppercase">Data Target Consegna</label>
+                                                         <input type="date" name="deliveryDate" defaultValue={order.deliveryDate ? new Date(order.deliveryDate).toISOString().split('T')[0] : ''} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none" required />
+                                                     </div>
+                                                     <button type="submit" disabled={savingOrderId === order.id} className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-xs transition duration-200 disabled:opacity-50">
+                                                         {savingOrderId === order.id ? 'Salvataggio...' : 'Applica Modifiche Ordine'}
+                                                     </button>
+                                                 </form>
+                                             </div>
+
+                                             {/* Preview Foto Assegnate (Grandi) */}
+                                             <div className="md:w-[320px] shrink-0 bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
+                                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Prove Visive (S3)</div>
+                                                {order.photos && order.photos.length > 0 ? (
+                                                    <div className="flex gap-3 w-full overflow-x-auto pb-2 custom-scrollbar snap-x">
+                                                        {order.photos.map((photo: string, idx: number) => (
+                                                            <img key={idx} src={photo} alt="Prova visiva fiorista" className="w-[140px] h-[140px] object-cover rounded-xl border border-gray-200 shadow-sm shrink-0 snap-center transition transform hover:scale-105" />
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full h-24 border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 bg-white">
+                                                         <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                                                         <span className="text-xs">Nessuna foto ricevuta</span>
+                                                    </div>
+                                                )}
+                                             </div>
+                                        </div>
+                                    </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    )}
+
+                    {/* TAB: FINANZA E STATI DI PAGAMENTO */}
+                    {activeTab === 'FINANZA' && (
+                        <div className="space-y-6">
+                            {/* Recap numerico rapido */}
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className="bg-white border border-red-100 rounded-2xl p-5 shadow-sm text-center">
+                                     <div className="text-red-500 text-3xl font-bold font-display">
+                                         {(formData.orders || []).filter(o => o.partnerPaymentStatus === 'UNPAID').length}
+                                     </div>
+                                     <div className="text-xs font-bold text-red-400 uppercase tracking-widest mt-1">Ordini da Saldare</div>
+                                </div>
+                                <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm text-center">
+                                     <div className="text-emerald-500 text-3xl font-bold font-display">
+                                         {(formData.orders || []).filter(o => o.partnerPaymentStatus === 'PAID').length}
+                                     </div>
+                                     <div className="text-xs font-bold text-emerald-400 uppercase tracking-widest mt-1">Ordini Saldati</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                                <table className="w-full text-left text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100">
+                                            <th className="px-5 py-3">ID</th>
+                                            <th className="px-5 py-3">PRODOTTO</th>
+                                            <th className="px-5 py-3 text-right">INCASSO</th>
+                                            <th className="px-5 py-3 text-right">PREZZO</th>
+                                            <th className="px-5 py-3 text-right">STATO PAGAMENTO</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {(formData.orders || []).map(order => {
+                                            const totalCustomerPrice = (order.totalPriceCents || 0) / 100;
+                                            
+                                            // Calcolo compenso fiorista estraendo ogni singolo articolo
+                                            const COMPENSATION_MAP: Record<string, number> = {
+                                                'Bouquet Tradizione': 32.50,
+                                                'Corona Funebre': 97.50,
+                                                'Cuscino Funerale': 65.00,
+                                                'Fiori per Loculo': 26.00,
+                                                'Lumino': 0.00,
+                                                'Nastro': 0.00,
+                                                'Biglietto': 0.00,
+                                                'Cesto di Gigli': 52.00,
+                                                'Mazzo Stagionale': 29.25
+                                            };
+
+                                            let floristCut = 0;
+                                            if (order.items && order.items.length > 0) {
+                                                floristCut = order.items.reduce((sum: number, item: any) => {
+                                                    const prodName = item.product?.name || '';
+                                                    if (prodName in COMPENSATION_MAP) {
+                                                        return sum + COMPENSATION_MAP[prodName];
+                                                    }
+                                                    // Fallback 65% se non in mappa
+                                                    const itemPrice = (item.priceCents || 0) / 100;
+                                                    return sum + (itemPrice * 0.65);
+                                                }, 0);
+                                            } else {
+                                                floristCut = totalCustomerPrice * 0.65;
+                                            }
+
+                                            // Estrapolo nome prodotto/i
+                                            const productNames = order.items?.map((i: any) => i.product?.name).filter(Boolean).join(', ') || 'Prodotto non trovato';
+
+                                            return (
+                                            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-5 py-3 font-mono text-xs">{order.orderNumber || order.id.slice(0,8)}</td>
+                                                <td className="px-5 py-3 font-semibold text-gray-900">{productNames}</td>
+                                                <td className="px-5 py-3 text-right text-gray-500">
+                                                    {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(totalCustomerPrice)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right font-bold text-emerald-600">
+                                                    {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(floristCut)}
+                                                </td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button 
+                                                        onClick={() => togglePaymentStatus(order, order.partnerPaymentStatus === 'PAID' ? 'UNPAID' : 'PAID')}
+                                                        className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-colors ${order.partnerPaymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                                                    >
+                                                        {order.partnerPaymentStatus === 'PAID' ? 'SALDATO' : 'C/C IN SOSPESO'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </div>

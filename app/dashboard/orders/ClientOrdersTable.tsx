@@ -87,7 +87,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
         const exportData = filteredOrders.map(o => ({
             'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
             'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
-            'Acquirente': o.buyerFullName || 'Sconosciuto',
+            'Utente': o.buyerFullName || 'Sconosciuto',
             'Telefono': o.customerPhone || '',
             'Origine Citta': o.buyerCity || '',
             'Origine Nazione': o.buyerCountry || '',
@@ -193,7 +193,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Data e N° Ordine</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">Foto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Defunto</th>
-                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Acquirente</th>
+                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Utente</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Origine</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Prodotto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">Prezzo Pagato</th>

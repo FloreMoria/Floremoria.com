@@ -19,6 +19,7 @@
   "dependencies": {
     "@google-analytics/data": "^5.2.1",
     "@prisma/client": "^6.19.2",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "d3-scale": "^4.0.2",
     "lucide-react": "^0.575.0",
@@ -30,7 +31,8 @@
     "react-google-autocomplete": "^2.7.5",
     "react-simple-maps": "^3.0.0",
     "recharts": "^3.7.0",
-    "topojson-client": "^3.1.0"
+    "topojson-client": "^3.1.0",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

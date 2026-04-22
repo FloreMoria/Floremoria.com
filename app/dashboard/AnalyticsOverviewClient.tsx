@@ -239,7 +239,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                                     className="text-base font-serif font-bold text-slate-800 mt-0.5 leading-snug group-hover:text-fm-cta transition-colors drop-shadow-sm hover:underline cursor-pointer"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        router.push('/logs/' + log.id);
+                                                                        router.push('/dashboard/logs/' + log.id + '?v=' + Date.now());
                                                                     }}
                                                                 >{log.topic}</h3>
                                                             </div>
@@ -252,7 +252,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                                         key={i} 
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            router.push(`/logs?filter=${encodeURIComponent(t.trim())}`);
+                                                                            router.push(`/dashboard/logs?filter=${encodeURIComponent(t.trim())}`);
                                                                         }}
                                                                         className="px-2 py-0.5 rounded-md text-[8px] uppercase font-bold tracking-wider bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
                                                                     >
@@ -293,7 +293,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                 type="text" 
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
-                                                        router.push('/logs?q=' + encodeURIComponent(e.currentTarget.value));
+                                                        router.push('/dashboard/logs?q=' + encodeURIComponent(e.currentTarget.value));
                                                     }
                                                 }}
                                                 placeholder="Cerca argomento o data..." 
@@ -454,7 +454,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                     key={i} 
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        router.push('/logs?q=' + encodeURIComponent(tag));
+                                                        router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
                                                     }}
                                                     className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${colorClass}`}
                                                 >

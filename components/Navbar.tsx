@@ -16,10 +16,10 @@ export default function Navbar() {
         { name: 'Home', href: '/' },
         { name: 'Chi siamo', href: '/chi-siamo' },
         { name: 'Fiori sulle tombe', href: '/fiori-sulle-tombe' },
-        { name: 'Blog', href: '/blog' },
         { name: 'Per il funerale', href: '/per-il-funerale' },
         { name: 'Per animali domestici', href: '/per-animali-domestici' },
         { name: 'Per enti pubblici', href: '/enti-pubblici' },
+        { name: 'Blog', href: '/blog' },
         { name: 'Assistenza', href: '/assistenza' },
     ];
 

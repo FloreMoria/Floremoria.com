@@ -20,6 +20,7 @@ model Role {
 
 model User {
   id            String    @id @default(cuid())
+  uniqueCode    String?   @unique // Codice parlante UT- (es. UT-LOM-BG-001)
   email         String    @unique
   name          String?
   roleId        String?
@@ -29,9 +30,22 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   roleExpiresAt DateTime?
-  deletedAt     DateTime?
-  orders        Order[]
-  role          Role?     @relation(fields: [roleId], references: [id])
+  deletedAt       DateTime?
+  orders          Order[]
+  role            Role?           @relation(fields: [roleId], references: [id])
+  confirmedProofs DeliveryProof[]
+}
+
+model DeceasedProfile {
+  id           String   @id @default(cuid())
+  uniqueCode   String?  @unique
+  fullName     String
+  cemeteryCity String
+  cemeteryName String?
+  verifiedNotes String? @db.Text
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Order {
@@ -39,6 +53,8 @@ model Order {
   status                 OrderStatus   @default(PENDING)
   userId                 String?
   deceasedName           String
+  deceasedBirthDate      DateTime?
+  deceasedDeathDate      DateTime?
   cemeteryName           String
   cemeteryCity           String
   gravePosition          String?
@@ -57,13 +73,18 @@ model Order {
   deletedAt              DateTime?
   additionalInstructions String?
   funeralDate            DateTime?
+  latitude               Float?
+  longitude              Float?
   partnerId              String?
   partnerPaymentStatus   PaymentStatus @default(UNPAID)
   orderNumber            String?       @unique
   deliveryProvince       String?       @db.VarChar(2)
+  deceasedProfileId      String?
+  deceasedProfile        DeceasedProfile? @relation(fields: [deceasedProfileId], references: [id])
   partner                Partner?      @relation(fields: [partnerId], references: [id])
   user                   User?         @relation(fields: [userId], references: [id])
   items                  OrderItem[]
+  deliveryProof          DeliveryProof?
 }
 
 model OrderItem {
@@ -179,6 +200,7 @@ model Partner {
   province       String?       @db.VarChar(2)
   uniqueCode     String?       @unique
   orders         Order[]
+  deliveryProofs DeliveryProof[]
 }
 
 model Supplier {
@@ -254,4 +276,31 @@ enum PaymentStatus {
 enum OfferType {
   PERCENT
   FIXED
+}
+
+enum DeliveryProofStatus {
+  PENDING
+  BEFORE_UPLOADED
+  COMPLETED
+}
+
+model DeliveryProof {
+  id                String              @id @default(cuid())
+  orderId           String              @unique
+  partnerId         String
+  photoBeforeUrl    String?
+  photoAfterUrl     String?
+  timestampBefore   DateTime?
+  timestampAfter    DateTime?
+  gpsLatitude       Float?
+  gpsLongitude      Float?
+  confirmedByUserId String?
+  status            DeliveryProofStatus @default(PENDING)
+  floristNotes      String?             @db.Text
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  order             Order               @relation(fields: [orderId], references: [id])
+  partner           Partner             @relation(fields: [partnerId], references: [id])
+  confirmedByUser   User?               @relation(fields: [confirmedByUserId], references: [id])
 }

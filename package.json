@@ -19,10 +19,8 @@
   "dependencies": {
     "@google-analytics/data": "^5.2.1",
     "@prisma/client": "^6.19.2",
-    "axios": "^1.15.0",
-    "browser-image-compression": "^2.0.2",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.4.2",
+    "chart.js": "^4.5.1",
+    "d3-scale": "^4.0.2",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
     "papaparse": "^5.5.3",
@@ -30,8 +28,7 @@
     "react-dom": "19.2.3",
     "react-google-autocomplete": "^2.7.5",
     "recharts": "^3.7.0",
-    "sharp": "^0.34.5",
-    "twilio": "^5.13.1"
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

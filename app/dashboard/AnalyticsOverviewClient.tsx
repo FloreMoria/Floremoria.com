@@ -13,7 +13,7 @@ import MissionControlHub from './MissionControlHub';
 export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], csvData = [], latestLogs = [] }: { ga4Data: any, initialOrders?: any[], csvData?: any[], latestLogs?: any[] }) {
     const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);
-    
+
     const toggleTheme = () => {
         document.documentElement.classList.toggle('dark');
         setDarkMode(!darkMode);
@@ -43,7 +43,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
 
         const fetchLogs = async () => {
             try {
-                const res = await fetch('/api/logs', { 
+                const res = await fetch('/api/logs', {
                     cache: 'no-store',
                     headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
                 });
@@ -186,10 +186,10 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             Traffico e Comportamento Utenti (Powered by GA4)
                         </p>
                     </div>
-                    
+
                     {/* RESTORE THEME TOGGLE */}
-                    <button 
-                        onClick={toggleTheme} 
+                    <button
+                        onClick={toggleTheme}
                         className={`p-2 rounded-full border transition-all ${darkMode ? 'border-amber-500/30 hover:bg-amber-500/10 text-amber-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
                         title="Cambia Tema"
                     >
@@ -199,7 +199,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
 
                 {/* ABOVE THE FOLD WRAPPER (Zero Scroll Dashboard Engine) */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 lg:h-[85vh] lg:max-h-[900px]">
-                    
+
                     {/* LEFT COL: Mission Control (65%) */}
                     <div className="lg:col-span-2 h-full flex flex-col min-h-0">
                         <MissionControlHub orders={initialOrders} />
@@ -224,7 +224,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                         <h3 className="text-sm uppercase tracking-widest text-slate-500 font-bold">Registro Verbali Operativi</h3>
                                         <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded-full">{logs.length} record</span>
                                     </div>
-                                    
+
                                     <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 pr-2 space-y-4">
                                         {logs.length > 0 ? logs.map((log: any) => {
                                             return (
@@ -235,21 +235,21 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                                 <span className="text-[10px] uppercase font-bold text-slate-400">
                                                                     {new Date(log.sessionDate).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
                                                                 </span>
-                                                                <h3 
+                                                                <h3
                                                                     className="text-base font-serif font-bold text-slate-800 mt-0.5 leading-snug group-hover:text-fm-cta transition-colors drop-shadow-sm hover:underline cursor-pointer"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        router.push('/dashboard/logs/' + log.id + '?v=' + Date.now());
+                                                                        router.push('/logs/' + log.id);
                                                                     }}
                                                                 >{log.topic}</h3>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {log.tag && (
                                                             <div className="mt-2 flex flex-wrap gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                                                                 {log.tag.split(',').slice(0, 3).map((t: string, i: number) => (
-                                                                    <span 
-                                                                        key={i} 
+                                                                    <span
+                                                                        key={i}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             router.push(`/dashboard/logs?filter=${encodeURIComponent(t.trim())}`);
@@ -276,7 +276,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                                 Il backend ha garantito il rendering asincrono escludendo la cache, ma nessun verbale è attualmente presente nel Database Reports (FloremoriaLogs).
                                             </p>
                                         )}
-                                        
+
                                         {!hasProf && logs.length > 0 && (
                                             <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 mt-4 shadow-sm animate-pulse">
                                                 <strong className="block text-xs uppercase tracking-wider mb-1 flex items-center gap-1">🚨 Allarme Sincronizzazione</strong>
@@ -286,17 +286,17 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
                                         <div className="relative flex items-center">
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         router.push('/dashboard/logs?q=' + encodeURIComponent(e.currentTarget.value));
                                                     }
                                                 }}
-                                                placeholder="Cerca argomento o data..." 
+                                                placeholder="Cerca argomento o data..."
                                                 className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-full text-sm focus:ring-1 focus:ring-slate-400 outline-none text-black shadow-inner"
                                             />
                                             <svg className="w-4 h-4 absolute left-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -450,8 +450,8 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                             ];
                                             const colorClass = pastelClasses[i % pastelClasses.length];
                                             return (
-                                                <button 
-                                                    key={i} 
+                                                <button
+                                                    key={i}
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         router.push('/dashboard/logs?q=' + encodeURIComponent(tag));
@@ -510,7 +510,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                 <div>
                                     <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2"><Terminal size={16} /> Prompt e Dettagli Tecnici</h4>
                                     <div className="relative group">
-                                        <button 
+                                        <button
                                             onClick={handleCopy}
                                             className="absolute top-3 right-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg transition-colors flex items-center gap-2 focus:outline-none z-10"
                                         >

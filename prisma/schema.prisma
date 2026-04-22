@@ -277,30 +277,3 @@ enum OfferType {
   PERCENT
   FIXED
 }
-
-enum DeliveryProofStatus {
-  PENDING
-  BEFORE_UPLOADED
-  COMPLETED
-}
-
-model DeliveryProof {
-  id                String              @id @default(cuid())
-  orderId           String              @unique
-  partnerId         String
-  photoBeforeUrl    String?
-  photoAfterUrl     String?
-  timestampBefore   DateTime?
-  timestampAfter    DateTime?
-  gpsLatitude       Float?
-  gpsLongitude      Float?
-  confirmedByUserId String?
-  status            DeliveryProofStatus @default(PENDING)
-  floristNotes      String?             @db.Text
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  order             Order               @relation(fields: [orderId], references: [id])
-  partner           Partner             @relation(fields: [partnerId], references: [id])
-  confirmedByUser   User?               @relation(fields: [confirmedByUserId], references: [id])
-}

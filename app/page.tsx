@@ -10,6 +10,7 @@ import TextParallax from '@/components/TextParallax';
 import TrustBar from '@/components/TrustBar';
 import CarouselFotoConferme from '@/components/CarouselFotoConferme';
 import prisma from '@/lib/prisma';
+import CoreValues from '@/components/CoreValues';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Invia fiori al cimitero in tutta Italia',
@@ -41,7 +42,7 @@ export default async function Home() {
       <div className="relative z-10 w-full pt-[72px]"> {/* pt-[72px] for navbar height */}
 
         {/* 1) HERO SECTION */}
-        <section className="text-center flex flex-col justify-start pt-12 lg:pt-20 h-[calc(60vh-72px)] lg:h-[calc(70vh-72px)] max-w-4xl mx-auto px-4 drop-shadow-lg">
+        <section className="text-center flex flex-col justify-start pt-0 -mt-6 md:mt-0 md:pt-12 lg:pt-20 h-[calc(60vh-72px)] lg:h-[calc(70vh-72px)] max-w-4xl mx-auto px-4 drop-shadow-lg">
           <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria
@@ -50,7 +51,7 @@ export default async function Home() {
               I fiori della memoria
             </h2>
             <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
-              Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo la foto sul tuo WhatsApp.
+              Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo le due foto (prima e dopo) sul tuo WhatsApp.
             </p>
           </TextParallax>
         </section>
@@ -117,9 +118,9 @@ export default async function Home() {
                 <div className="w-20 h-20 rounded-full bg-[#2F6B43] flex items-center justify-center text-white font-display font-bold text-2xl shadow-md border border-white">
                   3
                 </div>
-                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ricevi la foto</h3>
+                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ricevi le foto</h3>
                 <p className="text-fm-muted font-body leading-relaxed">
-                  Al termine, riceverai una foto del fiore posato, garantendoti la massima trasparenza.
+                  Al termine, riceverai le due foto di conferma (prima e dopo), garantendoti la massima trasparenza.
                 </p>
               </div>
             </div>
@@ -163,36 +164,37 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 5) TRUST / PROOF */}
+          {/* 5) TRUST / PROOF & FINAL CTA MERGED */}
           <section className="max-w-5xl mx-auto bg-[#FBF6EF] rounded-[30px] shadow-xl overflow-hidden relative mx-4 lg:mx-auto">
-            <div className="relative z-10 flex flex-col md:flex-row items-stretch min-h-[400px]">
-              <div className="w-full md:w-1/2 p-8 lg:p-16 space-y-6 flex flex-col justify-center">
-                <h2 className="text-[32px] md:text-3xl lg:text-4xl font-display font-semibold text-fm-text leading-snug">
-                  Foto di conferma per ogni consegna
-                </h2>
-                <p className="text-fm-text/80 font-body text-lg leading-relaxed">
-                  Sappiamo quanto sia importante per te. Per questo, ogni nostro fiorista è tenuto a scattare una fotografia una volta che l&apos;omaggio floreale è stato gentilmente posato sulla tomba del tuo caro. Riceverai la foto su WhatsApp e nel tuo profilo utente.
-                </p>
+            <div className="relative z-10 flex flex-col md:flex-row items-stretch">
+              <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-between space-y-8">
+                <div className="space-y-4">
+                  <h2 className="text-[32px] md:text-3xl lg:text-4xl font-display font-semibold text-fm-text leading-snug">
+                    Foto di conferma per ogni consegna
+                  </h2>
+                  <p className="text-fm-text/80 font-body text-lg leading-relaxed">
+                    Sappiamo quanto sia importante per te. Per questo, ogni nostro fiorista scatta una fotografia una volta che l&apos;omaggio floreale è stato posato. La riceverai sul tuo WhatsApp per la massima serenità.
+                  </p>
+                </div>
+                
+                <div className="pt-6 border-t border-fm-rose-soft/30 space-y-4">
+                  <h3 className="text-2xl font-display font-bold text-fm-text">
+                    Pronto a inviare il tuo omaggio?
+                  </h3>
+                  <Button href="#search-section" variant="primary" className="w-full sm:w-auto px-8 py-3.5 text-lg shadow-md justify-center">
+                    Inizia ora
+                  </Button>
+                </div>
               </div>
-              <div className="w-full md:w-1/2 bg-white/40 p-8 lg:p-16 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/50">
+              <div className="w-full md:w-1/2 bg-white/40 p-8 lg:p-12 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/50">
                 {/* Componente Dinamico Foto Consegne */}
                 <CarouselFotoConferme photos={proofPhotos} />
               </div>
             </div>
           </section>
 
-          {/* 6) FINAL CTA */}
-          <section className="text-center py-12 lg:py-24 max-w-2xl mx-auto space-y-8 px-4 bg-white rounded-[30px] shadow-xl border border-gray-100 mt-16 mx-4 md:mx-auto">
-            <h2 className="text-[32px] md:text-4xl font-display font-bold text-fm-text leading-tight">
-              Pronto a inviare il tuo omaggio floreale?
-            </h2>
-            <p className="text-fm-muted text-lg font-body">
-              Usa la nostra ricerca rapida e controlla la copertura nel tuo comune. Troverai i fiori ideali per esprimere la tua vicinanza.
-            </p>
-            <Button href="#search-section" variant="primary" className="mt-4 px-10 py-4 text-lg">
-              Inizia ora
-            </Button>
-          </section>
+          {/* 7) CORE VALUES / TRUST BADGES */}
+          <CoreValues />
 
         </div>
       </div>

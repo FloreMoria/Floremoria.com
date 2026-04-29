@@ -1,10 +1,11 @@
 import { products } from '@/lib/products';
 import ProductGrid from '@/components/shared/ProductGrid';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
+import AnimalBanner from '@/components/shared/AnimalBanner';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Omaggi Floreali | FloreMoria',
+    title: 'Fiori sulle tombe | FloreMoria',
     description: 'Sfoglia i nostri omaggi floreali e servizi dedicati per onorare e ricordare i tuoi cari.',
 };
 
@@ -26,7 +27,7 @@ export default function CatalogPage() {
         <div className="space-y-8 lg:space-y-12">
             <section className="text-center space-y-4 max-w-3xl mx-auto">
                 <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-4 leading-tight">
-                    Omaggi floreali
+                    Fiori sulle tombe
                 </h1>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
                     Scegli tra le nostre composizioni floreali e i nostri servizi per onorare la memoria dei tuoi cari con eleganza e rispetto. La consegna è effettuata direttamente presso le strutture cimiteriali.
@@ -50,6 +51,8 @@ export default function CatalogPage() {
                     />
                 </div>
             </section>
+
+            <AnimalBanner />
         </div>
     );
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     // Ora corrente in Italia
     const nowItalyStr = new Intl.DateTimeFormat('en-US', {
@@ -35,20 +37,13 @@ export async function GET() {
     }
 
     let minDateFF = new Date(nowItaly);
-    const hourFF = nowItaly.getHours();
+    minDateFF.setHours(minDateFF.getHours() + 4);
 
-    if (hourFF < 11) {
-        // Scenario A: prima delle 11:00 AM -> +6 ore o comunque non prima delle 15:00
-        minDateFF.setHours(Math.max(15, hourFF + 6), minDateFF.getMinutes(), 0, 0);
-        // Se sforiamo le 17:00
-        if (minDateFF.getHours() >= 17) {
-            minDateFF.setDate(minDateFF.getDate() + 1);
-            minDateFF.setHours(15, 0, 0, 0);
-        }
-    } else {
-        // Scenario B: >= 11:00 AM -> giorno successivo alle 15:00
+    if (minDateFF.getHours() < 9) {
+        minDateFF.setHours(9, 0, 0, 0);
+    } else if (minDateFF.getHours() >= 17) {
         minDateFF.setDate(minDateFF.getDate() + 1);
-        minDateFF.setHours(15, 0, 0, 0);
+        minDateFF.setHours(9, 0, 0, 0);
     }
 
     // Funzione helper per formattare a YYYY-MM-DDThh:mm (input datetime-local compatibile UTC-agnostico)

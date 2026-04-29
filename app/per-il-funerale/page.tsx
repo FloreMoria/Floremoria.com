@@ -2,10 +2,11 @@ import { Metadata } from 'next';
 import React from 'react';
 import ProductGrid from '@/components/shared/ProductGrid';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
+import AnimalBanner from '@/components/shared/AnimalBanner';
 import { products } from '@/lib/products';
 
 export const metadata: Metadata = {
-    title: 'Fiori per funerale | Consegna floreale professionale | FloreMoria',
+    title: 'Fiori per il Funerale | Consegna floreale professionale | FloreMoria',
     description: 'Composizioni floreali per funerali e camere ardenti consegnate da fioristi locali con la massima discrezione.',
 };
 
@@ -33,7 +34,7 @@ export default function FuneralCatalogPage() {
         <div className="space-y-8 lg:space-y-12 pb-16">
             <section className="text-center space-y-4 max-w-3xl mx-auto">
                 <h1 className="text-4xl md:text-[40px] font-display font-bold text-gray-900 mb-4 leading-tight pt-8">
-                    Per il funerale
+                    Fiori per il funerale
                 </h1>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
                     Scegli tra le nostre composizioni floreali e i nostri servizi per onorare la memoria dei tuoi cari con eleganza e rispetto. La consegna è effettuata direttamente presso chiese, camere mortuarie e cimiteri per garantirti il massimo supporto.
@@ -57,6 +58,8 @@ export default function FuneralCatalogPage() {
                     />
                 </div>
             </section>
+
+            <AnimalBanner />
         </div>
     );
 }

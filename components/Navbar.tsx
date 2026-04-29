@@ -16,9 +16,8 @@ export default function Navbar() {
         { name: 'Home', href: '/' },
         { name: 'Chi siamo', href: '/chi-siamo' },
         { name: 'Fiori sulle tombe', href: '/fiori-sulle-tombe' },
-        { name: 'Per il funerale', href: '/per-il-funerale' },
-        { name: 'Per animali domestici', href: '/per-animali-domestici' },
-        { name: 'Per enti pubblici', href: '/enti-pubblici' },
+        { name: 'Fiori per il funerale', href: '/per-il-funerale' },
+        { name: 'Piccoli Amici', href: '/per-animali-domestici' },
         { name: 'Blog', href: '/blog' },
         { name: 'Assistenza', href: '/assistenza' },
     ];
@@ -27,12 +26,17 @@ export default function Navbar() {
         <header className="bg-fm-section border-b border-fm-rose-soft/30 shadow-sm fixed w-full z-[999] top-0 left-0">
             <div className="w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px]">
                 <div className="flex justify-between items-center h-[72px]">
-                    <Link href="/" className="text-[26px] font-display font-semibold text-fm-text tracking-tight flex items-center gap-3">
-                        <div className="relative flex items-center justify-center">
-                            <Image src="/images/brand/Logo FloreMoria.png" alt={buildGenericAlt('logo')} width={400} height={379} className="h-[28px] lg:h-[32px] w-auto object-contain rounded-sm" priority />
+                    <div className="flex items-center">
+                        <Link href="/" className="text-[24px] sm:text-[26px] font-display font-semibold text-fm-text tracking-tight flex items-center gap-2 sm:gap-3">
+                            <div className="relative flex items-center justify-center">
+                                <Image src="/images/brand/Logo FloreMoria.png" alt={buildGenericAlt('logo')} width={400} height={379} className="h-[24px] lg:h-[32px] w-auto object-contain rounded-sm" priority />
+                            </div>
+                            <span className="inline-block">FloreMoria</span>
+                        </Link>
+                        <div className="flex items-center justify-center ml-2 pl-2 sm:ml-4 sm:pl-4 border-l border-gray-200">
+                            <Image src="/logo-made-in-italy-v2.webp" alt="Sigillo Made in Italy" width={32} height={32} className="object-contain opacity-90 w-[24px] h-[24px] sm:w-[32px] sm:h-[32px]" />
                         </div>
-                        <span>FloreMoria</span>
-                    </Link>
+                    </div>
 
                     {/* Desktop Navigation */}
                     <nav className="hidden lg:flex space-x-6">

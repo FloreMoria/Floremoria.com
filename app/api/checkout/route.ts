@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
+import Stripe from 'stripe';
 
 export async function POST(request: Request) {
     try {
@@ -40,18 +41,14 @@ export async function POST(request: Request) {
 
             const reqDate = new Date(requestedIso);
 
-            if (category === 'FF') {
+            if (category === 'FF' || category === 'FA') {
                 let minDateFF = new Date(nowItaly);
-                const hourFF = nowItaly.getHours();
-                if (hourFF < 11) {
-                    minDateFF.setHours(Math.max(15, hourFF + 6), minDateFF.getMinutes(), 0, 0);
-                    if (minDateFF.getHours() >= 17) {
-                        minDateFF.setDate(minDateFF.getDate() + 1);
-                        minDateFF.setHours(15, 0, 0, 0);
-                    }
-                } else {
+                minDateFF.setHours(minDateFF.getHours() + 4);
+                if (minDateFF.getHours() < 9) {
+                    minDateFF.setHours(9, 0, 0, 0);
+                } else if (minDateFF.getHours() >= 17) {
                     minDateFF.setDate(minDateFF.getDate() + 1);
-                    minDateFF.setHours(15, 0, 0, 0);
+                    minDateFF.setHours(9, 0, 0, 0);
                 }
                 return reqDate >= minDateFF;
             } else {
@@ -114,20 +111,25 @@ export async function POST(request: Request) {
         }
 
         // 4. Create the Order in the database
+        let finalGravePosition = gravePosition;
+        let requiresLocationSearch = false;
+        if (gravePosition && gravePosition.toUpperCase().includes('NON LA CONOSCO')) {
+            finalGravePosition = `${gravePosition} #RICERCA_POSIZIONE`;
+            requiresLocationSearch = true;
+        }
+
         const isRecurring = recurringType !== 'none';
 
         const order = await prisma.order.create({
             data: {
                 orderNumber,
                 buyerFullName,
+                buyerEmail,
                 isRecurring,
-                // store email as user relationship eventually, but for now we don't have a direct email field on Order
-                // so we skip updating the user model if they don't exist yet to simplify, or maybe we create one
-                // for this prototype we just store buyerFullName
                 customerPhone: buyerPhone,
                 deceasedName,
                 cemeteryName,
-                gravePosition,
+                gravePosition: finalGravePosition,
                 cemeteryCity: 'Non specificato', // Deprecated in favor of generic cemetery/location field but required by schema
                 deliveryProvince: prov,
                 deliveryDate: new Date(deliveryDate),
@@ -205,7 +207,37 @@ export async function POST(request: Request) {
 
         console.log(`[Notification] Auto-assegnazione effettuata per ordine ${orderNumber} al Partner ${partner?.shopName || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
 
-        return NextResponse.json({ success: true, order, orderNumber, marginCents: totalMarginCents }, { status: 201 });
+        // Create Stripe Session
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51MockKey', {
+            apiVersion: '2023-10-16' as any,
+        });
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const successUrl = `${baseUrl}/order-completed?orderId=${order.orderNumber}&margin=${totalMarginCents}&phone=${encodeURIComponent(buyerPhone)}&prov=${prov}`;
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card', 'paypal'],
+            line_items: cart.map((item: any) => ({
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: item.name,
+                    },
+                    unit_amount: item.priceCents,
+                },
+                quantity: item.qty,
+            })),
+            mode: 'payment',
+            metadata: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                ricercaPosizione: requiresLocationSearch ? 'SI' : 'NO'
+            },
+            success_url: successUrl,
+            cancel_url: `${baseUrl}/checkout`,
+        });
+
+        return NextResponse.json({ success: true, url: session.url }, { status: 201 });
     } catch (error) {
         console.error('Checkout execution error:', error);
         return NextResponse.json({ error: 'Errore interno durante il checkout' }, { status: 500 });

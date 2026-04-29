@@ -21,6 +21,14 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
     const [imgSrc, setImgSrc] = useState(product.coverImage || '');
     const [hasError, setHasError] = useState(!product.coverImage);
 
+    React.useEffect(() => {
+        if (product.images && product.images.length > 0) {
+            const randomIndex = Math.floor(Math.random() * product.images.length);
+            setImgSrc(product.images[randomIndex]);
+            setHasError(false);
+        }
+    }, [product]);
+
     return (
         <article className="bg-white rounded-[24px] shadow-sm border border-gray-100 hover:shadow-2xl transition-shadow flex flex-col h-[500px] min-h-[500px] hover:z-50 relative group">
             <Link href={productUrl} className="w-full h-[85%] relative bg-gray-50 flex items-center justify-center text-center overflow-hidden rounded-t-[24px] cursor-pointer group-hover:opacity-70 transition-opacity duration-500">

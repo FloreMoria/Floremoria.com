@@ -1,25 +1,25 @@
 const pathMapping: Record<string, string> = {
     // OMAGGI FLOREALI (Cimitero -> Bouquet)
-    "bouquet-ricordo-affettuoso": "images/products/fiori-sulle-tombe/bouquet-ricordo-affettuoso",
-    "bouquet-omaggio-speciale": "images/products/fiori-sulle-tombe/bouquet-omaggio-speciale",
-    "bouquet-tributo-eterno": "images/products/fiori-sulle-tombe/bouquet-tributo-eterno",
-    "bouquet-di-rose": "images/products/fiori-sulle-tombe/bouquet-di-rose",
-    "lumino": "images/products/fiori-sulle-tombe/lumino",
-    "messaggio": "images/products/fiori-sulle-tombe/messaggio",
+    "bouquet-ricordo-affettuoso": "images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso",
+    "bouquet-omaggio-speciale": "images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale",
+    "bouquet-tributo-eterno": "images/products/fiori-sulle-tombe/Bouquet Tributo Eterno",
+    "bouquet-di-rose": "images/products/fiori-sulle-tombe/Bouquet Rose",
+    "lumino": "images/products/accessori/lumino",
+    "messaggio": "images/products/accessori/messaggio",
 
     // PER IL FUNERALE
-    "bouquet-cordoglio-sincero": "images/products/Funerale/bouquet-cordoglio-sincero",
-    "bouquet-omaggio-solenne": "images/products/Funerale/bouquet-omaggio-solenne",
-    "bouquet-memoria-imperituri": "images/products/Funerale/bouquet-memoria-imperituri",
-    "kalonche": "images/products/Funerale/kalonche",
-    "margherite-gerbere": "images/products/Funerale/margherite-gerbere",
-    "bouquet-rispetto-vicinanza": "images/products/Funerale/bouquet-rispetto-vicinanza",
-    "nastro-commemorativo": "images/products/Funerale/nastro-commemorativo",
-    "set-ceri": "images/products/Funerale/set-ceri",
-    "cuscino": "images/products/Funerale/cuscino",
-    "piramide": "images/products/Funerale/piramide",
-    "copribara": "images/products/Funerale/copribara",
-    "cuore-corona": "images/products/Funerale/cuore-corona"
+    "bouquet-cordoglio-sincero": "images/products/Fiori per Funerale/bouquet-cordoglio-sincero",
+    "bouquet-omaggio-solenne": "images/products/Fiori per Funerale/bouquet-omaggio-solenne",
+    "bouquet-memoria-imperituri": "images/products/Fiori per Funerale/bouquet-memoria-eterna",
+    "kalonche": "images/products/Fiori per Funerale/kalonche",
+    "margherite-gerbere": "images/products/Fiori per Funerale/margherite-gerbere FF",
+    "bouquet-rispetto-vicinanza": "images/products/Fiori per Funerale/bouquet-rispetto-vicinanza",
+    "nastro-commemorativo": "images/products/accessori/Nastro commemorativo",
+    "set-ceri": "images/products/accessori/set-ceri-candele",
+    "cuscino": "images/products/Fiori per Funerale/cuscino",
+    "piramide": "images/products/Fiori per Funerale/piramide",
+    "copribara": "images/products/Fiori per Funerale/copribara",
+    "cuore-corona": "images/products/Fiori per Funerale/cuore-corona"
 };
 
 export function getImagesFromFilesystem(slug: string): string[] {
@@ -64,7 +64,7 @@ export function getImagesFromFilesystem(slug: string): string[] {
         // Restituisce i primi 5 (1 cover + 4 gallery)
         return sortedFiles.slice(0, 5).map((f: string) => {
             // Encode the URL spaces because Next/Image requires proper URIs
-            return `/${physicalPath}/${f}`;
+            return encodeURI(`/${physicalPath}/${f}`);
         });
     } else {
         // Log richiesto per errore critico e debug strutturale

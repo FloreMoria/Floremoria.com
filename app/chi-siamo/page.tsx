@@ -102,6 +102,12 @@ export default function ChiSiamoPage() {
                                 <p className="font-semibold text-fm-rose mt-4 block">
                                     Affidabilità al centro del territorio.
                                 </p>
+                                <div className="mt-8 flex items-center gap-5 bg-white/60 p-5 rounded-2xl border border-white/50 shadow-sm">
+                                    <Image src="/logo-made-in-italy-v2.webp" alt="Sigillo Made in Italy" width={60} height={60} className="object-contain drop-shadow-sm shrink-0" />
+                                    <p className="text-[13px] text-fm-text/90 font-medium leading-snug">
+                                        Un impegno autentico per l&apos;eccellenza artigianale italiana. Ogni nostra composizione &egrave; curata da mani esperte sul territorio, garantendo il rispetto della tradizione e la freschezza del &quot;Prodotto in Italia&quot;.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,30 +1,115 @@
 {
   "Fiori per Animali": {
-    "images": [],
-    "coverImage": null
+    "images": [
+      "/images/products/Fiori per Animali/Margherite : Gerbere FA/margherite-gerbere-00001-fiori-loculo-cimitero-siracusa.webp",
+      "/images/products/Fiori per Animali/Margherite : Gerbere FA/margherite-gerbere-00002-consegna-chiesa-freschi-udine.webp",
+      "/images/products/Fiori per Animali/Margherite : Gerbere FA/margherite-gerbere-00003-consegna-tomba-loculo-brescia.webp",
+      "/images/products/Fiori per Animali/Margherite : Gerbere FA/margherite-gerbere-00004-floremoria-chiesa-tomba-monza.webp"
+    ],
+    "coverImage": "/images/products/Fiori per Animali/Margherite : Gerbere FA/margherite-gerbere-00001-fiori-loculo-cimitero-siracusa.webp"
   },
   "Fiori per Funerale": {
-    "images": [],
-    "coverImage": null
+    "images": [
+      "/images/products/Fiori per Funerale/bouquet-cordoglio-sincero/bouquet-cordoglio-sincero-consegna-funerale-cimitero-latina.webp",
+      "/images/products/Fiori per Funerale/bouquet-cordoglio-sincero/composizione-floreale-funerale-cordoglio-tomba-lutto-parma.webp",
+      "/images/products/Fiori per Funerale/bouquet-cordoglio-sincero/fiori-bianchi-funerale-cordoglio-sincero-freschi-milano.webp",
+      "/images/products/Fiori per Funerale/bouquet-cordoglio-sincero/mazzo-fiori-condoglianze-sincere-loculo-freschi-reggio-calabria.webp",
+      "/images/products/Fiori per Funerale/bouquet-memoria-eterna/bouquet-memoria-eterna-fiori-funerale-tomba-catania.webp",
+      "/images/products/Fiori per Funerale/bouquet-memoria-eterna/composizione-funebre-memoria-eterna-tomba-chiesa-bolzano.webp",
+      "/images/products/Fiori per Funerale/bouquet-memoria-eterna/fiori-lutto-consegna-memoria-eterna-chiesa-venezia.webp",
+      "/images/products/Fiori per Funerale/bouquet-memoria-eterna/mazzo-fiori-memoria-eterna-condoglianze-lutto-cagliari.webp",
+      "/images/products/Fiori per Funerale/bouquet-omaggio-solenne/bouquet-omaggio-solenne-funerale-defunti-lutto-ancona.webp",
+      "/images/products/Fiori per Funerale/bouquet-omaggio-solenne/composizione-elegante-funerale-omaggio-floremoria-cimitero-livorno.webp",
+      "/images/products/Fiori per Funerale/bouquet-omaggio-solenne/fiori-funerale-omaggio-solenne-consegna-lutto-modena.webp",
+      "/images/products/Fiori per Funerale/bouquet-omaggio-solenne/mazzo-fiori-omaggio-solenne-condoglianze-chiesa-foggia.webp",
+      "/images/products/Fiori per Funerale/bouquet-rispetto-vicinanza/bouquet-rispetto-vicinanza-funerale-lutto-cimitero-roma.webp",
+      "/images/products/Fiori per Funerale/bouquet-rispetto-vicinanza/composizione-floreale-condoglianze-vicinanza-fiori-funerale-verona.webp",
+      "/images/products/Fiori per Funerale/bouquet-rispetto-vicinanza/fiori-rispetto-vicinanza-condoglianze-cimitero-lutto-genova.webp",
+      "/images/products/Fiori per Funerale/bouquet-rispetto-vicinanza/mazzo-fiori-lutto-rispetto-vicinanza-loculo-lecce.webp",
+      "/images/products/Fiori per Funerale/copribara/composizione-copribara-elegante-funerale-fiori-defunti-pescara.webp",
+      "/images/products/Fiori per Funerale/copribara/copribara-floreale-funerale-loculo-freschi-cimitero-bari.webp",
+      "/images/products/Fiori per Funerale/copribara/cuscino-fiori-copribara-lutto-floremoria-chiesa-prato.webp",
+      "/images/products/Fiori per Funerale/copribara/fiori-copribara-consegna-chiesa-funerale-defunti-arezzo.webp",
+      "/images/products/Fiori per Funerale/cuore-corona/composizione-cuore-funerale-fiori-cimitero-loculo-piacenza.webp",
+      "/images/products/Fiori per Funerale/cuore-corona/corona-fiori-funerale-cuore-defunti-cimitero-ferrara.webp",
+      "/images/products/Fiori per Funerale/cuore-corona/corona-funebre-cuore-fiori-freschi-consegna-torino.webp",
+      "/images/products/Fiori per Funerale/cuore-corona/cuore-floreale-lutto-condoglianze-fiori-freschi-perugia.webp",
+      "/images/products/Fiori per Funerale/cuscino/composizione-cuscino-funebre-fiori-floremoria-chiesa-taranto.webp",
+      "/images/products/Fiori per Funerale/cuscino/cuscino-fiori-funerale-chiesa-consegna-cimitero-bergamo.webp",
+      "/images/products/Fiori per Funerale/cuscino/cuscino-floreale-lutto-condoglianze-loculo-chiesa-bologna.webp",
+      "/images/products/Fiori per Funerale/cuscino/fiori-funerale-cuscino-elegante-tomba-chiesa-ravenna.webp",
+      "/images/products/Fiori per Funerale/kalonche/composizione-pianta-kalanchoe-lutto-tomba-chiesa-napoli.webp",
+      "/images/products/Fiori per Funerale/kalonche/pianta-kalanchoe-bianca-condoglianze-fiori-floremoria-forli.webp",
+      "/images/products/Fiori per Funerale/kalonche/pianta-kalanchoe-fiori-funerale-lutto-loculo-trieste.webp",
+      "/images/products/Fiori per Funerale/kalonche/piante-funerale-kalanchoe-consegna-tomba-lutto-firenze.webp",
+      "/images/products/Fiori per Funerale/margherite-gerbere FF/bouquet-margherite-condoglianze-lutto-defunti-freschi-salerno.webp",
+      "/images/products/Fiori per Funerale/margherite-gerbere FF/composizione-margherite-gerbere-funerale-cimitero-loculo-padova.webp",
+      "/images/products/Fiori per Funerale/margherite-gerbere FF/fiori-funerale-gerbere-chiesa-floremoria-consegna-trento.webp",
+      "/images/products/Fiori per Funerale/margherite-gerbere FF/mazzo-fiori-gerbere-margherite-lutto-tomba-novara.webp",
+      "/images/products/Fiori per Funerale/piramide/composizione-floreale-piramide-funerale-loculo-defunti-vicenza.webp",
+      "/images/products/Fiori per Funerale/piramide/composizione-funebre-piramide-elegante-fiori-chiesa-rimini.webp",
+      "/images/products/Fiori per Funerale/piramide/fiori-piramide-lutto-condoglianze-loculo-freschi-terni.webp",
+      "/images/products/Fiori per Funerale/piramide/piramide-fiori-freschi-funerale-tomba-defunti-sassari.webp"
+    ],
+    "coverImage": "/images/products/Fiori per Funerale/bouquet-cordoglio-sincero/bouquet-cordoglio-sincero-consegna-funerale-cimitero-latina.webp"
   },
   "Fiori per i Comuni": {
     "images": [],
     "coverImage": null
   },
-  "Foto modificate": {
-    "images": [
-      "/images/products/Foto modificate/composizione-floreale-lusso-per-tomba-e-cappella.webp",
-      "/images/products/Foto modificate/ricordo_affettuoso_proporzionato_1776273915997.webp",
-      "/images/products/Foto modificate/ricordo_estivo_verticale_1776274426568.webp"
-    ],
-    "coverImage": "/images/products/Foto modificate/composizione-floreale-lusso-per-tomba-e-cappella.webp"
-  },
   "accessori": {
-    "images": [],
-    "coverImage": null
+    "images": [
+      "/images/products/accessori/Nastro commemorativo/accessorio-nastro-dedica-commemorativa-omaggio-floreale-palermo.webp",
+      "/images/products/accessori/Nastro commemorativo/nastro-commemorativo-personalizzato-fiori-funerale-freschi-messina.webp",
+      "/images/products/accessori/Nastro commemorativo/nastro-seta-corona-fiori-funerale-italia-reggio-emilia.webp",
+      "/images/products/accessori/Nastro commemorativo/scritta-nastro-funebre-dedica-caro-estinto-siracusa.webp",
+      "/images/products/accessori/lumino/accensione-lumino-voto-cimitero-italia-servizio-udine.webp",
+      "/images/products/accessori/lumino/luce-votiva-commemorativa-tomba-loculo-freschi-brescia.webp",
+      "/images/products/accessori/lumino/lumino-tradizionale-defunti-consegna-cimitero-funerale-monza.webp",
+      "/images/products/accessori/lumino/servizio-cura-loculo-accensione-candela-votiva-latina.webp",
+      "/images/products/accessori/messaggio/biglietto-commemorativo-messaggio-caro-estinto-floremoria-parma.webp",
+      "/images/products/accessori/messaggio/biglietto-scritto-defunti-consegna-fiori-online-milano.webp",
+      "/images/products/accessori/messaggio/messaggio-personalizzato-fiori-defunti-italia-cimitero-reggio-calabria.webp",
+      "/images/products/accessori/messaggio/servizio-scrittura-messaggio-omaggio-floreale-cimitero-catania.webp",
+      "/images/products/accessori/set-ceri-candele/candele-ricordo-defunti-tomba-floremoria-cimitero-bolzano.webp",
+      "/images/products/accessori/set-ceri-candele/lumini-votivi-tomba-cera-defunti-fiori-venezia.webp",
+      "/images/products/accessori/set-ceri-candele/set-ceri-candele-cimitero-lunga-durata-cagliari.webp",
+      "/images/products/accessori/set-ceri-candele/set-illuminazione-votiva-cimitero-chiesa-consegna-ancona.webp"
+    ],
+    "coverImage": "/images/products/accessori/Nastro commemorativo/accessorio-nastro-dedica-commemorativa-omaggio-floreale-palermo.webp"
   },
   "fiori-sulle-tombe": {
-    "images": [],
-    "coverImage": null
+    "images": [
+      "/images/products/fiori-sulle-tombe/Azalea festa mamma/azalea-rosa-confezionata-regalo-mamma-italia-modena.webp",
+      "/images/products/fiori-sulle-tombe/Azalea festa mamma/azalea-vaso-regalo-festa-della-mamma-livorno.webp",
+      "/images/products/fiori-sulle-tombe/Azalea festa mamma/consegna-piante-fiorite-domicilio-festa-della-foggia.webp",
+      "/images/products/fiori-sulle-tombe/Azalea festa mamma/pianta-azalea-festa-della-mamma-consegna-roma.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale/bouquet-fiori-misti-commemorativo-consegna-veloce-verona.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale/composizione-fiori-freschi-loculo-cimitero-tomba-genova.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale/fiorista-online-consegna-fiori-italia-qualita-lecce.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale/omaggio-floreale-personalizzato-caro-estinto-chiesa-pescara.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso/consegna-fiori-cimitero-italia-bouquet-economico-bari.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso/fiori-sulle-tombe-prezzo-basso-omaggio-prato.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso/servizio-consegna-fiori-defunti-economico-chiesa-arezzo.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso/spedizione-fiori-loculo-italia-offerta-online-piacenza.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Rose/bouquet-rose-giallo-classico-cimitero-consegna-ferrara.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Rose/consegna-rose-bianche-tomba-italia-cimitero-torino.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Rose/mazzo-rose-arancione-cimitero-consegna-italia-perugia.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Rose/mazzo-rose-rosa-cimitero-consegna-italia-taranto.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Rose/rose-rosse-fresche-defunti-fiorista-online-bergamo.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Tributo Eterno/bouquet-fiori-pregiati-defunti-alta-gamma-bologna.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Tributo Eterno/composizione-floreale-lusso-tomba-cappella-fiori-ravenna.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Tributo Eterno/migliore-servizio-fiori-cimitero-italia-premium-napoli.webp",
+      "/images/products/fiori-sulle-tombe/Bouquet Tributo Eterno/tributo-floreale-solenne-consegna-cimitero-italia-forli.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Begonie/begonie-fresche-caro-estinto-ordine-online-trieste.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Begonie/fiori-vaso-resistenti-cimitero-consegna-floremoria-firenze.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Begonie/pianta-begonia-decorazione-loculo-italia-freschi-salerno.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Begonie/vaso-begonie-fiorite-consegna-cimitero-lutto-padova.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Margherite:Gerbere/decorazione-tomba-gerbere-margherite-online-defunti-trento.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Margherite:Gerbere/pianta-gerbere-vaso-cimitero-consegna-loculo-novara.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Margherite:Gerbere/piante-fiorite-defunti-consegna-cimitero-italia-vicenza.webp",
+      "/images/products/fiori-sulle-tombe/Pianta di Margherite:Gerbere/vaso-margherite-fresche-tombe-loculi-cimitero-rimini.webp"
+    ],
+    "coverImage": "/images/products/fiori-sulle-tombe/Azalea festa mamma/azalea-rosa-confezionata-regalo-mamma-italia-modena.webp"
   }
 }

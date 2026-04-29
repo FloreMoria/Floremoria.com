@@ -11,7 +11,7 @@ export interface Product {
     isBouquet?: boolean;
     coverImage?: string | null;
     images?: string[];
-    category?: 'cimitero' | 'funerale';
+    category?: 'cimitero' | 'funerale' | 'animali';
 }
 
 const productsRaw: Omit<Product, 'images'>[] = [
@@ -23,7 +23,7 @@ const productsRaw: Omit<Product, 'images'>[] = [
         description: "Elegante bouquet di rose per un omaggio dolce e delicato.",
         isBouquet: true,
         category: 'cimitero',
-        descriptionSEO: "Il Bouquet di Rose è un omaggio floreale elegante e senza tempo, pensato per esprimere affetto, vicinanza e rispetto nel ricordo di una persona cara.\nLa composizione include una selezione di 5 rose fresche, simbolo universale di amore eterno, purezza e memoria.\n\nOgni bouquet viene realizzato dal fiorista locale in base alla stagionalità e alla disponibilità nella zona di consegna, garantendo freschezza e armonia nella composizione.\n\nDopo la consegna riceverai una foto della tomba direttamente sul tuo WhatsApp e nel tuo profilo personale, come conferma del servizio.\n\nLe immagini hanno valore illustrativo: i fiori possono variare leggermente, ma il risultato finale manterrà lo stile e l’eleganza del bouquet scelto."
+        descriptionSEO: "Il Bouquet di Rose è un omaggio floreale elegante e senza tempo, pensato per esprimere affetto, vicinanza e rispetto nel ricordo di una persona cara.\nLa composizione include una selezione di 5 rose fresche, simbolo universale di amore eterno, purezza e memoria.\n\nOgni bouquet viene realizzato dal fiorista locale in base alla stagionalità e alla disponibilità nella zona di consegna, garantendo freschezza e armonia nella composizione.\n\nDopo la consegna riceverai le due foto (prima e dopo) direttamente sul tuo WhatsApp e nel tuo profilo personale, come conferma del servizio.\n\nLe immagini hanno valore illustrativo: i fiori possono variare leggermente, ma il risultato finale manterrà lo stile e l’eleganza del bouquet scelto."
     },
     {
         id: "c2",
@@ -91,8 +91,7 @@ const productsRaw: Omit<Product, 'images'>[] = [
         description: "Composizione floreale speciale, curata in ogni minimo dettaglio.",
         isBouquet: true,
         category: 'cimitero',
-        descriptionSEO: "L'Omaggio Speciale è una composizione floreale curata in ogni minimo dettaglio, pensata per esprimere vicinanza e rispetto nel ricordo di una persona cara.",
-        coverImage: "/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp"
+        descriptionSEO: "L'Omaggio Speciale è una composizione floreale curata in ogni minimo dettaglio, pensata per esprimere vicinanza e rispetto nel ricordo di una persona cara."
     },
     {
         id: "c6",
@@ -192,7 +191,67 @@ const productsRaw: Omit<Product, 'images'>[] = [
         description: "Il massimo tributo di affetto e onore. Una composizione prestigiosa simbolo di amore infinito.",
         isBouquet: true,
         category: 'funerale',
-        descriptionSEO: "Il massimo tributo di affetto e onore. Una composizione prestigiosa simbolo di amore infinito, realizzata con fiori d'eccellenza dai nostri fioristi locali. Riceverai la foto della consegna direttamente su WhatsApp come garanzia del servizio."
+        descriptionSEO: "Il massimo tributo di affetto e onore. Una composizione prestigiosa simbolo di amore infinito, realizzata con fiori d'eccellenza dai nostri fioristi locali. Riceverai le due foto della consegna direttamente su WhatsApp come garanzia del servizio."
+    },
+    {
+        id: "a1",
+        name: "Un Raggio di Sole",
+        slug: "un-raggio-di-sole",
+        price: 29.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Pianta fiorita di stagione (es. Kalanchoe, Primula, Ciclamino) in confezione solare."
+    },
+    {
+        id: "a2",
+        name: "Abbraccio Verde",
+        slug: "abbraccio-verde",
+        price: 39.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Pianta verde stagionale o succulenta in vaso di ceramica o terracotta."
+    },
+    {
+        id: "a3",
+        name: "Legame Eterno",
+        slug: "legame-eterno",
+        price: 49.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Composizione di piante grasse miste (resistenti) in ciotola decorata."
+    },
+    {
+        id: "a4",
+        name: "Battito di Foglia",
+        slug: "battito-di-foglia",
+        price: 69.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Pianta da interno elegante (es. Spatifillo, Anthurium) a foglia larga e lucida."
+    },
+    {
+        id: "a5",
+        name: "Anima Pura",
+        slug: "anima-pura",
+        price: 84.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Pianta fiorita d'eccellenza (es. Orchidea o pianta premium bianca) con nastro in seta."
+    },
+    {
+        id: "a6",
+        name: "Il Giardino del Ponte",
+        slug: "il-giardino-del-ponte",
+        price: 99.99,
+        description: "Selezioni stagionali dei nostri maestri fioristi.",
+        isBouquet: true,
+        category: 'animali',
+        descriptionSEO: "Composizione mista \"Lusso\" di piante verdi e fiorite di stagione in cesto o cassetta legno."
     }
 ];
 

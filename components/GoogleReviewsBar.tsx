@@ -77,7 +77,7 @@ export default function GoogleReviewsBar() {
                 author_name: "Marco B.",
                 profile_photo_url: "",
                 rating: 5,
-                text: "Servizio eccellente e rispettoso. Poter vedere la foto del fiore posato sulla tomba della mia mamma mi ha scaldato il cuore.",
+                text: "Servizio eccellente e rispettoso. Poter vedere le due foto della tomba, prima e dopo la consegna, mi ha scaldato il cuore.",
                 time: Math.floor(Date.now() / 1000) - 86400 * 2
             },
             {

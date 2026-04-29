@@ -37,7 +37,7 @@ Se desideri rimpiazzare o aggiornare l'intero dataset dei comuni italiani (~8000
 
 2. Esegui lo script di utilità preparato appositamente per generare gli slug e validare l'integrità del tuo dataset:
 ```bash
-node scripts/generate-municipalities.js
+node Script/generate-municipalities.js
 ```
 Questo script:
 - Genererà automaticamente gli slug normalizzati nel formato standard (es. `nome-comune-pr`).

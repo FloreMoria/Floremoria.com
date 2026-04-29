@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product, products } from '@/lib/products';
 import ProductCard from '@/components/ProductCard';
+import CoreValues from '@/components/CoreValues';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { getDailyImageSet } from '@/utils/dailyImageSet';
@@ -21,7 +22,32 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     const [comune, setComune] = useState(initialComune);
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
     const autocompleteRef = useRef<HTMLDivElement>(null);
+
+    const addonsMapping: Record<string, { id: string, slug: string, name: string, price: number, icon: string }[]> = {
+        'cimitero': [
+            { id: 'c3', slug: 'messaggio', name: "Aggiungi Messaggio d'affetto", price: 2.49, icon: '✉️' },
+            { id: 'c2', slug: 'lumino', name: "Aggiungi Lumino votivo", price: 3.49, icon: '🕯️' }
+        ],
+        'funerale': [
+            { id: 'f4', slug: 'nastro-commemorativo', name: "Aggiungi Nastro personalizzato", price: 14.99, icon: '🎀' },
+            { id: 'f5', slug: 'set-ceri', name: "Aggiungi Set Ceri solenni", price: 24.99, icon: '🕯️' }
+        ],
+        'animali': [
+            { id: 'c3', slug: 'messaggio', name: "Bigliettino 'Oltre il Ponte'", price: 2.49, icon: '✉️' },
+            { id: 'c2', slug: 'lumino', name: "Aggiungi Lumino del Ricordo", price: 3.49, icon: '🕯️' }
+        ]
+    };
+    
+    const availableAddons = product.isBouquet ? (addonsMapping[product.category] || []) : [];
+    
+    const addonsTotal = selectedAddons.reduce((acc, addonId) => {
+        const addon = availableAddons.find(a => a.id === addonId);
+        return acc + (addon ? addon.price : 0);
+    }, 0);
+    
+    const totalPrice = (product.price * qty) + addonsTotal;
 
     // Fetch municipalities
     useEffect(() => {
@@ -50,7 +76,6 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const [dataConsegna, setDataConsegna] = useState('');
     const [customMessage, setCustomMessage] = useState('');
     const [variantColor, setVariantColor] = useState('Rosso');
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -81,7 +106,6 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             if (savedStr) {
                 const parsed = JSON.parse(savedStr);
                 if (parsed.comune && !initialComune) setComune(parsed.comune);
-                if (parsed.dataConsegna) setDataConsegna(parsed.dataConsegna);
                 if (parsed.customMessage) setCustomMessage(parsed.customMessage);
             }
         } catch (e) {
@@ -91,9 +115,9 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     }, []);
 
     useEffect(() => {
-        const dataToSave = { comune, dataConsegna, customMessage };
+        const dataToSave = { comune, customMessage };
         localStorage.setItem('fm_checkout_data', JSON.stringify(dataToSave));
-    }, [comune, dataConsegna, customMessage]);
+    }, [comune, customMessage]);
 
     // Gallery state
     const hasImages = product.images && product.images.length > 0;
@@ -110,7 +134,8 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     useEffect(() => {
         if (galleryImages.length > 0) {
             setDisplayImages([...galleryImages]);
-            setMainImage(galleryImages[0]);
+            const randomIndex = Math.floor(Math.random() * galleryImages.length);
+            setMainImage(galleryImages[randomIndex]);
         } else {
             console.error(`ERRORE CRITICO CLIENT: Cartella /public/images/products/${product.slug} non trovata o vuota per la galleria di ${product.name}`);
         }
@@ -124,16 +149,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     const increaseQty = () => setQty(prev => (prev < 10 ? prev + 1 : 10));
     const decreaseQty = () => setQty(prev => (prev > 1 ? prev - 1 : 1));
 
-    // Calculate min date (today + 2 days)
-    const today = new Date();
-    today.setDate(today.getDate() + 2);
-    const minDateISO = today.toISOString().split('T')[0];
-
     const handleAddToCart = () => {
-        if (dataConsegna && dataConsegna < minDateISO) {
-            alert("La consegna può essere programmata a partire da due giorni da oggi");
-            return;
-        }
 
         const cartStr = localStorage.getItem('fm_cart');
         const cart = cartStr ? JSON.parse(cartStr) : [];
@@ -167,13 +183,34 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 priceCents: Math.round(product.price * 100),
                 qty: qty,
                 customData: {
-                    comune, dataConsegna,
+                    comune,
                     ...(product.slug === 'bouquet-di-rose' ? { variantColor } : {}),
                     ...(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' ? { customMessage } : {})
                 }
             };
             cart.push(newItem);
         }
+
+        // Push addons
+        selectedAddons.forEach(addonId => {
+            const addonConfig = availableAddons.find(a => a.id === addonId);
+            if (addonConfig) {
+                const realProduct = products.find(p => p.id === addonId);
+                if (realProduct) {
+                    cart.push({
+                        productId: realProduct.id,
+                        slug: realProduct.slug,
+                        name: addonConfig.name,
+                        priceCents: Math.round(addonConfig.price * 100),
+                        qty: 1, // Accessory qty is 1 per addition
+                        customData: {
+                            comune,
+                            ...(realProduct.slug === 'messaggio' || realProduct.slug === 'nastro-commemorativo' ? { customMessage } : {})
+                        }
+                    });
+                }
+            }
+        });
 
         localStorage.setItem('fm_cart', JSON.stringify(cart));
         window.dispatchEvent(new CustomEvent('cart-added', { detail: { name: product.name } }));
@@ -246,6 +283,27 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             </div>
                         )}
                     </div>
+
+                    {/* BLOCCO TRUST BADGES (Spostato a SX per bilanciare il layout) */}
+                    <div className="space-y-3 pt-6 border-t border-gray-100 mt-8">
+                        <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                            <span className="text-fm-cta mt-0.5 text-lg">📸</span>
+                            <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                <strong className="text-gray-900 block mb-0.5">Certificazione Fotografica</strong>
+                                Riceverai una foto della tomba/loculo allo stato di fatto e una foto con i fiori posati sulla tomba/loculo subito dopo la consegna.
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                            <span className="text-fm-cta mt-0.5 text-lg">🚶‍♂️</span>
+                            <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                <strong className="text-gray-900 block mb-0.5">Consegna e Posa in Opera</strong>
+                                Costi di consegna: <span className="text-green-600 font-bold">TOTALMENTE INCLUSI</span>. Nessun costo nascosto nel carrello.
+                            </p>
+                        </div>
+                        <p className="text-[12px] text-fm-muted/80 italic pt-2 leading-snug">
+                            Le foto sono indicative: la composizione può variare leggermente per garantire sempre freschezza e qualità artigianale.
+                        </p>
+                    </div>
                 </div>
 
 
@@ -259,14 +317,8 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <h1 className="text-4xl lg:text-5xl font-display font-bold text-gray-900 tracking-tight leading-tight">
                                 {product.name}
                             </h1>
-                            <p className="text-3xl font-display font-semibold text-fm-gold tracking-tight">
-                                €{product.price.toFixed(2)}
-                            </p>
-                            <p className="text-[14px] text-fm-muted font-medium pt-0 mb-4">
-                                Prezzo tutto incluso. {product.isBouquet ? 'Consegna gratuita, nessun' : 'Nessun'} costo nascosto.
-                            </p>
-                            <p className="text-[13px] text-fm-muted/80 italic pt-1 leading-snug">
-                                Le foto sono indicative: la composizione può variare leggermente per garantire sempre freschezza e qualità.
+                            <p className="text-3xl font-display font-semibold text-fm-gold tracking-tight transition-all duration-300">
+                                €{totalPrice.toFixed(2)}
                             </p>
                         </div>
 
@@ -298,10 +350,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                             <div className="space-y-6">
                                 <div className="space-y-2 relative" ref={autocompleteRef}>
-                                    <label className="block text-sm font-semibold text-fm-text">Comune o Cimitero <span className="text-fm-rose">*</span></label>
+                                    <label className="block text-sm font-semibold text-fm-text">Verifica Copertura Cimitero <span className="text-fm-rose">*</span></label>
                                     <input
                                         type="text"
-                                        placeholder="Es. Cimitero Monumentale, Milano"
+                                        placeholder="Inserisci il Comune..."
                                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
                                         value={comune}
                                         onChange={(e) => {
@@ -312,6 +364,12 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                             if (comune.length >= 2) setShowSuggestions(true);
                                         }}
                                     />
+                                    {comune.includes('(') && !showSuggestions && (
+                                        <div className="flex items-center gap-2 mt-2 bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-semibold border border-green-100 animate-in fade-in slide-in-from-top-1">
+                                            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                            Servizio disponibile per questa località
+                                        </div>
+                                    )}
                                     {showSuggestions && suggestions.length > 0 && (
                                         <ul className="absolute z-20 top-[82px] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-[220px] overflow-auto overflow-x-hidden">
                                             {suggestions.map((m, idx) => (
@@ -331,31 +389,13 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                     )}
                                 </div>
 
-
-                                <div className="space-y-2 pt-2 border-t border-gray-100">
-                                    <label className="block text-sm font-semibold text-fm-text mt-4">Data di consegna preferita <span className="text-fm-rose">*</span></label>
-                                    <input
-                                        type="date"
-                                        min={minDateISO}
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-cta-soft focus:bg-white transition-colors"
-                                        value={dataConsegna}
-                                        onChange={(e) => setDataConsegna(e.target.value)}
-                                    />
-                                    <p className="text-[13px] text-fm-muted font-medium pt-1">
-                                        La consegna gratuita è disponibile da 2 giorni da oggi.
-                                    </p>
-                                    <p className="text-[12px] text-fm-muted/80 italic pt-1 leading-snug">
-                                        Se il fiorista o il cimitero sono chiusi, la consegna viene effettuata il primo giorno disponibile.
-                                    </p>
-                                </div>
-
-                                {(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo') && (
-                                    <div className="space-y-3 pt-4 border-t border-gray-100">
+                                {(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' || selectedAddons.includes('c3') || selectedAddons.includes('f4')) && (
+                                    <div className="space-y-3 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
                                         <label className="block text-sm font-semibold text-fm-gold uppercase tracking-wide">
-                                            Testo del {product.slug === 'messaggio' ? 'Messaggio' : 'Nastro'} <span className="text-fm-rose">*</span>
+                                            Testo del Messaggio/Nastro <span className="text-fm-rose">*</span>
                                         </label>
                                         <textarea
-                                            placeholder={product.slug === 'messaggio' ? "Scrivi qui il pensiero che desideri allegare ai fiori..." : "Scrivi qui la frase per il nastro (es. 'Dai tuoi nipoti', 'Alla cara zia')"}
+                                            placeholder="Scrivi qui il pensiero che desideri allegare ai fiori..."
                                             className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-4 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all min-h-[140px] resize-none text-lg font-medium placeholder:text-gray-300"
                                             value={customMessage}
                                             onChange={(e) => setCustomMessage(e.target.value)}
@@ -379,9 +419,60 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                         onClick={handleAddToCart}
                                         className="hidden md:block flex-1 bg-fm-gold hover:brightness-110 text-white font-semibold font-body py-4 px-6 rounded-xl transition-all shadow-md active:scale-[0.98] h-14 text-lg"
                                     >
-                                        Ordina
+                                        Ordina - €{totalPrice.toFixed(2)}
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* WIDGET ADD-ON (CROSS-SELLING) */}
+                            {availableAddons.length > 0 && (
+                                <div className="pt-6 border-t border-gray-100 animate-in fade-in slide-in-from-bottom-2">
+                                    <h3 className="text-lg font-display font-medium text-gray-900 mb-4">Completa il tuo omaggio</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {availableAddons.map(addon => {
+                                            const isSelected = selectedAddons.includes(addon.id);
+                                            return (
+                                                <label 
+                                                    key={addon.id} 
+                                                    className={`cursor-pointer flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${isSelected ? 'border-fm-gold bg-yellow-50/30 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="w-4.5 h-4.5 text-fm-gold border-gray-300 rounded focus:ring-fm-gold/50 cursor-pointer transition-colors"
+                                                            checked={isSelected}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setSelectedAddons([...selectedAddons, addon.id]);
+                                                                else setSelectedAddons(selectedAddons.filter(id => id !== addon.id));
+                                                            }}
+                                                        />
+                                                        <span className="text-[22px] leading-none grayscale-[0.2]">{addon.icon}</span>
+                                                        <span className="text-sm font-semibold text-gray-800 tracking-tight">{addon.name}</span>
+                                                    </div>
+                                                    <span className="text-[13px] font-bold text-fm-gold">+€{addon.price.toFixed(2)}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* BLOCCO TRUST BADGES DX */}
+                        <div className="space-y-3 pt-2">
+                            <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                                <span className="text-fm-gold mt-0.5 text-lg">🔒</span>
+                                <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                    <strong className="text-gray-900 block mb-0.5">Pagamento Sicuro al 100%</strong>
+                                    Transazioni protette con crittografia Stripe. Accettiamo carte di credito e Apple Pay.
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-3 bg-fm-cta-soft/10 p-3 rounded-xl border border-fm-cta/20">
+                                <span className="text-[#25D366] mt-0.5 text-lg">💬</span>
+                                <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                    <strong className="text-fm-cta block mb-0.5">Serve Aiuto?</strong>
+                                    <a href="https://wa.me/393204105305" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] font-semibold transition-colors">Dubbi sulla data o sul luogo? Scrivici, rispondiamo in tempo reale.</a>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -445,7 +536,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             </p>
 
                             <p>
-                                <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo profondamente l&apos;importanza della memoria. Subito dopo la posa formale della composizione sulla tomba nel luogo della cerimonia funebre, il fiorista incaricato ti invierà la foto cristallina del tuo pensiero direttamente su WhatsApp. Una rassicurazione immediata e trasparente che il tuo pensiero è giunto a destinazione con la dignità che merita.
+                                <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo profondamente l&apos;importanza della memoria. Subito dopo la posa formale della composizione sulla tomba nel luogo della cerimonia funebre, il fiorista incaricato ti invierà due foto cristalline (lo stato di fatto e i fiori appena posati) direttamente su WhatsApp. Una rassicurazione immediata e trasparente che il tuo pensiero è giunto a destinazione con la dignità che merita.
                             </p>
 
                             {isDescriptionExpanded && (
@@ -495,7 +586,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <div className="w-12 h-12 flex-shrink-0 rounded-full bg-fm-section flex items-center justify-center text-fm-text font-display font-bold text-xl shadow-sm border border-white">3</div>
                             <div>
                                 <h4 className="font-semibold text-fm-text">Foto su WhatsApp</h4>
-                                <p className="text-sm text-fm-muted">Riceverai subito una foto di conferma della consegna.</p>
+                                <p className="text-sm text-fm-muted">Riceverai subito le due foto di conferma (prima e dopo).</p>
                             </div>
                         </div>
                     </div>
@@ -517,7 +608,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <span className="flex-shrink-0 w-10 h-10 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta mt-1">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                             </span>
-                            <span className="font-medium leading-relaxed">Invio discreto di documentazione fotografica via WhatsApp post-consegna</span>
+                            <span className="font-medium leading-relaxed">Invio discreto delle due foto via WhatsApp post-consegna</span>
                         </li>
                         <li className="flex items-start gap-4">
                             <span className="flex-shrink-0 w-10 h-10 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta mt-1">
@@ -527,6 +618,11 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         </li>
                     </ul>
                 </section>
+            </div>
+
+            {/* CORE VALUES */}
+            <div className="pt-12">
+                <CoreValues />
             </div>
 
             {/* 4) PRODOTTI CORRELATI (Spesso i nostri utenti acquistano) */}
@@ -549,7 +645,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 >
                     <span>Ordina</span>
                     <span className="opacity-80 translate-y-[-1px]">|</span>
-                    <span className="font-bold">€{(product.price * qty).toFixed(2)}</span>
+                    <span className="font-bold">€{totalPrice.toFixed(2)}</span>
                 </button>
             </div>
             {/* Safe area padding for mobile spacing */}

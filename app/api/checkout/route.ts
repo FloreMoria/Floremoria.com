@@ -240,6 +240,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, url: session.url }, { status: 201 });
     } catch (error) {
         console.error('Checkout execution error:', error);
-        return NextResponse.json({ error: 'Errore interno durante il checkout' }, { status: 500 });
+        return NextResponse.json({ error: 'Errore interno durante il checkout', details: error.message, stack: error.stack }, { status: 500 });
     }
 }

@@ -216,7 +216,7 @@ export async function POST(request: Request) {
         const successUrl = `${baseUrl}/order-completed?orderId=${order.orderNumber}&margin=${totalMarginCents}&phone=${encodeURIComponent(buyerPhone)}&prov=${prov}`;
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'paypal'],
+            payment_method_types: ['card'],
             line_items: cart.map((item: any) => ({
                 price_data: {
                     currency: 'eur',

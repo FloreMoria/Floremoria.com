@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Heart, Users, Leaf, BadgeCheck } from 'lucide-react';
 
 export default function CoreValues() {
@@ -29,8 +30,8 @@ export default function CoreValues() {
         <section className="w-full max-w-6xl mx-auto px-4 py-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                 {values.map((item, idx) => (
-                    <div 
-                        key={idx} 
+                    <div
+                        key={idx}
                         className="flex flex-col items-center text-center p-4 md:p-6 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
                     >
                         <div className="mb-3 md:mb-4">

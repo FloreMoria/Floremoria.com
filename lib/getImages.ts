@@ -19,7 +19,19 @@ const pathMapping: Record<string, string> = {
     "cuscino": "images/products/Fiori per Funerale/cuscino",
     "piramide": "images/products/Fiori per Funerale/piramide",
     "copribara": "images/products/Fiori per Funerale/copribara",
-    "cuore-corona": "images/products/Fiori per Funerale/cuore-corona"
+    "cuore-corona": "images/products/Fiori per Funerale/cuore-corona",
+
+    // PICCOLI AMICI
+    "un-raggio-di-sole": "images/products/Fiori-per-Piccoli-Amici/Un raggio di sole",
+    "abbraccio-verde": "images/products/Fiori-per-Piccoli-Amici/Abbraccio Verde",
+    "legame-eterno": "images/products/Fiori-per-Piccoli-Amici/Legame eterno",
+    "battito-di-foglia": "images/products/Fiori-per-Piccoli-Amici/Battito di Foglia",
+    "anima-pura": "images/products/Fiori-per-Piccoli-Amici/Anima Pura",
+    "il-giardino-del-ponte": "images/products/Fiori-per-Piccoli-Amici/Il Giardino del Ponte",
+    "lumino-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Lumino Piccoli Amici",
+    "biglietto-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Biglietto Piccoli Amici",
+    "ceri-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Ceri Piccoli Amici",
+    "nastro-commemorativo-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Nastro Commemorativo Piccoli Amici"
 };
 
 export function getImagesFromFilesystem(slug: string): string[] {

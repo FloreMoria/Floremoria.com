@@ -252,6 +252,42 @@ const productsRaw: Omit<Product, 'images'>[] = [
         isBouquet: true,
         category: 'animali',
         descriptionSEO: "Composizione mista \"Lusso\" di piante verdi e fiorite di stagione in cesto o cassetta legno."
+    },
+    {
+        id: "a7",
+        name: "Lumino Piccoli Amici",
+        slug: "lumino-piccoli-amici",
+        price: 4.99,
+        description: "Un lumino delicato dedicato al tuo compagno fedele.",
+        category: 'animali',
+        isBouquet: false
+    },
+    {
+        id: "a8",
+        name: "Messaggio Piccoli Amici",
+        slug: "biglietto-piccoli-amici",
+        price: 2.99,
+        description: "Un biglietto dolce per un ultimo pensiero affettuoso.",
+        category: 'animali',
+        isBouquet: false
+    },
+    {
+        id: "a9",
+        name: "Set Ceri Piccoli Amici",
+        slug: "ceri-piccoli-amici",
+        price: 19.99,
+        description: "Ceri eleganti per casa funeraria o per il ricordo casalingo.",
+        category: 'animali',
+        isBouquet: false
+    },
+    {
+        id: "a10",
+        name: "Nastro Piccoli Amici",
+        slug: "nastro-commemorativo-piccoli-amici",
+        price: 14.99,
+        description: "Nastro personalizzato e discreto per il tuo tributo.",
+        category: 'animali',
+        isBouquet: false
     }
 ];
 

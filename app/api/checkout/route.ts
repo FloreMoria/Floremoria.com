@@ -140,7 +140,7 @@ export async function POST(request: Request) {
                 status: 'PENDING',
                 items: {
                     create: cart.map((item: any) => ({
-                        productId: item.productId,
+                        productId: item.productId || item.id, // Fallback for old carts in localStorage
                         quantity: item.qty,
                         priceCents: item.priceCents
                     }))

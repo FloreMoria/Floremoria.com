@@ -20,10 +20,10 @@ export default function PerAnimaliDomesticiPage() {
     ];
     
     const accessoriesOrder = [
-        'messaggio',
-        'lumino',
-        'set-ceri',
-        'nastro-commemorativo'
+        'biglietto-piccoli-amici',
+        'lumino-piccoli-amici',
+        'ceri-piccoli-amici',
+        'nastro-commemorativo-piccoli-amici'
     ];
 
     const animalProducts = mainTargetOrder

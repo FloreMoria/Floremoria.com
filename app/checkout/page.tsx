@@ -611,7 +611,7 @@ export default function CheckoutPage() {
                             <div className="flex items-center justify-center gap-3 mb-4 bg-gray-50/80 p-2 rounded-xl">
                                 <img src="/logo-made-in-italy-v2.webp" alt="Made in Italy" className="h-6 w-auto object-contain opacity-90" />
                                 <p className="text-[11px] md:text-xs text-gray-600 font-medium max-w-xs text-left leading-tight">
-                                    <strong className="text-gray-800">Pagamento Sicuro gestito da Stripe.</strong> Riceverai le due foto della consegna via email/WhatsApp.
+                                    <strong className="text-gray-800">Pagamento Sicuro gestito da Stripe.</strong> Riceverai le due foto della consegna via WhatsApp.
                                 </p>
                             </div>
                         )}

@@ -1,9 +1,7 @@
 import { Metadata } from 'next';
 import BackgroundSwapper from '@/components/BackgroundSwapper';
-import { products } from '@/lib/products';
 import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
-import ProductCard from '@/components/ProductCard';
 import Button from '@/components/Button';
 import GoogleReviewsBar from '@/components/GoogleReviewsBar';
 import TextParallax from '@/components/TextParallax';
@@ -33,6 +31,7 @@ export default async function Home() {
       console.error("Prisma fetch error (Carousel):", e);
     }
   }
+  
   return (
     <div className="relative">
       {/* 0) FIXED BACKGROUND HERO LAYER (SWAPPER) */}
@@ -59,9 +58,8 @@ export default async function Home() {
         {/* CONTAINER SCROLLING OVER HERO */}
         <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-32">
 
-          {/* 1.5) TRUST BAR HORIZONTAL MARQUEE */}
+          {/* TRUST BAR HORIZONTAL MARQUEE */}
           <TrustBar />
-
 
           {/* 2) SEARCH SECTION */}
           <section id="search-section" className="bg-white rounded-[30px] lg:rounded-[50px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border border-fm-rose-soft/30 scroll-mt-24 mx-4 xl:mx-auto">
@@ -76,7 +74,50 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 3) HOW IT WORKS */}
+          {/* 3) NEW CATEGORIES SECTION */}
+          <section className="max-w-6xl mx-auto bg-white rounded-[30px] p-8 lg:p-16 shadow-xl border border-gray-100 mx-4 xl:mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
+                Scegli il servizio
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <Link href="/fiori-sulle-tombe" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
+                 <div className="absolute inset-0 z-0">
+                    <img src={products.find(p => p.slug === 'bouquet-ricordo-affettuoso')?.coverImage || ''} alt="Fiori sulle tombe" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                 </div>
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
+                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
+                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Cimitero</h3>
+                   <p className="text-white/90 mt-2 font-body font-medium">Consegna sulle tombe</p>
+                 </div>
+               </Link>
+
+               <Link href="/per-il-funerale" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
+                 <div className="absolute inset-0 z-0">
+                    <img src={products.find(p => p.slug === 'bouquet-omaggio-solenne')?.coverImage || ''} alt="Fiori per il Funerale" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                 </div>
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
+                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
+                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Funerale</h3>
+                   <p className="text-white/90 mt-2 font-body font-medium">Per camera ardente e chiesa</p>
+                 </div>
+               </Link>
+
+               <Link href="/per-animali-domestici" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
+                 <div className="absolute inset-0 z-0">
+                    <img src={products.find(p => p.slug === 'anima-pura')?.coverImage || ''} alt="Fiori per i Piccoli Amici" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                 </div>
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
+                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
+                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Piccoli Amici</h3>
+                   <p className="text-white/90 mt-2 font-body font-medium">Piante vive per ricordarli</p>
+                 </div>
+               </Link>
+            </div>
+          </section>
+
+          {/* 4) HOW IT WORKS */}
           <section className="max-w-6xl mx-auto bg-white rounded-[30px] p-8 lg:p-16 shadow-xl border border-gray-100 mx-4 xl:mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
@@ -126,45 +167,7 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 3.5) TRUST / REVIEWS SECTION */}
-          <section id="reviews" className="max-w-6xl mx-auto w-full">
-            <GoogleReviewsBar />
-          </section>
-
-          {/* 4) OMAGGI FLOREALI GRID */}
-          <section className="max-w-6xl mx-auto bg-white rounded-[30px] p-8 lg:p-16 shadow-xl border border-gray-100 mx-4 xl:mx-auto">
-            <div className="flex justify-between items-end border-b border-fm-rose-soft/30 pb-4 mb-8">
-              <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
-                Omaggi floreali
-              </h2>
-              <Link
-                href="/fiori-sulle-tombe"
-                className="hidden sm:inline-flex items-center text-fm-text hover:text-fm-cta font-medium font-body transition-colors hover:underline"
-              >
-                Vedi tutti &rarr;
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {['bouquet-ricordo-affettuoso', 'bouquet-di-rose', 'bouquet-omaggio-speciale', 'bouquet-tributo-eterno', 'lumino', 'messaggio']
-                .map(slug => products.find(p => p.slug === slug))
-                .filter((p): p is NonNullable<typeof p> => p !== undefined)
-                .slice(0, 6).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-            </div>
-
-            <div className="mt-8 text-center sm:hidden">
-              <Link
-                href="/fiori-sulle-tombe"
-                className="inline-flex items-center text-fm-text hover:text-fm-cta font-medium font-body transition-colors hover:underline"
-              >
-                Vedi tutto il catalogo &rarr;
-              </Link>
-            </div>
-          </section>
-
-          {/* 5) TRUST / PROOF & FINAL CTA MERGED */}
+          {/* 5) TRUST / PROOF */}
           <section className="max-w-5xl mx-auto bg-[#FBF6EF] rounded-[30px] shadow-xl overflow-hidden relative mx-4 lg:mx-auto">
             <div className="relative z-10 flex flex-col md:flex-row items-stretch">
               <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-between space-y-8">
@@ -193,6 +196,11 @@ export default async function Home() {
             </div>
           </section>
 
+          {/* 6) REVIEWS SECTION */}
+          <section id="reviews" className="max-w-6xl mx-auto w-full">
+            <GoogleReviewsBar />
+          </section>
+
           {/* 7) CORE VALUES / TRUST BADGES */}
           <CoreValues />
 
@@ -201,3 +209,4 @@ export default async function Home() {
     </div>
   );
 }
+

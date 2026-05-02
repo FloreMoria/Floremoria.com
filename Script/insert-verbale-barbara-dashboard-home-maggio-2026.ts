@@ -32,18 +32,19 @@ function printDbHelp(err: unknown): void {
   console.error(`
 Impossibile connettersi al database (DATABASE_URL).
 
-Cosa fare:
-1) Avvia PostgreSQL in locale (es. Postgres.app, oppure Docker):
-   docker run --name floremoria-pg -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=floremoria -p 5432:5432 -d postgres:16
+Se usi Docker Compose di questo repo:
+- Il container "db" espone la porta 5432 sul Mac → l'host deve essere localhost, MAI "db".
+  "db" funziona solo dentro il container "web", non da terminale sul Mac.
 
-2) In .env oppure .env.local imposta una URL valida, esempio:
-   DATABASE_URL="postgresql://postgres:dev@localhost:5432/floremoria?schema=public"
+Esempio per .env o .env.local (vedi env.host.docker.example in repo):
+  DATABASE_URL="postgresql://floremoria:floremoria_pw@localhost:5432/floremoria?schema=public"
 
-3) Applica le migrazioni se il DB è nuovo:
-   npx prisma migrate dev
-
-4) Rilancia:
-   npm run log:verbale-barbara-home
+Checklist:
+1) In Docker Desktop il container Postgres deve essere Running (cerchio verde).
+2) Avvia anche "web" se ti serve il sito su http://localhost:3000 :
+     docker compose up -d web
+3) Migrazioni: npx prisma migrate dev
+4) Riprova: npm run log:verbale-barbara-home
 `);
 }
 

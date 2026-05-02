@@ -1,3 +1,4 @@
+# DB: da terminale sul Mac usa DATABASE_URL con host localhost (non "db").
 services:
   web:
     build: .

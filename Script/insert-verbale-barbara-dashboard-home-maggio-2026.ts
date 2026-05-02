@@ -1,15 +1,71 @@
-import { PrismaClient } from '@prisma/client';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-const prisma = new PrismaClient();
+/**
+ * Carica .env poi .env.local (come Next.js), così DATABASE_URL non deve stare solo in .env.
+ */
+function loadEnvFiles(): void {
+  for (const name of ['.env', '.env.local']) {
+    const p = resolve(process.cwd(), name);
+    if (!existsSync(p)) continue;
+    for (const line of readFileSync(p, 'utf8').split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) continue;
+      const i = t.indexOf('=');
+      if (i === -1) continue;
+      const key = t.slice(0, i).trim();
+      let val = t.slice(i + 1).trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      process.env[key] = val;
+    }
+  }
+}
+
+function printDbHelp(err: unknown): void {
+  const msg = String(err);
+  if (!msg.includes("Can't reach database") && !msg.includes('P1001')) return;
+  console.error(`
+Impossibile connettersi al database (DATABASE_URL).
+
+Cosa fare:
+1) Avvia PostgreSQL in locale (es. Postgres.app, oppure Docker):
+   docker run --name floremoria-pg -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=floremoria -p 5432:5432 -d postgres:16
+
+2) In .env oppure .env.local imposta una URL valida, esempio:
+   DATABASE_URL="postgresql://postgres:dev@localhost:5432/floremoria?schema=public"
+
+3) Applica le migrazioni se il DB è nuovo:
+   npx prisma migrate dev
+
+4) Rilancia:
+   npm run log:verbale-barbara-home
+`);
+}
 
 /**
  * Verbale redatto in stile BARBARA (Legal & Compliance, .cursorrules)
  * per tracciare in Dashboard gli interventi sulla home pubblica.
  *
- * Esecuzione: npx tsx Script/insert-verbale-barbara-dashboard-home-maggio-2026.ts
- * (richiede DATABASE_URL e migrazioni Prisma applicate)
+ * Esecuzione: npm run log:verbale-barbara-home
  */
-async function main() {
+async function main(): Promise<void> {
+  loadEnvFiles();
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    console.error(
+      'Manca DATABASE_URL. Aggiungila in .env o .env.local (vedi messaggio sopra per esempio).'
+    );
+    process.exit(1);
+  }
+
+  const { PrismaClient } = await import('@prisma/client');
+  const prisma = new PrismaClient();
+
   const verbaleTesto = `
 VERBALE DI CONSOLIDAMENTO — Home FloreMoria (sessione maggio 2026)
 
@@ -41,33 +97,36 @@ Si raccomanda di mantenere allineati copy legali/condizioni di servizio e privac
 
   console.log('Inserimento verbale Barbara (Dashboard LOG)...');
 
-  await prisma.floremoriaLog.create({
-    data: {
-      sessionDate: new Date(),
-      tag: '#BARBARA_LEGAL',
-      topic,
-      shortSummary:
-        'Verbale su aggiornamento home: sezioni, card 3:4 per categoria, esclusione accessori da hero, fix path Fiori-per-Funerale, resilienza DB e copy trasparenza foto.',
-      keyPrompt: 'BARBARA — Verbale post-sessione home / Tre modi / LOG Dashboard',
-      fullText: verbaleTesto,
-      discussedPoints:
-        'Allineamento immagini alle categorie merceologiche; prevenzione mismatch lumino/accessori su card funerale; posizionamento TrustBar; testi foto di conferma.',
-      achievedResults:
-        'Mapping getImages corretto per Fiori-per-Funerale; pickRandomTrePorteHero con whitelist; TrePorteCard aspect 3:4; fallback categoria-specifici; loadDeliveryProofPhotos non bloccante.',
-      pendingTasks:
-        'Verifica copy legali su pagine statiche correlate; rotazione chiavi Stripe di test se esposte in passato in ambienti non produttivi.',
-      criticalAlarms: null,
-    },
-  });
+  try {
+    await prisma.floremoriaLog.create({
+      data: {
+        sessionDate: new Date(),
+        tag: '#BARBARA_LEGAL',
+        topic,
+        shortSummary:
+          'Verbale su aggiornamento home: sezioni, card 3:4 per categoria, esclusione accessori da hero, fix path Fiori-per-Funerale, resilienza DB e copy trasparenza foto.',
+        keyPrompt: 'BARBARA — Verbale post-sessione home / Tre modi / LOG Dashboard',
+        fullText: verbaleTesto,
+        discussedPoints:
+          'Allineamento immagini alle categorie merceologiche; prevenzione mismatch lumino/accessori su card funerale; posizionamento TrustBar; testi foto di conferma.',
+        achievedResults:
+          'Mapping getImages corretto per Fiori-per-Funerale; pickRandomTrePorteHero con whitelist; TrePorteCard aspect 3:4; fallback categoria-specifici; loadDeliveryProofPhotos non bloccante.',
+        pendingTasks:
+          'Verifica copy legali su pagine statiche correlate; rotazione chiavi Stripe di test se esposte in passato in ambienti non produttivi.',
+        criticalAlarms: null,
+      },
+    });
+  } catch (e) {
+    printDbHelp(e);
+    throw e;
+  } finally {
+    await prisma.$disconnect();
+  }
 
   console.log('Verbale inserito in floremoria_logs (Dashboard → Log).');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

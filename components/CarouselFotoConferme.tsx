@@ -10,8 +10,14 @@ const mockImages = [
   'https://images.unsplash.com/photo-1563241527-300ecb9687ee?auto=format&fit=crop&w=800&q=80'
 ];
 
+function sanitizePhotoUrls(urls: string[] | undefined): string[] {
+  if (!urls?.length) return [];
+  return urls.filter((u) => typeof u === 'string' && u.trim() !== '');
+}
+
 export default function CarouselFotoConferme({ photos }: { photos?: string[] }) {
-  const images = photos && photos.length > 0 ? photos : mockImages;
+  const valid = sanitizePhotoUrls(photos);
+  const images = valid.length > 0 ? valid : mockImages;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {

@@ -303,3 +303,76 @@ export const products: Product[] = productsRaw.map(p => {
 export function getProductBySlug(slug: string): Product | undefined {
     return products.find((p) => p.slug === slug);
 }
+
+/** Solo composizioni floreali / addobbi in cartella Fiori-per-Funerale (no ceri, nastri, ecc.). */
+const TRE_PORTE_FUNERALE_SLUGS = new Set([
+    'bouquet-cordoglio-sincero',
+    'bouquet-omaggio-solenne',
+    'bouquet-memoria-imperituri',
+    'kalonche',
+    'margherite-gerbere',
+    'bouquet-rispetto-vicinanza',
+    'cuscino',
+    'piramide',
+    'copribara',
+    'cuore-corona',
+]);
+
+/** Solo bouquet “verdi” Piccoli Amici (no lumini, ceri, biglietti, nastri). */
+const TRE_PORTE_ANIMALI_SLUGS = new Set([
+    'un-raggio-di-sole',
+    'abbraccio-verde',
+    'legame-eterno',
+    'battito-di-foglia',
+    'anima-pura',
+    'il-giardino-del-ponte',
+]);
+
+const TRE_PORTE_FALLBACK_SRC: Record<'cimitero' | 'funerale' | 'animali', string> = {
+    cimitero: encodeURI(
+        '/images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso/fiori-sulle-tombe-prezzo-basso-omaggio-prato.webp'
+    ),
+    funerale:
+        '/images/products/Fiori-per-Funerale/bouquet-omaggio-solenne/mazzo-fiori-omaggio-solenne-condoglianze-chiesa-foggia.webp',
+    animali: encodeURI(
+        '/images/products/Fiori-per-Piccoli-Amici/Anima Pura/anima-pura-fiori-bianchi-autunno-animali.webp'
+    ),
+};
+
+function trePorteBouquetPool(category: 'cimitero' | 'funerale' | 'animali'): Product[] {
+    const bouquets = products.filter((p) => p.category === category && p.isBouquet === true);
+    if (category === 'funerale') {
+        return bouquets.filter((p) => TRE_PORTE_FUNERALE_SLUGS.has(p.slug));
+    }
+    if (category === 'animali') {
+        return bouquets.filter((p) => TRE_PORTE_ANIMALI_SLUGS.has(p.slug));
+    }
+    return bouquets;
+}
+
+/**
+ * Immagine casuale per le card home "Tre modi…": bouquet per categoria (funerale = solo Fiori per Funerale in repo).
+ * Varia ad ogni richiesta SSR (Math.random).
+ */
+export function pickRandomTrePorteHero(category: 'cimitero' | 'funerale' | 'animali'): {
+    src: string;
+    product: Product;
+} {
+    const bouquets = trePorteBouquetPool(category);
+    const withSrc = bouquets
+        .map((p) => {
+            const raw = (p.coverImage && p.coverImage.trim()) || p.images?.[0]?.trim() || '';
+            return raw ? { product: p, src: raw } : null;
+        })
+        .filter((x): x is { product: Product; src: string } => x !== null);
+    if (withSrc.length === 0) {
+        const fallbackProduct =
+            bouquets[0] ??
+            products.find((p) => p.slug === 'bouquet-omaggio-solenne') ??
+            products.find((p) => p.isBouquet) ??
+            products[0];
+        return { src: TRE_PORTE_FALLBACK_SRC[category], product: fallbackProduct };
+    }
+    const i = Math.floor(Math.random() * withSrc.length);
+    return withSrc[i]!;
+}

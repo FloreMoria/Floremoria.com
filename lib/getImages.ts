@@ -7,19 +7,19 @@ const pathMapping: Record<string, string> = {
     "lumino": "images/products/accessori/lumino",
     "messaggio": "images/products/accessori/messaggio",
 
-    // PER IL FUNERALE
-    "bouquet-cordoglio-sincero": "images/products/Fiori per Funerale/bouquet-cordoglio-sincero",
-    "bouquet-omaggio-solenne": "images/products/Fiori per Funerale/bouquet-omaggio-solenne",
-    "bouquet-memoria-imperituri": "images/products/Fiori per Funerale/bouquet-memoria-eterna",
-    "kalonche": "images/products/Fiori per Funerale/kalonche",
-    "margherite-gerbere": "images/products/Fiori per Funerale/margherite-gerbere FF",
-    "bouquet-rispetto-vicinanza": "images/products/Fiori per Funerale/bouquet-rispetto-vicinanza",
+    // PER IL FUNERALE (cartella reale: Fiori-per-Funerale)
+    "bouquet-cordoglio-sincero": "images/products/Fiori-per-Funerale/bouquet-cordoglio-sincero",
+    "bouquet-omaggio-solenne": "images/products/Fiori-per-Funerale/bouquet-omaggio-solenne",
+    "bouquet-memoria-imperituri": "images/products/Fiori-per-Funerale/bouquet-memoria-eterna",
+    "kalonche": "images/products/Fiori-per-Funerale/kalonche",
+    "margherite-gerbere": "images/products/Fiori-per-Funerale/margherite-gerbere FF",
+    "bouquet-rispetto-vicinanza": "images/products/Fiori-per-Funerale/bouquet-rispetto-vicinanza",
     "nastro-commemorativo": "images/products/accessori/Nastro commemorativo",
     "set-ceri": "images/products/accessori/set-ceri-candele",
-    "cuscino": "images/products/Fiori per Funerale/cuscino",
-    "piramide": "images/products/Fiori per Funerale/piramide",
-    "copribara": "images/products/Fiori per Funerale/copribara",
-    "cuore-corona": "images/products/Fiori per Funerale/cuore-corona",
+    "cuscino": "images/products/Fiori-per-Funerale/cuscino",
+    "piramide": "images/products/Fiori-per-Funerale/piramide",
+    "copribara": "images/products/Fiori-per-Funerale/copribara",
+    "cuore-corona": "images/products/Fiori-per-Funerale/cuore-corona",
 
     // PICCOLI AMICI
     "un-raggio-di-sole": "images/products/Fiori-per-Piccoli-Amici/Un raggio di sole",

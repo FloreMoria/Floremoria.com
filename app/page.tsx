@@ -1,8 +1,6 @@
 import { Metadata } from 'next';
-import { getProductBySlug } from '@/lib/products';
-import { buildProductAlt } from '@/utils/altText';
+import TrePorteCard from '@/components/TrePorteCard';
 import BackgroundSwapper from '@/components/BackgroundSwapper';
-import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 import Button from '@/components/Button';
 import GoogleReviewsBar from '@/components/GoogleReviewsBar';
@@ -17,26 +15,32 @@ export const metadata: Metadata = {
   description: 'Consegna fiori sulle tombe e nei cimiteri in Italia tramite fioristi partner. Per ogni servizio riceverai una foto di conferma per rassicurarti.',
 };
 
-export default async function Home() {
-  const trePorteTombe = getProductBySlug('bouquet-ricordo-affettuoso');
-  const trePorteFunerale = getProductBySlug('bouquet-omaggio-solenne');
-  const trePortePiccoli = getProductBySlug('anima-pura');
-
-  // Recupero ultime prove fotografiche (carousel)
-  let proofPhotos: string[] = [];
-  if (prisma.deliveryProof) {
-    try {
-      const proofs = await prisma.deliveryProof.findMany({
-        where: { status: 'COMPLETED', photoAfterUrl: { not: null } },
-        orderBy: { timestampAfter: 'desc' },
-        take: 3,
-        select: { photoAfterUrl: true }
-      });
-      proofPhotos = proofs.map((p: any) => p.photoAfterUrl).filter(Boolean) as string[];
-    } catch (e) {
-      console.error("Prisma fetch error (Carousel):", e);
-    }
+async function loadDeliveryProofPhotos(): Promise<string[]> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return [];
   }
+  try {
+    const proofs = await prisma.deliveryProof.findMany({
+      where: { status: 'COMPLETED', photoAfterUrl: { not: null } },
+      orderBy: { timestampAfter: 'desc' },
+      take: 3,
+      select: { photoAfterUrl: true },
+    });
+    return proofs
+      .map((p) => p.photoAfterUrl)
+      .filter((url): url is string => typeof url === 'string' && url.trim() !== '');
+  } catch {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[FloreMoria] Home: DB non raggiungibile o non configurato — carousel foto usa i fallback. Avvia Postgres o aggiorna DATABASE_URL in .env.local.'
+      );
+    }
+    return [];
+  }
+}
+
+export default async function Home() {
+  const proofPhotos = await loadDeliveryProofPhotos();
   
   return (
     <div className="relative">
@@ -61,8 +65,13 @@ export default async function Home() {
           </TextParallax>
         </section>
 
-        {/* Ordine sezioni: Ricerca → Tre porte → Come funziona → Foto → Recensioni → Valori → TrustBar */}
-        <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-28">
+        {/* Banner fiducia: in basso verso la ricerca (NINA: respiro visivo prima di “Dove desideri…”) */}
+        <div className="relative z-10 w-full mt-6 md:mt-10 lg:mt-14 mb-1 lg:mb-2">
+          <TrustBar compactBottom />
+        </div>
+
+        {/* Ordine sezioni: Ricerca → Tre porte → Come funziona → Foto → Recensioni → Valori */}
+        <div className="relative z-10 w-full pt-3 lg:pt-5 pb-16 space-y-16 lg:space-y-28">
 
           {/* 2) Ricerca */}
           <section id="search-section" className="bg-[#FDFCF9] rounded-[28px] lg:rounded-[40px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_8px_40px_rgba(43,43,43,0.06)] border border-stone-200/80 scroll-mt-24 mx-4 xl:mx-auto">
@@ -83,98 +92,36 @@ export default async function Home() {
             aria-labelledby="tre-porte-heading"
             className="max-w-7xl mx-auto bg-[#FAF9F6] rounded-[28px] p-6 sm:p-10 lg:p-14 shadow-[0_8px_48px_rgba(43,43,43,0.05)] border border-stone-200/70 mx-4 xl:mx-auto"
           >
-            <header className="text-center mb-10 lg:mb-14 max-w-2xl mx-auto space-y-3">
-              <p className="text-[11px] sm:text-xs font-body uppercase tracking-[0.28em] text-fm-muted">
-                Percorsi
+            <header className="text-center mb-10 lg:mb-14 max-w-2xl mx-auto space-y-4">
+              <p className="text-[11px] sm:text-xs font-body uppercase tracking-[0.22em] text-fm-muted">
+                Dove conta il tuo ricordo
               </p>
               <h2 id="tre-porte-heading" className="text-[28px] sm:text-[34px] lg:text-[40px] font-display font-semibold text-fm-text leading-tight tracking-tight">
-                Tre porte
+                Tre modi per accompagnarti
               </h2>
               <p className="text-fm-muted font-body text-base sm:text-lg leading-relaxed">
-                Tre ingressi distinti: stesso rigore, stessa cura. Scegli il contesto che rispecchia il tuo ricordo.
+                Tombe, funerale o un ultimo gesto per un animale amato: tre contesti diversi, con la stessa cura silenziosa — fiori freschi, fioristi sul territorio e la conferma su WhatsApp.
               </p>
             </header>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8">
-              <Link
+              <TrePorteCard
+                category="cimitero"
                 href="/fiori-sulle-tombe"
-                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
-              >
-                <div className="absolute inset-0">
-                  <img
-                    src={trePorteTombe?.coverImage || ''}
-                    alt={trePorteTombe ? buildProductAlt(trePorteTombe, { context: 'card' }) : 'Fiori sulle tombe, catalogo FloreMoria'}
-                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
-                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
-                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
-                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
-                    Fiori sulle tombe
-                  </h3>
-                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
-                    Consegna sulle tombe, con rete di fioristi locali in tutta Italia.
-                  </p>
-                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
-                    Apri il catalogo
-                  </span>
-                </div>
-              </Link>
-
-              <Link
+                title="Fiori sulle tombe"
+                description="Consegna sulle tombe, con rete di fioristi locali in tutta Italia."
+              />
+              <TrePorteCard
+                category="funerale"
                 href="/per-il-funerale"
-                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
-              >
-                <div className="absolute inset-0">
-                  <img
-                    src={trePorteFunerale?.coverImage || ''}
-                    alt={trePorteFunerale ? buildProductAlt(trePorteFunerale, { context: 'card' }) : 'Fiori per il Funerale, catalogo FloreMoria'}
-                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
-                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
-                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
-                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
-                    Fiori per il Funerale
-                  </h3>
-                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
-                    Camera ardente, chiesa e luoghi del commiato — con la stessa discrezione.
-                  </p>
-                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
-                    Apri il catalogo
-                  </span>
-                </div>
-              </Link>
-
-              <Link
+                title="Fiori per il Funerale"
+                description="Camera ardente, chiesa e luoghi del commiato — con la stessa discrezione."
+              />
+              <TrePorteCard
+                category="animali"
                 href="/per-animali-domestici"
-                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
-              >
-                <div className="absolute inset-0">
-                  <img
-                    src={trePortePiccoli?.coverImage || ''}
-                    alt={trePortePiccoli ? buildProductAlt(trePortePiccoli, { context: 'card' }) : 'Fiori per i Piccoli Amici, catalogo FloreMoria'}
-                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
-                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
-                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
-                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
-                    Fiori per i Piccoli Amici
-                  </h3>
-                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
-                    Omaggi dedicati agli animali di famiglia: piante e composizioni con cuore.
-                  </p>
-                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
-                    Apri il catalogo
-                  </span>
-                </div>
-              </Link>
+                title="Fiori per i Piccoli Amici"
+                description="Omaggi dedicati agli animali di famiglia: piante e composizioni con cuore."
+              />
             </div>
           </section>
 
@@ -268,8 +215,6 @@ export default async function Home() {
 
           {/* 7) Valori */}
           <CoreValues />
-
-          <TrustBar />
         </div>
       </div>
     </div>

@@ -11,7 +11,8 @@
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "log:verbale-barbara-home": "tsx Script/insert-verbale-barbara-dashboard-home-maggio-2026.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

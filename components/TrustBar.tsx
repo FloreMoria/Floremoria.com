@@ -11,9 +11,18 @@ const trustItems = [
   { icon: ShieldCheck, text: 'Garanzia di soddisfazione' },
 ];
 
-export default function TrustBar() {
+type TrustBarProps = {
+  /** Margine inferiore ridotto quando il banner sta sotto l’hero, prima della ricerca */
+  compactBottom?: boolean;
+};
+
+export default function TrustBar({ compactBottom = false }: TrustBarProps) {
   return (
-    <div className="w-full bg-[#FDFCF9]/65 backdrop-blur-sm border-y border-[#EAE3D9]/50 py-5 overflow-hidden relative z-10 shadow-sm mx-auto mb-16 lg:mb-24">
+    <div
+      className={`w-full bg-[#FDFCF9]/65 backdrop-blur-sm border-y border-[#EAE3D9]/50 py-5 overflow-hidden relative z-10 shadow-sm mx-auto ${
+        compactBottom ? 'mb-6 lg:mb-10' : 'mb-16 lg:mb-24'
+      }`}
+    >
       <div className="flex animate-marquee md:animate-marquee-slow w-max">
         {/* Usiamo 4 copie dell'array. Traslando del -50% otteniamo un loop perfetto infinito */}
         {[...Array(4)].map((_, arrayIndex) => (

@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import { getProductBySlug } from '@/lib/products';
+import { buildProductAlt } from '@/utils/altText';
 import BackgroundSwapper from '@/components/BackgroundSwapper';
 import Link from 'next/link';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
@@ -16,7 +18,11 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  // 0. Recupero Dati Dinamici: Ultime Prove Fotografiche
+  const trePorteTombe = getProductBySlug('bouquet-ricordo-affettuoso');
+  const trePorteFunerale = getProductBySlug('bouquet-omaggio-solenne');
+  const trePortePiccoli = getProductBySlug('anima-pura');
+
+  // Recupero ultime prove fotografiche (carousel)
   let proofPhotos: string[] = [];
   if (prisma.deliveryProof) {
     try {
@@ -55,14 +61,11 @@ export default async function Home() {
           </TextParallax>
         </section>
 
-        {/* CONTAINER SCROLLING OVER HERO */}
-        <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-32">
+        {/* Ordine sezioni: Ricerca → Tre porte → Come funziona → Foto → Recensioni → Valori → TrustBar */}
+        <div className="relative z-10 w-full pt-4 lg:pt-8 pb-16 space-y-16 lg:space-y-28">
 
-          {/* TRUST BAR HORIZONTAL MARQUEE */}
-          <TrustBar />
-
-          {/* 2) SEARCH SECTION */}
-          <section id="search-section" className="bg-white rounded-[30px] lg:rounded-[50px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border border-fm-rose-soft/30 scroll-mt-24 mx-4 xl:mx-auto">
+          {/* 2) Ricerca */}
+          <section id="search-section" className="bg-[#FDFCF9] rounded-[28px] lg:rounded-[40px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_8px_40px_rgba(43,43,43,0.06)] border border-stone-200/80 scroll-mt-24 mx-4 xl:mx-auto">
             <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug mb-4">
               Dove desideri inviare fiori?
             </h2>
@@ -74,51 +77,109 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 3) NEW CATEGORIES SECTION */}
-          <section className="max-w-6xl mx-auto bg-white rounded-[30px] p-8 lg:p-16 shadow-xl border border-gray-100 mx-4 xl:mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
-                Scegli il servizio
+          {/* 3) Tre porte — categorie (sostituisce il blocco “Scegli il servizio” / galleria omaggi) */}
+          <section
+            id="tre-porte"
+            aria-labelledby="tre-porte-heading"
+            className="max-w-7xl mx-auto bg-[#FAF9F6] rounded-[28px] p-6 sm:p-10 lg:p-14 shadow-[0_8px_48px_rgba(43,43,43,0.05)] border border-stone-200/70 mx-4 xl:mx-auto"
+          >
+            <header className="text-center mb-10 lg:mb-14 max-w-2xl mx-auto space-y-3">
+              <p className="text-[11px] sm:text-xs font-body uppercase tracking-[0.28em] text-fm-muted">
+                Percorsi
+              </p>
+              <h2 id="tre-porte-heading" className="text-[28px] sm:text-[34px] lg:text-[40px] font-display font-semibold text-fm-text leading-tight tracking-tight">
+                Tre porte
               </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <Link href="/fiori-sulle-tombe" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
-                 <div className="absolute inset-0 z-0">
-                    <img src={products.find(p => p.slug === 'bouquet-ricordo-affettuoso')?.coverImage || ''} alt="Fiori sulle tombe" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                 </div>
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
-                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
-                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Cimitero</h3>
-                   <p className="text-white/90 mt-2 font-body font-medium">Consegna sulle tombe</p>
-                 </div>
-               </Link>
+              <p className="text-fm-muted font-body text-base sm:text-lg leading-relaxed">
+                Tre ingressi distinti: stesso rigore, stessa cura. Scegli il contesto che rispecchia il tuo ricordo.
+              </p>
+            </header>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8">
+              <Link
+                href="/fiori-sulle-tombe"
+                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
+              >
+                <div className="absolute inset-0">
+                  <img
+                    src={trePorteTombe?.coverImage || ''}
+                    alt={trePorteTombe ? buildProductAlt(trePorteTombe, { context: 'card' }) : 'Fiori sulle tombe, catalogo FloreMoria'}
+                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
+                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
+                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
+                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
+                    Fiori sulle tombe
+                  </h3>
+                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
+                    Consegna sulle tombe, con rete di fioristi locali in tutta Italia.
+                  </p>
+                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
+                    Apri il catalogo
+                  </span>
+                </div>
+              </Link>
 
-               <Link href="/per-il-funerale" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
-                 <div className="absolute inset-0 z-0">
-                    <img src={products.find(p => p.slug === 'bouquet-omaggio-solenne')?.coverImage || ''} alt="Fiori per il Funerale" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                 </div>
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
-                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
-                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Funerale</h3>
-                   <p className="text-white/90 mt-2 font-body font-medium">Per camera ardente e chiesa</p>
-                 </div>
-               </Link>
+              <Link
+                href="/per-il-funerale"
+                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
+              >
+                <div className="absolute inset-0">
+                  <img
+                    src={trePorteFunerale?.coverImage || ''}
+                    alt={trePorteFunerale ? buildProductAlt(trePorteFunerale, { context: 'card' }) : 'Fiori per il Funerale, catalogo FloreMoria'}
+                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
+                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
+                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
+                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
+                    Fiori per il Funerale
+                  </h3>
+                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
+                    Camera ardente, chiesa e luoghi del commiato — con la stessa discrezione.
+                  </p>
+                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
+                    Apri il catalogo
+                  </span>
+                </div>
+              </Link>
 
-               <Link href="/per-animali-domestici" className="block relative overflow-hidden rounded-[30px] text-center hover:shadow-2xl transition-all duration-300 group aspect-[4/5] flex flex-col justify-end border border-fm-rose-soft/30">
-                 <div className="absolute inset-0 z-0">
-                    <img src={products.find(p => p.slug === 'anima-pura')?.coverImage || ''} alt="Fiori per i Piccoli Amici" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                 </div>
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-90"></div>
-                 <div className="relative z-20 p-8 transform transition-transform duration-300 group-hover:-translate-y-2">
-                   <h3 className="text-3xl font-display font-bold text-white drop-shadow-md">Piccoli Amici</h3>
-                   <p className="text-white/90 mt-2 font-body font-medium">Piante vive per ricordarli</p>
-                 </div>
-               </Link>
+              <Link
+                href="/per-animali-domestici"
+                className="group relative flex min-h-[320px] sm:min-h-[380px] lg:min-h-[420px] flex-col justify-end overflow-hidden rounded-[24px] border border-stone-200/90 bg-stone-100 shadow-sm transition-all duration-500 hover:shadow-[0_20px_50px_rgba(43,43,43,0.12)] hover:border-stone-300"
+              >
+                <div className="absolute inset-0">
+                  <img
+                    src={trePortePiccoli?.coverImage || ''}
+                    alt={trePortePiccoli ? buildProductAlt(trePortePiccoli, { context: 'card' }) : 'Fiori per i Piccoli Amici, catalogo FloreMoria'}
+                    className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/75 via-stone-900/25 to-transparent" aria-hidden />
+                <div className="relative z-10 p-7 sm:p-9 lg:p-10">
+                  <span className="mb-3 inline-block h-px w-12 bg-fm-gold/90" aria-hidden />
+                  <h3 className="font-display text-2xl sm:text-3xl lg:text-[1.85rem] font-semibold tracking-tight text-white">
+                    Fiori per i Piccoli Amici
+                  </h3>
+                  <p className="mt-2 max-w-sm font-body text-[15px] leading-relaxed text-white/85">
+                    Omaggi dedicati agli animali di famiglia: piante e composizioni con cuore.
+                  </p>
+                  <span className="mt-5 inline-flex items-center font-body text-sm font-medium text-white/95 underline decoration-white/40 underline-offset-4 transition group-hover:decoration-fm-gold">
+                    Apri il catalogo
+                  </span>
+                </div>
+              </Link>
             </div>
           </section>
 
-          {/* 4) HOW IT WORKS */}
-          <section className="max-w-6xl mx-auto bg-white rounded-[30px] p-8 lg:p-16 shadow-xl border border-gray-100 mx-4 xl:mx-auto">
+          {/* 4) Come funziona */}
+          <section className="max-w-6xl mx-auto bg-[#FDFCF9] rounded-[28px] p-8 lg:p-16 shadow-[0_8px_40px_rgba(43,43,43,0.05)] border border-stone-200/80 mx-4 xl:mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
                 Come funziona
@@ -167,16 +228,20 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 5) TRUST / PROOF */}
-          <section className="max-w-5xl mx-auto bg-[#FBF6EF] rounded-[30px] shadow-xl overflow-hidden relative mx-4 lg:mx-auto">
+          {/* 5) Foto di conferma */}
+          <section className="max-w-5xl mx-auto overflow-hidden rounded-[28px] border border-stone-200/80 bg-[#F7F5F0] shadow-[0_8px_40px_rgba(43,43,43,0.06)] relative mx-4 lg:mx-auto">
             <div className="relative z-10 flex flex-col md:flex-row items-stretch">
               <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-between space-y-8">
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <h2 className="text-[32px] md:text-3xl lg:text-4xl font-display font-semibold text-fm-text leading-snug">
                     Foto di conferma per ogni consegna
                   </h2>
+                  <p className="rounded-2xl border border-fm-gold/25 bg-fm-gold-soft/80 px-4 py-3 font-display text-[15px] font-semibold tracking-wide text-fm-text sm:text-base">
+                    Lo scatto fotografico dopo la consegna — la foto con l&apos;omaggio già posato — è{' '}
+                    <span className="whitespace-nowrap text-fm-gold">sempre gratuito</span>.
+                  </p>
                   <p className="text-fm-text/80 font-body text-lg leading-relaxed">
-                    Sappiamo quanto sia importante per te. Per questo, ogni nostro fiorista scatta una fotografia una volta che l&apos;omaggio floreale è stato posato. La riceverai sul tuo WhatsApp per la massima serenità.
+                    Sappiamo quanto conti avere una prova tangibile. Il fiorista documenta il lavoro svolto; ricevi tutto sul tuo WhatsApp, con la stessa cura che mettiamo in ogni dettaglio del servizio.
                   </p>
                 </div>
                 
@@ -189,21 +254,22 @@ export default async function Home() {
                   </Button>
                 </div>
               </div>
-              <div className="w-full md:w-1/2 bg-white/40 p-8 lg:p-12 flex items-center justify-center border-t md:border-t-0 md:border-l border-white/50">
+              <div className="w-full md:w-1/2 bg-[#FDFCF9]/90 p-8 lg:p-12 flex items-center justify-center border-t border-stone-200/60 md:border-t-0 md:border-l md:border-stone-200/60">
                 {/* Componente Dinamico Foto Consegne */}
                 <CarouselFotoConferme photos={proofPhotos} />
               </div>
             </div>
           </section>
 
-          {/* 6) REVIEWS SECTION */}
-          <section id="reviews" className="max-w-6xl mx-auto w-full">
+          {/* 6) Recensioni */}
+          <section id="reviews" className="max-w-6xl mx-auto w-full px-4">
             <GoogleReviewsBar />
           </section>
 
-          {/* 7) CORE VALUES / TRUST BADGES */}
+          {/* 7) Valori */}
           <CoreValues />
 
+          <TrustBar />
         </div>
       </div>
     </div>

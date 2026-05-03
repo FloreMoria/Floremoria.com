@@ -13,7 +13,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "log:verbale-barbara-home": "tsx Script/insert-verbale-barbara-dashboard-home-maggio-2026.ts",
-    "log:verbale:consolidato:2026-05-03": "tsx Script/consolidate-verbale-2026-05-03.ts"
+    "log:verbale:consolidato:2026-05-03": "tsx Script/consolidate-verbale-2026-05-03.ts",
+    "log:verbale:daily": "tsx Script/daily-verbale-sync.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

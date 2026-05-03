@@ -1,0 +1,57 @@
+# Automazione «Regola Aurea»: alle ~08:00 Europe/Rome elabora il giorno PRECEDENTE
+# (Obsidian + riga unica in floremoria_logs). Richiede Mac spento = niente: gira su GitHub.
+#
+# Prerequisiti:
+# - Repository secret DATABASE_URL verso Postgres raggiungibile da Internet (es. Neon, Supabase).
+#   Se manca, lo script crea/aggiorna solo i file Markdown; il commit resta se ci sono modifiche.
+# - Cron in UTC: 06:00 UTC = 08:00 in ora legale italiana (CEST). In inverno (CET) sono le 07:00 Roma:
+#   sostituisci con "0 7 * * *" se preferisci sempre le 08:00 in solare.
+
+name: Verbale giornaliero (ieri)
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: daily-verbale-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installa dipendenze
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Sync verbale (ieri, Europe/Rome)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CI: 'true'
+        run: npm run log:verbale:daily
+
+      - name: Commit e push Obsidian (se cambiato)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notes/obsidian/verbali/
+          if git diff --staged --quiet; then
+            echo "Nessun file verbale da committare."
+          else
+            git commit -m "chore(verbali): sync automatico verbale giorno precedente (Europe/Rome)"
+            git push
+          fi

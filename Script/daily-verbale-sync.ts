@@ -6,6 +6,8 @@
  *
  * DATABASE_URL: opzionale in CI; se assente si aggiorna solo Obsidian in repo al prossimo commit manuale
  * (in Actions il commit è step separato). In locale: carica .env / .env.local.
+ *
+ * VERBALE_FORCE_ISO=YYYY-MM-DD (opzionale): forza la data di sessione (es. rettifica consolidato) invece di «ieri».
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -104,13 +106,25 @@ tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 - (Da compilare)
 `;
 
+function resolveSessionISO(): string {
+    const raw = process.env.VERBALE_FORCE_ISO?.trim();
+    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return raw;
+    }
+    if (raw) {
+        console.warn(`VERBALE_FORCE_ISO ignorato (formato non valido): ${raw}`);
+    }
+    return getYesterdayRomeISO();
+}
+
 async function main(): Promise<void> {
     const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
     if (!isCI) {
         loadEnvFiles();
     }
 
-    const iso = getYesterdayRomeISO();
+    const iso = resolveSessionISO();
+    const forceIso = Boolean(process.env.VERBALE_FORCE_ISO?.trim());
     const verbaliDir = resolve(process.cwd(), 'notes/obsidian/verbali');
     if (!existsSync(verbaliDir)) {
         mkdirSync(verbaliDir, { recursive: true });
@@ -132,6 +146,12 @@ async function main(): Promise<void> {
         mdBody = readFileSync(pathGiornaliero, 'utf8');
         shortSummary = `Verbale giornaliero (${iso}).`;
     } else {
+        if (forceIso) {
+            console.error(
+                `VERBALE_FORCE_ISO=${iso}: mancano sia ${pathConsolidato} sia ${pathGiornaliero}. Creare almeno uno dei due file.`
+            );
+            process.exit(1);
+        }
         const label = italianLongDate(iso);
         mdBody = TEMPLATE(iso, label);
         writeFileSync(pathGiornaliero, mdBody, 'utf8');
@@ -167,12 +187,18 @@ async function main(): Promise<void> {
         });
 
         const topic = `Verbale operativo ${italianLongDate(iso)} (Regola Aurea)`;
-        const keyPrompt = 'BARBARA / DEVIN — Sync automatico mattutino (ieri, Europe/Rome)';
-        const discussed =
-            'Vedi file Obsidian allegato; sezioni Infrastruttura, Strategia, Sviluppo, Logistica.';
-        const achieved = `Sincronizzazione automatica su dashboard; fonte: ${rel}`;
-        const pending =
-            'Completare il verbale in Obsidian e push su main se non già consolidato.';
+        const keyPrompt = forceIso
+            ? 'BARBARA (Segreteria Senior) — deposito / rettifica consolidato e allineamento dashboard (coordinamento con referente di progetto Salvatore)'
+            : 'BARBARA / DEVIN — Sync automatico mattutino (ieri, Europe/Rome)';
+        const discussed = forceIso
+            ? `Riscrittura integrale verbale ${iso} secondo standard redazionale FLOREM_NET; contenuto in Obsidian (${rel}).`
+            : 'Vedi file Obsidian allegato; sezioni Infrastruttura, Strategia, Sviluppo, Logistica.';
+        const achieved = forceIso
+            ? `Aggiornamento record floremoria_logs da consolidato; sorgente: ${rel}`
+            : `Sincronizzazione automatica su dashboard; fonte: ${rel}`;
+        const pending = forceIso
+            ? 'Verifica lettura su /dashboard/logs; eventuale push su main del file Obsidian.'
+            : 'Completare il verbale in Obsidian e push su main se non già consolidato.';
 
         const data = {
             sessionDate,

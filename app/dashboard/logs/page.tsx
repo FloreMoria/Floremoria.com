@@ -24,7 +24,7 @@ export default async function SystemLogsPage({
             where: {
                 tag: { contains: filter, mode: 'insensitive' }
             },
-            orderBy: { sessionDate: 'desc' }
+            orderBy: [{ sessionDate: 'desc' }, { id: 'desc' }],
         });
     } else if (q) {
         logs = await prisma.floremoriaLog.findMany({
@@ -36,15 +36,11 @@ export default async function SystemLogsPage({
                     { keyPrompt: { contains: q, mode: 'insensitive' } },
                 ]
             },
-            orderBy: {
-                sessionDate: 'desc'
-            }
+            orderBy: [{ sessionDate: 'desc' }, { id: 'desc' }],
         });
     } else {
         logs = await prisma.floremoriaLog.findMany({
-            orderBy: {
-                sessionDate: 'desc'
-            }
+            orderBy: [{ sessionDate: 'desc' }, { id: 'desc' }],
         });
     }
 

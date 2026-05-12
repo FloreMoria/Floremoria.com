@@ -42,6 +42,10 @@ yarn-error.log*
 
 # vercel
 .vercel
+env-per-vercel.txt
+env.host.docker.example
+*.txt
+*.example
 
 # typescript
 *.tsbuildinfo

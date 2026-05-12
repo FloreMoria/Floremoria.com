@@ -31,14 +31,33 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             where: { id: resolvedParams.id },
             data: {
                 name: data.name,
-                code: data.code,
+                code: typeof data.code === 'string' ? data.code.trim().toUpperCase() : null,
                 type: data.type,
                 value: data.value,
+                maxUses: typeof data.maxUses === 'number' && data.maxUses > 0 ? data.maxUses : null,
                 startsAt: data.startsAt ? new Date(data.startsAt) : null,
                 endsAt: data.endsAt ? new Date(data.endsAt) : null,
                 isActive: data.isActive,
                 rulesJson: data.rulesJson
             }
+        });
+        return NextResponse.json(offer);
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+}
+
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+    if (!checkAdminAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const resolvedParams = await context.params;
+    try {
+        const data = await request.json();
+        const offer = await prisma.offer.update({
+            where: { id: resolvedParams.id },
+            data: {
+                isActive: Boolean(data?.isActive),
+            },
         });
         return NextResponse.json(offer);
     } catch (e: any) {

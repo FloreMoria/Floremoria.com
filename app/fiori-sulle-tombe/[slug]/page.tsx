@@ -1,4 +1,5 @@
 import { products, getProductBySlug } from '@/lib/products';
+import { getPdpCrossSellProducts } from '@/lib/getPdpCrossSellProducts';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import ProductClientView from '@/components/ProductClientView';
@@ -39,13 +40,14 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         notFound();
     }
 
-    // Related products: 1 suggested bouquet, Lumino, Messaggio
-    const suggestedBouquet = products.find(p => p.isBouquet && p.id !== product.id) || products.find(p => p.isBouquet);
-    const lumino = products.find(p => p.slug === 'lumino');
-    const messaggio = products.find(p => p.slug === 'messaggio');
-    const relatedProducts = [suggestedBouquet, lumino, messaggio].filter(Boolean) as typeof products;
+    const relatedProducts = getPdpCrossSellProducts(product, 3);
 
     const initialComune = resolvedSearchParams.loc ? decodeURIComponent(resolvedSearchParams.loc).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+
+    const siteBase =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+        process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
+        'https://www.floremoria.com';
 
     const schemaOrg = {
         "@context": "https://schema.org",
@@ -54,7 +56,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         "description": "Omaggio floreale consegnato da fiorista locale con foto su WhatsApp",
         "price": product.price,
         "priceCurrency": "EUR",
-        "url": `https://floremoria.eu/fiori-sulle-tombe/${product.slug}`
+        "url": `${siteBase}/fiori-sulle-tombe/${product.slug}`
     };
 
     return (

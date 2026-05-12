@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 
 const prisma = new PrismaClient();
 
@@ -30,12 +31,16 @@ export async function POST(request: Request) {
         // (senza un vero flusso di magic-link inviato via email) iniettiamo direttamente
         // il cookie di sessione per simulare che l'utente assegnato abbia effettuato l'accesso.
         if (role) {
-            response.cookies.set('fm_user_role', role.name, {
-                path: '/',
-            });
-            response.cookies.set('fm_role_expires_at', expiresAt.toISOString(), {
-                path: '/',
-            });
+            const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
+            const opts = {
+                path: base.path,
+                ...(base.domain ? { domain: base.domain } : {}),
+                secure: base.secure,
+                sameSite: base.sameSite,
+                httpOnly: true,
+            };
+            response.cookies.set('fm_user_role', role.name, opts);
+            response.cookies.set('fm_role_expires_at', expiresAt.toISOString(), opts);
         }
 
         return response;

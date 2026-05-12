@@ -22,9 +22,19 @@ export default function OrderCompletedPage() {
     const [buyerPhone, setBuyerPhone] = useState<string | null>(null);
     const [deliveryProvince, setDeliveryProvince] = useState<string | null>(null);
     const [marginCents, setMarginCents] = useState<number>(0);
+    const [partnerReturnUrl, setPartnerReturnUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsClient(true), 0);
+
+        try {
+            const r = sessionStorage.getItem('florem_partner_redirect_url');
+            if (r?.startsWith('http://') || r?.startsWith('https://')) {
+                setPartnerReturnUrl(r);
+            }
+        } catch {
+            /* ignore */
+        }
 
         // Subscription checks
         const subStr = localStorage.getItem('fm_sub');
@@ -202,6 +212,23 @@ export default function OrderCompletedPage() {
                     >
                         <Download size={18} /> Scarica Riepilogo dell'ordine
                     </button>
+
+                    {partnerReturnUrl && (
+                        <Button
+                            href={partnerReturnUrl}
+                            variant="secondary"
+                            className="px-10 py-4 font-sans font-semibold border-2 border-fm-rose-soft"
+                            onClick={() => {
+                                try {
+                                    sessionStorage.removeItem('florem_partner_redirect_url');
+                                } catch {
+                                    /* ignore */
+                                }
+                            }}
+                        >
+                            Torna al sito partner
+                        </Button>
+                    )}
 
                     <Button href="/" variant="primary" className="px-12 py-4 font-sans uppercase tracking-wider font-bold shadow-lg shadow-fm-cta/20">
                         Torna alla Home

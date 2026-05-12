@@ -3,7 +3,7 @@ import React from 'react';
 import ProductGrid from '@/components/shared/ProductGrid';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 import AnimalBanner from '@/components/shared/AnimalBanner';
-import { products } from '@/lib/products';
+import { CATALOG_SLUGS_FUNERALE, productsBySlugOrder } from '@/lib/catalogProductOrder';
 
 export const metadata: Metadata = {
     title: 'Fiori per il Funerale | Consegna floreale professionale | FloreMoria',
@@ -11,29 +11,12 @@ export const metadata: Metadata = {
 };
 
 export default function FuneralCatalogPage() {
-    const targetOrder = [
-        'cuore-corona',
-        'copribara',
-        'piramide',
-        'cuscino',
-        'bouquet-memoria-imperituri',
-        'bouquet-omaggio-solenne',
-        'set-ceri',
-        'nastro-commemorativo',
-        'bouquet-cordoglio-sincero',
-        'bouquet-rispetto-vicinanza',
-        'margherite-gerbere',
-        'kalonche'
-    ];
-
-    const funeralProducts = targetOrder
-        .map(slug => products.find(p => p.slug === slug))
-        .filter((p): p is NonNullable<typeof p> => p !== undefined);
+    const funeralProducts = productsBySlugOrder(CATALOG_SLUGS_FUNERALE);
 
     return (
-        <div className="space-y-8 lg:space-y-12 pb-16">
+        <div className="space-y-6 lg:space-y-10 pb-16">
             <section className="text-center space-y-4 max-w-3xl mx-auto">
-                <h1 className="text-4xl md:text-[40px] font-display font-bold text-gray-900 mb-4 leading-tight pt-8">
+                <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-4 leading-tight">
                     Fiori per il funerale
                 </h1>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
@@ -43,14 +26,14 @@ export default function FuneralCatalogPage() {
 
             <ProductGrid products={funeralProducts} />
 
-            <section className="bg-white rounded-[30px] lg:rounded-[50px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-xl border border-gray-100 mt-16 md:mt-24 space-y-6">
-                <h2 className="text-[32px] font-display font-semibold text-gray-900 leading-snug">
+            <section className="bg-white rounded-[22px] lg:rounded-[40px] px-5 py-5 sm:p-7 lg:p-12 text-center max-w-4xl mx-auto shadow-lg border border-gray-100 mt-8 md:mt-12 space-y-3 sm:space-y-5">
+                <h2 className="text-[22px] sm:text-[28px] font-display font-semibold text-fm-text leading-snug">
                     Servizio di consegna su tutti i Comuni italiani
                 </h2>
-                <p className="text-fm-muted font-body leading-relaxed max-w-2xl mx-auto text-lg">
+                <p className="text-fm-muted font-body leading-relaxed max-w-2xl mx-auto text-[14px] sm:text-base">
                     Offriamo un servizio dedicato e locale per la consegna dei vostri omaggi floreali in tutti i cimiteri, camere mortuarie e chiese d&apos;Italia per garantirti un supporto presente sul territorio.
                 </p>
-                <div className="max-w-xl mx-auto relative z-10 pt-4">
+                <div className="max-w-xl mx-auto relative z-10 pt-1 sm:pt-2">
                     <MunicipalitySearch
                         showButton={true}
                         buttonText="Cerca il comune"

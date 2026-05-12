@@ -1,107 +1,92 @@
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { PrismaClient } from '@prisma/client';
+import { products as catalogProducts } from '../lib/products';
+
+const prisma = new PrismaClient();
+
+function categoryMeta(category?: 'cimitero' | 'funerale' | 'animali') {
+    switch (category) {
+        case 'funerale':
+            return { slug: 'funerale', name: 'Funerale' };
+        case 'animali':
+            return { slug: 'animali', name: 'Piccoli Amici' };
+        default:
+            return { slug: 'cimitero', name: 'Cimitero' };
+    }
+}
+
+async function ensureCategory(slug: string, name: string) {
+    return prisma.category.upsert({
+        where: { slug },
+        update: { name },
+        create: { slug, name },
+    });
+}
 
 async function main() {
-    const catOmaggi = await prisma.category.upsert({
-        where: { slug: 'omaggi-floreali' },
-        update: {},
-        create: {
-            name: 'Omaggi floreali',
-            slug: 'omaggi-floreali',
-        },
-    });
+    const categories = new Map<string, { id: string }>();
 
-    const catAccessori = await prisma.category.upsert({
-        where: { slug: 'accessori' },
-        update: {},
-        create: {
-            name: 'Accessori',
-            slug: 'accessori',
-        },
-    });
+    // 1) Crea/aggiorna le categorie usate dal catalogo
+    for (const p of catalogProducts) {
+        const meta = categoryMeta(p.category);
+        if (!categories.has(meta.slug)) {
+            const cat = await ensureCategory(meta.slug, meta.name);
+            categories.set(meta.slug, { id: cat.id });
+        }
+    }
 
-    const products = [
-        {
-            name: 'Ricordo Affettuoso',
-            slug: 'ricordo-affettuoso',
-            basePriceCents: 2999,
-            categoryId: catOmaggi.id,
-        },
-        {
-            name: 'Bouquet di Rose',
-            slug: 'bouquet-di-rose',
-            basePriceCents: 3499,
-            categoryId: catOmaggi.id,
-        },
-        {
-            name: 'Omaggio Speciale',
-            slug: 'omaggio-speciale',
-            basePriceCents: 3999,
-            categoryId: catOmaggi.id,
-        },
-        {
-            name: 'Tributo Eterno',
-            slug: 'tributo-eterno',
-            basePriceCents: 4999,
-            categoryId: catOmaggi.id,
-        },
-        {
-            name: 'Lumino',
-            slug: 'lumino',
-            basePriceCents: 349,
-            categoryId: catAccessori.id,
-        },
-        {
-            name: 'Messaggio',
-            slug: 'messaggio',
-            basePriceCents: 249,
-            categoryId: catAccessori.id,
-        },
-    ];
+    // 2) Crea/aggiorna tutti i prodotti del catalogo statico nel DB
+    for (const p of catalogProducts) {
+        const meta = categoryMeta(p.category);
+        const categoryId = categories.get(meta.slug)?.id;
+        if (!categoryId) continue;
 
-    for (const prod of products) {
+        const basePriceCents = Math.round((p.price || 0) * 100);
         const product = await prisma.product.upsert({
-            where: { slug: prod.slug },
+            where: { slug: p.slug },
             update: {
-                name: prod.name,
-                basePriceCents: prod.basePriceCents,
-                categoryId: prod.categoryId,
+                name: p.name,
+                basePriceCents,
+                categoryId,
+                isBouquet: p.isBouquet ?? true,
+                isActive: true,
             },
             create: {
-                name: prod.name,
-                slug: prod.slug,
-                basePriceCents: prod.basePriceCents,
-                categoryId: prod.categoryId,
+                // Manteniamo l'ID statico solo per "foto-stato-prima" per compatibilita' carrello.
+                ...(p.id === 'florem-foto-stato-prima' ? { id: p.id } : {}),
+                name: p.name,
+                slug: p.slug,
+                basePriceCents,
+                categoryId,
+                isBouquet: p.isBouquet ?? true,
+                isActive: true,
             },
         });
 
-        const placeholderUrl = `/images/products/${product.slug}.webp`;
-
-        // Upsert placeholder image just based on URL for the product
+        // 3) Placeholder immagine se assente
         const existingImages = await prisma.productImage.findMany({
-            where: { productId: product.id }
+            where: { productId: product.id },
+            take: 1,
         });
-
         if (existingImages.length === 0) {
             await prisma.productImage.create({
                 data: {
                     productId: product.id,
-                    url: placeholderUrl,
-                    alt: `Immagine per ${product.name}`
-                }
+                    url: `/images/products/${product.slug}.webp`,
+                    alt: `Immagine per ${product.name}`,
+                },
             });
         }
     }
 
-    console.log('Database seeded successfully!');
+    console.log(`Database seeded successfully with ${catalogProducts.length} products.`);
 }
 
 main()
     .then(async () => {
-        await prisma.$disconnect()
+        await prisma.$disconnect();
     })
     .catch(async (e) => {
-        console.error(e)
-        await prisma.$disconnect()
-        process.exit(1)
-    })
+        console.error(e);
+        await prisma.$disconnect();
+        process.exit(1);
+    });

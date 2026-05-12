@@ -120,7 +120,7 @@ export default function GoogleReviewsBar() {
     const marqueeReviews = [...enhancedReviews, ...enhancedReviews];
 
     return (
-        <section className="w-full relative py-20 px-4 overflow-hidden bg-fm-section/30">
+        <section className="w-full relative py-10 sm:py-16 md:py-20 px-4 overflow-hidden bg-fm-section/30">
             <style jsx>{`
                 @keyframes marquee {
                     0% { transform: translateX(0); }
@@ -136,12 +136,12 @@ export default function GoogleReviewsBar() {
                 }
             `}</style>
 
-            <div className="max-w-6xl mx-auto space-y-16">
-                <div className="text-center space-y-4">
-                    <h2 className="text-[32px] md:text-4xl font-display font-semibold text-fm-text leading-tight drop-shadow-sm">
+            <div className="max-w-6xl mx-auto space-y-7 sm:space-y-12 md:space-y-16">
+                <div className="text-center space-y-2 sm:space-y-4">
+                    <h2 className="text-[24px] sm:text-[30px] md:text-4xl font-display font-semibold text-fm-text leading-tight drop-shadow-sm">
                         La voce di chi ci ha scelto
                     </h2>
-                    <p className="text-fm-muted font-body text-lg max-w-2xl mx-auto">
+                    <p className="text-fm-muted font-body text-[15px] sm:text-lg max-w-2xl mx-auto">
                         Cosa dicono di noi le persone che ci hanno scelto per ricordare i propri cari.
                     </p>
                 </div>
@@ -152,18 +152,18 @@ export default function GoogleReviewsBar() {
                     <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-fm-section/30 to-transparent z-10 pointer-events-none"></div>
 
                     {/* Marquee Track */}
-                    <div className="animate-marquee gap-6 py-4">
+                    <div className="animate-marquee gap-4 sm:gap-6 py-2 sm:py-4">
                         {marqueeReviews.map((review, idx) => (
                             <blockquote
                                 key={idx}
-                                className="w-[320px] md:w-[400px] flex-shrink-0 flex flex-col justify-between h-full bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/40 transition-all duration-300"
+                                className="w-[285px] sm:w-[320px] md:w-[400px] flex-shrink-0 flex flex-col justify-between h-full bg-white/10 backdrop-blur-md border border-white/20 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/40 transition-all duration-300"
                             >
-                                <div className="space-y-5">
+                                <div className="space-y-3 sm:space-y-5">
                                     <div className="flex items-center justify-between">
                                         {/* Google Stars */}
                                         <div className="flex items-center gap-1 text-yellow-500">
                                             {[...Array(5)].map((_, i) => (
-                                                <svg key={i} className={`w-5 h-5 fill-current ${i < review.rating ? 'opacity-100' : 'opacity-30'}`} viewBox="0 0 24 24">
+                                                <svg key={i} className={`w-4 h-4 sm:w-5 sm:h-5 fill-current ${i < review.rating ? 'opacity-100' : 'opacity-30'}`} viewBox="0 0 24 24">
                                                     <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                                                 </svg>
                                             ))}
@@ -185,14 +185,14 @@ export default function GoogleReviewsBar() {
                                             </svg>
                                         </div>
                                     </div>
-                                    <p className="text-fm-text font-body text-[16px] italic leading-relaxed line-clamp-5">
+                                    <p className="text-fm-text font-body text-[14px] sm:text-[16px] italic leading-relaxed line-clamp-4 sm:line-clamp-5">
                                         &quot;{review.text}&quot;
                                     </p>
                                 </div>
 
-                                <footer className="mt-8 pt-6 border-t border-fm-muted/20">
+                                <footer className="mt-5 sm:mt-8 pt-4 sm:pt-6 border-t border-fm-muted/20">
                                     <cite className="flex flex-col not-italic">
-                                        <span className="font-display font-bold text-fm-text text-lg">
+                                        <span className="font-display font-bold text-fm-text text-base sm:text-lg">
                                             {review.author_name}
                                         </span>
                                         <span className="text-[13px] font-medium text-fm-muted mt-1 truncate">

@@ -288,6 +288,16 @@ const productsRaw: Omit<Product, 'images'>[] = [
         description: "Nastro personalizzato e discreto per il tuo tributo.",
         category: 'animali',
         isBouquet: false
+    },
+    {
+        id: "florem-foto-stato-prima",
+        name: "Foto stato di fatto prima della consegna",
+        slug: "foto-stato-prima-consegna",
+        price: 1.49,
+        description:
+            "Supplemento per ricevere su WhatsApp lo scatto del luogo prima che il fiorista posi l'omaggio (oltre alla foto gratuita dopo la posa).",
+        category: 'cimitero',
+        isBouquet: false
     }
 ];
 
@@ -339,8 +349,33 @@ const TRE_PORTE_FALLBACK_SRC: Record<'cimitero' | 'funerale' | 'animali', string
     ),
 };
 
+/** Accessori: mai hero delle card Tre porte (né come prodotto né come path immagine). */
+const TRE_PORTE_EXCLUDED_SLUGS = new Set([
+    'foto-stato-prima-consegna',
+    'lumino',
+    'messaggio',
+    'nastro-commemorativo',
+    'set-ceri',
+    'lumino-piccoli-amici',
+    'biglietto-piccoli-amici',
+    'ceri-piccoli-amici',
+    'nastro-commemorativo-piccoli-amici',
+]);
+
+function isTrePorteExcludedImageSrc(src: string): boolean {
+    const s = src.toLowerCase();
+    if (s.includes('/accessori/')) return true;
+    if (s.includes('accessorio-')) return true;
+    return false;
+}
+
 function trePorteBouquetPool(category: 'cimitero' | 'funerale' | 'animali'): Product[] {
-    const bouquets = products.filter((p) => p.category === category && p.isBouquet === true);
+    const bouquets = products.filter(
+        (p) =>
+            p.category === category &&
+            p.isBouquet === true &&
+            !TRE_PORTE_EXCLUDED_SLUGS.has(p.slug)
+    );
     if (category === 'funerale') {
         return bouquets.filter((p) => TRE_PORTE_FUNERALE_SLUGS.has(p.slug));
     }
@@ -350,22 +385,33 @@ function trePorteBouquetPool(category: 'cimitero' | 'funerale' | 'animali'): Pro
     return bouquets;
 }
 
+function collectTrePorteHeroCandidates(bouquets: Product[]): { product: Product; src: string }[] {
+    const out: { product: Product; src: string }[] = [];
+    for (const p of bouquets) {
+        const seen = new Set<string>();
+        const add = (raw?: string | null) => {
+            const u = raw?.trim();
+            if (!u || seen.has(u) || isTrePorteExcludedImageSrc(u)) return;
+            seen.add(u);
+            out.push({ product: p, src: u });
+        };
+        add(p.coverImage);
+        for (const im of p.images || []) add(im);
+    }
+    return out;
+}
+
 /**
- * Immagine casuale per le card home "Tre modi…": bouquet per categoria (funerale = solo Fiori per Funerale in repo).
- * Varia ad ogni richiesta SSR (Math.random).
+ * Immagine casuale per le card home "Tre modi…": solo omaggi principali (no accessori),
+ * scelta casuale tra tutte le immagini idonee della categoria. SSR (Math.random).
  */
 export function pickRandomTrePorteHero(category: 'cimitero' | 'funerale' | 'animali'): {
     src: string;
     product: Product;
 } {
     const bouquets = trePorteBouquetPool(category);
-    const withSrc = bouquets
-        .map((p) => {
-            const raw = (p.coverImage && p.coverImage.trim()) || p.images?.[0]?.trim() || '';
-            return raw ? { product: p, src: raw } : null;
-        })
-        .filter((x): x is { product: Product; src: string } => x !== null);
-    if (withSrc.length === 0) {
+    const candidates = collectTrePorteHeroCandidates(bouquets);
+    if (candidates.length === 0) {
         const fallbackProduct =
             bouquets[0] ??
             products.find((p) => p.slug === 'bouquet-omaggio-solenne') ??
@@ -373,6 +419,6 @@ export function pickRandomTrePorteHero(category: 'cimitero' | 'funerale' | 'anim
             products[0];
         return { src: TRE_PORTE_FALLBACK_SRC[category], product: fallbackProduct };
     }
-    const i = Math.floor(Math.random() * withSrc.length);
-    return withSrc[i]!;
+    const i = Math.floor(Math.random() * candidates.length);
+    return candidates[i]!;
 }

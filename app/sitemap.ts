@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { products } from '@/lib/products';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.floremoria.eu';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.floremoria.com';
 
     // 1. Pagine Istituzionali (Weekly)
     const staticPages: MetadataRoute.Sitemap = [
@@ -53,6 +53,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/termini-condizioni`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.6,
         }
     ];
 

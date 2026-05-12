@@ -1,9 +1,22 @@
 import { notFound } from 'next/navigation';
+import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import GraveNotesForm from './GraveNotesForm';
+
+const giardinoUserInclude = {
+    orders: {
+        include: {
+            deliveryProof: true,
+            items: { include: { product: true } },
+        },
+        orderBy: { createdAt: 'desc' as const },
+    },
+} satisfies Prisma.UserInclude;
+
+type GiardinoUserData = Prisma.UserGetPayload<{ include: typeof giardinoUserInclude }>;
 
 interface GiardinoPageProps {
     params: Promise<{
@@ -26,7 +39,7 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
     const resolvedParams = await params;
     const userIdOrCode = resolvedParams.id;
 
-    let user: any = null;
+    let user: GiardinoUserData | null = null;
 
     if (userIdOrCode === 'UT-DEMO') {
         user = {
@@ -55,7 +68,7 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                     deliveryProof: null
                 }
             ]
-        };
+        } as GiardinoUserData;
     } else {
         // Cerchiamo l'utente sia per uniqueCode (es. UT-LOM-BG-001) sia per ID classico (cuid)
         user = await prisma.user.findFirst({
@@ -65,17 +78,7 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                     { id: userIdOrCode }
                 ]
             },
-            include: {
-                orders: {
-                    include: {
-                        deliveryProof: true,
-                        items: {
-                            include: { product: true }
-                        }
-                    },
-                    orderBy: { createdAt: 'desc' }
-                }
-            }
+            include: giardinoUserInclude,
         });
     }
 

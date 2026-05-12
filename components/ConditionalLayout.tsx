@@ -3,6 +3,7 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import FloatingWhatsAppButton from '@/components/FloatingWhatsAppButton';
 
 interface ConditionalLayoutProps {
     children: React.ReactNode;
@@ -15,8 +16,9 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
     // Le rotte applicative pure (Dashboard, Login, Admin) non devono avere Navbar pubblica o Footer,
     // né devono sottostare al "max-w" tipico dei blog.
     const isAppRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/login') || pathname?.startsWith('/admin');
+    const isPrintRoute = pathname?.startsWith('/stampa');
 
-    if (isAppRoute) {
+    if (isAppRoute || isPrintRoute) {
         return (
             <main className="flex-grow flex flex-col w-full h-full overflow-hidden">
                 {children}
@@ -31,6 +33,7 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
             <main className="flex-grow w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px] py-12 lg:py-20 mt-[72px]">
                 {children}
             </main>
+            <FloatingWhatsAppButton />
             {footer}
         </>
     );

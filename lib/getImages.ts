@@ -4,8 +4,9 @@ const pathMapping: Record<string, string> = {
     "bouquet-omaggio-speciale": "images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale",
     "bouquet-tributo-eterno": "images/products/fiori-sulle-tombe/Bouquet Tributo Eterno",
     "bouquet-di-rose": "images/products/fiori-sulle-tombe/Bouquet Rose",
-    "lumino": "images/products/accessori/lumino",
-    "messaggio": "images/products/accessori/messaggio",
+    "lumino": "images/products/fiori-sulle-tombe/lumino",
+    "messaggio": "images/products/fiori-sulle-tombe/messaggio",
+    "foto-stato-prima-consegna": "images/products/fiori-sulle-tombe/messaggio",
 
     // PER IL FUNERALE (cartella reale: Fiori-per-Funerale)
     "bouquet-cordoglio-sincero": "images/products/Fiori-per-Funerale/bouquet-cordoglio-sincero",
@@ -14,8 +15,8 @@ const pathMapping: Record<string, string> = {
     "kalonche": "images/products/Fiori-per-Funerale/kalonche",
     "margherite-gerbere": "images/products/Fiori-per-Funerale/margherite-gerbere FF",
     "bouquet-rispetto-vicinanza": "images/products/Fiori-per-Funerale/bouquet-rispetto-vicinanza",
-    "nastro-commemorativo": "images/products/accessori/Nastro commemorativo",
-    "set-ceri": "images/products/accessori/set-ceri-candele",
+    "nastro-commemorativo": "images/products/Fiori-per-Funerale/Nastro commemorativo",
+    "set-ceri": "images/products/Fiori-per-Funerale/set-ceri-candele",
     "cuscino": "images/products/Fiori-per-Funerale/cuscino",
     "piramide": "images/products/Fiori-per-Funerale/piramide",
     "copribara": "images/products/Fiori-per-Funerale/copribara",

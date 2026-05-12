@@ -40,9 +40,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         <TopNavLink href="/dashboard/users" label="Utenti" />
                         <TopNavLink href="/dashboard/products" label="Prodotti" />
                         <TopNavLink href="/dashboard/fioristi" label="Fioristi" />
+                        <TopNavLink href="/dashboard/partner-api" label="API Partner" />
                         <TopNavLink href="/dashboard/fornitori" label="Fornitori" />
                         <TopNavLink href="/dashboard/logs" label="Log di Sistema" />
                         <TopNavLink href="/dashboard/communications" label="Messaggi" />
+                        <TopNavLink href="/dashboard/offers" label="Buoni" />
                         <TopNavLink href="/dashboard/settings/roles" label="Impostazioni" />
                     </nav>
                 </div>

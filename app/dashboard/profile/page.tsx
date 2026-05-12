@@ -82,7 +82,7 @@ export default async function ProfilePage() {
                                         <label className="text-xs font-semibold uppercase tracking-wider text-gray-400">Email di Accesso</label>
                                         <div className="relative">
                                             <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            <input type="email" defaultValue="salvatore@floremoria.eu" className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none" />
+                                            <input type="email" defaultValue="salvatore@floremoria.com" className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">

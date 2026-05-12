@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 
 export async function POST(request: Request) {
     try {
@@ -9,14 +10,18 @@ export async function POST(request: Request) {
         if (username === 'admin' && password === '2212') {
             const response = NextResponse.json({ success: true, redirectUrl: '/dashboard/orders' }, { status: 200 });
 
-            // Impostiamo il cookie per il middleware con ruolo SUPER_ADMIN
+            const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
+
+            // Cookie condiviso www ↔ dashboard in produzione (domain .floremoria.com)
             response.cookies.set({
                 name: 'fm_user_role',
                 value: 'SUPER_ADMIN',
                 httpOnly: true,
-                path: '/',
-                secure: process.env.NODE_ENV === 'production' && !request.url.includes('localhost'),
-                maxAge: 60 * 60 * 24 * 7 // 1 settimana
+                path: base.path,
+                ...(base.domain ? { domain: base.domain } : {}),
+                secure: base.secure,
+                sameSite: base.sameSite,
+                maxAge: 60 * 60 * 24 * 7, // 1 settimana
             });
 
             return response;

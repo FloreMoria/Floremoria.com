@@ -1,16 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Button from '@/components/Button';
 import { Check, ShieldCheck, ChevronRight, ChevronLeft, Trash2, Info } from 'lucide-react';
 import Autocomplete from 'react-google-autocomplete';
 import { products } from '@/lib/products';
+import {
+    clearPreDeliveryPhotoPref,
+    FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID,
+    mergePreDeliveryPhotoIntoCart,
+} from '@/lib/floremPreDeliveryPhoto';
+import type { PartnerExternalOrderPayload } from '@/lib/partnerExternalOrderData';
+import { canAddProductToCart } from '@/lib/floremCartCategory';
+import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 
 interface OrderItem {
     productId: string;
     name: string;
     priceCents: number;
     qty: number;
+    slug?: string;
+}
+
+interface AppliedDiscount {
+    code: string;
+    offerName: string;
+    discountCents: number;
+    finalTotalCents: number;
 }
 
 export default function CheckoutPage() {
@@ -18,6 +34,8 @@ export default function CheckoutPage() {
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [isClient, setIsClient] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [cartCategoryModalOpen, setCartCategoryModalOpen] = useState(false);
+    const pendingAccessoryAddRef = useRef<{ prodId: string; prodName: string; priceCents: number } | null>(null);
 
     // Form data
     const [orderCategory, setOrderCategory] = useState<'FT' | 'FF' | 'FA' | 'FP'>('FT');
@@ -31,6 +49,23 @@ export default function CheckoutPage() {
 
     const [recurringType, setRecurringType] = useState<'none' | 'monthly'>('none');
 
+    /**
+     * Solo ordini FF (Funerale): promemoria empatico cura tomba (sostituisce l’upsell abbonamento in step 2).
+     *
+     * POSTMAN / Integrazioni: se `true`, il backend o un worker dovrà programmare a T+10 giorni
+     * un invio automatico (email e/o WhatsApp) con messaggio discreto sulla cura continuativa della tomba.
+     * Oggi il flag viene inoltrato in checkout (metadata Stripe / istruzioni ordine); la pipeline di invio non è ancora cablata.
+     */
+    // Marketing default: su FF inviamo sempre promemoria cura tomba a +10 giorni.
+    const [ffTombCareReminder10d] = useState(true);
+
+    /**
+     * Flusso «Opzioni» (step 2): abbonamento mensile SOLO per FT (Fiori sulle Tombe).
+     * FF: promemoria cura tomba. PA (FA): nessuno step intermedio — checkout più rapido (ALMA / NINA).
+     */
+    const showTombsMonthlySubscription = orderCategory === 'FT';
+    const hasMidCheckoutStep = orderCategory === 'FT';
+
     const [buyerName, setBuyerName] = useState('');
     const [buyerSurname, setBuyerSurname] = useState('');
     const [buyerEmail, setBuyerEmail] = useState('');
@@ -39,6 +74,12 @@ export default function CheckoutPage() {
 
     const [optimizationAlert, setOptimizationAlert] = useState(false);
     const [referralRef, setReferralRef] = useState('');
+    /** Email azienda partner (handoff API); salvata su Order.partnerNotifyEmail. */
+    const [partnerNotifyEmail, setPartnerNotifyEmail] = useState('');
+    const [newsletterOptIn, setNewsletterOptIn] = useState(false);
+    const [discountCodeInput, setDiscountCodeInput] = useState('');
+    const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
+    const [discountError, setDiscountError] = useState('');
 
     const [minDateFT, setMinDateFT] = useState('');
     const [minDateFF, setMinDateFF] = useState('');
@@ -54,19 +95,25 @@ export default function CheckoutPage() {
         const cartStr = localStorage.getItem('fm_cart');
         if (cartStr) {
             try {
-                const parsed = JSON.parse(cartStr);
-                setCart(parsed);
+                const parsed = JSON.parse(cartStr) as OrderItem[];
+                const merged = mergePreDeliveryPhotoIntoCart(parsed);
+                setCart(merged);
+                if (JSON.stringify(merged) !== JSON.stringify(parsed)) {
+                    localStorage.setItem('fm_cart', JSON.stringify(merged));
+                }
 
                 // Smart Category Inference
+                let inferredCategory: 'FT' | 'FF' | 'FA' | 'FP' = 'FT';
                 if (parsed.length > 0) {
                     const firstItem = products.find(p => p.id === parsed[0].productId);
-                    if (firstItem?.category === 'funerale') setOrderCategory('FF');
-                    else if (firstItem?.category === 'animali') setOrderCategory('FA');
-                    else setOrderCategory('FT');
+                    if (firstItem?.category === 'funerale') inferredCategory = 'FF';
+                    else if (firstItem?.category === 'animali') inferredCategory = 'FA';
+                    setOrderCategory(inferredCategory);
                 }
 
                 const subStr = localStorage.getItem('fm_sub');
-                if (subStr === 'true') setRecurringType('monthly');
+                // Abbonamento mensile da preferenza home: solo se l’ordine è FT (tombe)
+                if (subStr === 'true' && inferredCategory === 'FT') setRecurringType('monthly');
 
                 const checkoutDataStr = localStorage.getItem('fm_checkout_data');
                 if (checkoutDataStr) {
@@ -89,11 +136,13 @@ export default function CheckoutPage() {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             const refParam = params.get('ref');
+            const discountCodeParam = params.get('discountCode');
             const deceasedParam = params.get('deceased');
             const locationParam = params.get('location');
             const notesParam = params.get('notes');
 
             if (refParam) setReferralRef(refParam);
+            if (discountCodeParam) setDiscountCodeInput(discountCodeParam.toUpperCase());
             if (deceasedParam) setDeceasedName(deceasedParam);
             if (notesParam) {
                 setTicketMessage(notesParam.substring(0, 70));
@@ -107,6 +156,50 @@ export default function CheckoutPage() {
                         localStorage.setItem('fm_cart', JSON.stringify(newCart));
                     }
                 } catch (e) { }
+            }
+
+            const externalKey = params.get('externalKey');
+            if (externalKey) {
+                void fetch(`/api/external/handoff/${encodeURIComponent(externalKey)}`)
+                    .then(async (r) => {
+                        if (!r.ok) return null;
+                        return r.json() as Promise<{
+                            payload: PartnerExternalOrderPayload;
+                        }>;
+                    })
+                    .then((data) => {
+                        if (!data?.payload) return;
+                        const p = data.payload;
+                        if (p.nomeUtente) setBuyerName(p.nomeUtente);
+                        if (p.cognomeUtente) setBuyerSurname(p.cognomeUtente);
+                        if (p.emailUtente) setBuyerEmail(p.emailUtente);
+                        if (p.telefonoUtente) setBuyerPhone(p.telefonoUtente);
+                        setDeceasedName(`${p.nomeDefunto} ${p.cognomeDefunto}`.trim());
+                        if (p.indirizzoConsegna) setCemeteryName(p.indirizzoConsegna);
+                        const pr = p.provinciaUtente?.trim().toUpperCase().slice(0, 2);
+                        if (pr && pr.length === 2) setDeliveryProvince(pr);
+                        setReferralRef(p.codiceReferral);
+                        setPartnerNotifyEmail(p.emailAziendaPartner);
+                        const buyerAddr =
+                            p.indirizzoUtente && p.cittaUtente
+                                ? `Dati acquirente (partner): ${p.indirizzoUtente}, ${p.cittaUtente}${p.capUtente ? ` ${p.capUtente}` : ''}${p.provinciaUtente ? ` (${p.provinciaUtente})` : ''}`
+                                : '';
+                        const extra = [p.info, buyerAddr].filter(Boolean).join('\n');
+                        if (extra) {
+                            setTicketMessage((prev) => {
+                                const next = prev ? `${prev}\n${extra}` : extra;
+                                return next.slice(0, 2000);
+                            });
+                        }
+                        try {
+                            if (p.redirectUrl) {
+                                sessionStorage.setItem('florem_partner_redirect_url', p.redirectUrl);
+                            }
+                        } catch {
+                            /* ignore */
+                        }
+                    })
+                    .catch(() => {});
             }
 
             if (locationParam) {
@@ -158,7 +251,21 @@ export default function CheckoutPage() {
         }
     }, [orderCategory, minDateFF, minDateFT]);
 
+    useEffect(() => {
+        if (orderCategory !== 'FT') {
+            setRecurringType('none');
+        }
+    }, [orderCategory]);
+
+    /** Evita schermata vuota se lo step 2 non esiste per questa categoria */
+    useEffect(() => {
+        if (!hasMidCheckoutStep && step === 2) {
+            setStep(3);
+        }
+    }, [hasMidCheckoutStep, step]);
+
     const cartTotalCents = cart.reduce((acc, item) => acc + (item.priceCents * item.qty), 0);
+    const finalCheckoutTotalCents = appliedDiscount?.finalTotalCents ?? cartTotalCents;
 
     const toggleAccessory = (prodId: string, prodName: string, priceCents: number) => {
         const existingInfo = cart.find(i => i.productId === prodId);
@@ -167,6 +274,12 @@ export default function CheckoutPage() {
             setCart(newCart);
             localStorage.setItem('fm_cart', JSON.stringify(newCart));
         } else {
+            const p = products.find((pr) => pr.id === prodId);
+            if (p && !canAddProductToCart(cart, p)) {
+                pendingAccessoryAddRef.current = { prodId, prodName, priceCents };
+                setCartCategoryModalOpen(true);
+                return;
+            }
             const newCart = [...cart, { productId: prodId, name: prodName, priceCents, qty: 1 }];
             setCart(newCart);
             localStorage.setItem('fm_cart', JSON.stringify(newCart));
@@ -175,11 +288,56 @@ export default function CheckoutPage() {
 
     const removeItem = (prodId: string) => {
         const newCart = cart.filter(i => i.productId !== prodId);
+        if (prodId === FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID) {
+            clearPreDeliveryPhotoPref();
+        }
         setCart(newCart);
         localStorage.setItem('fm_cart', JSON.stringify(newCart));
     };
 
     const hasAccessory = (id: string) => cart.some(i => i.productId === id);
+
+    useEffect(() => {
+        setAppliedDiscount((prev) => {
+            if (!prev) return prev;
+            const recalculatedFinal = Math.max(0, cartTotalCents - prev.discountCents);
+            return { ...prev, finalTotalCents: recalculatedFinal };
+        });
+    }, [cartTotalCents]);
+
+    const applyDiscountCode = async () => {
+        if (!discountCodeInput.trim()) {
+            setDiscountError('Inserisci un codice sconto.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/checkout/validate-discount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: discountCodeInput,
+                    subtotalCents: cartTotalCents,
+                    buyerEmail,
+                    buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
+                }),
+            });
+            const payload = await res.json();
+            if (!res.ok || !payload?.ok) {
+                throw new Error(payload?.error || 'Codice non valido.');
+            }
+            setAppliedDiscount({
+                code: payload.code,
+                offerName: payload.offerName,
+                discountCents: payload.discountCents,
+                finalTotalCents: payload.finalTotalCents,
+            });
+            setDiscountError('');
+        } catch (error) {
+            setAppliedDiscount(null);
+            setDiscountError(error instanceof Error ? error.message : 'Impossibile applicare il codice.');
+        }
+    };
 
     const completeOrder = async () => {
         if (!buyerName || !buyerEmail) {
@@ -192,6 +350,7 @@ export default function CheckoutPage() {
                 cart,
                 orderCategory,
                 recurringType,
+                ...(orderCategory === 'FF' ? { ffTombCareReminder10d } : {}),
                 buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
                 buyerEmail,
                 buyerPhone,
@@ -201,8 +360,11 @@ export default function CheckoutPage() {
                 deliveryProvince: deliveryProvince.toUpperCase(),
                 deliveryDate: new Date(deliveryDate).toISOString(),
                 ticketMessage,
-                totalPriceCents: cartTotalCents,
-                referralRef
+                totalPriceCents: finalCheckoutTotalCents,
+                referralRef,
+                ...(partnerNotifyEmail.trim() ? { partnerNotifyEmail: partnerNotifyEmail.trim() } : {}),
+                ...(appliedDiscount?.code ? { discountCode: appliedDiscount.code } : {}),
+                newsletterOptIn,
             };
 
             const res = await fetch('/api/checkout', {
@@ -211,20 +373,33 @@ export default function CheckoutPage() {
                 body: JSON.stringify(orderData)
             });
 
-            if (!res.ok) throw new Error('Checkout fallito');
+            if (!res.ok) {
+                let serverError = 'Checkout fallito';
+                try {
+                    const payload = await res.json();
+                    if (payload?.error && typeof payload.error === 'string') {
+                        serverError = payload.error;
+                    }
+                } catch {
+                    // fallback text below
+                }
+                throw new Error(serverError);
+            }
 
             const { url } = await res.json();
 
             localStorage.removeItem('fm_cart');
-            
+            clearPreDeliveryPhotoPref();
+
             if (url) {
                 window.location.href = url;
             } else {
-                window.location.href = `/order-completed?orderId=${orderData.orderNumber || ''}`;
+                window.location.href = '/order-completed';
             }
         } catch (error) {
             console.error(error);
-            alert('Si è verificato un errore durante l\'ordine.');
+            const msg = error instanceof Error ? error.message : 'Si è verificato un errore durante l\'ordine.';
+            alert(msg);
             setIsProcessing(false);
         }
     };
@@ -258,6 +433,40 @@ export default function CheckoutPage() {
         return true;
     };
 
+    const goCheckoutNext = () => {
+        if (step === 1) {
+            if (!isDeliveryValid()) return;
+            setStep(hasMidCheckoutStep ? 2 : 3);
+            return;
+        }
+        if (step === 2) setStep(3);
+    };
+
+    const goCheckoutPrev = () => {
+        if (step === 3) {
+            setStep(hasMidCheckoutStep ? 2 : 1);
+            return;
+        }
+        if (step === 2) setStep(1);
+    };
+
+    const handleCartCategoryModalCancel = () => {
+        setCartCategoryModalOpen(false);
+        pendingAccessoryAddRef.current = null;
+    };
+
+    const handleCartCategoryModalClearAndAdd = () => {
+        const pending = pendingAccessoryAddRef.current;
+        setCartCategoryModalOpen(false);
+        pendingAccessoryAddRef.current = null;
+        if (!pending) return;
+        const newCart: OrderItem[] = [
+            { productId: pending.prodId, name: pending.prodName, priceCents: pending.priceCents, qty: 1 },
+        ];
+        setCart(newCart);
+        localStorage.setItem('fm_cart', JSON.stringify(newCart));
+    };
+
     if (!isClient) return null;
 
     if (cart.length === 0) {
@@ -269,44 +478,89 @@ export default function CheckoutPage() {
         );
     }
 
+    const stripePk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+    const isStripeTestMode = stripePk.startsWith('pk_test_');
+
     return (
         <div className="bg-gray-50 min-h-screen py-8 md:py-12">
-            <div className="bg-amber-100/80 text-amber-800 text-center py-3 px-4 text-sm font-bold mb-8 max-w-3xl mx-auto rounded-xl border border-amber-200 shadow-sm animate-pulse flex items-center justify-center gap-2">
-                <span className="text-xl">⚠️</span> MODALITÀ TEST ATTIVA: Nessun addebito reale verrà effettuato. Transazione Sandbox.
-            </div>
+            {isStripeTestMode && (
+                <div className="bg-amber-100/80 text-amber-800 text-center py-3 px-4 text-sm font-bold mb-8 max-w-3xl mx-auto rounded-xl border border-amber-200 shadow-sm animate-pulse flex items-center justify-center gap-2">
+                    <span className="text-xl">⚠️</span> MODALITÀ TEST ATTIVA: Nessun addebito reale verrà effettuato. Transazione Sandbox.
+                </div>
+            )}
             <div className="max-w-3xl mx-auto px-4 lg:px-0">
 
-                {/* Progress bar (3 steps) */}
+                {/* Progress: 3 passi (FT/FF con step opzioni) o 2 passi (PA = solo dati → pagamento) */}
                 <div className="mb-10 px-2">
-                    <div className="flex items-center justify-between relative mb-2">
-                        <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -z-10 rounded-full translate-y-[-50%]"></div>
-                        <div className="absolute top-1/2 left-0 h-1 bg-fm-cta -z-10 rounded-full transition-all duration-500 translate-y-[-50%]" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
-                        {[1, 2, 3].map(num => (
-                            <div key={num} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] border-2 transition-colors ${step >= num ? 'bg-fm-cta border-fm-cta text-white shadow-sm' : 'bg-white border-gray-300 text-gray-400'}`}>
-                                {step > num ? <Check size={14} /> : num}
+                    {hasMidCheckoutStep ? (
+                        <>
+                            <div className="relative mb-2 flex items-center justify-between">
+                                <div className="absolute top-1/2 left-0 -z-10 h-1 w-full translate-y-[-50%] rounded-full bg-gray-200"></div>
+                                <div
+                                    className="absolute top-1/2 left-0 -z-10 h-1 translate-y-[-50%] rounded-full bg-fm-cta transition-all duration-500"
+                                    style={{ width: `${((step - 1) / 2) * 100}%` }}
+                                />
+                                {[1, 2, 3].map((num) => (
+                                    <div
+                                        key={num}
+                                        className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-colors ${
+                                            step >= num ? 'border-fm-cta bg-fm-cta text-white shadow-sm' : 'border-gray-300 bg-white text-gray-400'
+                                        }`}
+                                    >
+                                        {step > num ? <Check size={14} /> : num}
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                    <div className="flex justify-between text-[10px] md:text-xs font-semibold uppercase tracking-wider text-gray-500 px-1 opacity-70">
-                        <span className={step >= 1 ? 'text-fm-cta' : ''}>Dati Ordine</span>
-                        <span className={step >= 2 ? 'text-fm-cta text-center' : 'text-center'}>Opzioni</span>
-                        <span className={step >= 3 ? 'text-fm-cta text-right' : 'text-right'}>Pagamento</span>
-                    </div>
+                            <div className="flex justify-between px-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 opacity-70 md:text-xs">
+                                <span className={step >= 1 ? 'text-fm-cta' : ''}>Dati ordine</span>
+                                <span className={`text-center ${step >= 2 ? 'text-fm-cta' : ''}`}>Opzioni</span>
+                                <span className={`text-right ${step >= 3 ? 'text-fm-cta' : ''}`}>Pagamento</span>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="relative mb-2 flex items-center justify-between px-[12%]">
+                                <div className="absolute top-1/2 left-[12%] right-[12%] -z-10 h-1 translate-y-[-50%] rounded-full bg-gray-200"></div>
+                                <div
+                                    className="absolute top-1/2 left-[12%] -z-10 h-1 translate-y-[-50%] rounded-full bg-fm-cta transition-all duration-500"
+                                    style={{ width: step >= 3 ? '76%' : '0%' }}
+                                />
+                                <div
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-colors ${
+                                        step >= 1 ? 'border-fm-cta bg-fm-cta text-white shadow-sm' : 'border-gray-300 bg-white text-gray-400'
+                                    }`}
+                                >
+                                    {step >= 3 ? <Check size={14} /> : 1}
+                                </div>
+                                <div
+                                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-colors ${
+                                        step >= 3 ? 'border-fm-cta bg-fm-cta text-white shadow-sm' : 'border-gray-300 bg-white text-gray-400'
+                                    }`}
+                                >
+                                    2
+                                </div>
+                            </div>
+                            <div className="flex justify-between px-[10%] text-[10px] font-semibold uppercase tracking-wider text-gray-500 opacity-70 md:text-xs">
+                                <span className={step >= 1 ? 'text-fm-cta' : ''}>Dati ordine</span>
+                                <span className={step >= 3 ? 'text-fm-cta' : ''}>Pagamento</span>
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-gray-100 animate-fade-in relative min-h-[500px]">
+                <div className="bg-white rounded-3xl p-5 md:p-7 shadow-sm border border-gray-100 animate-fade-in relative min-h-[500px]">
 
                     {/* STEP 1: DATI DELLA MEMORIA */}
                     {step === 1 && (
-                        <div className="space-y-8 animate-in fade-in duration-300 pb-16">
-                            <div className="text-center space-y-2 mb-8">
+                        <div className="space-y-4 animate-in fade-in duration-300 pb-6">
+                            <div className="text-center space-y-1 mb-3">
                                 <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900">Dati dell&apos;Ordine</h2>
                                 <p className="text-gray-500 font-medium">Queste informazioni sono fondamentali per organizzare la consegna.</p>
                             </div>
 
-                            <div className="space-y-8 max-w-xl mx-auto">
+                            <div className="space-y-3.5 max-w-xl mx-auto">
                                 {/* SEZIONE DEFUNTO / PICCOLI AMICI */}
-                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                                <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 space-y-2.5">
                                     <h3 className="font-display font-bold text-lg text-gray-900 border-b border-gray-200 pb-2">
                                         {orderCategory === 'FA' ? "Dati del Piccolo Amico" : "Sezione Defunto"}
                                     </h3>
@@ -314,14 +568,14 @@ export default function CheckoutPage() {
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                                             {orderCategory === 'FA' ? "Nome del Piccolo Amico *" : "Nome e Cognome Defunto *"}
                                         </label>
-                                        <input type="text" value={deceasedName} onChange={e => setDeceasedName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                        <input type="text" value={deceasedName} onChange={e => setDeceasedName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
                                     </div>
                                 </div>
 
                                 {/* SEZIONE CONSEGNA */}
-                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                                <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 space-y-2.5">
                                     <h3 className="font-display font-bold text-lg text-gray-900 border-b border-gray-200 pb-2">Sezione Consegna</h3>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-2">
                                         <div className="col-span-2 relative">
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                                                 {orderCategory === 'FT' ? 'Cimitero / Comune *' : 'Comune *'}
@@ -339,13 +593,13 @@ export default function CheckoutPage() {
                                                 defaultValue={cemeteryName}
                                                 onChange={(e: any) => setCemeteryName(e.target.value)}
                                                 placeholder="Es. Cimitero Maggiore, Milano"
-                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all"
+                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all"
                                             />
                                             <div className="absolute top-[34px] left-3 text-gray-400">📍</div>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Provincia *</label>
-                                            <input type="text" value={deliveryProvince} onChange={e => setDeliveryProvince(e.target.value.substring(0, 2).toUpperCase())} placeholder="MI" maxLength={2} className="w-full uppercase font-mono bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-center focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                            <input type="text" value={deliveryProvince} onChange={e => setDeliveryProvince(e.target.value.substring(0, 2).toUpperCase())} placeholder="MI" maxLength={2} className="w-full uppercase font-mono bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 text-center focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
                                         </div>
                                     </div>
                                     
@@ -357,21 +611,21 @@ export default function CheckoutPage() {
                                             orderCategory === 'FF' ? "Es. Chiesa San Giovanni, Via Roma" : 
                                             orderCategory === 'FA' ? "Es. Giardino dei ricordi, Fila 4..." : 
                                             "Es: campo C, fila 8, tomba 12... Se non conosci la posizione, scrivi 'NON LA CONOSCO'"
-                                        } className="w-full h-20 resize-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" required />
+                                        } className="w-full h-16 resize-none bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" required />
                                     </div>
 
                                     {orderCategory === 'FF' && (
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Impresa Funebre (non obbligatorio)</label>
-                                            <input type="text" value={funeralDirector} onChange={e => setFuneralDirector(e.target.value)} placeholder="Es. Onoranze Funebri Rossi" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                            <input type="text" value={funeralDirector} onChange={e => setFuneralDirector(e.target.value)} placeholder="Es. Onoranze Funebri Rossi" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
                                         </div>
                                     )}
                                     
-                                    <div className="pt-2">
+                                    <div className="pt-1">
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
                                             {orderCategory === 'FF' ? "Data e Ora del Funerale *" : "Calendario Data e Ora *"}
                                         </label>
-                                        <input type="datetime-local" min={getMinDeliveryDate()} value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                        <input type="datetime-local" min={getMinDeliveryDate()} value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
                                         {deliveryDate && (() => {
                                             const d = new Date(deliveryDate);
                                             const h = d.getHours();
@@ -391,70 +645,67 @@ export default function CheckoutPage() {
                                 </div>
 
                                 {/* SEZIONE CONTATTO */}
-                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                                <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 space-y-2.5">
                                     <h3 className="font-display font-bold text-lg text-gray-900 border-b border-gray-200 pb-2">Sezione Contatto (Chi riceve la conferma)</h3>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <input type="text" placeholder="Nome *" value={buyerName} onChange={e => setBuyerName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900" autoComplete="given-name" />
+                                            <input type="text" placeholder="Nome *" value={buyerName} onChange={e => setBuyerName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="given-name" />
                                         </div>
                                         <div>
-                                            <input type="text" placeholder="Cognome *" value={buyerSurname} onChange={e => setBuyerSurname(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900" autoComplete="family-name" />
+                                            <input type="text" placeholder="Cognome *" value={buyerSurname} onChange={e => setBuyerSurname(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="family-name" />
                                         </div>
                                     </div>
                                     <div>
-                                        <input type="email" placeholder="Email *" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 ${buyerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail) ? 'border-red-400 focus:ring-red-400' : 'border-gray-200'}`} autoComplete="email" />
+                                        <input type="email" placeholder="Email *" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} className={`w-full bg-white border rounded-xl px-4 py-2.5 text-gray-900 ${buyerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail) ? 'border-red-400 focus:ring-red-400' : 'border-gray-200'}`} autoComplete="email" />
                                         <p className="text-[11px] text-gray-400 mt-1.5 ml-2">Necessario per ricevere la ricevuta fiscale.</p>
                                     </div>
                                     <div>
                                         <input type="tel" placeholder="Cellulare *" value={buyerPhone} onChange={e => {
                                             const val = e.target.value;
                                             if (/^\+?[0-9]*$/.test(val)) setBuyerPhone(val);
-                                        }} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900" autoComplete="tel" />
-                                        <p className="text-[11px] text-gray-400 mt-1.5 ml-2">Fondamentale per ricevere le due foto a consegna avvenuta.</p>
+                                        }} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="tel" />
+                                        <p className="text-[11px] text-gray-400 mt-1.5 ml-2">
+                                            {orderCategory === 'FA'
+                                                ? 'Per aggiornamenti sulla consegna del tuo omaggio.'
+                                                : 'Fondamentale per ricevere le due foto a consegna avvenuta.'}
+                                        </p>
                                     </div>
                                 </div>
 
                             </div>
 
-                            {/* Validation Hint */}
-                            {!isDeliveryValid() && (
-                                <div className="text-center text-red-500 text-sm font-medium mt-6">
-                                    Compila tutti i campi obbligatori per continuare.
-                                </div>
-                            )}
                         </div>
                     )}
 
-                    {/* STEP 2: UPSELL RICORRENTE */}
-                    {step === 2 && (
+                    {step === 2 && showTombsMonthlySubscription && (
                         <div className="space-y-8 animate-in fade-in duration-300">
                             <div className="text-center space-y-2">
                                 <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900">Mantieni vivo il ricordo ogni mese</h2>
                                 <p className="text-gray-500 font-medium">Un bouquet fresco, puntuale, per non lasciare mai solo chi ami e mantenere vivo il ricordo.</p>
                             </div>
-                            <div className="flex flex-col gap-4 max-w-xl mx-auto mt-6">
-                                <label className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${recurringType === 'monthly' ? 'border-fm-cta bg-fm-cta-soft/10 shadow-sm' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`}>
+                            <div className="mx-auto mt-6 flex max-w-xl flex-col gap-4">
+                                <label className={`flex cursor-pointer items-center justify-between rounded-2xl border-2 p-6 transition-all ${recurringType === 'monthly' ? 'border-fm-cta bg-fm-cta-soft/10 shadow-sm' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`}>
                                     <div>
-                                        <h4 className={`font-bold text-lg mb-1 flex items-center gap-2 ${recurringType === 'monthly' ? 'text-fm-cta' : 'text-gray-900'}`}>
+                                        <h4 className={`mb-1 flex items-center gap-2 text-lg font-bold ${recurringType === 'monthly' ? 'text-fm-cta' : 'text-gray-900'}`}>
                                             <span className="text-2xl">✨</span> Sì, attiva la consegna mensile ricorrente
                                         </h4>
-                                        <p className="text-sm text-gray-500 leading-relaxed max-w-sm ml-8">Riceverai le due foto ogni mese come testimonianza della nostra presenza costante.</p>
+                                        <p className="ml-8 max-w-sm text-sm leading-relaxed text-gray-500">Riceverai le due foto ogni mese come testimonianza della nostra presenza costante.</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${recurringType === 'monthly' ? 'border-fm-cta bg-fm-cta text-white' : 'border-gray-300 bg-white'}`}>
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors ${recurringType === 'monthly' ? 'border-fm-cta bg-fm-cta text-white' : 'border-gray-300 bg-white'}`}>
                                             <input type="radio" name="recurring" value="monthly" checked={recurringType === 'monthly'} onChange={() => setRecurringType('monthly')} className="hidden" />
                                             {recurringType === 'monthly' && <Check size={16} />}
                                         </div>
                                     </div>
                                 </label>
-                                <label className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between opacity-80 ${recurringType === 'none' ? 'border-gray-300 bg-gray-50 shadow-none' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`}>
+                                <label className={`flex cursor-pointer items-center justify-between rounded-2xl border-2 p-4 opacity-80 transition-all ${recurringType === 'none' ? 'border-gray-300 bg-gray-50 shadow-none' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`}>
                                     <div>
-                                        <h4 className={`font-semibold text-[15px] mb-1 ${recurringType === 'none' ? 'text-gray-700' : 'text-gray-500'}`}>No grazie, procedi con un acquisto singolo per ora</h4>
+                                        <h4 className={`mb-1 text-[15px] font-semibold ${recurringType === 'none' ? 'text-gray-700' : 'text-gray-500'}`}>No grazie, procedi con un acquisto singolo per ora</h4>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ${recurringType === 'none' ? 'border-gray-500 bg-gray-500 text-white' : 'border-gray-200 bg-white'}`}>
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${recurringType === 'none' ? 'border-gray-500 bg-gray-500 text-white' : 'border-gray-200 bg-white'}`}>
                                             <input type="radio" name="recurring" value="none" checked={recurringType === 'none'} onChange={() => setRecurringType('none')} className="hidden" />
-                                            {recurringType === 'none' && <div className="w-2 h-2 rounded-full bg-white" />}
+                                            {recurringType === 'none' && <div className="h-2 w-2 rounded-full bg-white" />}
                                         </div>
                                     </div>
                                 </label>
@@ -596,9 +847,49 @@ export default function CheckoutPage() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="pt-4 border-t border-gray-200 flex justify-between items-end">
+                                    <div className="space-y-3 mb-6">
+                                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                                            <input
+                                                type="checkbox"
+                                                className="mt-1 h-4 w-4 rounded border-gray-300 text-fm-cta focus:ring-fm-cta/40"
+                                                checked={newsletterOptIn}
+                                                onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                                            />
+                                            <span>Voglio iscrivermi alla newsletter di FloreMoria</span>
+                                        </label>
+                                        <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-2">
+                                            <p className="text-sm font-semibold text-gray-900">Hai un codice sconto?</p>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Campo per scriverlo"
+                                                    value={discountCodeInput}
+                                                    onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
+                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={applyDiscountCode}
+                                                    className="px-4 py-2 rounded-lg bg-fm-cta text-white text-sm font-semibold hover:bg-fm-cta/90"
+                                                >
+                                                    Applica
+                                                </button>
+                                            </div>
+                                            {discountError && <p className="text-xs text-red-500">{discountError}</p>}
+                                            {appliedDiscount && <p className="text-xs text-green-600">Codice applicato: {appliedDiscount.offerName}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t border-gray-200 space-y-3">
+                                        {appliedDiscount && (
+                                            <div className="flex justify-between items-center text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+                                                <span>Sconto {appliedDiscount.code}</span>
+                                                <span className="font-bold">-€{(appliedDiscount.discountCents / 100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-end">
                                         <span className="text-lg font-bold text-gray-900">Totale</span>
-                                        <span className="text-3xl font-display font-bold text-fm-rose">&euro;{(cartTotalCents / 100).toFixed(2)}{recurringType === 'monthly' ? <span className="text-lg text-gray-500 font-medium ml-1">/ mese</span> : ''}</span>
+                                        <span className="text-3xl font-display font-bold text-fm-rose">&euro;{(finalCheckoutTotalCents / 100).toFixed(2)}{recurringType === 'monthly' ? <span className="text-lg text-gray-500 font-medium ml-1">/ mese</span> : ''}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -606,33 +897,41 @@ export default function CheckoutPage() {
                     )}
 
                     {/* Bottom Navigation Buttons */}
-                    <div className="mt-8 pt-6 border-t border-gray-100 bg-white">
+                    <div className={`mt-8 border-t border-gray-100 bg-white pt-6 ${step === 2 && hasMidCheckoutStep ? 'pt-8' : ''}`}>
                         {step === 3 && (
                             <div className="flex items-center justify-center gap-3 mb-4 bg-gray-50/80 p-2 rounded-xl">
                                 <img src="/logo-made-in-italy-v2.webp" alt="Made in Italy" className="h-6 w-auto object-contain opacity-90" />
                                 <p className="text-[11px] md:text-xs text-gray-600 font-medium max-w-xs text-left leading-tight">
-                                    <strong className="text-gray-800">Pagamento Sicuro gestito da Stripe.</strong> Riceverai le due foto della consegna via WhatsApp.
+                                    <strong className="text-gray-800">Pagamento sicuro gestito da Stripe.</strong> Riceverai le foto della consegna via WhatsApp.
                                 </p>
                             </div>
                         )}
-                        <div className="flex items-center justify-between">
+                        <div className={`flex items-center justify-between gap-3 ${step === 2 && hasMidCheckoutStep ? 'flex-col-reverse sm:flex-row' : ''}`}>
                             {step > 1 ? (
-                                <button onClick={() => setStep(step - 1 as any)} className="flex items-center gap-2 text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <button type="button" onClick={goCheckoutPrev} className="flex items-center gap-2 text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-full transition-colors shrink-0">
                                     <ChevronLeft size={18} /> Indietro
                                 </button>
                             ) : (
-                                <button onClick={() => window.history.back()} className="flex items-center gap-2 text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <button onClick={() => window.history.back()} className="flex items-center gap-2 text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-full transition-colors shrink-0">
                                     <ChevronLeft size={18} /> Indietro
                                 </button>
                             )}
 
                             {step < 3 ? (
                                 <button
-                                    onClick={() => setStep(step + 1 as any)}
+                                    type="button"
+                                    onClick={goCheckoutNext}
                                     disabled={step === 1 && !isDeliveryValid()}
-                                    className="flex items-center gap-2 bg-fm-cta text-white font-bold px-8 py-3 rounded-full hover:bg-fm-cta/90 transition-all shadow-md disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed"
+                                    className={`flex items-center justify-center gap-2 rounded-full bg-fm-cta font-bold text-white shadow-md transition-all hover:bg-fm-cta/90 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none ${
+                                        step === 2 && hasMidCheckoutStep
+                                            ? 'w-full px-10 py-3.5 text-base sm:w-auto sm:min-w-[min(100%,14rem)] sm:px-12 sm:py-4 sm:text-lg sm:shadow-lg'
+                                            : step === 1 && orderCategory === 'FA'
+                                              ? 'px-10 py-3.5 text-base sm:px-12 sm:py-4 sm:text-lg sm:shadow-lg'
+                                              : 'px-8 py-3'
+                                    }`}
                                 >
-                                    Avanti <ChevronRight size={18} />
+                                    {step === 2 && hasMidCheckoutStep ? 'Prosegui' : step === 1 && orderCategory === 'FA' ? 'Vai al pagamento' : 'Avanti'}{' '}
+                                    <ChevronRight size={18} />
                                 </button>
                             ) : (
                                 <button
@@ -640,7 +939,7 @@ export default function CheckoutPage() {
                                     disabled={isProcessing || !buyerName || !buyerEmail}
                                     className="flex items-center gap-2 bg-black text-white font-bold px-8 py-3 rounded-full hover:bg-gray-800 transition-all shadow-md disabled:bg-gray-300 w-full md:w-auto justify-center"
                                 >
-                                    {isProcessing ? 'Elaborazione...' : `Paga Ora €${(cartTotalCents / 100).toFixed(2)}`}
+                                    {isProcessing ? 'Elaborazione...' : `Paga Ora €${(finalCheckoutTotalCents / 100).toFixed(2)}`}
                                     {!isProcessing && <Check size={18} />}
                                 </button>
                             )}
@@ -649,6 +948,12 @@ export default function CheckoutPage() {
 
                 </div>
             </div>
+
+            <FloremCartCategoryModal
+                open={cartCategoryModalOpen}
+                onCancel={handleCartCategoryModalCancel}
+                onClearAndAdd={handleCartCategoryModalClearAndAdd}
+            />
         </div>
     );
 }

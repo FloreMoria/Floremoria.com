@@ -1,0 +1,72 @@
+/* Volantino A5 verticale — stampa / export PDF (allineato a istruzioni tipografiche volantino flyer) */
+
+@page {
+  size: A5 portrait;
+  /* 0,5 cm per lato: area utile 138×200 mm su foglio A5 148×210 mm */
+  margin: 5mm;
+  marks: none;
+}
+
+.wrap {
+  box-sizing: border-box;
+}
+
+.sheet {
+  box-sizing: border-box;
+  width: 138mm;
+  height: 200mm;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.screenHint {
+  max-width: 138mm;
+  margin: 0 auto 12px;
+  font-family: var(--font-manrope, system-ui), system-ui, sans-serif;
+  font-size: 14.5px;
+  color: #444;
+  text-align: center;
+}
+
+@media screen {
+  .wrap {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #e6e4e0 0%, #d4d0ca 100%);
+    padding: 28px 16px 48px;
+  }
+
+  .sheet {
+    margin: 0 auto 28px;
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.06),
+      0 12px 28px rgba(0, 0, 0, 0.12);
+    border-radius: 2px;
+  }
+}
+
+@media print {
+  .wrap {
+    background: #fff;
+    padding: 0;
+  }
+
+  .screenHint {
+    display: none !important;
+  }
+
+  .sheet {
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .sheet:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}

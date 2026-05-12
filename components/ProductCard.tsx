@@ -10,9 +10,11 @@ interface ProductCardProps {
     product: Product;
     comuneSlug?: string;
     comuneName?: string;
+    /** Card più basse e tipografia ridotta (es. accessori in riga da 4). */
+    compact?: boolean;
 }
 
-export default function ProductCard({ product, comuneSlug, comuneName }: ProductCardProps) {
+export default function ProductCard({ product, comuneSlug, comuneName, compact = false }: ProductCardProps) {
     const productUrl = comuneSlug
         ? `/fiori-sulle-tombe/${product.slug}?loc=${comuneSlug}`
         : `/fiori-sulle-tombe/${product.slug}`;
@@ -30,8 +32,19 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
     }, [product]);
 
     return (
-        <article className="bg-white rounded-[24px] shadow-sm border border-gray-100 hover:shadow-2xl transition-shadow flex flex-col h-[500px] min-h-[500px] hover:z-50 relative group">
-            <Link href={productUrl} className="w-full h-[85%] relative bg-gray-50 flex items-center justify-center text-center overflow-hidden rounded-t-[24px] cursor-pointer group-hover:opacity-70 transition-opacity duration-500">
+        <article
+            className={`relative flex h-full flex-col border border-gray-100 bg-white shadow-sm transition-shadow hover:z-50 hover:shadow-2xl group ${
+                compact
+                    ? 'min-h-[300px] rounded-[18px] sm:min-h-[320px]'
+                    : 'min-h-[500px] rounded-[24px]'
+            }`}
+        >
+            <Link
+                href={productUrl}
+                className={`relative flex w-full flex-1 cursor-pointer items-center justify-center overflow-hidden bg-gray-50 text-center transition-opacity duration-500 group-hover:opacity-70 ${
+                    compact ? 'min-h-[140px] rounded-t-[18px] sm:min-h-[160px]' : 'min-h-[240px] rounded-t-[24px]'
+                }`}
+            >
                 {!hasError ? (
                     <>
 
@@ -39,8 +52,16 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
                             src={imgSrc}
                             alt={buildProductAlt(product, { context: 'card', municipalityName: comuneName })}
                             fill
-                            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className={`object-center transition-transform duration-700 ${
+                                compact
+                                    ? 'object-cover group-hover:scale-105'
+                                    : 'object-contain p-2'
+                            }`}
+                            sizes={
+                                compact
+                                    ? '(max-width: 640px) 50vw, 25vw'
+                                    : '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+                            }
                             loading="lazy"
                             onError={() => {
                                 console.error(`ERRORE IMMAGINE CARD: ${product.slug} all'URL ${imgSrc}`);
@@ -55,22 +76,40 @@ export default function ProductCard({ product, comuneSlug, comuneName }: Product
                     </div>
                 )}
             </Link>
-            <div className="h-[15%] w-full flex items-center justify-between px-5 bg-white/90 backdrop-blur-xl border-t border-gray-100/50 rounded-b-[24px] z-10 relative">
-                <div className="flex flex-col min-w-0 pr-4 py-1">
-                    <h3 className="text-[18px] font-display font-bold text-gray-900 tracking-tight truncate">
+            <div
+                className={`relative z-10 flex w-full shrink-0 items-start justify-between border-t border-gray-100/50 bg-white/90 backdrop-blur-xl ${
+                    compact
+                        ? 'gap-2 rounded-b-[18px] px-3 py-2.5 sm:px-3.5 sm:py-3'
+                        : 'gap-3 rounded-b-[24px] px-5 py-3'
+                }`}
+            >
+                <div className="min-w-0 flex-1 py-0.5">
+                    <h3
+                        className={`font-display font-bold leading-snug tracking-tight text-gray-900 break-words [overflow-wrap:anywhere] ${
+                            compact ? 'text-[13px] sm:text-[14px]' : 'text-[18px]'
+                        }`}
+                    >
                         {product.name}
                     </h3>
-                    <p className="text-fm-gold font-semibold text-[17px] mt-0.5 tracking-tight opacity-75">
+                    <p
+                        className={`mt-0.5 font-semibold tracking-tight text-fm-gold opacity-75 ${
+                            compact ? 'text-[13px] sm:text-[14px]' : 'mt-1 text-[17px]'
+                        }`}
+                    >
                         €{product.price.toFixed(2)}
                     </p>
                 </div>
-                <Link href={productUrl} className="shrink-0 bg-fm-gold text-white px-5 py-2.5 rounded-full text-xs font-semibold tracking-wide hover:brightness-110 transition-colors shadow-sm">
+                <Link
+                    href={productUrl}
+                    className={`mt-0.5 shrink-0 self-center rounded-full bg-fm-gold font-semibold tracking-wide text-white shadow-sm transition-colors hover:brightness-110 ${
+                        compact ? 'px-2.5 py-1.5 text-[10px] sm:px-3 sm:py-2 sm:text-[11px]' : 'px-5 py-2.5 text-xs'
+                    }`}
+                >
                     {comuneSlug ? 'Vedi' : 'Dettagli'}
                 </Link>
             </div>
 
-            {/* Hover Preview Box with Floating asymmetric positioning */}
-            <ProductHoverPreview product={product} selectedImage={imgSrc} />
+            {!compact && <ProductHoverPreview product={product} selectedImage={imgSrc} />}
         </article>
     );
 }

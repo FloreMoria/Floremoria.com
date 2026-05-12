@@ -77,6 +77,8 @@ model Order {
   latitude               Float?
   longitude              Float?
   partnerId              String?
+  /** Email azienda partner (handoff da siti esterni) per notifiche / rendicontazione. */
+  partnerNotifyEmail     String?       @map("partner_notify_email") @db.VarChar(255)
   partnerPaymentStatus   PaymentStatus @default(UNPAID)
   orderNumber            String?       @unique
   deliveryProvince       String?       @db.VarChar(2)
@@ -85,6 +87,7 @@ model Order {
   partner                Partner?      @relation(fields: [partnerId], references: [id])
   user                   User?         @relation(fields: [userId], references: [id])
   items                  OrderItem[]
+  offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
 }
 
@@ -148,6 +151,7 @@ model Offer {
   code      String?   @unique
   type      OfferType
   value     Int
+  maxUses   Int?
   startsAt  DateTime?
   endsAt    DateTime?
   isActive  Boolean   @default(true)
@@ -155,6 +159,21 @@ model Offer {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+  redemptions OfferRedemption[]
+}
+
+model OfferRedemption {
+  id            String   @id @default(cuid())
+  offerId       String
+  orderId       String
+  buyerEmail    String?
+  buyerFullName String?
+  usedAt        DateTime @default(now())
+  offer         Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([offerId, usedAt])
+  @@index([buyerEmail])
 }
 
 model Article {
@@ -200,8 +219,41 @@ model Partner {
   paymentStatus  PaymentStatus @default(UNPAID)
   province       String?       @db.VarChar(2)
   uniqueCode     String?       @unique
-  orders         Order[]
-  deliveryProofs DeliveryProof[]
+  orders              Order[]
+  deliveryProofs      DeliveryProof[]
+  handoffSessions     PartnerHandoffSession[]
+  apiCredentials      PartnerApiCredential[]
+}
+
+/** Dati inviati da siti partner (API legacy `order-data`); scambio via `externalKey` in query su checkout. */
+model PartnerHandoffSession {
+  id          String   @id @default(cuid())
+  externalKey String   @unique @map("external_key") @db.VarChar(64)
+  payload     Json
+  expiresAt   DateTime @map("expires_at")
+  partnerId   String?  @map("partner_id")
+  partner     Partner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("partner_handoff_sessions")
+}
+
+/** Credenziali API per `POST /api/external/order-data` senza variabili Vercel (chiave pubblica + segreto). */
+model PartnerApiCredential {
+  id         String    @id @default(cuid())
+  partnerId  String    @map("partner_id")
+  partner    Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  label      String
+  publicId   String    @unique @map("public_id") @db.VarChar(80)
+  secretHash String    @map("secret_hash") @db.Text
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  @@index([partnerId])
+  @@map("partner_api_credentials")
 }
 
 model Supplier {

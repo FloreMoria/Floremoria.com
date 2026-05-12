@@ -16,7 +16,11 @@ export async function recoverGardenLink(email: string) {
         // Security: Non riveliamo esplicitamente se l'email esiste o meno per evitare enumerazione.
         // Ma internamente processiamo l'invio solo se l'utente esiste e ha il telefono.
         if (user) {
-            const magicLink = `https://floremoria.eu/giardino/${user.uniqueCode || user.id}`;
+            const siteBase =
+                process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+                process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
+                'https://www.floremoria.com';
+            const magicLink = `${siteBase}/giardino/${user.uniqueCode || user.id}`;
             const userPhone = user.phone || 'Nessun numero di telefono salvato';
 
             // TODO: Integrazione API WhatsApp (es. Twilio o Meta Business API)

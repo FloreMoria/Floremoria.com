@@ -1,5 +1,10 @@
+/**
+ * Home pubblica (equivalente storico di index.html in stack Next.js App Router).
+ * Sezioni: Hero → Ricerca → Tre Porte → Come funziona → Foto di conferma → Recensioni → Valori.
+ * Assistente / comando umano: vedi `lib/floremDigitalAssistant.ts` e attributi `data-florem-*` sul wrapper.
+ */
 import { Metadata } from 'next';
-import TrePorteCard from '@/components/TrePorteCard';
+import TrePorteSection from '@/components/TrePorteSection';
 import BackgroundSwapper from '@/components/BackgroundSwapper';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 import Button from '@/components/Button';
@@ -7,8 +12,13 @@ import GoogleReviewsBar from '@/components/GoogleReviewsBar';
 import TextParallax from '@/components/TextParallax';
 import TrustBar from '@/components/TrustBar';
 import CarouselFotoConferme from '@/components/CarouselFotoConferme';
+import FotoPrimaConsegnaOptIn from '@/components/FotoPrimaConsegnaOptIn';
 import prisma from '@/lib/prisma';
 import CoreValues from '@/components/CoreValues';
+import {
+  FLOREM_DIGITAL_ASSISTANT_NAME,
+  FLOREM_HUMAN_OPERATOR_TRIGGER,
+} from '@/lib/floremDigitalAssistant';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Invia fiori al cimitero in tutta Italia',
@@ -43,7 +53,11 @@ export default async function Home() {
   const proofPhotos = await loadDeliveryProofPhotos();
   
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      data-florem-assistant={FLOREM_DIGITAL_ASSISTANT_NAME}
+      data-florem-human-command={FLOREM_HUMAN_OPERATOR_TRIGGER}
+    >
       {/* 0) FIXED BACKGROUND HERO LAYER (SWAPPER) */}
       <BackgroundSwapper />
 
@@ -60,25 +74,25 @@ export default async function Home() {
               I fiori della memoria
             </h2>
             <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
-              Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo le due foto (prima e dopo) sul tuo WhatsApp.
+              Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo le foto sul tuo WhatsApp.
             </p>
           </TextParallax>
         </section>
 
-        {/* Banner fiducia: in basso verso la ricerca (NINA: respiro visivo prima di “Dove desideri…”) */}
-        <div className="relative z-10 w-full mt-6 md:mt-10 lg:mt-14 mb-1 lg:mb-2">
+        {/* Banner fiducia: ~3 cm più in alto rispetto al precedente posizionamento */}
+        <div className="relative z-10 w-full mt-[calc(1.5rem-3cm)] md:mt-[calc(2.5rem-3cm)] lg:mt-[calc(3.5rem-3cm)] mb-1 lg:mb-2">
           <TrustBar compactBottom />
         </div>
 
         {/* Ordine sezioni: Ricerca → Tre porte → Come funziona → Foto → Recensioni → Valori */}
-        <div className="relative z-10 w-full pt-3 lg:pt-5 pb-16 space-y-16 lg:space-y-28">
+        <div className="relative z-10 w-full pt-3 lg:pt-5 pb-16 space-y-10 sm:space-y-14 lg:space-y-28">
 
           {/* 2) Ricerca */}
-          <section id="search-section" className="bg-[#FDFCF9] rounded-[28px] lg:rounded-[40px] p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_8px_40px_rgba(43,43,43,0.06)] border border-stone-200/80 scroll-mt-24 mx-4 xl:mx-auto">
-            <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug mb-4">
-              Dove desideri inviare fiori?
+          <section id="search-section" className="bg-[#FDFCF9] rounded-[24px] lg:rounded-[40px] px-5 py-5 sm:p-8 lg:p-16 text-center max-w-4xl mx-auto shadow-[0_8px_40px_rgba(43,43,43,0.06)] border border-stone-200/80 scroll-mt-24 mx-4 xl:mx-auto">
+            <h2 className="text-[24px] sm:text-[32px] font-display font-semibold text-fm-text leading-snug mb-2 sm:mb-4">
+              Dove desideri inviare i fiori?
             </h2>
-            <p className="text-fm-muted font-body text-lg mb-8">
+            <p className="text-fm-muted font-body text-[15px] sm:text-lg mb-4 sm:mb-8">
               Inserisci il nome del comune (Es. Como, Tivoli, Catania, ecc...)
             </p>
             <div className="max-w-md mx-auto relative z-10">
@@ -86,122 +100,103 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* 3) Tre porte — categorie (sostituisce il blocco “Scegli il servizio” / galleria omaggi) */}
-          <section
-            id="tre-porte"
-            aria-labelledby="tre-porte-heading"
-            className="max-w-7xl mx-auto bg-[#FAF9F6] rounded-[28px] p-6 sm:p-10 lg:p-14 shadow-[0_8px_48px_rgba(43,43,43,0.05)] border border-stone-200/70 mx-4 xl:mx-auto"
-          >
-            <header className="text-center mb-10 lg:mb-14 max-w-2xl mx-auto space-y-4">
-              <p className="text-[11px] sm:text-xs font-body uppercase tracking-[0.22em] text-fm-muted">
-                Dove conta il tuo ricordo
-              </p>
-              <h2 id="tre-porte-heading" className="text-[28px] sm:text-[34px] lg:text-[40px] font-display font-semibold text-fm-text leading-tight tracking-tight">
-                Tre modi per accompagnarti
-              </h2>
-              <p className="text-fm-muted font-body text-base sm:text-lg leading-relaxed">
-                Tombe, funerale o un ultimo gesto per un animale amato: tre contesti diversi, con la stessa cura silenziosa — fiori freschi, fioristi sul territorio e la conferma su WhatsApp.
-              </p>
-            </header>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8">
-              <TrePorteCard
-                category="cimitero"
-                href="/fiori-sulle-tombe"
-                title="Fiori sulle tombe"
-                description="Consegna sulle tombe, con rete di fioristi locali in tutta Italia."
-              />
-              <TrePorteCard
-                category="funerale"
-                href="/per-il-funerale"
-                title="Fiori per il Funerale"
-                description="Camera ardente, chiesa e luoghi del commiato — con la stessa discrezione."
-              />
-              <TrePorteCard
-                category="animali"
-                href="/per-animali-domestici"
-                title="Fiori per i Piccoli Amici"
-                description="Omaggi dedicati agli animali di famiglia: piante e composizioni con cuore."
-              />
-            </div>
-          </section>
+          {/* 3) Tre porte — categorie */}
+          <TrePorteSection />
 
           {/* 4) Come funziona */}
-          <section className="max-w-6xl mx-auto bg-[#FDFCF9] rounded-[28px] p-8 lg:p-16 shadow-[0_8px_40px_rgba(43,43,43,0.05)] border border-stone-200/80 mx-4 xl:mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
+          <section className="max-w-6xl mx-auto bg-[#FDFCF9] rounded-[24px] lg:rounded-[28px] p-5 sm:p-8 lg:p-16 shadow-[0_8px_40px_rgba(43,43,43,0.05)] border border-stone-200/80 mx-4 xl:mx-auto">
+            <div className="text-center mb-6 sm:mb-12">
+              <h2 className="text-[24px] sm:text-[32px] font-display font-semibold text-fm-text leading-snug">
                 Come funziona
               </h2>
-              <p className="text-fm-muted text-lg mt-4 font-body">
-                Un processo semplice per esserti vicino anche da lontano.
+              <p className="text-fm-muted text-[15px] sm:text-lg mt-2 sm:mt-4 font-body">
+                Tre passaggi. Zero dubbi.
+                <br />
+                Presenza concreta anche a distanza.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              {/* Decorative line linking steps (hidden on mobile) */}
-              <div className="hidden md:block absolute top-[40px] left-[15%] right-[15%] h-[2px] bg-fm-rose-soft/50 z-0"></div>
-
-              {/* Step 1 */}
-              <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-[#E6F3EA] flex items-center justify-center text-[#2F6B43] font-display font-bold text-2xl shadow-sm border border-white">
-                  1
+            <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
+              <div className="rounded-2xl border border-stone-200 bg-white/70 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#E6F3EA] flex items-center justify-center text-[#2F6B43] font-display font-bold text-base shadow-sm border border-white shrink-0">
+                    1
+                  </div>
+                  <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Tu ordini</h3>
                 </div>
-                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ordina l&apos;omaggio</h3>
-                <p className="text-fm-muted font-body leading-relaxed">
-                  Seleziona l&apos;omaggio floreale e inserisci i dettagli del cimitero e del defunto.
+                <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
+                  Scegli la composizione e inserisci i dati.
                 </p>
               </div>
 
-              {/* Step 2 */}
-              <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-[#B3DABF] flex items-center justify-center text-[#1C472A] font-display font-bold text-2xl shadow-sm border border-white">
-                  2
+              <div className="rounded-2xl border border-stone-200 bg-white/70 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#B3DABF] flex items-center justify-center text-[#1C472A] font-display font-bold text-base shadow-sm border border-white shrink-0">
+                    2
+                  </div>
+                  <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Noi consegniamo</h3>
                 </div>
-                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Il fiorista consegna</h3>
-                <p className="text-fm-muted font-body leading-relaxed">
-                  Un fiorista partner locale si occuperà di preparare e recapitare i fiori con rispetto. La consegna è sempre gratuita.
+                <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
+                  Il fiorista partner locale prepara e posa i fiori con cura.
                 </p>
               </div>
 
-              {/* Step 3 */}
-              <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-[#2F6B43] flex items-center justify-center text-white font-display font-bold text-2xl shadow-md border border-white">
-                  3
+              <div className="rounded-2xl border border-stone-200 bg-white/70 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#2F6B43] flex items-center justify-center text-white font-display font-bold text-base shadow-md border border-white shrink-0">
+                    3
+                  </div>
+                  <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Ricevi conferma</h3>
                 </div>
-                <h3 className="text-xl font-display font-semibold text-fm-text mt-4">Ricevi le foto</h3>
-                <p className="text-fm-muted font-body leading-relaxed">
-                  Al termine, riceverai le due foto di conferma (prima e dopo), garantendoti la massima trasparenza.
+                <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
+                  Ricevi su WhatsApp le foto della consegna effettuata.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* 5) Foto di conferma */}
-          <section className="max-w-5xl mx-auto overflow-hidden rounded-[28px] border border-stone-200/80 bg-[#F7F5F0] shadow-[0_8px_40px_rgba(43,43,43,0.06)] relative mx-4 lg:mx-auto">
+          {/* 5) Foto di conferma (MARK: valore percepito “GRATIS”; NINA: chiarezza immediata) */}
+          <section
+            id="foto-conferma"
+            aria-labelledby="foto-conferma-heading"
+            className="max-w-5xl mx-auto overflow-hidden rounded-[20px] lg:rounded-[28px] border border-stone-200/80 bg-[#F7F5F0] shadow-[0_8px_32px_rgba(43,43,43,0.05)] relative mx-4 lg:mx-auto"
+          >
             <div className="relative z-10 flex flex-col md:flex-row items-stretch">
-              <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-between space-y-8">
-                <div className="space-y-5">
-                  <h2 className="text-[32px] md:text-3xl lg:text-4xl font-display font-semibold text-fm-text leading-snug">
+              <div className="w-full md:w-1/2 p-4 sm:p-8 lg:p-12 flex flex-col justify-between space-y-4 sm:space-y-8">
+                <div className="space-y-3 sm:space-y-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full border border-fm-green/25 bg-fm-green-soft px-3 py-1 font-body text-[10px] font-bold uppercase tracking-[0.12em] text-fm-green">
+                      Gratis
+                    </span>
+                    <span className="font-body text-xs text-fm-muted">Foto dopo la consegna inclusa nell&apos;ordine</span>
+                  </div>
+                  <h2
+                    id="foto-conferma-heading"
+                    className="text-[20px] sm:text-[30px] md:text-3xl lg:text-4xl font-display font-semibold text-fm-text leading-snug"
+                  >
                     Foto di conferma per ogni consegna
                   </h2>
-                  <p className="rounded-2xl border border-fm-gold/25 bg-fm-gold-soft/80 px-4 py-3 font-display text-[15px] font-semibold tracking-wide text-fm-text sm:text-base">
-                    Lo scatto fotografico dopo la consegna — la foto con l&apos;omaggio già posato — è{' '}
-                    <span className="whitespace-nowrap text-fm-gold">sempre gratuito</span>.
+                  <p className="rounded-xl border border-fm-gold/30 bg-white/90 px-3.5 sm:px-5 py-2.5 sm:py-4 font-display text-[13px] sm:text-[15px] font-semibold tracking-wide text-fm-text shadow-sm">
+                    La foto con l&apos;omaggio già posato sul luogo — il nostro modo di restituirti serenità — è{' '}
+                    <span className="whitespace-nowrap text-fm-gold">100% gratuita</span>, senza costi nascosti e senza
+                    sorprese in fattura.
                   </p>
-                  <p className="text-fm-text/80 font-body text-lg leading-relaxed">
+                  <p className="text-fm-text/80 font-body text-[14px] sm:text-lg leading-relaxed">
                     Sappiamo quanto conti avere una prova tangibile. Il fiorista documenta il lavoro svolto; ricevi tutto sul tuo WhatsApp, con la stessa cura che mettiamo in ogni dettaglio del servizio.
                   </p>
+                  <FotoPrimaConsegnaOptIn />
                 </div>
                 
-                <div className="pt-6 border-t border-fm-rose-soft/30 space-y-4">
-                  <h3 className="text-2xl font-display font-bold text-fm-text">
+                <div className="pt-3 sm:pt-6 border-t border-fm-rose-soft/30 space-y-2.5 sm:space-y-4">
+                  <h3 className="text-lg sm:text-2xl font-display font-bold text-fm-text">
                     Pronto a inviare il tuo omaggio?
                   </h3>
-                  <Button href="#search-section" variant="primary" className="w-full sm:w-auto px-8 py-3.5 text-lg shadow-md justify-center">
-                    Inizia ora
+                  <Button href="#tre-porte" variant="primary" className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3.5 text-[15px] sm:text-lg shadow-md justify-center">
+                    Invia ora
                   </Button>
                 </div>
               </div>
-              <div className="w-full md:w-1/2 bg-[#FDFCF9]/90 p-8 lg:p-12 flex items-center justify-center border-t border-stone-200/60 md:border-t-0 md:border-l md:border-stone-200/60">
+              <div className="w-full md:w-1/2 bg-[#FDFCF9]/90 p-3.5 sm:p-8 lg:p-12 flex items-center justify-center border-t border-stone-200/60 md:border-t-0 md:border-l md:border-stone-200/60">
                 {/* Componente Dinamico Foto Consegne */}
                 <CarouselFotoConferme photos={proofPhotos} />
               </div>

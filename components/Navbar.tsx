@@ -5,6 +5,37 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { buildGenericAlt } from '@/utils/altText';
+import { getProductBySlug } from '@/lib/products';
+
+/** Le PDP sono tutte sotto `/fiori-sulle-tombe/[slug]`; la categoria reale è sul prodotto. */
+function productFromFioriTombePdp(pathname: string) {
+    const m = pathname.match(/^\/fiori-sulle-tombe\/([^/]+)\/?$/);
+    if (!m) return undefined;
+    return getProductBySlug(m[1]);
+}
+
+function isNavLinkActive(pathname: string, linkHref: string): boolean {
+    if (linkHref === '/') {
+        return pathname === '/';
+    }
+
+    const pdpProduct = productFromFioriTombePdp(pathname);
+
+    if (linkHref === '/fiori-sulle-tombe') {
+        if (pathname === '/fiori-sulle-tombe') return true;
+        return pdpProduct?.category === 'cimitero';
+    }
+    if (linkHref === '/per-il-funerale') {
+        if (pathname === '/per-il-funerale') return true;
+        return pdpProduct?.category === 'funerale';
+    }
+    if (linkHref === '/per-animali-domestici') {
+        if (pathname === '/per-animali-domestici') return true;
+        return pdpProduct?.category === 'animali';
+    }
+
+    return pathname === linkHref || pathname.startsWith(`${linkHref}/`);
+}
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -41,7 +72,7 @@ export default function Navbar() {
                     {/* Desktop Navigation */}
                     <nav className="hidden lg:flex space-x-6">
                         {navLinks.map((link) => {
-                            const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+                            const isActive = isNavLinkActive(pathname, link.href);
                             return (
                                 <Link
                                     key={link.href}
@@ -87,33 +118,41 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {/* Mobile Navigation */}
+            {/* Mobile Navigation: drawer laterale destro */}
             {isOpen && (
-                <div className="lg:hidden bg-fm-bg border-t border-fm-rose-soft/30 shadow-lg">
-                    <div className="px-4 py-4 space-y-2">
-                        {navLinks.map((link) => {
-                            const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
-                            return (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    className={`block px-3 py-2.5 rounded-md text-base font-body font-medium ${isActive
-                                        ? 'text-fm-cta bg-fm-cta-soft/30'
-                                        : 'text-fm-text hover:text-fm-cta hover:bg-fm-section'
-                                        }`}
-                                    onClick={() => setIsOpen(false)}
-                                >
-                                    {link.name}
-                                </Link>
-                            );
-                        })}
-                        <Link
-                            href="/login"
-                            className="block mt-4 text-center px-4 py-3 rounded-lg text-base font-body font-medium border border-fm-rose-soft text-fm-text hover:bg-fm-section"
-                            onClick={() => setIsOpen(false)}
-                        >
-                            Log In
-                        </Link>
+                <div className="lg:hidden fixed inset-0 z-[998]">
+                    <button
+                        type="button"
+                        className="absolute inset-0 bg-black/25"
+                        aria-label="Chiudi menu"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <div className="absolute right-0 top-[72px] h-[calc(100dvh-72px)] w-[84vw] max-w-[360px] bg-fm-bg border-l border-fm-rose-soft/30 shadow-2xl overflow-y-auto">
+                        <div className="px-4 py-4 space-y-2">
+                            {navLinks.map((link) => {
+                                const isActive = isNavLinkActive(pathname, link.href);
+                                return (
+                                    <Link
+                                        key={link.href}
+                                        href={link.href}
+                                        className={`block px-3 py-2.5 rounded-md text-base font-body font-medium ${isActive
+                                            ? 'text-fm-cta bg-fm-cta-soft/30'
+                                            : 'text-fm-text hover:text-fm-cta hover:bg-fm-section'
+                                            }`}
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        {link.name}
+                                    </Link>
+                                );
+                            })}
+                            <Link
+                                href="/login"
+                                className="block mt-4 text-center px-4 py-3 rounded-lg text-base font-body font-medium border border-fm-rose-soft text-fm-text hover:bg-fm-section"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Log In
+                            </Link>
+                        </div>
                     </div>
                 </div>
             )}

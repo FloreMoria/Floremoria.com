@@ -8,7 +8,29 @@ export async function GET(request: Request) {
     try {
         const offers = await prisma.offer.findMany({
             where: { deletedAt: null },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            include: {
+                redemptions: {
+                    orderBy: { usedAt: 'desc' },
+                    take: 10,
+                    select: {
+                        id: true,
+                        buyerEmail: true,
+                        buyerFullName: true,
+                        usedAt: true,
+                        order: {
+                            select: {
+                                orderNumber: true,
+                            },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        redemptions: true,
+                    },
+                },
+            },
         });
         return NextResponse.json(offers);
     } catch (e: any) {
@@ -24,9 +46,10 @@ export async function POST(request: Request) {
         const newOffer = await prisma.offer.create({
             data: {
                 name: data.name,
-                code: data.code,
+                code: typeof data.code === 'string' ? data.code.trim().toUpperCase() : null,
                 type: data.type,
                 value: data.value,
+                maxUses: typeof data.maxUses === 'number' && data.maxUses > 0 ? data.maxUses : null,
                 startsAt: data.startsAt ? new Date(data.startsAt) : null,
                 endsAt: data.endsAt ? new Date(data.endsAt) : null,
                 isActive: data.isActive !== undefined ? data.isActive : true,

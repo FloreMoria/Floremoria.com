@@ -2,18 +2,21 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Disable telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
+# `postinstall` → `prisma generate`: URL valido a build-time (nessuna connessione reale richiesta).
+ENV DATABASE_URL="postgresql://docker:docker@127.0.0.1:5432/docker?schema=public"
+
+# Dipendenze + schema Prisma prima di `npm ci` (postinstall esegue `prisma generate`)
 COPY package*.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci --legacy-peer-deps
 
+# Resto dell'app (rispetta `.dockerignore`)
 COPY . .
 
-# Generate Prisma types
 RUN npx prisma generate
-
-# Build Next.js app
 RUN npm run build
 
 EXPOSE 3000

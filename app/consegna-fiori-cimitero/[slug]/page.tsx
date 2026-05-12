@@ -1,10 +1,17 @@
 import { notFound, permanentRedirect } from 'next/navigation';
-import { products } from '@/lib/products';
 import { findBySlug } from '@/lib/municipalities';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import ProductCard from '@/components/ProductCard';
 import prisma from '@/lib/prisma';
+import TrePorteSection from '@/components/TrePorteSection';
+import ProductGrid from '@/components/shared/ProductGrid';
+import {
+    CATALOG_SLUGS_ANIMALI_ACCESSORIES,
+    CATALOG_SLUGS_ANIMALI_MAIN,
+    CATALOG_SLUGS_CIMITERO,
+    CATALOG_SLUGS_FUNERALE,
+    productsBySlugOrder,
+} from '@/lib/catalogProductOrder';
 import { getDeterministicWeather, getDeterministicDistance } from '@/utils/seo-enrichment';
 import Image from 'next/image';
 
@@ -81,6 +88,11 @@ export default async function MunicipalityPage({ params }: MunicipalityPageProps
     const finalImageUrl = deliveryProof?.photoAfterUrl || "/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp";
     const isRealProof = !!deliveryProof;
 
+    const cimiteroProducts = productsBySlugOrder(CATALOG_SLUGS_CIMITERO);
+    const funeralProducts = productsBySlugOrder(CATALOG_SLUGS_FUNERALE);
+    const animalMainProducts = productsBySlugOrder(CATALOG_SLUGS_ANIMALI_MAIN);
+    const animalAccessoryProducts = productsBySlugOrder(CATALOG_SLUGS_ANIMALI_ACCESSORIES);
+
     return (
         <div className="space-y-12 lg:space-y-20">
             <header className="bg-fm-section rounded-[20px] p-8 lg:p-16 text-center text-fm-text">
@@ -147,22 +159,67 @@ export default async function MunicipalityPage({ params }: MunicipalityPageProps
                 </div>
             </section>
 
-            <section className="max-w-6xl mx-auto w-full">
-                <div className="flex justify-between items-end border-b border-fm-rose-soft/30 pb-4 mb-8">
-                    <h2 className="text-[32px] font-display font-semibold text-fm-text leading-snug">
-                        I Nostri Omaggi floreali per {comuneData.name}
-                    </h2>
+            <TrePorteSection
+                comuneSlug={comuneData.slug}
+                comuneName={comuneData.name}
+                sectionId="tre-porte-comune"
+            />
+
+            <section className="max-w-6xl mx-auto w-full px-4 space-y-14 lg:space-y-20">
+                <div className="space-y-6">
+                    <div className="border-b border-fm-rose-soft/30 pb-4">
+                        <h2 className="text-[28px] md:text-[32px] font-display font-semibold text-fm-text leading-snug">
+                            Fiori sulle tombe a {comuneData.name}
+                        </h2>
+                        <p className="mt-2 text-fm-muted font-body text-base leading-relaxed max-w-2xl">
+                            Omaggi per tomba e loculo; accessori come lumino e messaggio per completare il pensiero.
+                        </p>
+                    </div>
+                    <ProductGrid
+                        products={cimiteroProducts}
+                        comuneSlug={comuneData.slug}
+                        comuneName={comuneData.name}
+                    />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.map((product) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            comuneSlug={comuneData.slug}
-                            comuneName={comuneData.name}
-                        />
-                    ))}
+                <div className="space-y-6">
+                    <div className="border-b border-fm-rose-soft/30 pb-4">
+                        <h2 className="text-[28px] md:text-[32px] font-display font-semibold text-fm-text leading-snug">
+                            Fiori per il funerale a {comuneData.name}
+                        </h2>
+                        <p className="mt-2 text-fm-muted font-body text-base leading-relaxed max-w-2xl">
+                            Corone, cuscini, bouquet e complementi per camera ardente, chiesa e cerimonie.
+                        </p>
+                    </div>
+                    <ProductGrid
+                        products={funeralProducts}
+                        comuneSlug={comuneData.slug}
+                        comuneName={comuneData.name}
+                    />
+                </div>
+
+                <div className="space-y-6">
+                    <div className="border-b border-fm-rose-soft/30 pb-4">
+                        <h2 className="text-[28px] md:text-[32px] font-display font-semibold text-fm-text leading-snug">
+                            Piccoli amici a {comuneData.name}
+                        </h2>
+                        <p className="mt-2 text-fm-muted font-body text-base leading-relaxed max-w-2xl">
+                            Piante e composizioni dedicate; in fondo gli accessori per accompagnare il ricordo.
+                        </p>
+                    </div>
+                    <ProductGrid
+                        products={animalMainProducts}
+                        comuneSlug={comuneData.slug}
+                        comuneName={comuneData.name}
+                    />
+                    <h3 className="text-xl font-display font-semibold text-fm-text text-center pt-4">
+                        Accessori per accompagnare il ricordo
+                    </h3>
+                    <ProductGrid
+                        products={animalAccessoryProducts}
+                        comuneSlug={comuneData.slug}
+                        comuneName={comuneData.name}
+                    />
                 </div>
             </section>
 

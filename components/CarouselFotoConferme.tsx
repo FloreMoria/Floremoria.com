@@ -49,9 +49,14 @@ export default function CarouselFotoConferme({ photos }: { photos?: string[] }) 
       {/* Elementi Decorativi / Trust Overlay */}
       <div className="absolute inset-0 z-20 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-black/10"></div>
       
-      <div className="absolute top-4 left-4 z-30 bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/20">
-        <Camera className="w-3.5 h-3.5 text-white" />
-        <span className="text-white text-[10px] font-bold tracking-widest uppercase">Genuinità Certificata</span>
+      <div className="absolute top-4 left-4 right-4 z-30 flex flex-wrap items-center gap-2 sm:right-auto">
+        <div className="bg-emerald-950/85 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/15">
+          <span className="text-white text-[10px] font-bold tracking-[0.12em] uppercase">Gratis</span>
+        </div>
+        <div className="bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center gap-2 border border-white/20">
+          <Camera className="w-3.5 h-3.5 text-white" />
+          <span className="text-white text-[10px] font-bold tracking-widest uppercase">Genuinità certificata</span>
+        </div>
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 z-30 bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-lg border border-white flex flex-col gap-1">

@@ -23,8 +23,10 @@ export async function GET(request: Request) {
             take: limit
         });
 
-        // Configura un path di base, di default https://floremoria.com
-        const baseUrl = 'https://floremoria.eu';
+        const baseUrl =
+            process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+            process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
+            'https://www.floremoria.com';
 
         const payload = products.map(p => {
             let absoluteMediaUrl = null;

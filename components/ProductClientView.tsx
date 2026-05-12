@@ -9,6 +9,15 @@ import { useRouter } from 'next/navigation';
 import { getDailyImageSet } from '@/utils/dailyImageSet';
 import { buildProductAlt } from '@/utils/altText';
 import Link from 'next/link';
+import {
+    FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID,
+    mergePreDeliveryPhotoIntoCart,
+    readPreDeliveryPhotoPref,
+    removePreDeliveryPhotoLineFromStoredCart,
+    setPreDeliveryPhotoPref,
+} from '@/lib/floremPreDeliveryPhoto';
+import { canAddProductToCart } from '@/lib/floremCartCategory';
+import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 
 interface ProductClientViewProps {
     product: Product;
@@ -16,19 +25,38 @@ interface ProductClientViewProps {
     initialComune?: string;
 }
 
+function catalogBackLink(category: Product['category']) {
+    if (category === 'funerale') {
+        return { href: '/per-il-funerale', label: 'Torna a Fiori per il funerale' };
+    }
+    if (category === 'animali') {
+        return { href: '/per-animali-domestici', label: 'Torna a Piccoli Amici' };
+    }
+    return { href: '/fiori-sulle-tombe', label: 'Torna a Fiori sulle tombe' };
+}
+
 export default function ProductClientView({ product, relatedProducts, initialComune = '' }: ProductClientViewProps) {
     const router = useRouter();
+    const backToCatalog = catalogBackLink(product.category);
     const [qty, setQty] = useState(1);
     const [comune, setComune] = useState(initialComune);
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+    const [cartCategoryModalOpen, setCartCategoryModalOpen] = useState(false);
     const autocompleteRef = useRef<HTMLDivElement>(null);
 
     const addonsMapping: Record<string, { id: string, slug: string, name: string, price: number, icon: string }[]> = {
         'cimitero': [
             { id: 'c3', slug: 'messaggio', name: "Aggiungi Messaggio d'affetto", price: 2.49, icon: '✉️' },
-            { id: 'c2', slug: 'lumino', name: "Aggiungi Lumino votivo", price: 3.49, icon: '🕯️' }
+            {
+                id: FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID,
+                slug: 'foto-stato-prima-consegna',
+                name: 'Foto dello stato di fatto prima della consegna',
+                price: 1.49,
+                icon: '📷',
+            },
+            { id: 'c2', slug: 'lumino', name: 'Aggiungi Lumino votivo', price: 3.49, icon: '🕯️' },
         ],
         'funerale': [
             { id: 'f4', slug: 'nastro-commemorativo', name: "Aggiungi Nastro personalizzato", price: 14.99, icon: '🎀' },
@@ -40,7 +68,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         ]
     };
     
-    const availableAddons = product.isBouquet ? (addonsMapping[product.category] || []) : [];
+    const categoryKey = product.category;
+    const coverageLabel = product.category === 'cimitero' ? 'Verifica Copertura Cimitero' : 'Verifica Copertura Comune';
+    const availableAddons =
+        product.isBouquet && categoryKey ? (addonsMapping[categoryKey] ?? []) : [];
     
     const addonsTotal = selectedAddons.reduce((acc, addonId) => {
         const addon = availableAddons.find(a => a.id === addonId);
@@ -75,6 +106,20 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // FT: ripristina optional «foto prima» da preferenza (es. home). FF/PA: rimuovi id orfano dallo stato.
+    useEffect(() => {
+        if (!product.isBouquet) return;
+        if (product.category !== 'cimitero') {
+            setSelectedAddons((prev) => prev.filter((id) => id !== FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID));
+            return;
+        }
+        if (typeof window === 'undefined') return;
+        if (!readPreDeliveryPhotoPref()) return;
+        setSelectedAddons((prev) =>
+            prev.includes(FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID) ? prev : [...prev, FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID]
+        );
+    }, [product.category, product.isBouquet, product.id]);
 
     const [customMessage, setCustomMessage] = useState('');
     const [variantColor, setVariantColor] = useState('Rosso');
@@ -149,15 +194,19 @@ export default function ProductClientView({ product, relatedProducts, initialCom
     const increaseQty = () => setQty(prev => (prev < 10 ? prev + 1 : 10));
     const decreaseQty = () => setQty(prev => (prev > 1 ? prev - 1 : 1));
 
-    const handleAddToCart = () => {
+    const finalizeCartToCheckout = (baseCart: unknown[]) => {
+        let cart = [...baseCart] as {
+            productId: string;
+            slug?: string;
+            name?: string;
+            priceCents?: number;
+            qty: number;
+            customData?: Record<string, unknown>;
+        }[];
 
-        const cartStr = localStorage.getItem('fm_cart');
-        const cart = cartStr ? JSON.parse(cartStr) : [];
-
-        // Check for accessory (isBouquet === false) validation
         if (product.isBouquet === false) {
-            const hasBouquet = cart.some((item: any) => {
-                const p = products.find(prod => prod.id === item.productId);
+            const hasBouquet = cart.some((item) => {
+                const p = products.find((prod) => prod.id === item.productId);
                 return p?.isBouquet === true;
             });
 
@@ -168,9 +217,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             }
         }
 
-        const existingItemIndex = cart.findIndex((item: { productId: string, customData?: Record<string, unknown> }) =>
-            item.productId === product.id &&
-            (product.slug === 'bouquet-di-rose' ? item.customData?.variantColor === variantColor : true)
+        const existingItemIndex = cart.findIndex(
+            (item) =>
+                item.productId === product.id &&
+                (product.slug === 'bouquet-di-rose' ? item.customData?.variantColor === variantColor : true)
         );
 
         if (existingItemIndex >= 0) {
@@ -185,62 +235,178 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 customData: {
                     comune,
                     ...(product.slug === 'bouquet-di-rose' ? { variantColor } : {}),
-                    ...(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' ? { customMessage } : {})
-                }
+                    ...(product.slug === 'messaggio' || product.slug === 'nastro-commemorativo' ? { customMessage } : {}),
+                },
             };
-            cart.push(newItem);
+            cart.push(newItem as (typeof cart)[number]);
         }
 
-        // Push addons
-        selectedAddons.forEach(addonId => {
-            const addonConfig = availableAddons.find(a => a.id === addonId);
+        selectedAddons.forEach((addonId) => {
+            const addonConfig = availableAddons.find((a) => a.id === addonId);
             if (addonConfig) {
-                const realProduct = products.find(p => p.id === addonId);
+                const realProduct = products.find((p) => p.id === addonId);
                 if (realProduct) {
                     cart.push({
                         productId: realProduct.id,
                         slug: realProduct.slug,
                         name: addonConfig.name,
                         priceCents: Math.round(addonConfig.price * 100),
-                        qty: 1, // Accessory qty is 1 per addition
+                        qty: 1,
                         customData: {
                             comune,
-                            ...(realProduct.slug === 'messaggio' || realProduct.slug === 'nastro-commemorativo' ? { customMessage } : {})
-                        }
+                            ...(realProduct.slug === 'messaggio' || realProduct.slug === 'nastro-commemorativo' ? { customMessage } : {}),
+                        },
                     });
                 }
             }
         });
 
-        localStorage.setItem('fm_cart', JSON.stringify(cart));
+        const cartForStorage = mergePreDeliveryPhotoIntoCart(cart);
+        localStorage.setItem('fm_cart', JSON.stringify(cartForStorage));
         window.dispatchEvent(new CustomEvent('cart-added', { detail: { name: product.name } }));
-        // Change Purchase Flow: Navigate to Checkout
         window.location.href = '/checkout';
     };
 
+    const handleAddToCart = () => {
+        const cartStr = localStorage.getItem('fm_cart');
+        const cart = cartStr ? JSON.parse(cartStr) : [];
+        if (!canAddProductToCart(cart, product)) {
+            setCartCategoryModalOpen(true);
+            return;
+        }
+        setCartCategoryModalOpen(false);
+        finalizeCartToCheckout(cart);
+    };
+
+    const handleCartCategoryModalClearAndAdd = () => {
+        setCartCategoryModalOpen(false);
+        finalizeCartToCheckout([]);
+    };
+
+    type AddonRow = (typeof availableAddons)[number];
+
+    const handleAddonToggle = (addon: AddonRow, on: boolean) => {
+        if (addon.id === FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID) {
+            setPreDeliveryPhotoPref(on);
+            if (!on) removePreDeliveryPhotoLineFromStoredCart();
+        }
+        if (on) setSelectedAddons([...selectedAddons, addon.id]);
+        else setSelectedAddons(selectedAddons.filter((id) => id !== addon.id));
+    };
+
+    /** FT: striscia foto a tutta larghezza, un solo band orizzontale basso. */
+    const renderAddonCard = (addon: AddonRow, layout: 'default' | 'ftDense' | 'ftFotoStrip' = 'default') => {
+        const isSelected = selectedAddons.includes(addon.id);
+        const selectedRing = isSelected ? 'border-fm-gold bg-yellow-50/35 shadow-sm ring-1 ring-fm-gold/20' : 'border-gray-200 bg-white hover:border-gray-300';
+
+        if (layout === 'ftFotoStrip') {
+            return (
+                <label
+                    key={addon.id}
+                    title={addon.name}
+                    className={`flex w-full max-w-none cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 transition-all duration-200 sm:gap-3 sm:rounded-md sm:px-4 sm:py-2 ${selectedRing}`}
+                >
+                    <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-gray-300 text-fm-gold focus:ring-fm-gold/40 sm:h-4 sm:w-4"
+                        checked={isSelected}
+                        onChange={(e) => handleAddonToggle(addon, e.target.checked)}
+                    />
+                    <span className="shrink-0 text-base leading-none grayscale-[0.15] sm:text-[17px]" aria-hidden>
+                        {addon.icon}
+                    </span>
+                    <span className="min-w-0 flex-1 text-left text-[12px] font-semibold leading-tight text-gray-800 sm:text-[13px] md:text-sm line-clamp-2 break-words">
+                        {addon.name}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[11px] font-bold text-fm-gold sm:text-xs md:text-[13px]">
+                        +€{addon.price.toFixed(2)}
+                    </span>
+                </label>
+            );
+        }
+
+        if (layout === 'ftDense') {
+            return (
+                <label
+                    key={addon.id}
+                    className={`flex w-full cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 transition-all duration-200 sm:gap-2.5 sm:px-3 sm:py-2.5 ${selectedRing}`}
+                >
+                    <input
+                        type="checkbox"
+                        className="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-fm-gold focus:ring-fm-gold/40"
+                        checked={isSelected}
+                        onChange={(e) => handleAddonToggle(addon, e.target.checked)}
+                    />
+                    <span className="shrink-0 text-[17px] leading-none grayscale-[0.15] sm:text-lg" aria-hidden>
+                        {addon.icon}
+                    </span>
+                    <span className="min-w-0 flex-1 text-left text-[13px] font-semibold leading-snug text-gray-800 sm:text-sm">
+                        {addon.name}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-xs font-bold text-fm-gold sm:text-[13px]">+€{addon.price.toFixed(2)}</span>
+                </label>
+            );
+        }
+
+        return (
+            <label
+                key={addon.id}
+                className={`flex min-h-[3.25rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl border p-3.5 transition-all duration-200 sm:gap-3 ${selectedRing}`}
+            >
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                    <input
+                        type="checkbox"
+                        className="h-4.5 w-4.5 flex-shrink-0 cursor-pointer rounded border-gray-300 text-fm-gold transition-colors focus:ring-fm-gold/50"
+                        checked={isSelected}
+                        onChange={(e) => handleAddonToggle(addon, e.target.checked)}
+                    />
+                    <span className="flex-shrink-0 text-[22px] leading-none grayscale-[0.2]">{addon.icon}</span>
+                    <span className="min-w-0 text-sm font-semibold leading-snug tracking-tight text-gray-800">{addon.name}</span>
+                </div>
+                <span className="flex-shrink-0 text-[13px] font-bold text-fm-gold">+€{addon.price.toFixed(2)}</span>
+            </label>
+        );
+    };
+
+    const addonMessaggio = availableAddons.find((a) => a.id === 'c3');
+    const addonFotoPrima = availableAddons.find((a) => a.id === FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID);
+    const addonLuminoFt = availableAddons.find((a) => a.id === 'c2');
+    const useFtCompletaGrid =
+        product.category === 'cimitero' &&
+        availableAddons.length === 3 &&
+        Boolean(addonMessaggio && addonFotoPrima && addonLuminoFt);
+
     return (
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 lg:py-12 space-y-8 lg:space-y-16">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-9 space-y-5 lg:space-y-9">
 
 
             {/* HERO PRODOTTO - 2 COLONNE */}
-            <div className="flex flex-col lg:flex-row gap-8 xl:gap-16 lg:items-start">
+            <div className="flex flex-col lg:flex-row gap-5 xl:gap-10 lg:items-start">
 
                 {/* SX: Gallery, SEO Text */}
-                <div className="lg:w-[45%] space-y-12 shrink-0">
-
+                <div className="lg:w-[45%] space-y-6 shrink-0">
                     {/* Bottone Indietro */}
                     <Link
-                        href="/fiori-sulle-tombe"
+                        href={backToCatalog.href}
                         className="flex items-center text-fm-text hover:text-fm-gold transition-colors font-medium text-[15px] w-fit group"
                     >
                         <svg className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
-                        Torna agli omaggi floreali
+                        {backToCatalog.label}
                     </Link>
 
+                    <div className="space-y-1.5">
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-gray-900 tracking-tight leading-tight">
+                            {product.name}
+                        </h1>
+                        <p className="text-2xl sm:text-3xl font-display font-semibold text-fm-gold tracking-tight transition-all duration-300">
+                            €{totalPrice.toFixed(2)}
+                        </p>
+                    </div>
+
                     {/* Gallery Reworked */}
-                    <div className="flex flex-col space-y-3 w-full">
+                    <div className="flex flex-col space-y-2.5 w-full">
                         <div className="w-full aspect-[4/5] bg-gray-50 rounded-3xl shadow-sm border border-white/20 flex items-center justify-center text-fm-muted text-lg relative overflow-hidden transition-all duration-300">
                             {mainImage ? (
                                 <>
@@ -284,15 +450,8 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         )}
                     </div>
 
-                    {/* BLOCCO TRUST BADGES (Spostato a SX per bilanciare il layout) */}
-                    <div className="space-y-3 pt-6 border-t border-gray-100 mt-8">
-                        <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
-                            <span className="text-fm-cta mt-0.5 text-lg">📸</span>
-                            <p className="text-[13px] text-gray-700 font-medium leading-snug">
-                                <strong className="text-gray-900 block mb-0.5">Certificazione Fotografica</strong>
-                                Riceverai una foto della tomba/loculo allo stato di fatto e una foto con i fiori posati sulla tomba/loculo subito dopo la consegna.
-                            </p>
-                        </div>
+                    {/* BLOCCO TRUST SX: consegna + aiuto WhatsApp */}
+                    <div className="space-y-2.5 pt-4 border-t border-gray-100 mt-4">
                         <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
                             <span className="text-fm-cta mt-0.5 text-lg">🚶‍♂️</span>
                             <p className="text-[13px] text-gray-700 font-medium leading-snug">
@@ -300,9 +459,20 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                 Costi di consegna: <span className="text-green-600 font-bold">TOTALMENTE INCLUSI</span>. Nessun costo nascosto nel carrello.
                             </p>
                         </div>
-                        <p className="text-[12px] text-fm-muted/80 italic pt-2 leading-snug">
-                            Le foto sono indicative: la composizione può variare leggermente per garantire sempre freschezza e qualità artigianale.
-                        </p>
+                        <div className="flex items-start gap-3 bg-fm-cta-soft/10 p-3 rounded-xl border border-fm-cta/20">
+                            <span className="text-[#25D366] mt-0.5 text-lg">💬</span>
+                            <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                <strong className="text-fm-cta block mb-0.5">Serve Aiuto?</strong>
+                                <a
+                                    href="https://wa.me/393204105305"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-semibold transition-colors hover:text-[#25D366]"
+                                >
+                                    Dubbi sulla data o sul luogo? Scrivici, rispondiamo in tempo reale.
+                                </a>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -310,20 +480,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                 {/* DX: Title, Price, Optionals, Form, Button */}
                 <div className="lg:w-[55%]">
-                    <div className="sticky top-24 space-y-8">
-
-                        {/* Title & Price */}
-                        <div className="space-y-4 pt-10 lg:pt-0">
-                            <h1 className="text-4xl lg:text-5xl font-display font-bold text-gray-900 tracking-tight leading-tight">
-                                {product.name}
-                            </h1>
-                            <p className="text-3xl font-display font-semibold text-fm-gold tracking-tight transition-all duration-300">
-                                €{totalPrice.toFixed(2)}
-                            </p>
-                        </div>
+                    <div className="sticky top-24 space-y-5">
 
                         {/* CONFIGURAZIONE CONSEGNA */}
-                        <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 space-y-8">
+                        <div className="bg-white rounded-2xl p-5 md:p-6 shadow-xl shadow-gray-200/50 border border-gray-100 space-y-6">
 
                             {/* Variante Rose */}
                             {product.slug === 'bouquet-di-rose' && (
@@ -348,9 +508,9 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                 </div>
                             )}
 
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 <div className="space-y-2 relative" ref={autocompleteRef}>
-                                    <label className="block text-sm font-semibold text-fm-text">Verifica Copertura Cimitero <span className="text-fm-rose">*</span></label>
+                                    <label className="block text-sm font-semibold text-fm-text">{coverageLabel} <span className="text-fm-rose">*</span></label>
                                     <input
                                         type="text"
                                         placeholder="Inserisci il Comune..."
@@ -396,7 +556,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                                         </label>
                                         <textarea
                                             placeholder="Scrivi qui il pensiero che desideri allegare ai fiori..."
-                                            className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-4 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all min-h-[140px] resize-none text-lg font-medium placeholder:text-gray-300"
+                                            className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all min-h-[70px] resize-none text-base font-medium placeholder:text-gray-300"
                                             value={customMessage}
                                             onChange={(e) => setCustomMessage(e.target.value)}
                                         ></textarea>
@@ -406,10 +566,10 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                             </div>
 
-                            <div className="pt-6 border-t border-gray-100">
-                                <div className="flex items-center gap-4">
+                            <div className="pt-4 border-t border-gray-100">
+                                <div className="flex items-center gap-3">
                                     {/* Quantity */}
-                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden h-14 flex-shrink-0">
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden h-12 flex-shrink-0">
                                         <button onClick={decreaseQty} className="w-12 text-fm-muted hover:text-fm-text hover:bg-gray-100 transition-colors h-full text-lg font-medium">-</button>
                                         <span className="w-8 text-center font-semibold font-display text-fm-text text-lg">{qty}</span>
                                         <button onClick={increaseQty} className="w-12 text-fm-muted hover:text-fm-text hover:bg-gray-100 transition-colors h-full text-lg font-medium">+</button>
@@ -417,7 +577,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                                     <button
                                         onClick={handleAddToCart}
-                                        className="hidden md:block flex-1 bg-fm-gold hover:brightness-110 text-white font-semibold font-body py-4 px-6 rounded-xl transition-all shadow-md active:scale-[0.98] h-14 text-lg"
+                                        className="hidden md:block flex-1 bg-fm-gold hover:brightness-110 text-white font-semibold font-body py-3 px-5 rounded-xl transition-all shadow-md active:scale-[0.98] h-12 text-base"
                                     >
                                         Ordina - €{totalPrice.toFixed(2)}
                                     </button>
@@ -426,52 +586,54 @@ export default function ProductClientView({ product, relatedProducts, initialCom
 
                             {/* WIDGET ADD-ON (CROSS-SELLING) */}
                             {availableAddons.length > 0 && (
-                                <div className="pt-6 border-t border-gray-100 animate-in fade-in slide-in-from-bottom-2">
-                                    <h3 className="text-lg font-display font-medium text-gray-900 mb-4">Completa il tuo omaggio</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {availableAddons.map(addon => {
-                                            const isSelected = selectedAddons.includes(addon.id);
-                                            return (
-                                                <label 
-                                                    key={addon.id} 
-                                                    className={`cursor-pointer flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 ${isSelected ? 'border-fm-gold bg-yellow-50/30 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            className="w-4.5 h-4.5 text-fm-gold border-gray-300 rounded focus:ring-fm-gold/50 cursor-pointer transition-colors"
-                                                            checked={isSelected}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) setSelectedAddons([...selectedAddons, addon.id]);
-                                                                else setSelectedAddons(selectedAddons.filter(id => id !== addon.id));
-                                                            }}
-                                                        />
-                                                        <span className="text-[22px] leading-none grayscale-[0.2]">{addon.icon}</span>
-                                                        <span className="text-sm font-semibold text-gray-800 tracking-tight">{addon.name}</span>
-                                                    </div>
-                                                    <span className="text-[13px] font-bold text-fm-gold">+€{addon.price.toFixed(2)}</span>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
+                                <div className="pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-bottom-2">
+                                    <h3
+                                        className={`font-display font-medium text-gray-900 ${useFtCompletaGrid ? 'mb-2.5 text-base sm:mb-3 sm:text-lg' : 'mb-4 text-lg'}`}
+                                    >
+                                        Completa il tuo omaggio
+                                    </h3>
+                                    {useFtCompletaGrid && addonMessaggio && addonFotoPrima && addonLuminoFt ? (
+                                        <div className="flex w-full min-w-0 flex-col gap-2 sm:gap-2.5">
+                                            {renderAddonCard(addonFotoPrima, 'ftFotoStrip')}
+                                            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+                                                {renderAddonCard(addonMessaggio, 'ftDense')}
+                                                {renderAddonCard(addonLuminoFt, 'ftDense')}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                            {availableAddons.map((addon) => renderAddonCard(addon))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                         
-                        {/* BLOCCO TRUST BADGES DX */}
+                        {/* BLOCCO TRUST BADGES DX (stesso formato compatto) */}
                         <div className="space-y-3 pt-2">
+                            <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                                <span className="text-fm-gold mt-0.5 text-lg" aria-hidden>
+                                    📸
+                                </span>
+                                <p className="text-[13px] text-gray-700 font-medium leading-snug">
+                                    <strong className="text-gray-900 block mb-0.5">Certificazione fotografica</strong>
+                                    {product.category === 'cimitero' ? (
+                                        <>
+                                            Due foto su WhatsApp: lo stato del luogo prima della posa (su richiesta, 1,49&nbsp;€) e la
+                                            foto dopo la posa — quest&apos;ultima sempre gratuita.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Foto su WhatsApp: Riceverai gratuitamente la foto dei fiori dopo l&apos;allestimento
+                                        </>
+                                    )}
+                                </p>
+                            </div>
                             <div className="flex items-start gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
                                 <span className="text-fm-gold mt-0.5 text-lg">🔒</span>
                                 <p className="text-[13px] text-gray-700 font-medium leading-snug">
                                     <strong className="text-gray-900 block mb-0.5">Pagamento Sicuro al 100%</strong>
                                     Transazioni protette con crittografia Stripe. Accettiamo carte di credito e Apple Pay.
-                                </p>
-                            </div>
-                            <div className="flex items-start gap-3 bg-fm-cta-soft/10 p-3 rounded-xl border border-fm-cta/20">
-                                <span className="text-[#25D366] mt-0.5 text-lg">💬</span>
-                                <p className="text-[13px] text-gray-700 font-medium leading-snug">
-                                    <strong className="text-fm-cta block mb-0.5">Serve Aiuto?</strong>
-                                    <a href="https://wa.me/393204105305" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] font-semibold transition-colors">Dubbi sulla data o sul luogo? Scrivici, rispondiamo in tempo reale.</a>
                                 </p>
                             </div>
                         </div>
@@ -480,7 +642,7 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             </div>
 
             {/* 2.5) DESCRIZIONE FULL-WIDTH (SEO & DETAILS) AL CENTRO A "T" */}
-            <section className="w-full max-w-[900px] mx-auto mt-12 md:mt-16 pt-10 md:pt-12 pb-12 px-6 lg:px-12 bg-[#FAF9F6] border border-[#E2DFD3] shadow-sm rounded-[24px] relative overflow-hidden text-center">
+            <section className="w-full max-w-[900px] mx-auto mt-6 md:mt-8 pt-6 md:pt-8 pb-7 px-5 lg:px-10 bg-[#FAF9F6] border border-[#E2DFD3] shadow-sm rounded-[20px] relative overflow-hidden text-center">
                 {/* Paper Texture Overlay */}
                 <div
                     className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply"
@@ -490,13 +652,13 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 </div>
 
                 <div className="relative z-10">
-                    <h2 className="text-3xl lg:text-4xl font-serif font-medium text-gray-900 mb-6 tracking-tight">
+                    <h2 className="text-2xl lg:text-3xl font-serif font-medium text-gray-900 mb-4 tracking-tight">
                         Dettagli della Composizione
                     </h2>
 
                     {/* Impact Sentence & Toggle Button */}
                     <div className="mb-6">
-                        <p className="text-[17px] lg:text-[19px] text-gray-800 font-sans font-medium leading-relaxed mx-auto mb-6">
+                        <p className="text-[15px] lg:text-[17px] text-gray-800 font-sans font-medium leading-relaxed mx-auto mb-4">
                             Un gesto di pura eleganza per onorare il ricordo, curato dai migliori fioristi della tua zona con consegna garantita.
                         </p>
 
@@ -518,8 +680,8 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         className={`overflow-hidden transition-all duration-700 ease-in-out ${isDescriptionExpanded ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0 m-0'}`}
                         aria-hidden={!isDescriptionExpanded}
                     >
-                        <div className="text-[16px] lg:text-[17px] text-gray-700 font-sans leading-relaxed text-left max-w-3xl mx-auto space-y-6">
-                            <h3 className="text-2xl font-serif font-medium text-gray-900 mt-4 mb-3">
+                        <div className="text-[15px] lg:text-[16px] text-gray-700 font-sans leading-relaxed text-left max-w-3xl mx-auto space-y-4">
+                            <h3 className="text-xl font-serif font-medium text-gray-900 mt-2 mb-2">
                                 L&apos;eccellenza dell&apos;artigianato floreale locale per {product.name}
                             </h3>
 
@@ -536,7 +698,21 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             </p>
 
                             <p>
-                                <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo profondamente l&apos;importanza della memoria. Subito dopo la posa formale della composizione sulla tomba nel luogo della cerimonia funebre, il fiorista incaricato ti invierà due foto cristalline (lo stato di fatto e i fiori appena posati) direttamente su WhatsApp. Una rassicurazione immediata e trasparente che il tuo pensiero è giunto a destinazione con la dignità che merita.
+                                {product.category === 'cimitero' ? (
+                                    <>
+                                        <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Comprendiamo
+                                        l&apos;importanza della memoria. Puoi ricevere due scatti su WhatsApp: lo stato del luogo prima
+                                        della posa (opzionale, 1,49&nbsp;€) e la foto dopo l&apos;allestimento — quest&apos;ultima
+                                        sempre gratuita — per avere la certezza che il tuo pensiero sia arrivato con la dignità che
+                                        merita.
+                                    </>
+                                ) : (
+                                    <>
+                                        <strong>Conferma Fotografica (Garanzia FloreMoria):</strong> Dopo
+                                        l&apos;allestimento, il fiorista ti invia su WhatsApp la foto dei fiori posati: un gesto
+                                        concreto e gratuito per accompagnarti con trasparenza.
+                                    </>
+                                )}
                             </p>
 
                             {isDescriptionExpanded && (
@@ -558,13 +734,13 @@ export default function ProductClientView({ product, relatedProducts, initialCom
             </section>
 
             {/* 3) UNIFIED TRUST & HOW IT WORKS SECTION (Desktop + Mobile) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-6 lg:pt-8 w-full max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 pt-4 lg:pt-5 w-full max-w-5xl mx-auto">
                 {/* Come Funziona */}
-                <section className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100 shadow-sm flex flex-col h-full">
-                    <h3 className="text-xl font-display font-semibold text-fm-text mb-8 text-center lg:text-left">
+                <section className="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 shadow-sm flex flex-col h-full">
+                    <h3 className="text-lg font-display font-semibold text-fm-text mb-5 text-center lg:text-left">
                         Come funziona dopo l&apos;ordine
                     </h3>
-                    <div className="space-y-6 relative flex-grow">
+                    <div className="space-y-4 relative flex-grow">
                         {/* Vertical line connecting steps */}
                         <div className="absolute top-6 bottom-6 left-6 w-[2px] bg-fm-rose-soft/50 z-0"></div>
 
@@ -586,18 +762,22 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <div className="w-12 h-12 flex-shrink-0 rounded-full bg-fm-section flex items-center justify-center text-fm-text font-display font-bold text-xl shadow-sm border border-white">3</div>
                             <div>
                                 <h4 className="font-semibold text-fm-text">Foto su WhatsApp</h4>
-                                <p className="text-sm text-fm-muted">Riceverai subito le due foto di conferma (prima e dopo).</p>
+                                <p className="text-sm text-fm-muted">
+                                    {product.category === 'cimitero'
+                                        ? "Riceverai le foto di conferma: prima (opzionale) e dopo la posa, quest'ultima sempre gratuita."
+                                        : "Riceverai gratuitamente la foto dei fiori dopo l'allestimento."}
+                                </p>
                             </div>
                         </div>
                     </div>
                 </section>
 
                 {/* Box Rassicurazione */}
-                <section className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 md:p-8 border border-fm-rose-soft shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex flex-col h-full">
-                    <h3 className="text-xl font-display font-semibold text-fm-text mb-8 text-center lg:text-left">
+                <section className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-5 md:p-6 border border-fm-rose-soft shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex flex-col h-full">
+                    <h3 className="text-lg font-display font-semibold text-fm-text mb-5 text-center lg:text-left">
                         Perché scegliere FloreMoria
                     </h3>
-                    <ul className="space-y-6 font-body text-fm-text text-left flex-grow text-[15px] md:text-[16px]">
+                    <ul className="space-y-4 font-body text-fm-text text-left flex-grow text-[14px] md:text-[15px]">
                         <li className="flex items-start gap-4">
                             <span className="flex-shrink-0 w-10 h-10 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta mt-1">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
@@ -608,7 +788,11 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                             <span className="flex-shrink-0 w-10 h-10 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta mt-1">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                             </span>
-                            <span className="font-medium leading-relaxed">Invio discreto delle due foto via WhatsApp post-consegna</span>
+                            <span className="font-medium leading-relaxed">
+                                {product.category === 'cimitero'
+                                    ? 'Invio su WhatsApp delle foto di conferma (prima opzionale e dopo la posa, gratuita)'
+                                    : "Invio su WhatsApp della foto gratuita dopo l'allestimento"}
+                            </span>
                         </li>
                         <li className="flex items-start gap-4">
                             <span className="flex-shrink-0 w-10 h-10 rounded-full bg-fm-cta-soft flex items-center justify-center text-fm-cta mt-1">
@@ -620,22 +804,22 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 </section>
             </div>
 
-            {/* CORE VALUES */}
-            <div className="pt-12">
-                <CoreValues />
-            </div>
-
-            {/* 4) PRODOTTI CORRELATI (Spesso i nostri utenti acquistano) */}
-            <section className="pt-12 border-t border-gray-100">
-                <h2 className="text-[28px] lg:text-[32px] font-display font-semibold text-fm-text leading-snug mb-8 text-center md:text-left">
+            {/* PRODOTTI CORRELATI — sopra ai Valori */}
+            <section className="pt-7 border-t border-gray-100">
+                <h2 className="text-[24px] lg:text-[28px] font-display font-semibold text-fm-text leading-snug mb-5 text-center md:text-left">
                     Spesso i nostri utenti acquistano anche:
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {relatedProducts.map(p => (
-                        <ProductCard key={p.id} product={p} />
+                        <ProductCard key={p.id} product={p} compact />
                     ))}
                 </div>
             </section>
+
+            {/* Valori (CoreValues) */}
+            <div className="pt-[10px] border-t border-gray-100">
+                <CoreValues className="py-0" />
+            </div>
 
             {/* MOBILE STICKY BOTTOM CTA */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-8px_16px_rgba(0,0,0,0.08)] z-[100] pb-safe">
@@ -649,7 +833,13 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 </button>
             </div>
             {/* Safe area padding for mobile spacing */}
-            <div className="h-[80px] md:hidden"></div>
+            <div className="h-[10px] md:hidden"></div>
+
+            <FloremCartCategoryModal
+                open={cartCategoryModalOpen}
+                onCancel={() => setCartCategoryModalOpen(false)}
+                onClearAndAdd={handleCartCategoryModalClearAndAdd}
+            />
         </div>
     );
 }

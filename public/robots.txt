@@ -1,0 +1,21 @@
+# FloreMoria — indicizzazione: sito pubblico consentito; area dashboard e API non indicizzate.
+# Coerente con redirect del sottodominio dashboard verso app/login.
+
+User-agent: *
+
+# Area riservata back-office (dashboard.floremoria.com → app, stessa app)
+Disallow: /dashboard
+
+# Flussi partner / upload (non per SERP)
+Disallow: /partner/
+
+# API (niente URL da indicizzare)
+Disallow: /api/
+
+# Autenticazione back-office
+Disallow: /login
+
+Allow: /
+
+# Sitemap: in produzione coincide con NEXT_PUBLIC_SITE_URL (canonical www.floremoria.com)
+Sitemap: https://www.floremoria.com/sitemap.xml

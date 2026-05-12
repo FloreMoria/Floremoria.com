@@ -2,6 +2,8 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Product } from '@/lib/products';
+import { canAddProductToCart } from '@/lib/floremCartCategory';
+import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 import Image from 'next/image';
 import { buildProductAlt } from '@/utils/altText';
 
@@ -16,15 +18,11 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
     const [qty, setQty] = useState(1);
     const [isClosed, setIsClosed] = useState(false);
     const [toastMsg, setToastMsg] = useState('');
+    const [cartCategoryModalOpen, setCartCategoryModalOpen] = useState(false);
 
-    const handleAddToCart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const cartStr = localStorage.getItem('fm_cart');
-        const cart = cartStr ? JSON.parse(cartStr) : [];
-
-        const existingItemIndex = cart.findIndex((item: { productId: string }) => item.productId === product.id);
+    const finalizePreviewCart = (baseCart: { productId: string; slug?: string; name?: string; priceCents: number; qty: number }[]) => {
+        let cart = [...baseCart];
+        const existingItemIndex = cart.findIndex((item) => item.productId === product.id);
         if (existingItemIndex >= 0) {
             cart[existingItemIndex].qty += qty;
         } else {
@@ -33,7 +31,7 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
                 slug: product.slug,
                 name: product.name,
                 priceCents: Math.round(product.price * 100),
-                qty: qty
+                qty: qty,
             });
         }
 
@@ -42,6 +40,27 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
 
         setToastMsg('Aggiunto al carrello');
         setTimeout(() => setToastMsg(''), 2500);
+    };
+
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const cartStr = localStorage.getItem('fm_cart');
+        const cart = cartStr ? JSON.parse(cartStr) : [];
+
+        if (!canAddProductToCart(cart, product)) {
+            setCartCategoryModalOpen(true);
+            return;
+        }
+
+        setCartCategoryModalOpen(false);
+        finalizePreviewCart(cart);
+    };
+
+    const handleCartCategoryModalClearAndAdd = () => {
+        setCartCategoryModalOpen(false);
+        finalizePreviewCart([]);
     };
 
     const handleSaveForLater = async (e: React.MouseEvent) => {
@@ -113,6 +132,7 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
     }, []);
 
     return (
+        <>
         <div
             ref={previewRef}
             className={`hidden lg:flex flex-col absolute z-[50] w-[75%] h-[75%] overflow-hidden bg-white/20 backdrop-blur-xl border border-white/20 rounded-[24px] shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible pointer-events-none group-hover:pointer-events-auto transition-all duration-300 delay-75 group-hover:delay-0 top-0 right-0 translate-x-[30%] -translate-y-[30%] ${isClosed ? '!opacity-0 !invisible pointer-events-none' : ''}`}
@@ -129,7 +149,7 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
 
                 {/* 1) HEADER (top band) */}
                 <div className="flex-none flex items-start justify-between pb-2">
-                    <h4 className="flex-1 text-[16px] font-display font-semibold text-fm-text truncate pr-2 pt-1">
+                    <h4 className="flex-1 pr-2 pt-1 font-display text-[16px] font-semibold leading-snug text-fm-text break-words [overflow-wrap:anywhere]">
                         {product.name}
                     </h4>
                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsClosed(true); }} className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors" aria-label="Chiudi">
@@ -194,5 +214,11 @@ export default function ProductHoverPreview({ product, selectedImage }: ProductH
                 </div>
             </div>
         </div>
+        <FloremCartCategoryModal
+            open={cartCategoryModalOpen}
+            onCancel={() => setCartCategoryModalOpen(false)}
+            onClearAndAdd={handleCartCategoryModalClearAndAdd}
+        />
+        </>
     );
 }

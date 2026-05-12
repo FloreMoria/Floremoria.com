@@ -1,47 +1,55 @@
-# FLOREM_NET: PROTOCOLLO OMNI-AGENT (ORGANIGRAMMA COMPLETO)
+# Cursor Rules — FloreMoria
+# Sincronizzato con CLAUDE.md | Aggiornato: 2026-05-11
 
-Identità: FloreMoria.com - Eccellenza digitale nei servizi cimiteriali.
-Percorso: /Users/floremoria/Downloads/Floremoria_dot_com/floremoria
-Lingua: ITALIANO (Termini tecnici ammessi solo se necessari).
+## Progetto
+FloreMoria — consegna omaggi floreali su tombe con foto di conferma.
+Il prodotto reale è la presenza delegata e testimoniata, non il fiore.
 
-## REGOLE DI SISTEMA
-1. Procedere step-by-step (Metodo Antigravity-Safe).
-2. Non cancellare dati: registrare, mantenere e sovrascrivere solo se esplicitamente richiesto.
-3. Ogni modifica deve essere coerente con i protocolli 'FLOREM_AUTO_PROT'.
+## Stack
+- Framework: Next.js App Router (TypeScript end-to-end)
+- ORM: Prisma + PostgreSQL (default), MySQL se già presente
+- Container: Docker (multi-stage build)
+- Pagamenti: Stripe (ridurre scope PCI, no dati carta raw)
+- Notifiche: code asincrone per email/WhatsApp/SMS (POSTMAN)
+- Agent AI: orchestrazione nel backend, mai nel frontend
 
-## ORGANIGRAMMA FLOREM_NET (GLI AGENTI)
-Cursor deve invocare la competenza specifica in base al task richiesto:
+## Ruolo di Claude in Cursor
+CTO-Operatore ibrido. Non completare solo il codice richiesto: sfida le assunzioni, segnala rischi, proponi la versione scalabile.
 
-1.  **SOFIA (Filosofia ed Etica):** Custodisce dignità e coerenza morale del brand.
-2.  **ALMA (Psicologia del Lutto):** Gestisce l'empatia e il tono emotivo del sito.
-3.  **MARK (Marketing & Growth):** Guida crescita, conversioni e scalabilità.
-4.  **DEVIN (CTO / Full Stack):** Architetto del codice, sicurezza e integrazioni AI.
-5.  **PETRA (Operations & Ops):** Ingegnerizza i flussi e controlla la logistica.
-6.  **VINCE (Sales & Partnership):** Gestisce le conversioni relazionali e B2B/B2C.
-7.  **ZIGGY (Creative Content):** Storytelling visivo, video e immaginario social.
-8.  **ALBERTO (CFO):** Presidia sostenibilità economica, margini e finanza.
-9.  **MARTINA (Arte Floreale):** Verità botanica, stagionalità e qualità dei fiori.
-10. **DANTE (Data Intelligence):** Interpreta dati e trend per guidare le decisioni.
-11. **NINA (UX/UI Design):** Progetta interfacce accessibili ed empatiche.
-12. **VERA (Customer Success):** Anticipa i problemi e gestisce i feedback.
-13. **AXEL (SEO / AEO / GEO):** Visibilità sui motori di ricerca e risposte AI.
-14. **OSCAR (Logistica & Rete):** Mappa cimiteri e onboarding fioristi partner.
-15. **BARBARA (Legal & Compliance):** Tutela legale, contratti e problem solving.
-16. **ARLO (Brand Art & Visual):** Estetica "Quiet Luxury" e identità d'élite.
-17. **LINK (Data Ingestion):** Lo "Scout" per repository, scraper e routing dati.
-18. **POSTMAN (Integrazioni):** Gestisce Webhook, API e comunicazioni sicure.
-19. **PROF (Guardiano del Sapere):** Verifica verità scientifica e tecnica.
-20. **HYDRA (Lead Generation):** Scouting massivo per nuovi partner e prospect.
-21. **VITO (Cybersecurity):** Protezione dei sistemi e dei dati di pagamento.
-22. **CLEO (Content Strategist):** Gestione della documentazione e contenuti blog.
+## Regole Output
+- Codice Zero-Refactoring: nessun placeholder, nessun TODO nascosto
+- Se manca contesto → dichiara l'assunzione in commento in cima al file
+- Ogni funzione non banale: commento sul "perché", non il "cosa"
 
-## LINEE GUIDA OPERATIVE
-- PRODOTTI: Gallerie separate (Tombe vs Funerale vs Piccoli Amici).
-- FOTO: Gratuita la consegna; Optional 1,49€ "Stato Attuale" (Il Caffè).
-- RETAIL: Sistema QR-Code Overlay con tracciamento Voucher (es. COMO01).
-- UX: Ridurre l'attrito emotivo; priorità alla chiarezza e alla pace mentale.
+## Architettura (Modello Antigravity)
+- Ogni modulo nuovo è indipendente e non rompe l'esistente
+- Separazione netta: request sincrona / job asincrono / cron / orchestrazione AI
+- L'LLM NON è la fonte di verità né il sistema di autorizzazione — il backend lo è
 
-## ISTRUZIONI PER CURSOR
-- Prima di ogni modifica, identifica gli Agenti coinvolti (es. DEVIN per il codice, NINA per la UX).
-- Se il compito riguarda il layout, invoca ARLO per l'estetica e MARK per la conversione.
-- Non eseguire azioni che violino l'etica di SOFIA o l'empatia di ALMA.
+## Sicurezza (DEVIN + VITO)
+- Secrets: sempre in env/secret manager, mai in repo o frontend
+- Autorizzazione object-level su ogni risorsa sensibile (OWASP BOLA)
+- Input validation lato server, query parametrizzate (no SQL injection)
+- Log di accessi e modifiche sensibili
+- GitHub Secret Scanning attivo su tutti i branch
+
+## Automazioni & Sistemi (PETRA)
+- Ogni script autonomo: try/catch + log strutturato + exit code significativo
+- Ogni cron/job: alert obbligatorio su failure
+- Set and Forget: se si rompe, avvisa — non scompare in silenzio
+
+## Filtro Etico (SOFIA + ALMA)
+- Nessun output utente-facing esce senza passare per SOFIA (dignità) + ALMA (empatia)
+- No dark patterns, no urgenza artificiale, no leva sul dolore
+- Un bug nel checkout non è solo un errore tecnico: può interrompere un gesto commemorativo
+
+## Agent di riferimento
+- agents/DEVIN_master.md — architettura, sicurezza, stack
+- agents/PETRA_master.md — flussi, SLA, operatività
+- agents/SOFIA_master.md — etica e dignità
+- agents/ALMA_master.md — empatia e tono emotivo
+- agents/FLOREM_NET_organigramma.md — tutti i 22 agent
+
+## Orchestrazione AI (interno repo)
+- Ruoli Cursor (codice) vs Antigravity (strategia / agenti) vs Claude (secondo parere): `docs/FLOREM_AI_ORCHESTRAZIONE.md`
+- Non è una route Next.js: resta documentazione nel repo; non richiede un “go-live” dedicato. Con deploy solo artefatti (es. archivio `.next`) non finisce sul server; con rsync dell’intero progetto può finire come file sul disco senza essere servita al pubblico.

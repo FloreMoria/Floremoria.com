@@ -1,4 +1,43 @@
+# Dipendenze e artefatti build (rigenerati in immagine)
 node_modules
 .next
+out
+build
+coverage
+*.tsbuildinfo
+
+# Git / IDE / temporanei
 .git
+.github
+.cursor
+.vscode
+*.bak
+*.tmp
+
+# Segreti e env locali
 .env
+.env.*
+!.env.example
+hydra-keys.env
+
+# Dati leadgen / export locali (non servono al runtime Next)
+hydra_prospects.csv
+hydra_completed.json
+
+# Test Stripe di sviluppo (root)
+test-stripe.js
+test-stripe2.js
+
+# Documentazione interna voluminosa (non necessaria nell'immagine runtime)
+DEVELOPER_MANUAL.md
+PROTOCOLLI_MASTER.md
+
+# Script operativi locali: eccezione — la build Next esegue `prebuild` su questo file
+Script/*
+!Script/generate-images-manifest.mjs
+
+# Originali foto non ottimizzati (se presenti in working tree)
+public/images/products/_backup_originals
+
+# PDF generati in locale
+volantino-b2b-*.pdf

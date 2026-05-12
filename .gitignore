@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+*.bak
+*.tmp
 
 # debug
 npm-debug.log*
@@ -30,8 +32,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Variabili d'ambiente (segreti) — non versionare. Il template `.env.example` resta tracciato.
+.env
+.env.local
+.env.production
+.env.production.local
+.env.development.local
+.env.test.local
 
 # vercel
 .vercel
@@ -42,6 +49,21 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-.env
-.env.local
 hydra-keys.env
+
+# Dati leadgen / test di sviluppo (non in repository; usare storage interno se servono)
+hydra_prospects.csv
+hydra_completed.json
+/test-stripe.js
+/test-stripe2.js
+
+# Originali foto ad alta risoluzione (solo locale; il manifest ignora già questa cartella)
+public/images/products/_backup_originals/
+
+# Archivio lean deploy (generato in locale, non versionare)
+/floremoria-deploy.tar.gz
+
+# PDF generati in locale (Script/export-volantino-pdf.mjs)
+/volantino-b2b-floremoria.pdf
+/volantino-b2b-fronte.pdf
+/volantino-b2b-retro.pdf

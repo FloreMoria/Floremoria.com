@@ -1,87 +1,54 @@
+import manifest from '../public/images-manifest.json';
+
 const pathMapping: Record<string, string> = {
-    // OMAGGI FLOREALI (Cimitero -> Bouquet)
-    "bouquet-ricordo-affettuoso": "images/products/fiori-sulle-tombe/Bouquet Ricordo Affettuoso",
-    "bouquet-omaggio-speciale": "images/products/fiori-sulle-tombe/Bouquet Omaggio Speciale",
-    "bouquet-tributo-eterno": "images/products/fiori-sulle-tombe/Bouquet Tributo Eterno",
-    "bouquet-di-rose": "images/products/fiori-sulle-tombe/Bouquet Rose",
-    "lumino": "images/products/fiori-sulle-tombe/lumino",
-    "messaggio": "images/products/fiori-sulle-tombe/messaggio",
-    "foto-stato-prima-consegna": "images/products/fiori-sulle-tombe/messaggio",
-
-    // PER IL FUNERALE (cartella reale: Fiori-per-Funerale)
-    "bouquet-cordoglio-sincero": "images/products/Fiori-per-Funerale/bouquet-cordoglio-sincero",
-    "bouquet-omaggio-solenne": "images/products/Fiori-per-Funerale/bouquet-omaggio-solenne",
-    "bouquet-memoria-imperituri": "images/products/Fiori-per-Funerale/bouquet-memoria-eterna",
-    "kalonche": "images/products/Fiori-per-Funerale/kalonche",
-    "margherite-gerbere": "images/products/Fiori-per-Funerale/margherite-gerbere FF",
-    "bouquet-rispetto-vicinanza": "images/products/Fiori-per-Funerale/bouquet-rispetto-vicinanza",
-    "nastro-commemorativo": "images/products/Fiori-per-Funerale/Nastro commemorativo",
-    "set-ceri": "images/products/Fiori-per-Funerale/set-ceri-candele",
-    "cuscino": "images/products/Fiori-per-Funerale/cuscino",
-    "piramide": "images/products/Fiori-per-Funerale/piramide",
-    "copribara": "images/products/Fiori-per-Funerale/copribara",
-    "cuore-corona": "images/products/Fiori-per-Funerale/cuore-corona",
-
-    // PICCOLI AMICI
-    "un-raggio-di-sole": "images/products/Fiori-per-Piccoli-Amici/Un raggio di sole",
-    "abbraccio-verde": "images/products/Fiori-per-Piccoli-Amici/Abbraccio Verde",
-    "legame-eterno": "images/products/Fiori-per-Piccoli-Amici/Legame eterno",
-    "battito-di-foglia": "images/products/Fiori-per-Piccoli-Amici/Battito di Foglia",
-    "anima-pura": "images/products/Fiori-per-Piccoli-Amici/Anima Pura",
-    "il-giardino-del-ponte": "images/products/Fiori-per-Piccoli-Amici/Il Giardino del Ponte",
-    "lumino-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Lumino Piccoli Amici",
-    "biglietto-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Biglietto Piccoli Amici",
-    "ceri-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Ceri Piccoli Amici",
-    "nastro-commemorativo-piccoli-amici": "images/products/Fiori-per-Piccoli-Amici/Nastro Commemorativo Piccoli Amici"
+    // Mappatura per compatibilità con vecchi slug o cartelle rinominate
+    "bouquet-ricordo-affettuoso": "Bouquet Ricordo Affettuoso",
+    "bouquet-omaggio-speciale": "Bouquet Omaggio Speciale",
+    "bouquet-tributo-eterno": "Bouquet Tributo Eterno",
+    "bouquet-di-rose": "Bouquet Rose",
+    "lumino": "lumino",
+    "messaggio": "messaggio",
+    "foto-stato-prima-consegna": "messaggio",
+    "bouquet-cordoglio-sincero": "bouquet-cordoglio-sincero",
+    "bouquet-omaggio-solenne": "bouquet-omaggio-solenne",
+    "bouquet-memoria-imperituri": "bouquet-memoria-eterna",
+    "kalonche": "kalonche",
+    "margherite-gerbere": "margherite-gerbere FF",
+    "bouquet-rispetto-vicinanza": "bouquet-rispetto-vicinanza",
+    "nastro-commemorativo": "Nastro commemorativo",
+    "set-ceri": "set-ceri-candele",
+    "cuscino": "cuscino",
+    "piramide": "piramide",
+    "copribara": "copribara",
+    "cuore-corona": "cuore-corona",
+    "un-raggio-di-sole": "Un raggio di sole",
+    "abbraccio-verde": "Abbraccio Verde",
+    "legame-eterno": "Legame eterno",
+    "battito-di-foglia": "Battito di Foglia",
+    "anima-pura": "Anima Pura",
+    "il-giardino-del-ponte": "Il Giardino del Ponte",
+    "lumino-piccoli-amici": "Lumino Piccoli Amici",
+    "biglietto-piccoli-amici": "Biglietto Piccoli Amici",
+    "ceri-piccoli-amici": "Ceri Piccoli Amici",
+    "nastro-commemorativo-piccoli-amici": "Nastro Commemorativo Piccoli Amici"
 };
 
 export function getImagesFromFilesystem(slug: string): string[] {
-    if (typeof window !== 'undefined') {
-        return [];
+    // 1. Tenta di recuperare le immagini dal Manifest generato a build-time
+    // Usiamo il pathMapping se presente, altrimenti lo slug diretto
+    const folderKey = pathMapping[slug] || slug;
+    const entry = (manifest as any)[folderKey];
+
+    if (entry && entry.images && entry.images.length > 0) {
+        // Restituisce i primi 5 (già ordinati e codificati dal manifest-script)
+        return entry.images.slice(0, 5);
     }
 
-    const physicalPath = pathMapping[slug] || `images/products/${slug}`;
-    let validFiles: string[] = [];
-
-    try {
-        // Nascondiamo il require al bundler Webpack per i Client Components
-        const fs = eval('require("fs")');
-        const path = eval('require("path")');
-
-        const folderPath = path.join(process.cwd(), 'public', physicalPath);
-
-        if (fs.existsSync(folderPath)) {
-            const files = fs.readdirSync(folderPath);
-            validFiles = files.filter((f: string) => {
-                if (f.startsWith('.')) return false;
-                const ext = path.extname(f).toLowerCase();
-                return ['.webp', '.png', '.jpg', '.jpeg'].includes(ext);
-            });
-        }
-    } catch (e) {
-        // Fallback silenzioso se fs non è disponibile (es. runtime browser)
+    // 2. Se non trova nulla nel manifest, logghiamo l'errore per debug
+    if (typeof window === 'undefined') {
+        console.warn(`[getImages] Nessuna immagine trovata nel manifest per folderKey: ${folderKey} (slug: ${slug})`);
     }
 
-    if (validFiles.length > 0) {
-        // Ordina mettendo al primo posto l'immagine di copertina
-        const sortedFiles = validFiles.sort((a: string, b: string) => {
-            const aLow = a.toLowerCase();
-            const bLow = b.toLowerCase();
-            const aCover = aLow.includes('copertina') || aLow.includes('main') || aLow.startsWith('1.');
-            const bCover = bLow.includes('copertina') || bLow.includes('main') || bLow.startsWith('1.');
-            if (aCover && !bCover) return -1;
-            if (!aCover && bCover) return 1;
-            return a.localeCompare(b);
-        });
-
-        // Restituisce i primi 5 (1 cover + 4 gallery)
-        return sortedFiles.slice(0, 5).map((f: string) => {
-            // Encode the URL spaces because Next/Image requires proper URIs
-            return encodeURI(`/${physicalPath}/${f}`);
-        });
-    } else {
-        // Log richiesto per errore critico e debug strutturale
-        console.error(`ERRORE CRITICO: Cartella /public/${physicalPath} non trovata o vuota (slug: ${slug})`);
-        return [];
-    }
+    return [];
 }
+

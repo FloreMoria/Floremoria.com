@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '@/components/Button';
 import { Check, ShieldCheck, ChevronRight, ChevronLeft, Trash2, Info } from 'lucide-react';
-import Autocomplete from 'react-google-autocomplete';
 import { products } from '@/lib/products';
 import {
     clearPreDeliveryPhotoPref,
@@ -27,6 +26,12 @@ interface AppliedDiscount {
     offerName: string;
     discountCents: number;
     finalTotalCents: number;
+}
+
+declare global {
+    interface Window {
+        google?: any;
+    }
 }
 
 export default function CheckoutPage() {
@@ -80,6 +85,9 @@ export default function CheckoutPage() {
     const [discountCodeInput, setDiscountCodeInput] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
     const [discountError, setDiscountError] = useState('');
+    const cemeteryInputRef = useRef<HTMLInputElement | null>(null);
+    const placesAutocompleteRef = useRef<any>(null);
+    const placesListenerRef = useRef<any>(null);
 
     const [minDateFT, setMinDateFT] = useState('');
     const [minDateFF, setMinDateFF] = useState('');
@@ -118,15 +126,29 @@ export default function CheckoutPage() {
                 const checkoutDataStr = localStorage.getItem('fm_checkout_data');
                 if (checkoutDataStr) {
                     const parsedCheckout = JSON.parse(checkoutDataStr);
-                    if (parsedCheckout.comune && !cemeteryName) {
-                        setCemeteryName(parsedCheckout.comune);
-                        const provMatch = parsedCheckout.comune.match(/\(([A-Z]{2})\)$/i);
+                    const prefillLocation =
+                        parsedCheckout.comune ||
+                        parsedCheckout.location ||
+                        parsedCheckout.indirizzo ||
+                        parsedCheckout.address;
+                    if (prefillLocation && !cemeteryName) {
+                        setCemeteryName(prefillLocation);
+                        const provMatch = String(prefillLocation).match(/\(([A-Z]{2})\)$/i);
                         if (provMatch) {
                             setDeliveryProvince(provMatch[1].toUpperCase());
                         }
                     }
                     if (parsedCheckout.customMessage) {
                         setTicketMessage(parsedCheckout.customMessage);
+                    }
+                } else {
+                    const comuneFromCart = (parsed as any[]).find((item) => item?.customData?.comune)?.customData?.comune;
+                    if (typeof comuneFromCart === 'string' && comuneFromCart.trim() && !cemeteryName) {
+                        setCemeteryName(comuneFromCart.trim());
+                        const provMatch = comuneFromCart.match(/\(([A-Z]{2})\)$/i);
+                        if (provMatch) {
+                            setDeliveryProvince(provMatch[1].toUpperCase());
+                        }
                     }
                 }
             } catch (e) { }
@@ -250,6 +272,77 @@ export default function CheckoutPage() {
             else if (orderCategory !== 'FF' && orderCategory !== 'FA' && minDateFT) setDeliveryDate(minDateFT);
         }
     }, [orderCategory, minDateFF, minDateFT]);
+
+    useEffect(() => {
+        if (!isClient) return;
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) return;
+
+        const applyPlaceSelection = (place: any) => {
+            if (!place) return;
+            const normalizedLocation =
+                place.formatted_address ||
+                [place.name, place.vicinity].filter(Boolean).join(', ') ||
+                '';
+            if (normalizedLocation) {
+                setCemeteryName(normalizedLocation);
+            }
+            const components = Array.isArray(place.address_components) ? place.address_components : [];
+            const provinceComp =
+                components.find((c: any) => c.types?.includes('administrative_area_level_2')) ||
+                components.find((c: any) => c.types?.includes('administrative_area_level_1'));
+            if (provinceComp?.short_name) {
+                setDeliveryProvince(String(provinceComp.short_name).slice(0, 2).toUpperCase());
+            }
+        };
+
+        const initAutocomplete = () => {
+            const input = cemeteryInputRef.current;
+            if (!input || !window.google?.maps?.places) return;
+            if (placesAutocompleteRef.current) return;
+
+            const instance = new window.google.maps.places.Autocomplete(input, {
+                componentRestrictions: { country: 'it' },
+                fields: ['name', 'formatted_address', 'address_components', 'vicinity'],
+            });
+            placesAutocompleteRef.current = instance;
+            placesListenerRef.current = instance.addListener('place_changed', () => {
+                applyPlaceSelection(instance.getPlace());
+            });
+        };
+
+        if (window.google?.maps?.places) {
+            initAutocomplete();
+            return;
+        }
+
+        const scriptId = 'fm-google-places-script';
+        let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+        const scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=it`;
+
+        const handleLoad = () => initAutocomplete();
+        if (!script) {
+            script = document.createElement('script');
+            script.id = scriptId;
+            script.src = scriptSrc;
+            script.async = true;
+            script.defer = true;
+            script.addEventListener('load', handleLoad);
+            document.head.appendChild(script);
+        } else {
+            script.addEventListener('load', handleLoad);
+            initAutocomplete();
+        }
+
+        return () => {
+            script?.removeEventListener('load', handleLoad);
+            if (placesListenerRef.current && window.google?.maps?.event) {
+                window.google.maps.event.removeListener(placesListenerRef.current);
+                placesListenerRef.current = null;
+            }
+            placesAutocompleteRef.current = null;
+        };
+    }, [isClient]);
 
     useEffect(() => {
         if (orderCategory !== 'FT') {
@@ -580,19 +673,13 @@ export default function CheckoutPage() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                                                 {orderCategory === 'FT' ? 'Cimitero / Comune *' : 'Comune *'}
                                             </label>
-                                            <Autocomplete
-                                                apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-                                                onPlaceSelected={(place: any) => {
-                                                    if (place && place.formatted_address) {
-                                                        setCemeteryName(place.name && !place.formatted_address.includes(place.name) ? `${place.name}, ${place.formatted_address}` : place.formatted_address);
-                                                        const adminArea2 = place.address_components?.find((c: any) => c.types.includes('administrative_area_level_2'));
-                                                        if (adminArea2) setDeliveryProvince(adminArea2.short_name.toUpperCase());
-                                                    }
-                                                }}
-                                                options={{ componentRestrictions: { country: "it" } }}
-                                                defaultValue={cemeteryName}
-                                                onChange={(e: any) => setCemeteryName(e.target.value)}
+                                            <input
+                                                ref={cemeteryInputRef}
+                                                type="text"
+                                                value={cemeteryName}
+                                                onChange={(e) => setCemeteryName(e.target.value)}
                                                 placeholder="Es. Cimitero Maggiore, Milano"
+                                                autoComplete="off"
                                                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all"
                                             />
                                             <div className="absolute top-[34px] left-3 text-gray-400">📍</div>

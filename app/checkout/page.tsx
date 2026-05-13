@@ -640,7 +640,7 @@ export default function CheckoutPage() {
         return (
             <div className="max-w-xl mx-auto py-24 text-center space-y-6">
                 <h1 className="text-3xl font-display font-semibold">Il tuo carrello è vuoto</h1>
-                <Button href="/fiori-sulle-tombe" variant="primary">Sfoglia il catalogo</Button>
+                <Button href="/#tre-porte" variant="primary">Sfoglia il catalogo</Button>
             </div>
         );
     }

@@ -84,9 +84,12 @@ export async function POST(request: Request) {
             }
         };
 
+        // Validazione orario rimossa su richiesta dell'utente per non bloccare il pagamento.
+        /*
         if (!validateDeliveryTime(orderCategory || 'FT', deliveryDate)) {
             return NextResponse.json({ error: "L'orario richiesto non rispetta i tempi minimi di preparazione floreale." }, { status: 400 });
         }
+        */
 
         const cartLines = Array.isArray(cart) ? cart : [];
         const catState = getCartCatalogCategoryState(cartLines);

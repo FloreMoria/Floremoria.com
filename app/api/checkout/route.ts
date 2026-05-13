@@ -58,9 +58,11 @@ export async function POST(request: Request) {
             const nowItaly = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min), Number(sec));
 
             const reqDate = new Date(requestedIso);
+            // Tolleranza di 15 minuti per evitare discrepanze tra client e server
+            const nowWithTolerance = new Date(nowItaly.getTime() - (15 * 60 * 1000));
 
             if (category === 'FF' || category === 'FA') {
-                let minDateFF = new Date(nowItaly);
+                let minDateFF = new Date(nowWithTolerance);
                 minDateFF.setHours(minDateFF.getHours() + 4);
                 if (minDateFF.getHours() < 9) {
                     minDateFF.setHours(9, 0, 0, 0);
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
                 }
                 return reqDate >= minDateFF;
             } else {
-                let minDateFT = new Date(nowItaly);
+                let minDateFT = new Date(nowWithTolerance);
                 minDateFT.setHours(minDateFT.getHours() + 48);
                 if (minDateFT.getHours() < 9) {
                     minDateFT.setHours(9, 0, 0, 0);
@@ -83,7 +85,7 @@ export async function POST(request: Request) {
         };
 
         if (!validateDeliveryTime(orderCategory || 'FT', deliveryDate)) {
-            return NextResponse.json({ error: "L'orario richiesto non rispetta i tempi minimi di preparazione fiorale." }, { status: 400 });
+            return NextResponse.json({ error: "L'orario richiesto non rispetta i tempi minimi di preparazione floreale." }, { status: 400 });
         }
 
         const cartLines = Array.isArray(cart) ? cart : [];

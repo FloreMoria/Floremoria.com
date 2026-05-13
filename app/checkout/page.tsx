@@ -949,7 +949,7 @@ export default function CheckoutPage() {
                                             <div className="flex gap-2">
                                                 <input
                                                     type="text"
-                                                    placeholder="Campo per scriverlo"
+                                                    placeholder="Scrivi qui"
                                                     value={discountCodeInput}
                                                     onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
                                                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"

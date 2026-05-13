@@ -278,71 +278,63 @@ export default function CheckoutPage() {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
         if (!apiKey) return;
 
-        const applyPlaceSelection = (place: any) => {
-            if (!place) return;
-            const normalizedLocation =
-                place.formatted_address ||
-                [place.name, place.vicinity].filter(Boolean).join(', ') ||
-                '';
-            if (normalizedLocation) {
-                setCemeteryName(normalizedLocation);
-            }
-            const components = Array.isArray(place.address_components) ? place.address_components : [];
-            const provinceComp =
-                components.find((c: any) => c.types?.includes('administrative_area_level_2')) ||
-                components.find((c: any) => c.types?.includes('administrative_area_level_1'));
-            if (provinceComp?.short_name) {
-                setDeliveryProvince(String(provinceComp.short_name).slice(0, 2).toUpperCase());
-            }
-        };
+        let autocomplete: any = null;
 
-        const initAutocomplete = () => {
-            const input = cemeteryInputRef.current;
-            if (!input || !window.google?.maps?.places) return;
-            if (placesAutocompleteRef.current) return;
+        const init = () => {
+            if (!cemeteryInputRef.current || !window.google?.maps?.places || autocomplete) return;
 
-            const instance = new window.google.maps.places.Autocomplete(input, {
+            autocomplete = new window.google.maps.places.Autocomplete(cemeteryInputRef.current, {
                 componentRestrictions: { country: 'it' },
                 fields: ['name', 'formatted_address', 'address_components', 'vicinity'],
             });
-            placesAutocompleteRef.current = instance;
-            placesListenerRef.current = instance.addListener('place_changed', () => {
-                applyPlaceSelection(instance.getPlace());
+
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (!place) return;
+                
+                const normalizedLocation =
+                    place.formatted_address ||
+                    [place.name, place.vicinity].filter(Boolean).join(', ') ||
+                    '';
+                if (normalizedLocation) {
+                    setCemeteryName(normalizedLocation);
+                }
+                const components = Array.isArray(place.address_components) ? place.address_components : [];
+                const provinceComp =
+                    components.find((c: any) => c.types?.includes('administrative_area_level_2')) ||
+                    components.find((c: any) => c.types?.includes('administrative_area_level_1'));
+                if (provinceComp?.short_name) {
+                    setDeliveryProvince(String(provinceComp.short_name).slice(0, 2).toUpperCase());
+                }
             });
         };
 
         if (window.google?.maps?.places) {
-            initAutocomplete();
-            return;
-        }
-
-        const scriptId = 'fm-google-places-script';
-        let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-        const scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=it`;
-
-        const handleLoad = () => initAutocomplete();
-        if (!script) {
-            script = document.createElement('script');
-            script.id = scriptId;
-            script.src = scriptSrc;
-            script.async = true;
-            script.defer = true;
-            script.addEventListener('load', handleLoad);
-            document.head.appendChild(script);
+            init();
         } else {
-            script.addEventListener('load', handleLoad);
-            initAutocomplete();
-        }
-
-        return () => {
-            script?.removeEventListener('load', handleLoad);
-            if (placesListenerRef.current && window.google?.maps?.event) {
-                window.google.maps.event.removeListener(placesListenerRef.current);
-                placesListenerRef.current = null;
+            const scriptId = 'fm-google-places-script';
+            let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+            if (!script) {
+                script = document.createElement('script');
+                script.id = scriptId;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=it`;
+                script.async = true;
+                script.defer = true;
+                script.onload = () => init();
+                document.head.appendChild(script);
+            } else {
+                script.addEventListener('load', init);
+                // Se lo script c'è già ma Google non è ancora pronto, aspettiamo un attimo
+                const interval = setInterval(() => {
+                    if (window.google?.maps?.places) {
+                        init();
+                        clearInterval(interval);
+                    }
+                }, 100);
+                setTimeout(() => clearInterval(interval), 5000);
             }
-            placesAutocompleteRef.current = null;
-        };
-    }, [isClient]);
+        }
+    }, [isClient, cemeteryName === '']); // Re-init se il campo viene svuotato
 
     useEffect(() => {
         if (orderCategory !== 'FT') {

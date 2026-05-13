@@ -85,7 +85,7 @@ export default async function MunicipalityPage({ params }: MunicipalityPageProps
         });
     }
 
-    const finalImageUrl = deliveryProof?.photoAfterUrl || "/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp";
+    const finalImageUrl = deliveryProof?.photoAfterUrl || "/images/seo/hero-consegna-fiori.png";
     const isRealProof = !!deliveryProof;
 
     const cimiteroProducts = productsBySlugOrder(CATALOG_SLUGS_CIMITERO);

@@ -28,6 +28,10 @@ interface AppliedDiscount {
     finalTotalCents: number;
 }
 
+/** Messaggio per ordini FT: niente scelta data/ora da parte dell'utente (slot tecnico = minDateFT lato server). */
+const FT_DELIVERY_REASSURANCE =
+    'La posa dei fiori avverrà entro 48 ore dall\'ordine, esclusi i giorni di chiusura del cimitero e dei fioristi locali.';
+
 declare global {
     interface Window {
         google?: any;
@@ -87,7 +91,6 @@ export default function CheckoutPage() {
     const [discountError, setDiscountError] = useState('');
     const cemeteryInputRef = useRef<HTMLInputElement | null>(null);
     const placesAutocompleteRef = useRef<any>(null);
-    const placesListenerRef = useRef<any>(null);
 
     const [minDateFT, setMinDateFT] = useState('');
     const [minDateFF, setMinDateFF] = useState('');
@@ -149,6 +152,28 @@ export default function CheckoutPage() {
                         if (provMatch) {
                             setDeliveryProvince(provMatch[1].toUpperCase());
                         }
+                    }
+                }
+                // Se fm_checkout_data c’è ma senza luogo, prova comunque il comune salvato nel carrello
+                if (checkoutDataStr) {
+                    try {
+                        const parsedCheckout = JSON.parse(checkoutDataStr) as Record<string, unknown>;
+                        const hasLoc = Boolean(
+                            parsedCheckout.comune ||
+                                parsedCheckout.location ||
+                                parsedCheckout.indirizzo ||
+                                parsedCheckout.address
+                        );
+                        if (!hasLoc && !cemeteryName) {
+                            const comuneFromCart = (parsed as any[]).find((item) => item?.customData?.comune)?.customData?.comune;
+                            if (typeof comuneFromCart === 'string' && comuneFromCart.trim()) {
+                                setCemeteryName(comuneFromCart.trim());
+                                const provMatch = comuneFromCart.match(/\(([A-Z]{2})\)$/i);
+                                if (provMatch) setDeliveryProvince(provMatch[1].toUpperCase());
+                            }
+                        }
+                    } catch {
+                        /* ignore */
                     }
                 }
             } catch (e) { }
@@ -256,42 +281,66 @@ export default function CheckoutPage() {
             .then(data => {
                 setMinDateFT(data.minDateFTText);
                 setMinDateFF(data.minDateFFText);
-                // Pre-fill deliveryDate with the first available slot to avoid user errors
-                if (!deliveryDate) {
-                    // Decide based on category (but might not be accurate if category resolves later, so safe to use FF if FF, else FT)
-                    // We'll update the default in another hook when orderCategory is set
-                }
             })
             .catch(err => console.error("Error fetching delivery time constraints", err));
 
     }, []);
 
+    /** FT: slot fisso lato server (POST checkout valida la stessa finestra); niente datetime-local in UI. */
     useEffect(() => {
+        if (orderCategory === 'FT' && minDateFT) {
+            setDeliveryDate(minDateFT);
+        }
+    }, [orderCategory, minDateFT]);
+
+    useEffect(() => {
+        if (orderCategory === 'FT') return;
         if (!deliveryDate) {
             if ((orderCategory === 'FF' || orderCategory === 'FA') && minDateFF) setDeliveryDate(minDateFF);
-            else if (orderCategory !== 'FF' && orderCategory !== 'FA' && minDateFT) setDeliveryDate(minDateFT);
+            else if (minDateFT) setDeliveryDate(minDateFT);
         }
-    }, [orderCategory, minDateFF, minDateFT]);
+    }, [orderCategory, minDateFF, minDateFT, deliveryDate]);
 
+    /**
+     * Google Places sul campo comune/cimitero.
+     * NON legare questo effect a `cemeteryName`: al primo carattere il valore passa da '' a testo,
+     * rieseguirebbe l'effect e distruggerebbe l'autocomplete → perdita di focus / campo “bloccato”.
+     * Si riattacca solo quando torni allo step 1 (es. Indietro dal riepilogo).
+     */
     useEffect(() => {
-        if (!isClient) return;
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!isClient || step !== 1) return;
+
+        const apiKey = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '').trim();
         if (!apiKey) return;
 
-        let autocomplete: any = null;
+        let cancelled = false;
+        let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-        const init = () => {
-            if (!cemeteryInputRef.current || !window.google?.maps?.places || autocomplete) return;
+        const detachAutocomplete = () => {
+            const ac = placesAutocompleteRef.current;
+            if (ac && window.google?.maps?.event) {
+                window.google.maps.event.clearInstanceListeners(ac);
+            }
+            placesAutocompleteRef.current = null;
+        };
 
-            autocomplete = new window.google.maps.places.Autocomplete(cemeteryInputRef.current, {
+        const attachAutocomplete = () => {
+            if (cancelled) return;
+            const input = cemeteryInputRef.current;
+            if (!input || !window.google?.maps?.places) return;
+
+            detachAutocomplete();
+
+            const ac = new window.google.maps.places.Autocomplete(input, {
                 componentRestrictions: { country: 'it' },
                 fields: ['name', 'formatted_address', 'address_components', 'vicinity'],
             });
+            placesAutocompleteRef.current = ac;
 
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
+            ac.addListener('place_changed', () => {
+                const place = ac.getPlace();
                 if (!place) return;
-                
+
                 const normalizedLocation =
                     place.formatted_address ||
                     [place.name, place.vicinity].filter(Boolean).join(', ') ||
@@ -309,32 +358,62 @@ export default function CheckoutPage() {
             });
         };
 
-        if (window.google?.maps?.places) {
-            init();
-        } else {
+        const tryAttach = () => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (window.google?.maps?.places) {
+                        attachAutocomplete();
+                    }
+                });
+            });
+        };
+
+        const loadScript = () => {
             const scriptId = 'fm-google-places-script';
             let script = document.getElementById(scriptId) as HTMLScriptElement | null;
             if (!script) {
                 script = document.createElement('script');
                 script.id = scriptId;
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=it`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=it&loading=async`;
                 script.async = true;
                 script.defer = true;
-                script.onload = () => init();
+                script.addEventListener('load', tryAttach);
                 document.head.appendChild(script);
+            } else if (window.google?.maps?.places) {
+                tryAttach();
             } else {
-                script.addEventListener('load', init);
-                // Se lo script c'è già ma Google non è ancora pronto, aspettiamo un attimo
-                const interval = setInterval(() => {
+                script.addEventListener('load', tryAttach);
+                pollTimer = setInterval(() => {
                     if (window.google?.maps?.places) {
-                        init();
-                        clearInterval(interval);
+                        tryAttach();
+                        if (pollTimer) clearInterval(pollTimer);
+                        pollTimer = null;
                     }
                 }, 100);
-                setTimeout(() => clearInterval(interval), 5000);
+                setTimeout(() => {
+                    if (pollTimer) {
+                        clearInterval(pollTimer);
+                        pollTimer = null;
+                    }
+                }, 8000);
             }
+        };
+
+        if (window.google?.maps?.places) {
+            tryAttach();
+        } else {
+            loadScript();
         }
-    }, [isClient, cemeteryName === '']); // Re-init se il campo viene svuotato
+
+        return () => {
+            cancelled = true;
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            detachAutocomplete();
+        };
+    }, [isClient, step]);
 
     useEffect(() => {
         if (orderCategory !== 'FT') {
@@ -497,15 +576,18 @@ export default function CheckoutPage() {
     const isDeliveryValid = () => {
         if (!deceasedName || !cemeteryName || deliveryProvince.length !== 2 || !deliveryDate) return false;
         if ((orderCategory === 'FF' || orderCategory === 'FA') && !gravePosition) return false;
-        
-        const d = new Date(deliveryDate);
-        const h = d.getHours();
+
         const minDStr = getMinDeliveryDate();
         if (!minDStr) return false;
 
+        const d = new Date(deliveryDate);
         const minD = new Date(minDStr);
-        if (h < 9 || h >= 17) return false;
         if (d < minD) return false;
+
+        if (orderCategory !== 'FT') {
+            const h = d.getHours();
+            if (h < 9 || h >= 17) return false;
+        }
         
         if (!buyerName || !buyerSurname || !buyerEmail || !buyerPhone) return false;
         
@@ -700,27 +782,42 @@ export default function CheckoutPage() {
                                         </div>
                                     )}
                                     
-                                    <div className="pt-1">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
-                                            {orderCategory === 'FF' ? "Data e Ora del Funerale *" : "Calendario Data e Ora *"}
-                                        </label>
-                                        <input type="datetime-local" min={getMinDeliveryDate()} value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
-                                        {deliveryDate && (() => {
-                                            const d = new Date(deliveryDate);
-                                            const h = d.getHours();
-                                            const isOutOfHours = h < 9 || h >= 17;
-                                            const minDStr = getMinDeliveryDate();
-                                            const isTooEarly = minDStr ? d < new Date(minDStr) : false;
-                                            if (isOutOfHours || isTooEarly) {
-                                                return (
-                                                    <p className="text-sm text-red-500 font-medium mt-2">
-                                                        Richiediamo un preavviso di {orderCategory === 'FF' || orderCategory === 'FA' ? '4h' : '48h'} lavorative e consegniamo tra le 09:00 e le 17:00.
-                                                    </p>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-                                    </div>
+                                    {orderCategory === 'FT' ? (
+                                        <div className="pt-1 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                                            <p className="text-sm text-gray-700 leading-relaxed">{FT_DELIVERY_REASSURANCE}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="pt-1">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+                                                {orderCategory === 'FF' ? 'Data e Ora del Funerale *' : 'Calendario Data e Ora *'}
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                min={getMinDeliveryDate()}
+                                                value={deliveryDate}
+                                                onChange={(e) => setDeliveryDate(e.target.value)}
+                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all"
+                                            />
+                                            {deliveryDate &&
+                                                (() => {
+                                                    const d = new Date(deliveryDate);
+                                                    const h = d.getHours();
+                                                    const isOutOfHours = h < 9 || h >= 17;
+                                                    const minDStr = getMinDeliveryDate();
+                                                    const isTooEarly = minDStr ? d < new Date(minDStr) : false;
+                                                    if (isOutOfHours || isTooEarly) {
+                                                        return (
+                                                            <p className="text-sm text-red-500 font-medium mt-2">
+                                                                Richiediamo un preavviso di{' '}
+                                                                {orderCategory === 'FF' || orderCategory === 'FA' ? '4h' : '48h'} lavorative e
+                                                                consegniamo tra le 09:00 e le 17:00.
+                                                            </p>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* SEZIONE CONTATTO */}
@@ -823,9 +920,19 @@ export default function CheckoutPage() {
                                             <div className="text-gray-500 font-medium">Luogo:</div>
                                             <div className="text-gray-900 font-semibold">{cemeteryName} ({deliveryProvince})</div>
                                             
-                                            <div className="text-gray-500 font-medium">Data:</div>
-                                            <div className="text-gray-900 font-semibold">
-                                                {deliveryDate ? new Date(deliveryDate).toLocaleString('it-IT', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }) : ''}
+                                            <div className="text-gray-500 font-medium">Consegna:</div>
+                                            <div className="text-gray-900 font-semibold leading-snug">
+                                                {orderCategory === 'FT'
+                                                    ? FT_DELIVERY_REASSURANCE
+                                                    : deliveryDate
+                                                      ? new Date(deliveryDate).toLocaleString('it-IT', {
+                                                            weekday: 'long',
+                                                            day: '2-digit',
+                                                            month: 'long',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })
+                                                      : ''}
                                             </div>
                                         </div>
                                     </div>

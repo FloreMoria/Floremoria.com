@@ -19,8 +19,8 @@ type TrustBarProps = {
 export default function TrustBar({ compactBottom = false }: TrustBarProps) {
   return (
     <div
-      className={`w-full bg-[#FDFCF9]/65 backdrop-blur-sm border-y border-[#EAE3D9]/50 py-5 overflow-hidden relative z-10 shadow-sm mx-auto ${
-        compactBottom ? 'mb-6 lg:mb-10' : 'mb-16 lg:mb-24'
+      className={`w-full bg-[#FDFCF9]/65 backdrop-blur-sm border-y border-[#EAE3D9]/50 py-2.5 md:py-5 overflow-hidden relative z-10 shadow-sm mx-auto ${
+        compactBottom ? 'mb-4 md:mb-6 lg:mb-10' : 'mb-16 lg:mb-24'
       }`}
     >
       <div className="flex animate-marquee md:animate-marquee-slow w-max">

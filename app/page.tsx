@@ -66,21 +66,21 @@ export default async function Home() {
 
         {/* 1) HERO SECTION */}
         <section className="text-center flex flex-col justify-start pt-0 -mt-6 md:mt-0 md:pt-12 lg:pt-20 h-[calc(60vh-72px)] lg:h-[calc(70vh-72px)] max-w-4xl mx-auto px-4 drop-shadow-lg">
-          <TextParallax speed={-0.4} className="space-y-4 md:space-y-6">
+          <TextParallax speed={-0.4} className="space-y-3 md:space-y-6">
             <h1 className="text-4xl md:text-[56px] font-display font-bold text-white leading-tight tracking-tight drop-shadow-[0_2px_15px_rgba(0,0,0,0.6)]">
               FloreMoria
             </h1>
             <h2 className="text-2xl md:text-3xl text-fm-rose-soft font-semibold tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
               I fiori della memoria
             </h2>
-            <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-4 rounded-3xl border border-white/20 shadow-xl">
+            <p className="text-lg md:text-xl text-white/95 font-medium font-body leading-relaxed max-w-2xl mx-auto bg-black/30 backdrop-blur-[2px] px-6 py-2.5 md:py-4 rounded-3xl border border-white/20 shadow-xl">
               Consegniamo bouquet di fiori freschi direttamente sulle tombe in tutta Italia e ti inviamo le foto sul tuo WhatsApp.
             </p>
           </TextParallax>
         </section>
 
         {/* Banner fiducia: ~3 cm più in alto rispetto al precedente posizionamento */}
-        <div className="relative z-10 w-full mt-[calc(1.5rem-3cm)] md:mt-[calc(2.5rem-3cm)] lg:mt-[calc(3.5rem-3cm)] mb-1 lg:mb-2">
+        <div className="relative z-10 w-full mt-[calc(1rem-3cm)] md:mt-[calc(2.5rem-3cm)] lg:mt-[calc(3.5rem-3cm)] mb-0.5 md:mb-1 lg:mb-2">
           <TrustBar compactBottom />
         </div>
 

@@ -77,6 +77,8 @@ model Order {
   latitude               Float?
   longitude              Float?
   partnerId              String?
+  /** Ragione sociale o nome agenzia lato partner (AnnunciFunebri / integrazioni B2B). */
+  agencyName             String?       @map("agency_name") @db.VarChar(255)
   /** Email azienda partner (handoff da siti esterni) per notifiche / rendicontazione. */
   partnerNotifyEmail     String?       @map("partner_notify_email") @db.VarChar(255)
   partnerPaymentStatus   PaymentStatus @default(UNPAID)

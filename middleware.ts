@@ -9,6 +9,26 @@ import { getFloremAuthCookieBase, isLocalDevHost } from '@/lib/authCookieDomain'
  * In locale (localhost) nessun redirect verso i domini .com.
  */
 
+function isPartnerApiDocsPath(pathname: string): boolean {
+    return (
+        pathname === '/docs/partner-api' ||
+        pathname.startsWith('/docs/partner-api/') ||
+        pathname.startsWith('/api/docs/partner/')
+    );
+}
+
+function parseBasicAuth(authorization: string | null): { user: string; pass: string } | null {
+    if (!authorization?.toLowerCase().startsWith('basic ')) return null;
+    try {
+        const decoded = atob(authorization.slice(6).trim());
+        const colon = decoded.indexOf(':');
+        if (colon < 0) return null;
+        return { user: decoded.slice(0, colon), pass: decoded.slice(colon + 1) };
+    } catch {
+        return null;
+    }
+}
+
 function applyDashboardSecurityHeaders(request: NextRequest, response: NextResponse): NextResponse {
     if (request.nextUrl.pathname.startsWith('/dashboard')) {
         response.headers.set('X-Frame-Options', 'SAMEORIGIN');
@@ -19,6 +39,22 @@ function applyDashboardSecurityHeaders(request: NextRequest, response: NextRespo
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+
+    if (isPartnerApiDocsPath(pathname)) {
+        const expectedUser = process.env.PARTNER_DOCS_BASIC_USER?.trim();
+        const expectedPass = process.env.PARTNER_DOCS_BASIC_PASSWORD?.trim();
+        if (!expectedUser || !expectedPass) {
+            return NextResponse.redirect(new URL('/', request.url), 302);
+        }
+        const creds = parseBasicAuth(request.headers.get('authorization'));
+        if (!creds || creds.user !== expectedUser || creds.pass !== expectedPass) {
+            return new NextResponse('Autenticazione richiesta per la documentazione Partner API.', {
+                status: 401,
+                headers: { 'WWW-Authenticate': 'Basic realm="FloreMoria Partner API"' },
+            });
+        }
+    }
+
     const hostFull = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').toLowerCase();
     const hostname = hostFull.split(':')[0];
     const isLocal = isLocalDevHost(hostname);

@@ -17,8 +17,9 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
     // né devono sottostare al "max-w" tipico dei blog.
     const isAppRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/login') || pathname?.startsWith('/admin');
     const isPrintRoute = pathname?.startsWith('/stampa');
+    const isPartnerDocsRoute = pathname?.startsWith('/docs/partner-api');
 
-    if (isAppRoute || isPrintRoute) {
+    if (isAppRoute || isPrintRoute || isPartnerDocsRoute) {
         return (
             <main className="flex-grow flex flex-col w-full h-full overflow-hidden">
                 {children}

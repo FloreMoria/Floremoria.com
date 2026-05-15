@@ -1,0 +1,312 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "FloreMoria Partner API",
+    "version": "1.0.0",
+    "description": "API per integratori (es. portali funerari): catalogo prodotti, creazione ordine e consultazione storico per agenzia.\n\n**Autenticazione:** invia sempre `X-Partner-Key` con il *public id* (`fmp_…`) della credenziale creata in Dashboard, e il *segreto* in `Authorization: Bearer <segreto>` (stesso modello di `POST /api/external/order-data`). In alternativa, un unico header `X-Partner-Key: fmp_…:fms_…` (publicId e secret separati da `:` — il secret non contiene `:`).\n\nIn caso di credenziali assenti o non valide le route rispondono **401** con JSON `{ \"error\": \"…\" }`."
+  },
+  "servers": [{ "url": "/", "description": "Stesso host dell'installazione Next.js" }],
+  "tags": [
+    { "name": "Catalog", "description": "Prodotti attivi" },
+    { "name": "Orders", "description": "Creazione e storico" }
+  ],
+  "paths": {
+    "/api/v1/partner/catalog": {
+      "get": {
+        "tags": ["Catalog"],
+        "summary": "Lista prodotti",
+        "security": [{ "PartnerKey": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 100, "maximum": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista prodotti",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CatalogProduct" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/partner/catalog/{id}": {
+      "get": {
+        "tags": ["Catalog"],
+        "summary": "Dettaglio prodotto",
+        "security": [{ "PartnerKey": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID Prisma del prodotto (cuid)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prodotto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/CatalogProductDetail" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Prodotto non trovato o non attivo" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/partner/order/create": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Crea ordine",
+        "security": [{ "PartnerKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PartnerOrderCreateBody" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ordine creato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/PartnerOrderCreateResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Payload non valido" },
+          "403": { "description": "partnerId non coerente con la credenziale" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/partner/orders/{agencyId}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Storico ordini per agenzia",
+        "description": "Restituisce gli ordini del partner autenticato con `agencyName` uguale al path `agencyId` (tipicamente codice o slug agenzia lato partner). Usa `encodeURIComponent` nel path se contiene caratteri speciali.",
+        "security": [{ "PartnerKey": [] }],
+        "parameters": [
+          {
+            "name": "agencyId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Valore salvato in `agencyName` sugli ordini"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50, "maximum": 100 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": { "type": "integer", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elenco ordini",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/PartnerOrderSummary" }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "integer" },
+                        "limit": { "type": "integer" },
+                        "offset": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PartnerKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Partner-Key",
+        "description": "Public id `fmp_…` oppure `fmp_…:fms_…`. Con solo public id serve anche `Authorization: Bearer`."
+      },
+      "BearerPartnerSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "fms_…",
+        "description": "Segreto mostrato una sola volta alla creazione della credenziale API."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Credenziali assenti o non valide",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CatalogProduct": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "price": { "type": "number", "description": "Prezzo in EUR (decimale)" },
+          "priceCents": { "type": "integer" },
+          "currency": { "type": "string", "example": "EUR" },
+          "image": { "type": "string", "nullable": true, "description": "URL assoluto immagine principale" },
+          "category": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "slug": { "type": "string" }
+            }
+          }
+        }
+      },
+      "CatalogProductDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/CatalogProduct" },
+          {
+            "type": "object",
+            "properties": {
+              "slug": { "type": "string" },
+              "shortDescription": { "type": "string", "nullable": true },
+              "description": { "type": "string", "nullable": true },
+              "images": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string" },
+                    "alt": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PartnerOrderLineItem": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": { "type": "string", "description": "ID Prisma prodotto" },
+          "quantity": { "type": "integer", "minimum": 1, "default": 1 }
+        }
+      },
+      "PartnerOrderCreateBody": {
+        "type": "object",
+        "required": [
+          "deceasedName",
+          "cemeteryName",
+          "cemeteryCity",
+          "deliveryProvince",
+          "deliveryDate",
+          "buyerFullName",
+          "buyerEmail",
+          "lineItems"
+        ],
+        "properties": {
+          "partnerId": {
+            "type": "string",
+            "description": "Deve coincidere con il `partnerId` legato alla credenziale API (cuid partner)."
+          },
+          "agencyName": {
+            "type": "string",
+            "description": "Ragione sociale o identificativo agenzia lato integratore; usato anche per `GET /orders/{agencyId}`."
+          },
+          "deceasedName": { "type": "string" },
+          "cemeteryName": { "type": "string" },
+          "cemeteryCity": { "type": "string" },
+          "gravePosition": { "type": "string", "nullable": true },
+          "deliveryProvince": { "type": "string", "minLength": 2, "maxLength": 2, "description": "Sigla provincia IT (es. RM)" },
+          "deliveryDate": { "type": "string", "format": "date", "description": "Data consegna prevista (ISO 8601 date)" },
+          "ticketMessage": { "type": "string", "nullable": true, "description": "Messaggio / istruzioni per il fiorista" },
+          "buyerFullName": { "type": "string" },
+          "buyerEmail": { "type": "string", "format": "email" },
+          "buyerPhone": { "type": "string", "nullable": true },
+          "partnerNotifyEmail": { "type": "string", "format": "email", "nullable": true, "description": "Email agenzia per notifiche rendicontazione" },
+          "lineItems": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/PartnerOrderLineItem" }
+          }
+        }
+      },
+      "PartnerOrderCreateResponse": {
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "string" },
+          "orderNumber": { "type": "string", "nullable": true },
+          "totalPriceCents": { "type": "integer" },
+          "currency": { "type": "string" }
+        }
+      },
+      "PartnerOrderSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "orderNumber": { "type": "string", "nullable": true },
+          "status": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "agencyName": { "type": "string", "nullable": true },
+          "deceasedName": { "type": "string" },
+          "totalPriceCents": { "type": "integer" },
+          "currency": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -40,6 +40,18 @@ rm -f "${REMOTE_TMP}"
 # --ignore-scripts: evita postinstall "prisma generate" (prisma CLI è devDependency, assente con --omit=dev)
 npm ci --omit=dev --ignore-scripts
 npx --yes prisma@6.19.2 generate
+if [[ -f .env ]] || [[ -f .env.local ]]; then
+  set -a
+  [[ -f .env ]] && source .env
+  [[ -f .env.local ]] && source .env.local
+  set +a
+fi
+if [[ -n "\${DATABASE_URL:-}" ]]; then
+  echo "==> prisma migrate deploy (sul server, DB locale al VPS)"
+  npx --yes prisma@6.19.2 migrate deploy
+else
+  echo "ATTENZIONE: DATABASE_URL assente sul server — salto migrate deploy."
+fi
 if command -v pm2 >/dev/null 2>&1; then
   pm2 restart floremoria || pm2 start npm --name floremoria -- run start
   pm2 save || true

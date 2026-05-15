@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Ruolo di sistema elevato (promozione solo via `scripts/master-key.ts`).
+enum UserRole {
+  USER
+  OPERATOR
+  MARKETING_MANAGER
+  PARTNER_FLORIST
+  SUPER_ADMIN
+}
+
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -24,6 +33,8 @@ model User {
   email         String    @unique
   name          String?
   roleId        String?
+  /** Elevazione Super Admin: impostabile solo dallo script offline master-key. */
+  systemRole    UserRole  @default(USER) @map("system_role")
   company       String?
   phone         String?
   vatNumber     String?

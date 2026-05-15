@@ -31,7 +31,8 @@ export default function LoginPage() {
                 router.push(data.redirectUrl || '/dashboard/orders');
                 router.refresh();
             } else {
-                setErrorMsg(data.message || 'Credenziali errate.');
+                const hint = typeof data.hint === 'string' ? data.hint : '';
+                setErrorMsg(hint ? `${data.message || 'Credenziali errate.'} ${hint}` : data.message || 'Credenziali errate.');
                 setIsLoading(false);
             }
         } catch (err) {
@@ -69,7 +70,7 @@ export default function LoginPage() {
                     <form className="space-y-6" onSubmit={handleLogin}>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2" htmlFor="username">
-                                Identificativo
+                                Email o identificativo
                             </label>
                             <div className="mt-1">
                                 <input
@@ -80,7 +81,7 @@ export default function LoginPage() {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-fm-text shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                    placeholder="Inserisci l'identificativo"
+                                    placeholder="es. nome@floremoria.com"
                                 />
                             </div>
                         </div>

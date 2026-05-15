@@ -7,6 +7,7 @@ import {
     isDashboardSubdomainRoutingEnabled,
     type DashboardHostContext,
 } from '@/lib/dashboardRouting';
+import { isSuperAdminRole } from '@/lib/superAdmin';
 
 /**
  * Middleware Centrale FloreMoria
@@ -36,11 +37,20 @@ function parseBasicAuth(authorization: string | null): { user: string; pass: str
 }
 
 function applyDashboardSecurityHeaders(request: NextRequest, response: NextResponse): NextResponse {
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    const { pathname } = request.nextUrl;
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin-panel')) {
         response.headers.set('X-Frame-Options', 'SAMEORIGIN');
         response.headers.set('X-Content-Type-Options', 'nosniff');
     }
     return response;
+}
+
+function isSuperAdminOnlyPath(pathname: string): boolean {
+    return (
+        pathname.startsWith('/admin-panel') ||
+        pathname.startsWith('/dashboard/settings/roles') ||
+        pathname.startsWith('/api/admin/')
+    );
 }
 
 function getHostContext(request: NextRequest): DashboardHostContext {
@@ -133,6 +143,30 @@ export function middleware(request: NextRequest) {
         }
     }
 
+    if (isSuperAdminOnlyPath(pathname)) {
+        if (!userRole) {
+            if (pathname.startsWith('/api/admin/')) {
+                return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+            }
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+            );
+        }
+        if (!isSuperAdminRole(userRole)) {
+            if (pathname.startsWith('/api/admin/')) {
+                return NextResponse.json({ error: 'Accesso riservato al Super Admin.' }, { status: 403 });
+            }
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
+            );
+        }
+        if (pathname.startsWith('/admin-panel') || pathname.startsWith('/api/admin/')) {
+            return applyDashboardSecurityHeaders(request, NextResponse.next());
+        }
+    }
+
     if (pathname.startsWith('/dashboard')) {
         const dashboardOrigin = getDashboardAppOrigin(request, hostCtx);
 
@@ -184,6 +218,8 @@ export function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         '/dashboard/:path*',
+        '/admin-panel/:path*',
+        '/api/admin/:path*',
         '/',
         '/login',
         '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',

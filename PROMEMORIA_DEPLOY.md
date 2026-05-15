@@ -52,6 +52,8 @@ Crea `/var/www/floremoria/.env` (o `.env.production`) sul VPS, **mai** committar
 | `PARTNER_INBOUND_API_SECRET` | Opzionale (legacy API partner) |
 | `PARTNER_INBOUND_CORS_ORIGIN` | CSV origini consentite in produzione |
 | `ADMIN_API_KEY` | Protezione route admin interne |
+| `SUPER_ADMIN_SETUP_TOKEN` | Solo per `node scripts/server-promote-super-admin.cjs` sul VPS |
+| `SUPER_ADMIN_LOGIN_PASSWORD` | Password login web Super Admin (email su /login) |
 | `FLOREMORIA_WEBHOOK_KEY` | Se usi `/api/logs/update` |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Checkout / mappe |
 | `GOOGLE_PLACES_API_KEY` / `GOOGLE_PLACE_ID` | Recensioni / Places |

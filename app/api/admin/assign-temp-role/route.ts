@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
-
-const prisma = new PrismaClient();
+import { isBlockedSuperAdminAssignment } from '@/lib/superAdmin';
+import { requireSuperAdminApi } from '@/lib/superAdminAuth';
 
 export async function POST(request: Request) {
+    const denied = await requireSuperAdminApi();
+    if (denied) return denied;
+
     try {
         const body = await request.json();
         const { email, roleId, durationMins } = body;
@@ -13,35 +16,47 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Dati mancanti' }, { status: 400 });
         }
 
-        // Calcolo della scadenza TTL
-        const expiresAt = new Date(Date.now() + durationMins * 60 * 1000);
+        const role = await prisma.role.findUnique({ where: { id: roleId } });
+        if (!role) {
+            return NextResponse.json({ error: 'Ruolo non trovato.' }, { status: 404 });
+        }
 
-        // Funzione Database per associare scadenza all'utente
+        if (isBlockedSuperAdminAssignment(role.name)) {
+            return NextResponse.json(
+                {
+                    error:
+                        'Il ruolo SUPER_ADMIN non può essere assegnato dalla dashboard. Usa lo script offline: npm run master-key',
+                },
+                { status: 403 }
+            );
+        }
+
+        const expiresAt = new Date(Date.now() + durationMins * 60 * 1000);
+        const normalizedEmail = String(email).trim().toLowerCase();
+
         const user = await prisma.user.upsert({
-            where: { email },
+            where: { email: normalizedEmail },
             update: { roleId, roleExpiresAt: expiresAt },
-            create: { email, name: email.split('@')[0] || 'Invitato', roleId, roleExpiresAt: expiresAt }
+            create: {
+                email: normalizedEmail,
+                name: normalizedEmail.split('@')[0] || 'Invitato',
+                roleId,
+                roleExpiresAt: expiresAt,
+            },
         });
 
-        const role = await prisma.role.findUnique({ where: { id: roleId } });
+        const response = NextResponse.json({ success: true, expiresAt, userId: user.id });
 
-        const response = NextResponse.json({ success: true, expiresAt });
-
-        // HACK per test: per permettere un test immediato del TTL sullo stesso browser
-        // (senza un vero flusso di magic-link inviato via email) iniettiamo direttamente
-        // il cookie di sessione per simulare che l'utente assegnato abbia effettuato l'accesso.
-        if (role) {
-            const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
-            const opts = {
-                path: base.path,
-                ...(base.domain ? { domain: base.domain } : {}),
-                secure: base.secure,
-                sameSite: base.sameSite,
-                httpOnly: true,
-            };
-            response.cookies.set('fm_user_role', role.name, opts);
-            response.cookies.set('fm_role_expires_at', expiresAt.toISOString(), opts);
-        }
+        const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
+        const opts = {
+            path: base.path,
+            ...(base.domain ? { domain: base.domain } : {}),
+            secure: base.secure,
+            sameSite: base.sameSite as 'lax',
+            httpOnly: true,
+        };
+        response.cookies.set('fm_user_role', role.name, opts);
+        response.cookies.set('fm_role_expires_at', expiresAt.toISOString(), opts);
 
         return response;
     } catch (error) {

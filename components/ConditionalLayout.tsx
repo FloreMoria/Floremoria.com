@@ -15,7 +15,11 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
 
     // Le rotte applicative pure (Dashboard, Login, Admin) non devono avere Navbar pubblica o Footer,
     // né devono sottostare al "max-w" tipico dei blog.
-    const isAppRoute = pathname?.startsWith('/dashboard') || pathname?.startsWith('/login') || pathname?.startsWith('/admin');
+    const isAppRoute =
+        pathname?.startsWith('/dashboard') ||
+        pathname?.startsWith('/login') ||
+        pathname?.startsWith('/admin-panel') ||
+        pathname?.startsWith('/admin');
     const isPrintRoute = pathname?.startsWith('/stampa');
     const isPartnerDocsRoute = pathname?.startsWith('/docs/partner-api');
 

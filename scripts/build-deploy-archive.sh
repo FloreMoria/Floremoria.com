@@ -29,6 +29,7 @@ tar -czf "$ARCHIVE_PATH" \
   .next \
   public \
   prisma \
+  scripts/server-promote-super-admin.cjs \
   package.json \
   package-lock.json \
   next.config.ts

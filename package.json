@@ -11,12 +11,15 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "tsx scripts/db-migrate-deploy.ts",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "log:verbale-barbara-home": "tsx Script/insert-verbale-barbara-dashboard-home-maggio-2026.ts",
     "log:verbale:consolidato:2026-05-03": "tsx Script/consolidate-verbale-2026-05-03.ts",
     "log:verbale:daily": "tsx Script/daily-verbale-sync.ts",
-    "pdf:volantino": "node Script/export-volantino-pdf.mjs"
+    "pdf:volantino": "node Script/export-volantino-pdf.mjs",
+    "master-key": "tsx scripts/master-key.ts",
+    "verify-super-admin": "tsx scripts/verify-super-admin.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

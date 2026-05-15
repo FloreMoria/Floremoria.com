@@ -73,17 +73,12 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
 
     if (!isMounted) return null;
 
-    if (!ga4Data || ga4Data.isEmpty) {
-        return (
-            <div className={`-m-8 p-8 min-h-screen transition-colors duration-300 ${bgClass} flex flex-col items-center justify-center`}>
-                <div className="w-16 h-16 border-4 border-fm-cta/20 border-t-fm-cta rounded-full animate-spin mb-6"></div>
-                <h2 className="text-2xl font-display font-bold mb-2">In attesa di dati da Google...</h2>
-                <p className={`${textMuted} text-center max-w-md`}>La proprietà Google Analytics ({process.env.NEXT_PUBLIC_GA4_PROPERTY_ID || 'G-K00DQKQXFC'}) potrebbe essere appena stata creata o non avere ancora registrato traffico nelle ultime ore.</p>
-            </div>
-        );
-    }
-
-    const { totals, dailyTraffic, topPages } = ga4Data;
+    const ga4Unavailable = !ga4Data || ga4Data.isEmpty;
+    const totals = ga4Unavailable
+        ? { users: 0, sessions: 0, bounceRate: '—' }
+        : ga4Data.totals;
+    const dailyTraffic = ga4Unavailable ? [] : ga4Data.dailyTraffic ?? [];
+    const topPages = ga4Unavailable ? [] : ga4Data.topPages ?? [];
 
     // THE MARGIN ENGINE
     const costiFioristaMap = new Map();
@@ -171,13 +166,39 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
     });
 
     // REVENUE-PER-VISITOR (The Key Metric)
-    const activeUsers = totals?.users > 0 ? totals.users : 1; // Prevent division by 0
-    const marginPerVisitorCents = totalMarginCents / activeUsers;
-    const conversionRate = activeUsers > 0 ? ((initialOrders.length / activeUsers) * 100).toFixed(2) : '0.00';
+    const activeUsers = totals?.users > 0 ? totals.users : 1;
+    const marginPerVisitorCents = ga4Unavailable ? 0 : totalMarginCents / activeUsers;
+    const conversionRate = ga4Unavailable
+        ? 'N/D'
+        : activeUsers > 0
+          ? ((initialOrders.length / activeUsers) * 100).toFixed(2)
+          : '0.00';
 
     return (
         <div className={`-m-8 p-8 min-h-screen transition-colors duration-300 ${bgClass}`}>
             <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+
+                {ga4Unavailable && (
+                    <div
+                        className={`rounded-2xl border px-5 py-4 flex gap-3 ${
+                            darkMode ? 'bg-amber-950/40 border-amber-700/50' : 'bg-amber-50 border-amber-200'
+                        }`}
+                        role="status"
+                    >
+                        <Info className={`shrink-0 mt-0.5 ${darkMode ? 'text-amber-400' : 'text-amber-700'}`} size={22} />
+                        <div className="text-sm">
+                            <p className={`font-semibold ${darkMode ? 'text-amber-100' : 'text-amber-900'}`}>
+                                Traffico GA4 non disponibile — Mission Control e ordini restano attivi
+                            </p>
+                            <p className={`mt-1 ${textMuted}`}>
+                                Sul server servono <code className="text-xs">GA4_PROPERTY_ID</code> (ID numerico API, es. 456714),
+                                il file <code className="text-xs">floremoria-456714-*.json</code> e permessi al service account. Il
+                                tag <code className="text-xs">{process.env.NEXT_PUBLIC_GA4_PROPERTY_ID || 'G-K00DQKQXFC'}</code> è
+                                solo per il sito, non per l&apos;API dashboard.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
                     <div>
@@ -320,7 +341,9 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             <span className="flex items-center text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-full"><Activity size={12} className="mr-1" /> {conversionRate}% CR</span>
                         </div>
                         <div className={`text-sm font-semibold uppercase tracking-wider ${textMuted}`}>Utenti Attivi (GA4)</div>
-                        <div className="text-3xl font-display font-bold mt-1 text-gray-900 dark:text-gray-100">{totals.users.toLocaleString()}</div>
+                        <div className="text-3xl font-display font-bold mt-1 text-gray-900 dark:text-gray-100">
+                            {ga4Unavailable ? 'N/D' : totals.users.toLocaleString()}
+                        </div>
                     </div>
 
                     <div className={`${cardClass} rounded-2xl p-6 border shadow-sm relative overflow-hidden transition-colors`}>
@@ -376,6 +399,11 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                     <div className={`${cardClass} rounded-3xl p-6 border shadow-sm transition-colors flex flex-col`}>
                         <h3 className="font-bold text-lg flex items-center gap-2 mb-6"><BarChart2 className="text-blue-500" /> Traffico Giornaliero (Ultimi 7 gg)</h3>
                         <div className="h-[280px] w-full flex-1">
+                            {ga4Unavailable ? (
+                                <div className={`h-full flex items-center justify-center text-sm ${textMuted}`}>
+                                    Dati GA4 non configurati sul server
+                                </div>
+                            ) : (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={dailyTraffic} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
@@ -394,6 +422,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                     <Area type="monotone" dataKey="sessions" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorSessions)" />
                                 </AreaChart>
                             </ResponsiveContainer>
+                            )}
                         </div>
                     </div>
 
@@ -409,7 +438,10 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                 <div className="col-span-2 text-right flex items-center justify-end"><Clock size={14} className="mr-1" /> Tempo</div>
                             </div>
 
-                            {topPages.map((page: any, idx: number) => (
+                            {ga4Unavailable && (
+                                <p className={`text-sm py-8 text-center ${textMuted}`}>Nessun dato pagine da GA4.</p>
+                            )}
+                            {!ga4Unavailable && topPages.map((page: any, idx: number) => (
                                 <div key={idx} className={`grid grid-cols-12 items-center text-sm border-b pb-3 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-lg transition-colors ${darkMode ? 'border-gray-800' : 'border-gray-50'}`}>
                                     <div className={`col-span-1 font-bold text-center ${idx < 3 ? 'text-fm-cta' : textMuted}`}>{idx + 1}</div>
                                     <div className="col-span-6 md:col-span-7 pr-2">

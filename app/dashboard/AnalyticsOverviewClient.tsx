@@ -193,7 +193,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             <p className={`mt-1 ${textMuted}`}>
                                 Sul server servono <code className="text-xs">GA4_PROPERTY_ID</code> (ID numerico API, es. 456714),
                                 il file <code className="text-xs">floremoria-456714-*.json</code> e permessi al service account. Il
-                                tag <code className="text-xs">{process.env.NEXT_PUBLIC_GA4_PROPERTY_ID || 'G-K00DQKQXFC'}</code> è
+                                tag <code className="text-xs">{process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-GVL7FSLBDK'}</code> è
                                 solo per il sito, non per l&apos;API dashboard.
                             </p>
                         </div>

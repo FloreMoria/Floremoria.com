@@ -10,6 +10,7 @@ import Script from 'next/script';
 import { buildGenericAlt } from '@/utils/altText';
 import ConditionalLayout from '@/components/ConditionalLayout';
 import FloremSocialLinks from '@/components/FloremSocialLinks';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -205,6 +206,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className={`${inter.variable} ${manrope.variable} ${greatVibes.variable} font-body bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors min-h-screen flex flex-col`}>
+        <GoogleAnalytics />
         <ConditionalLayout footer={footerBlock}>
           {children}
         </ConditionalLayout>

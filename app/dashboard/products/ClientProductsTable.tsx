@@ -83,6 +83,32 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         setIsCreatingCategory(false);
     };
 
+    const handleFileUpload = async (file: File) => {
+        const catPrefix = formData.categoryId ? 'fiori-sulle-tombe' : 'nuova-cartella';
+        const sluggedName = formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'prodotto';
+        
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        uploadData.append('slug', sluggedName);
+        uploadData.append('categorySlug', catPrefix);
+        
+        try {
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: uploadData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setFormData(prev => ({ ...prev, mediaUrl: data.url }));
+                alert('File caricato correttamente e percorso sincronizzato!');
+            } else {
+                alert('Errore durante l\'upload del file sul server.');
+            }
+        } catch(err) {
+            alert('Errore di connessione durante l\'upload.');
+        }
+    };
+
     const handleCreateCategory = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newCategoryName.trim()) return;
@@ -437,39 +463,22 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Immagine Principale</label>
                             <div className="flex flex-col gap-3">
-                                <label className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-blue-500 hover:border-blue-400 transition-all cursor-pointer">
+                                <label 
+                                    className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-blue-500 hover:border-blue-400 transition-all cursor-pointer"
+                                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    onDrop={async (e) => {
+                                        e.preventDefault(); e.stopPropagation();
+                                        const file = e.dataTransfer.files?.[0];
+                                        if (file) await handleFileUpload(file);
+                                    }}
+                                >
                                     <input 
                                         type="file" 
                                         className="hidden" 
-                                        accept=".webp,.png,.jpg,.jpeg" 
+                                        accept="image/webp, image/jpeg, image/png, .webp, .jpg, .jpeg, .png" 
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
-                                            if (file) {
-                                                const catPrefix = formData.categoryId ? 'fiori-sulle-tombe' : 'nuova-cartella';
-                                                const sluggedName = formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'prodotto';
-                                                
-                                                // Create form data for actual DB upload endpoint
-                                                const uploadData = new FormData();
-                                                uploadData.append('file', file);
-                                                uploadData.append('slug', sluggedName);
-                                                uploadData.append('categorySlug', catPrefix);
-                                                
-                                                try {
-                                                    const res = await fetch('/api/upload', {
-                                                        method: 'POST',
-                                                        body: uploadData
-                                                    });
-                                                    if (res.ok) {
-                                                        const data = await res.json();
-                                                        setFormData({ ...formData, mediaUrl: data.url });
-                                                        alert('File caricato correttamente e percorso sincronizzato!');
-                                                    } else {
-                                                        alert('Errore durante l\'upload del file sul server.');
-                                                    }
-                                                } catch(err) {
-                                                    alert('Errore di connessione durante l\'upload.');
-                                                }
-                                            }
+                                            if (file) await handleFileUpload(file);
                                         }} 
                                     />
                                     {formData.mediaUrl ? (
@@ -482,8 +491,8 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 </label>
                                 <input
                                     type="text"
-                                    value={formData.mediaUrl}
-                                    placeholder="...o incolla direttamente URL Immagine"
+                                    value={formData.mediaUrl || ''}
+                                    placeholder="...o incolla direttamente URL Immagine (es: /images/products/ft-001.webp)"
                                     onChange={e => setFormData({ ...formData, mediaUrl: e.target.value })}
                                     className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all text-xs shadow-sm bg-gray-50"
                                 />

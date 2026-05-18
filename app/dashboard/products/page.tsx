@@ -8,8 +8,8 @@ export const metadata = {
     title: 'Catalogo Prodotti - FloreMoria Dashboard',
 };
 
-// Next.js config per forzare dinamicità se serve (export const dynamic = 'force-dynamic')
-// In questo caso gestiamo il revalidation path sui server actions o routes
+// Forziamo dinamicità per evitare la cache di build (così i DB live si vedono subito)
+export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
     // 1. Fetching dati con Prisma

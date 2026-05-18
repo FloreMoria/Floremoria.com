@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Shield, Users, LayoutDashboard, KeyRound, FileText } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminPanelHomePage() {
     return (
         <div className="space-y-10">

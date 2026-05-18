@@ -1,36 +1,30 @@
 // Definizione della gerarchia delle macro-aree (Domain Isolation) e dei singoli privilegi granulari
 export const PERMISSION_MATRIX = {
-    LOGISTICS: [
-        { key: 'view_orders', label: 'Visualizza Ordini' },
-        { key: 'change_status', label: 'Cambia Stato / Accetta' },
-        { key: 'upload_photos', label: 'Carica Foto Consegna' },
-        { key: 'customer_data', label: 'Dati Sensibili Cliente' },
-        { key: 'assign_florist', label: 'Assegna Fioristi' },
-        { key: 'edit_delivery', label: 'Modifica Posizione Consegna' }
+    MISSION_CONTROL: [
+        { key: 'global_analytics', label: 'Metriche & Andamento Globale' },
+        { key: 'system_settings', label: 'Impostazioni di Sistema' }
     ],
-    CATALOG: [
-        { key: 'view_products', label: 'Visualizza Catalogo' },
-        { key: 'edit_prices', label: 'Modifica Prezzi' },
-        { key: 'stock_management', label: 'Gestione Inventario' }
+    GESTIONE_ORDINI: [
+        { key: 'view_all_orders', label: 'Visualizza Tutti gli Ordini' },
+        { key: 'view_assigned_orders', label: 'Visualizza Solo Propri Ordini (Abbonamenti/Assegnati)' },
+        { key: 'edit_order_status', label: 'Modifica Stato Ordini' },
+        { key: 'assign_orders', label: 'Assegna Ordini a Partner' },
+        { key: 'upload_proofs', label: 'Carica Prove di Consegna' }
     ],
-    FINANCE: [
-        { key: 'invoicing', label: 'Fatturazione & Rimborsi' },
-        { key: 'profit_margins', label: 'Visualizza Margini di Profitto' },
-        { key: 'company_data', label: 'Dati Aziendali e IBAN' }
+    CATALOGO: [
+        { key: 'manage_global_catalog', label: 'Gestione Catalogo Globale (Admin)' },
+        { key: 'manage_own_inventory', label: 'Gestione Proprio Inventario' }
     ],
-    GROWTH: [
-        { key: 'edit_texts', label: 'Modifica Testi / FAQ' },
-        { key: 'seo_metadata', label: 'Impostazioni SEO / AEO' },
-        { key: 'analytics', label: 'Visualizza Analytics Avanzati' }
+    ANAGRAFICHE: [
+        { key: 'manage_users', label: 'Gestione Utenti e Partner' },
+        { key: 'view_customer_data', label: 'Visualizza Dati Sensibili Clienti' },
+        { key: 'view_cemetery_data', label: 'Accesso Info Cimiteriali' },
+        { key: 'manage_own_profile', label: 'Gestisci Proprio Profilo e Password' }
     ],
-    TECHNICAL: [
-        { key: 'error_logs', label: 'Gestione Errori di Sistema' },
-        { key: 'database_access', label: 'Gestione Diretta Database' }
-    ],
-    "ACCOUNT, PRIVACY & FINANZA": [
-        { key: 'personal_profile', label: 'Gestisci Profilo e Password' },
-        { key: 'partner_finance', label: 'Visualizza Fatturato Partner' },
-        { key: 'my_orders', label: 'Visualizza Ordini Assegnati' }
+    FINANZA: [
+        { key: 'view_global_finance', label: 'Visualizza Finanza Globale & Margini' },
+        { key: 'export_fiscal_data', label: 'Export Dati Fiscali (Commercialista)' },
+        { key: 'view_own_finance', label: 'Visualizza Propri Guadagni' }
     ]
 } as const;
 
@@ -39,17 +33,93 @@ export type PermissionKey = typeof PERMISSION_MATRIX[MacroArea][number]['key'];
 
 // Preset per creare/ripristinare ruoli base
 export const ROOT_ROLES = {
-    OPERATORE: {
+    ADMIN: {
+        name: 'ADMIN',
+        isSystem: true,
+        permissions: {
+            global_analytics: true,
+            system_settings: true,
+            view_all_orders: true,
+            edit_order_status: true,
+            assign_orders: true,
+            upload_proofs: true,
+            manage_global_catalog: true,
+            manage_users: true,
+            view_customer_data: true,
+            manage_own_profile: true,
+            view_global_finance: true,
+            export_fiscal_data: true
+        }
+    },
+    STAKEHOLDER: {
+        name: 'STAKEHOLDER', // Soci / Developer
+        isSystem: true,
+        permissions: {
+            global_analytics: true,
+            view_all_orders: true,
+            manage_own_profile: true,
+            view_global_finance: true
+        }
+    },
+    ACCOUNTANT: {
+        name: 'ACCOUNTANT',
+        isSystem: true,
+        permissions: {
+            export_fiscal_data: true,
+            manage_own_profile: true,
+            view_all_orders: true
+        }
+    },
+    OPERATOR: {
         name: 'OPERATOR',
         isSystem: true,
         permissions: {
-            view_orders: true,
-            change_status: true,
-            edit_delivery: true,
-            assign_florist: true,
-            customer_data: true,
-            upload_photos: true,
-            personal_profile: true
+            view_all_orders: true,
+            edit_order_status: true,
+            assign_orders: true,
+            upload_proofs: true,
+            manage_global_catalog: true,
+            manage_own_profile: true,
+            view_customer_data: true
+        }
+    },
+    FLORIST: {
+        name: 'FLORIST',
+        isSystem: true,
+        permissions: {
+            view_assigned_orders: true,
+            edit_order_status: true,
+            upload_proofs: true,
+            manage_own_inventory: true,
+            manage_own_profile: true,
+            view_own_finance: true
+        }
+    },
+    AGENCY: {
+        name: 'AGENCY',
+        isSystem: true,
+        permissions: {
+            view_assigned_orders: true,
+            upload_proofs: true,
+            manage_own_profile: true,
+            view_own_finance: true
+        }
+    },
+    MUNICIPALITY: {
+        name: 'MUNICIPALITY', // Comuni
+        isSystem: true,
+        permissions: {
+            view_cemetery_data: true,
+            view_assigned_orders: true, // Abbonamenti
+            manage_own_profile: true
+        }
+    },
+    USER: {
+        name: 'USER',
+        isSystem: true,
+        permissions: {
+            view_assigned_orders: true,
+            manage_own_profile: true
         }
     }
 };

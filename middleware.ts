@@ -177,7 +177,7 @@ export function middleware(request: NextRequest) {
             );
         }
 
-        if (userRole === 'SUPER_ADMIN') {
+        if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
             return applyDashboardSecurityHeaders(request, NextResponse.next());
         }
 
@@ -185,22 +185,10 @@ export function middleware(request: NextRequest) {
             ? new URL('/dashboard', request.nextUrl.origin)
             : new URL('/dashboard', dashboardOrigin);
 
-        if (userRole === 'OPERATOR') {
-            if (pathname.startsWith('/dashboard/orders') || pathname === '/dashboard') {
-                return applyDashboardSecurityHeaders(request, NextResponse.next());
-            }
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
-        }
-
-        if (userRole === 'PARTNER_FLORIST') {
-            if (pathname.startsWith('/dashboard/orders') || pathname === '/dashboard') {
-                return applyDashboardSecurityHeaders(request, NextResponse.next());
-            }
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
-        }
-
-        if (userRole === 'MARKETING_MANAGER') {
-            if (pathname.startsWith('/dashboard/blog') || pathname === '/dashboard') {
+        const ordersAccessRoles = ['STAKEHOLDER', 'ACCOUNTANT', 'OPERATOR', 'FLORIST', 'AGENCY', 'MUNICIPALITY'];
+        
+        if (ordersAccessRoles.includes(userRole)) {
+            if (pathname.startsWith('/dashboard/orders') || pathname === '/dashboard' || pathname.startsWith('/dashboard/profile')) {
                 return applyDashboardSecurityHeaders(request, NextResponse.next());
             }
             return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));

@@ -15,14 +15,16 @@ export async function ensureSystemRoles(prisma: PrismaClient): Promise<void> {
         },
     });
 
-    const operator = ROOT_ROLES.OPERATORE;
-    await prisma.role.upsert({
-        where: { name: operator.name },
-        update: { isSystem: true, permissions: operator.permissions },
-        create: {
-            name: operator.name,
-            isSystem: operator.isSystem,
-            permissions: operator.permissions,
-        },
-    });
+    for (const key in ROOT_ROLES) {
+        const role = ROOT_ROLES[key as keyof typeof ROOT_ROLES];
+        await prisma.role.upsert({
+            where: { name: role.name },
+            update: { isSystem: true, permissions: role.permissions },
+            create: {
+                name: role.name,
+                isSystem: role.isSystem,
+                permissions: role.permissions,
+            },
+        });
+    }
 }

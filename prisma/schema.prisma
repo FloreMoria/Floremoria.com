@@ -11,8 +11,12 @@ datasource db {
 enum UserRole {
   USER
   OPERATOR
-  MARKETING_MANAGER
-  PARTNER_FLORIST
+  FLORIST
+  AGENCY
+  MUNICIPALITY
+  ACCOUNTANT
+  STAKEHOLDER
+  ADMIN
   SUPER_ADMIN
 }
 
@@ -28,19 +32,21 @@ model Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  uniqueCode    String?   @unique // Codice parlante UT- (es. UT-LOM-BG-001)
-  email         String    @unique
-  name          String?
-  roleId        String?
-  /** Elevazione Super Admin: impostabile solo dallo script offline master-key. */
-  systemRole    UserRole  @default(USER) @map("system_role")
-  company       String?
-  phone         String?
-  vatNumber     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  roleExpiresAt DateTime?
+  id              String          @id @default(cuid())
+  uniqueCode      String?         @unique // Codice parlante UT- (es. UT-LOM-BG-001)
+  email           String          @unique
+  name            String?
+  roleId          String?
+  /**
+   * Elevazione Super Admin: impostabile solo dallo script offline master-key.
+   */
+  systemRole      UserRole        @default(USER) @map("system_role")
+  company         String?
+  phone           String?
+  vatNumber       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  roleExpiresAt   DateTime?
   deletedAt       DateTime?
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
@@ -48,20 +54,20 @@ model User {
 }
 
 model DeceasedProfile {
-  id           String   @id @default(cuid())
-  uniqueCode   String?  @unique
-  fullName     String
-  cemeteryCity String
-  cemeteryName String?
-  verifiedNotes String? @db.Text
-  orders       Order[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  uniqueCode    String?  @unique
+  fullName      String
+  cemeteryCity  String
+  cemeteryName  String?
+  verifiedNotes String?  @db.Text
+  orders        Order[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Order {
-  id                     String        @id @default(cuid())
-  status                 OrderStatus   @default(PENDING)
+  id                     String            @id @default(cuid())
+  status                 OrderStatus       @default(PENDING)
   userId                 String?
   deceasedName           String
   deceasedBirthDate      DateTime?
@@ -71,34 +77,38 @@ model Order {
   gravePosition          String?
   deliveryDate           DateTime?
   totalPriceCents        Int
-  currency               String        @default("EUR")
-  photos                 String[]      @default([])
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  currency               String            @default("EUR")
+  photos                 String[]          @default([])
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
   customerPhone          String?
   ticketMessage          String?
   buyerCity              String?
   buyerCountry           String?
   buyerFullName          String?
   buyerEmail             String?
-  isRecurring            Boolean       @default(false)
+  isRecurring            Boolean           @default(false)
   deletedAt              DateTime?
   additionalInstructions String?
   funeralDate            DateTime?
   latitude               Float?
   longitude              Float?
   partnerId              String?
-  /** Ragione sociale o nome agenzia lato partner (AnnunciFunebri / integrazioni B2B). */
-  agencyName             String?       @map("agency_name") @db.VarChar(255)
-  /** Email azienda partner (handoff da siti esterni) per notifiche / rendicontazione. */
-  partnerNotifyEmail     String?       @map("partner_notify_email") @db.VarChar(255)
-  partnerPaymentStatus   PaymentStatus @default(UNPAID)
-  orderNumber            String?       @unique
-  deliveryProvince       String?       @db.VarChar(2)
+  /**
+   * Ragione sociale o nome agenzia lato partner (AnnunciFunebri / integrazioni B2B).
+   */
+  agencyName             String?           @map("agency_name") @db.VarChar(255)
+  /**
+   * Email azienda partner (handoff da siti esterni) per notifiche / rendicontazione.
+   */
+  partnerNotifyEmail     String?           @map("partner_notify_email") @db.VarChar(255)
+  partnerPaymentStatus   PaymentStatus     @default(UNPAID)
+  orderNumber            String?           @unique
+  deliveryProvince       String?           @db.VarChar(2)
   deceasedProfileId      String?
-  deceasedProfile        DeceasedProfile? @relation(fields: [deceasedProfileId], references: [id])
-  partner                Partner?      @relation(fields: [partnerId], references: [id])
-  user                   User?         @relation(fields: [userId], references: [id])
+  deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
+  partner                Partner?          @relation(fields: [partnerId], references: [id])
+  user                   User?             @relation(fields: [userId], references: [id])
   items                  OrderItem[]
   offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
@@ -159,19 +169,19 @@ model ProductImage {
 }
 
 model Offer {
-  id        String    @id @default(cuid())
-  name      String
-  code      String?   @unique
-  type      OfferType
-  value     Int
-  maxUses   Int?
-  startsAt  DateTime?
-  endsAt    DateTime?
-  isActive  Boolean   @default(true)
-  rulesJson Json?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id          String            @id @default(cuid())
+  name        String
+  code        String?           @unique
+  type        OfferType
+  value       Int
+  maxUses     Int?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean           @default(true)
+  rulesJson   Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
   redemptions OfferRedemption[]
 }
 
@@ -211,34 +221,36 @@ model NewsletterLog {
 }
 
 model Partner {
-  id             String        @id @default(cuid())
-  coverageArea   String?
-  address        String?
-  activeOrders   Int           @default(0)
-  adminRating    Float         @default(5.0)
-  internalNotes  String?
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  iban           String?
-  whatsappNumber String?
-  deletedAt      DateTime?
-  pecAddress     String?
-  sdiCode        String?
-  taxCode        String?
-  vatNumber      String?
-  ownerName      String
-  shopName       String
-  paymentStatus  PaymentStatus @default(UNPAID)
-  province       String?       @db.VarChar(2)
-  uniqueCode     String?       @unique
-  orders              Order[]
-  deliveryProofs      DeliveryProof[]
-  handoffSessions     PartnerHandoffSession[]
-  apiCredentials      PartnerApiCredential[]
+  id              String                  @id @default(cuid())
+  coverageArea    String?
+  address         String?
+  activeOrders    Int                     @default(0)
+  adminRating     Float                   @default(5.0)
+  internalNotes   String?
+  isActive        Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  iban            String?
+  whatsappNumber  String?
+  deletedAt       DateTime?
+  pecAddress      String?
+  sdiCode         String?
+  taxCode         String?
+  vatNumber       String?
+  ownerName       String
+  shopName        String
+  paymentStatus   PaymentStatus           @default(UNPAID)
+  province        String?                 @db.VarChar(2)
+  uniqueCode      String?                 @unique
+  orders          Order[]
+  deliveryProofs  DeliveryProof[]
+  handoffSessions PartnerHandoffSession[]
+  apiCredentials  PartnerApiCredential[]
 }
 
-/** Dati inviati da siti partner (API legacy `order-data`); scambio via `externalKey` in query su checkout. */
+/**
+ * Dati inviati da siti partner (API legacy `order-data`); scambio via `externalKey` in query su checkout.
+ */
 model PartnerHandoffSession {
   id          String   @id @default(cuid())
   externalKey String   @unique @map("external_key") @db.VarChar(64)
@@ -252,7 +264,9 @@ model PartnerHandoffSession {
   @@map("partner_handoff_sessions")
 }
 
-/** Credenziali API per `POST /api/external/order-data` senza variabili Vercel (chiave pubblica + segreto). */
+/**
+ * Credenziali API per `POST /api/external/order-data` senza variabili Vercel (chiave pubblica + segreto).
+ */
 model PartnerApiCredential {
   id         String    @id @default(cuid())
   partnerId  String    @map("partner_id")
@@ -345,8 +359,8 @@ enum OfferType {
 }
 
 model DeliveryProof {
-  id              String    @id @default(cuid())
-  orderId         String    @unique
+  id              String              @id @default(cuid())
+  orderId         String              @unique
   partnerId       String
   userId          String?
   photoBeforeUrl  String?
@@ -356,8 +370,8 @@ model DeliveryProof {
   gpsLatitude     Float?
   gpsLongitude    Float?
   status          DeliveryProofStatus @default(PENDING)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   order   Order   @relation(fields: [orderId], references: [id])
   partner Partner @relation(fields: [partnerId], references: [id])

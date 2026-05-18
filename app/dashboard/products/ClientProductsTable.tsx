@@ -210,28 +210,44 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         const catA = a.category?.name || '';
         const catB = b.category?.name || '';
 
-        // 1. Group by Category: Fiori sulle Tombe first, Per il Funerale second
-        if (catA === 'Fiori sulle Tombe' && catB !== 'Fiori sulle Tombe') return -1;
-        if (catB === 'Fiori sulle Tombe' && catA !== 'Fiori sulle Tombe') return 1;
-        if (catA === 'Per il Funerale' && catB !== 'Per il Funerale') return -1;
-        if (catB === 'Per il Funerale' && catA !== 'Per il Funerale') return 1;
+        const getCategoryRank = (cat: string) => {
+            if (cat === 'Fiori sulle Tombe') return 1;
+            if (cat === 'Per il Funerale') return 2;
+            return 3;
+        };
 
-        // Same category, sort by specific rules
+        const rankA = getCategoryRank(catA);
+        const rankB = getCategoryRank(catB);
+
+        if (rankA !== rankB) {
+            return rankA - rankB;
+        }
+
+        // 1. Categoria: Fiori sulle Tombe
         if (catA === 'Fiori sulle Tombe') {
+            const isFotoA = a.name.toLowerCase().includes('foto stato');
+            const isFotoB = b.name.toLowerCase().includes('foto stato');
+
+            if (isFotoA && !isFotoB) return 1;
+            if (!isFotoA && isFotoB) return -1;
+            if (isFotoA && isFotoB) return 0;
+
             const isAccessoryA = a.name === 'Lumino' || a.name === 'Messaggio';
             const isAccessoryB = b.name === 'Lumino' || b.name === 'Messaggio';
 
-            // Push accessories to the bottom
             if (isAccessoryA && !isAccessoryB) return 1;
             if (!isAccessoryA && isAccessoryB) return -1;
 
-            if (isAccessoryA && isAccessoryB) {
-                // Keep ascending price specifically for accessories too
-                return a.basePriceCents - b.basePriceCents;
-            }
+            return a.basePriceCents - b.basePriceCents;
         }
 
-        // 2. Sort by Price Ascending (Lowest to Highest)
+        // 2. Categoria: Per il Funerale
+        if (catA === 'Per il Funerale') {
+            // Ordinamento decrescente: dal più costoso al più economico
+            return b.basePriceCents - a.basePriceCents;
+        }
+
+        // Default sorting per altre categorie (Piante in vaso ecc.)
         return a.basePriceCents - b.basePriceCents;
     }).filter(p => {
         const matchSearch = p.name.toLowerCase().includes(filterSearch.toLowerCase()) || (p.shortDescription || '').toLowerCase().includes(filterSearch.toLowerCase());
@@ -313,17 +329,15 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                             ) : sortedProducts.map(product => (
                                 <tr key={product.id} onClick={() => openDrawer(product)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
                                     <td className="py-3 px-4">
-                                        <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                                            {(() => {
-                                                if (product.id === 'FT-001') {
-                                                    console.log('FT-001 mediaUrl is exactly:', product.mediaUrl);
-                                                }
-                                                return product.mediaUrl ? (
-                                                    <Image src={product.mediaUrl} alt={product.name} width={40} height={40} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <ImageIcon size={16} className="text-gray-400" />
-                                                );
-                                            })()}
+                                        <div className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative bg-white">
+                                            {product.mediaUrl ? (
+                                                <Image src={product.mediaUrl} alt={product.name} fill sizes="48px" className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-amber-50 flex flex-col items-center justify-center border-amber-200 border-dashed border hover:bg-amber-100 transition-colors" title="Manca foto! Clicca per caricare">
+                                                    <ImageIcon size={16} className="text-amber-500 mb-0.5" />
+                                                    <span className="text-[8px] font-bold text-amber-700 uppercase tracking-tighter leading-none">Carica</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="py-3 px-4">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PERMISSION_MATRIX } from '@/lib/rbac';
-import { Shield, Lock, Users, Save, Check } from 'lucide-react';
+import { Shield, Lock, Users, Save, Check, Trash2 } from 'lucide-react';
 
 interface Role {
     id: string;
@@ -113,10 +113,27 @@ export default function RolesMatrixClient() {
         }
     };
 
+    const handleDeleteRole = async (roleId: string, roleName: string) => {
+        if (!confirm(`Sei sicuro di voler eliminare il ruolo "${roleName}"?`)) return;
+        setIsSaving(true);
+        try {
+            const res = await fetch(`/api/admin/roles?id=${roleId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Impossibile eliminare il ruolo.');
+            setRoles(roles.filter(r => r.id !== roleId));
+            setSaveSuccess(`Ruolo "${roleName}" eliminato.`);
+            setTimeout(() => setSaveSuccess(''), 3000);
+        } catch (err: any) {
+            console.error(err);
+            alert(err.message || 'Errore durante eliminazione');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     if (isLoading) return <div className="p-10 flex justify-center items-center"><div className="animate-pulse w-8 h-8 rounded-full border-2 border-fm-gold border-t-transparent animate-spin" /></div>;
 
     return (
-        <div className="max-w-7xl mx-auto space-y-12 pb-16">
+        <div className="w-full px-5 md:px-6 mx-auto space-y-12 pb-16">
 
             {/* INTESTAZIONE */}
             <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 pb-6 border-b border-gray-100">
@@ -177,38 +194,7 @@ export default function RolesMatrixClient() {
                 )}
             </div>
 
-            {/* Creazione ruolo permanente (POST /api/admin/roles) */}
-            <div className="bg-white rounded-[20px] border border-gray-100 shadow-sm p-5 md:p-6">
-                <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">
-                    Nuovo ruolo definitivo
-                </h2>
-                <p className="text-sm text-fm-muted mb-4">
-                    Crea un ruolo permanente nel database (non è accesso TTL). Dopo il salvataggio, imposta i permessi nella matrice sotto.
-                </p>
-                <form onSubmit={handleCreateRole} className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                    <div className="flex-1">
-                        <label htmlFor="permanent-role-name" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            Nome ruolo
-                        </label>
-                        <input
-                            id="permanent-role-name"
-                            type="text"
-                            value={newRoleName}
-                            onChange={(e) => setNewRoleName(e.target.value)}
-                            placeholder="es. OPERATORE_ORDINI"
-                            className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold p-3 outline-none shadow-sm"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={!newRoleName.trim() || isSaving}
-                        className="inline-flex items-center justify-center gap-2 bg-fm-gold hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed sm:mb-0"
-                    >
-                        <Save size={16} />
-                        {isSaving ? 'Salvataggio...' : 'Salva Ruolo'}
-                    </button>
-                </form>
-            </div>
+            {/* Il box "Nuovo ruolo definitivo" è stato rimosso in favore di quello nell'header */}
 
             {/* MATRICE DEI PERMESSI - Tabellone Orizzontale Scrollabile */}
             <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative">
@@ -216,14 +202,24 @@ export default function RolesMatrixClient() {
                     <table className="w-full text-left font-body">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100">
-                                <th className="p-6 sticky left-0 bg-gray-50 z-10 w-64 uppercase tracking-wider text-xs font-semibold text-gray-400">
+                                <th className="p-4 sticky left-0 bg-gray-50 z-10 w-48 uppercase tracking-wider text-[11px] font-semibold text-gray-400 shadow-[1px_0_0_0_rgba(243,244,246,1)]">
                                     Funzionalità & Macro-Aree
                                 </th>
                                 {roles.map(role => (
-                                    <th key={role.id} className="p-6 text-center border-l border-gray-50 min-w-[160px]">
-                                        <div className="flex flex-col items-center gap-1.5">
-                                            {role.isSystem ? <Lock size={14} className="text-fm-rose/70" /> : <Shield size={14} className="text-fm-gold/60" />}
-                                            <span className="font-display font-semibold text-gray-800 tracking-tight text-[15px]">{role.name}</span>
+                                    <th key={role.id} className="p-3 text-center border-l border-gray-50 min-w-[100px] relative group">
+                                        {!role.isSystem && (
+                                            <button 
+                                                onClick={() => handleDeleteRole(role.id, role.name)}
+                                                className="absolute top-1 right-1 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Elimina ruolo"
+                                                disabled={isSaving}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                        <div className="flex flex-col items-center gap-1">
+                                            {role.isSystem ? <Lock size={12} className="text-fm-rose/70" /> : <Shield size={12} className="text-fm-gold/60" />}
+                                            <span className="font-display font-semibold text-gray-800 tracking-tight text-[12px] md:text-[13px] break-all">{role.name}</span>
                                         </div>
                                     </th>
                                 ))}
@@ -242,8 +238,8 @@ export default function RolesMatrixClient() {
                                     {/* Righe dei Permessi Specifici */}
                                     {permissions.map((perm) => (
                                         <tr key={perm.key} className="hover:bg-gray-50/30 transition-colors">
-                                            <td className="p-5 pl-8 sticky left-0 bg-white border-r border-gray-50 w-64">
-                                                <span className="text-sm text-gray-700 font-medium">{perm.label}</span>
+                                            <td className="p-3 pl-4 sticky left-0 bg-white border-r border-gray-50 w-48 shadow-[1px_0_0_0_rgba(249,250,251,1)]">
+                                                <span className="text-[12px] text-gray-700 font-medium leading-tight block">{perm.label}</span>
                                             </td>
 
                                             {roles.map(role => {
@@ -251,7 +247,7 @@ export default function RolesMatrixClient() {
                                                 const toggleDisabled = role.name === 'SUPER_ADMIN';
 
                                                 return (
-                                                    <td key={role.id} className="p-5 border-l border-gray-50 text-center relative">
+                                                    <td key={role.id} className="p-3 border-l border-gray-50 text-center relative">
                                                         {toggleDisabled ? (
                                                             <div className="inline-flex items-center justify-center w-11 h-6 bg-gray-100 rounded-full border border-gray-200" title="Controllo esclusivo di sistema (Sempre Attivo)">
                                                                 <Lock size={12} className="text-gray-400" />

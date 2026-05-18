@@ -84,3 +84,34 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: 'Errore durante aggiornamento permessi' }, { status: 500 });
     }
 }
+
+export async function DELETE(request: Request) {
+    const denied = await requireSuperAdminApi();
+    if (denied) return denied;
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID ruolo mancante.' }, { status: 400 });
+        }
+
+        const role = await prisma.role.findUnique({ where: { id } });
+
+        if (!role) {
+            return NextResponse.json({ error: 'Ruolo non trovato.' }, { status: 404 });
+        }
+
+        if (role.isSystem) {
+            return NextResponse.json({ error: 'Non puoi eliminare un ruolo di sistema.' }, { status: 403 });
+        }
+
+        await prisma.role.delete({ where: { id } });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting role:', error);
+        return NextResponse.json({ error: 'Errore durante eliminazione ruolo' }, { status: 500 });
+    }
+}

@@ -133,45 +133,45 @@ export default function RolesMatrixClient() {
     if (isLoading) return <div className="p-10 flex justify-center items-center"><div className="animate-pulse w-8 h-8 rounded-full border-2 border-fm-gold border-t-transparent animate-spin" /></div>;
 
     return (
-        <div className="w-full px-5 md:px-6 mx-auto space-y-12 pb-16">
+        <div className="w-full mx-auto space-y-16 pb-24">
 
             {/* INTESTAZIONE */}
-            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 pb-6 border-b border-gray-100">
-                <div className="space-y-2">
-                    <h1 className="text-3xl font-display font-semibold text-gray-900 flex items-center gap-3">
-                        <Shield className="text-fm-gold" size={32} />
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 pb-8 border-b border-gray-200/60">
+                <div className="space-y-3">
+                    <h1 className="text-4xl md:text-5xl font-display font-bold text-gray-900 flex items-center gap-4">
+                        <Shield className="text-fm-gold" size={40} />
                         Gestione Ruoli & Permessi
                     </h1>
-                    <p className="text-fm-muted font-body text-lg">
+                    <p className="text-gray-500 font-body text-xl max-w-2xl">
                         Stabilisci i livelli di accesso (RBAC) per i partner e i membri del team sulla Dashboard.
                     </p>
                 </div>
 
                 <form
                     onSubmit={handleCreateRole}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 sm:p-2 rounded-xl border border-gray-200 shadow-sm w-full md:w-auto"
+                    className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white p-4 sm:p-2 rounded-2xl border border-gray-200 shadow-md w-full md:w-auto"
                 >
                     <input
                         type="text"
                         value={newRoleName}
                         onChange={(e) => setNewRoleName(e.target.value)}
-                        placeholder="Nome nuovo ruolo (permanente)"
-                        className="flex-1 min-w-[200px] bg-transparent border border-gray-100 sm:border-none outline-none font-body px-3 py-2 sm:py-0 text-sm focus:ring-2 focus:ring-fm-gold/30 rounded-lg text-gray-800"
+                        placeholder="Nome nuovo ruolo (es. LOGISTICA)"
+                        className="flex-1 min-w-[280px] bg-transparent border border-gray-100 sm:border-none outline-none font-body px-4 py-3 sm:py-2 text-base focus:ring-2 focus:ring-fm-gold/30 rounded-xl text-gray-900 placeholder:text-gray-400"
                         aria-label="Nome ruolo definitivo"
                     />
                     <button
                         type="submit"
                         disabled={!newRoleName.trim() || isSaving}
-                        className="inline-flex items-center justify-center gap-2 bg-fm-gold hover:bg-yellow-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        className="inline-flex items-center justify-center gap-3 bg-fm-gold hover:bg-yellow-600 text-white px-8 py-3.5 rounded-xl font-bold text-base transition-all shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                     >
                         {isSaving ? (
                             <>
-                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Salvataggio...
+                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Creazione...
                             </>
                         ) : (
                             <>
-                                <Save size={16} />
+                                <Save size={20} />
                                 Salva Ruolo
                             </>
                         )}
@@ -197,49 +197,54 @@ export default function RolesMatrixClient() {
             {/* Il box "Nuovo ruolo definitivo" è stato rimosso in favore di quello nell'header */}
 
             {/* MATRICE DEI PERMESSI - Tabellone Orizzontale Scrollabile */}
-            <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative">
-                <div className="overflow-x-auto w-full">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-200/60 overflow-hidden relative">
+                <div className="overflow-x-auto w-full custom-scrollbar">
                     <table className="w-full text-left font-body">
                         <thead>
-                            <tr className="bg-gray-50/50 border-b border-gray-100">
-                                <th className="p-4 sticky left-0 bg-gray-50 z-10 w-48 uppercase tracking-wider text-[11px] font-semibold text-gray-400 shadow-[1px_0_0_0_rgba(243,244,246,1)]">
+                            <tr className="bg-gray-50/80 border-b-2 border-gray-200">
+                                <th className="p-6 sticky left-0 bg-gray-50 z-10 min-w-[320px] uppercase tracking-widest text-[14px] font-bold text-gray-500 shadow-[2px_0_10px_0_rgba(0,0,0,0.03)]">
                                     Funzionalità & Macro-Aree
                                 </th>
                                 {roles.map(role => (
-                                    <th key={role.id} className="p-3 text-center border-l border-gray-50 min-w-[100px] relative group">
+                                    <th key={role.id} className="p-6 text-center border-l border-gray-200 min-w-[180px] relative group bg-white/50">
                                         {!role.isSystem && (
                                             <button 
                                                 onClick={() => handleDeleteRole(role.id, role.name)}
-                                                className="absolute top-1 right-1 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="absolute top-3 right-3 text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                                 title="Elimina ruolo"
                                                 disabled={isSaving}
                                             >
-                                                <Trash2 size={14} />
+                                                <Trash2 size={18} />
                                             </button>
                                         )}
-                                        <div className="flex flex-col items-center gap-1">
-                                            {role.isSystem ? <Lock size={12} className="text-fm-rose/70" /> : <Shield size={12} className="text-fm-gold/60" />}
-                                            <span className="font-display font-semibold text-gray-800 tracking-tight text-[12px] md:text-[13px] break-all">{role.name}</span>
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="p-3 rounded-full bg-gray-50 border border-gray-100 shadow-sm">
+                                                {role.isSystem ? <Lock size={20} className="text-fm-rose/80" /> : <Shield size={20} className="text-fm-gold" />}
+                                            </div>
+                                            <span className="font-display font-bold text-gray-900 tracking-tight text-[16px] md:text-[18px] break-all uppercase">{role.name}</span>
                                         </div>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-100">
                             {Object.entries(PERMISSION_MATRIX).map(([area, permissions]) => (
                                 <React.Fragment key={area}>
                                     {/* Intestazione Macro-Area */}
-                                    <tr className="bg-gray-50/20">
-                                        <td colSpan={roles.length + 1} className="p-4 font-semibold text-[13px] tracking-widest text-fm-gold uppercase">
-                                            {area}
+                                    <tr>
+                                        <td colSpan={roles.length + 1} className="py-8 px-6 font-display font-black text-[22px] tracking-wide text-gray-900 bg-gray-50/60 border-y border-gray-200">
+                                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-fm-gold to-yellow-600">
+                                                {area.replace(/_/g, ' ')}
+                                            </span>
                                         </td>
                                     </tr>
 
                                     {/* Righe dei Permessi Specifici */}
                                     {permissions.map((perm) => (
-                                        <tr key={perm.key} className="hover:bg-gray-50/30 transition-colors">
-                                            <td className="p-3 pl-4 sticky left-0 bg-white border-r border-gray-50 w-48 shadow-[1px_0_0_0_rgba(249,250,251,1)]">
-                                                <span className="text-[12px] text-gray-700 font-medium leading-tight block">{perm.label}</span>
+                                        <tr key={perm.key} className="hover:bg-gray-50/50 transition-colors group">
+                                            <td className="py-6 px-6 sticky left-0 bg-white group-hover:bg-gray-50/50 border-r border-gray-200 shadow-[2px_0_10px_0_rgba(0,0,0,0.02)]">
+                                                <span className="text-[16px] md:text-[17px] text-gray-800 font-semibold leading-tight block">{perm.label}</span>
+                                                <span className="text-[13px] text-gray-400 font-mono mt-1.5 block opacity-70">{perm.key}</span>
                                             </td>
 
                                             {roles.map(role => {
@@ -247,20 +252,20 @@ export default function RolesMatrixClient() {
                                                 const toggleDisabled = role.name === 'SUPER_ADMIN';
 
                                                 return (
-                                                    <td key={role.id} className="p-3 border-l border-gray-50 text-center relative">
+                                                    <td key={role.id} className="py-6 px-4 border-l border-gray-100 text-center relative align-middle">
                                                         {toggleDisabled ? (
-                                                            <div className="inline-flex items-center justify-center w-11 h-6 bg-gray-100 rounded-full border border-gray-200" title="Controllo esclusivo di sistema (Sempre Attivo)">
-                                                                <Lock size={12} className="text-gray-400" />
+                                                            <div className="inline-flex items-center justify-center w-14 h-8 bg-gray-100/80 rounded-full border border-gray-300 shadow-inner" title="Controllo esclusivo di sistema (Sempre Attivo)">
+                                                                <Lock size={16} className="text-gray-400" />
                                                             </div>
                                                         ) : (
                                                             <button
                                                                 disabled={isSaving}
                                                                 onClick={() => togglePermission(role.id, perm.key)}
-                                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isSaving ? 'opacity-50 cursor-wait' : ''} ${hasAccess ? 'bg-fm-gold' : 'bg-gray-200'}`}
+                                                                className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-fm-gold/20 shadow-inner ${isSaving ? 'opacity-50 cursor-wait' : ''} ${hasAccess ? 'bg-fm-gold' : 'bg-gray-200 hover:bg-gray-300'}`}
                                                                 role="switch"
                                                                 aria-checked={hasAccess}
                                                             >
-                                                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                                <span className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${hasAccess ? 'translate-x-6' : 'translate-x-0'}`} />
                                                             </button>
                                                         )}
                                                     </td>

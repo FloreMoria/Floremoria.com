@@ -20,11 +20,12 @@ const ROW1_BASE: HubButton[] = [
     { id: 'maps', label: 'Maps', icon: '📍', url: 'https://business.google.com' },
 ];
 
-const ROW2 = [
+const ROW2_BASE: HubButton[] = [
     { id: 'gmail', label: 'Gmail', icon: '📧', url: 'https://mail.google.com' },
     { id: 'gemini', label: 'Gemini', icon: '✨', url: 'https://gemini.google.com' },
     { id: 'meet', label: 'Meet', icon: '📹', url: 'https://meet.google.com' },
     { id: 'openreply', label: 'OpenReply', icon: '🤖', url: '#' },
+    { id: 'youdox', label: 'Fatture', icon: '📄', url: '#' },
 ];
 
 const ROW3 = [
@@ -44,6 +45,10 @@ export default function MissionControlHub({
 }) {
     const ROW1: HubButton[] = ROW1_BASE.map((btn) =>
         btn.id === 'ga4' ? { ...btn, url: ga4ConsoleUrl } : btn,
+    );
+    const youdoxUrl = process.env.NEXT_PUBLIC_YOUDOX_URL || '#';
+    const ROW2: HubButton[] = ROW2_BASE.map((btn) =>
+        btn.id === 'youdox' ? { ...btn, url: youdoxUrl } : btn,
     );
     const [states, setStates] = useState<Record<string, string>>({});
     
@@ -129,8 +134,8 @@ export default function MissionControlHub({
                     <div className="grid grid-cols-5 gap-3">
                         {ROW1.map(btn => <StatusButton key={btn.id} btn={btn} />)}
                     </div>
-                    {/* Row 2: 4 Buttons */}
-                    <div className="grid grid-cols-4 gap-3 md:px-12">
+                    {/* Row 2: 5 Buttons (simmetrica a righe 1 e 3) */}
+                    <div className="grid grid-cols-5 gap-3">
                         {ROW2.map(btn => <StatusButton key={btn.id} btn={btn} />)}
                     </div>
                     {/* Row 3: 5 Buttons */}

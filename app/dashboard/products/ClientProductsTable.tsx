@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Image as ImageIcon, Check, X, Tag, Euro, Package, XCircle, Filter, Download } from 'lucide-react';
-import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
+import { getCategoryDisplayName, getCategorySortRank } from '@/lib/categoryDisplayNames';
+import { getProductImageCandidates } from '@/lib/resolveDashboardProductImage';
 
 interface Category {
     id: string;
     name: string;
+    slug?: string;
 }
 
 interface Product {
     id: string;
+    slug: string;
     name: string;
     shortDescription: string | null;
     basePriceCents: number;
@@ -19,6 +22,54 @@ interface Product {
     mediaUrl: string | null;
     categoryId: string;
     category?: Category;
+    images?: { url: string }[];
+    manifestCover?: string | null;
+}
+
+function ProductThumbnail({ product }: { product: Product }) {
+    const candidates = useMemo(
+        () => getProductImageCandidates(product),
+        [product.id, product.slug, product.mediaUrl, product.manifestCover, product.images],
+    );
+    const [candidateIndex, setCandidateIndex] = useState(0);
+    const src = candidates[candidateIndex];
+
+    if (!src || candidateIndex >= candidates.length) {
+        return <ImageIcon size={16} className="text-gray-400" />;
+    }
+
+    return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={src}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setCandidateIndex((prev) => prev + 1)}
+        />
+    );
+}
+
+function DrawerImagePreview({ product, mediaUrl }: { product: Pick<Product, 'id' | 'slug' | 'manifestCover' | 'images'>; mediaUrl: string }) {
+    const candidates = useMemo(
+        () => (mediaUrl.trim() ? [mediaUrl.trim()] : getProductImageCandidates({ ...product, mediaUrl })),
+        [mediaUrl, product],
+    );
+    const [candidateIndex, setCandidateIndex] = useState(0);
+    const src = candidates[candidateIndex];
+
+    if (!src || candidateIndex >= candidates.length) {
+        return <ImageIcon size={32} className="mb-2 opacity-50" />;
+    }
+
+    return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={src}
+            alt="Anteprima"
+            className="w-20 h-20 rounded-xl object-cover mb-2 border border-gray-200"
+            onError={() => setCandidateIndex((prev) => prev + 1)}
+        />
+    );
 }
 
 interface ClientProductsTableProps {
@@ -45,6 +96,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
     // Form state
     const [formData, setFormData] = useState({
         id: '',
+        slug: '',
         name: '',
         shortDescription: '',
         basePriceCents: 0,
@@ -57,9 +109,10 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         if (product) {
             setFormData({
                 id: product.id,
+                slug: product.slug,
                 name: product.name,
                 shortDescription: product.shortDescription || '',
-                basePriceCents: product.basePriceCents / 100, // converte per l'editor
+                basePriceCents: product.basePriceCents / 100,
                 categoryId: product.categoryId || '',
                 mediaUrl: product.mediaUrl || '',
                 isActive: product.isActive ?? true
@@ -67,6 +120,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         } else {
             setFormData({
                 id: '',
+                slug: '',
                 name: '',
                 shortDescription: '',
                 basePriceCents: 0,
@@ -233,24 +287,14 @@ export default function ClientProductsTable({ initialProducts, initialCategories
 
     // Strict Sorting Logic
     const sortedProducts = [...products].sort((a, b) => {
-        const catA = a.category?.name?.toLowerCase() || '';
-        const catB = b.category?.name?.toLowerCase() || '';
-
-        const getCategoryRank = (cat: string) => {
-            if (cat.includes('fiori sulle tombe') || cat.includes('cimitero')) return 1;
-            if (cat.includes('fiori per funerali') || cat.includes('funerale')) return 2;
-            if (cat.includes('piccoli amici')) return 3;
-            return 4;
-        };
-
-        const rankA = getCategoryRank(catA);
-        const rankB = getCategoryRank(catB);
+        const rankA = getCategorySortRank(a.category);
+        const rankB = getCategorySortRank(b.category);
 
         if (rankA !== rankB) {
             return rankA - rankB;
         }
 
-        // 1. Categoria: Fiori sulle Tombe (Cimitero)
+        // Fiori sulle Tombe: bouquet economico → costoso, accessori, foto stato per ultima
         if (rankA === 1) {
             const isFotoA = a.name.toLowerCase().includes('foto stato');
             const isFotoB = b.name.toLowerCase().includes('foto stato');
@@ -268,13 +312,10 @@ export default function ClientProductsTable({ initialProducts, initialCategories
             return a.basePriceCents - b.basePriceCents;
         }
 
-        // 2. Categoria: Fiori per Funerali (Funerale)
         if (rankA === 2) {
-            // Ordinamento decrescente: dal più costoso al più economico
             return b.basePriceCents - a.basePriceCents;
         }
 
-        // Default sorting per altre categorie
         return a.basePriceCents - b.basePriceCents;
     }).filter(p => {
         const matchSearch = p.name.toLowerCase().includes(filterSearch.toLowerCase()) || (p.shortDescription || '').toLowerCase().includes(filterSearch.toLowerCase());
@@ -286,7 +327,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         const exportData = sortedProducts.map(p => ({
             ID: p.id,
             Nome: p.name,
-            Categoria: p.category?.name || 'Nessuna',
+            Categoria: getCategoryDisplayName(p.category),
             PrezzoEURO: (p.basePriceCents / 100).toFixed(2),
             Stato: p.isActive ? 'Attivo' : 'Inattivo'
         }));
@@ -357,11 +398,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 <tr key={product.id} onClick={() => openDrawer(product)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
                                     <td className="py-3 px-4">
                                         <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative">
-                                            {product.mediaUrl ? (
-                                                <Image src={product.mediaUrl} alt={product.name} fill sizes="48px" className="object-cover" />
-                                            ) : (
-                                                <ImageIcon size={16} className="text-gray-400" />
-                                            )}
+                                            <ProductThumbnail key={product.id} product={product} />
                                         </div>
                                     </td>
                                     <td className="py-3 px-4">
@@ -370,7 +407,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                     </td>
                                     <td className="py-3 px-4">
                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                                            <Tag size={12} /> {product.category?.name || 'Senza Categoria'}
+                                            <Tag size={12} /> {getCategoryDisplayName(product.category)}
                                         </span>
                                     </td>
                                     <td className="py-3 px-4 text-right">
@@ -481,18 +518,29 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                             if (file) await handleFileUpload(file);
                                         }} 
                                     />
-                                    {formData.mediaUrl ? (
-                                        <Image src={formData.mediaUrl} alt="Preview" width={80} height={80} className="w-20 h-20 rounded-xl object-cover mb-2 border border-gray-200" />
+                                    {(formData.mediaUrl || formData.slug || formData.id) ? (
+                                        <DrawerImagePreview
+                                            product={{
+                                                id: formData.id || 'preview',
+                                                slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                                                manifestCover: null,
+                                                images: [],
+                                            }}
+                                            mediaUrl={formData.mediaUrl}
+                                        />
                                     ) : (
                                         <ImageIcon size={32} className="mb-2 opacity-50" />
                                     )}
                                     <span className="text-[12px] font-semibold text-gray-700 mt-2">Trascina Immagine Qui o Clicca per Esplorare</span>
                                     <span className="text-[10px] font-medium text-gray-400 mt-1 uppercase">Supporta formati .webp, .jpg, .png</span>
                                 </label>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    Percorso Immagine / URL
+                                </label>
                                 <input
                                     type="text"
                                     value={formData.mediaUrl || ''}
-                                    placeholder="...o incolla direttamente URL Immagine (es: /images/products/ft-001.webp)"
+                                    placeholder="/images/products/lumino.webp oppure https://..."
                                     onChange={e => setFormData({ ...formData, mediaUrl: e.target.value })}
                                     className="w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all text-xs shadow-sm bg-gray-50"
                                 />
@@ -575,7 +623,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 >
                                     <option value="" disabled>Seleziona una categoria...</option>
                                     {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                        <option key={c.id} value={c.id}>{getCategoryDisplayName(c)}</option>
                                     ))}
                                 </select>
                             )}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { buildProductUpdateData } from '@/lib/dashboardProductApi';
 
 const prisma = new PrismaClient();
 
@@ -8,16 +9,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     try {
         const { id } = await context.params;
         const data = await request.json();
-        const slug = data.slug || data.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-        const updateData: any = { ...data };
-        if (updateData.basePriceCents !== undefined) updateData.basePriceCents = parseInt(updateData.basePriceCents, 10);
-        if (data.name) updateData.slug = slug;
+        const updateData = buildProductUpdateData(data);
 
         const updatedProduct = await prisma.product.update({
             where: { id },
             data: updateData,
-            include: { category: true }
+            include: {
+                category: true,
+                images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+            },
         });
 
         revalidatePath('/dashboard/products');

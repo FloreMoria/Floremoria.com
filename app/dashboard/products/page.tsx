@@ -1,6 +1,7 @@
 import React from 'react';
 import { PrismaClient } from '@prisma/client';
 import ClientProductsTable from './ClientProductsTable';
+import { getImagesFromFilesystem } from '@/lib/getImages';
 
 const prisma = new PrismaClient();
 
@@ -17,13 +18,21 @@ export default async function ProductsPage() {
         prisma.product.findMany({
             where: { deletedAt: null },
             orderBy: { sortOrder: 'asc' },
-            include: { category: true } // Carichiamo la relazione
+            include: {
+                category: true,
+                images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+            },
         }),
         prisma.category.findMany({
             where: { deletedAt: null },
             orderBy: { sortOrder: 'asc' }
         })
     ]);
+
+    const productsWithManifest = products.map((product) => ({
+        ...product,
+        manifestCover: getImagesFromFilesystem(product.slug)[0] ?? null,
+    }));
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -37,7 +46,7 @@ export default async function ProductsPage() {
             </header>
 
             {/* Interactive Client Component */}
-            <ClientProductsTable initialProducts={products} initialCategories={categories} />
+            <ClientProductsTable initialProducts={productsWithManifest} initialCategories={categories} />
         </div>
     );
 }

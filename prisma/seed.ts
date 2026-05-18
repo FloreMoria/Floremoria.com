@@ -6,11 +6,11 @@ const prisma = new PrismaClient();
 function categoryMeta(category?: 'cimitero' | 'funerale' | 'animali') {
     switch (category) {
         case 'funerale':
-            return { slug: 'funerale', name: 'Funerale' };
+            return { slug: 'funerale', name: 'Fiori per Funerali' };
         case 'animali':
             return { slug: 'animali', name: 'Piccoli Amici' };
         default:
-            return { slug: 'cimitero', name: 'Cimitero' };
+            return { slug: 'cimitero', name: 'Fiori sulle Tombe' };
     }
 }
 

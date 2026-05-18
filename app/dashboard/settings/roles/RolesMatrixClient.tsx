@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PERMISSION_MATRIX } from '@/lib/rbac';
-import { Shield, Plus, Lock, Users, Save, Check } from 'lucide-react';
+import { Shield, Lock, Users, Save, Check } from 'lucide-react';
 
 interface Role {
     id: string;
@@ -130,20 +130,34 @@ export default function RolesMatrixClient() {
                     </p>
                 </div>
 
-                <form onSubmit={handleCreateRole} className="flex items-center space-x-3 bg-white p-2 rounded-xl border border-gray-200 shadow-sm w-full md:w-auto">
+                <form
+                    onSubmit={handleCreateRole}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 sm:p-2 rounded-xl border border-gray-200 shadow-sm w-full md:w-auto"
+                >
                     <input
                         type="text"
                         value={newRoleName}
                         onChange={(e) => setNewRoleName(e.target.value)}
-                        placeholder="Nome Nuovo Ruolo"
-                        className="flex-1 bg-transparent border-none outline-none font-body px-3 text-sm focus:ring-0 text-gray-800"
+                        placeholder="Nome nuovo ruolo (permanente)"
+                        className="flex-1 min-w-[200px] bg-transparent border border-gray-100 sm:border-none outline-none font-body px-3 py-2 sm:py-0 text-sm focus:ring-2 focus:ring-fm-gold/30 rounded-lg text-gray-800"
+                        aria-label="Nome ruolo definitivo"
                     />
                     <button
                         type="submit"
                         disabled={!newRoleName.trim() || isSaving}
-                        className="bg-fm-gold hover:bg-yellow-600 text-white p-2 rounded-lg transition-colors flex:shrink-0 disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-2 bg-fm-gold hover:bg-yellow-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                     >
-                        <Plus size={18} />
+                        {isSaving ? (
+                            <>
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                Salvataggio...
+                            </>
+                        ) : (
+                            <>
+                                <Save size={16} />
+                                Salva Ruolo
+                            </>
+                        )}
                     </button>
                 </form>
             </div>
@@ -161,6 +175,39 @@ export default function RolesMatrixClient() {
                         <Check size={18} /> <span className="font-medium text-sm">{saveSuccess}</span>
                     </div>
                 )}
+            </div>
+
+            {/* Creazione ruolo permanente (POST /api/admin/roles) */}
+            <div className="bg-white rounded-[20px] border border-gray-100 shadow-sm p-5 md:p-6">
+                <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">
+                    Nuovo ruolo definitivo
+                </h2>
+                <p className="text-sm text-fm-muted mb-4">
+                    Crea un ruolo permanente nel database (non è accesso TTL). Dopo il salvataggio, imposta i permessi nella matrice sotto.
+                </p>
+                <form onSubmit={handleCreateRole} className="flex flex-col sm:flex-row gap-3 sm:items-end">
+                    <div className="flex-1">
+                        <label htmlFor="permanent-role-name" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            Nome ruolo
+                        </label>
+                        <input
+                            id="permanent-role-name"
+                            type="text"
+                            value={newRoleName}
+                            onChange={(e) => setNewRoleName(e.target.value)}
+                            placeholder="es. OPERATORE_ORDINI"
+                            className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold p-3 outline-none shadow-sm"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={!newRoleName.trim() || isSaving}
+                        className="inline-flex items-center justify-center gap-2 bg-fm-gold hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed sm:mb-0"
+                    >
+                        <Save size={16} />
+                        {isSaving ? 'Salvataggio...' : 'Salva Ruolo'}
+                    </button>
+                </form>
             </div>
 
             {/* MATRICE DEI PERMESSI - Tabellone Orizzontale Scrollabile */}

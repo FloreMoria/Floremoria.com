@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getGa4HealthState } from '@/lib/ga4/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export async function GET() {
     };
 
     const data = {
-        ga4: getRandState(0.9),
+        ga4: getGa4HealthState(),
         calendar: getRandState(0.95),
         ads: getRandState(0.8),
         merchant: getRandState(0.85),
@@ -24,7 +25,7 @@ export async function GET() {
         ig: getRandState(0.85),
         fb: getRandState(0.85),
         tiktok: getRandState(0.8),
-        yt: getRandState(0.9)
+        yt: getRandState(0.9),
     };
 
     return NextResponse.json(data);

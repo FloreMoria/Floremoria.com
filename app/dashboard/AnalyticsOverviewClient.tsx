@@ -5,12 +5,26 @@ import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, CartesianAxis
 } from 'recharts';
 import { AreaChart, Area } from 'recharts';
-import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info, Copy, Check } from 'lucide-react';
+import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info, Copy, Check, ExternalLink } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 import MissionControlHub from './MissionControlHub';
 
-export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], csvData = [], latestLogs = [] }: { ga4Data: any, initialOrders?: any[], csvData?: any[], latestLogs?: any[] }) {
+export default function AnalyticsOverviewClient({
+    ga4Data,
+    ga4ApiConfigured = false,
+    ga4ConsoleUrl = 'https://analytics.google.com',
+    initialOrders = [],
+    csvData = [],
+    latestLogs = [],
+}: {
+    ga4Data: any;
+    ga4ApiConfigured?: boolean;
+    ga4ConsoleUrl?: string;
+    initialOrders?: any[];
+    csvData?: any[];
+    latestLogs?: any[];
+}) {
     const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);
 
@@ -191,11 +205,20 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                                 Traffico GA4 non disponibile — Mission Control e ordini restano attivi
                             </p>
                             <p className={`mt-1 ${textMuted}`}>
-                                Sul server servono <code className="text-xs">GA4_PROPERTY_ID</code> (ID numerico API, es. 456714),
-                                il file <code className="text-xs">floremoria-456714-*.json</code> e permessi al service account. Il
-                                tag <code className="text-xs">{process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-GVL7FSLBDK'}</code> è
-                                solo per il sito, non per l&apos;API dashboard.
+                                Il tag <code className="text-xs">{process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-GVL7FSLBDK'}</code>{' '}
+                                sul sito è attivo. Per i grafici qui servono su Vercel:{' '}
+                                <code className="text-xs">GA4_PROPERTY_ID</code> (ID numerico in Admin → Impostazioni proprietà),{' '}
+                                <code className="text-xs">GA4_SERVICE_ACCOUNT_JSON</code> (chiave account di servizio). In GA4 collega il
+                                progetto Cloud e assegna il ruolo Analytics in IAM — non aggiungere la mail robot in &quot;Aggiungi utenti&quot;.
                             </p>
+                            <a
+                                href={ga4ConsoleUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`inline-flex mt-2 text-xs font-semibold underline ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}
+                            >
+                                Apri Google Analytics →
+                            </a>
                         </div>
                     </div>
                 )}
@@ -223,7 +246,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
 
                     {/* LEFT COL: Mission Control (65%) */}
                     <div className="lg:col-span-2 h-full flex flex-col min-h-0">
-                        <MissionControlHub orders={initialOrders} />
+                        <MissionControlHub orders={initialOrders} ga4ConsoleUrl={ga4ConsoleUrl} />
                     </div>
 
                     {/* RIGHT COL: Verbali/Log (35%) */}
@@ -329,6 +352,26 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                             )}
                         </div>
                     </div>
+                </div>
+
+                <section id="ga4-traffic" className="scroll-mt-24 space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className={`text-xl font-display font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                        Traffico GA4
+                    </h2>
+                    <a
+                        href={ga4ConsoleUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                            darkMode
+                                ? 'border-slate-600 text-slate-200 hover:bg-slate-800'
+                                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                        Tempo reale in Google Analytics
+                        <ExternalLink size={14} />
+                    </a>
                 </div>
 
                 {/* KPI OPERATIONAL (Top Row) */}
@@ -459,6 +502,7 @@ export default function AnalyticsOverviewClient({ ga4Data, initialOrders = [], c
                         </div>
                     </div>
                 </div>
+                </section>
 
             </div>
 

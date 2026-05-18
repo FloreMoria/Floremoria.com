@@ -6,6 +6,11 @@ import { resolve } from 'node:path';
  * Necessario per Prisma CLI: prisma.config.ts non legge .env.local da solo.
  */
 export function loadEnvFiles(cwd = process.cwd()): void {
+    /** Variabili già nel processo (es. `export DATABASE_URL=...neon`) non vanno sovrascritte da .env.local. */
+    const presetKeys = new Set(Object.keys(process.env));
+
+    const fromFiles: Record<string, string> = {};
+
     for (const name of ['.env', '.env.local']) {
         const p = resolve(cwd, name);
         if (!existsSync(p)) continue;
@@ -22,8 +27,13 @@ export function loadEnvFiles(cwd = process.cwd()): void {
             ) {
                 val = val.slice(1, -1);
             }
-            process.env[key] = val;
+            fromFiles[key] = val;
         }
+    }
+
+    for (const [key, val] of Object.entries(fromFiles)) {
+        if (presetKeys.has(key)) continue;
+        process.env[key] = val;
     }
 }
 

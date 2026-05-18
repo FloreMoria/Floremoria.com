@@ -3,8 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertCircle, CheckCircle2, LayoutGrid } from 'lucide-react';
 
-const ROW1 = [
-    { id: 'ga4', label: 'GA4', icon: '📈', url: 'https://analytics.google.com' },
+type HubButton = {
+    id: string;
+    label: string;
+    icon: string;
+    url: string;
+    /** Scroll alla sezione Traffico GA4 nella Overview */
+    scrollTarget?: string;
+};
+
+const ROW1_BASE: HubButton[] = [
+    { id: 'ga4', label: 'GA4', icon: '📈', url: 'https://analytics.google.com', scrollTarget: 'ga4-traffic' },
     { id: 'calendar', label: 'Calendar', icon: '📅', url: 'https://calendar.google.com' },
     { id: 'ads', label: 'Google Ads', icon: '🎯', url: 'https://ads.google.com' },
     { id: 'merchant', label: 'Merchant', icon: '🛍️', url: 'https://merchants.google.com' },
@@ -26,7 +35,16 @@ const ROW3 = [
     { id: 'yt', label: 'YouTube', icon: '▶️', url: 'https://youtube.com/studio' },
 ];
 
-export default function MissionControlHub({ orders }: { orders: any[] }) {
+export default function MissionControlHub({
+    orders,
+    ga4ConsoleUrl = 'https://analytics.google.com',
+}: {
+    orders: any[];
+    ga4ConsoleUrl?: string;
+}) {
+    const ROW1: HubButton[] = ROW1_BASE.map((btn) =>
+        btn.id === 'ga4' ? { ...btn, url: ga4ConsoleUrl } : btn,
+    );
     const [states, setStates] = useState<Record<string, string>>({});
     
     useEffect(() => {
@@ -55,13 +73,35 @@ export default function MissionControlHub({ orders }: { orders: any[] }) {
         }
     };
 
-    const StatusButton = ({ btn }: { btn: any }) => {
+    const StatusButton = ({ btn }: { btn: HubButton }) => {
         const state = states[btn.id] || 'green';
+
+        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+            if (!btn.scrollTarget) return;
+            e.preventDefault();
+            document.getElementById(btn.scrollTarget)?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+        };
+
         return (
-            <a 
-                href={btn.url}
-                target="_blank"
-                rel="noopener noreferrer"
+            <a
+                href={btn.scrollTarget ? `#${btn.scrollTarget}` : btn.url}
+                onClick={handleClick}
+                target={btn.scrollTarget ? undefined : '_blank'}
+                rel={btn.scrollTarget ? undefined : 'noopener noreferrer'}
+                title={
+                    btn.scrollTarget
+                        ? 'Vai alla sezione Traffico GA4 (clic destro → Apri GA4 in nuova scheda)'
+                        : btn.label
+                }
+                onContextMenu={(e) => {
+                    if (btn.scrollTarget) {
+                        e.preventDefault();
+                        window.open(btn.url, '_blank', 'noopener,noreferrer');
+                    }
+                }}
                 className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-300 w-full min-w-[70px] ${getColorClass(state)}`}
             >
                 <span className="text-xl sm:text-2xl mb-1.5">{btn.icon}</span>

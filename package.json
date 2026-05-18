@@ -19,7 +19,12 @@
     "log:verbale:daily": "tsx Script/daily-verbale-sync.ts",
     "pdf:volantino": "node Script/export-volantino-pdf.mjs",
     "master-key": "tsx scripts/master-key.ts",
-    "verify-super-admin": "tsx scripts/verify-super-admin.ts"
+    "verify-super-admin": "tsx scripts/verify-super-admin.ts",
+    "ga4:setup": "node scripts/ga4-setup-credentials.mjs",
+    "ga4:verify": "tsx scripts/verify-ga4-api.ts",
+    "ga4:vercel-env": "node scripts/ga4-print-vercel-env.mjs",
+    "ga4:oauth-setup": "node scripts/ga4-oauth-setup.mjs",
+    "ga4:list-properties": "node scripts/ga4-list-properties.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -202,26 +202,26 @@ export default function RolesMatrixClient() {
                     <table className="w-full text-left font-body">
                         <thead>
                             <tr className="bg-gray-50/80 border-b-2 border-gray-200">
-                                <th className="p-6 sticky left-0 bg-gray-50 z-10 min-w-[320px] uppercase tracking-widest text-[14px] font-bold text-gray-500 shadow-[2px_0_10px_0_rgba(0,0,0,0.03)]">
+                                <th className="p-3 sticky left-0 bg-gray-50 z-10 min-w-[240px] uppercase tracking-widest text-[11px] font-bold text-gray-500 shadow-[2px_0_10px_0_rgba(0,0,0,0.03)]">
                                     Funzionalità & Macro-Aree
                                 </th>
                                 {roles.map(role => (
-                                    <th key={role.id} className="p-6 text-center border-l border-gray-200 min-w-[180px] relative group bg-white/50">
+                                    <th key={role.id} className="p-3 text-center border-l border-gray-200 min-w-[110px] relative group bg-white/50">
                                         {!role.isSystem && (
                                             <button 
                                                 onClick={() => handleDeleteRole(role.id, role.name)}
-                                                className="absolute top-3 right-3 text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                                                className="absolute top-1 right-1 text-red-300 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                                 title="Elimina ruolo"
                                                 disabled={isSaving}
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={14} />
                                             </button>
                                         )}
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="p-3 rounded-full bg-gray-50 border border-gray-100 shadow-sm">
-                                                {role.isSystem ? <Lock size={20} className="text-fm-rose/80" /> : <Shield size={20} className="text-fm-gold" />}
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="p-2 rounded-full bg-gray-50 border border-gray-100 shadow-sm">
+                                                {role.isSystem ? <Lock size={14} className="text-fm-rose/80" /> : <Shield size={14} className="text-fm-gold" />}
                                             </div>
-                                            <span className="font-display font-bold text-gray-900 tracking-tight text-[16px] md:text-[18px] break-all uppercase">{role.name}</span>
+                                            <span className="font-display font-bold text-gray-900 tracking-tight text-[12px] md:text-[13px] break-all uppercase leading-tight">{role.name}</span>
                                         </div>
                                     </th>
                                 ))}
@@ -232,7 +232,7 @@ export default function RolesMatrixClient() {
                                 <React.Fragment key={area}>
                                     {/* Intestazione Macro-Area */}
                                     <tr>
-                                        <td colSpan={roles.length + 1} className="py-8 px-6 font-display font-black text-[22px] tracking-wide text-gray-900 bg-gray-50/60 border-y border-gray-200">
+                                        <td colSpan={roles.length + 1} className="py-4 px-4 font-display font-black text-[16px] tracking-wide text-gray-900 bg-gray-50/60 border-y border-gray-200">
                                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-fm-gold to-yellow-600">
                                                 {area.replace(/_/g, ' ')}
                                             </span>
@@ -242,9 +242,9 @@ export default function RolesMatrixClient() {
                                     {/* Righe dei Permessi Specifici */}
                                     {permissions.map((perm) => (
                                         <tr key={perm.key} className="hover:bg-gray-50/50 transition-colors group">
-                                            <td className="py-6 px-6 sticky left-0 bg-white group-hover:bg-gray-50/50 border-r border-gray-200 shadow-[2px_0_10px_0_rgba(0,0,0,0.02)]">
-                                                <span className="text-[16px] md:text-[17px] text-gray-800 font-semibold leading-tight block">{perm.label}</span>
-                                                <span className="text-[13px] text-gray-400 font-mono mt-1.5 block opacity-70">{perm.key}</span>
+                                            <td className="py-3 px-4 sticky left-0 bg-white group-hover:bg-gray-50/50 border-r border-gray-200 shadow-[2px_0_10px_0_rgba(0,0,0,0.02)]">
+                                                <span className="text-[13px] md:text-[14px] text-gray-800 font-semibold leading-tight block">{perm.label}</span>
+                                                <span className="text-[11px] text-gray-400 font-mono mt-0.5 block opacity-70">{perm.key}</span>
                                             </td>
 
                                             {roles.map(role => {
@@ -252,20 +252,20 @@ export default function RolesMatrixClient() {
                                                 const toggleDisabled = role.name === 'SUPER_ADMIN';
 
                                                 return (
-                                                    <td key={role.id} className="py-6 px-4 border-l border-gray-100 text-center relative align-middle">
+                                                    <td key={role.id} className="py-3 px-2 border-l border-gray-100 text-center relative align-middle">
                                                         {toggleDisabled ? (
-                                                            <div className="inline-flex items-center justify-center w-14 h-8 bg-gray-100/80 rounded-full border border-gray-300 shadow-inner" title="Controllo esclusivo di sistema (Sempre Attivo)">
-                                                                <Lock size={16} className="text-gray-400" />
+                                                            <div className="inline-flex items-center justify-center w-11 h-6 bg-gray-100/80 rounded-full border border-gray-300 shadow-inner" title="Controllo esclusivo di sistema (Sempre Attivo)">
+                                                                <Lock size={12} className="text-gray-400" />
                                                             </div>
                                                         ) : (
                                                             <button
                                                                 disabled={isSaving}
                                                                 onClick={() => togglePermission(role.id, perm.key)}
-                                                                className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-fm-gold/20 shadow-inner ${isSaving ? 'opacity-50 cursor-wait' : ''} ${hasAccess ? 'bg-fm-gold' : 'bg-gray-200 hover:bg-gray-300'}`}
+                                                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-fm-gold/20 shadow-inner ${isSaving ? 'opacity-50 cursor-wait' : ''} ${hasAccess ? 'bg-fm-gold' : 'bg-gray-200 hover:bg-gray-300'}`}
                                                                 role="switch"
                                                                 aria-checked={hasAccess}
                                                             >
-                                                                <span className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${hasAccess ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
                                                             </button>
                                                         )}
                                                     </td>

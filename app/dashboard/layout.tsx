@@ -47,11 +47,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         <TopNavLink href="/dashboard/logs" label="Log di Sistema" />
                         <TopNavLink href="/dashboard/communications" label="Messaggi" />
                         <TopNavLink href="/dashboard/offers" label="Buoni" />
-                        {isSuperAdmin ? (
-                            <TopNavLink href="/admin-panel" label="Admin Panel" />
-                        ) : null}
-                        {isSuperAdmin ? (
-                            <TopNavLink href="/admin-panel/roles" label="Ruoli" />
+                        {['SUPER_ADMIN', 'ADMIN'].includes(userRole) ? (
+                            <TopNavLink href="/admin-panel/roles" label="Gestione Ruoli" />
                         ) : null}
                     </nav>
                 </div>

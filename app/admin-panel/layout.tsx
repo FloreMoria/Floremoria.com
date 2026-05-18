@@ -14,7 +14,7 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
     const cookieStore = await cookies();
     const userRole = cookieStore.get('fm_user_role')?.value;
 
-    if (!isSuperAdminRole(userRole)) {
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole || '')) {
         redirect('/login');
     }
 

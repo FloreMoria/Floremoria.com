@@ -207,13 +207,14 @@ export default function ClientProductsTable({ initialProducts, initialCategories
 
     // Strict Sorting Logic
     const sortedProducts = [...products].sort((a, b) => {
-        const catA = a.category?.name || '';
-        const catB = b.category?.name || '';
+        const catA = a.category?.name?.toLowerCase() || '';
+        const catB = b.category?.name?.toLowerCase() || '';
 
         const getCategoryRank = (cat: string) => {
-            if (cat === 'Fiori sulle Tombe') return 1;
-            if (cat === 'Per il Funerale') return 2;
-            return 3;
+            if (cat.includes('fiori sulle tombe') || cat.includes('cimitero')) return 1;
+            if (cat.includes('fiori per funerali') || cat.includes('funerale')) return 2;
+            if (cat.includes('piccoli amici')) return 3;
+            return 4;
         };
 
         const rankA = getCategoryRank(catA);
@@ -223,8 +224,8 @@ export default function ClientProductsTable({ initialProducts, initialCategories
             return rankA - rankB;
         }
 
-        // 1. Categoria: Fiori sulle Tombe
-        if (catA === 'Fiori sulle Tombe') {
+        // 1. Categoria: Fiori sulle Tombe (Cimitero)
+        if (rankA === 1) {
             const isFotoA = a.name.toLowerCase().includes('foto stato');
             const isFotoB = b.name.toLowerCase().includes('foto stato');
 
@@ -232,8 +233,8 @@ export default function ClientProductsTable({ initialProducts, initialCategories
             if (!isFotoA && isFotoB) return -1;
             if (isFotoA && isFotoB) return 0;
 
-            const isAccessoryA = a.name === 'Lumino' || a.name === 'Messaggio';
-            const isAccessoryB = b.name === 'Lumino' || b.name === 'Messaggio';
+            const isAccessoryA = a.name.toLowerCase().includes('lumino') || a.name.toLowerCase().includes('messaggio');
+            const isAccessoryB = b.name.toLowerCase().includes('lumino') || b.name.toLowerCase().includes('messaggio');
 
             if (isAccessoryA && !isAccessoryB) return 1;
             if (!isAccessoryA && isAccessoryB) return -1;
@@ -241,13 +242,13 @@ export default function ClientProductsTable({ initialProducts, initialCategories
             return a.basePriceCents - b.basePriceCents;
         }
 
-        // 2. Categoria: Per il Funerale
-        if (catA === 'Per il Funerale') {
+        // 2. Categoria: Fiori per Funerali (Funerale)
+        if (rankA === 2) {
             // Ordinamento decrescente: dal più costoso al più economico
             return b.basePriceCents - a.basePriceCents;
         }
 
-        // Default sorting per altre categorie (Piante in vaso ecc.)
+        // Default sorting per altre categorie
         return a.basePriceCents - b.basePriceCents;
     }).filter(p => {
         const matchSearch = p.name.toLowerCase().includes(filterSearch.toLowerCase()) || (p.shortDescription || '').toLowerCase().includes(filterSearch.toLowerCase());
@@ -329,14 +330,11 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                             ) : sortedProducts.map(product => (
                                 <tr key={product.id} onClick={() => openDrawer(product)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
                                     <td className="py-3 px-4">
-                                        <div className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative bg-white">
+                                        <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm relative">
                                             {product.mediaUrl ? (
                                                 <Image src={product.mediaUrl} alt={product.name} fill sizes="48px" className="object-cover" />
                                             ) : (
-                                                <div className="w-full h-full bg-amber-50 flex flex-col items-center justify-center border-amber-200 border-dashed border hover:bg-amber-100 transition-colors" title="Manca foto! Clicca per caricare">
-                                                    <ImageIcon size={16} className="text-amber-500 mb-0.5" />
-                                                    <span className="text-[8px] font-bold text-amber-700 uppercase tracking-tighter leading-none">Carica</span>
-                                                </div>
+                                                <ImageIcon size={16} className="text-gray-400" />
                                             )}
                                         </div>
                                     </td>

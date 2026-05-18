@@ -16,7 +16,7 @@ async function getRevenueData(role: string, userId: string | null) {
         return { total: (aggr._sum.totalPriceCents || 0) / 100, count };
     }
 
-    if (role === 'PARTNER_FLORIST' && userId) {
+    if ((role === 'FLORIST' || role === 'AGENCY') && userId) {
         const aggr = await prisma.order.aggregate({
             _sum: { totalPriceCents: true },
             where: { status: 'COMPLETED', userId: userId }
@@ -38,7 +38,7 @@ export default async function ProfilePage() {
     const { total: revenue, count: completedOrders } = await getRevenueData(userRole, mockUserId);
 
     // Testo di formato basato sul ruolo
-    const isLabUser = ['SUPER_ADMIN', 'OPERATOR', 'MARKETING_MANAGER'].includes(userRole);
+    const isLabUser = ['SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'STAKEHOLDER'].includes(userRole);
 
     return (
         <div className="max-w-6xl mx-auto space-y-10 pb-16">
@@ -62,7 +62,7 @@ export default async function ProfilePage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* SINISTRA: Modulo Dati Personali */}
                 <div className="lg:col-span-2 space-y-8">
-                    <Protect permission="personal_profile" fallback={
+                    <Protect permission="manage_own_profile" fallback={
                         <div className="p-8 bg-red-50 text-red-600 rounded-2xl border border-red-100 flex gap-3 text-sm">
                             <Activity /> Non sei autorizzato a visualizzare o modificare profili.
                         </div>
@@ -113,8 +113,8 @@ export default async function ProfilePage() {
 
                 {/* DESTRA: Analytics & Finance Widget */}
                 <div className="space-y-6">
-                    {(userRole === 'SUPER_ADMIN' || userRole === 'PARTNER_FLORIST') && (
-                        <Protect permission="partner_finance">
+                    {(userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'FLORIST' || userRole === 'AGENCY') && (
+                        <Protect permission="view_own_finance">
                             <div className="bg-white/80 backdrop-blur-xl rounded-[24px] border border-gray-100 shadow-sm p-8 relative overflow-hidden">
                                 {/* Decorazione Sfondo */}
                                 <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">

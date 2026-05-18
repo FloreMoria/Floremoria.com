@@ -34,7 +34,24 @@ export default function RolesMatrixClient() {
             const res = await fetch('/api/admin/roles');
             if (res.ok) {
                 const data = await res.json();
-                setRoles(data);
+                
+                const desiredOrder = [
+                    'SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'USER', 
+                    'FLORIST', 'AGENCY', 'MUNICIPALITY', 
+                    'STAKEHOLDER', 'ACCOUNTANT'
+                ];
+                
+                const sortedData = data.sort((a: Role, b: Role) => {
+                    const idxA = desiredOrder.indexOf(a.name.toUpperCase());
+                    const idxB = desiredOrder.indexOf(b.name.toUpperCase());
+                    
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                
+                setRoles(sortedData);
             }
         } catch (error) {
             console.error(error);

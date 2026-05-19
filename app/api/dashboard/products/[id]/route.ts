@@ -34,8 +34,9 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     try {
         const { id } = await context.params;
 
-        await prisma.product.delete({
-            where: { id }
+        await prisma.product.update({
+            where: { id },
+            data: { deletedAt: new Date() }
         });
 
         revalidatePath('/dashboard/products');

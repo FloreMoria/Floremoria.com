@@ -5,7 +5,7 @@ import { generatePartnerCode } from '@/lib/codeGenerator';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { id, createdAt, updatedAt, deletedAt, ...data } = body;
+        const { id, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...data } = body;
 
         let uniqueCode = data.uniqueCode;
         if (!uniqueCode) {

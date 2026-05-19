@@ -7,11 +7,12 @@ import { exportToCSV } from '@/lib/utils';
 
 interface ClientOrdersTableProps {
     orders: any[];
+    florists: any[];
     canChangeStatus: boolean;
     isGlobalAdmin?: boolean;
 }
 
-export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
+export default function ClientOrdersTable({ orders, florists, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [currentFilter, setCurrentFilter] = useState('TUTTI');
@@ -24,6 +25,14 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
 
     const [localOrders, setLocalOrders] = useState<any[]>(orders);
     React.useEffect(() => { setLocalOrders(orders); }, [orders]);
+
+    const [isSaving, setIsSaving] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3200);
+    };
 
     const statusMap = {
         'ACCEPTED': { label: 'Ricevuto', color: 'bg-yellow-100 text-yellow-800' },
@@ -102,7 +111,7 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
         exportToCSV(exportData, 'FloreMoria_Ordini.csv');
     };
 
-    // Gestione mock up cambio status
+    // Salvataggio effettivo nel DB del cambio status
     const updateStatus = async (orderId: string, newStatus: string) => {
         if (!canChangeStatus) return alert("Non hai i permessi per questa azione.");
 
@@ -110,7 +119,58 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
         setLocalOrders((prev: any[]) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
         setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, status: newStatus } : prev);
 
-        // In produzione verrebbe richiamato un endpoint API
+        try {
+            const res = await fetch(`/api/dashboard/orders/${orderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                showToast('Stato ordine aggiornato!');
+            } else {
+                alert('Errore aggiornamento stato nel database.');
+            }
+        } catch {
+            alert('Errore di connessione durante l\'aggiornamento dello stato.');
+        }
+    };
+
+    // Salvataggio fiorista assegnato e note posizione
+    const handleSaveOrder = async () => {
+        if (!selectedOrder) return;
+        setIsSaving(true);
+
+        try {
+            const res = await fetch(`/api/dashboard/orders/${selectedOrder.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: selectedOrder.userId || null,
+                    specialNotes: selectedOrder.specialNotes || ''
+                })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                
+                // Aggiorna lo stato locale degli ordini
+                setLocalOrders((prev: any[]) => prev.map(o => o.id === selectedOrder.id ? {
+                    ...o,
+                    userId: selectedOrder.userId,
+                    specialNotes: selectedOrder.specialNotes,
+                    user: florists.find(f => f.id === selectedOrder.userId) || null
+                } : o));
+
+                showToast('Dettagli ordine salvati con successo!');
+                closeDrawer();
+            } else {
+                alert('Errore nel salvataggio dell\'assegnazione.');
+            }
+        } catch {
+            alert('Errore di rete durante il salvataggio.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -327,8 +387,12 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                                 </h3>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button className="!bg-blue-600 !text-white !font-bold py-2 px-6 rounded-md shadow-sm hover:!bg-blue-700 transition-all flex items-center gap-2">
-                                    SALVA
+                                <button 
+                                    onClick={handleSaveOrder}
+                                    disabled={isSaving}
+                                    className="!bg-blue-600 !text-white !font-bold py-2 px-6 rounded-md shadow-sm hover:!bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSaving ? 'SALVATAGGIO...' : 'SALVA'}
                                 </button>
                                 <button onClick={closeDrawer} className="p-2.5 bg-white rounded-full text-gray-400 hover:text-black hover:bg-gray-200 shadow-sm transition-all border border-gray-100">
                                     <X size={20} />
@@ -421,16 +485,20 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                                 </h4>
                                 {canChangeStatus ? (
                                     <select
-                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm"
-                                        defaultValue={selectedOrder.userId || ''}
+                                        className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm font-semibold"
+                                        value={selectedOrder.userId || ''}
+                                        onChange={(e) => setSelectedOrder({ ...selectedOrder, userId: e.target.value || null })}
                                     >
                                         <option value="">-- Nessun Fiorista --</option>
-                                        <option value="mock-florist-id">Fioreria Le Rose di Como</option>
-                                        <option value="other-florist">Arte Floreale Milano</option>
+                                        {florists.map((f: any) => (
+                                            <option key={f.id} value={f.id} className="text-black font-semibold">
+                                                {f.shopName} ({f.ownerName})
+                                            </option>
+                                        ))}
                                     </select>
                                 ) : (
                                     <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center gap-2">
-                                        <span>{selectedOrder.user?.company || selectedOrder.user?.name || 'Nessun fiorista'}</span>
+                                        <span>{selectedOrder.user?.company || selectedOrder.user?.shopName || selectedOrder.user?.name || 'Nessun fiorista'}</span>
                                     </div>
                                 )}
                             </div>
@@ -443,7 +511,8 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                                 {canChangeStatus ? (
                                     <textarea
                                         className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm min-h-[80px] resize-none"
-                                        defaultValue={selectedOrder.specialNotes || ''}
+                                        value={selectedOrder.specialNotes || ''}
+                                        onChange={(e) => setSelectedOrder({ ...selectedOrder, specialNotes: e.target.value })}
                                         placeholder="Inserisci note sulla posizione..."
                                     />
                                 ) : (
@@ -549,6 +618,13 @@ export default function ClientOrdersTable({ orders, canChangeStatus, isGlobalAdm
                 )}
             </div>
 
+            {/* Premium Toast Notification */}
+            {toast && (
+                <div className="fixed bottom-6 right-6 z-50 bg-black text-white text-xs font-bold uppercase tracking-widest px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-gray-800 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    {toast}
+                </div>
+            )}
         </div >
     );
 }

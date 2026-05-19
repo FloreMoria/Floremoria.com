@@ -53,12 +53,18 @@ export default async function OrdersPage() {
         }
     });
 
+    const florists = await prisma.partner.findMany({
+        where: { deletedAt: null, isB2B: false },
+        orderBy: { shopName: 'asc' },
+        select: { id: true, shopName: true, ownerName: true }
+    });
+
     const displayOrders = ordersData; // La logica del mock-up fallback è stata staccata come richiesto.
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Interactive Client Component */}
-            <ClientOrdersTable orders={displayOrders} canChangeStatus={canChangeStatus} isGlobalAdmin={isGlobalAdmin} />
+            <ClientOrdersTable orders={displayOrders} florists={florists} canChangeStatus={canChangeStatus} isGlobalAdmin={isGlobalAdmin} />
         </div>
     );
 }

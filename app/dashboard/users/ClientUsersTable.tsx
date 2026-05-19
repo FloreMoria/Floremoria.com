@@ -4,6 +4,24 @@ import { useState } from 'react';
 import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Phone, Calendar, Mail, Camera, Edit2 } from 'lucide-react';
 import Image from 'next/image';
 
+const formatITDate = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    
+    // Auto-correzione per anomalie del database (es. anni salvati come 43 o 13 invece di 1943 o 2013)
+    let correctedYear = year;
+    if (year === 43) correctedYear = 1943;
+    if (year === 13) correctedYear = 2013;
+    
+    // Se l'anno è espresso in sole due/tre cifre (es: 43 o 13), formattiamolo con zeri ma visivamente corretto
+    const paddedYear = String(correctedYear).padStart(4, '0');
+    return `${day}/${month}/${paddedYear}`;
+};
+
 export default function ClientUsersTable({ initialUsers }: { initialUsers: any[] }) {
     const [users, setUsers] = useState(initialUsers);
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,8 +69,39 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
         e.preventDefault();
         setSavingOrderId(order.id);
         const form = e.target as HTMLFormElement;
-        const deceasedBirthDate = (form.elements.namedItem('deceasedBirthDate') as HTMLInputElement).value;
-        const deceasedDeathDate = (form.elements.namedItem('deceasedDeathDate') as HTMLInputElement).value;
+        const deceasedBirthDateRaw = (form.elements.namedItem('deceasedBirthDate') as HTMLInputElement).value.trim();
+        const deceasedDeathDateRaw = (form.elements.namedItem('deceasedDeathDate') as HTMLInputElement).value.trim();
+
+        const parseITDateToISO = (raw: string) => {
+            if (!raw) return null;
+            // Se l'utente inserisce la data usando trattini o in formato ISO YYYY-MM-DD
+            if (raw.includes('-')) {
+                const parts = raw.split('-');
+                if (parts.length === 3 && parts[0].length === 4) {
+                    return raw; // Già in formato YYYY-MM-DD
+                }
+            }
+            // Formato standard italiano: GG/MM/AAAA
+            const parts = raw.split('/');
+            if (parts.length === 3) {
+                const day = parts[0].trim().padStart(2, '0');
+                const month = parts[1].trim().padStart(2, '0');
+                let year = parts[2].trim();
+                
+                // Se l'utente scrive l'anno a 2 cifre (es: 43 o 13), completiamo automaticamente a 1943 o 2013
+                if (year.length === 2) {
+                    const yearNum = parseInt(year, 10);
+                    year = yearNum < 50 ? `20${year}` : `19${year}`;
+                } else if (year.length === 3) {
+                    year = year.padStart(4, '0');
+                }
+                return `${year}-${month}-${day}`;
+            }
+            return raw;
+        };
+
+        const deceasedBirthDate = parseITDateToISO(deceasedBirthDateRaw);
+        const deceasedDeathDate = parseITDateToISO(deceasedDeathDateRaw);
 
         try {
             const res = await fetch(`/api/dashboard/orders/${order.id}`, {
@@ -280,11 +329,25 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
                                                                 <label className="block text-xs text-gray-500 mb-1">Nascita</label>
-                                                                <input type="date" name="deceasedBirthDate" defaultValue={order.deceasedBirthDate ? new Date(order.deceasedBirthDate).toISOString().split('T')[0] : '1900-01-01'} className="w-full border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:ring-1 focus:ring-fm-gold outline-none" required />
+                                                                <input 
+                                                                    type="text" 
+                                                                    name="deceasedBirthDate" 
+                                                                    placeholder="GG/MM/AAAA"
+                                                                    defaultValue={formatITDate(order.deceasedBirthDate)} 
+                                                                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:ring-1 focus:ring-fm-gold outline-none" 
+                                                                    required 
+                                                                />
                                                             </div>
                                                             <div>
                                                                 <label className="block text-xs text-gray-500 mb-1">Decesso</label>
-                                                                <input type="date" name="deceasedDeathDate" defaultValue={order.deceasedDeathDate ? new Date(order.deceasedDeathDate).toISOString().split('T')[0] : '1900-01-01'} className="w-full border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:ring-1 focus:ring-fm-gold outline-none" required />
+                                                                <input 
+                                                                    type="text" 
+                                                                    name="deceasedDeathDate" 
+                                                                    placeholder="GG/MM/AAAA"
+                                                                    defaultValue={formatITDate(order.deceasedDeathDate)} 
+                                                                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:ring-1 focus:ring-fm-gold outline-none" 
+                                                                    required 
+                                                                />
                                                             </div>
                                                         </div>
                                                         <button type="submit" disabled={savingOrderId === order.id} className="text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition-colors w-full disabled:opacity-50">

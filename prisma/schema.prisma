@@ -228,6 +228,7 @@ model Partner {
   adminRating     Float                   @default(5.0)
   internalNotes   String?
   isActive        Boolean                 @default(true)
+  isB2B           Boolean                 @default(false)
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
   iban            String?

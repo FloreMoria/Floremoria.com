@@ -60,7 +60,10 @@ export default async function OrdersPage() {
         select: { id: true, shopName: true, ownerName: true }
     });
 
-    const displayOrders = ordersData; // La logica del mock-up fallback è stata staccata come richiesto.
+    const displayOrders = ordersData.map(o => ({
+        ...o,
+        specialNotes: o.additionalInstructions || ''
+    }));
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

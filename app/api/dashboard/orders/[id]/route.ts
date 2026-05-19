@@ -12,7 +12,7 @@ export async function PUT(request: Request, context: any) {
         const validKeys = [
             'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
             'gravePosition', 'deliveryDate', 'deceasedName', 
-            'deceasedBirthDate', 'deceasedDeathDate', 'userId', 'partnerId', 'specialNotes', 'status'
+            'deceasedBirthDate', 'deceasedDeathDate', 'additionalInstructions', 'status'
         ];
 
         validKeys.forEach(k => {
@@ -25,6 +25,19 @@ export async function PUT(request: Request, context: any) {
                 }
             }
         });
+
+        // Gestione note / istruzioni aggiuntive (specialNotes nel frontend mappato su additionalInstructions nel DB)
+        if (body.specialNotes !== undefined) {
+            safeData.additionalInstructions = body.specialNotes;
+        }
+
+        // Gestione relazioni annidate in Prisma per evitare l'errore ReadOnly di partnerId/userId
+        if (body.partnerId !== undefined) {
+            safeData.partner = body.partnerId ? { connect: { id: body.partnerId } } : { disconnect: true };
+        }
+        if (body.userId !== undefined) {
+            safeData.user = body.userId ? { connect: { id: body.userId } } : { disconnect: true };
+        }
 
         const updatedOrder = await prisma.order.update({
             where: { id },

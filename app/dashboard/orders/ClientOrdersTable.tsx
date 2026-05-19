@@ -105,7 +105,7 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
             'Comune Destinazione': o.cemeteryCity || '',
             'Cimitero': o.cemeteryName || '',
             'Ricorrente': o.isRecurring ? 'Si' : 'No',
-            'Fiorista': o.user?.company || o.user?.name || 'Nessuno',
+            'Fiorista': o.partner?.shopName || o.partner?.ownerName || 'Nessuno',
             'Stato': (statusMap as any)[o.status]?.label || o.status
         }));
         exportToCSV(exportData, 'FloreMoria_Ordini.csv');
@@ -145,7 +145,7 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: selectedOrder.userId || null,
+                    partnerId: selectedOrder.partnerId || null,
                     specialNotes: selectedOrder.specialNotes || ''
                 })
             });
@@ -156,9 +156,9 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                 // Aggiorna lo stato locale degli ordini
                 setLocalOrders((prev: any[]) => prev.map(o => o.id === selectedOrder.id ? {
                     ...o,
-                    userId: selectedOrder.userId,
+                    partnerId: selectedOrder.partnerId,
                     specialNotes: selectedOrder.specialNotes,
-                    user: florists.find(f => f.id === selectedOrder.userId) || null
+                    partner: florists.find(f => f.id === selectedOrder.partnerId) || null
                 } : o));
 
                 showToast('Dettagli ordine salvati con successo!');
@@ -331,8 +331,8 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                             )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            <span className={`text-[13px] inline-block font-semibold break-words leading-tight ${!order.userId ? 'text-orange-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100' : 'text-gray-700'}`}>
-                                                {order.user?.company || order.user?.name || 'Da Assegnare'}
+                                            <span className={`text-[13px] inline-block font-semibold break-words leading-tight ${!order.partnerId ? 'text-orange-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100' : 'text-gray-700'}`}>
+                                                {order.partner?.shopName || order.partner?.ownerName || 'Da Assegnare'}
                                             </span>
                                         </td>
                                         <td className="py-3 px-3">
@@ -486,8 +486,8 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                 {canChangeStatus ? (
                                     <select
                                         className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm font-semibold"
-                                        value={selectedOrder.userId || ''}
-                                        onChange={(e) => setSelectedOrder({ ...selectedOrder, userId: e.target.value || null })}
+                                        value={selectedOrder.partnerId || ''}
+                                        onChange={(e) => setSelectedOrder({ ...selectedOrder, partnerId: e.target.value || null })}
                                     >
                                         <option value="">-- Nessun Fiorista --</option>
                                         {florists.map((f: any) => (
@@ -498,7 +498,7 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                     </select>
                                 ) : (
                                     <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center gap-2">
-                                        <span>{selectedOrder.user?.company || selectedOrder.user?.shopName || selectedOrder.user?.name || 'Nessun fiorista'}</span>
+                                        <span>{selectedOrder.partner?.shopName || selectedOrder.partner?.ownerName || 'Nessun fiorista'}</span>
                                     </div>
                                 )}
                             </div>
@@ -541,10 +541,10 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
 
                                     {/* Step 2 */}
                                     <div className="flex flex-col items-center gap-2 relative z-10 bg-gray-50 px-2 min-w-[80px]">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${selectedOrder.userId ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-300 text-transparent'}`}>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${selectedOrder.partnerId ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-300 text-transparent'}`}>
                                             <Check size={12} strokeWidth={3} />
                                         </div>
-                                        <span className={`text-[10px] uppercase tracking-wider font-semibold ${selectedOrder.userId ? 'text-gray-700' : 'text-gray-400'}`}>Assegnato</span>
+                                        <span className={`text-[10px] uppercase tracking-wider font-semibold ${selectedOrder.partnerId ? 'text-gray-700' : 'text-gray-400'}`}>Assegnato</span>
                                     </div>
 
                                     {/* Step 3 */}

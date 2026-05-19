@@ -12,7 +12,7 @@ export async function PUT(request: Request, context: any) {
         const validKeys = [
             'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
             'gravePosition', 'deliveryDate', 'deceasedName', 
-            'deceasedBirthDate', 'deceasedDeathDate', 'userId', 'specialNotes', 'status'
+            'deceasedBirthDate', 'deceasedDeathDate', 'userId', 'partnerId', 'specialNotes', 'status'
         ];
 
         validKeys.forEach(k => {

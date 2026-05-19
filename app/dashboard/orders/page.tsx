@@ -44,7 +44,8 @@ export default async function OrdersPage() {
         ...ordersQuery,
         orderBy: { createdAt: 'desc' },
         include: {
-            user: true, // Fiorista Assegnato
+            user: true, 
+            partner: true, // Fiorista Assegnato reale
             items: {
                 include: {
                     product: true // Serve per Nome e Immagine

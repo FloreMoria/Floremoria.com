@@ -552,9 +552,6 @@ export default function CheckoutPage() {
 
             const { url } = await res.json();
 
-            localStorage.removeItem('fm_cart');
-            clearPreDeliveryPhotoPref();
-
             if (url) {
                 window.location.href = url;
             } else {

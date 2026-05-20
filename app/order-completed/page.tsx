@@ -87,6 +87,9 @@ export default function OrderCompletedPage() {
             } catch (e) {
                 // console.error("Error reading cart", e);
             }
+            // Clear cart and preferences now that the purchase is fully completed!
+            localStorage.removeItem('fm_cart');
+            localStorage.removeItem('florem_opt_foto_stato_prima_consegna');
         }
 
         return () => clearTimeout(timer);

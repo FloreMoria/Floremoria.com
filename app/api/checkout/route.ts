@@ -397,7 +397,7 @@ export async function POST(request: Request) {
             apiVersion: '2023-10-16' as any,
         });
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.floremoria.com';
         const successUrl = `${baseUrl}/order-completed?orderId=${order.orderNumber}&margin=${totalMarginCents}&phone=${encodeURIComponent(buyerPhone)}&prov=${prov}`;
 
         const buyerEmailTrimmed = typeof buyerEmail === 'string' ? buyerEmail.trim() : '';

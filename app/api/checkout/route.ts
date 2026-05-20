@@ -405,7 +405,6 @@ export async function POST(request: Request) {
             buyerEmailTrimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmailTrimmed) ? buyerEmailTrimmed : undefined;
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'paypal'],
             ...(validCustomerEmail ? { customer_email: validCustomerEmail } : {}),
             line_items: [
                 {

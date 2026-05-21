@@ -1,4 +1,5 @@
 import type { Category, Product, ProductImage } from '@prisma/client';
+import { resolvePartnerProductCopy } from '@/lib/partnerProductCopy';
 import { resolvePartnerProductImages } from '@/lib/resolveProductPublicImage';
 
 type ProductWithCategoryImages = Product & {
@@ -11,15 +12,20 @@ export function resolveProductImageUrl(product: ProductWithCategoryImages): stri
 }
 
 export function mapCatalogProduct(product: ProductWithCategoryImages) {
-    const { cover } = resolvePartnerProductImages(product);
+    const { cover, gallery } = resolvePartnerProductImages(product);
+    const { shortDescription, description } = resolvePartnerProductCopy(product);
 
     return {
         id: product.id,
+        slug: product.slug,
         name: product.name,
         price: product.basePriceCents / 100,
         priceCents: product.basePriceCents,
         currency: product.currency,
         image: cover,
+        shortDescription,
+        description,
+        images: gallery,
         category: {
             id: product.category.id,
             name: product.category.name,
@@ -29,15 +35,7 @@ export function mapCatalogProduct(product: ProductWithCategoryImages) {
 }
 
 export function mapCatalogProductDetail(product: ProductWithCategoryImages) {
-    const { gallery } = resolvePartnerProductImages(product);
-
-    return {
-        ...mapCatalogProduct(product),
-        slug: product.slug,
-        shortDescription: product.shortDescription,
-        description: product.description,
-        images: gallery,
-    };
+    return mapCatalogProduct(product);
 }
 
 export const partnerCatalogInclude = {

@@ -1,5 +1,7 @@
 import { getImagesFromFilesystem } from '@/lib/getImages';
+import { getProductBySlug } from '@/lib/products';
 import { getPublicSiteBaseUrl } from '@/lib/siteBaseUrl';
+import { buildProductAlt } from '@/utils/altText';
 
 /** Percorsi piatti legacy (seed) tipo /images/products/cuore-corona.webp — non esistono su disco. */
 export function isFlatLegacyProductImagePath(path: string): boolean {
@@ -26,17 +28,42 @@ type ProductImageInput = {
     images?: { url: string; alt?: string | null }[];
 };
 
-/** Percorsi relativi stabili: DB valido → galleria manifest per slug istituzionale. */
+function isGenericDbAlt(alt?: string | null): boolean {
+    if (!alt?.trim()) return true;
+    return /^Immagine per /i.test(alt.trim());
+}
+
+function buildPartnerGalleryAlt(slug: string, name: string, relativePath: string, imageIndex: number): string {
+    const catalog = getProductBySlug(slug);
+    if (catalog) {
+        return buildProductAlt(catalog, { context: 'gallery', imageIndex });
+    }
+
+    const fileStem = decodeURIComponent(relativePath.split('/').pop() || name)
+        .replace(/\.webp$/i, '')
+        .replace(/-/g, ' ');
+    return `${name}, omaggio floreale FloreMoria — ${fileStem}`;
+}
+
+/** Galleria completa: manifest istituzionale + eventuali path validi extra dal DB. */
 export function resolveRelativeProductImagePaths(product: Pick<ProductImageInput, 'slug' | 'mediaUrl' | 'images'>): string[] {
-    const stored = [
+    const manifestPaths = getImagesFromFilesystem(product.slug);
+    const storedValid = [
         ...(product.images?.map((img) => img.url) ?? []),
         product.mediaUrl,
-    ].filter(isUsableStoredPath);
+    ]
+        .filter(isUsableStoredPath)
+        .map((p) => p.trim());
 
-    const uniqueStored = [...new Set(stored.map((p) => p.trim()))];
-    if (uniqueStored.length > 0) return uniqueStored;
+    if (manifestPaths.length > 0) {
+        const merged = [...manifestPaths];
+        for (const path of storedValid) {
+            if (!merged.includes(path)) merged.push(path);
+        }
+        return merged;
+    }
 
-    return getImagesFromFilesystem(product.slug);
+    return [...new Set(storedValid)];
 }
 
 export function resolvePartnerProductImages(product: ProductImageInput): {
@@ -44,9 +71,15 @@ export function resolvePartnerProductImages(product: ProductImageInput): {
     gallery: { url: string; alt: string }[];
 } {
     const relativePaths = resolveRelativeProductImagePaths(product);
+    const dbAltByPath = new Map(
+        (product.images ?? [])
+            .filter((img) => isUsableStoredPath(img.url) && !isGenericDbAlt(img.alt))
+            .map((img) => [img.url.trim(), img.alt!.trim()] as const),
+    );
+
     const gallery = relativePaths.map((rel, idx) => ({
         url: toAbsolutePublicAssetUrl(rel),
-        alt: product.images?.[idx]?.alt?.trim() || product.name,
+        alt: dbAltByPath.get(rel) ?? buildPartnerGalleryAlt(product.slug, product.name, rel, idx),
     }));
 
     return {

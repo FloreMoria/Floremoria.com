@@ -16,6 +16,7 @@ function asList(v: string | string[] | undefined): string[] | undefined {
 
 async function sendViaResend(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
     const key = process.env.RESEND_API_KEY?.trim();
+    console.log('[DEBUG sendViaResend] Key being used:', JSON.stringify(key));
     if (!key) return { ok: false, error: 'missing_resend' };
 
     const to = asList(params.to);

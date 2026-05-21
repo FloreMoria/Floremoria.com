@@ -33,8 +33,16 @@ export default async function OrdersPage() {
         if (roleName === 'OPERATOR') isGlobalAdmin = true;
     }
 
-    // 2. Query Ordini con filtro basato su Ruolo (Domain Isolation) e Soft Deletes
-    let ordersQuery: any = { where: { deletedAt: null } };
+    // 2. Query Ordini con filtro basato su Ruolo (Domain Isolation), Soft Deletes ed escludendo checkout abbandonati (PENDING + UNPAID)
+    let ordersQuery: any = { 
+        where: { 
+            deletedAt: null,
+            NOT: {
+                status: 'PENDING',
+                partnerPaymentStatus: 'UNPAID'
+            }
+        } 
+    };
     if (!isGlobalAdmin) {
         // Se è un partner, filtra solo i suoi ordini
         ordersQuery.where = { ...ordersQuery.where, userId: MOCK_FLORIST_ID };

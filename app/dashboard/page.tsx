@@ -27,6 +27,13 @@ export default async function AdminOverview() {
     const ga4ConsoleUrl = buildGa4ConsoleUrl('realtime');
 
     const orders = await prisma.order.findMany({
+        where: {
+            deletedAt: null,
+            NOT: {
+                status: 'PENDING',
+                partnerPaymentStatus: 'UNPAID'
+            }
+        },
         include: {
             items: { include: { product: true } },
             partner: true,

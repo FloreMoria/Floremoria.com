@@ -56,10 +56,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true, duplicate: true });
     }
 
-    const order = (await prisma.order.findUnique({
+    const order = await prisma.order.findUnique({
         where: { id: orderId },
-        include: { items: { include: { product: true } } },
-    })) as OrderWithItems | null;
+        include: {
+            items: { include: { product: true } },
+            partner: true,
+        },
+    });
 
     if (!order) {
         console.error('[stripe-webhook] Ordine non trovato dopo update:', orderId);

@@ -1,7 +1,11 @@
-import type { Order, OrderItem, Product } from '@prisma/client';
+import type { Order, OrderItem, Product, Partner } from '@prisma/client';
 
 type OrderWithItems = Order & {
     items: (OrderItem & { product: Product })[];
+};
+
+type OrderWithItemsAndPartner = OrderWithItems & {
+    partner?: Partner | null;
 };
 
 function esc(s: string | null | undefined): string {
@@ -17,7 +21,7 @@ function formatMoney(cents: number): string {
     return `€${(cents / 100).toFixed(2)}`;
 }
 
-export function buildOrderStaffHtml(params: { order: OrderWithItems; stripeSessionId: string }): string {
+export function buildOrderStaffHtml(params: { order: OrderWithItemsAndPartner; stripeSessionId: string }): string {
     const { order, stripeSessionId } = params;
     const rows = order.items
         .map(
@@ -25,6 +29,14 @@ export function buildOrderStaffHtml(params: { order: OrderWithItems; stripeSessi
                 `<tr><td>${esc(li.product.name)}</td><td style="text-align:center">${li.quantity}</td><td style="text-align:right">${formatMoney(li.priceCents * li.quantity)}</td></tr>`
         )
         .join('');
+
+    const partnerInfo = order.partner
+        ? `${esc(order.partner.shopName)} (Proprietario: ${esc(order.partner.ownerName)} - WA: ${esc(order.partner.whatsappNumber)})`
+        : 'Nessun partner assegnato (Auto-assegnazione fallita)';
+
+    const funeralFormatted = order.funeralDate
+        ? esc(order.funeralDate.toISOString().replace('T', ' ').slice(0, 16))
+        : 'Non specificato';
 
     return `
 <!DOCTYPE html>
@@ -36,12 +48,15 @@ export function buildOrderStaffHtml(params: { order: OrderWithItems; stripeSessi
     <tr><td><strong>Email</strong></td><td>${esc(order.buyerEmail)}</td></tr>
     <tr><td><strong>Telefono</strong></td><td>${esc(order.customerPhone)}</td></tr>
     <tr><td><strong>Defunto / dedicatario</strong></td><td>${esc(order.deceasedName)}</td></tr>
-    <tr><td><strong>Luogo</strong></td><td>${esc(order.cemeteryName)}</td></tr>
-    <tr><td><strong>Posizione / note</strong></td><td>${esc(order.gravePosition)}</td></tr>
+    <tr><td><strong>Luogo di Consegna (Cimitero)</strong></td><td>${esc(order.cemeteryName)}</td></tr>
+    <tr><td><strong>Posizione / note tomba</strong></td><td>${esc(order.gravePosition)}</td></tr>
     <tr><td><strong>Provincia</strong></td><td>${esc(order.deliveryProvince)}</td></tr>
-    <tr><td><strong>Data consegna</strong></td><td>${order.deliveryDate ? esc(order.deliveryDate.toISOString().slice(0, 10)) : '—'}</td></tr>
-    <tr><td><strong>Totale</strong></td><td><strong>${formatMoney(order.totalPriceCents)}</strong></td></tr>
-    <tr><td><strong>Stripe session</strong></td><td><code>${esc(stripeSessionId)}</code></td></tr>
+    <tr><td><strong>Data Consegna Richiesta</strong></td><td>${order.deliveryDate ? esc(order.deliveryDate.toISOString().slice(0, 10)) : '—'}</td></tr>
+    <tr><td><strong>Agenzia Funebre (B2B)</strong></td><td>${esc(order.agencyName)}</td></tr>
+    <tr><td><strong>Data/Ora Funerale</strong></td><td>${funeralFormatted}</td></tr>
+    <tr><td><strong>Partner Fiorista Assegnato</strong></td><td>${partnerInfo}</td></tr>
+    <tr><td><strong>Totale Ordine</strong></td><td><strong>${formatMoney(order.totalPriceCents)}</strong></td></tr>
+    <tr><td><strong>ID Sessione Stripe</strong></td><td><code>${esc(stripeSessionId)}</code></td></tr>
   </table>
   <h3 style="margin:16px 0 8px">Righe ordine</h3>
   <table cellpadding="8" cellspacing="0" border="1" style="border-collapse:collapse;width:100%;max-width:560px">

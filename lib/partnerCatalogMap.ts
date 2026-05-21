@@ -1,5 +1,5 @@
 import type { Category, Product, ProductImage } from '@prisma/client';
-import { getPublicSiteBaseUrl } from '@/lib/siteBaseUrl';
+import { resolvePartnerProductImages } from '@/lib/resolveProductPublicImage';
 
 type ProductWithCategoryImages = Product & {
     category: Category;
@@ -7,23 +7,19 @@ type ProductWithCategoryImages = Product & {
 };
 
 export function resolveProductImageUrl(product: ProductWithCategoryImages): string | null {
-    const base = getPublicSiteBaseUrl();
-    const firstImg = product.images?.[0]?.url;
-    const raw = firstImg || product.mediaUrl;
-    if (!raw) return null;
-    if (raw.startsWith('http')) return raw;
-    return `${base}${raw.startsWith('/') ? '' : '/'}${raw}`;
+    return resolvePartnerProductImages(product).cover;
 }
 
 export function mapCatalogProduct(product: ProductWithCategoryImages) {
-    const image = resolveProductImageUrl(product);
+    const { cover } = resolvePartnerProductImages(product);
+
     return {
         id: product.id,
         name: product.name,
         price: product.basePriceCents / 100,
         priceCents: product.basePriceCents,
         currency: product.currency,
-        image,
+        image: cover,
         category: {
             id: product.category.id,
             name: product.category.name,
@@ -32,7 +28,19 @@ export function mapCatalogProduct(product: ProductWithCategoryImages) {
     };
 }
 
+export function mapCatalogProductDetail(product: ProductWithCategoryImages) {
+    const { gallery } = resolvePartnerProductImages(product);
+
+    return {
+        ...mapCatalogProduct(product),
+        slug: product.slug,
+        shortDescription: product.shortDescription,
+        description: product.description,
+        images: gallery,
+    };
+}
+
 export const partnerCatalogInclude = {
     category: true,
-    images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
+    images: { orderBy: { sortOrder: 'asc' as const } },
 } as const;

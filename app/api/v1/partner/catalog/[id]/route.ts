@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
-import { mapCatalogProduct, partnerCatalogInclude, resolveProductImageUrl } from '@/lib/partnerCatalogMap';
-import { getPublicSiteBaseUrl } from '@/lib/siteBaseUrl';
+import { mapCatalogProductDetail, partnerCatalogInclude } from '@/lib/partnerCatalogMap';
 
 export const runtime = 'nodejs';
 
@@ -25,10 +24,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     const { id } = await ctx.params;
     const product = await prisma.product.findFirst({
         where: { id, isActive: true, deletedAt: null },
-        include: {
-            category: true,
-            images: { orderBy: { sortOrder: 'asc' } },
-        },
+        include: partnerCatalogInclude,
     });
 
     if (!product) {
@@ -37,22 +33,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
 
     await touchPartnerCredentialLastUsed(auth.credentialId);
 
-    const base = getPublicSiteBaseUrl();
-    const images = product.images.map((img) => ({
-        url: img.url.startsWith('http') ? img.url : `${base}${img.url.startsWith('/') ? '' : '/'}${img.url}`,
-        alt: img.alt,
-    }));
-
     return NextResponse.json(
-        {
-            data: {
-                ...mapCatalogProduct(product),
-                slug: product.slug,
-                shortDescription: product.shortDescription,
-                description: product.description,
-                images: images.length ? images : resolveProductImageUrl(product) ? [{ url: resolveProductImageUrl(product)!, alt: product.name }] : [],
-            },
-        },
+        { data: mapCatalogProductDetail(product) },
         { headers: { ...partnerV1CorsHeaders(request, 'GET, OPTIONS'), 'Content-Type': 'application/json' } }
     );
 }

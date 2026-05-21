@@ -15,7 +15,7 @@ function asList(v: string | string[] | undefined): string[] | undefined {
 }
 
 async function sendViaResend(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
-    const key = process.env.RESEND_API_KEY;
+    const key = process.env.RESEND_API_KEY?.trim();
     if (!key) return { ok: false, error: 'missing_resend' };
 
     const to = asList(params.to);
@@ -46,9 +46,9 @@ async function sendViaResend(from: string, params: SendFloremMailParams): Promis
 }
 
 async function sendViaSmtp(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
-    const host = process.env.SMTP_HOST;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const host = process.env.SMTP_HOST?.trim();
+    const user = process.env.SMTP_USER?.trim();
+    const pass = process.env.SMTP_PASS?.trim();
     if (!host || !user || !pass) return { ok: false, error: 'missing_smtp' };
 
     const port = Number(process.env.SMTP_PORT || '587');

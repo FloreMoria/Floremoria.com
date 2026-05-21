@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
 import prisma from '@/lib/prisma';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { buildGa4ConsoleUrl } from '@/lib/ga4/config';
 import { fetchGa4Overview } from '@/lib/ga4/fetchOverview';
 import { isGa4ApiConfigured } from '@/lib/ga4/credentials';
@@ -27,13 +28,7 @@ export default async function AdminOverview() {
     const ga4ConsoleUrl = buildGa4ConsoleUrl('realtime');
 
     const orders = await prisma.order.findMany({
-        where: {
-            deletedAt: null,
-            NOT: {
-                status: 'PENDING',
-                partnerPaymentStatus: 'UNPAID'
-            }
-        },
+        where: visibleDashboardOrdersWhere(),
         include: {
             items: { include: { product: true } },
             partner: true,

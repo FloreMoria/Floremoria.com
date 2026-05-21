@@ -12,6 +12,21 @@ type OrderWithItems = Prisma.OrderGetPayload<{
     include: { items: { include: { product: true } } };
 }>;
 
+async function archiveAbandonedCheckoutOrder(orderId: string) {
+    await prisma.order.updateMany({
+        where: {
+            id: orderId,
+            deletedAt: null,
+            status: 'PENDING',
+            partnerPaymentStatus: 'UNPAID',
+        },
+        data: {
+            deletedAt: new Date(),
+            status: 'CANCELLED',
+        },
+    });
+}
+
 export async function POST(request: Request) {
     const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
     const key = process.env.STRIPE_SECRET_KEY?.trim();
@@ -34,6 +49,16 @@ export async function POST(request: Request) {
     } catch (e) {
         console.error('[stripe-webhook] Verifica firma fallita:', e);
         return NextResponse.json({ error: 'invalid_signature' }, { status: 400 });
+    }
+
+    if (event.type === 'checkout.session.expired') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId = session.metadata?.orderId;
+        if (orderId) {
+            await archiveAbandonedCheckoutOrder(orderId);
+            console.info('[stripe-webhook] Checkout scaduto, ordine archiviato:', orderId);
+        }
+        return NextResponse.json({ received: true });
     }
 
     if (event.type !== 'checkout.session.completed') {

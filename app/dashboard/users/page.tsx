@@ -1,11 +1,13 @@
 import prisma from '@/lib/prisma';
 import ClientUsersTable from './ClientUsersTable';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
     // Recupero tutti gli ordini per costruire gli account utente (Poiché non c'è ancora registrazione esplicita)
     const orders = await prisma.order.findMany({
+        where: visibleDashboardOrdersWhere(),
         orderBy: { createdAt: 'desc' },
         include: {
             items: { include: { product: true } },

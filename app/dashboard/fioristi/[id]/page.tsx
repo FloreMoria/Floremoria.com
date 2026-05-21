@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -12,6 +13,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
         where: { id },
         include: {
             orders: {
+                where: visibleDashboardOrdersWhere(),
                 include: {
                     items: {
                         include: {

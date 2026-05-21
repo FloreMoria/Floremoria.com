@@ -3,6 +3,7 @@ import { Download } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 import ClientOrdersTable from './ClientOrdersTable';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 
 const prisma = new PrismaClient();
 
@@ -33,15 +34,9 @@ export default async function OrdersPage() {
         if (roleName === 'OPERATOR') isGlobalAdmin = true;
     }
 
-    // 2. Query Ordini con filtro basato su Ruolo (Domain Isolation), Soft Deletes ed escludendo checkout abbandonati (PENDING + UNPAID)
-    let ordersQuery: any = { 
-        where: { 
-            deletedAt: null,
-            NOT: {
-                status: 'PENDING',
-                partnerPaymentStatus: 'UNPAID'
-            }
-        } 
+    // 2. Query Ordini: solo consegne reali (no carrelli abbandonati, no CANCELLED)
+    let ordersQuery: any = {
+        where: visibleDashboardOrdersWhere(),
     };
     if (!isGlobalAdmin) {
         // Se è un partner, filtra solo i suoi ordini

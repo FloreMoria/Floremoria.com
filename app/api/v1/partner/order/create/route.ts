@@ -130,7 +130,7 @@ export async function POST(request: Request) {
         return tx.order.create({
             data: {
                 orderNumber,
-                status: 'PENDING',
+                status: 'ACCEPTED',
                 deceasedName: deceasedName.trim(),
                 cemeteryName: cemeteryName.trim(),
                 cemeteryCity: cemeteryCity.trim(),

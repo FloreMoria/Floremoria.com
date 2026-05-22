@@ -1,10 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import OpenReplay from '@openreplay/tracker/cjs';
-
-const PROJECT_KEY =
-    process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY?.trim() || 'RPvj17FQ3rJhQrjzZWmJ';
 
 export default function OpenReplayTracker() {
     const startedRef = useRef(false);
@@ -13,14 +9,17 @@ export default function OpenReplayTracker() {
         if (startedRef.current || typeof window === 'undefined') return;
         startedRef.current = true;
 
-        const tracker = new OpenReplay({
-            projectKey: PROJECT_KEY,
-            capturePerformance: true,
-        });
-
-        void tracker.start().catch((err: unknown) => {
-            console.error('[OpenReplay] Avvio tracker fallito:', err);
-        });
+        import('@openreplay/tracker/cjs')
+            .then(({ default: OpenReplay }) => {
+                const tracker = new OpenReplay({
+                    projectKey:
+                        process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY?.trim() ||
+                        'RPvj17FQ3rJhQrjzZWmJ',
+                    capturePerformance: true,
+                });
+                return tracker.start();
+            })
+            .catch((err) => console.error('Errore nel caricamento di OpenReplay:', err));
     }, []);
 
     return null;

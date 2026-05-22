@@ -24,7 +24,7 @@ const ROW2_BASE: HubButton[] = [
     { id: 'gmail', label: 'Gmail', icon: '📧', url: 'https://mail.google.com' },
     { id: 'gemini', label: 'Gemini', icon: '✨', url: 'https://gemini.google.com' },
     { id: 'meet', label: 'Meet', icon: '📹', url: 'https://meet.google.com' },
-    { id: 'openreply', label: 'OpenReply', icon: '🤖', url: '#' },
+    { id: 'openreply', label: 'OpenReplay', icon: '🤖', url: '#' },
     { id: 'youdox', label: 'Fatture', icon: '📄', url: '#' },
 ];
 
@@ -46,9 +46,16 @@ export default function MissionControlHub({
     const ROW1: HubButton[] = ROW1_BASE.map((btn) =>
         btn.id === 'ga4' ? { ...btn, url: ga4ConsoleUrl } : btn,
     );
+    const openReplayUrl =
+        process.env.NEXT_PUBLIC_OPENREPLAY_DASHBOARD_URL?.trim() ||
+        'https://app.openreplay.com/sessions';
     const youdoxUrl = process.env.NEXT_PUBLIC_YOUDOX_URL || '#';
     const ROW2: HubButton[] = ROW2_BASE.map((btn) =>
-        btn.id === 'youdox' ? { ...btn, url: youdoxUrl } : btn,
+        btn.id === 'youdox'
+            ? { ...btn, url: youdoxUrl }
+            : btn.id === 'openreply'
+              ? { ...btn, url: openReplayUrl }
+              : btn,
     );
     const [states, setStates] = useState<Record<string, string>>({});
     

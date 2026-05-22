@@ -1,29 +1,29 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import Script from 'next/script';
 
 export default function OpenReplayTracker() {
-    const startedRef = useRef(false);
+    const projectKey =
+        process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY || 'RPvj17FQ3rJhQrjzZWmJ';
 
-    useEffect(() => {
-        // Blocco di sicurezza tassativo per il server e build statico
-        if (typeof window === 'undefined' || startedRef.current) return;
-
-        startedRef.current = true;
-
-        // Import dinamico della libreria standard ESM
-        import('@openreplay/tracker')
-            .then(({ default: OpenReplay }) => {
-                const tracker = new OpenReplay({
-                    projectKey:
-                        process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY ||
-                        'RPvj17FQ3rJhQrjzZWmJ',
-                    capturePerformance: true,
-                });
-                tracker.start();
-            })
-            .catch((err) => console.error('Errore caricamento OpenReplay:', err));
-    }, []);
-
-    return null;
+    return (
+        <Script
+            id="openreplay-tracker"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+                __html: `
+          (function(A,s){
+            var t=A.OpenReplay||function(){(A.OpenReplay.q=A.OpenReplay.q||[]).push(arguments)};
+            A.OpenReplay=t;
+            var e=s.createElement("script");
+            e.async=1;
+            e.src="https://static.openreplay.com/tracker/v14/openreplay.js";
+            s.getElementsByTagName("head")[0].appendChild(e);
+            t("init", { projectKey: ${JSON.stringify(projectKey)}, capturePerformance: true });
+            t("start");
+          })(window,document);
+        `,
+            }}
+        />
+    );
 }

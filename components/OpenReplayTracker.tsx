@@ -12,16 +12,25 @@ export default function OpenReplayTracker() {
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{
                 __html: `
-          (function(A,s){
-            var t=A.OpenReplay||function(){(A.OpenReplay.q=A.OpenReplay.q||[]).push(arguments)};
-            A.OpenReplay=t;
-            var e=s.createElement("script");
-            e.async=1;
-            e.src="https://static.openreplay.com/tracker/v14/openreplay.js";
-            s.getElementsByTagName("head")[0].appendChild(e);
-            t("init", { projectKey: ${JSON.stringify(projectKey)}, capturePerformance: true });
-            t("start");
-          })(window,document);
+          var initOpts = { projectKey: "${projectKey}", capturePerformance: true };
+          var startOpts = { userID: "" };
+          (function(A,s,a,y,e,r){
+            r=window.OpenReplay=[e,r,y,[s-1, e]];
+            s=document.createElement('script');s.src=A;s.async=!0;
+            document.getElementsByTagName('head')[0].appendChild(s);
+            r.start=function(v){r.push([0])};
+            r.stop=function(v){r.push([1])};
+            r.setUserID=function(id){r.push([2,id])};
+            r.setUserAnonymousID=function(id){r.push([3,id])};
+            r.setMetadata=function(k,v){r.push([4,k,v])};
+            r.event=function(k,v){r.push([5,k,v])};
+            r.issue=function(k,v){r.push([6,k,v])};
+            r.isActive=function(){return !1};
+            r.init=function(i){initOpts=i};
+            r.startOpts=function(s){startOpts=s};
+          })("https://static.openreplay.com/tracker/v14/openreplay.js", 1, 0, [0,0], 0, 0);
+
+          window.OpenReplay.start();
         `,
             }}
         />

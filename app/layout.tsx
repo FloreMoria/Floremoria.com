@@ -11,7 +11,7 @@ import { buildGenericAlt } from '@/utils/altText';
 import ConditionalLayout from '@/components/ConditionalLayout';
 import FloremSocialLinks from '@/components/FloremSocialLinks';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
-import OpenReplayTracker from '@/components/OpenReplayTracker';
+import OpenReplayProvider from '@/components/OpenReplayProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -208,7 +208,7 @@ export default function RootLayout({
     <html lang="it">
       <body className={`${inter.variable} ${manrope.variable} ${greatVibes.variable} font-body bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors min-h-screen flex flex-col`}>
         <GoogleAnalytics />
-        <OpenReplayTracker />
+        <OpenReplayProvider />
         <ConditionalLayout footer={footerBlock}>
           {children}
         </ConditionalLayout>

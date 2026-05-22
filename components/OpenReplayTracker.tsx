@@ -1,10 +1,17 @@
 'use client';
 
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 
 export default function OpenReplayTracker() {
+    const pathname = usePathname();
     const projectKey =
         process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY || 'RPvj17FQ3rJhQrjzZWmJ';
+
+    // Protezione Privacy ed esclusione area amministrativa
+    if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin')) {
+        return null;
+    }
 
     return (
         <Script
@@ -28,9 +35,7 @@ export default function OpenReplayTracker() {
             r.isActive=function(){return !1};
             r.init=function(i){initOpts=i};
             r.startOpts=function(s){startOpts=s};
-          })("https://static.openreplay.com/tracker/v14/openreplay.js", 1, 0, [0,0], 0, 0);
-
-          window.OpenReplay.start();
+          })("https://static.openreplay.com/tracker/v14/openreplay.js", 1, 0, initOpts, startOpts);
         `,
             }}
         />

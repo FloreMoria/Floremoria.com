@@ -6,20 +6,23 @@ export default function OpenReplayTracker() {
     const startedRef = useRef(false);
 
     useEffect(() => {
-        if (startedRef.current || typeof window === 'undefined') return;
+        // Blocco di sicurezza tassativo per il server e build statico
+        if (typeof window === 'undefined' || startedRef.current) return;
+
         startedRef.current = true;
 
-        import('@openreplay/tracker/cjs')
+        // Import dinamico della libreria standard ESM
+        import('@openreplay/tracker')
             .then(({ default: OpenReplay }) => {
                 const tracker = new OpenReplay({
                     projectKey:
-                        process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY?.trim() ||
+                        process.env.NEXT_PUBLIC_OPENREPLAY_PROJECT_KEY ||
                         'RPvj17FQ3rJhQrjzZWmJ',
                     capturePerformance: true,
                 });
-                return tracker.start();
+                tracker.start();
             })
-            .catch((err) => console.error('Errore nel caricamento di OpenReplay:', err));
+            .catch((err) => console.error('Errore caricamento OpenReplay:', err));
     }, []);
 
     return null;

@@ -16,7 +16,6 @@ function asList(v: string | string[] | undefined): string[] | undefined {
 
 async function sendViaResend(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
     const key = process.env.RESEND_API_KEY?.trim();
-    console.log('[DEBUG sendViaResend] Key being used:', JSON.stringify(key));
     if (!key) return { ok: false, error: 'missing_resend' };
 
     const to = asList(params.to);
@@ -90,7 +89,24 @@ export async function sendFloremTransactionalMail(params: SendFloremMailParams):
 
     try {
         if (process.env.RESEND_API_KEY?.trim()) {
-            return await sendViaResend(from, params);
+            const resendResult = await sendViaResend(from, params);
+            if (resendResult.ok) {
+                return resendResult;
+            }
+
+            // Fallback automatico: se Resend fallisce ma SMTP è configurato, proviamo SMTP.
+            if (process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim()) {
+                const smtpResult = await sendViaSmtp(from, params);
+                if (smtpResult.ok) {
+                    console.warn('[mail] Resend fallito, invio riuscito via SMTP fallback.');
+                    return smtpResult;
+                }
+                return {
+                    ok: false,
+                    error: `resend:${resendResult.error ?? 'unknown'} | smtp:${smtpResult.error ?? 'unknown'}`,
+                };
+            }
+            return resendResult;
         }
         if (process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim()) {
             return await sendViaSmtp(from, params);

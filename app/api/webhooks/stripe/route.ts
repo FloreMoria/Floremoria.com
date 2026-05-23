@@ -77,9 +77,7 @@ export async function POST(request: Request) {
         data: { partnerPaymentStatus: 'PAID', status: 'ACCEPTED' },
     });
 
-    if (markPaid.count === 0) {
-        return NextResponse.json({ received: true, duplicate: true });
-    }
+    const isFirstPaidTransition = markPaid.count > 0;
 
     const order = await prisma.order.findUnique({
         where: { id: orderId },
@@ -105,7 +103,15 @@ export async function POST(request: Request) {
         html: staffHtml,
     });
     if (!staffResult.ok) {
-        console.error('[stripe-webhook] Invio email staff fallito:', staffResult.error);
+        console.error('[stripe-webhook] Invio email staff fallito:', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            stripeSessionId: session.id,
+            firstPaidTransition: isFirstPaidTransition,
+            error: staffResult.error,
+        });
+        // Rispondiamo 500 per far ritentare Stripe: evita perdita definitiva della notifica operativa.
+        return NextResponse.json({ error: 'staff_mail_failed' }, { status: 500 });
     }
 
     const buyer = order.buyerEmail?.trim();
@@ -124,5 +130,5 @@ export async function POST(request: Request) {
         }
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true, duplicate: !isFirstPaidTransition });
 }

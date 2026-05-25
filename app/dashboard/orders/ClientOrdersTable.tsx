@@ -331,9 +331,22 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                             )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            <span className={`text-[13px] inline-block font-semibold break-words leading-tight ${!order.partnerId ? 'text-orange-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100' : 'text-gray-700'}`}>
-                                                {order.partner?.shopName || order.partner?.ownerName || 'Da Assegnare'}
-                                            </span>
+                                            {order.partner?.isB2B ? (
+                                                <div className="space-y-1">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider shadow-sm">
+                                                        🔌 B2B: {order.partner.shopName}
+                                                    </span>
+                                                    {order.agencyName && (
+                                                        <div className="text-[12px] font-bold text-gray-800 flex items-center gap-1">
+                                                            🏛️ {order.agencyName}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className={`text-[13px] inline-block font-semibold break-words leading-tight ${!order.partnerId ? 'text-orange-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100' : 'text-gray-700'}`}>
+                                                    {order.partner?.shopName || order.partner?.ownerName || 'Da Assegnare'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3">
                                             {canChangeStatus ? (

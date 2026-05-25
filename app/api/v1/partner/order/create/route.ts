@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
 import { generatePartnerTunnelOrderNumber } from '@/lib/partnerV1OrderNumber';
+import { sendFloremTransactionalMail } from '@/lib/serverMail';
+import { buildOrderStaffHtml } from '@/lib/orderEmails';
 
 export const runtime = 'nodejs';
 
@@ -179,8 +181,34 @@ export async function POST(request: Request) {
                     })),
                 },
             },
+            include: {
+                items: {
+                    include: {
+                        product: true,
+                    },
+                },
+                partner: true,
+            },
         });
     });
+
+    // Invio notifica email immediata allo staff (ordini@floremoria.com)
+    try {
+        const staffTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || 'ordini@floremoria.com';
+        const staffHtml = buildOrderStaffHtml({
+            order: order as any,
+            stripeSessionId: stripeCheckoutSessionId || 'B2B Partner Integration',
+        });
+
+        await sendFloremTransactionalMail({
+            to: staffTo,
+            subject: `[B2B Partner Order] Nuovo ordine ${order.orderNumber} da ${order.partner?.shopName || 'Partner B2B'}`,
+            html: staffHtml,
+        });
+        console.log(`[B2B Order Email] Notifica inviata a ${staffTo} per l'ordine ${order.orderNumber}`);
+    } catch (mailErr) {
+        console.error('[B2B Order Email Error] Errore durante l\'invio della notifica email:', mailErr);
+    }
 
     await touchPartnerCredentialLastUsed(auth.credentialId);
 

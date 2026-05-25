@@ -1,10 +1,33 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Eye, MessageCircle, Settings, BarChart2, CheckCircle2, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, MessageCircle, Settings, BarChart2, CheckCircle2, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon } from 'lucide-react';
 
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Poll for new messages every 4 seconds to simulate real-time chat
+  useEffect(() => {
+    async function fetchSessions() {
+      try {
+        const res = await fetch('/api/dashboard/communications');
+        const data = await res.json();
+        if (data.success) {
+          setSessions(data.sessions || []);
+        }
+      } catch (err) {
+        console.error('Error fetching chat sessions:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSessions();
+    const interval = setInterval(fetchSessions, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const tabs = [
     { id: 'visione', label: 'Monitoraggio', icon: Eye },
@@ -36,7 +59,14 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
 
       {/* CONTENT AREA */}
       <div className="p-8 md:p-12 min-h-[650px] bg-white">
-        {activeTab === 'visione' && <VisioneTab proofs={initialProofs} />}
+        {activeTab === 'visione' && (
+          <VisioneTab 
+            proofs={initialProofs} 
+            sessions={sessions} 
+            setSessions={setSessions}
+            loading={loading}
+          />
+        )}
         {activeTab === 'foto' && <FotoTab proofs={initialProofs} />}
         {activeTab === 'manutenzione' && <ManutenzioneTab />}
         {activeTab === 'controllo' && <ControlloTab />}
@@ -48,56 +78,132 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
 // -------------------------------------------------------------
 // 1. VISIONE (Monitoring Feed WhatsApp Style)
 // -------------------------------------------------------------
-const mockClienti = [
-  { id: '1', name: 'Cesaroni Isabella', lastMessage: 'Ne siamo sempre felici 🌹', date: 'sabato', time: '10:30', status: 'read', initials: 'CI' },
-  { id: '2', name: 'Marsiglione Salvatore', lastMessage: 'L\'affermazione è parzialmente vera...', date: 'ieri', time: '11:00', status: 'problem', initials: 'MS' },
-  { id: '3', name: 'Capellini Diego', lastMessage: 'Sì per entrambi. Grazie! Al tuo client...', date: 'sabato', time: '09:15', status: 'read', initials: 'CD' }
-];
+function VisioneTab({ 
+  proofs, 
+  sessions, 
+  setSessions, 
+  loading 
+}: { 
+  proofs: any[]; 
+  sessions: any[]; 
+  setSessions: React.Dispatch<React.SetStateAction<any[]>>; 
+  loading: boolean;
+}) {
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-const mockFioristi = [
-  { id: '4', name: 'Medda Gabriele', lastMessage: 'Foto', date: 'oggi', time: '11:44', status: 'unread', initials: 'MG', hasPhoto: true },
-  { id: '5', name: 'Fioraia Civitanova Alta', lastMessage: 'Grazie molte Antonella. A presto. 🌹', date: 'sabato', time: '08:24', status: 'read', initials: 'FC' },
-  { id: '6', name: 'Capitano Davide', lastMessage: 'Buongiorno, vai tranquillo. Ci aggiorni...', date: 'sabato', time: '07:12', status: 'read', initials: 'CD' }
-];
+  // Find the currently active chat
+  const activeChat = sessions.find(s => s.phone === activeChatId) || null;
 
-function VisioneTab({ proofs }: { proofs: any[] }) {
-  const [activeChat, setActiveChat] = useState<any>(null);
+  // Scroll to bottom of chat when active chat or messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeChat?.messages?.length]);
 
-  const renderStatus = (status: string) => {
-    if (status === 'read') return <CheckCheck className="w-[15px] h-[15px] text-[#34B7F1]" />;
-    if (status === 'unread') return <Check className="w-[15px] h-[15px] text-gray-400" />;
-    if (status === 'problem') return <AlertCircle className="w-[15px] h-[15px] text-red-500" />;
+  const renderStatus = (status: string, direction: string) => {
+    if (direction === 'OUTBOUND') {
+      return <CheckCheck className="w-[15px] h-[15px] text-[#34B7F1]" />;
+    }
+    if (status === 'HUMAN_INTERVENTION') {
+      return <AlertCircle className="w-[15px] h-[15px] text-red-500" />;
+    }
     return <Check className="w-[15px] h-[15px] text-gray-400" />;
   };
 
-  const ChatRow = ({ chat }: { chat: any }) => (
-    <div 
-      onClick={() => setActiveChat(chat)}
-      className="flex items-center gap-4 p-4 hover:bg-[#F0F2F5] cursor-pointer border-b border-[#F0F2F5] last:border-0 transition-colors"
-    >
-      <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0">
-         {chat.initials}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-baseline mb-1">
-          <h4 className="font-display font-medium text-[#111B21] truncate">{chat.name}</h4>
-          <span className={`text-[12px] font-medium ${chat.status === 'unread' ? 'text-[#25D366]' : 'text-[#667781]'}`}>
-             {chat.date !== 'oggi' ? chat.date : chat.time}
-          </span>
+  const toggleStatus = async (phone: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'AI_ACTIVE' ? 'HUMAN_INTERVENTION' : 'AI_ACTIVE';
+    try {
+      const res = await fetch('/api/dashboard/communications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, action: 'updateStatus', status: nextStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSessions(prev => prev.map(s => s.phone === phone ? { ...s, status: nextStatus } : s));
+      }
+    } catch (err) {
+      console.error('Error toggling status:', err);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || !activeChatId || sending) return;
+
+    setSending(true);
+    const textToSend = inputText;
+    setInputText('');
+
+    try {
+      const res = await fetch('/api/dashboard/communications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: activeChatId, action: 'sendMessage', messageText: textToSend })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSessions(prev => prev.map(s => s.phone === activeChatId ? data.session : s));
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Rollback input if failed
+      setInputText(textToSend);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const ChatRow = ({ chat }: { chat: any }) => {
+    const latestMsg = chat.messages?.[chat.messages.length - 1] || null;
+    return (
+      <div 
+        onClick={() => setActiveChatId(chat.phone)}
+        className={`flex items-center gap-4 p-4 hover:bg-[#F0F2F5] cursor-pointer border-b border-[#F0F2F5] last:border-0 transition-colors
+        ${activeChatId === chat.phone ? 'bg-[#F0F2F5]' : ''}`}
+      >
+        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#EAE3D9] to-[#DFDFDF] flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0 border border-gray-200">
+           {chat.initials}
         </div>
-        <div className="flex items-center gap-1.5 text-[14px] text-[#667781]">
-          {renderStatus(chat.status)}
-          <span className="truncate flex items-center gap-1.5">
-            {chat.hasPhoto && <ImageIcon className="w-4 h-4" />}
-            {chat.lastMessage}
-          </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-baseline mb-1">
+            <h4 className="font-display font-medium text-[#111B21] truncate flex items-center gap-2">
+              {chat.name}
+              {chat.status === 'HUMAN_INTERVENTION' && (
+                <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" title="Richiede Intervento Umano" />
+              )}
+            </h4>
+            <span className={`text-[12px] font-medium ${chat.status === 'HUMAN_INTERVENTION' ? 'text-red-500 font-bold animate-pulse' : 'text-[#667781]'}`}>
+               {chat.time}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[14px] text-[#667781]">
+            {latestMsg && renderStatus(chat.status, latestMsg.direction)}
+            <span className="truncate flex items-center gap-1.5">
+              {chat.hasPhoto && <ImageIcon className="w-4 h-4 text-emerald-600" />}
+              {chat.lastMessage || 'Nessun messaggio'}
+            </span>
+          </div>
         </div>
+        {chat.status === 'HUMAN_INTERVENTION' && (
+          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm animate-pulse">
+            SOS
+          </div>
+        )}
       </div>
-      {chat.status === 'unread' && (
-        <div className="w-5 h-5 bg-[#25D366] rounded-full flex items-center justify-center text-white text-[10px] font-bold">1</div>
-      )}
-    </div>
-  );
+    );
+  };
+
+  // Filter clients and florists from sessions
+  const clienti = sessions.filter(s => s.userType === 'CLIENT' || s.userType === 'UNKNOWN');
+  const fioristi = sessions.filter(s => s.userType === 'FLORIST');
+
+  const humanInterventionsCount = clienti.filter(c => c.status === 'HUMAN_INTERVENTION').length;
+  const newVisualsCount = fioristi.filter(f => f.hasPhoto).length;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
@@ -105,22 +211,52 @@ function VisioneTab({ proofs }: { proofs: any[] }) {
         {/* COLONNA UTENTI */}
         <div className="bg-white rounded-2xl border border-[#EAE3D9] overflow-hidden shadow-sm flex flex-col h-[520px]">
           <div className="bg-[#F0F2F5] p-4 border-b border-[#EAE3D9] flex justify-between items-center">
-             <h3 className="font-display font-semibold text-[#111B21]">Chat Utenti</h3>
-             <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">1 Fix Richiesto</span>
+             <h3 className="font-display font-semibold text-[#111B21] flex items-center gap-2">
+               <UserIcon className="w-4 h-4 text-gray-600" />
+               Chat Utenti (Clienti)
+             </h3>
+             {humanInterventionsCount > 0 ? (
+               <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1">
+                 <AlertCircle className="w-3 h-3" /> {humanInterventionsCount} Richiesta Umano
+               </span>
+             ) : (
+               <span className="bg-[#00A884] text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">AI Vito Attivo</span>
+             )}
           </div>
           <div className="overflow-y-auto flex-1 custom-scrollbar">
-            {mockClienti.map(c => <ChatRow key={c.id} chat={c} />)}
+            {loading ? (
+              <div className="p-8 text-center text-[#6F6F6F]">Caricamento chat...</div>
+            ) : clienti.length === 0 ? (
+              <div className="p-8 text-center text-[#6F6F6F]">Nessuna chat utente registrata.</div>
+            ) : (
+              clienti.map(c => <ChatRow key={c.phone} chat={c} />)
+            )}
           </div>
         </div>
 
         {/* COLONNA FIORISTI */}
         <div className="bg-white rounded-2xl border border-[#EAE3D9] overflow-hidden shadow-sm flex flex-col h-[520px]">
           <div className="bg-[#F0F2F5] p-4 border-b border-[#EAE3D9] flex justify-between items-center">
-             <h3 className="font-display font-semibold text-[#111B21]">Chat Fioristi (Partner)</h3>
-             <span className="bg-[#25D366] text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Nuove Prove Visive</span>
+             <h3 className="font-display font-semibold text-[#111B21] flex items-center gap-2">
+               <Camera className="w-4 h-4 text-gray-600" />
+               Chat Fioristi (Partner)
+             </h3>
+             {newVisualsCount > 0 ? (
+               <span className="bg-[#25D366] text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                 {newVisualsCount} Prove Foto Caricate
+               </span>
+             ) : (
+               <span className="bg-gray-400 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">In Attesa</span>
+             )}
           </div>
           <div className="overflow-y-auto flex-1 custom-scrollbar">
-            {mockFioristi.map(f => <ChatRow key={f.id} chat={f} />)}
+            {loading ? (
+              <div className="p-8 text-center text-[#6F6F6F]">Caricamento chat...</div>
+            ) : fioristi.length === 0 ? (
+              <div className="p-8 text-center text-[#6F6F6F]">Nessuna chat fiorista registrata.</div>
+            ) : (
+              fioristi.map(f => <ChatRow key={f.phone} chat={f} />)
+            )}
           </div>
         </div>
       </div>
@@ -131,63 +267,101 @@ function VisioneTab({ proofs }: { proofs: any[] }) {
            <div className="bg-[#EFEAE2] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[650px] animate-in zoom-in-95 duration-200">
              
              {/* Header WhatsApp Style */}
-             <div className="bg-[#00A884] text-white p-4 flex items-center gap-4 relative shadow-sm">
-               <button onClick={() => setActiveChat(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors mr-1">
+             <div className="bg-[#00A884] text-white p-4 flex items-center gap-4 relative shadow-md">
+               <button onClick={() => setActiveChatId(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors mr-1">
                  <X className="w-5 h-5"/>
                </button>
-               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-display font-bold text-white shadow-sm border border-white/30">
+               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-display font-bold text-white shadow-sm border border-white/30 flex-shrink-0">
                  {activeChat.initials}
                </div>
-               <div className="flex-1">
+               <div className="flex-1 min-w-0 mr-4">
                  <h4 className="font-semibold text-[16px] leading-tight truncate">{activeChat.name}</h4>
-                 <p className="text-white/80 text-[13px] font-medium">Ultimo accesso oggi alle {activeChat.time}</p>
+                 <p className="text-white/80 text-[12px] font-medium truncate">Twilio: {activeChat.phone.replace('whatsapp:', '')}</p>
                </div>
+
+               {/* UMANO / AI TOGGLE BUTTON */}
+               <button 
+                 onClick={() => toggleStatus(activeChat.phone, activeChat.status)}
+                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm border
+                 ${activeChat.status === 'AI_ACTIVE' 
+                   ? 'bg-emerald-900/40 text-emerald-100 hover:bg-emerald-800/60 border-emerald-400' 
+                   : 'bg-red-600 text-white hover:bg-red-700 border-red-300 animate-pulse'}`}
+               >
+                 {activeChat.status === 'AI_ACTIVE' ? (
+                   <>
+                     <Bot className="w-3.5 h-3.5" />
+                     🤖 AI VITO
+                   </>
+                 ) : (
+                   <>
+                     <UserIcon className="w-3.5 h-3.5" />
+                     👤 UMANO
+                   </>
+                 )}
+               </button>
              </div>
              
              {/* Body Chat */}
              <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: 'cover' }}>
                 <div className="flex justify-center">
-                  <span className="bg-[#FFEECD] text-[#54656F] text-[12px] px-4 py-1.5 rounded-lg shadow-sm font-medium">
-                    I messaggi e le foto sono crittografati end-to-end tramite le API Twilio.
+                  <span className="bg-[#FFEECD] text-[#54656F] text-[12px] px-4 py-1.5 rounded-lg shadow-sm font-medium border border-[#F0E6D2]">
+                    I messaggi e le foto sono sincronizzati end-to-end con le API di Twilio.
                   </span>
                 </div>
                 
-                {/* Simulated Received Message */}
-                <div className="flex justify-start">
-                  <div className="bg-white p-2 rounded-lg rounded-tl-none max-w-[85%] sm:max-w-[70%] shadow-sm relative text-[14.5px] text-[#111B21]">
-                    {activeChat.hasPhoto ? (
-                       <div className="space-y-1">
-                         <div className="w-full aspect-[3/4] bg-gray-200 rounded animate-pulse flex items-center justify-center min-w-[200px]">
-                           <Camera className="w-8 h-8 text-gray-400 opacity-50"/>
-                         </div>
-                         <p className="pt-2 px-1 pb-1">Ecco la ricevuta e la foto posata in cimitero.</p>
-                       </div>
-                    ) : (
-                       <p className="px-1 py-1 pr-12">{activeChat.lastMessage}</p>
-                    )}
-                    <span className="text-[11px] text-[#8696A0] absolute bottom-1.5 right-2">{activeChat.time}</span>
-                  </div>
-                </div>
-
-                {/* Simulated Sent Message (Admin) */}
-                <div className="flex justify-end">
-                  <div className="bg-[#D9FDD3] p-2 rounded-lg rounded-tr-none max-w-[85%] sm:max-w-[70%] shadow-sm relative text-[14.5px] text-[#111B21]">
-                    <p className="px-1 py-1 pr-16 leading-relaxed">Perfetto, la ringraziamo a nome di FloreMoria. Questo gesto porterà molta serenità alla famiglia lontana.</p>
-                    <div className="absolute bottom-1.5 right-2 flex items-center gap-1">
-                      <span className="text-[11px] text-[#8696A0]">{activeChat.time}</span>
-                      <CheckCheck className="w-[15px] h-[15px] text-[#53BDEB]" />
+                {/* Dynamically render messages */}
+                {activeChat.messages.map((m: any, idx: number) => {
+                  const isOutbound = m.direction === 'OUTBOUND';
+                  return (
+                    <div key={m.id || idx} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
+                      <div 
+                        className={`p-2.5 rounded-xl shadow-sm relative text-[14.5px] text-[#111B21] max-w-[85%] sm:max-w-[70%] leading-relaxed border
+                        ${isOutbound 
+                          ? 'bg-[#D9FDD3] rounded-tr-none border-[#C1E7B9]' 
+                          : 'bg-white rounded-tl-none border-[#E6E6E6]'}`}
+                      >
+                        {m.mediaUrl ? (
+                           <div className="space-y-1.5">
+                             <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-gray-200">
+                               <img src={m.mediaUrl} alt="Visual Proof" className="w-full h-auto max-h-[300px] object-cover hover:scale-105 transition-transform duration-300" />
+                             </a>
+                             {m.body && <p className="pt-2 px-1 pb-1">{m.body}</p>}
+                           </div>
+                        ) : (
+                           <p className="px-1 py-0.5 pb-2 pr-12 whitespace-pre-wrap">{m.body}</p>
+                        )}
+                        <div className="absolute bottom-1 right-2 flex items-center gap-1.5">
+                          <span className="text-[10px] text-[#8696A0]">{m.timestamp || m.time}</span>
+                          {isOutbound && <CheckCheck className="w-[14px] h-[14px] text-[#53BDEB]" />}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
              </div>
              
              {/* Input Bar */}
-             <div className="bg-[#F0F2F5] p-3 md:p-4 flex items-center gap-3">
-                <input type="text" placeholder="Scrivi un messaggio" className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[15px] text-[#111B21] shadow-sm" disabled />
-                <button className="w-12 h-12 rounded-full bg-[#00A884] text-white flex items-center justify-center shadow-md hover:bg-[#008f6f] transition-colors flex-shrink-0">
+             <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-3 md:p-4 flex items-center gap-3 border-t border-[#DFDFDF]">
+                <input 
+                  type="text" 
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={activeChat.status === 'AI_ACTIVE' ? "Vito sta rispondendo... disattiva l'AI per scrivere manuale" : "Scrivi un messaggio... (Invia per inoltrare su WhatsApp)"}
+                  className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[15px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
+                  disabled={activeChat.status === 'AI_ACTIVE'}
+                />
+                <button 
+                  type="submit"
+                  disabled={activeChat.status === 'AI_ACTIVE' || !inputText.trim() || sending}
+                  className={`w-12 h-12 rounded-full text-white flex items-center justify-center shadow-md transition-all flex-shrink-0
+                  ${activeChat.status === 'AI_ACTIVE' || !inputText.trim() || sending
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-[#00A884] hover:bg-[#008f6f] active:scale-95'}`}
+                >
                   <Send className="w-5 h-5 ml-1" />
                 </button>
-             </div>
+             </form>
            </div>
         </div>
       )}
@@ -199,6 +373,7 @@ function VisioneTab({ proofs }: { proofs: any[] }) {
 // 2. FOTO (Approvazione & Inoltro Postman)
 // -------------------------------------------------------------
 function FotoTab({ proofs }: { proofs: any[] }) {
+
   // Mock dati Controllo Qualità
   const mockPhotos = [
     { id: 'ORD-75', fiorista: 'Medda Gabriele', utente: 'Marsiglione S.', data: 'Oggi, 11:44', status: 'In Attesa' },

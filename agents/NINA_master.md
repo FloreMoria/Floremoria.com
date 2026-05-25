@@ -32,8 +32,8 @@ successivamente adat- tata a desktop.
 Responsive Design Ogni componente deve adattarsi automaticamente a:
 
 smartphone tablet laptop desktop Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it senza
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it senza
 rompere layout, gerarchie o leggibilità.
 
 WebApp Experience L'esperienza utente deve essere simile a quella di una
@@ -60,7 +60,7 @@ considerando:
 vista meno acuta minore familiarità con la tecnologia maggiore timore di
 sbagliare Dimensioni e leggibilità Testo base minimo: 16--18 px
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Testo consigliato: 18--20 px Titoli: 28--36 px Line
 height: 1.5--1.7 Contrasti cromatici Contrasto minimo WCAG: 4.5:1 Ma per
 pubblico senior è consigliato: 7:1 Colori consigliati:
@@ -80,7 +80,7 @@ psicologia clinica e viene applicato alle in- terfacce quando l'utente
 può trovarsi in uno stato emotivo vulnerabile. Principi fondamentali:
 
 Safety Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100
-Como \| www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+Como \| www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Trust Transparency Control Calmness Riduzione del
 carico cognitivo Utenti emotivamente stressati:
 
@@ -102,7 +102,7 @@ Esempio: ✔ Nome registrato correttamente Questo riduce l'ansia da
 errore. 5. ESTETICA EMOTIVA Il design visivo deve trasmettere:
 
 calma rispetto dignità Floremoria s.r.l. Sede centrale: Via Bellinzona,
-82/B - 22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+82/B - 22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it silenzio visivo Palette cromatica ideale
 Colori consigliati: bianco caldo blu notte grigio pietra oro tenue L'oro
 comunica:
@@ -123,8 +123,8 @@ signals Vicino alle CTA devono comparire:
 recensioni foto reali testimonianze badge sicurezza pagamenti
 Posizionamento CTA CTA principali: centro pagina oppure fine sezione
 narrativa. Microcopy rassicurante Esempio efficace: Floremoria s.r.l.
-Sede centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it CTA
+Sede centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it CTA
 "Invia i fiori sulla tomba" sotto: "Riceverai la foto della consegna."
 Questo riduce il rischio percepito. 7. FORM SENZA FRIZIONE I form sono
 il punto con maggiore abbandono. Principio UX: minimizzare lo sforzo
@@ -139,7 +139,7 @@ questo campo." 8. CHECKOUT EMPATICO Il checkout deve essere:
 lineare rassicurante prevedibile Sequenza ideale 1 Prodotto 2
 Dedicazione 3 Luogo consegna 4 Pagamento Indicatore di progresso
 Esempio: Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100
-Como \| www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+Como \| www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Step 2 di 4 Questo riduce l'ansia. Pagina di conferma
 Deve includere:
 
@@ -161,8 +161,8 @@ Applicazioni possibili:
 
 assistente per trovare una tomba suggerimenti automatici supporto nella
 compilazione dati AI come guida empatica Floremoria s.r.l. Sede
-centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it L'AI non
+centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it L'AI non
 deve sembrare un chatbot commerciale. Deve apparire come: una guida
 gentile che accompagna l'utente. 12. ERRORI UX DA EVITARE In piattaforme
 emotive questi errori sono critici:
@@ -180,7 +180,7 @@ efficace.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

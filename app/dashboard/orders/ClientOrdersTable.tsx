@@ -404,44 +404,113 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                         <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
 
                             {/* DETTAGLI CONSEGNA E MEMORIA */}
-                            <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
-                                <h4 className="text-[13px] font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                                    <Users size={14} className="text-fm-gold" /> Dettagli Consegna e Memoria
-                                </h4>
-                                <div className="grid grid-cols-1 gap-3">
-                                    <div>
-                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Nome Defunto</span>
-                                        <span className="font-bold text-gray-900 text-base">{selectedOrder.deceasedName || 'Non specificato'}</span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <MapPin size={15} className="text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Luogo / Cimitero</span>
-                                            <span className="font-medium text-gray-800 text-sm">{selectedOrder.cemeteryName || 'Non specificato'}</span>
-                                            {selectedOrder.cemeteryCity && <span className="text-gray-500 text-xs block mt-0.5">{selectedOrder.cemeteryCity}</span>}
-                                            {selectedOrder.gravePosition && <span className="text-gray-500 text-xs block mt-0.5">Posizione: {selectedOrder.gravePosition}</span>}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <Clock size={15} className="text-gray-400 mt-0.5 shrink-0" />
-                                        <div>
-                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data e Ora Cerimonia</span>
-                                            <span className="font-medium text-gray-800 text-sm">
-                                                {selectedOrder.funeralDate ? new Date(selectedOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {selectedOrder.additionalInstructions && (
-                                        <div className="flex items-start gap-2 mt-2 pt-3 border-t border-gray-100">
-                                            <Info size={15} className="text-gray-400 mt-0.5 shrink-0" />
-                                            <div>
-                                                <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Istruzioni Aggiuntive</span>
-                                                <span className="text-gray-700 text-sm leading-snug">{selectedOrder.additionalInstructions}</span>
+                            {(() => {
+                                let displayInstructions = selectedOrder.additionalInstructions || '';
+                                let stripeMetadata: any = null;
+
+                                if (displayInstructions.includes('---B2B_STRIPE_METADATA---')) {
+                                    const parts = displayInstructions.split('---B2B_STRIPE_METADATA---');
+                                    displayInstructions = parts[0].trim();
+                                    try {
+                                        stripeMetadata = JSON.parse(parts[1].trim());
+                                    } catch (e) {
+                                        console.error('Error parsing B2B Stripe metadata:', e);
+                                    }
+                                }
+
+                                return (
+                                    <>
+                                        <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
+                                            <h4 className="text-[13px] font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                                                <Users size={14} className="text-fm-gold" /> Dettagli Consegna e Memoria
+                                            </h4>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Nome Defunto</span>
+                                                        <span className="font-bold text-gray-900 text-base">{selectedOrder.deceasedName || 'Non specificato'}</span>
+                                                    </div>
+                                                    {selectedOrder.agencyName && (
+                                                        <div>
+                                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Agenzia Funebre (B2B Partner)</span>
+                                                            <span className="font-semibold text-emerald-800 text-sm bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded inline-flex items-center gap-1.5 shadow-sm">
+                                                                🏛️ {selectedOrder.agencyName}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin size={15} className="text-gray-400 mt-0.5 shrink-0" />
+                                                    <div>
+                                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Luogo / Cimitero</span>
+                                                        <span className="font-medium text-gray-800 text-sm">{selectedOrder.cemeteryName || 'Non specificato'}</span>
+                                                        {selectedOrder.cemeteryCity && (
+                                                            <span className="text-gray-500 text-xs block mt-0.5">
+                                                                {selectedOrder.cemeteryCity} {selectedOrder.deliveryProvince ? `(${selectedOrder.deliveryProvince.toUpperCase()})` : ''}
+                                                            </span>
+                                                        )}
+                                                        {selectedOrder.gravePosition && <span className="text-gray-500 text-xs block mt-0.5">Posizione: {selectedOrder.gravePosition}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-start gap-2">
+                                                    <Clock size={15} className="text-gray-400 mt-0.5 shrink-0" />
+                                                    <div>
+                                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data e Ora Cerimonia</span>
+                                                        <span className="font-medium text-gray-800 text-sm">
+                                                            {selectedOrder.funeralDate ? new Date(selectedOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {displayInstructions && (
+                                                    <div className="flex items-start gap-2 mt-2 pt-3 border-t border-gray-100">
+                                                        <Info size={15} className="text-gray-400 mt-0.5 shrink-0" />
+                                                        <div>
+                                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Istruzioni Aggiuntive</span>
+                                                            <span className="text-gray-700 text-sm leading-snug whitespace-pre-wrap">{displayInstructions}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+
+                                        {stripeMetadata && (
+                                            <div className="bg-blue-50/60 rounded-2xl p-4 border border-blue-100 space-y-3 mb-6">
+                                                <h4 className="text-[13px] font-bold text-blue-800 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-blue-100/50">
+                                                    💳 Transazione Stripe Connect (Riconciliazione B2B)
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                    {stripeMetadata.stripeCheckoutSessionId && (
+                                                        <div>
+                                                            <span className="block text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Stripe Checkout Session ID</span>
+                                                            <code className="text-gray-700 bg-white px-2 py-1 rounded border border-blue-100 break-all block font-mono font-bold">{stripeMetadata.stripeCheckoutSessionId}</code>
+                                                        </div>
+                                                    )}
+                                                    {stripeMetadata.stripePaymentIntentId && (
+                                                        <div>
+                                                            <span className="block text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Stripe Payment Intent ID</span>
+                                                            <code className="text-gray-700 bg-white px-2 py-1 rounded border border-blue-100 break-all block font-mono font-bold">{stripeMetadata.stripePaymentIntentId}</code>
+                                                        </div>
+                                                    )}
+                                                    {stripeMetadata.stripeConnectedAccountId && (
+                                                        <div>
+                                                            <span className="block text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Stripe Connected Account ID</span>
+                                                            <code className="text-gray-700 bg-white px-2 py-1 rounded border border-blue-100 break-all block font-mono font-bold">{stripeMetadata.stripeConnectedAccountId}</code>
+                                                        </div>
+                                                    )}
+                                                    {stripeMetadata.casperApplicationFeeAmount !== undefined && (
+                                                        <div>
+                                                            <span className="block text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Casper Application Fee</span>
+                                                            <span className="font-bold text-blue-900 text-sm bg-blue-100/50 border border-blue-200 px-2.5 py-0.5 rounded inline-block">
+                                                                € {Number(stripeMetadata.casperApplicationFeeAmount).toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
 
                             {/* FLOW STATO */}
                             <div className="space-y-3">

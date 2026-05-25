@@ -40,8 +40,8 @@ rassicurante · elegante · universale · memorabile
 Un brand che opera nel campo della memoria e del lutto non può adottare
 un'estetica aggressiva o commerciale.
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Deve generare tre sensazioni fondamentali:
 
@@ -87,8 +87,8 @@ palette gender-neutral
 
 Le palette più sofisticate combinano:
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 bianco caldo grigio pietra blu notte verde salvia oro tenue.
 
@@ -125,8 +125,8 @@ Gli elementi visivi devono ridurre:
 
 stress confusione stimolazione eccessiva.
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 palette calmanti
 
@@ -165,8 +165,8 @@ Non drammatica. Non teatrale.
 
 Ma:
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 naturale morbida diffusa.
 
@@ -202,7 +202,7 @@ Nel design digitale questo si traduce in:
 
 gerarchia visiva volumi tipografici profondità degli elementi.
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it 12. PRINCIPI DERIVATI DALLA MUSICA
 
 La musica introduce il concetto di ritmo visivo.
@@ -239,8 +239,8 @@ immagini stock artificiali saturazione eccessiva composizioni kitsch.
 Il floral design moderno non è decorazione.
 
 È una forma di espressione artistica. Floremoria s.r.l. Sede centrale:
-Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it Le
+Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it Le
 tendenze contemporanee privilegiano:
 
 naturalezza asimmetria controllata palette cromatiche delicate.
@@ -279,8 +279,8 @@ Elementi da mantenere costanti:
 
 palette cromatica tipografia
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 stile fotografico linguaggio grafico.
 
@@ -318,8 +318,8 @@ Il risultato finale non è solo un brand.
 È una presenza estetica capace di:
 
 rassicurare accogliere incantare. Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  Quando
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  Quando
 ARLO compie il suo lavoro nel modo corretto, accade qualcosa di
 speciale.
 
@@ -373,8 +373,8 @@ speciale.
 
           4. L'Integrazione delle Arti (Il Metodo ARLO)
 
-                     Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                               assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+                     Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                               assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 
 
@@ -437,8 +437,8 @@ fi fi  ARLO ragiona fondendo molteplici discipline:
           cattura la luce, elimina l'arti cio." ARLO è l'aura che avvolge FloreMoria, trasformando un
           servizio funzionale in pura poesia visiva.
 
-                      Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                                assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+                      Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                                assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 
 
@@ -461,7 +461,7 @@ fi fi  ARLO ragiona fondendo molteplici discipline:
 fi FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva :
 IT 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

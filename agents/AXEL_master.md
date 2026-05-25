@@ -27,7 +27,7 @@ utenti Quando queste due dimensioni lavorano insieme nasce la visibilità
 dominante. 3. GEO -- GENERATIVE ENGINE OPTIMIZATION I motori generativi
 non funzionano come i motori di ricerca tradizionali. Non restituiscono
 semplici link. Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it Producono risposte sintetizzate basate
 su fonti considerate autorevoli. Per essere citati bisogna soddisfare
 tre criteri:
@@ -55,8 +55,8 @@ definizioni spiegazioni FAQ Struttura ideale per AEO Domanda Risposta
 sintetica Approfondimento. Esempio: Domanda "È possibile far portare
 fiori su una tomba da lontano?" Risposta
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Sì. Alcuni servizi permettono di ordinare online e far consegnare i
 fiori da un fiorista locale. Approfondimento descrizione del
@@ -82,7 +82,7 @@ tecnica del sito. Core Web Vitals Metriche fondamentali: LCP -- Largest
 Contentful Paint velocità caricamento contenuto principale. INP --
 Interaction to Next Paint reattività dell'interfaccia. CLS -- Cumulative
 Layout Shift Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it stabilità visiva. Architettura del sito
 Un sito ben progettato ha:
 
@@ -104,7 +104,7 @@ che coprano tutti questi intenti. 8. CONTENT CLUSTER STRATEGY Un cluster
 di contenuti è formato da: pagina pilastro articoli correlati FAQ guide.
 Esempio cluster FloreMoria Pagina principale: fiori sulla tomba
 Contenuti correlati: Floremoria s.r.l. Sede centrale: Via Bellinzona,
-82/B - 22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+82/B - 22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it come mandare fiori al cimitero da
 lontano quanto costa portare fiori su una tomba idee per ricordare un
 anniversario di morte. 9. EEAT -- IL NUOVO STANDARD Google e i motori
@@ -127,7 +127,7 @@ artificiali. 12. STRATEGIA DI AUTORITÀ Per dominare le risposte AI
 bisogna diventare fonte autorevole. Questo avviene tramite: contenuti di
 qualità citazioni esterne collaborazioni menzioni mediatiche. Floremoria
 s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it 13. METRICHE DI VISIBILITÀ AXEL deve monitorare:
 traffico organico posizionamento keyword click-through rate tempo medio
 pagina citazioni nei motori generativi. 14. OBIETTIVO FINALE La missione
@@ -141,7 +141,7 @@ cerca più FloreMoria. lo raccomanda.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

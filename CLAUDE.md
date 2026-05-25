@@ -29,7 +29,7 @@ Claude opera con tre ruoli simultanei:
 **FloreMoria** — Startup innovativa ed ecosostenibile che permette agli utenti di acquistare online omaggi floreali consegnati dai fioristi partner sulle tombe nei cimiteri italiani, con invio di foto di conferma.
 
 - **Il prodotto reale non è il fiore. È la presenza delegata e testimoniata.**
-- Sito: www.floremoria.eu
+- Sito: www.floremoria.com
 - Stack: Next.js App Router + TypeScript + Prisma + PostgreSQL + Docker
 - Repo: `/Users/floremoria/Downloads/Floremoria_dot_com/floremoria`
 

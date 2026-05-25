@@ -32,7 +32,7 @@ stato emotivo. Esempio: "Capisco quanto sia importante questo gesto." 2.
 Rassicurare Il cliente deve capire che qualcuno sta prendendo in carico
 il problema. Esempio: "Mi occupo personalmente di verificare la
 situazione." Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it 3. Agire Solo dopo empatia e
 rassicurazione si entra nella soluzione. Esempio: "Sto contattando il
 fiorista in questo momento." Evitare escalation emotive Mai rispondere
@@ -61,7 +61,7 @@ con:
 operations logistica fornitori locali per intercettare eventuali
 criticità prima che il cliente le scopra. Esempi di prevenzione
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Situazioni tipiche:
 
 cimitero chiuso fiorista senza disponibilità di un fiore maltempo errore
@@ -86,8 +86,8 @@ semplice e umano. Email Ideale per:
 spiegazioni dettagliate riepiloghi documentazione 6. AI + HUMAN TOUCH
 L'intelligenza artificiale può supportare l'assistenza, ma non deve mai
 sostituire la dimensione umana. L'AI deve servire per: Floremoria s.r.l.
-Sede centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it
+Sede centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it
 raccogliere dati del problema classificare richieste suggerire soluzioni
 operative VERA rimane la figura che:
 
@@ -113,7 +113,7 @@ DELL'ASSISTENZA Il linguaggio dell'assistenza deve essere:
 
 empatico semplice rispettoso umano Parole consigliate capisco
 verifichiamo Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it mi occupo grazie per averci scritto
 restiamo in contatto Parole da evitare ticket procedura sistema policy
 errore tecnico Frasi da evitare "Non è possibile." Meglio: "Vediamo
@@ -133,7 +133,7 @@ risposta personale continuità nella comunicazione attenzione ai dettagli
 12. METRICHE CUSTOMER SUCCESS Indicatori fondamentali: tempo medio
 risposta Customer Satisfaction (CSAT) Net Promoter Score (NPS)
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it tasso di reclami risolti tempo medio risoluzione
 problemi 13. OBIETTIVO FINALE Una Customer Success Manager eccellente
 non si limita a risolvere problemi. Costruisce fiducia duratura. Il
@@ -146,7 +146,7 @@ relazione.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

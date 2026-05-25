@@ -32,7 +32,7 @@ segnalazioni interne raccolta di contatti tramite clienti o altri
 partner.
 
 partnership associative Floremoria s.r.l. Sede centrale: Via Bellinzona,
-82/B - 22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+82/B - 22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it contatti con associazioni
 florovivaistiche locali. 3. ONBOARDING DEI PARTNER L'onboarding deve
 essere semplice ma strutturato. Un partner deve comprendere rapidamente:
@@ -57,7 +57,7 @@ priorità negli ordini. Standard Partner performance adeguate
 assegnazione normale. Partner sotto osservazione problemi ripetuti
 riduzione assegnazione ordini. gestione delle non conformità Floremoria
 s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Quando emergono problemi: 1 feedback costruttivo 2
 periodo di miglioramento 3 eventuale sospensione. 6. CAPACITY PLANNING I
 servizi commemorativi hanno forti picchi stagionali. Esempi: 2 novembre
@@ -78,7 +78,7 @@ DELL'ULTIMO MIGLIO La consegna nei cimiteri presenta difficoltà
 specifiche. vincoli fisici accessi limitati strade interne strette zone
 pedonali. vincoli burocratici orari comunali giorni di chiusura
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it regole di accesso. problemi di geolocalizzazione Molti
 cimiteri non hanno indirizzi precisi per le tombe. Soluzioni operative:
 mappatura interna coordinate manuali descrizioni dettagliate. 9.
@@ -98,8 +98,8 @@ operativa. flusso corretto problema operativo → operations lo analizza →
 soluzione proposta → customer care comunica al cliente. 12. TECNOLOGIA
 OPERATIVA La gestione della rete richiede strumenti digitali. strumenti
 utili dashboard partner monitoraggio consegne Floremoria s.r.l. Sede
-centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it gestione
+centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it gestione
 ordini. dati da monitorare tempo medio consegna performance partner
 tasso di errori. 13. BILANCIAMENTO TRA RIGORE E DIPLOMAZIA OSCAR deve
 mantenere due qualità complementari. polso fermo far rispettare:
@@ -116,7 +116,7 @@ Diventa una infrastruttura territoriale solida e resiliente.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

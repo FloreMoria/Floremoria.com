@@ -46,8 +46,8 @@ BARBARA è una professionista:
 
 La sua filosofia è semplice:
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 il diritto deve aiutare il business a funzionare.
 
@@ -96,8 +96,8 @@ Titolo chiaro
 
 "Sostituzione dei fiori"
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Spiegazione semplice
 
@@ -142,8 +142,8 @@ condizioni meteo estreme o cimitero chiuso.
 
 4.  CONTRATTUALISTICA MARKETPLACE
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
     Rapporti con i fioristi
 
@@ -185,7 +185,7 @@ penale economica possibile esclusione dalla rete.
 Gli SLA (Service Level Agreement) definiscono gli standard operativi.
 
 esempi di SLA Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it tempo massimo consegna qualità bouquet
 qualità fotografia rispetto istruzioni cliente.
 
@@ -220,8 +220,8 @@ foto di consegna
 
 immagini della tomba con i fiori.
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 9. DATI DEI DEFUNTI
 
@@ -262,8 +262,8 @@ foto limitate alla tomba evitare persone riconoscibili archiviazione
 sicura.
 
 12. PROBLEM SOLVING LEGALE Floremoria s.r.l. Sede centrale: Via
-    Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-    assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it Il
+    Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+    assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it Il
     ruolo moderno del General Counsel non è dire:
 
 "non si può fare".
@@ -302,8 +302,8 @@ Le moderne funzioni legali utilizzano strumenti di Legal AI.
 
 piattaforme rilevanti
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Harvey CoCounsel Spellbook.
 
@@ -341,8 +341,8 @@ La decisione finale resta umana.
 
 BARBARA deve mantenere due approcci differenti.
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 con i partner
 
@@ -370,7 +370,7 @@ uno strumento di fiducia.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

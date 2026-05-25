@@ -43,7 +43,7 @@ estrai i dati per la Task Force."
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

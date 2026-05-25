@@ -48,8 +48,8 @@ potenzialmente rivoluzionaria:
 • Etichettatura: L'informazione viene marcata come \[Sperimentale - Alta
 Incertezza\].
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 • Valutazione Rischio/Beneficio: Viene presentata a Petra e Salvatore
 con una nota specifica: "Questa teoria suggerisce X, non è ancora
@@ -82,7 +82,7 @@ nostro asset legale."
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                  assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

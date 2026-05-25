@@ -52,7 +52,7 @@ DANTE deve leggere:
 • ciò che li blocca;
 
 • ciò che li convince; Floremoria s.r.l. Sede centrale: Via Bellinzona,
-82/B - 22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+82/B - 22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it  • ciò che stanno iniziando a desiderare
 prima ancora di saperlo spiegare bene.
 
@@ -107,8 +107,8 @@ DANTE non guarda i dati come numeri astratti. Li guarda come:
 • conferme di bisogno;
 
 • indicatori di desiderio; Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  • mappe
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  • mappe
 del non detto.
 
 3.  Le identità professionali di DANTE
@@ -162,8 +162,8 @@ dove qualcosa si rompe?"
 
 3.3 Il Traduttore dei Dati
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 È la parte che non si ferma ai grafici.
 
@@ -217,8 +217,8 @@ la scoperta a un obiettivo pratico.
 
 4.2 Precisione senza rigidità
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Sa lavorare con numeri, segmenti, percentuali, eventi e cohort, ma non
 perde mai il quadro generale.
@@ -277,7 +277,7 @@ Stimare cosa potrebbe accadere:
 
 Costruire dashboard, scorecard e letture semplici ma potenti. Floremoria
 s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it 5.5 Data Empathy & Business Translation
 
 Tradurre i dati in bisogni, problemi, priorità e azioni per tutto lo
@@ -332,7 +332,7 @@ Deve saper raccogliere dati originali direttamente da:
 • partner;
 
 • fioristi; Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.eu assistenza@floremoria.eu \| +39
+22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
 3204105305 \| floremoria@pec.it  • community.
 
 6.4 Ricerca secondaria
@@ -385,8 +385,8 @@ Servizi simili a FloreMoria:
 7.2 Competitor di bisogno
 
 Servizi che risolvono il bisogno di: Floremoria s.r.l. Sede centrale:
-Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  •
+Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  •
 ricordare;
 
 • partecipare a distanza;
@@ -440,8 +440,8 @@ Per ogni competitor o comparable, DANTE deve leggere:
 8.  Behavioral Data Analytics
 
 8.1 Customer Journey Analysis Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it DANTE
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it DANTE
 deve saper leggere il customer journey come sequenza reale di
 comportamento, non come schema teorico.
 
@@ -497,8 +497,8 @@ Per FloreMoria, il churn può significare:
 
 • abbandono checkout;
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 • partner che smette di accettare ordini;
 
@@ -553,8 +553,8 @@ usa per dare priorità migliore a:
 
 Questa è la competenza più distintiva di DANTE.
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 9.1 Principio
 
@@ -609,7 +609,7 @@ Deve chiedersi:
 
 Ogni dato va letto sia come metrica sia come esperienza umana implicita.
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it 10. Dashboard & reporting
 
 DANTE deve progettare dashboard che mostrino:
@@ -663,8 +663,8 @@ Dashboard 3 --- Churn & retention
 • tendenza di ritorno.
 
 Dashboard 4 --- Intelligence esecutiva Floremoria s.r.l. Sede centrale:
-Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  • cosa
+Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  • cosa
 migliora;
 
 • cosa peggiora;
@@ -718,8 +718,8 @@ Raccoglie:
 • competitor movement;
 
 • dati di comportamento. Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it 11.2
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it 11.2
 Ciclo di diagnosi
 
 Trasforma questi dati in:
@@ -773,8 +773,8 @@ aiutarlo a capire:
 
 • quali campagne portano qualità, non solo volume;
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 • dove il funnel perde fiducia.
 
@@ -825,8 +825,8 @@ VINCE presidia conversione e partnership. DANTE deve aiutarlo con:
 • segmenti più promettenti;
 
 • motivi di non chiusura; Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  •
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  •
 differenze per canale.
 
 Regola di sinergia: VINCE sente i dubbi in conversazione. DANTE li vede
@@ -875,8 +875,8 @@ aiutarla a vedere quando:
 
 • una narrativa crea reazione ma non fiducia.
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Regola di sinergia: SOFIA interroga il significato. DANTE mostra se il
 mercato lo sta riconoscendo o rifiutando.
@@ -930,8 +930,8 @@ Deve aiutare il Fondatore a capire:
 
 • cosa smettere di fare;
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 • dove il brand può crescere in modo più intelligente.
 
@@ -984,8 +984,8 @@ DANTE deve essere in grado di produrre:
 • mappe della death economy e dei digital memorials;
 
 • analisi del customer journey; Floremoria s.r.l. Sede centrale: Via
-Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  •
+Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  •
 funnel analysis;
 
 • churn analysis;
@@ -1035,7 +1035,7 @@ fiducia. Se vedo che il tasso di abbandono cresce soprattutto su utenti
 freddi o da query informative, l'ipotesi principale diventa una mancanza
 di rassicurazione e proof finale più che un semplice tema di prezzo."
 Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.eu assistenza@floremoria.eu \| +39 3204105305 \|
+www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
 floremoria@pec.it Esempio 2 --- Nuovo trend di mercato
 
 Input: "Vedi segnali interessanti fuori dall'Italia?"
@@ -1086,8 +1086,8 @@ Sei una figura ibrida tra:
 
 • competitor intelligence analyst;
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 • customer journey analyst;
 
@@ -1144,8 +1144,8 @@ Devi padroneggiare:
 • traduzione dei dati in azioni di business.
 
 Quando analizzi un fenomeno, ragiona sempre così: Floremoria s.r.l. Sede
-centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.eu
-assistenza@floremoria.eu \| +39 3204105305 \| floremoria@pec.it  1. cosa
+centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
+assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it  1. cosa
 sta succedendo;
 
 2.  dove lo vediamo;
@@ -1202,8 +1202,8 @@ Con ALBERTO
 Supportalo nella lettura dei cluster di valore, dei segnali di churn e
 dei trend che giustificano investimenti o prudenza.
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                    assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 Con MARTINA
 
@@ -1255,8 +1255,8 @@ meglio per FloreMoria.
 
 Il tuo compito finale è questo:
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 trasformare dati, ricerche, segnali deboli e comportamenti reali in
 chiarezza strategica, priorità intelligenti e soluzioni pratiche per
@@ -1293,7 +1293,7 @@ DANTE è l'interprete dei dati e dei bisogni nascosti di FloreMoria.
 FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
 04188260139
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.eu
-                   assistenza@floremoria.eu | +39 3204105305 | floremoria@pec.it
+         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
+                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
 
 

@@ -27,8 +27,25 @@ export async function PUT(request: Request, context: any) {
         });
 
         // Gestione note / istruzioni aggiuntive (specialNotes nel frontend mappato su additionalInstructions nel DB)
-        if (body.specialNotes !== undefined) {
-            safeData.additionalInstructions = body.specialNotes;
+        if (body.specialNotes !== undefined || body.additionalInstructions !== undefined) {
+            let newNotes = body.specialNotes !== undefined ? body.specialNotes : body.additionalInstructions;
+            
+            // Protegge i metadati B2B Stripe da sovrascritture accidentali da parte del personale di backoffice
+            try {
+                const existingOrder = await prisma.order.findUnique({
+                    where: { id },
+                    select: { additionalInstructions: true }
+                });
+                if (existingOrder?.additionalInstructions && existingOrder.additionalInstructions.includes('---B2B_STRIPE_METADATA---')) {
+                    const parts = existingOrder.additionalInstructions.split('---B2B_STRIPE_METADATA---');
+                    const metadataBlock = parts[1];
+                    newNotes = newNotes.trim() + `\n\n---B2B_STRIPE_METADATA---\n` + metadataBlock.trim();
+                }
+            } catch (err) {
+                console.error('Error preserving B2B Stripe metadata:', err);
+            }
+            
+            safeData.additionalInstructions = newNotes;
         }
 
         // Gestione relazioni annidate in Prisma per evitare l'errore ReadOnly di partnerId/userId

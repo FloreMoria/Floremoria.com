@@ -63,6 +63,30 @@ export async function POST(request: Request) {
             : undefined;
     const lineItems = Array.isArray(b.lineItems) ? (b.lineItems as LineItem[]) : [];
 
+    // Supporto separazione tra biglietto pulito (ticketMessage) e note operative del fiorista (additionalInstructions/specialNotes)
+    const additionalInstructionsRaw = typeof b.additionalInstructions === 'string' 
+        ? b.additionalInstructions.trim() 
+        : (typeof b.specialNotes === 'string' ? b.specialNotes.trim() : '');
+    
+    // Acquisizione riferimenti pagamento Stripe Connect (B2B)
+    const stripeCheckoutSessionId = typeof b.stripeCheckoutSessionId === 'string' ? b.stripeCheckoutSessionId.trim() : undefined;
+    const stripePaymentIntentId = typeof b.stripePaymentIntentId === 'string' ? b.stripePaymentIntentId.trim() : undefined;
+    const stripeConnectedAccountId = typeof b.stripeConnectedAccountId === 'string' ? b.stripeConnectedAccountId.trim() : undefined;
+    const casperApplicationFeeAmount = typeof b.casperApplicationFeeAmount === 'number' 
+        ? b.casperApplicationFeeAmount 
+        : (typeof b.casperApplicationFeeAmount === 'string' ? parseFloat(b.casperApplicationFeeAmount) : undefined);
+
+    let finalInstructions = additionalInstructionsRaw;
+    if (stripeCheckoutSessionId || stripePaymentIntentId || stripeConnectedAccountId || casperApplicationFeeAmount !== undefined) {
+        const stripeMeta = {
+            stripeCheckoutSessionId,
+            stripePaymentIntentId,
+            stripeConnectedAccountId,
+            casperApplicationFeeAmount
+        };
+        finalInstructions += (finalInstructions ? '\n\n' : '') + `---B2B_STRIPE_METADATA---\n${JSON.stringify(stripeMeta)}`;
+    }
+
     if (!isNonEmptyString(deceasedName) || !isNonEmptyString(cemeteryName) || !isNonEmptyString(cemeteryCity)) {
         return NextResponse.json(
             { error: 'Campi obbligatori: deceasedName, cemeteryName, cemeteryCity.' },
@@ -138,6 +162,7 @@ export async function POST(request: Request) {
                 deliveryProvince,
                 deliveryDate,
                 ticketMessage: ticketMessage ?? null,
+                additionalInstructions: finalInstructions || null,
                 buyerFullName: buyerFullName.trim(),
                 buyerEmail,
                 customerPhone: buyerPhone || null,

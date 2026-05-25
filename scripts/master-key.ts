@@ -12,7 +12,7 @@ import { SUPER_ADMIN_ROLE_NAME } from '../lib/superAdmin';
 
 function usage(): never {
     console.error('Uso: npm run master-key -- <email> <SUPER_ADMIN_SETUP_TOKEN>');
-    console.error('Esempio: npm run master-key -- salvatore@floremoria.eu "il-tuo-token-segreto"');
+    console.error('Esempio: npm run master-key -- salvatore@floremoria.com "il-tuo-token-segreto"');
     process.exit(1);
 }
 

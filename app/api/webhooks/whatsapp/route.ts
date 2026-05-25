@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import prisma from '@/lib/prisma';
 import twilio from 'twilio';
+import { FLOREM_HUMAN_OPERATOR_TRIGGER } from '@/lib/floremDigitalAssistant';
+import { buildWhatsAppAiReply } from '@/lib/whatsappKnowledge';
 
 // Load Twilio credentials to allow reply if configured
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -94,18 +96,13 @@ export async function POST(request: Request) {
         // 3. Save incoming message
         addMessage(phone, 'INBOUND', rawMessage, mediaUrl);
 
-        // 4. Check for UMANO (Human) handoff triggers
+        // 4. Check for UMANO (Human) handoff trigger
         const lowerMsg = rawMessage.toLowerCase();
-        const wantsHuman = lowerMsg.includes('umano') || 
-                           lowerMsg.includes('operatore') || 
-                           lowerMsg.includes('parlare') || 
-                           lowerMsg.includes('aiuto') || 
-                           lowerMsg.includes('salvatore') ||
-                           lowerMsg.includes('persona');
+        const wantsHuman = rawMessage.toUpperCase().includes(FLOREM_HUMAN_OPERATOR_TRIGGER);
 
         if (wantsHuman && session.status !== 'HUMAN_INTERVENTION') {
             setSessionStatus(phone, 'HUMAN_INTERVENTION');
-            const humanNotice = "La sto trasferendo a un operatore umano. Salvatore o uno dei nostri addetti all'assistenza FloreMoria prenderà in carico la chat a brevissimo per aiutarla di persona. A presto! 🌹";
+            const humanNotice = 'Ti passo subito a un operatore umano. Restiamo con te.';
             
             // Save outbound message in store and send via Twilio
             addMessage(phone, 'OUTBOUND', humanNotice);
@@ -116,21 +113,21 @@ export async function POST(request: Request) {
 
         // 5. If AI Assistant is active (AI_ACTIVE), respond automatically
         if (session.status === 'AI_ACTIVE') {
-            let replyText = '';
+            const replyText = buildWhatsAppAiReply({
+                message: rawMessage,
+                userName: session.name,
+                userType: session.userType,
+                mediaUrl,
+            });
 
-            // --- A: FLORIST (Partner) LOGIC ---
-            if (session.userType === 'FLORIST') {
-                if (mediaUrl) {
-                    // Ingest photo! Extract potential order number (e.g. FT-RM-26-001)
-                    const orderMatch = rawMessage.match(/FT-RM-\d+-\d+/i) || rawMessage.match(/FT-\d+/i);
-                    const orderNum = orderMatch ? orderMatch[0].toUpperCase() : 'FT-RM-26-001';
-
-                    replyText = `Grazie mille per la foto caricata! Ho registrato la garanzia fotografica e l'ho associata all'ordine ${orderNum} nella dashboard FloreMoria. È stata approvata automaticamente dai nostri controlli di qualità preliminari. Buon lavoro! 🌸`;
-
-                    // Ingest delivery proof into DB safely
+            // Se il fiorista invia una foto, proviamo ad agganciarla all'ordine indicato nel testo.
+            if (session.userType === 'FLORIST' && mediaUrl) {
+                const orderMatch = rawMessage.match(/\b(?:FT|FF|FA|FP)-[A-Z]{2}-\d{2}-\d{3}\b/i);
+                const orderNum = orderMatch ? orderMatch[0].toUpperCase() : null;
+                if (orderNum) {
                     try {
                         const targetOrder = await prisma.order.findFirst({
-                            where: { orderNumber: orderNum }
+                            where: { orderNumber: orderNum },
                         });
                         if (targetOrder) {
                             await prisma.deliveryProof.upsert({
@@ -138,36 +135,21 @@ export async function POST(request: Request) {
                                 update: {
                                     photoAfterUrl: mediaUrl,
                                     timestampAfter: new Date(),
-                                    status: 'COMPLETED'
+                                    status: 'COMPLETED',
                                 },
                                 create: {
                                     orderId: targetOrder.id,
                                     partnerId: targetOrder.partnerId || 'default-partner',
                                     photoAfterUrl: mediaUrl,
                                     timestampAfter: new Date(),
-                                    status: 'COMPLETED'
-                                }
+                                    status: 'COMPLETED',
+                                },
                             });
                             console.log(`[Photo Ingestion] Photo associated with order ${orderNum}`);
                         }
                     } catch (dbErr) {
                         console.warn('[Photo Ingestion Database Error] Running in offline fallback mode:', dbErr);
                     }
-                } else {
-                    replyText = `Buongiorno! Se stai completando un allestimento, inviami pure la foto del bouquet posato sulla tomba indicando il numero progressivo dell'ordine (es. FT-RM-26-001) affinché possa caricarlo all'istante nella dashboard! 🌹`;
-                }
-            } 
-            // --- B: CLIENT LOGIC ---
-            else {
-                // Vito Empathy AI simulation
-                if (lowerMsg.includes('stato') || lowerMsg.includes('ordine') || lowerMsg.includes('consegna')) {
-                    replyText = `Gentile ${session.name}, le confermo che le nostre consegne al cimitero avvengono sempre puntualmente prima della cerimonia o in mattinata. Riceverà una notifica SMS e WhatsApp automatica con la foto prova non appena l'omaggio floreale sarà posato con rispetto sulla tomba del suo caro. 🌹`;
-                } else if (lowerMsg.includes('foto') || lowerMsg.includes('prova')) {
-                    replyText = `Sì, assolutamente! Con il nostro protocollo 'Luce e Memoria' le invieremo una foto reale e ad alta definizione dell'omaggio floreale allestito al cimitero, così che possa vedere il risultato con i suoi occhi. 📸`;
-                } else if (lowerMsg.includes('prezzo') || lowerMsg.includes('costo') || lowerMsg.includes('spedizione')) {
-                    replyText = `I nostri prezzi includono sempre la confezione a mano da parte di fioristi locali. Le spese di consegna cimiteriale o a domicilio vengono calcolate al checkout in base alla località esatta, garantendo il massimo rispetto e puntualità. 🌸`;
-                } else {
-                    replyText = `Gentile ${session.name}, sono Vito, l'assistente virtuale di FloreMoria. Sono qui per aiutarla a onorare la memoria del suo caro nel modo più sereno e trasparente possibile. Se desidera parlare direttamente con Salvatore o un operatore umano, scriva semplicemente la parola "UMANO". 🌹`;
                 }
             }
 

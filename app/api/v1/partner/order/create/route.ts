@@ -114,6 +114,20 @@ export async function POST(request: Request) {
             { status: 400, headers: { ...partnerV1CorsHeaders(request, 'POST, OPTIONS') } }
         );
     }
+
+    const funeralDateRaw = b.funeralDate;
+    let funeralDate: Date | null = null;
+    if (typeof funeralDateRaw === 'string' && funeralDateRaw.trim()) {
+        const parsed = new Date(funeralDateRaw.trim());
+        if (!Number.isNaN(parsed.getTime())) {
+            funeralDate = parsed;
+        } else {
+            return NextResponse.json(
+                { error: 'funeralDate non valida (formato ISO string o YYYY-MM-DDTHH:MM:SS).' },
+                { status: 400, headers: { ...partnerV1CorsHeaders(request, 'POST, OPTIONS') } }
+            );
+        }
+    }
     if (!isNonEmptyString(buyerFullName) || !buyerEmail) {
         return NextResponse.json(
             { error: 'Campi obbligatori: buyerFullName, buyerEmail.' },
@@ -172,6 +186,7 @@ export async function POST(request: Request) {
                 currency: 'EUR',
                 partnerId: auth.partnerId,
                 agencyName: agencyName || null,
+                funeralDate: funeralDate || null,
                 partnerNotifyEmail: partnerNotifyEmail || null,
                 items: {
                     create: resolved.map((r) => ({

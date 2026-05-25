@@ -514,7 +514,7 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                                         <div>
                                                             <span className="block text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Casper Application Fee</span>
                                                             <span className="font-bold text-blue-900 text-sm bg-blue-100/50 border border-blue-200 px-2.5 py-0.5 rounded inline-block">
-                                                                € {Number(stripeMetadata.casperApplicationFeeAmount).toFixed(2)}
+                                                                € {(Number(stripeMetadata.casperApplicationFeeAmount) / 100).toFixed(2)}
                                                             </span>
                                                         </div>
                                                     )}
@@ -588,18 +588,18 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                             {/* DETTAGLI CONSEGNA E NOTE */}
                             <div className="space-y-2">
                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                    <MapPin size={16} className="text-gray-400" /> Posizione della consegna
+                                    <Info size={16} className="text-gray-400" /> Istruzioni Fiorista / Note Operative
                                 </h4>
                                 {canChangeStatus ? (
                                     <textarea
                                         className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm min-h-[80px] resize-none"
                                         value={selectedOrder.specialNotes || ''}
                                         onChange={(e) => setSelectedOrder({ ...selectedOrder, specialNotes: e.target.value })}
-                                        placeholder="Inserisci note sulla posizione..."
+                                        placeholder="Inserisci note e istruzioni per il fiorista..."
                                     />
                                 ) : (
                                     <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 p-3 rounded-xl min-h-[48px]">
-                                        {selectedOrder.specialNotes || 'Nessuna specifica posizione in archivio.'}
+                                        {selectedOrder.specialNotes || 'Nessuna istruzione aggiuntiva.'}
                                     </div>
                                 )}
                             </div>

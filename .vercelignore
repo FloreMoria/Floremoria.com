@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+floremoria-deploy.tar.gz
+tsconfig.tsbuildinfo
+.cursor
+agent-transcripts
+notes
+chats_database.json
+*.log

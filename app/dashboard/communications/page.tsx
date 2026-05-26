@@ -11,7 +11,9 @@ export const dynamic = 'force-dynamic';
 export default async function CommunicationsPage() {
   // Recupera gli ultimi Delivery Proofs (con Fallback Protettivo per Server in cache)
   let proofs: any[] = [];
-  if (prisma.deliveryProof) {
+  const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
+
+  if (prisma.deliveryProof && hasDatabaseUrl) {
       try {
         proofs = await prisma.deliveryProof.findMany({
           orderBy: { createdAt: 'desc' },
@@ -21,10 +23,14 @@ export default async function CommunicationsPage() {
             partner: { select: { shopName: true } }
           }
         });
-      } catch (e) {
-        console.error("Prisma Fetch Error:", e);
+      } catch {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            '[FloreMoria] Dashboard Communications: DB non raggiungibile, mostro lista prove vuota.'
+          );
+        }
       }
-  } else {
+  } else if (!prisma.deliveryProof) {
       console.warn("Attenzione: Prisma Client non aggiornato. Il server Next.js necessita di un riavvio (npm run dev).");
   }
 

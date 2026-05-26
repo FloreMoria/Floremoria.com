@@ -1,11 +1,8 @@
 import React from 'react';
-import { Download } from 'lucide-react';
 import { cookies } from 'next/headers';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
-
-const prisma = new PrismaClient();
 
 // MOCK: ID dell'utente loggato, per test fiorista (sostituire in produzione con session.user.id)
 const MOCK_FLORIST_ID = "mock-florist-id";
@@ -17,6 +14,7 @@ export const metadata = {
 export default async function OrdersPage() {
     const cookieStore = await cookies();
     const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
+    const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
     // 1. Risolvi RBAC per vedere se può cambiare stato
     let canChangeStatus = false;
@@ -25,17 +23,27 @@ export default async function OrdersPage() {
     if (roleName === 'SUPER_ADMIN') {
         canChangeStatus = true;
         isGlobalAdmin = true;
-    } else {
-        const role = await prisma.role.findUnique({ where: { name: roleName } });
-        if (role && typeof role.permissions === 'object' && role.permissions !== null) {
-            const perms = role.permissions as Record<string, boolean>;
-            canChangeStatus = !!perms['change_status'];
+    } else if (hasDatabaseUrl) {
+        try {
+            const role = await prisma.role.findUnique({ where: { name: roleName } });
+            if (role && typeof role.permissions === 'object' && role.permissions !== null) {
+                const perms = role.permissions as Record<string, boolean>;
+                canChangeStatus = !!perms['change_status'];
+            }
+        } catch {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn(
+                    '[FloreMoria] Dashboard Orders: RBAC DB non raggiungibile, applico permessi minimi locali.'
+                );
+            }
         }
         if (roleName === 'OPERATOR') isGlobalAdmin = true;
+    } else if (roleName === 'OPERATOR') {
+        isGlobalAdmin = true;
     }
 
     // 2. Query Ordini: solo consegne reali (no carrelli abbandonati, no CANCELLED)
-    let ordersQuery: any = {
+    const ordersQuery: any = {
         where: visibleDashboardOrdersWhere(),
     };
     if (!isGlobalAdmin) {
@@ -43,25 +51,38 @@ export default async function OrdersPage() {
         ordersQuery.where = { ...ordersQuery.where, userId: MOCK_FLORIST_ID };
     }
 
-    const ordersData = await prisma.order.findMany({
-        ...ordersQuery,
-        orderBy: { createdAt: 'desc' },
-        include: {
-            user: true, 
-            partner: true, // Fiorista Assegnato reale
-            items: {
+    let ordersData: any[] = [];
+    let florists: Array<{ id: string; shopName: string; ownerName: string | null }> = [];
+
+    if (hasDatabaseUrl) {
+        try {
+            ordersData = await prisma.order.findMany({
+                ...ordersQuery,
+                orderBy: { createdAt: 'desc' },
                 include: {
-                    product: true // Serve per Nome e Immagine
+                    user: true,
+                    partner: true, // Fiorista Assegnato reale
+                    items: {
+                        include: {
+                            product: true // Serve per Nome e Immagine
+                        }
+                    }
                 }
+            });
+
+            florists = await prisma.partner.findMany({
+                where: { deletedAt: null, isB2B: false },
+                orderBy: { shopName: 'asc' },
+                select: { id: true, shopName: true, ownerName: true }
+            });
+        } catch {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn(
+                    '[FloreMoria] Dashboard Orders: DB non raggiungibile, renderizzo tabella vuota senza crash.'
+                );
             }
         }
-    });
-
-    const florists = await prisma.partner.findMany({
-        where: { deletedAt: null, isB2B: false },
-        orderBy: { shopName: 'asc' },
-        select: { id: true, shopName: true, ownerName: true }
-    });
+    }
 
     const displayOrders = ordersData.map(o => ({
         ...o,

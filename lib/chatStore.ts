@@ -6,14 +6,16 @@ export interface ChatMessage {
     direction: 'INBOUND' | 'OUTBOUND';
     body: string;
     mediaUrl?: string;
+    metadata?: Record<string, string>;
     timestamp: string;
 }
 
 export interface ChatSession {
     phone: string;
     name: string;
-    userType: 'CLIENT' | 'FLORIST' | 'UNKNOWN';
+    userType: 'UTENTE' | 'FLORIST' | 'UNKNOWN';
     status: 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED';
+    welcomeSent?: boolean;
     lastMessage: string;
     hasPhoto?: boolean;
     date: string;
@@ -24,14 +26,35 @@ export interface ChatSession {
 }
 
 const dbPath = path.join(process.cwd(), 'chats_database.json');
+type PersistenceMode = 'disk' | 'memory';
+let persistenceMode: PersistenceMode = 'disk';
+let memoryStore: Record<string, ChatSession> | null = null;
+
+function cloneSessions(source: Record<string, ChatSession>): Record<string, ChatSession> {
+    return JSON.parse(JSON.stringify(source)) as Record<string, ChatSession>;
+}
+
+function getMemoryStore(): Record<string, ChatSession> {
+    if (!memoryStore) {
+        memoryStore = cloneSessions(defaultSessions);
+    }
+    return memoryStore;
+}
+
+function switchToMemoryStore(candidate?: Record<string, ChatSession>): Record<string, ChatSession> {
+    persistenceMode = 'memory';
+    memoryStore = candidate ? cloneSessions(candidate) : getMemoryStore();
+    return memoryStore;
+}
 
 // Initialize with nice mock data if file does not exist
 const defaultSessions: Record<string, ChatSession> = {
     'whatsapp:+393331112222': {
         phone: 'whatsapp:+393331112222',
         name: 'Cesaroni Isabella',
-        userType: 'CLIENT',
+        userType: 'UTENTE',
         status: 'AI_ACTIVE',
+        welcomeSent: true,
         lastMessage: 'Ne siamo sempre felici 🌹',
         date: 'sabato',
         time: '10:30',
@@ -48,6 +71,7 @@ const defaultSessions: Record<string, ChatSession> = {
         name: 'Medda Gabriele',
         userType: 'FLORIST',
         status: 'HUMAN_INTERVENTION', // Richiede l'attenzione dell'amministratore
+        welcomeSent: true,
         lastMessage: 'Ecco la foto di controllo per l\'ordine FT-RM-26-001',
         date: 'oggi',
         time: '11:44',
@@ -62,24 +86,40 @@ const defaultSessions: Record<string, ChatSession> = {
 };
 
 export function getChatStore(): Record<string, ChatSession> {
+    if (persistenceMode === 'memory') {
+        return getMemoryStore();
+    }
+
     try {
         if (!fs.existsSync(dbPath)) {
-            fs.writeFileSync(dbPath, JSON.stringify(defaultSessions, null, 2), 'utf-8');
-            return defaultSessions;
+            const initial = cloneSessions(defaultSessions);
+            try {
+                fs.writeFileSync(dbPath, JSON.stringify(initial, null, 2), 'utf-8');
+                return initial;
+            } catch (writeErr) {
+                console.warn('Chat store file not writable, using in-memory fallback', writeErr);
+                return switchToMemoryStore(initial);
+            }
         }
         const data = fs.readFileSync(dbPath, 'utf-8');
         return JSON.parse(data);
     } catch (e) {
-        console.error('Error loading chat store, using defaults', e);
-        return defaultSessions;
+        console.error('Error loading chat store, using in-memory fallback', e);
+        return switchToMemoryStore();
     }
 }
 
 export function saveChatStore(store: Record<string, ChatSession>) {
+    if (persistenceMode === 'memory') {
+        memoryStore = cloneSessions(store);
+        return;
+    }
+
     try {
         fs.writeFileSync(dbPath, JSON.stringify(store, null, 2), 'utf-8');
     } catch (e) {
-        console.error('Error saving chat store', e);
+        console.error('Error saving chat store, switching to memory mode', e);
+        switchToMemoryStore(store);
     }
 }
 
@@ -93,6 +133,7 @@ export function getSession(phone: string): ChatSession {
             name: phone.replace('whatsapp:', ''),
             userType: 'UNKNOWN',
             status: 'AI_ACTIVE',
+            welcomeSent: false,
             lastMessage: '',
             date: 'oggi',
             time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
@@ -105,7 +146,13 @@ export function getSession(phone: string): ChatSession {
     return store[phone];
 }
 
-export function addMessage(phone: string, direction: 'INBOUND' | 'OUTBOUND', body: string, mediaUrl?: string): ChatSession {
+export function addMessage(
+    phone: string,
+    direction: 'INBOUND' | 'OUTBOUND',
+    body: string,
+    mediaUrl?: string,
+    metadata?: Record<string, string>
+): ChatSession {
     const store = getChatStore();
     const session = store[phone] || getSession(phone);
 
@@ -117,6 +164,7 @@ export function addMessage(phone: string, direction: 'INBOUND' | 'OUTBOUND', bod
         direction,
         body,
         mediaUrl,
+        metadata,
         timestamp: timeStr
     };
 
@@ -142,4 +190,22 @@ export function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUMAN_INT
     store[phone] = session;
     saveChatStore(store);
     return session;
+}
+
+export function updateSessionProfile(
+    phone: string,
+    updates: Partial<Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>>
+): ChatSession {
+    const store = getChatStore();
+    const session = store[phone] || getSession(phone);
+
+    const nextSession: ChatSession = {
+        ...session,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+    };
+
+    store[phone] = nextSession;
+    saveChatStore(store);
+    return nextSession;
 }

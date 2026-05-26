@@ -158,6 +158,27 @@ function VisioneTab({
     }
   };
 
+  const renderLinkedMessage = (text: string): React.ReactNode => {
+    if (!text) return null;
+    const parts = text.split(/(https?:\/\/[^\s]+)/g);
+    return parts.map((part, idx) => {
+      if (/^https?:\/\/[^\s]+$/.test(part)) {
+        return (
+          <a
+            key={`${part}-${idx}`}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[#0B57D0] underline break-all"
+          >
+            {part}
+          </a>
+        );
+      }
+      return <React.Fragment key={`txt-${idx}`}>{part}</React.Fragment>;
+    });
+  };
+
   const ChatRow = ({ chat }: { chat: any }) => {
     const latestMsg = chat.messages?.[chat.messages.length - 1] || null;
     return (
@@ -198,8 +219,8 @@ function VisioneTab({
     );
   };
 
-  // Filter clients and florists from sessions
-  const clienti = sessions.filter(s => s.userType === 'CLIENT' || s.userType === 'UNKNOWN');
+  // Filter users and florists from sessions
+  const clienti = sessions.filter(s => s.userType === 'UTENTE' || s.userType === 'UNKNOWN');
   const fioristi = sessions.filter(s => s.userType === 'FLORIST');
 
   const humanInterventionsCount = clienti.filter(c => c.status === 'HUMAN_INTERVENTION').length;
@@ -325,10 +346,10 @@ function VisioneTab({
                              <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-gray-200">
                                <img src={m.mediaUrl} alt="Visual Proof" className="w-full h-auto max-h-[300px] object-cover hover:scale-105 transition-transform duration-300" />
                              </a>
-                             {m.body && <p className="pt-2 px-1 pb-1">{m.body}</p>}
+                             {m.body && <p className="pt-2 px-1 pb-1 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>}
                            </div>
                         ) : (
-                           <p className="px-1 py-0.5 pb-2 pr-12 whitespace-pre-wrap">{m.body}</p>
+                           <p className="px-1 py-0.5 pb-2 pr-12 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>
                         )}
                         <div className="absolute bottom-1 right-2 flex items-center gap-1.5">
                           <span className="text-[10px] text-[#8696A0]">{m.timestamp || m.time}</span>

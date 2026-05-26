@@ -1,0 +1,420 @@
+{
+  "whatsapp:+393331112222": {
+    "phone": "whatsapp:+393331112222",
+    "name": "Cesaroni Isabella",
+    "userType": "UTENTE",
+    "status": "AI_ACTIVE",
+    "lastMessage": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+    "date": "oggi",
+    "time": "15:53",
+    "initials": "CI",
+    "messages": [
+      {
+        "id": "m1",
+        "direction": "INBOUND",
+        "body": "Buongiorno, desideravo sapere se il bouquet di rose gialle è stato consegnato al cimitero.",
+        "timestamp": "10:15"
+      },
+      {
+        "id": "m2",
+        "direction": "OUTBOUND",
+        "body": "Gentile Isabella, sono Vito l'assistente FloreMoria. Sì, le confermo che il fiorista partner ha completato la posa con la massima cura. Ecco la foto prova per lei!",
+        "timestamp": "10:20"
+      },
+      {
+        "id": "m3",
+        "direction": "INBOUND",
+        "body": "Ne siamo sempre felici 🌹",
+        "timestamp": "10:30"
+      },
+      {
+        "id": "msg-bla0hcjny",
+        "direction": "INBOUND",
+        "body": "Ciao",
+        "timestamp": "14:12"
+      },
+      {
+        "id": "msg-4y8gnuhov",
+        "direction": "OUTBOUND",
+        "body": "Gentile Cesaroni Isabella, sono VERA, assistente FloreMoria. Posso aiutarti con ordini, consegne, foto e catalogo. Se desideri un operatore umano, scrivi UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "14:12"
+      },
+      {
+        "id": "msg-w65l0wj1h",
+        "direction": "INBOUND",
+        "body": "Ciao",
+        "timestamp": "14:48"
+      },
+      {
+        "id": "msg-rgmchycc4",
+        "direction": "OUTBOUND",
+        "body": "Gentile Cesaroni Isabella, sono VERA, assistente FloreMoria. Posso aiutarti con ordini, consegne, foto e catalogo. Se desideri un operatore umano, scrivi UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "14:48"
+      },
+      {
+        "id": "msg-ggwq4wx82",
+        "direction": "OUTBOUND",
+        "body": "vorrei inviare dei fiori a Como",
+        "timestamp": "14:49"
+      },
+      {
+        "id": "msg-hmz8iwt8q",
+        "direction": "INBOUND",
+        "body": "Quanto costa un bouquet?",
+        "timestamp": "14:49"
+      },
+      {
+        "id": "msg-qr6fg4dym",
+        "direction": "INBOUND",
+        "body": "Ciao, vorrei mandare dei fiori a Como, è possibile? ",
+        "timestamp": "14:50"
+      },
+      {
+        "id": "msg-mbar9zyup",
+        "direction": "OUTBOUND",
+        "body": "Gentile Cesaroni Isabella, sono VERA, assistente FloreMoria. Posso aiutarti con ordini, consegne, foto e catalogo. Se desideri un operatore umano, scrivi UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "14:50"
+      },
+      {
+        "id": "msg-v1enxye4k",
+        "direction": "INBOUND",
+        "body": "Ciao, consegnate anche a Palermo?",
+        "timestamp": "14:54"
+      },
+      {
+        "id": "msg-fiadp7xb0",
+        "direction": "OUTBOUND",
+        "body": "Copriamo tutta Italia, anche comuni piccoli. Puoi partire da qui: https://www.floremoria.com/fiori-sulle-tombe",
+        "timestamp": "14:54"
+      },
+      {
+        "id": "msg-yu31l2bvk",
+        "direction": "INBOUND",
+        "body": "Quanto costa un bouquet?e quanti fiori ci sono? posso scegliere",
+        "timestamp": "14:56"
+      },
+      {
+        "id": "msg-dkhgfdmc4",
+        "direction": "OUTBOUND",
+        "body": "Ti aiuto subito. Per fiori sulle tombe partiamo da EUR 29.99. Puoi vedere il catalogo qui: https://www.floremoria.com/fiori-sulle-tombe",
+        "timestamp": "14:56"
+      },
+      {
+        "id": "msg-2yzca3gfp",
+        "direction": "INBOUND",
+        "body": "UMANO",
+        "timestamp": "14:58"
+      },
+      {
+        "id": "msg-ocn0kspxm",
+        "direction": "OUTBOUND",
+        "body": "Ti passo subito a un operatore umano. Restiamo con te.",
+        "timestamp": "14:58"
+      },
+      {
+        "id": "msg-g4ttyzvzs",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, come possiamo aiutarla? ",
+        "timestamp": "14:58"
+      },
+      {
+        "id": "msg-rqhebyivl",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:00"
+      },
+      {
+        "id": "msg-kvq01i9zu",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:00"
+      },
+      {
+        "id": "msg-2iy973asb",
+        "direction": "OUTBOUND",
+        "body": "Per i piccoli amici puoi vedere il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:00"
+      },
+      {
+        "id": "msg-w5oevxglv",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:13"
+      },
+      {
+        "id": "msg-jmrmsugye",
+        "direction": "OUTBOUND",
+        "body": "Per i piccoli amici puoi vedere il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:13"
+      },
+      {
+        "id": "msg-3x9863tjx",
+        "direction": "INBOUND",
+        "body": "aiuto, voglio parlare con qualcuno",
+        "timestamp": "15:25"
+      },
+      {
+        "id": "msg-81agzw4nb",
+        "direction": "OUTBOUND",
+        "body": "Ti passo subito a un operatore umano. Restiamo con te.",
+        "metadata": {
+          "eventType": "HUMAN_HANDOFF",
+          "handoffReason": "keyword:aiuto",
+          "handoffAt": "2026-05-26T13:25:25.513Z"
+        },
+        "timestamp": "15:25"
+      },
+      {
+        "id": "msg-iega90mzb",
+        "direction": "OUTBOUND",
+        "body": "buongiorno isabella , come posso aiutarla? ",
+        "timestamp": "15:26"
+      },
+      {
+        "id": "msg-qvgy6locz",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:27"
+      },
+      {
+        "id": "msg-klo4uvh5j",
+        "direction": "OUTBOUND",
+        "body": "Per i piccoli amici puoi vedere il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:27"
+      },
+      {
+        "id": "msg-thszgu65n",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:29"
+      },
+      {
+        "id": "msg-42mrt84sv",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Cesaroni Isabella, per il ricordo dei piccoli amici puo consultare il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:29"
+      },
+      {
+        "id": "msg-1zzrdy3r4",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:31"
+      },
+      {
+        "id": "msg-pjlhxjz92",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Cesaroni, per il ricordo dei piccoli amici puo consultare il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:31"
+      },
+      {
+        "id": "msg-9ru6ah4ni",
+        "direction": "INBOUND",
+        "body": "Purtroppo è successa una disgrazia non ce lo aspettavamo è morta lilla la nostra cagnolina di 19 anni non ce lo aspettavamo Avete fiori per animali domestici?",
+        "timestamp": "15:32"
+      },
+      {
+        "id": "msg-vcqijitwh",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, per il ricordo dei piccoli amici puo consultare il catalogo qui: https://www.floremoria.com/per-animali-domestici",
+        "timestamp": "15:32"
+      },
+      {
+        "id": "msg-kq3slz46e",
+        "direction": "INBOUND",
+        "body": "voglio dei fiori per bologna devo venire io a prenderli",
+        "timestamp": "15:33"
+      },
+      {
+        "id": "msg-t4ctihxtx",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:33"
+      },
+      {
+        "id": "msg-6dcdbr6kt",
+        "direction": "INBOUND",
+        "body": "voglio dei fiori per bologna devo venire io a prenderli",
+        "timestamp": "15:39"
+      },
+      {
+        "id": "msg-em5ytde0s",
+        "direction": "OUTBOUND",
+        "body": "La ringrazio. Per essere certa di aiutarLa al meglio: desidera che l'omaggio floreale venga consegnato a Prenderli?",
+        "timestamp": "15:39"
+      },
+      {
+        "id": "msg-nrsj43vdf",
+        "direction": "INBOUND",
+        "body": "hai cannato",
+        "timestamp": "15:39"
+      },
+      {
+        "id": "msg-sqxj6v5op",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:39"
+      },
+      {
+        "id": "msg-s89q8vzuw",
+        "direction": "INBOUND",
+        "body": "mi capisci",
+        "timestamp": "15:40"
+      },
+      {
+        "id": "msg-nszw8dgih",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno, sono VERA, assistenza virtuale FloreMoria.\nSiamo disponibili 08:00-22:00, tutti i giorni.\nSe desidera parlare con lo staff umano, scriva UMANO.",
+        "timestamp": "15:40"
+      },
+      {
+        "id": "msg-n2aceqeka",
+        "direction": "INBOUND",
+        "body": "voglio inviare fiori a venezia",
+        "timestamp": "15:41"
+      },
+      {
+        "id": "msg-7equcs1qs",
+        "direction": "OUTBOUND",
+        "body": "La ringrazio. Per essere certa di aiutarLa al meglio: desidera che l'omaggio floreale venga consegnato a Venezia?",
+        "timestamp": "15:41"
+      },
+      {
+        "id": "msg-1ohrqvjaf",
+        "direction": "INBOUND",
+        "body": "si cosa devo fare",
+        "timestamp": "15:41"
+      },
+      {
+        "id": "msg-achgd4e9h",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:41"
+      },
+      {
+        "id": "msg-8tadoq6qs",
+        "direction": "INBOUND",
+        "body": "si cosa devo fare",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-lss3py1pk",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-d6te8vygh",
+        "direction": "INBOUND",
+        "body": "ciao",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-ugkyxgm43",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-ug4ubo7w2",
+        "direction": "INBOUND",
+        "body": "vogli odei fiori per calabria san biagio",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-cwulk0q0n",
+        "direction": "OUTBOUND",
+        "body": "La ringrazio. Per aiutarLa con precisione Le chiedo un solo dettaglio: desidera organizzare un Tributo sulla tomba o un Omaggio Solenne per il funerale?",
+        "timestamp": "15:49"
+      },
+      {
+        "id": "msg-a5mum8f18",
+        "direction": "INBOUND",
+        "body": "tomba",
+        "timestamp": "15:50"
+      },
+      {
+        "id": "msg-nh9wi5aea",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:50"
+      },
+      {
+        "id": "msg-4t0i251j4",
+        "direction": "INBOUND",
+        "body": "tomba",
+        "timestamp": "15:52"
+      },
+      {
+        "id": "msg-xblqkqzv3",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, certamente. Le confermo che inviamo la testimonianza fotografica del tributo floreale sul posto, con la massima trasparenza.",
+        "timestamp": "15:52"
+      },
+      {
+        "id": "msg-2bnig9mx5",
+        "direction": "INBOUND",
+        "body": "quindi cosa faccio",
+        "timestamp": "15:52"
+      },
+      {
+        "id": "msg-39l6gry0e",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:52"
+      },
+      {
+        "id": "msg-fdxwe8v59",
+        "direction": "INBOUND",
+        "body": "quindi cosa faccio",
+        "timestamp": "15:53"
+      },
+      {
+        "id": "msg-5mni35ps0",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:53"
+      },
+      {
+        "id": "msg-to58215h1",
+        "direction": "INBOUND",
+        "body": "voglio i fiori",
+        "timestamp": "15:53"
+      },
+      {
+        "id": "msg-u2lh3k6og",
+        "direction": "OUTBOUND",
+        "body": "Buongiorno Isabella, sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza 08:00-22:00, tutti i giorni.",
+        "timestamp": "15:53"
+      }
+    ],
+    "updatedAt": "2026-05-26T13:53:21.411Z",
+    "welcomeSent": true
+  },
+  "whatsapp:+393444222333": {
+    "phone": "whatsapp:+393444222333",
+    "name": "Medda Gabriele",
+    "userType": "FLORIST",
+    "status": "HUMAN_INTERVENTION",
+    "lastMessage": "Ecco la foto di controllo per l'ordine FT-RM-26-001",
+    "date": "oggi",
+    "time": "11:44",
+    "initials": "MG",
+    "hasPhoto": true,
+    "messages": [
+      {
+        "id": "m4",
+        "direction": "INBOUND",
+        "body": "Buongiorno, qui fiorista Medda Gabriele. Sto completando la consegna al cimitero.",
+        "timestamp": "11:40"
+      },
+      {
+        "id": "m5",
+        "direction": "INBOUND",
+        "body": "Ecco la foto di controllo per l'ordine FT-RM-26-001",
+        "mediaUrl": "https://www.floremoria.com/images/products/fiori-sulle-tombe/Bouquet Rose/bouquet-rose-giallo-classico-cimitero-consegna-ferrara.webp",
+        "timestamp": "11:44"
+      }
+    ],
+    "updatedAt": "2026-05-26T11:57:52.805Z"
+  }
+}

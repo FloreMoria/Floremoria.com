@@ -339,6 +339,40 @@ model FloremoriaLog {
   @@map("floremoria_logs")
 }
 
+model WhatsAppChatSession {
+  id         String               @id @default(cuid())
+  phone      String               @unique
+  name       String
+  userType   String               @default("UNKNOWN")
+  status     String               @default("AI_ACTIVE")
+  welcomeSent Boolean             @default(false) @map("welcome_sent")
+  lastMessage String              @default("") @map("last_message")
+  hasPhoto   Boolean              @default(false) @map("has_photo")
+  dateLabel  String               @default("oggi") @map("date_label")
+  timeLabel  String               @default("") @map("time_label")
+  initials   String               @default("UT")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+  messages   WhatsAppChatMessage[]
+
+  @@map("whatsapp_chat_sessions")
+}
+
+model WhatsAppChatMessage {
+  id             String             @id @default(cuid())
+  sessionId      String             @map("session_id")
+  direction      String
+  body           String
+  mediaUrl       String?            @map("media_url")
+  metadata       Json?
+  timestampLabel String             @map("timestamp_label")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  session        WhatsAppChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("whatsapp_chat_messages")
+}
+
 enum OrderStatus {
   PENDING
   ACCEPTED

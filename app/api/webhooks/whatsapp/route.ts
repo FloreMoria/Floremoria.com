@@ -72,13 +72,13 @@ export async function POST(request: Request) {
         const kb = loadWhatsAppCoreKb();
 
         // 1. Get or create session
-        let session = getSession(phone);
+        let session = await getSession(phone);
         if (session.name === phone.replace('whatsapp:', '')) {
-            session = updateSessionProfile(phone, { name: profileName });
+            session = await updateSessionProfile(phone, { name: profileName });
         }
 
         // 2. Save incoming message immediately (dashboard/chat DB sync).
-        addMessage(phone, 'INBOUND', rawMessage, mediaUrl || undefined);
+        await addMessage(phone, 'INBOUND', rawMessage, mediaUrl || undefined);
 
         // 3. Check for explicit or emotional human handoff trigger.
         const wantsHuman = shouldEscalateToHuman(rawMessage);
@@ -87,10 +87,10 @@ export async function POST(request: Request) {
             if (process.env.NODE_ENV === 'development') {
                 console.info(`[WhatsApp Handoff] ${phone} => HUMAN_INTERVENTION (${escalationReason || 'unknown'})`);
             }
-            setSessionStatus(phone, 'HUMAN_INTERVENTION');
+            await setSessionStatus(phone, 'HUMAN_INTERVENTION');
             const humanNotice = 'Ti passo subito a un operatore umano. Restiamo con te.';
 
-            addMessage(phone, 'OUTBOUND', humanNotice, undefined, {
+            await addMessage(phone, 'OUTBOUND', humanNotice, undefined, {
                 eventType: 'HUMAN_HANDOFF',
                 handoffReason: escalationReason || 'unknown',
                 handoffAt: new Date().toISOString(),
@@ -111,15 +111,15 @@ export async function POST(request: Request) {
                 welcomeLines.push('[2] Sono un fiorista partner');
             }
             const welcomeMessage = welcomeLines.join('\n');
-            session = updateSessionProfile(phone, { welcomeSent: true });
-            addMessage(phone, 'OUTBOUND', welcomeMessage);
+            session = await updateSessionProfile(phone, { welcomeSent: true });
+            await addMessage(phone, 'OUTBOUND', welcomeMessage);
             return twimlMessageResponse(welcomeMessage);
         }
 
         // Explicit support keywords bypass generic flows and repeat essential info.
         if (isSupportInfoRequest(rawMessage) && !wantsHuman) {
             const supportReply = `Assistenza FloreMoria: siamo disponibili ${kb.supportHours}. Se desidera, puo scrivere UMANO e La mettiamo subito in contatto con lo staff.`;
-            addMessage(phone, 'OUTBOUND', supportReply);
+            await addMessage(phone, 'OUTBOUND', supportReply);
             return twimlMessageResponse(supportReply);
         }
 
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
                     }
                 });
                 if (partner) {
-                    session = updateSessionProfile(phone, {
+                    session = await updateSessionProfile(phone, {
                         userType: 'FLORIST',
                         name: partner.shopName,
                     });
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
                         where: { customerPhone: { contains: normalizedPhone } }
                     });
                     if (order) {
-                        session = updateSessionProfile(phone, {
+                        session = await updateSessionProfile(phone, {
                             userType: 'UTENTE',
                             name: order.buyerFullName || profileName,
                         });
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
                 const choice = extractOnboardingChoice(rawMessage);
                 if (!choice) {
                     const onboardingMessage = 'Per proseguire, risponda con [1] se e Utente oppure [2] se e fiorista partner.';
-                    addMessage(phone, 'OUTBOUND', onboardingMessage);
+                    await addMessage(phone, 'OUTBOUND', onboardingMessage);
                     return twimlMessageResponse(onboardingMessage);
                 }
 
@@ -170,26 +170,26 @@ export async function POST(request: Request) {
                         .slice(0, 2)
                         .map((part) => part[0]?.toUpperCase() || '')
                         .join('') || 'UT';
-                    session = updateSessionProfile(phone, {
+                    session = await updateSessionProfile(phone, {
                         userType: 'UTENTE',
                         name: fallbackName,
                         initials,
                     });
                     const confirmation = 'Perfetto, profilo registrato come UTENTE. Come posso aiutarti oggi?';
-                    addMessage(phone, 'OUTBOUND', confirmation);
+                    await addMessage(phone, 'OUTBOUND', confirmation);
                     return twimlMessageResponse(confirmation);
                 }
 
                 const floristPending = 'Ricevuto. Profilo fiorista in verifica: tra poco ti invieremo il testo di convalida dedicato.';
-                setSessionStatus(phone, 'HUMAN_INTERVENTION');
-                addMessage(phone, 'OUTBOUND', floristPending);
+                await setSessionStatus(phone, 'HUMAN_INTERVENTION');
+                await addMessage(phone, 'OUTBOUND', floristPending);
                 return twimlMessageResponse(floristPending);
             }
         }
 
         // 5. If AI Assistant is active (AI_ACTIVE), respond automatically
         if (session.status === 'AI_ACTIVE') {
-            const sessionWithHistory = getSession(phone);
+            const sessionWithHistory = await getSession(phone);
             const replyText = buildWhatsAppAiReply({
                 message: rawMessage,
                 userName: session.name,
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
             }
 
             // Save outbound message in store and return via TwiML.
-            addMessage(phone, 'OUTBOUND', replyText);
+            await addMessage(phone, 'OUTBOUND', replyText);
             return twimlMessageResponse(replyText);
         }
 

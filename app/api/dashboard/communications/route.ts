@@ -30,7 +30,7 @@ async function sendTwilioMessage(to: string, text: string) {
 // GET: Retrieve all active chat sessions from persistent store
 export async function GET() {
     try {
-        const store = getChatStore();
+        const store = await getChatStore();
         // Convert record to array, sorted by last updated timestamp
         const sessions = Object.values(store).sort((a, b) => {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
             if (!status || !['AI_ACTIVE', 'HUMAN_INTERVENTION', 'CLOSED'].includes(status)) {
                 return NextResponse.json({ success: false, error: 'Stato non valido.' }, { status: 400 });
             }
-            const session = setSessionStatus(phone, status);
+            const session = await setSessionStatus(phone, status);
             return NextResponse.json({ success: true, session });
         }
 
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
             await sendTwilioMessage(phone, messageText);
 
             // 2. Save in local database
-            const session = addMessage(phone, 'OUTBOUND', messageText);
+            const session = await addMessage(phone, 'OUTBOUND', messageText);
 
             return NextResponse.json({ success: true, session });
         }

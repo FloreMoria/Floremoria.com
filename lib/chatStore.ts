@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import prisma from './prisma';
 
 export interface ChatMessage {
     id: string;
@@ -26,26 +27,10 @@ export interface ChatSession {
 }
 
 const dbPath = path.join(process.cwd(), 'chats_database.json');
+const useDatabasePersistence = process.env.NODE_ENV === 'production';
 type PersistenceMode = 'disk' | 'memory';
 let persistenceMode: PersistenceMode = 'disk';
 let memoryStore: Record<string, ChatSession> | null = null;
-
-function cloneSessions(source: Record<string, ChatSession>): Record<string, ChatSession> {
-    return JSON.parse(JSON.stringify(source)) as Record<string, ChatSession>;
-}
-
-function getMemoryStore(): Record<string, ChatSession> {
-    if (!memoryStore) {
-        memoryStore = cloneSessions(defaultSessions);
-    }
-    return memoryStore;
-}
-
-function switchToMemoryStore(candidate?: Record<string, ChatSession>): Record<string, ChatSession> {
-    persistenceMode = 'memory';
-    memoryStore = candidate ? cloneSessions(candidate) : getMemoryStore();
-    return memoryStore;
-}
 
 // Initialize with nice mock data if file does not exist
 const defaultSessions: Record<string, ChatSession> = {
@@ -70,7 +55,7 @@ const defaultSessions: Record<string, ChatSession> = {
         phone: 'whatsapp:+393444222333',
         name: 'Medda Gabriele',
         userType: 'FLORIST',
-        status: 'HUMAN_INTERVENTION', // Richiede l'attenzione dell'amministratore
+        status: 'HUMAN_INTERVENTION',
         welcomeSent: true,
         lastMessage: 'Ecco la foto di controllo per l\'ordine FT-RM-26-001',
         date: 'oggi',
@@ -85,7 +70,120 @@ const defaultSessions: Record<string, ChatSession> = {
     }
 };
 
-export function getChatStore(): Record<string, ChatSession> {
+function cloneSessions(source: Record<string, ChatSession>): Record<string, ChatSession> {
+    return JSON.parse(JSON.stringify(source)) as Record<string, ChatSession>;
+}
+
+function getMemoryStore(): Record<string, ChatSession> {
+    if (!memoryStore) {
+        memoryStore = cloneSessions(defaultSessions);
+    }
+    return memoryStore;
+}
+
+function switchToMemoryStore(candidate?: Record<string, ChatSession>): Record<string, ChatSession> {
+    persistenceMode = 'memory';
+    memoryStore = candidate ? cloneSessions(candidate) : getMemoryStore();
+    return memoryStore;
+}
+
+function nowTimeLabel(): string {
+    return new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function asUserType(value: string): 'UTENTE' | 'FLORIST' | 'UNKNOWN' {
+    if (value === 'UTENTE' || value === 'FLORIST') return value;
+    return 'UNKNOWN';
+}
+
+function asStatus(value: string): 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED' {
+    if (value === 'HUMAN_INTERVENTION' || value === 'CLOSED') return value;
+    return 'AI_ACTIVE';
+}
+
+function mapDbSessionToChatSession(session: {
+    phone: string;
+    name: string;
+    userType: string;
+    status: string;
+    welcomeSent: boolean;
+    lastMessage: string;
+    hasPhoto: boolean;
+    dateLabel: string;
+    timeLabel: string;
+    initials: string;
+    updatedAt: Date;
+    messages: Array<{
+        id: string;
+        direction: string;
+        body: string;
+        mediaUrl: string | null;
+        metadata: unknown;
+        timestampLabel: string;
+    }>;
+}): ChatSession {
+    return {
+        phone: session.phone,
+        name: session.name,
+        userType: asUserType(session.userType),
+        status: asStatus(session.status),
+        welcomeSent: session.welcomeSent,
+        lastMessage: session.lastMessage || '',
+        hasPhoto: session.hasPhoto || undefined,
+        date: session.dateLabel || 'oggi',
+        time: session.timeLabel || nowTimeLabel(),
+        initials: session.initials || 'UT',
+        messages: session.messages.map((msg) => ({
+            id: msg.id,
+            direction: msg.direction === 'OUTBOUND' ? 'OUTBOUND' : 'INBOUND',
+            body: msg.body,
+            mediaUrl: msg.mediaUrl || undefined,
+            metadata: typeof msg.metadata === 'object' && msg.metadata ? (msg.metadata as Record<string, string>) : undefined,
+            timestamp: msg.timestampLabel || nowTimeLabel(),
+        })),
+        updatedAt: session.updatedAt.toISOString(),
+    };
+}
+
+async function ensureDbSession(phone: string): Promise<ChatSession> {
+    const existing = await prisma.whatsAppChatSession.findUnique({
+        where: { phone },
+        include: { messages: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (existing) return mapDbSessionToChatSession(existing);
+
+    const initials = phone.replace(/[^\d]/g, '').slice(-2) || 'UT';
+    const created = await prisma.whatsAppChatSession.create({
+        data: {
+            phone,
+            name: phone.replace('whatsapp:', ''),
+            userType: 'UNKNOWN',
+            status: 'AI_ACTIVE',
+            welcomeSent: false,
+            lastMessage: '',
+            hasPhoto: false,
+            dateLabel: 'oggi',
+            timeLabel: nowTimeLabel(),
+            initials,
+        },
+        include: { messages: { orderBy: { createdAt: 'asc' } } },
+    });
+    return mapDbSessionToChatSession(created);
+}
+
+export async function getChatStore(): Promise<Record<string, ChatSession>> {
+    if (useDatabasePersistence) {
+        const sessions = await prisma.whatsAppChatSession.findMany({
+            orderBy: { updatedAt: 'desc' },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+        return sessions.reduce<Record<string, ChatSession>>((acc, session) => {
+            const mapped = mapDbSessionToChatSession(session);
+            acc[mapped.phone] = mapped;
+            return acc;
+        }, {});
+    }
+
     if (persistenceMode === 'memory') {
         return getMemoryStore();
     }
@@ -109,12 +207,14 @@ export function getChatStore(): Record<string, ChatSession> {
     }
 }
 
-export function saveChatStore(store: Record<string, ChatSession>) {
+export async function saveChatStore(store: Record<string, ChatSession>) {
+    if (useDatabasePersistence) {
+        return;
+    }
     if (persistenceMode === 'memory') {
         memoryStore = cloneSessions(store);
         return;
     }
-
     try {
         fs.writeFileSync(dbPath, JSON.stringify(store, null, 2), 'utf-8');
     } catch (e) {
@@ -123,10 +223,13 @@ export function saveChatStore(store: Record<string, ChatSession>) {
     }
 }
 
-export function getSession(phone: string): ChatSession {
-    const store = getChatStore();
+export async function getSession(phone: string): Promise<ChatSession> {
+    if (useDatabasePersistence) {
+        return ensureDbSession(phone);
+    }
+
+    const store = await getChatStore();
     if (!store[phone]) {
-        // Create new session
         const initials = phone.replace(/[^\d]/g, '').slice(-2);
         store[phone] = {
             phone,
@@ -136,29 +239,52 @@ export function getSession(phone: string): ChatSession {
             welcomeSent: false,
             lastMessage: '',
             date: 'oggi',
-            time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+            time: nowTimeLabel(),
             initials: initials || 'UT',
             messages: [],
             updatedAt: new Date().toISOString()
         };
-        saveChatStore(store);
+        await saveChatStore(store);
     }
     return store[phone];
 }
 
-export function addMessage(
+export async function addMessage(
     phone: string,
     direction: 'INBOUND' | 'OUTBOUND',
     body: string,
     mediaUrl?: string,
     metadata?: Record<string, string>
-): ChatSession {
-    const store = getChatStore();
-    const session = store[phone] || getSession(phone);
+): Promise<ChatSession> {
+    if (useDatabasePersistence) {
+        const session = await ensureDbSession(phone);
+        const timeStr = nowTimeLabel();
+        const updated = await prisma.whatsAppChatSession.update({
+            where: { phone },
+            data: {
+                lastMessage: body,
+                hasPhoto: mediaUrl ? true : session.hasPhoto || false,
+                dateLabel: 'oggi',
+                timeLabel: timeStr,
+                messages: {
+                    create: {
+                        direction,
+                        body,
+                        mediaUrl: mediaUrl || null,
+                        metadata: metadata || undefined,
+                        timestampLabel: timeStr,
+                    },
+                },
+            },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+        return mapDbSessionToChatSession(updated);
+    }
 
+    const store = await getChatStore();
+    const session = store[phone] || (await getSession(phone));
     const now = new Date();
     const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    
     const newMessage: ChatMessage = {
         id: 'msg-' + Math.random().toString(36).substr(2, 9),
         direction,
@@ -176,36 +302,61 @@ export function addMessage(
     session.time = timeStr;
     session.date = 'oggi';
     session.updatedAt = now.toISOString();
-
     store[phone] = session;
-    saveChatStore(store);
+    await saveChatStore(store);
     return session;
 }
 
-export function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED'): ChatSession {
-    const store = getChatStore();
-    const session = store[phone] || getSession(phone);
+export async function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED'): Promise<ChatSession> {
+    if (useDatabasePersistence) {
+        await ensureDbSession(phone);
+        const updated = await prisma.whatsAppChatSession.update({
+            where: { phone },
+            data: { status },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+        return mapDbSessionToChatSession(updated);
+    }
+
+    const store = await getChatStore();
+    const session = store[phone] || (await getSession(phone));
     session.status = status;
     session.updatedAt = new Date().toISOString();
     store[phone] = session;
-    saveChatStore(store);
+    await saveChatStore(store);
     return session;
 }
 
-export function updateSessionProfile(
+export async function updateSessionProfile(
     phone: string,
     updates: Partial<Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>>
-): ChatSession {
-    const store = getChatStore();
-    const session = store[phone] || getSession(phone);
+): Promise<ChatSession> {
+    if (useDatabasePersistence) {
+        await ensureDbSession(phone);
+        const updated = await prisma.whatsAppChatSession.update({
+            where: { phone },
+            data: {
+                ...(updates.name !== undefined ? { name: updates.name } : {}),
+                ...(updates.userType !== undefined ? { userType: updates.userType } : {}),
+                ...(updates.status !== undefined ? { status: updates.status } : {}),
+                ...(updates.initials !== undefined ? { initials: updates.initials } : {}),
+                ...(updates.lastMessage !== undefined ? { lastMessage: updates.lastMessage } : {}),
+                ...(updates.hasPhoto !== undefined ? { hasPhoto: updates.hasPhoto } : {}),
+                ...(updates.welcomeSent !== undefined ? { welcomeSent: updates.welcomeSent } : {}),
+            },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+        return mapDbSessionToChatSession(updated);
+    }
 
+    const store = await getChatStore();
+    const session = store[phone] || (await getSession(phone));
     const nextSession: ChatSession = {
         ...session,
         ...updates,
         updatedAt: new Date().toISOString(),
     };
-
     store[phone] = nextSession;
-    saveChatStore(store);
+    await saveChatStore(store);
     return nextSession;
 }

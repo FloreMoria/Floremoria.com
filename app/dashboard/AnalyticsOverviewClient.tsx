@@ -6,19 +6,23 @@ import {
 } from 'recharts';
 import { AreaChart, Area } from 'recharts';
 import { Activity, Users, MousePointerClick, Clock, ArrowUpRight, BarChart2, Moon, Sun, Euro, ShieldCheck, Terminal, Info, Copy, Check, ExternalLink } from 'lucide-react';
+import type {
+    Ga4OverviewResult,
+    Ga4OverviewStatus,
+} from '@/lib/ga4/fetchOverview';
 
 import { useRouter } from 'next/navigation';
 import MissionControlHub from './MissionControlHub';
 
 export default function AnalyticsOverviewClient({
-    ga4Data,
+    initialGa4Overview,
     ga4ApiConfigured = false,
     ga4ConsoleUrl = 'https://analytics.google.com',
     initialOrders = [],
     csvData = [],
     latestLogs = [],
 }: {
-    ga4Data: any;
+    initialGa4Overview: Ga4OverviewResult | null;
     ga4ApiConfigured?: boolean;
     ga4ConsoleUrl?: string;
     initialOrders?: any[];
@@ -38,6 +42,10 @@ export default function AnalyticsOverviewClient({
     const [isCopied, setIsCopied] = useState(false);
     const [logs, setLogs] = useState<any[]>(latestLogs);
     const [logsLoading, setLogsLoading] = useState(latestLogs.length === 0);
+    const [ga4Overview, setGa4Overview] = useState<Ga4OverviewResult | null>(
+        initialGa4Overview,
+    );
+    const [ga4RefreshError, setGa4RefreshError] = useState<string | null>(null);
 
 
     const handleCopy = () => {
@@ -74,6 +82,38 @@ export default function AnalyticsOverviewClient({
         fetchLogs();
     }, []);
 
+    useEffect(() => {
+        let disposed = false;
+
+        const refreshGa4Overview = async () => {
+            try {
+                const res = await fetch('/api/dashboard/ga4-overview', {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                });
+                if (!res.ok) {
+                    throw new Error(`ga4_overview_http_${res.status}`);
+                }
+                const nextOverview = (await res.json()) as Ga4OverviewResult;
+                if (disposed) return;
+                setGa4Overview(nextOverview);
+                setGa4RefreshError(null);
+            } catch (err) {
+                if (disposed) return;
+                console.error('[GA4 Overview] refresh failed:', err);
+                setGa4RefreshError('refresh_failed');
+            }
+        };
+
+        refreshGa4Overview();
+        const interval = setInterval(refreshGa4Overview, 5 * 60 * 1000);
+
+        return () => {
+            disposed = true;
+            clearInterval(interval);
+        };
+    }, []);
+
     const activeLog = logs.length > 0 ? logs[0] : null;
 
     const hasProf = logs.some((log: any) => {
@@ -87,12 +127,16 @@ export default function AnalyticsOverviewClient({
 
     if (!isMounted) return null;
 
-    const ga4Unavailable = !ga4Data || ga4Data.isEmpty;
-    const totals = ga4Unavailable
-        ? { users: 0, sessions: 0, bounceRate: '—' }
-        : ga4Data.totals;
-    const dailyTraffic = ga4Unavailable ? [] : ga4Data.dailyTraffic ?? [];
-    const topPages = ga4Unavailable ? [] : ga4Data.topPages ?? [];
+    const ga4Status: Ga4OverviewStatus = ga4Overview?.status
+        ? ga4Overview.status
+        : ga4ApiConfigured
+          ? 'api_error'
+          : 'config_missing';
+    const ga4Data = ga4Overview?.data;
+    const ga4Unavailable = ga4Status === 'config_missing' || ga4Status === 'auth_error' || ga4Status === 'api_error';
+    const totals = ga4Data?.totals ?? { users: 0, sessions: 0, bounceRate: '—' };
+    const dailyTraffic = ga4Data?.dailyTraffic ?? [];
+    const topPages = ga4Data?.topPages ?? [];
 
     // THE MARGIN ENGINE
     const costiFioristaMap = new Map();
@@ -192,7 +236,7 @@ export default function AnalyticsOverviewClient({
         <div className={`-m-8 p-8 min-h-screen transition-colors duration-300 ${bgClass}`}>
             <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
-                {ga4Unavailable && (
+                {ga4Status === 'config_missing' && (
                     <div
                         className={`rounded-2xl border px-5 py-4 flex gap-3 ${
                             darkMode ? 'bg-amber-950/40 border-amber-700/50' : 'bg-amber-50 border-amber-200'
@@ -221,6 +265,75 @@ export default function AnalyticsOverviewClient({
                             </a>
                         </div>
                     </div>
+                )}
+                {ga4Status === 'auth_error' && (
+                    <div
+                        className={`rounded-2xl border px-5 py-4 flex gap-3 ${
+                            darkMode ? 'bg-red-950/30 border-red-700/50' : 'bg-red-50 border-red-200'
+                        }`}
+                        role="status"
+                    >
+                        <Info className={`shrink-0 mt-0.5 ${darkMode ? 'text-red-300' : 'text-red-700'}`} size={22} />
+                        <div className="text-sm">
+                            <p className={`font-semibold ${darkMode ? 'text-red-100' : 'text-red-900'}`}>
+                                Autenticazione GA4 non valida — aggiorna token OAuth o service account
+                            </p>
+                            <p className={`mt-1 ${textMuted}`}>
+                                Il backend riesce a raggiungere GA4 ma le credenziali API sono state rifiutate (es. refresh token revocato).
+                                Aggiorna le variabili GA4 su Vercel e rilancia il deploy.
+                            </p>
+                            <a
+                                href={ga4ConsoleUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`inline-flex mt-2 text-xs font-semibold underline ${darkMode ? 'text-red-300' : 'text-red-800'}`}
+                            >
+                                Apri Google Analytics →
+                            </a>
+                        </div>
+                    </div>
+                )}
+                {ga4Status === 'api_error' && (
+                    <div
+                        className={`rounded-2xl border px-5 py-4 flex gap-3 ${
+                            darkMode ? 'bg-amber-950/40 border-amber-700/50' : 'bg-amber-50 border-amber-200'
+                        }`}
+                        role="status"
+                    >
+                        <Info className={`shrink-0 mt-0.5 ${darkMode ? 'text-amber-400' : 'text-amber-700'}`} size={22} />
+                        <div className="text-sm">
+                            <p className={`font-semibold ${darkMode ? 'text-amber-100' : 'text-amber-900'}`}>
+                                API GA4 temporaneamente non disponibile
+                            </p>
+                            <p className={`mt-1 ${textMuted}`}>
+                                I dati ordini e Mission Control restano attivi. Codice diagnostico:{' '}
+                                <code className="text-xs">{ga4Overview?.diagnosticCode || 'api_unknown_error'}</code>.
+                            </p>
+                        </div>
+                    </div>
+                )}
+                {ga4Status === 'empty' && (
+                    <div
+                        className={`rounded-2xl border px-5 py-4 flex gap-3 ${
+                            darkMode ? 'bg-blue-950/20 border-blue-700/40' : 'bg-blue-50 border-blue-200'
+                        }`}
+                        role="status"
+                    >
+                        <Info className={`shrink-0 mt-0.5 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`} size={22} />
+                        <div className="text-sm">
+                            <p className={`font-semibold ${darkMode ? 'text-blue-100' : 'text-blue-900'}`}>
+                                GA4 collegato correttamente, ma senza traffico recente
+                            </p>
+                            <p className={`mt-1 ${textMuted}`}>
+                                Nessuna sessione o top page negli ultimi giorni. La connessione API e' comunque attiva.
+                            </p>
+                        </div>
+                    </div>
+                )}
+                {ga4RefreshError && (
+                    <p className={`text-xs -mt-4 ${textMuted}`}>
+                        Ultimo refresh GA4 non riuscito: manteniamo gli ultimi dati validi in dashboard.
+                    </p>
                 )}
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
@@ -444,7 +557,11 @@ export default function AnalyticsOverviewClient({
                         <div className="h-[280px] w-full flex-1">
                             {ga4Unavailable ? (
                                 <div className={`h-full flex items-center justify-center text-sm ${textMuted}`}>
-                                    Dati GA4 non configurati sul server
+                                    Dati GA4 non disponibili in questo momento
+                                </div>
+                            ) : dailyTraffic.length === 0 ? (
+                                <div className={`h-full flex items-center justify-center text-sm ${textMuted}`}>
+                                    Nessun traffico registrato negli ultimi 7 giorni
                                 </div>
                             ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -483,6 +600,9 @@ export default function AnalyticsOverviewClient({
 
                             {ga4Unavailable && (
                                 <p className={`text-sm py-8 text-center ${textMuted}`}>Nessun dato pagine da GA4.</p>
+                            )}
+                            {!ga4Unavailable && topPages.length === 0 && (
+                                <p className={`text-sm py-8 text-center ${textMuted}`}>Nessuna pagina significativa nel periodo selezionato.</p>
                             )}
                             {!ga4Unavailable && topPages.map((page: any, idx: number) => (
                                 <div key={idx} className={`grid grid-cols-12 items-center text-sm border-b pb-3 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-lg transition-colors ${darkMode ? 'border-gray-800' : 'border-gray-50'}`}>

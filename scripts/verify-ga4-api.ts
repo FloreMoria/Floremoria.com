@@ -9,7 +9,7 @@ import {
     getGa4ServiceAccountCredentials,
     isGa4ApiConfigured,
 } from '../lib/ga4/credentials';
-import { fetchGa4Overview } from '../lib/ga4/fetchOverview';
+import { fetchGa4OverviewResult } from '../lib/ga4/fetchOverview';
 
 loadEnvFiles();
 
@@ -35,10 +35,17 @@ async function main() {
     }
 
     console.log('\nChiamata API in corso…');
-    const data = await fetchGa4Overview();
+    const overview = await fetchGa4OverviewResult({ bypassCache: true });
+    const data = overview.data;
 
-    if (!data) {
+    if (overview.status === 'config_missing') {
+        console.error('\n✗ Config GA4 incompleta.');
+        process.exit(1);
+    }
+
+    if (overview.status === 'auth_error' || overview.status === 'api_error' || !data) {
         console.error('\n✗ API fallita. Controlla:');
+        console.error(`  Diagnostica: ${overview.diagnosticCode}`);
         console.error('  1) GA4_PROPERTY_ID = ID proprietà (Admin → Impostazioni proprietà)');
         console.error('  2) GA4 → Amministrazione → Collegamenti GCP → collega progetto floremoria-com');
         console.error('  3) Cloud IAM → assistenza@... → ruolo "Visualizzatore Google Analytics"');
@@ -47,7 +54,7 @@ async function main() {
         process.exit(1);
     }
 
-    if (data.isEmpty) {
+    if (overview.status === 'empty' || data.isEmpty) {
         console.log('\n⚠ API ok ma nessun traffico negli ultimi 7 giorni (normale se il tag è appena attivo).');
     } else {
         console.log('\n✓ API ok — dati ricevuti:');

@@ -12,7 +12,7 @@ export async function GET() {
     };
 
     const data = {
-        ga4: getGa4HealthState(),
+        ga4: await getGa4HealthState(),
         calendar: getRandState(0.95),
         ads: getRandState(0.8),
         merchant: getRandState(0.85),

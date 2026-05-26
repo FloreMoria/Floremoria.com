@@ -5,8 +5,7 @@ import Papa from 'papaparse';
 import prisma from '@/lib/prisma';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { buildGa4ConsoleUrl } from '@/lib/ga4/config';
-import { fetchGa4Overview } from '@/lib/ga4/fetchOverview';
-import { isGa4ApiConfigured } from '@/lib/ga4/credentials';
+import { fetchGa4OverviewResult } from '@/lib/ga4/fetchOverview';
 
 export const revalidate = 3600;
 
@@ -23,8 +22,8 @@ function loadCSV() {
 }
 
 export default async function AdminOverview() {
-    const ga4Data = await fetchGa4Overview();
-    const ga4ApiConfigured = isGa4ApiConfigured();
+    const initialGa4Overview = await fetchGa4OverviewResult({ cacheTtlMs: 5 * 60 * 1000 });
+    const ga4ApiConfigured = initialGa4Overview.status !== 'config_missing';
     const ga4ConsoleUrl = buildGa4ConsoleUrl('realtime');
 
     const orders = await prisma.order.findMany({
@@ -45,7 +44,7 @@ export default async function AdminOverview() {
 
     return (
         <AnalyticsOverviewClient
-            ga4Data={ga4Data}
+            initialGa4Overview={initialGa4Overview}
             ga4ApiConfigured={ga4ApiConfigured}
             ga4ConsoleUrl={ga4ConsoleUrl}
             initialOrders={orders as any[]}

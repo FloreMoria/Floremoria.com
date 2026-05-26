@@ -6,6 +6,7 @@ import twilio from 'twilio';
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
 async function sendTwilioMessage(to: string, text: string) {
     if (!accountSid || !authToken) {
@@ -27,8 +28,25 @@ async function sendTwilioMessage(to: string, text: string) {
     }
 }
 
+function emptySessionsResponse(reason: string) {
+    return NextResponse.json(
+        {
+            success: true,
+            sessions: [],
+            degraded: true,
+            reason,
+        },
+        { status: 200 },
+    );
+}
+
 // GET: Retrieve all active chat sessions from persistent store
 export async function GET() {
+    if (!hasDatabaseUrl) {
+        console.warn('[Communications Dashboard] DATABASE_URL assente: ritorno sessions vuoto.');
+        return emptySessionsResponse('DATABASE_URL missing');
+    }
+
     try {
         const store = await getChatStore();
         // Convert record to array, sorted by last updated timestamp
@@ -37,7 +55,8 @@ export async function GET() {
         });
         return NextResponse.json({ success: true, sessions });
     } catch (err: any) {
-        return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+        console.error('[Communications Dashboard GET Error]', err);
+        return emptySessionsResponse(err?.message || 'chat store unavailable');
     }
 }
 

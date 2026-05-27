@@ -6,8 +6,15 @@ import { getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDig
 import { buildWhatsAppAiReply, loadWhatsAppCoreKb } from '@/lib/whatsappKnowledge';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
+const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
 const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+
+function isTwilioSignatureValidationEnabled(): boolean {
+    const raw = (process.env.TWILIO_VALIDATE_SIGNATURE || '').trim().toLowerCase();
+    // Default: ON in production unless explicitly disabled.
+    if (!raw) return true;
+    return !['false', '0', 'no', 'off'].includes(raw);
+}
 
 function xmlResponse(xml: string, status = 200): NextResponse {
     return new NextResponse(xml, {
@@ -81,15 +88,21 @@ function isSupportInfoRequest(rawMessage: string): boolean {
 export async function POST(request: Request) {
     try {
         let body: any = {};
+        const twilioParams: Record<string, string> = {};
         const contentType = request.headers.get('content-type') || '';
         
         if (contentType.includes('application/x-www-form-urlencoded')) {
             const formData = await request.formData();
             formData.forEach((value, key) => {
-                body[key] = value;
+                const normalized = typeof value === 'string' ? value : String(value);
+                body[key] = normalized;
+                twilioParams[key] = normalized;
             });
         } else {
             body = await request.json();
+            Object.entries(body || {}).forEach(([key, value]) => {
+                twilioParams[key] = asString(value);
+            });
         }
 
         console.log('[WhatsApp Webhook IN] received payload:', JSON.stringify(body));
@@ -103,9 +116,11 @@ export async function POST(request: Request) {
         const normalizedPhone = normalizePhone(phone);
         const kb = loadWhatsAppCoreKb();
 
-        // Validazione della firma Twilio (X-Twilio-Signature) - Attiva in produzione
+        // Validazione della firma Twilio (X-Twilio-Signature) in produzione.
+        // Override emergenza: TWILIO_VALIDATE_SIGNATURE=false per non bloccare il canale durante troubleshooting.
         const isProd = process.env.NODE_ENV === 'production';
-        if (isProd) {
+        const enforceTwilioSignature = isTwilioSignatureValidationEnabled();
+        if (isProd && enforceTwilioSignature) {
             const signature = request.headers.get('x-twilio-signature') || '';
             const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'www.floremoria.com';
             const proto = request.headers.get('x-forwarded-proto') || 'https';
@@ -116,15 +131,17 @@ export async function POST(request: Request) {
                 return xmlResponse('<Response></Response>', 500);
             }
 
-            const isValid = twilio.validateRequest(authToken, signature, absoluteUrl, body);
+            const isValid = twilio.validateRequest(authToken, signature, absoluteUrl, twilioParams);
             if (!isValid) {
                 console.warn('[WhatsApp Webhook Security] Validazione della firma fallita per la richiesta:', {
                     signature,
                     absoluteUrl,
-                    bodyKeys: Object.keys(body),
+                    bodyKeys: Object.keys(twilioParams),
                 });
                 return xmlResponse('<Response></Response>', 403);
             }
+        } else if (isProd && !enforceTwilioSignature) {
+            console.warn('[WhatsApp Webhook Security] Firma Twilio disattivata via TWILIO_VALIDATE_SIGNATURE=false');
         }
 
         // 1. Get or create session

@@ -9,6 +9,7 @@ export interface ChatMessage {
     mediaUrl?: string;
     metadata?: Record<string, string>;
     timestamp: string;
+    createdAt?: string;
 }
 
 export interface ChatSession {
@@ -120,6 +121,7 @@ function mapDbSessionToChatSession(session: {
         mediaUrl: string | null;
         metadata: unknown;
         timestampLabel: string;
+        createdAt: Date;
     }>;
 }): ChatSession {
     return {
@@ -140,6 +142,7 @@ function mapDbSessionToChatSession(session: {
             mediaUrl: msg.mediaUrl || undefined,
             metadata: typeof msg.metadata === 'object' && msg.metadata ? (msg.metadata as Record<string, string>) : undefined,
             timestamp: msg.timestampLabel || nowTimeLabel(),
+            createdAt: msg.createdAt.toISOString(),
         })),
         updatedAt: session.updatedAt.toISOString(),
     };
@@ -291,7 +294,8 @@ export async function addMessage(
         body,
         mediaUrl,
         metadata,
-        timestamp: timeStr
+        timestamp: timeStr,
+        createdAt: now.toISOString(),
     };
 
     session.messages.push(newMessage);

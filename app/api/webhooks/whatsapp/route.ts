@@ -286,6 +286,7 @@ export async function POST(request: Request) {
                     direction: msg.direction,
                     body: msg.body,
                     mediaUrl: msg.mediaUrl,
+                    createdAt: msg.createdAt,
                 })),
             });
 

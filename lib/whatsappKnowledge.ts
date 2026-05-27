@@ -15,6 +15,7 @@ type ConversationMessage = {
     direction: 'INBOUND' | 'OUTBOUND';
     body: string;
     mediaUrl?: string;
+    createdAt?: string;
 };
 
 let kbCache: CoreKb | null = null;
@@ -114,6 +115,22 @@ function isContextDependentMessage(normalizedMessage: string): boolean {
     return hasAny(compact, ['e quindi', 'e poi', 'e per', 'allora', 'come funziona', 'mi spiega meglio']);
 }
 
+function shouldUseDailyGreeting(history: ConversationMessage[]): boolean {
+    const now = new Date();
+    const greetedToday = history.some((msg) => {
+        if (msg.direction !== 'OUTBOUND') return false;
+        if (!normalizeMessage(msg.body || '').startsWith('buongiorno')) return false;
+        if (!msg.createdAt) return true;
+        const created = new Date(msg.createdAt);
+        return (
+            created.getFullYear() === now.getFullYear() &&
+            created.getMonth() === now.getMonth() &&
+            created.getDate() === now.getDate()
+        );
+    });
+    return !greetedToday;
+}
+
 function extractLineValue(content: string, label: string, fallback: string): string {
     const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = content.match(new RegExp(`^-\\s*${escaped}:\\s*(.+)$`, 'm'));
@@ -167,7 +184,9 @@ export function buildWhatsAppAiReply(params: {
     const recentInboundLocation = findRecentInboundLocation(history);
     const contextDependent = isContextDependentMessage(m);
     const displayName = getDisplayName(userName);
-    const saluto = displayName ? `Buongiorno ${displayName},` : 'Buongiorno,';
+    const salutoPrefix = shouldUseDailyGreeting(history)
+        ? (displayName ? `Buongiorno ${displayName}, ` : 'Buongiorno, ')
+        : '';
     const emotionalContext = hasAny(m, [
         'sconforto',
         'triste',
@@ -195,91 +214,95 @@ export function buildWhatsAppAiReply(params: {
         return `Buongiorno, per favore invii la foto della posa e il numero ordine (es. FT-XX-YY-001). Appena arriva, la registriamo subito in dashboard.`;
     }
 
+    if ((m.includes('tomba') || m.includes('cimitero')) && !m.includes('funerale')) {
+        return `${salutoPrefix}Se vuole farci posare il suo omaggio floreale su una tomba in qualsiasi cimitero d'Italia, puo farlo da qui: ${kb.catalogTombsUrl}`;
+    }
+
     if (contextDependent && recentTopic === 'price') {
-        return `${saluto} riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le elenco le opzioni principali e i relativi importi.`;
+        return `${salutoPrefix}Riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le elenco le opzioni principali e i relativi importi.`;
     }
     if (contextDependent && recentTopic === 'coverage') {
-        return `${saluto} certo. Confermo che copriamo tutta Italia, anche comuni piccoli. Se vuole, mi indichi il comune e Le confermo subito la copertura.`;
+        return `${salutoPrefix}Confermo che copriamo tutta Italia, anche comuni piccoli. Se vuole, mi indichi il comune e Le confermo subito la copertura.`;
     }
     if (contextDependent && recentTopic === 'funeral') {
-        return `${saluto} certo. Proseguendo da quanto ci siamo detti, per l'Omaggio Solenne in ambito funerale posso guidarLa io tra le composizioni disponibili.`;
+        return `${salutoPrefix}Per l'Omaggio Solenne in ambito funerale, puo procedere da qui: ${kb.funeralUrl}`;
     }
     if (contextDependent && recentTopic === 'pets') {
-        return `${saluto} certamente. Per il ricordo dei piccoli amici posso indicarLe subito le composizioni disponibili.`;
+        return `${salutoPrefix}Per il ricordo dei piccoli amici, puo procedere da qui: ${kb.petsUrl}`;
     }
     if (contextDependent && recentTopic === 'status') {
-        return `${saluto} certamente. Per lo stato ordine La aggiorniamo in chat e, a consegna conclusa, Le inviamo la testimonianza fotografica su WhatsApp.`;
+        return `${salutoPrefix}Per lo stato ordine La aggiorniamo in chat e, a consegna conclusa, Le inviamo la testimonianza fotografica su WhatsApp.`;
     }
     if (contextDependent && recentTopic === 'photo') {
-        return `${saluto} certamente. Le confermo che inviamo la testimonianza fotografica del tributo floreale sul posto, con la massima trasparenza.`;
+        return `${salutoPrefix}Le confermo che inviamo la testimonianza fotografica del tributo floreale sul posto, con la massima trasparenza.`;
     }
     if (contextDependent && recentTopic === 'subscription') {
-        return `${saluto} certamente. Possiamo attivare la consegna ricorrente mensile con testimonianza fotografica a ogni consegna.`;
+        return `${salutoPrefix}Possiamo attivare la consegna ricorrente mensile con testimonianza fotografica a ogni consegna.`;
     }
     if (contextDependent && recentTopic === 'payment') {
-        return `${saluto} certamente. I pagamenti sono tracciati e sicuri; per segnalazioni valide, la pratica di rimborso si avvia entro 24h.`;
+        return `${salutoPrefix}I pagamenti sono tracciati e sicuri; per segnalazioni valide, la pratica di rimborso si avvia entro 24h.`;
     }
     if (
         hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne']) &&
         m.includes('tomba')
     ) {
         if (recentInboundLocation) {
-            return `${saluto} perfetto, procediamo con un Tributo sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?`;
+            return `${salutoPrefix}Perfetto, procediamo con un Tributo sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?`;
         }
-        return `${saluto} perfetto, procediamo con un Tributo sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un Tributo sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?`;
     }
     if (
         hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne']) &&
         m.includes('funerale')
     ) {
-        return `${saluto} perfetto, procediamo con un Omaggio Solenne per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un Omaggio Solenne per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?`;
     }
 
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {
-        return `${saluto} ${emotionalPrefix}per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le presento subito le opzioni principali con i relativi prezzi.`;
+        return `${salutoPrefix}${emotionalPrefix}Per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le presento subito le opzioni principali con i relativi prezzi.`;
     }
 
     if (
         hasAny(m, ['stato ordine', 'stato del mio ordine', 'dove si trova il mio ordine']) ||
         (m.includes('ordine') && hasAny(m, ['stato', 'aggiornamento', 'confermato', 'consegnato']))
     ) {
-        return `${saluto} ${emotionalPrefix}La aggiorniamo volentieri sullo stato ordine. Le consegne sono gestite da fioristi partner locali e, a esecuzione completata, Le inviamo la testimonianza fotografica su WhatsApp.`;
+        return `${salutoPrefix}${emotionalPrefix}La aggiorniamo volentieri sullo stato ordine. Le consegne sono gestite da fioristi partner locali e, a esecuzione completata, Le inviamo la testimonianza fotografica su WhatsApp.`;
     }
 
     if (hasAny(m, ['foto', 'prova', 'prima dopo', 'prima e dopo'])) {
-        return `${saluto} ${emotionalPrefix}sara nostra cura inviarLe la testimonianza fotografica del tributo floreale sul posto, per garantirLe la massima vicinanza alla memoria del Suo caro. Se desidera, possiamo richiedere anche la foto prima/dopo quando disponibile.`;
+        return `${salutoPrefix}${emotionalPrefix}Sarà nostra cura inviarLe la testimonianza fotografica del tributo floreale sul posto, per garantirLe la massima vicinanza alla memoria del Suo caro. Se desidera, possiamo richiedere anche la foto prima/dopo quando disponibile.`;
     }
 
     if (hasAny(m, ['consegnate', 'consegnate a', 'copertura', 'in tutta italia', 'palermo', 'comune'])) {
-        return `${saluto} ${emotionalPrefix}copriamo tutta Italia, anche nei comuni piu piccoli. Se desidera, mi scriva il comune e Le confermo subito la copertura.`;
+        return `${salutoPrefix}${emotionalPrefix}Copriamo tutta Italia, anche nei comuni piu piccoli. Se desidera, mi scriva il comune e Le confermo subito la copertura.`;
     }
 
     if (hasAny(m, ['funerale', 'camera mortuaria', 'chiesa'])) {
-        return `${saluto} ${emotionalPrefix}per l'Omaggio Solenne in ambito funerale Le posso proporre le composizioni piu adatte, con indicazione chiara dei prezzi.`;
+        return `${salutoPrefix}${emotionalPrefix}Se desidera un Omaggio Solenne per il funerale, può procedere da qui: ${kb.funeralUrl}`;
     }
 
     if (hasAny(m, ['animali', 'animale', 'piccoli amici', 'pet'])) {
-        return `${saluto} ${emotionalPrefix}per il ricordo dei piccoli amici Le posso indicare subito le composizioni disponibili.`;
+        return `${salutoPrefix}${emotionalPrefix}Per il ricordo dei piccoli amici, può procedere da qui: ${kb.petsUrl}`;
     }
 
     if (hasAny(m, ['abbonamento', 'ricorrente', 'mensile', 'ogni mese'])) {
-        return `${saluto} ${emotionalPrefix}possiamo attivare una consegna ricorrente mensile, con testimonianza fotografica a ogni consegna. Desidera che La guidi passo per passo?`;
+        return `${salutoPrefix}${emotionalPrefix}Possiamo attivare una consegna ricorrente mensile, con testimonianza fotografica a ogni consegna. Desidera che La guidi passo per passo?`;
     }
 
     if (hasAny(m, ['quando consegnate', 'tempi', 'entro quanto', '48 ore', 'quanto ci vuole'])) {
-        return `${saluto} ${emotionalPrefix}in genere consegniamo entro 48 ore, salvo meteo o vincoli operativi del cimitero. La aggiorniamo sempre su WhatsApp.`;
+        return `${salutoPrefix}${emotionalPrefix}In genere consegniamo entro 48 ore, salvo meteo o vincoli operativi del cimitero. La aggiorniamo sempre su WhatsApp.`;
     }
 
     if (hasAny(m, ['pagamento', 'pagare', 'stripe', 'rimborso', 'reso'])) {
-        return `${saluto} ${emotionalPrefix}i pagamenti sono tracciati e sicuri. In caso di segnalazione valida, avviamo la pratica di reso/rimborso entro 24h; l'accredito puo richiedere fino a circa 7 giorni bancari.`;
+        return `${salutoPrefix}${emotionalPrefix}I pagamenti sono tracciati e sicuri. In caso di segnalazione valida, avviamo la pratica di reso/rimborso entro 24h; l'accredito puo richiedere fino a circa 7 giorni bancari.`;
     }
 
     if (hasAny(m, ['assistenza', 'contatto', 'email', 'whatsapp'])) {
-        return `${saluto} ${emotionalPrefix}siamo disponibili ${kb.supportHours}. Se desidera, La metto subito in contatto con lo staff umano.`;
+        return `${salutoPrefix}${emotionalPrefix}Siamo disponibili ${kb.supportHours}. Se desidera, La metto subito in contatto con lo staff umano.`;
     }
 
     if (emotionalContext) {
-        return `${saluto} ${emotionalPrefix}Per aiutarLa al meglio, preferisce organizzare un Tributo sulla tomba oppure un Omaggio Solenne per il funerale?`;
+        return `${salutoPrefix}${emotionalPrefix}Per aiutarLa al meglio, preferisce organizzare un Tributo sulla tomba oppure un Omaggio Solenne per il funerale?`;
     }
 
     if (looksHighlyFragmented(message, m)) {

@@ -294,5 +294,5 @@ export function buildWhatsAppAiReply(params: {
         return `La ringrazio. Per aiutarLa con precisione Le chiedo un solo dettaglio: desidera organizzare un Tributo sulla tomba o un Omaggio Solenne per il funerale?`;
     }
 
-    return `${saluto} sono qui per aiutarLa con ordine, consegna e testimonianza fotografica. Se desidera, possiamo procedere con un passaggio alla volta.`;
+    return `La ringrazio. Per aiutarLa al meglio, mi indica se desidera un Tributo sulla tomba o un Omaggio Solenne per il funerale?`;
 }

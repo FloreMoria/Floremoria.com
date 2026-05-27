@@ -85,6 +85,17 @@ function isSupportInfoRequest(rawMessage: string): boolean {
     return ['orari', 'orario', 'assistenza', 'operatore', 'umano'].some((keyword) => m.includes(keyword));
 }
 
+function buildWelcomeMessage(kb: { supportHours: string }): string {
+    return [
+        'Buongiorno, sono VERA, assistenza virtuale di FloreMoria.',
+        `Siamo disponibili ${kb.supportHours}. Come posso aiutarla?`,
+        'Se desidera parlare con lo staff umano, scriva UMANO.',
+        'Per iniziare scelga un profilo:',
+        '[1] Sono un Utente',
+        '[2] Sono un fiorista partner',
+    ].join('\n');
+}
+
 export async function POST(request: Request) {
     try {
         let body: any = {};
@@ -171,29 +182,22 @@ export async function POST(request: Request) {
                 console.info(`[WhatsApp Handoff] ${phone} => HUMAN_INTERVENTION (${escalationReason || 'unknown'})`);
             }
             await setSessionStatus(phone, 'HUMAN_INTERVENTION');
+            session = await updateSessionProfile(phone, { welcomeSent: true });
             const humanNotice = 'Ti passo subito a un operatore umano. Restiamo con te.';
+            const welcomeMessage = buildWelcomeMessage(kb);
+            const composedHumanReply = `${welcomeMessage}\n\n${humanNotice}`;
 
-            await addMessage(phone, 'OUTBOUND', humanNotice, undefined, {
+            await addMessage(phone, 'OUTBOUND', composedHumanReply, undefined, {
                 eventType: 'HUMAN_HANDOFF',
                 handoffReason: escalationReason || 'unknown',
                 handoffAt: new Date().toISOString(),
             });
-            return await respondWithTwimlAndRest(phone, humanNotice);
+            return await respondWithTwimlAndRest(phone, composedHumanReply);
         }
 
         // Welcome kit one-shot per session.
         if (!session.welcomeSent) {
-            const welcomeLines = [
-                `Buongiorno, sono VERA, assistenza virtuale FloreMoria.`,
-                `Siamo disponibili ${kb.supportHours}.`,
-                `Se desidera parlare con lo staff umano, scriva UMANO.`,
-            ];
-            if (session.userType === 'UNKNOWN') {
-                welcomeLines.push('Per iniziare scelga un profilo:');
-                welcomeLines.push('[1] Sono un Utente');
-                welcomeLines.push('[2] Sono un fiorista partner');
-            }
-            const welcomeMessage = welcomeLines.join('\n');
+            const welcomeMessage = buildWelcomeMessage(kb);
             session = await updateSessionProfile(phone, { welcomeSent: true });
             await addMessage(phone, 'OUTBOUND', welcomeMessage);
             return await respondWithTwimlAndRest(phone, welcomeMessage);
@@ -201,7 +205,7 @@ export async function POST(request: Request) {
 
         // Explicit support keywords bypass generic flows and repeat essential info.
         if (isSupportInfoRequest(rawMessage) && !wantsHuman) {
-            const supportReply = `Assistenza FloreMoria: siamo disponibili ${kb.supportHours}. Se desidera, puo scrivere UMANO e La mettiamo subito in contatto con lo staff.`;
+            const supportReply = buildWelcomeMessage(kb);
             await addMessage(phone, 'OUTBOUND', supportReply);
             return await respondWithTwimlAndRest(phone, supportReply);
         }

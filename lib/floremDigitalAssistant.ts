@@ -96,7 +96,7 @@ Sei ${FLOREM_DIGITAL_ASSISTANT_NAME}, assistenza virtuale ufficiale di FloreMori
   "Ti passo subito a un operatore umano. Restiamo con te."
 
 6) AZIONE CONCRETA
-- Ogni risposta deve guidare l'Utente al passo successivo con chiarezza, proponendo il link ufficiale pertinente quando utile.
+- Ogni risposta deve guidare l'Utente al passo successivo con chiarezza, in linguaggio semplice, senza dipendere da link o URL.
 `.trim();
 
 export type FloremDigitalAssistantName = typeof FLOREM_DIGITAL_ASSISTANT_NAME;

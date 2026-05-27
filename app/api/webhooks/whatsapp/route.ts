@@ -5,6 +5,10 @@ import twilio from 'twilio';
 import { getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
 import { buildWhatsAppAiReply, loadWhatsAppCoreKb } from '@/lib/whatsappKnowledge';
 
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+
 function xmlResponse(xml: string, status = 200): NextResponse {
     return new NextResponse(xml, {
         status,
@@ -20,6 +24,33 @@ function twimlMessageResponse(message?: string): NextResponse {
         messagingResponse.message(message);
     }
     return xmlResponse(messagingResponse.toString(), 200);
+}
+
+async function sendTwilioRestReply(to: string, message?: string): Promise<boolean> {
+    if (!message?.trim()) return false;
+    if (!accountSid || !authToken) return false;
+
+    try {
+        const client = twilio(accountSid, authToken);
+        await client.messages.create({
+            body: message,
+            from: twilioNumber,
+            to,
+        });
+        return true;
+    } catch (err) {
+        console.error('[Twilio REST Send Error]', err);
+        return false;
+    }
+}
+
+async function respondWithTwimlAndRest(to: string, message?: string): Promise<NextResponse> {
+    const restDelivered = await sendTwilioRestReply(to, message);
+    // Evita doppi invii: se il REST va a buon fine, TwiML risponde vuoto ma valido.
+    if (restDelivered) {
+        return twimlMessageResponse();
+    }
+    return twimlMessageResponse(message);
 }
 
 function asString(value: unknown): string {
@@ -95,7 +126,7 @@ export async function POST(request: Request) {
                 handoffReason: escalationReason || 'unknown',
                 handoffAt: new Date().toISOString(),
             });
-            return twimlMessageResponse(humanNotice);
+            return await respondWithTwimlAndRest(phone, humanNotice);
         }
 
         // Welcome kit one-shot per session.
@@ -113,14 +144,14 @@ export async function POST(request: Request) {
             const welcomeMessage = welcomeLines.join('\n');
             session = await updateSessionProfile(phone, { welcomeSent: true });
             await addMessage(phone, 'OUTBOUND', welcomeMessage);
-            return twimlMessageResponse(welcomeMessage);
+            return await respondWithTwimlAndRest(phone, welcomeMessage);
         }
 
         // Explicit support keywords bypass generic flows and repeat essential info.
         if (isSupportInfoRequest(rawMessage) && !wantsHuman) {
             const supportReply = `Assistenza FloreMoria: siamo disponibili ${kb.supportHours}. Se desidera, puo scrivere UMANO e La mettiamo subito in contatto con lo staff.`;
             await addMessage(phone, 'OUTBOUND', supportReply);
-            return twimlMessageResponse(supportReply);
+            return await respondWithTwimlAndRest(phone, supportReply);
         }
 
         // 4. Determine user type if unknown (DB match + onboarding flow)
@@ -159,7 +190,7 @@ export async function POST(request: Request) {
                 if (!choice) {
                     const onboardingMessage = 'Per proseguire, risponda con [1] se e Utente oppure [2] se e fiorista partner.';
                     await addMessage(phone, 'OUTBOUND', onboardingMessage);
-                    return twimlMessageResponse(onboardingMessage);
+                    return await respondWithTwimlAndRest(phone, onboardingMessage);
                 }
 
                 if (choice === 'UTENTE') {
@@ -177,13 +208,13 @@ export async function POST(request: Request) {
                     });
                     const confirmation = 'Perfetto, profilo registrato come UTENTE. Come posso aiutarti oggi?';
                     await addMessage(phone, 'OUTBOUND', confirmation);
-                    return twimlMessageResponse(confirmation);
+                    return await respondWithTwimlAndRest(phone, confirmation);
                 }
 
                 const floristPending = 'Ricevuto. Profilo fiorista in verifica: tra poco ti invieremo il testo di convalida dedicato.';
                 await setSessionStatus(phone, 'HUMAN_INTERVENTION');
                 await addMessage(phone, 'OUTBOUND', floristPending);
-                return twimlMessageResponse(floristPending);
+                return await respondWithTwimlAndRest(phone, floristPending);
             }
         }
 
@@ -252,11 +283,11 @@ export async function POST(request: Request) {
 
             // Save outbound message in store and return via TwiML.
             await addMessage(phone, 'OUTBOUND', replyText);
-            return twimlMessageResponse(replyText);
+            return await respondWithTwimlAndRest(phone, replyText);
         }
 
         // No automated response for this branch, but Twilio still needs valid TwiML XML.
-        return twimlMessageResponse();
+        return await respondWithTwimlAndRest(phone);
 
     } catch (error) {
         console.error('[WhatsApp Webhook ERR]', error);

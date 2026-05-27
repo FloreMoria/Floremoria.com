@@ -196,16 +196,16 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (contextDependent && recentTopic === 'price') {
-        return `${saluto} riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, puo consultare il catalogo ufficiale qui: ${kb.catalogTombsUrl}`;
+        return `${saluto} riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le elenco le opzioni principali e i relativi importi.`;
     }
     if (contextDependent && recentTopic === 'coverage') {
-        return `${saluto} certo. Confermo che copriamo tutta Italia, anche comuni piccoli. Se desidera, puo iniziare da qui: ${kb.catalogTombsUrl}`;
+        return `${saluto} certo. Confermo che copriamo tutta Italia, anche comuni piccoli. Se vuole, mi indichi il comune e Le confermo subito la copertura.`;
     }
     if (contextDependent && recentTopic === 'funeral') {
-        return `${saluto} certo. Proseguendo da quanto ci siamo detti, per l'Omaggio Solenne in ambito funerale trova i servizi qui: ${kb.funeralUrl}`;
+        return `${saluto} certo. Proseguendo da quanto ci siamo detti, per l'Omaggio Solenne in ambito funerale posso guidarLa io tra le composizioni disponibili.`;
     }
     if (contextDependent && recentTopic === 'pets') {
-        return `${saluto} certamente. Per il ricordo dei piccoli amici puo consultare il catalogo qui: ${kb.petsUrl}`;
+        return `${saluto} certamente. Per il ricordo dei piccoli amici posso indicarLe subito le composizioni disponibili.`;
     }
     if (contextDependent && recentTopic === 'status') {
         return `${saluto} certamente. Per lo stato ordine La aggiorniamo in chat e, a consegna conclusa, Le inviamo la testimonianza fotografica su WhatsApp.`;
@@ -236,7 +236,7 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {
-        return `${saluto} ${emotionalPrefix}per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, puo consultare il catalogo ufficiale qui: ${kb.catalogTombsUrl}`;
+        return `${saluto} ${emotionalPrefix}per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le presento subito le opzioni principali con i relativi prezzi.`;
     }
 
     if (
@@ -251,15 +251,15 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (hasAny(m, ['consegnate', 'consegnate a', 'copertura', 'in tutta italia', 'palermo', 'comune'])) {
-        return `${saluto} ${emotionalPrefix}copriamo tutta Italia, anche nei comuni piu piccoli. Se desidera, puo iniziare da qui: ${kb.catalogTombsUrl}`;
+        return `${saluto} ${emotionalPrefix}copriamo tutta Italia, anche nei comuni piu piccoli. Se desidera, mi scriva il comune e Le confermo subito la copertura.`;
     }
 
     if (hasAny(m, ['funerale', 'camera mortuaria', 'chiesa'])) {
-        return `${saluto} ${emotionalPrefix}per l'Omaggio Solenne in ambito funerale trova i servizi ufficiali qui: ${kb.funeralUrl}`;
+        return `${saluto} ${emotionalPrefix}per l'Omaggio Solenne in ambito funerale Le posso proporre le composizioni piu adatte, con indicazione chiara dei prezzi.`;
     }
 
     if (hasAny(m, ['animali', 'animale', 'piccoli amici', 'pet'])) {
-        return `${saluto} ${emotionalPrefix}per il ricordo dei piccoli amici puo consultare il catalogo qui: ${kb.petsUrl}`;
+        return `${saluto} ${emotionalPrefix}per il ricordo dei piccoli amici Le posso indicare subito le composizioni disponibili.`;
     }
 
     if (hasAny(m, ['abbonamento', 'ricorrente', 'mensile', 'ogni mese'])) {
@@ -275,7 +275,7 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (hasAny(m, ['assistenza', 'contatto', 'email', 'whatsapp'])) {
-        return `${saluto} ${emotionalPrefix}puo contattarci a ${kb.supportEmail} oppure su WhatsApp ${kb.supportWhatsapp}. Siamo disponibili ${kb.supportHours}.`;
+        return `${saluto} ${emotionalPrefix}siamo disponibili ${kb.supportHours}. Se desidera, La metto subito in contatto con lo staff umano.`;
     }
 
     if (emotionalContext) {
@@ -294,5 +294,5 @@ export function buildWhatsAppAiReply(params: {
         return `La ringrazio. Per aiutarLa con precisione Le chiedo un solo dettaglio: desidera organizzare un Tributo sulla tomba o un Omaggio Solenne per il funerale?`;
     }
 
-    return `${saluto} sono VERA, assistenza virtuale FloreMoria. Posso aiutarLa con ordini, consegne, testimonianza fotografica e catalogo. Se desidera un operatore umano, scriva UMANO. Assistenza ${kb.supportHours}.`;
+    return `${saluto} sono qui per aiutarLa con ordine, consegna e testimonianza fotografica. Se desidera, possiamo procedere con un passaggio alla volta.`;
 }

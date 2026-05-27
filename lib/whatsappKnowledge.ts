@@ -19,6 +19,9 @@ type ConversationMessage = {
 };
 
 let kbCache: CoreKb | null = null;
+let historicalKbCache: string | null = null;
+export const STANDARD_GUIDANCE_MESSAGE =
+    "La ringrazio. Per aiutarLa al meglio, mi indica se desidera un Tributo sulla tomba o un Omaggio Solenne per il funerale?";
 
 function normalizeMessage(value: string): string {
     return value
@@ -169,12 +172,25 @@ export function loadWhatsAppCoreKb(): CoreKb {
     return kbCache;
 }
 
+export function loadWhatsAppHistoricalKb(): string {
+    if (historicalKbCache !== null) return historicalKbCache;
+    const historicalKbPath = path.join(process.cwd(), 'docs', 'whatsapp', 'knowledge_base_whatsapp.txt');
+    try {
+        historicalKbCache = fs.readFileSync(historicalKbPath, 'utf-8');
+    } catch {
+        historicalKbCache = '';
+    }
+    return historicalKbCache;
+}
+
 export function buildWhatsAppAiReply(params: {
     message: string;
     userName: string;
     userType: 'UTENTE' | 'FLORIST' | 'UNKNOWN';
     mediaUrl?: string | null;
     history?: ConversationMessage[];
+    systemPrompt?: string;
+    knowledgeContext?: string;
 }): string {
     const { message, userName, userType, mediaUrl, history = [] } = params;
     const kb = loadWhatsAppCoreKb();
@@ -314,8 +330,8 @@ export function buildWhatsAppAiReply(params: {
         if (dateCandidate) {
             return `La ringrazio. Per essere certa di aiutarLa al meglio: desidera la consegna in data ${dateCandidate}?`;
         }
-        return `La ringrazio. Per aiutarLa con precisione Le chiedo un solo dettaglio: desidera organizzare un Tributo sulla tomba o un Omaggio Solenne per il funerale?`;
+        return STANDARD_GUIDANCE_MESSAGE;
     }
 
-    return `La ringrazio. Per aiutarLa al meglio, mi indica se desidera un Tributo sulla tomba o un Omaggio Solenne per il funerale?`;
+    return STANDARD_GUIDANCE_MESSAGE;
 }

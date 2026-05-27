@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { addMessage, getSession, setSessionStatus, updateSessionProfile } from '@/lib/chatStore';
 import prisma from '@/lib/prisma';
 import twilio from 'twilio';
-import { getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
-import { buildWhatsAppAiReply, loadWhatsAppCoreKb } from '@/lib/whatsappKnowledge';
+import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT, getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
+import { buildWhatsAppAiReply, loadWhatsAppCoreKb, loadWhatsAppHistoricalKb, STANDARD_GUIDANCE_MESSAGE } from '@/lib/whatsappKnowledge';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
@@ -96,6 +96,42 @@ function buildWelcomeMessage(kb: { supportHours: string }): string {
     ].join('\n');
 }
 
+function isConversationClosureMessage(rawMessage: string): boolean {
+    const m = rawMessage.toLowerCase();
+    return ['grazie', 'grazie mille', 'tutto chiaro', 'ok grazie', 'perfetto grazie', 'a posto'].some((v) => m.includes(v));
+}
+
+function normalizeForSimilarity(value: string): string {
+    return value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function similarityScore(a: string, b: string): number {
+    const na = normalizeForSimilarity(a);
+    const nb = normalizeForSimilarity(b);
+    if (!na || !nb) return 0;
+    if (na === nb) return 1;
+    const aTokens = na.split(' ').filter(Boolean);
+    const bTokens = nb.split(' ').filter(Boolean);
+    const aSet = new Set(aTokens);
+    const bSet = new Set(bTokens);
+    let intersection = 0;
+    aSet.forEach((token) => {
+        if (bSet.has(token)) intersection += 1;
+    });
+    return (2 * intersection) / (aSet.size + bSet.size);
+}
+
+function isRepetitiveReply(candidate: string, history: Array<{ direction: 'INBOUND' | 'OUTBOUND'; body: string }>): boolean {
+    const recentOutbound = history.filter((m) => m.direction === 'OUTBOUND').slice(-6);
+    return recentOutbound.some((msg) => similarityScore(candidate, msg.body) >= 0.8);
+}
+
 export async function POST(request: Request) {
     try {
         let body: any = {};
@@ -126,6 +162,7 @@ export async function POST(request: Request) {
         const messageSid = asString(body.MessageSid);
         const normalizedPhone = normalizePhone(phone);
         const kb = loadWhatsAppCoreKb();
+        const historicalKb = loadWhatsAppHistoricalKb();
 
         // Validazione della firma Twilio (X-Twilio-Signature) in produzione.
         // Override emergenza: TWILIO_VALIDATE_SIGNATURE=false per non bloccare il canale durante troubleshooting.
@@ -210,6 +247,16 @@ export async function POST(request: Request) {
             return await respondWithTwimlAndRest(phone, supportReply);
         }
 
+        if (isConversationClosureMessage(rawMessage)) {
+            const closureReply = 'La ringraziamo di cuore. Tutto lo staff di FloreMoria Le augura una buona giornata. 🌹';
+            await setSessionStatus(phone, 'CLOSED');
+            await addMessage(phone, 'OUTBOUND', closureReply, undefined, {
+                eventType: 'CONVERSATION_CLOSED',
+                closedAt: new Date().toISOString(),
+            });
+            return await respondWithTwimlAndRest(phone, closureReply);
+        }
+
         // 4. Determine user type if unknown (DB match + onboarding flow)
         if (session.userType === 'UNKNOWN') {
             try {
@@ -282,6 +329,8 @@ export async function POST(request: Request) {
                 userName: session.name,
                 userType: session.userType,
                 mediaUrl,
+                systemPrompt: FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT,
+                knowledgeContext: historicalKb,
                 history: sessionWithHistory.messages.map((msg) => ({
                     direction: msg.direction,
                     body: msg.body,
@@ -289,6 +338,16 @@ export async function POST(request: Request) {
                     createdAt: msg.createdAt,
                 })),
             });
+            const antiLoopReply = 'Le chiedo scusa, mi rendo conto di essere ripetitiva e non voglio farLe perdere tempo. Preferisco passarLe un operatore umano che saprà guidarla passo dopo passo con la dovuta attenzione. Un nostro incaricato sarà subito da Lei.';
+            if (isRepetitiveReply(replyText, sessionWithHistory.messages)) {
+                await setSessionStatus(phone, 'HUMAN_INTERVENTION');
+                await addMessage(phone, 'OUTBOUND', antiLoopReply, undefined, {
+                    eventType: 'ANTI_LOOP_HANDOFF',
+                    handoffReason: 'repeat_detected_80pct',
+                    handoffAt: new Date().toISOString(),
+                });
+                return await respondWithTwimlAndRest(phone, antiLoopReply);
+            }
 
             // Se il fiorista invia una foto, proviamo ad agganciarla all'ordine indicato nel testo.
             if (session.userType === 'FLORIST' && mediaUrl) {
@@ -339,8 +398,8 @@ export async function POST(request: Request) {
             }
 
             // Save outbound message in store and return via TwiML.
-            await addMessage(phone, 'OUTBOUND', replyText);
-            return await respondWithTwimlAndRest(phone, replyText);
+            await addMessage(phone, 'OUTBOUND', replyText || STANDARD_GUIDANCE_MESSAGE);
+            return await respondWithTwimlAndRest(phone, replyText || STANDARD_GUIDANCE_MESSAGE);
         }
 
         // No automated response for this branch, but Twilio still needs valid TwiML XML.

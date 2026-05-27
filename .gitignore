@@ -46,6 +46,10 @@ env-per-vercel.txt
 env.host.docker.example
 *.txt
 *.example
+# Permetti il tracciamento dei file di conoscenza di VERA
+!/docs/whatsapp/knowledge_base_whatsapp.txt
+!/docs/whatsapp/knowledge_base_whatsapp_examples.txt
+!/docs/whatsapp/knowledge_base_whatsapp_core.txt
 
 # typescript
 *.tsbuildinfo

@@ -94,13 +94,38 @@ export async function POST(request: Request) {
 
         console.log('[WhatsApp Webhook IN] received payload:', JSON.stringify(body));
 
-        // Twilio parameters: From, Body, MediaUrl0, ProfileName
+        // Twilio parameters: From, Body, MediaUrl0, ProfileName, MessageSid
         const phone = asString(body.From) || 'whatsapp:+393339999999';
         const rawMessage = asString(body.Body);
         const mediaUrl = asString(body.MediaUrl0) || null;
         const profileName = asString(body.ProfileName) || 'Utente';
+        const messageSid = asString(body.MessageSid);
         const normalizedPhone = normalizePhone(phone);
         const kb = loadWhatsAppCoreKb();
+
+        // Validazione della firma Twilio (X-Twilio-Signature) - Attiva in produzione
+        const isProd = process.env.NODE_ENV === 'production';
+        if (isProd) {
+            const signature = request.headers.get('x-twilio-signature') || '';
+            const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'www.floremoria.com';
+            const proto = request.headers.get('x-forwarded-proto') || 'https';
+            const absoluteUrl = `${proto}://${host}${new URL(request.url).pathname}${new URL(request.url).search}`;
+
+            if (!authToken) {
+                console.error('[WhatsApp Webhook Security] TWILIO_AUTH_TOKEN non configurato.');
+                return xmlResponse('<Response></Response>', 500);
+            }
+
+            const isValid = twilio.validateRequest(authToken, signature, absoluteUrl, body);
+            if (!isValid) {
+                console.warn('[WhatsApp Webhook Security] Validazione della firma fallita per la richiesta:', {
+                    signature,
+                    absoluteUrl,
+                    bodyKeys: Object.keys(body),
+                });
+                return xmlResponse('<Response></Response>', 403);
+            }
+        }
 
         // 1. Get or create session
         let session = await getSession(phone);
@@ -108,8 +133,20 @@ export async function POST(request: Request) {
             session = await updateSessionProfile(phone, { name: profileName });
         }
 
+        // Deduplica dei messaggi (Idempotency): se abbiamo già elaborato questo MessageSid in sessione, evitiamo risposte duplicate
+        if (messageSid && session.messages.some((msg) => msg.metadata?.messageSid === messageSid)) {
+            console.info(`[WhatsApp Deduplication] Messaggio già elaborato: ${messageSid}. Rispondo con TwiML vuoto.`);
+            return twimlMessageResponse();
+        }
+
         // 2. Save incoming message immediately (dashboard/chat DB sync).
-        await addMessage(phone, 'INBOUND', rawMessage, mediaUrl || undefined);
+        await addMessage(
+            phone, 
+            'INBOUND', 
+            rawMessage, 
+            mediaUrl || undefined, 
+            messageSid ? { messageSid } : undefined
+        );
 
         // 3. Check for explicit or emotional human handoff trigger.
         const wantsHuman = shouldEscalateToHuman(rawMessage);

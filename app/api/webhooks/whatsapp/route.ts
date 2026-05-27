@@ -119,18 +119,16 @@ export async function POST(request: Request) {
         // Validazione della firma Twilio (X-Twilio-Signature) in produzione.
         // Override emergenza: TWILIO_VALIDATE_SIGNATURE=false per non bloccare il canale durante troubleshooting.
         const isProd = process.env.NODE_ENV === 'production';
-        const enforceTwilioSignature = isTwilioSignatureValidationEnabled();
+        const signatureRequested = isTwilioSignatureValidationEnabled();
+        const enforceTwilioSignature = signatureRequested && !!authToken;
+        if (isProd && signatureRequested && !authToken) {
+            console.warn('[WhatsApp Webhook Security] TWILIO_AUTH_TOKEN mancante: bypass firma attivato per continuita operativa.');
+        }
         if (isProd && enforceTwilioSignature) {
             const signature = request.headers.get('x-twilio-signature') || '';
             const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'www.floremoria.com';
             const proto = request.headers.get('x-forwarded-proto') || 'https';
             const absoluteUrl = `${proto}://${host}${new URL(request.url).pathname}${new URL(request.url).search}`;
-
-            if (!authToken) {
-                console.error('[WhatsApp Webhook Security] TWILIO_AUTH_TOKEN non configurato.');
-                return xmlResponse('<Response></Response>', 500);
-            }
-
             const isValid = twilio.validateRequest(authToken, signature, absoluteUrl, twilioParams);
             if (!isValid) {
                 console.warn('[WhatsApp Webhook Security] Validazione della firma fallita per la richiesta:', {

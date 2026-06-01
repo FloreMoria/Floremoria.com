@@ -1,18 +1,39 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, History, Terminal, Info, Clock, Archive, Copy, Check, Filter } from 'lucide-react';
+import { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, Terminal, Clock, Archive, Copy, Check, Filter, CalendarDays, X } from 'lucide-react';
 import { FloremoriaLog } from '@prisma/client';
 
-export default function ClientLogsTable({ initialLogs, initialQuery }: { initialLogs: FloremoriaLog[], initialQuery: string }) {
+type ClientLogsTableProps = {
+    initialLogs: FloremoriaLog[];
+    initialQuery: string;
+    categories?: string[];
+    activeCategory?: string;
+    activeFrom?: string;
+    activeTo?: string;
+    pageSize?: number;
+};
+
+export default function ClientLogsTable({
+    initialLogs,
+    initialQuery,
+    categories = [],
+    activeCategory = '',
+    activeFrom = '',
+    activeTo = '',
+    pageSize = 200,
+}: ClientLogsTableProps) {
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const filterQuery = searchParams.get('filter') || '';
-    
+
     const [searchQuery, setSearchQuery] = useState(initialQuery);
+    const [category, setCategory] = useState(activeCategory);
+    const [from, setFrom] = useState(activeFrom);
+    const [to, setTo] = useState(activeTo);
     const [selectedLog, setSelectedLog] = useState<any | null>(null);
     const [isCopied, setIsCopied] = useState(false);
+
+    const hasActiveFilters = Boolean(initialQuery || activeCategory || activeFrom || activeTo);
 
     const handleCopy = () => {
         if (selectedLog?.keyPrompt) {
@@ -22,12 +43,34 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
         }
     };
 
+    // Unico punto di costruzione dell'URL: combina ricerca, categoria e intervallo date
+    // così i filtri sono componibili (es. WEBHOOK tra il 25 e il 28 maggio).
+    const applyFilters = (overrides?: { q?: string; category?: string; from?: string; to?: string }) => {
+        const params = new URLSearchParams();
+        const nextQ = overrides?.q ?? searchQuery;
+        const nextCategory = overrides?.category ?? category;
+        const nextFrom = overrides?.from ?? from;
+        const nextTo = overrides?.to ?? to;
+
+        if (nextQ.trim()) params.set('q', nextQ.trim());
+        if (nextCategory.trim()) params.set('category', nextCategory.trim());
+        if (nextFrom.trim()) params.set('from', nextFrom.trim());
+        if (nextTo.trim()) params.set('to', nextTo.trim());
+
+        const qs = params.toString();
+        router.push(qs ? `/dashboard/logs?${qs}` : '/dashboard/logs');
+    };
+
     const handleSearch = (e: FormEvent) => {
         e.preventDefault();
-        router.push(`/dashboard/logs?q=${encodeURIComponent(searchQuery)}`);
+        applyFilters();
     };
 
     const clearFilter = () => {
+        setSearchQuery('');
+        setCategory('');
+        setFrom('');
+        setTo('');
         router.push('/dashboard/logs');
     };
 
@@ -38,7 +81,7 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                     <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight flex items-center gap-3">
                         <Terminal className="text-fm-gold" size={28} /> Log di Sistema
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">Tracciamento sessioni operative, prompt strutturali e interventi di sistema</p>
+                    <p className="text-sm text-gray-500 mt-1">Timeline operativa completa — verbali, prompt strutturali e interventi di sistema</p>
                 </div>
 
                 <form onSubmit={handleSearch} className="relative w-full md:w-80">
@@ -47,25 +90,103 @@ export default function ClientLogsTable({ initialLogs, initialQuery }: { initial
                         type="search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Ricerca per tag, argomento o test..."
+                        placeholder="Ricerca nel testo profondo dei verbali..."
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-400 focus:border-slate-400 outline-none transition-all shadow-sm bg-white"
                     />
                 </form>
             </div>
-            
-            {(filterQuery || initialQuery) && (
-                <div className="flex items-center gap-3 bg-white p-3 px-5 border border-slate-200 rounded-xl shadow-sm w-fit">
-                    <Filter className="text-slate-400" size={16} />
-                    <span className="text-sm font-medium text-slate-600">
-                        {filterQuery ? (
-                            <>Visualizzazione tag: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{filterQuery}</strong></>
-                        ) : (
-                            <>Ricerca attiva: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{initialQuery}</strong></>
-                        )}
-                    </span>
-                    <button onClick={clearFilter} className="text-xs font-bold text-slate-400 hover:text-slate-700 uppercase tracking-widest ml-2 border-l pl-3">Rimuovi Filtro</button>
+
+            {/* Barra filtri: categoria + intervallo date */}
+            <div className="bg-white p-4 border border-slate-200 rounded-2xl shadow-sm flex flex-col lg:flex-row lg:items-end gap-4">
+                <div className="flex flex-col gap-1.5 w-full lg:w-56">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <Filter size={13} /> Categoria
+                    </label>
+                    <select
+                        value={category}
+                        onChange={(e) => {
+                            setCategory(e.target.value);
+                            applyFilters({ category: e.target.value });
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-slate-400 focus:border-slate-400 outline-none transition-all shadow-sm"
+                    >
+                        <option value="">Tutte le categorie</option>
+                        {categories.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5 w-full lg:w-44">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <CalendarDays size={13} /> Dal
+                    </label>
+                    <input
+                        type="date"
+                        value={from}
+                        onChange={(e) => setFrom(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-slate-400 focus:border-slate-400 outline-none transition-all shadow-sm"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-1.5 w-full lg:w-44">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <CalendarDays size={13} /> Al
+                    </label>
+                    <input
+                        type="date"
+                        value={to}
+                        onChange={(e) => setTo(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-slate-400 focus:border-slate-400 outline-none transition-all shadow-sm"
+                    />
+                </div>
+
+                <button
+                    onClick={() => applyFilters()}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm"
+                >
+                    Applica filtri
+                </button>
+
+                {hasActiveFilters && (
+                    <button
+                        onClick={clearFilter}
+                        className="px-4 py-2.5 text-slate-500 hover:text-slate-800 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-200"
+                    >
+                        <X size={14} /> Azzera
+                    </button>
+                )}
+            </div>
+
+            {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <span className="font-medium">Filtri attivi:</span>
+                    {activeCategory && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
+                            {activeCategory}
+                        </span>
+                    )}
+                    {initialQuery && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            "{initialQuery}"
+                        </span>
+                    )}
+                    {(activeFrom || activeTo) && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            {activeFrom || '…'} → {activeTo || '…'}
+                        </span>
+                    )}
                 </div>
             )}
+
+            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                <span>{initialLogs.length} verbali mostrati</span>
+                {initialLogs.length >= pageSize && (
+                    <span className="text-amber-600 font-medium">
+                        Mostrati i {pageSize} più recenti — affina i filtri (data/categoria) per vedere i precedenti.
+                    </span>
+                )}
+            </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto w-full custom-scrollbar">

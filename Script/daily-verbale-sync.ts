@@ -29,7 +29,9 @@ function loadEnvFiles(): void {
             ) {
                 val = val.slice(1, -1);
             }
-            process.env[key] = val;
+            if (process.env[key] === undefined) {
+                process.env[key] = val;
+            }
         }
     }
 }

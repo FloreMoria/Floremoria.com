@@ -43,11 +43,13 @@ export const ORIGINAL_MESSAGE_SEPARATOR = '---------- Messaggio Originale ------
  * Tono sobrio e dignitoso, adatto anche ai contesti di lutto.
  */
 const DEFAULT_OFFICIAL_SIGNATURE = [
-    'Con rispetto,',
     'Assistenza FloreMoria',
-    'Tel / WhatsApp: +39 320 410 5305',
-    'assistenza@floremoria.com · www.floremoria.com',
-    'FloreMoria — presenza delegata e testimoniata.',
+    '',
+    'al tuo servizio tutti i giorni dalle 8 alle 22:00',
+    '',
+    '✉️ assistenza@floremoria.com',
+    '📞 3204105305 (Whatsapp)',
+    '🛜 www.floremoria.com',
 ].join('\n');
 
 /**

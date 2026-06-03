@@ -34,6 +34,46 @@ export class PostmanConfigError extends Error {}
 
 const VALID_CATEGORIES: PostmanCategory[] = ['FF', 'FT', 'PA'];
 
+/** Separatore standard che introduce lo storico della corrispondenza in calce alla bozza. */
+export const ORIGINAL_MESSAGE_SEPARATOR = '---------- Messaggio Originale ----------';
+
+/**
+ * Firma di chiusura ufficiale della casella assistenza@floremoria.com.
+ * Allineata ai contatti reali pubblicati sul sito (pagina Assistenza / email transazionali).
+ * Tono sobrio e dignitoso, adatto anche ai contesti di lutto.
+ */
+const DEFAULT_OFFICIAL_SIGNATURE = [
+    'Con rispetto,',
+    'Assistenza FloreMoria',
+    'Tel / WhatsApp: +39 320 410 5305',
+    'assistenza@floremoria.com · www.floremoria.com',
+    'FloreMoria — presenza delegata e testimoniata.',
+].join('\n');
+
+/**
+ * Recupera la firma ufficiale da apporre in calce alla risposta.
+ * Override possibile via env POSTMAN_SIGNATURE (i "\n" letterali vengono convertiti in a capo),
+ * altrimenti usa il blocco di chiusura standard definito sopra.
+ */
+export function getOfficialSignature(): string {
+    const fromEnv = process.env.POSTMAN_SIGNATURE?.trim();
+    if (fromEnv) return fromEnv.replace(/\\n/g, '\n');
+    return DEFAULT_OFFICIAL_SIGNATURE;
+}
+
+/**
+ * Compone il corpo finale della bozza: risposta generata + firma ufficiale + storico della
+ * corrispondenza (messaggio originale ricevuto) separato dalla riga standard.
+ */
+export function composeDraftBody(generatedReply: string, originalText: string): string {
+    const parts = [generatedReply.trim(), '', getOfficialSignature()];
+    const original = (originalText || '').trim();
+    if (original) {
+        parts.push('', ORIGINAL_MESSAGE_SEPARATOR, original);
+    }
+    return parts.join('\n');
+}
+
 /** Link diretti al funnel/checkout per categoria (reali, già usati nel resto del sito). Override via env. */
 export function getCheckoutLinks(): Record<PostmanCategory, string> {
     return {
@@ -50,9 +90,9 @@ export function buildPostmanSystemPrompt(): string {
     return [
         'Sei POSTMAN, la voce email di FloreMoria (consegna di omaggi floreali sulle tombe nei cimiteri italiani, con foto di conferma).',
         'Operi come orchestra coordinata dei 16 Agent interni di FloreMoria. Prima di scrivere, fai convergere queste competenze:',
-        '- SOFIA + ALMA: blindano etica, dignità ed empatia. Nessun dark pattern, nessuna leva sul dolore, nessuna urgenza artificiale.',
+        '- SOFIA + ALMA: blindano etica, dignità ed empatia. Nessun dark pattern, nessuna leva sul dolore, nessuna urgenza artificiale. VINCOLO LESSICALE TASSATIVO: è vietato in modo assoluto usare la parola "cliente" (e ogni sua variante). Chi scrive è SEMPRE e solo l\'"utente".',
         '- ARLO: stile "Quiet Luxury" — essenziale, pulito, elegante. Niente fronzoli.',
-        '- MARK + VINCE: guidano dolcemente verso il completamento dell\'ordine inserendo UNA volta il link di checkout diretto pertinente alla categoria.',
+        '- MARK + VINCE: guidano dolcemente verso il completamento dell\'ordine inserendo UNA volta il link di checkout diretto pertinente alla categoria. Non scrivere MAI "cliente": il termine ufficiale è esclusivamente "utente".',
         '- ALBERTO + OSCAR: prezzi e logistica. NON inventare mai prezzi, importi, date o disponibilità del cimitero: se servono, il prezzo si vede al link; chiedi i dati mancanti (cimitero, città, nome del defunto/animale, data).',
         '',
         'REGOLE DI SCRITTURA (vincolanti):',
@@ -60,7 +100,8 @@ export function buildPostmanSystemPrompt(): string {
         '2. Dai sempre del "Lei". Se conosci il nome del mittente, usalo con garbo una sola volta.',
         '3. Inserisci il link di checkout SOLO quello pertinente alla categoria scelta (te lo fornisco nel messaggio utente).',
         '4. È una BOZZA: verrà riletta e inviata da un operatore umano. Non prendere impegni vincolanti.',
-        '5. Chiudi con firma sobria su nuova riga: "Assistenza FloreMoria".',
+        '5. NON aggiungere saluti di chiusura né firma: la firma ufficiale viene apposta automaticamente in calce dal sistema.',
+        '6. VINCOLO LESSICALE ASSOLUTO: non usare MAI la parola "cliente". Se ti serve un sostantivo, usa "utente"; altrimenti rivolgiti direttamente con il "Lei".',
         '',
         'TONO PER CATEGORIA:',
         '- FF (Funerale): solenne, rigoroso uso del "Lei", massima delicatezza e tempestività; link al checkout prioritario.',
@@ -68,7 +109,7 @@ export function buildPostmanSystemPrompt(): string {
         '- PA (Piccoli Amici): estremamente dolce, protettivo e delicato per il lutto di un animale domestico.',
         '',
         'OUTPUT: rispondi ESCLUSIVAMENTE con JSON valido (nessun markdown), con esattamente queste chiavi:',
-        '{"category":"FF|FT|PA","subject":"oggetto risposta","body":"bozza 3-4 frasi con il link pertinente","reasoning":"1 frase sul perché della categoria"}',
+        '{"category":"FF|FT|PA","subject":"oggetto risposta","body":"bozza 3-4 frasi con il link pertinente, SENZA firma né saluti di chiusura","reasoning":"1 frase sul perché della categoria"}',
     ].join('\n');
 }
 
@@ -149,10 +190,13 @@ export async function classifyAndDraft(input: PostmanIncoming): Promise<PostmanD
     }
 
     const category = coerceCategory(parsed.category);
-    const body = (parsed.body || '').trim();
-    if (!body) {
+    const generatedReply = (parsed.body || '').trim();
+    if (!generatedReply) {
         throw new Error('La bozza generata è vuota.');
     }
+
+    // Corpo finale della bozza: risposta + firma ufficiale + storico (messaggio originale).
+    const body = composeDraftBody(generatedReply, input.text);
 
     return {
         category,

@@ -120,11 +120,8 @@ async function runSync(): Promise<{
                     `Categoria: ${draft.category} — ${draft.reasoning}`,
                     `Oggetto bozza: ${draft.subject}`,
                     '',
-                    '--- Testo della bozza ---',
+                    '--- Testo della bozza (firma e messaggio originale inclusi) ---',
                     draft.body,
-                    '',
-                    '--- Email originale ricevuta ---',
-                    (email.text || '').slice(0, 4000),
                 ].join('\n');
 
                 await prisma.floremoriaLog.create({

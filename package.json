@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@google-analytics/data": "^5.2.1",
+    "@google/genai": "^2.7.0",
     "@openreplay/tracker": "^18.0.10",
     "@openreplay/tracker-assist": "^11.0.15",
     "@prisma/client": "^6.19.2",

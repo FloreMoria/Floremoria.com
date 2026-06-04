@@ -578,7 +578,7 @@ export default function AssistenzaPage() {
                     <div>
                         <strong className="text-gray-700 block mb-2 uppercase text-xs tracking-wider">Sede e Contatti</strong>
                         Via Bellinzona 82/B, Como<br />
-                        Whatsapp: +39 3204105305<br />
+                        Whatsapp: <a href="https://wa.me/393204105305" target="_blank" rel="noopener noreferrer" className="hover:text-fm-gold transition-colors">+39 3204105305</a><br />
                         Email: assistenza@floremoria.com
                     </div>
                     <div>

@@ -90,13 +90,33 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
             try {
                 const parsed = await simpleParser(message.source as Buffer);
                 const from = firstAddress(parsed.from);
+                
+                let messageId = parsed.messageId || message.envelope?.messageId || null;
+                if (!messageId) {
+                    const fromStr = from.address || 'unknown';
+                    const dateStr = (parsed.date || message.envelope?.date || new Date()).getTime();
+                    const subStr = (parsed.subject || message.envelope?.subject || '').replace(/\s+/g, '').slice(0, 30);
+                    messageId = `fallback-msgid-${fromStr}-${dateStr}-${subStr}`;
+                }
+
+                let text = (parsed.text || '').trim();
+                if (!text && parsed.html) {
+                    // Simple regex fallback to strip HTML tags and extract usable text for Gemini
+                    text = parsed.html
+                        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                        .replace(/<[^>]+>/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                }
+
                 out.push({
                     uid: message.uid,
-                    messageId: parsed.messageId || message.envelope?.messageId || null,
+                    messageId,
                     fromName: from.name,
                     fromEmail: from.address,
                     subject: (parsed.subject || message.envelope?.subject || '').trim(),
-                    text: (parsed.text || '').trim(),
+                    text,
                     date: parsed.date || message.envelope?.date || null,
                 });
             } catch (e) {

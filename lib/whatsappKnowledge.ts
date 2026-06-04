@@ -21,7 +21,7 @@ type ConversationMessage = {
 let kbCache: CoreKb | null = null;
 let historicalKbCache: string | null = null;
 export const STANDARD_GUIDANCE_MESSAGE =
-    "La ringrazio. Per aiutarLa al meglio, mi indica se desidera un Tributo sulla tomba o un Omaggio Solenne per il funerale?";
+    "La ringrazio. Per aiutarLa al meglio, mi indica se desidera un bouquet sulla tomba o un omaggio floreale per il funerale?";
 
 function normalizeMessage(value: string): string {
     return value
@@ -241,7 +241,7 @@ export function buildWhatsAppAiReply(params: {
         return `${salutoPrefix}Confermo che copriamo tutta Italia, anche comuni piccoli. Se vuole, mi indichi il comune e Le confermo subito la copertura.`;
     }
     if (contextDependent && recentTopic === 'funeral') {
-        return `${salutoPrefix}Per l'Omaggio Solenne in ambito funerale, puo procedere da qui: ${kb.funeralUrl}`;
+        return `${salutoPrefix}Per l'omaggio floreale per il funerale, puo procedere da qui: ${kb.funeralUrl}`;
     }
     if (contextDependent && recentTopic === 'pets') {
         return `${salutoPrefix}Per il ricordo dei piccoli amici, puo procedere da qui: ${kb.petsUrl}`;
@@ -259,19 +259,19 @@ export function buildWhatsAppAiReply(params: {
         return `${salutoPrefix}I pagamenti sono tracciati e sicuri; per segnalazioni valide, la pratica di rimborso si avvia entro 24h.`;
     }
     if (
-        hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne']) &&
+        hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne', 'bouquet sulla tomba', 'omaggio floreale']) &&
         m.includes('tomba')
     ) {
         if (recentInboundLocation) {
-            return `${salutoPrefix}Perfetto, procediamo con un Tributo sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?`;
+            return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?`;
         }
-        return `${salutoPrefix}Perfetto, procediamo con un Tributo sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?`;
     }
     if (
-        hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne']) &&
+        hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne', 'bouquet sulla tomba', 'omaggio floreale']) &&
         m.includes('funerale')
     ) {
-        return `${salutoPrefix}Perfetto, procediamo con un Omaggio Solenne per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un omaggio floreale per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?`;
     }
 
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {
@@ -294,7 +294,7 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (hasAny(m, ['funerale', 'camera mortuaria', 'chiesa'])) {
-        return `${salutoPrefix}${emotionalPrefix}Se desidera un Omaggio Solenne per il funerale, può procedere da qui: ${kb.funeralUrl}`;
+        return `${salutoPrefix}${emotionalPrefix}Se desidera un omaggio floreale per il funerale, può procedere da qui: ${kb.funeralUrl}`;
     }
 
     if (hasAny(m, ['animali', 'animale', 'piccoli amici', 'pet'])) {
@@ -318,7 +318,7 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (emotionalContext) {
-        return `${salutoPrefix}${emotionalPrefix}Per aiutarLa al meglio, preferisce organizzare un Tributo sulla tomba oppure un Omaggio Solenne per il funerale?`;
+        return `${salutoPrefix}${emotionalPrefix}Per aiutarLa al meglio, preferisce organizzare un bouquet sulla tomba oppure un omaggio floreale per il funerale?`;
     }
 
     if (looksHighlyFragmented(message, m)) {

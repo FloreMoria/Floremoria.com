@@ -48,7 +48,7 @@ const DEFAULT_OFFICIAL_SIGNATURE = [
     'al tuo servizio tutti i giorni dalle 8 alle 22:00',
     '',
     '✉️ assistenza@floremoria.com',
-    '📞 3204105305 (Whatsapp)',
+    '📞 3204105305 (WhatsApp): https://wa.me/393204105305',
     '🛜 www.floremoria.com',
 ].join('\n');
 

@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { addMessage, getSession, setSessionStatus, updateSessionProfile } from '@/lib/chatStore';
 import prisma from '@/lib/prisma';
 import twilio from 'twilio';
-import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT, getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
-import { buildWhatsAppAiReply, loadWhatsAppCoreKb, loadWhatsAppHistoricalKb, STANDARD_GUIDANCE_MESSAGE } from '@/lib/whatsappKnowledge';
+import { getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
+import { loadWhatsAppCoreKb, STANDARD_GUIDANCE_MESSAGE } from '@/lib/whatsappKnowledge';
+import { generateVeraReply } from '@/lib/assistant/veraBrain';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() || '';
@@ -80,11 +81,6 @@ function normalizePhone(phone: string): string {
     return phone.replace('whatsapp:', '').replace(/[^\d+]/g, '').trim();
 }
 
-function isSupportInfoRequest(rawMessage: string): boolean {
-    const m = rawMessage.toLowerCase();
-    return ['orari', 'orario', 'assistenza', 'operatore', 'umano'].some((keyword) => m.includes(keyword));
-}
-
 function buildWelcomeMessage(kb: { supportHours: string }): string {
     return [
         'Buongiorno, sono VERA, assistenza virtuale di FloreMoria.',
@@ -94,11 +90,6 @@ function buildWelcomeMessage(kb: { supportHours: string }): string {
         '[1] Sono un Utente',
         '[2] Sono un fiorista partner',
     ].join('\n');
-}
-
-function isConversationClosureMessage(rawMessage: string): boolean {
-    const m = rawMessage.toLowerCase();
-    return ['grazie', 'grazie mille', 'tutto chiaro', 'ok grazie', 'perfetto grazie', 'a posto'].some((v) => m.includes(v));
 }
 
 function normalizeForSimilarity(value: string): string {
@@ -162,7 +153,6 @@ export async function POST(request: Request) {
         const messageSid = asString(body.MessageSid);
         const normalizedPhone = normalizePhone(phone);
         const kb = loadWhatsAppCoreKb();
-        const historicalKb = loadWhatsAppHistoricalKb();
 
         // Validazione della firma Twilio (X-Twilio-Signature) in produzione.
         // Override emergenza: TWILIO_VALIDATE_SIGNATURE=false per non bloccare il canale durante troubleshooting.
@@ -240,23 +230,6 @@ export async function POST(request: Request) {
             return await respondWithTwimlAndRest(phone, welcomeMessage);
         }
 
-        // Explicit support keywords bypass generic flows and repeat essential info.
-        if (isSupportInfoRequest(rawMessage) && !wantsHuman) {
-            const supportReply = buildWelcomeMessage(kb);
-            await addMessage(phone, 'OUTBOUND', supportReply);
-            return await respondWithTwimlAndRest(phone, supportReply);
-        }
-
-        if (isConversationClosureMessage(rawMessage)) {
-            const closureReply = 'La ringraziamo di cuore. Tutto lo staff di FloreMoria Le augura una buona giornata. 🌹';
-            await setSessionStatus(phone, 'CLOSED');
-            await addMessage(phone, 'OUTBOUND', closureReply, undefined, {
-                eventType: 'CONVERSATION_CLOSED',
-                closedAt: new Date().toISOString(),
-            });
-            return await respondWithTwimlAndRest(phone, closureReply);
-        }
-
         // 4. Determine user type if unknown (DB match + onboarding flow)
         if (session.userType === 'UNKNOWN') {
             try {
@@ -321,16 +294,14 @@ export async function POST(request: Request) {
             }
         }
 
-        // 5. If AI Assistant is active (AI_ACTIVE), respond automatically
+        // 5. If AI Assistant is active (AI_ACTIVE), respond with the Gemini 16-agent brain (VERA).
         if (session.status === 'AI_ACTIVE') {
             const sessionWithHistory = await getSession(phone);
-            const replyText = buildWhatsAppAiReply({
+            const replyText = await generateVeraReply({
                 message: rawMessage,
                 userName: session.name,
                 userType: session.userType,
                 mediaUrl,
-                systemPrompt: FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT,
-                knowledgeContext: historicalKb,
                 history: sessionWithHistory.messages.map((msg) => ({
                     direction: msg.direction,
                     body: msg.body,

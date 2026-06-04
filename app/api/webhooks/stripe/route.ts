@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
+import { sendOrderWelcomeWhatsApp } from '@/lib/whatsapp/orderNotify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,14 @@ export async function POST(request: Request) {
     if (!order) {
         console.error('[stripe-webhook] Ordine non trovato dopo update:', orderId);
         return NextResponse.json({ received: true });
+    }
+
+    // Benvenuto WhatsApp (VERA): solo alla prima transizione a pagato, una volta per ordine.
+    // Fire-and-forget: non deve mai bloccare le email né far ritentare Stripe.
+    if (isFirstPaidTransition) {
+        await sendOrderWelcomeWhatsApp(order).catch((waErr) => {
+            console.error('[stripe-webhook] Benvenuto WhatsApp fallito (non bloccante):', waErr);
+        });
     }
 
     const staffTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || 'ordini@floremoria.com';

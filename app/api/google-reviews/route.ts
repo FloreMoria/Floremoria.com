@@ -20,17 +20,17 @@ interface GooglePlacesResponse {
 let cachedData: any = null;
 let cacheExpiration = 0;
 
-export async function GET() {
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    const placeId = process.env.GOOGLE_PLACE_ID;
+/** URL di riserva quando GOOGLE_PLACE_ID non è configurato (nessun log in produzione). */
+const FLOREMORIA_MAPS_FALLBACK_URL =
+    'https://www.google.com/maps/search/?api=1&query=FloreMoria';
 
-    if (!placeId) {
-        console.warn('Warning: GOOGLE_PLACE_ID environment variable is missing.');
-    }
+export async function GET() {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    const placeId = process.env.GOOGLE_PLACE_ID?.trim();
 
     const fallbackUrl = placeId
         ? `https://www.google.com/maps/search/?api=1&query_place_id=${placeId}`
-        : undefined;
+        : FLOREMORIA_MAPS_FALLBACK_URL;
 
     if (!apiKey || !placeId) {
         return NextResponse.json({

@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { sendWhatsAppMessage } from '@/lib/auth/twilio';
+import { findUserByEmail, findOrderByEmail, createUserFromOrder, isProfessionalRole, linkHistoricalOrders } from '@/lib/auth/identity';
 
 export async function POST(request: Request) {
     try {
@@ -18,14 +19,12 @@ export async function POST(request: Request) {
         }
 
         // Cerca l'utente a database per verificare il ruolo
-        let user = await prisma.user.findUnique({
-            where: { email },
-        });
+        let user = await findUserByEmail(email);
 
         if (user) {
             // Se l'utente esiste ma non è un utente finale (B2C), inibisci il magic link.
             // I fioristi, commercialisti, staff e admin devono accedere con credenziali/password.
-            if (user.systemRole !== UserRole.USER) {
+            if (isProfessionalRole(user.systemRole)) {
                 return NextResponse.json(
                     { 
                         success: false, 
@@ -34,16 +33,22 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
+            // Aggancia eventuali ordini storici rimasti orfani a questo cliente.
+            await linkHistoricalOrders(user);
         } else {
-            // Creazione silenziosa (Onboarding) se l'utente non è censito a database.
-            // Il sistema crea l'anagrafica USER ed è subito attiva.
-            user = await prisma.user.create({
-                data: {
-                    email,
-                    systemRole: UserRole.USER,
-                    isActive: true,
-                },
-            });
+            // Onboarding: se esiste uno storico ordini su questa email, crea l'account
+            // agganciando lo storico; altrimenti crea una nuova anagrafica USER attiva.
+            const order = await findOrderByEmail(email);
+            user = order ? await createUserFromOrder(order) : null;
+            if (!user) {
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        systemRole: UserRole.USER,
+                        isActive: true,
+                    },
+                });
+            }
         }
 
         // Genera il token crittografato firmato a 15 minuti

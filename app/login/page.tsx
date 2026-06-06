@@ -2,130 +2,137 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+
+type Stage = 'identify' | 'password' | 'otp' | 'magic-sent';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [username, setUsername] = useState('');
+
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [otpTempToken, setOtpTempToken] = useState('');
+
+    const [stage, setStage] = useState<Stage>('identify');
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isB2C, setIsB2C] = useState(false);
 
-    // States per l'accesso B2C (Magic Link / OTP)
-    const [b2cMethod, setB2cMethod] = useState<'magic_link' | 'otp'>('magic_link');
-    const [otpIdentifier, setOtpIdentifier] = useState('');
-    const [otpCode, setOtpCode] = useState('');
-    const [otpTempToken, setOtpTempToken] = useState('');
-    const [otpStep, setOtpStep] = useState<1 | 2>(1);
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const resetMessages = () => {
         setErrorMsg('');
+        setSuccessMsg('');
+    };
+
+    const backToStart = () => {
+        setStage('identify');
+        setPassword('');
+        setOtpCode('');
+        setOtpTempToken('');
+        resetMessages();
+    };
+
+    // Passo 1: il backend decide la via in base al ruolo a database.
+    const handleIdentify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        resetMessages();
+        setIsLoading(true);
+
+        try {
+            const res = await fetch('/api/auth/identity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier }),
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setErrorMsg(data.message || 'Non è stato possibile verificare questo contatto.');
+                return;
+            }
+
+            if (data.mode === 'password') {
+                setStage('password');
+                return;
+            }
+
+            // Passwordless: email → Magic Link, telefono → OTP.
+            if (data.channel === 'email') {
+                const mlRes = await fetch('/api/auth/magic-link/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: identifier }),
+                });
+                const mlData = await mlRes.json();
+                if (mlRes.ok && mlData.success) {
+                    setSuccessMsg(mlData.message || 'Ti abbiamo inviato un collegamento di accesso via email.');
+                    setStage('magic-sent');
+                } else {
+                    setErrorMsg(mlData.message || 'Impossibile inviare il collegamento di accesso.');
+                }
+                return;
+            }
+
+            // Canale telefono → invio codice OTP.
+            const otpRes = await fetch('/api/auth/otp/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier }),
+            });
+            const otpData = await otpRes.json();
+            if (otpRes.ok && otpData.success) {
+                setOtpTempToken(otpData.tempToken);
+                setSuccessMsg(otpData.message || 'Codice inviato.');
+                setStage('otp');
+            } else {
+                setErrorMsg(otpData.message || 'Impossibile inviare il codice.');
+            }
+        } catch {
+            setErrorMsg('Errore di connessione al server.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Passo 2a: login con password (ruoli professionali).
+    const handlePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        resetMessages();
         setIsLoading(true);
 
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: identifier, password }),
             });
-
             const data = await res.json();
 
             if (res.ok && data.success) {
-                router.push(data.redirectUrl || '/dashboard/orders');
+                router.push(data.redirectUrl || '/dashboard');
                 router.refresh();
             } else {
                 const hint = typeof data.hint === 'string' ? data.hint : '';
                 setErrorMsg(hint ? `${data.message || 'Credenziali errate.'} ${hint}` : data.message || 'Credenziali errate.');
                 setIsLoading(false);
             }
-        } catch (err) {
+        } catch {
             setErrorMsg('Errore di connessione al server.');
             setIsLoading(false);
         }
     };
 
-    const handleMagicLink = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-        setSuccessMsg('');
-        setIsLoading(true);
-
-        try {
-            const res = await fetch('/api/auth/magic-link/request', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email: username }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                setSuccessMsg(data.message || 'Link di accesso inviato. Controlla la tua email.');
-                setUsername('');
-            } else {
-                setErrorMsg(data.message || 'Impossibile inviare il link di accesso.');
-            }
-        } catch (err) {
-            setErrorMsg('Errore di connessione al server.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleOtpRequest = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg('');
-        setSuccessMsg('');
-        setIsLoading(true);
-
-        try {
-            const res = await fetch('/api/auth/otp/request', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ identifier: otpIdentifier }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                setOtpTempToken(data.tempToken);
-                setOtpStep(2);
-                setSuccessMsg(data.message || 'Codice inviato con successo.');
-            } else {
-                setErrorMsg(data.message || 'Impossibile inviare il codice.');
-            }
-        } catch (err) {
-            setErrorMsg('Errore di connessione al server.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Passo 2b: verifica del codice OTP (clienti privati via telefono).
     const handleOtpVerify = async (e: React.FormEvent) => {
         e.preventDefault();
-        setErrorMsg('');
-        setSuccessMsg('');
+        resetMessages();
         setIsLoading(true);
 
         try {
             const res = await fetch('/api/auth/otp/verify', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: otpCode, tempToken: otpTempToken }),
             });
-
             const data = await res.json();
 
             if (res.ok && data.success) {
@@ -133,17 +140,38 @@ export default function LoginPage() {
                 router.refresh();
             } else {
                 setErrorMsg(data.message || 'Codice di verifica non valido o scaduto.');
+                setIsLoading(false);
             }
-        } catch (err) {
+        } catch {
             setErrorMsg('Errore di connessione al server.');
-        } finally {
             setIsLoading(false);
         }
     };
 
+    const inputClass =
+        'appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all';
+    const buttonClass = (loading: boolean) =>
+        `w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-[17px] font-semibold text-white bg-fm-gold hover:bg-[#b59870] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fm-gold transition-all duration-300 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`;
+
+    const heading =
+        stage === 'password'
+            ? 'Accesso Collaboratori'
+            : stage === 'otp'
+            ? 'Conferma la tua identità'
+            : stage === 'magic-sent'
+            ? 'Controlla la tua email'
+            : 'Accedi alla tua bacheca';
+    const subheading =
+        stage === 'password'
+            ? 'Inserisci la password del tuo account professionale'
+            : stage === 'otp'
+            ? 'Abbiamo inviato un codice al tuo telefono'
+            : stage === 'magic-sent'
+            ? 'Ti abbiamo inviato un collegamento sicuro'
+            : 'Inserisci la tua email o il tuo numero di telefono';
+
     return (
         <div className="min-h-screen bg-[#FAF9F6] flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-            {/* Effetti di luce di sfondo - Stile FloreMoria */}
             <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-bl from-fm-gold/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
 
@@ -155,242 +183,28 @@ export default function LoginPage() {
                 </div>
 
                 <div className="bg-white/80 backdrop-blur-xl py-10 px-8 lg:px-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[32px] border border-white/60">
-                    
-                    {/* Intestazione del form dinamica */}
                     <div className="text-center mb-6">
-                        <h2 className="text-lg font-bold text-slate-800">
-                            {isB2C ? 'Accesso Clienti (Senza Password)' : 'Accesso Collaboratori'}
-                        </h2>
-                        <p className="text-xs text-slate-400 mt-1">
-                            {isB2C ? 'Inserisci la tua email per ricevere il link magico' : 'Accedi all\'area operativa con il codice personale'}
-                        </p>
+                        <h2 className="text-lg font-bold text-slate-800">{heading}</h2>
+                        <p className="text-xs text-slate-400 mt-1">{subheading}</p>
                     </div>
 
-                    {isB2C ? (
-                        /* FORM CLIENTE (PASSWORDLESS) */
-                        <div className="space-y-6">
-                            {/* Selettore Metodo B2C */}
-                            <div className="flex border-b border-slate-100 mb-6">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setB2cMethod('magic_link');
-                                        setErrorMsg('');
-                                        setSuccessMsg('');
-                                    }}
-                                    className={`flex-1 pb-3 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all ${
-                                        b2cMethod === 'magic_link'
-                                            ? 'border-fm-gold text-fm-gold font-extrabold'
-                                            : 'border-transparent text-slate-400 hover:text-slate-600'
-                                    }`}
-                                >
-                                    Email Magic Link
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setB2cMethod('otp');
-                                        setErrorMsg('');
-                                        setSuccessMsg('');
-                                        setOtpStep(1);
-                                        setOtpCode('');
-                                    }}
-                                    className={`flex-1 pb-3 text-xs font-bold uppercase tracking-wider text-center border-b-2 transition-all ${
-                                        b2cMethod === 'otp'
-                                            ? 'border-fm-gold text-fm-gold font-extrabold'
-                                            : 'border-transparent text-slate-400 hover:text-slate-600'
-                                    }`}
-                                >
-                                    Codice WhatsApp/SMS
-                                </button>
-                            </div>
-
-                            {b2cMethod === 'magic_link' ? (
-                                <form className="space-y-6" onSubmit={handleMagicLink}>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="email">
-                                            Indirizzo Email
-                                        </label>
-                                        <div className="mt-1">
-                                            <input
-                                                id="email"
-                                                name="email"
-                                                type="email"
-                                                required
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                                className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                                placeholder="es. mario.rossi@email.it"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {successMsg && (
-                                        <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
-                                            {successMsg}
-                                        </div>
-                                    )}
-
-                                    {errorMsg && (
-                                        <div className="text-xs text-red-600 bg-red-50 border border-red-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
-                                            {errorMsg}
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <button
-                                            type="submit"
-                                            disabled={isLoading}
-                                            className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-[17px] font-semibold text-white bg-fm-gold hover:bg-[#b59870] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fm-gold transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                        >
-                                            {isLoading ? 'Invio in corso...' : 'Invia Link di Accesso'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : (
-                                /* FORM OTP */
-                                <form className="space-y-6" onSubmit={otpStep === 1 ? handleOtpRequest : handleOtpVerify}>
-                                    {otpStep === 1 ? (
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="otp-identifier">
-                                                Email o Numero di Telefono
-                                            </label>
-                                            <div className="mt-1">
-                                                <input
-                                                    id="otp-identifier"
-                                                    type="text"
-                                                    required
-                                                    value={otpIdentifier}
-                                                    onChange={(e) => setOtpIdentifier(e.target.value)}
-                                                    className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                                    placeholder="es. mario.rossi@email.it o 3331234567"
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4 animate-in fade-in">
-                                            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs text-slate-600">
-                                                Codice inviato a: <strong className="text-slate-800">{otpIdentifier}</strong>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="otp-code">
-                                                    Codice di Verifica di 6 Cifre
-                                                </label>
-                                                <div className="mt-1">
-                                                    <input
-                                                        id="otp-code"
-                                                        type="text"
-                                                        maxLength={6}
-                                                        pattern="[0-9]*"
-                                                        inputMode="numeric"
-                                                        required
-                                                        value={otpCode}
-                                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                                        className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-center text-lg font-bold tracking-[0.5em] text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                                        placeholder="000000"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {successMsg && (
-                                        <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
-                                            {successMsg}
-                                        </div>
-                                    )}
-
-                                    {errorMsg && (
-                                        <div className="text-xs text-red-600 bg-red-50 border border-red-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
-                                            {errorMsg}
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <button
-                                            type="submit"
-                                            disabled={isLoading}
-                                            className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-[17px] font-semibold text-white bg-fm-gold hover:bg-[#b59870] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fm-gold transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                        >
-                                            {isLoading
-                                                ? 'Elaborazione...'
-                                                : otpStep === 1
-                                                ? 'Invia Codice Monouso'
-                                                : 'Verifica Codice & Accedi'}
-                                        </button>
-                                    </div>
-
-                                    {otpStep === 2 && (
-                                        <div className="text-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setOtpStep(1);
-                                                    setOtpCode('');
-                                                    setErrorMsg('');
-                                                    setSuccessMsg('');
-                                                }}
-                                                className="text-xs text-slate-400 hover:text-slate-600 underline font-semibold transition-colors"
-                                            >
-                                                Inserisci un numero/email differente
-                                            </button>
-                                        </div>
-                                    )}
-                                </form>
-                            )}
-
-                            <div className="text-center pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsB2C(false);
-                                        setErrorMsg('');
-                                        setSuccessMsg('');
-                                        setUsername('');
-                                    }}
-                                    className="text-xs font-semibold text-slate-500 hover:text-fm-gold underline transition-colors"
-                                >
-                                    Sei un fiorista o membro dello staff? Accedi qui
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        /* FORM TRADIZIONALE STAFF/PARTNER */
-                        <form className="space-y-6" onSubmit={handleLogin}>
+                    {/* STADIO 1 — Identificativo unico */}
+                    {stage === 'identify' && (
+                        <form className="space-y-6" onSubmit={handleIdentify}>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="username">
-                                    Email o identificativo
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="identifier">
+                                    Email o numero di telefono
                                 </label>
-                                <div className="mt-1">
-                                    <input
-                                        id="username"
-                                        name="username"
-                                        type="text"
-                                        required
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                        placeholder="es. nome@floremoria.com"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="password">
-                                    Codice di Accesso
-                                </label>
-                                <div className="mt-1">
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all"
-                                        placeholder="• • • •"
-                                    />
-                                </div>
+                                <input
+                                    id="identifier"
+                                    type="text"
+                                    autoComplete="username"
+                                    required
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="es. mario.rossi@email.it o 333 1234567"
+                                />
                             </div>
 
                             {errorMsg && (
@@ -399,31 +213,112 @@ export default function LoginPage() {
                                 </div>
                             )}
 
+                            <button type="submit" disabled={isLoading} className={buttonClass(isLoading)}>
+                                {isLoading ? 'Verifica in corso...' : 'Continua'}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* STADIO 2a — Password (ruoli professionali) */}
+                    {stage === 'password' && (
+                        <form className="space-y-6" onSubmit={handlePassword}>
+                            <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl text-xs text-slate-600 text-center">
+                                {identifier}
+                            </div>
                             <div>
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className={`w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-[17px] font-semibold text-white bg-fm-gold hover:bg-[#b59870] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fm-gold transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                >
-                                    {isLoading ? 'Accesso in corso...' : 'Accedi alla Stanza dei Bottoni'}
-                                </button>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="password">
+                                    Password
+                                </label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    autoFocus
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="• • • • • • • •"
+                                />
                             </div>
 
-                            <div className="text-center pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsB2C(true);
-                                        setErrorMsg('');
-                                        setSuccessMsg('');
-                                        setUsername('');
-                                    }}
-                                    className="text-xs font-semibold text-slate-500 hover:text-fm-gold underline transition-colors"
-                                >
-                                    Hai acquistato dei fiori? Traccia la consegna senza password
+                            {errorMsg && (
+                                <div className="text-xs text-red-600 bg-red-50 border border-red-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
+                                    {errorMsg}
+                                </div>
+                            )}
+
+                            <button type="submit" disabled={isLoading} className={buttonClass(isLoading)}>
+                                {isLoading ? 'Accesso in corso...' : 'Accedi'}
+                            </button>
+
+                            <div className="text-center">
+                                <button type="button" onClick={backToStart} className="text-xs text-slate-400 hover:text-slate-600 underline font-semibold transition-colors">
+                                    Usa un altro contatto
                                 </button>
                             </div>
                         </form>
+                    )}
+
+                    {/* STADIO 2b — Codice OTP (clienti via telefono) */}
+                    {stage === 'otp' && (
+                        <form className="space-y-6" onSubmit={handleOtpVerify}>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="otp-code">
+                                    Codice di verifica di 6 cifre
+                                </label>
+                                <input
+                                    id="otp-code"
+                                    type="text"
+                                    maxLength={6}
+                                    pattern="[0-9]*"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    required
+                                    autoFocus
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                    className={`${inputClass} text-center text-lg font-bold tracking-[0.5em]`}
+                                    placeholder="000000"
+                                />
+                            </div>
+
+                            {successMsg && (
+                                <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
+                                    {successMsg}
+                                </div>
+                            )}
+                            {errorMsg && (
+                                <div className="text-xs text-red-600 bg-red-50 border border-red-100 font-semibold text-center py-2.5 px-3 rounded-lg leading-tight">
+                                    {errorMsg}
+                                </div>
+                            )}
+
+                            <button type="submit" disabled={isLoading} className={buttonClass(isLoading)}>
+                                {isLoading ? 'Verifica...' : 'Verifica e accedi'}
+                            </button>
+
+                            <div className="text-center">
+                                <button type="button" onClick={backToStart} className="text-xs text-slate-400 hover:text-slate-600 underline font-semibold transition-colors">
+                                    Usa un altro contatto
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* STADIO 2c — Magic Link inviato */}
+                    {stage === 'magic-sent' && (
+                        <div className="space-y-6 text-center">
+                            <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 font-semibold py-4 px-4 rounded-2xl leading-snug">
+                                {successMsg || 'Ti abbiamo inviato un collegamento di accesso via email.'}
+                            </div>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Apri il messaggio e tocca il collegamento per entrare. È valido per 15 minuti.
+                            </p>
+                            <button type="button" onClick={backToStart} className="text-xs text-slate-500 hover:text-fm-gold underline font-semibold transition-colors">
+                                Torna all&apos;accesso
+                            </button>
+                        </div>
                     )}
                 </div>
 

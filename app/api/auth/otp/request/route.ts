@@ -1,85 +1,34 @@
 import { NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
-import prisma from '@/lib/prisma';
 import { generateOtpToken } from '@/lib/auth/otp';
-import { sendWhatsAppMessage, sendSMSMessage, formatPhoneNumber } from '@/lib/auth/twilio';
+import { sendWhatsAppMessage, sendSMSMessage } from '@/lib/auth/twilio';
+import { parseIdentifier, findOrCreatePasswordlessUser } from '@/lib/auth/identity';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const identifier = typeof body.identifier === 'string' ? body.identifier.trim() : '';
 
-        if (!identifier) {
+        const parsed = parseIdentifier(identifier);
+        if (!parsed) {
             return NextResponse.json(
                 { success: false, message: 'Fornire un indirizzo email o un numero di telefono valido.' },
                 { status: 400 }
             );
         }
 
-        let email = '';
-        let phone = '';
-        let user = null;
+        // Lookup robusto: trova l'utente o lo crea dallo storico ordini (clienti passati).
+        const user = await findOrCreatePasswordlessUser(parsed);
 
-        // Determina se l'identificativo è un'email o un numero di telefono
-        if (identifier.includes('@')) {
-            email = identifier.toLowerCase();
-            user = await prisma.user.findUnique({
-                where: { email },
-            });
-
-            if (!user) {
-                return NextResponse.json(
-                    { success: false, message: 'Indirizzo email non registrato. Effettua un acquisto per creare un account.' },
-                    { status: 404 }
-                );
-            }
-
-            if (!user.phone) {
-                return NextResponse.json(
-                    { success: false, message: 'Nessun numero di telefono associato a questo account. Accedi tramite Magic Link.' },
-                    { status: 400 }
-                );
-            }
-
-            phone = user.phone;
-        } else {
-            // È un numero di telefono, normalizzalo per la ricerca
-            const rawPhone = identifier.replace(/[^0-9+]/g, '');
-            if (rawPhone.length < 6) {
-                return NextResponse.json(
-                    { success: false, message: 'Fornire un numero di telefono valido.' },
-                    { status: 400 }
-                );
-            }
-
-            // Ricerca parziale o esatta
-            const normalizedSMS = formatPhoneNumber(rawPhone, 'sms');
-            const normalizedWA = formatPhoneNumber(rawPhone, 'whatsapp');
-            
-            // Cerca un utente che contenga questo numero di telefono
-            user = await prisma.user.findFirst({
-                where: {
-                    OR: [
-                        { phone: rawPhone },
-                        { phone: normalizedSMS },
-                        { phone: normalizedSMS.replace('+39', '') },
-                        { phone: { contains: rawPhone } }
-                    ]
-                }
-            });
-
-            if (!user) {
-                return NextResponse.json(
-                    { success: false, message: 'Numero di telefono non trovato o non associato ad alcun ordine.' },
-                    { status: 404 }
-                );
-            }
-
-            email = user.email;
-            phone = user.phone || rawPhone;
+        if (!user) {
+            const message =
+                parsed.type === 'email'
+                    ? 'Indirizzo email non registrato. Effettua un acquisto per creare un account.'
+                    : 'Numero di telefono non trovato o non associato ad alcun ordine.';
+            return NextResponse.json({ success: false, message }, { status: 404 });
         }
 
-        // Impedisce l'accesso passwordless per ruoli commerciali / staff / admin
+        // L'OTP è riservato ai clienti privati (B2C).
         if (user.systemRole !== UserRole.USER) {
             return NextResponse.json(
                 { success: false, message: 'L\'accesso passwordless (OTP) è riservato ai clienti privati.' },
@@ -87,18 +36,26 @@ export async function POST(request: Request) {
             );
         }
 
-        // Genera il codice di verifica a 6 cifre
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        if (!user.phone) {
+            return NextResponse.json(
+                { success: false, message: 'Nessun numero di telefono associato a questo account. Accedi tramite Magic Link via email.' },
+                { status: 400 }
+            );
+        }
 
-        // Genera il token OTP firmato con scadenza a 5 minuti
+        const email = user.email;
+        const phone = user.phone;
+
+        // Codice di verifica a 6 cifre + token firmato stateless (5 minuti).
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
         const tempToken = generateOtpToken(email, phone, code);
 
         const messageText = `Il tuo codice di verifica FloreMoria è: ${code}. Inseriscilo nella pagina di accesso. Valido per 5 minuti.`;
 
-        // Tenta l'invio tramite WhatsApp; in caso di errore, effettua fallback su SMS
+        // WhatsApp con fallback SMS.
         let sentMethod = 'whatsapp';
         const waResult = await sendWhatsAppMessage(phone, messageText);
-        
+
         if (!waResult.ok) {
             console.warn('[OTP] Invio WhatsApp fallito, provo fallback su SMS...');
             const smsResult = await sendSMSMessage(phone, messageText);

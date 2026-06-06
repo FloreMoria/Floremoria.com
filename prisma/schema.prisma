@@ -48,6 +48,11 @@ model User {
   updatedAt       DateTime        @updatedAt
   roleExpiresAt   DateTime?
   deletedAt       DateTime?
+  passwordHash    String?         @map("password_hash")
+  isActive        Boolean         @default(false) @map("is_active")
+  invitationToken String?         @unique @map("invitation_token")
+  inviteExpiresAt DateTime?       @map("invite_expires_at")
+  lastLoginAt     DateTime?       @map("last_login_at")
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]

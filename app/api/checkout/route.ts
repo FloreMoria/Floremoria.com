@@ -285,12 +285,41 @@ export async function POST(request: Request) {
             });
         }
 
+        // Onboarding Silenzioso: cerca o crea l'utente con ruolo USER ed email acquirente
+        let buyerUserId: string | null = null;
+        if (buyerEmail && typeof buyerEmail === 'string' && buyerEmail.trim().includes('@')) {
+            const emailTrim = buyerEmail.trim().toLowerCase();
+            try {
+                let userObj = await prisma.user.findUnique({
+                    where: { email: emailTrim },
+                    select: { id: true }
+                });
+                if (!userObj) {
+                    userObj = await prisma.user.create({
+                        data: {
+                            email: emailTrim,
+                            name: typeof buyerFullName === 'string' ? buyerFullName.trim() : null,
+                            phone: typeof buyerPhone === 'string' ? buyerPhone.trim() : null,
+                            systemRole: 'USER',
+                            isActive: true, // I clienti privati (USER) sono subito pronti per l'accesso Magic Link
+                        },
+                        select: { id: true }
+                    });
+                }
+                buyerUserId = userObj.id;
+            } catch (err) {
+                // In caso di errore anagrafica (es. vincoli temporanei), non blocchiamo il checkout
+                console.error('[checkout-onboarding] Errore creazione utente silenzioso:', err);
+            }
+        }
+
         const order = await prisma.order.create({
             data: {
                 orderNumber,
                 buyerFullName,
                 buyerEmail,
                 isRecurring,
+                userId: buyerUserId, // Collega l'ordine al profilo utente
                 customerPhone: buyerPhone,
                 deceasedName,
                 cemeteryName,

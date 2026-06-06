@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PERMISSION_MATRIX } from '@/lib/rbac';
-import { Shield, Lock, Users, Save, Check, Trash2 } from 'lucide-react';
+import { Shield, Lock, Users, Save, Check, Trash2, UserPlus, Mail, Send, AlertTriangle } from 'lucide-react';
 
 interface Role {
     id: string;
@@ -17,6 +17,67 @@ export default function RolesMatrixClient() {
     const [newRoleName, setNewRoleName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState('');
+
+    // States per l'invito B2B/Staff
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteName, setInviteName] = useState('');
+    const [invitePhone, setInvitePhone] = useState('');
+    const [inviteRole, setInviteRole] = useState('FLORIST');
+    const [isInviting, setIsInviting] = useState(false);
+    const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+    const [inviteWarningMsg, setInviteWarningMsg] = useState('');
+    const [manualLink, setManualLink] = useState('');
+    const [inviteErrorMsg, setInviteErrorMsg] = useState('');
+
+    const handleInviteCollaborator = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const email = inviteEmail.trim();
+        if (!email) return;
+
+        setIsInviting(true);
+        setInviteSuccessMsg('');
+        setInviteWarningMsg('');
+        setManualLink('');
+        setInviteErrorMsg('');
+
+        try {
+            const res = await fetch('/api/admin/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    name: inviteName.trim() || undefined,
+                    phone: invitePhone.trim() || undefined,
+                    role: inviteRole,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Errore durante l\'invio dell\'invito.');
+            }
+
+            if (data.warning) {
+                setInviteWarningMsg(data.warning);
+                if (data.setupLink) {
+                    setManualLink(data.setupLink);
+                }
+            } else {
+                setInviteSuccessMsg(`Invito inviato con successo a ${email}!`);
+            }
+
+            // Pulisci i campi
+            setInviteEmail('');
+            setInviteName('');
+            setInvitePhone('');
+        } catch (err: any) {
+            console.error(err);
+            setInviteErrorMsg(err.message || 'Errore durante l\'invio dell\'invito.');
+        } finally {
+            setIsInviting(false);
+        }
+    };
 
     // Esempio MOCK di Utenti (in vera produzione verrebbe da Prisma)
     const [users] = useState([
@@ -295,6 +356,136 @@ export default function RolesMatrixClient() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* SEZIONE: INVITO NUOVO COLLABORATORE */}
+            <div className="bg-white/60 backdrop-blur-xl border border-gray-100 rounded-[24px] p-8 lg:p-10 shadow-sm mt-12 w-full max-w-4xl">
+                <div className="flex items-center gap-3 mb-6">
+                    <UserPlus className="text-fm-gold" size={24} />
+                    <h2 className="text-2xl font-display font-semibold text-gray-900 tracking-tight">
+                        Invito Nuovo Collaboratore (B2B / Staff)
+                    </h2>
+                </div>
+
+                <p className="text-sm text-gray-500 font-body mb-6">
+                    Crea un nuovo account o aggiorna un utente esistente inattivo. Il collaboratore riceverà un&apos;email con un link sicuro (valido 48 ore) per configurare la propria password.
+                </p>
+
+                {inviteSuccessMsg && (
+                    <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl flex items-center gap-3 text-sm">
+                        <Check className="text-emerald-600 shrink-0" size={18} />
+                        <span className="font-medium">{inviteSuccessMsg}</span>
+                    </div>
+                )}
+
+                {inviteWarningMsg && (
+                    <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl space-y-3 text-sm">
+                        <div className="flex items-center gap-3">
+                            <AlertTriangle className="text-amber-600 shrink-0" size={18} />
+                            <span className="font-semibold">{inviteWarningMsg}</span>
+                        </div>
+                        {manualLink && (
+                            <div className="mt-2 bg-white/80 p-3 rounded-lg border border-amber-100 font-mono text-xs break-all select-all">
+                                <strong>Link di attivazione manuale:</strong> {manualLink}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {inviteErrorMsg && (
+                    <div className="mb-6 bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-center gap-3 text-sm">
+                        <AlertTriangle className="text-rose-600 shrink-0" size={18} />
+                        <span className="font-medium">{inviteErrorMsg}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleInviteCollaborator} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" htmlFor="invite-email">
+                                Email Collaboratore (obbligatoria)
+                            </label>
+                            <input
+                                id="invite-email"
+                                type="email"
+                                required
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                placeholder="collaboratore@floremoria.com"
+                                className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold block p-3 outline-none transition-all shadow-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" htmlFor="invite-role">
+                                Seleziona Ruolo B2B
+                            </label>
+                            <select
+                                id="invite-role"
+                                value={inviteRole}
+                                onChange={(e) => setInviteRole(e.target.value)}
+                                className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold block p-3 outline-none transition-all shadow-sm"
+                            >
+                                <option value="FLORIST">Fiorista Partner (FLORIST)</option>
+                                <option value="ACCOUNTANT">Consulente Fiscale (ACCOUNTANT)</option>
+                                <option value="OPERATOR">Staff / Supporto (OPERATOR)</option>
+                                <option value="ADMIN">Amministratore (ADMIN)</option>
+                                <option value="AGENCY">Agenzia (AGENCY)</option>
+                                <option value="MUNICIPALITY">Referente Comunale (MUNICIPALITY)</option>
+                                <option value="STAKEHOLDER">Socio / Stakeholder (STAKEHOLDER)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" htmlFor="invite-name">
+                                Nome e Cognome (opzionale)
+                            </label>
+                            <input
+                                id="invite-name"
+                                type="text"
+                                value={inviteName}
+                                onChange={(e) => setInviteName(e.target.value)}
+                                placeholder="Es: Mario Rossi"
+                                className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold block p-3 outline-none transition-all shadow-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" htmlFor="invite-phone">
+                                Telefono (opzionale)
+                            </label>
+                            <input
+                                id="invite-phone"
+                                type="tel"
+                                value={invitePhone}
+                                onChange={(e) => setInvitePhone(e.target.value)}
+                                placeholder="Es: +39 345 6789012"
+                                className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold block p-3 outline-none transition-all shadow-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                        <button
+                            type="submit"
+                            disabled={isInviting || !inviteEmail}
+                            className={`bg-fm-gold hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-md flex items-center gap-2 ${(isInviting || !inviteEmail) ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                        >
+                            {isInviting ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Spedizione invito...
+                                </>
+                            ) : (
+                                <>
+                                    <Send size={16} /> Invia Email di Invito
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
             </div>
 
             {/* SEZIONE: ASSEGNAZIONE UTENTI RAPIDA (TTL) */}

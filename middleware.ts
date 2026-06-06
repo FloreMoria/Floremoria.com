@@ -177,6 +177,25 @@ export function middleware(request: NextRequest) {
             );
         }
 
+        // Domain Isolation: gli utenti finali (USER) possono accedere SOLO alla bacheca cliente /dashboard/user
+        if (userRole === 'USER') {
+            if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
+                return applyDashboardSecurityHeaders(request, NextResponse.next());
+            }
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(new URL('/dashboard/user', request.url), 307)
+            );
+        }
+
+        // Inibisce l'accesso a /dashboard/user per lo staff e i partner B2B
+        if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
+            const dashboardHome = isLocal
+                ? new URL('/dashboard', request.nextUrl.origin)
+                : new URL('/dashboard', dashboardOrigin);
+            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
+        }
+
         if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
             return applyDashboardSecurityHeaders(request, NextResponse.next());
         }

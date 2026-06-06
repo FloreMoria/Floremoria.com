@@ -1,6 +1,19 @@
 import crypto from 'crypto';
 
-const OTP_SECRET = process.env.MAGIC_LINK_SECRET?.trim() || 'default-fallback-magic-link-secret-floremoria-2026';
+/**
+ * L'OTP condivide il segreto di firma con il Magic Link.
+ * Risoluzione lazy + fail-closed in produzione: nessun fallback hardcoded insicuro.
+ */
+function getOtpSecret(): string {
+    const secret = process.env.MAGIC_LINK_SECRET?.trim();
+    if (secret) return secret;
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+            '[OTP] MAGIC_LINK_SECRET non configurato in produzione: impossibile firmare/verificare i codici in modo sicuro.'
+        );
+    }
+    return 'default-fallback-magic-link-secret-floremoria-2026';
+}
 
 export interface OtpPayload {
     email: string;
@@ -14,7 +27,7 @@ export interface OtpPayload {
  */
 function hashOtpCode(code: string): string {
     const hash = crypto.createHash('sha256');
-    hash.update(code + OTP_SECRET);
+    hash.update(code + getOtpSecret());
     return hash.digest('hex');
 }
 
@@ -32,7 +45,7 @@ export function generateOtpToken(email: string, phone: string, code: string): st
     const payloadStr = JSON.stringify(payload);
     
     // Firma HMAC SHA256 per garantire l'integrità
-    const hmac = crypto.createHmac('sha256', OTP_SECRET);
+    const hmac = crypto.createHmac('sha256', getOtpSecret());
     hmac.update(payloadStr);
     const signature = hmac.digest('hex');
 
@@ -58,7 +71,7 @@ export function verifyOtpToken(token: string, code: string): { email: string; ph
         const payloadStr = Buffer.from(tokenObj.payload, 'base64url').toString('utf-8');
 
         // Calcola e verifica la firma HMAC
-        const hmac = crypto.createHmac('sha256', OTP_SECRET);
+        const hmac = crypto.createHmac('sha256', getOtpSecret());
         hmac.update(payloadStr);
         const expectedSignature = hmac.digest('hex');
 

@@ -1,7 +1,21 @@
 import crypto from 'crypto';
 
-// Segreto di firma: da configurare in ambiente su Vercel (es. MAGIC_LINK_SECRET)
-const MAGIC_LINK_SECRET = process.env.MAGIC_LINK_SECRET?.trim() || 'default-fallback-magic-link-secret-floremoria-2026';
+/**
+ * Risoluzione lazy del segreto di firma.
+ * In produzione fallisce in modo bloccante se MAGIC_LINK_SECRET non è impostato,
+ * eliminando il fallback hardcoded insicuro (token altrimenti forgiabili).
+ * La risoluzione è lazy (a runtime, non al load del modulo) per non rompere `next build`.
+ */
+function getMagicLinkSecret(): string {
+    const secret = process.env.MAGIC_LINK_SECRET?.trim();
+    if (secret) return secret;
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+            '[magic-link] MAGIC_LINK_SECRET non configurato in produzione: impossibile firmare/verificare i token in modo sicuro.'
+        );
+    }
+    return 'default-fallback-magic-link-secret-floremoria-2026';
+}
 
 export interface MagicLinkPayload {
     email: string;
@@ -20,7 +34,7 @@ export function generateMagicLinkToken(email: string): string {
     const payloadStr = JSON.stringify(payload);
     
     // Firma HMAC SHA256 per garantire l'integrità (tampering-proof)
-    const hmac = crypto.createHmac('sha256', MAGIC_LINK_SECRET);
+    const hmac = crypto.createHmac('sha256', getMagicLinkSecret());
     hmac.update(payloadStr);
     const signature = hmac.digest('hex');
     
@@ -47,7 +61,7 @@ export function verifyMagicLinkToken(token: string): string | null {
         const payloadStr = Buffer.from(tokenObj.payload, 'base64url').toString('utf-8');
         
         // Calcola e verifica la firma HMAC
-        const hmac = crypto.createHmac('sha256', MAGIC_LINK_SECRET);
+        const hmac = crypto.createHmac('sha256', getMagicLinkSecret());
         hmac.update(payloadStr);
         const expectedSignature = hmac.digest('hex');
         

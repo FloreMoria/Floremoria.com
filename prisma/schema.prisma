@@ -18,6 +18,10 @@ enum UserRole {
   STAKEHOLDER
   ADMIN
   SUPER_ADMIN
+  // Valori legacy mantenuti per retrocompatibilità: esistono già nel DB di produzione.
+  // Rimuoverli renderebbe il diff distruttivo (Postgres non sa droppare un valore enum).
+  MARKETING_MANAGER
+  PARTNER_FLORIST
 }
 
 model Role {

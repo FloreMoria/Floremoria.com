@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import { addMessage, getSession, setSessionStatus, updateSessionProfile } from '@/lib/chatStore';
 import prisma from '@/lib/prisma';
 import twilio from 'twilio';
-import { getHumanEscalationReason, shouldEscalateToHuman } from '@/lib/floremDigitalAssistant';
+import {
+    FLOREM_FLORIST_HUMAN_HANDOFF_REPLY,
+    getHumanEscalationReason,
+    isFloristHumanHandoffRequest,
+    shouldEscalateToHuman,
+} from '@/lib/floremDigitalAssistant';
 import { loadWhatsAppCoreKb, STANDARD_GUIDANCE_MESSAGE } from '@/lib/whatsappKnowledge';
 import { generateVeraReply } from '@/lib/assistant/veraBrain';
 
@@ -201,7 +206,24 @@ export async function POST(request: Request) {
             messageSid ? { messageSid } : undefined
         );
 
-        // 3. Check for explicit or emotional human handoff trigger.
+        // 3. Handover umano fiorista: frase chiave esatta "umano fiorista" (case-insensitive).
+        if (isFloristHumanHandoffRequest(rawMessage)) {
+            if (session.status !== 'HUMAN_INTERVENTION') {
+                console.info(`[WhatsApp Handoff] ${phone} => HUMAN_INTERVENTION (phrase:umano fiorista)`);
+                await setSessionStatus(phone, 'HUMAN_INTERVENTION');
+                session = await updateSessionProfile(phone, { welcomeSent: true });
+                await addMessage(phone, 'OUTBOUND', FLOREM_FLORIST_HUMAN_HANDOFF_REPLY, undefined, {
+                    eventType: 'HUMAN_HANDOFF',
+                    handoffReason: 'phrase:umano fiorista',
+                    handoffAt: new Date().toISOString(),
+                });
+                return await respondWithTwimlAndRest(phone, FLOREM_FLORIST_HUMAN_HANDOFF_REPLY);
+            }
+            // Già in coda operatore: nessuna risposta automatica dal bot.
+            return await respondWithTwimlAndRest(phone);
+        }
+
+        // 4. Check for explicit or emotional human handoff trigger.
         const wantsHuman = shouldEscalateToHuman(rawMessage);
         const escalationReason = wantsHuman ? getHumanEscalationReason(rawMessage) : null;
         if (wantsHuman && session.status !== 'HUMAN_INTERVENTION') {
@@ -230,7 +252,7 @@ export async function POST(request: Request) {
             return await respondWithTwimlAndRest(phone, welcomeMessage);
         }
 
-        // 4. Determine user type if unknown (DB match + onboarding flow)
+        // 5. Determine user type if unknown (DB match + onboarding flow)
         if (session.userType === 'UNKNOWN') {
             try {
                 // Try matching with Partner
@@ -294,7 +316,7 @@ export async function POST(request: Request) {
             }
         }
 
-        // 5. If AI Assistant is active (AI_ACTIVE), respond with the Gemini 16-agent brain (VERA).
+        // 6. If AI Assistant is active (AI_ACTIVE), respond with the Gemini 16-agent brain (VERA).
         if (session.status === 'AI_ACTIVE') {
             const sessionWithHistory = await getSession(phone);
             const replyText = await generateVeraReply({

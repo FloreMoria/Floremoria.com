@@ -7,6 +7,10 @@
  */
 export const FLOREM_DIGITAL_ASSISTANT_NAME = 'VERA' as const;
 export const FLOREM_HUMAN_OPERATOR_TRIGGER = 'UMANO' as const;
+/** Frase chiave esatta (case-insensitive) per handoff fiorista → operatore umano su WhatsApp. */
+export const FLOREM_FLORIST_HUMAN_HANDOFF_PHRASE = 'umano fiorista' as const;
+export const FLOREM_FLORIST_HUMAN_HANDOFF_REPLY =
+  'Ho preso in carico la tua richiesta. Un nostro operatore si collegherà a questa chat nel più breve tempo possibile per assisterti personalmente.' as const;
 export const FLOREM_USER_LABEL = 'Utente' as const;
 export const FLOREM_HUMAN_ESCALATION_KEYWORDS = [
   'aiuto',
@@ -24,6 +28,11 @@ export const FLOREM_HUMAN_ESCALATION_KEYWORDS = [
   'non capisco nulla',
 ] as const;
 
+/** Normalizzazione ferrea Body Twilio: minuscolo + trim (handoff "umano fiorista"). */
+export function normalizeWhatsAppBody(message: string): string {
+  return message.trim().toLowerCase();
+}
+
 function normalizeMessageForTrigger(message: string): string {
   return message
     .toLowerCase()
@@ -32,6 +41,11 @@ function normalizeMessageForTrigger(message: string): string {
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Match esatto case-insensitive su "umano fiorista" — interrompe l'automazione AI. */
+export function isFloristHumanHandoffRequest(rawMessage: string): boolean {
+  return normalizeWhatsAppBody(rawMessage) === FLOREM_FLORIST_HUMAN_HANDOFF_PHRASE;
 }
 
 export function shouldEscalateToHuman(rawMessage: string): boolean {

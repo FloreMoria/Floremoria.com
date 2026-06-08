@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server';
+import { UserRole } from '@prisma/client';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
-import { SUPER_ADMIN_ROLE_NAME } from '@/lib/superAdmin';
-import { superAdminLoginDevHint, verifySuperAdminCredentials } from '@/lib/superAdminLogin';
+import {
+    ADMIN_POST_LOGIN_REDIRECT,
+    ADMIN_ROLE_NAME,
+    SUPER_ADMIN_POST_LOGIN_REDIRECT,
+    SUPER_ADMIN_ROLE_NAME,
+} from '@/lib/superAdmin';
+import {
+    postLoginRedirectForRole,
+    resolveLegacyElevatedRole,
+    superAdminLoginDevHint,
+    verifyLegacyAdminPassword,
+    verifyLegacySuperAdminPassword,
+    verifySuperAdminCredentials,
+} from '@/lib/superAdminLogin';
 import prisma from '@/lib/prisma';
 
 function setAuthCookies(response: NextResponse, request: Request, roleName: string, email?: string, expiresAt?: Date) {
@@ -45,20 +58,49 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message: 'Credenziali non valide' }, { status: 401 });
         }
 
-        // Super Admin o Utenti B2B con email nel campo "Identificativo"
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+        // Legacy SUPER_ADMIN: cookie SUPER_ADMIN → pagina Ruoli.
+        const legacyRole = resolveLegacyElevatedRole(username);
+        if (legacyRole === SUPER_ADMIN_ROLE_NAME) {
+            if (verifyLegacySuperAdminPassword(password)) {
+                const sessionEmail = username.includes('@') ? username.toLowerCase() : 'superadmin@floremoria.local';
+                const response = NextResponse.json({
+                    success: true,
+                    redirectUrl: SUPER_ADMIN_POST_LOGIN_REDIRECT,
+                });
+                setAuthCookies(response, request, SUPER_ADMIN_ROLE_NAME, sessionEmail, expiresAt);
+                return response;
+            }
+            return NextResponse.json({ success: false, message: 'Credenziali non valide.' }, { status: 401 });
+        }
+
+        // Legacy ADMIN: cookie ADMIN → Overview dashboard (no Ruoli).
+        if (legacyRole === ADMIN_ROLE_NAME) {
+            if (verifyLegacyAdminPassword(password)) {
+                const sessionEmail = username.includes('@') ? username.toLowerCase() : 'admin@floremoria.local';
+                const response = NextResponse.json({
+                    success: true,
+                    redirectUrl: ADMIN_POST_LOGIN_REDIRECT,
+                });
+                setAuthCookies(response, request, ADMIN_ROLE_NAME, sessionEmail, expiresAt);
+                return response;
+            }
+            return NextResponse.json({ success: false, message: 'Credenziali non valide.' }, { status: 401 });
+        }
+
+        // Super Admin promosso a DB (email + SUPER_ADMIN_LOGIN_PASSWORD).
         if (username.includes('@')) {
             const result = await verifySuperAdminCredentials(username, password);
             if (result.ok) {
                 const response = NextResponse.json({
                     success: true,
-                    redirectUrl: '/admin-panel',
+                    redirectUrl: SUPER_ADMIN_POST_LOGIN_REDIRECT,
                 });
-                const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 ore di sessione
                 setAuthCookies(response, request, SUPER_ADMIN_ROLE_NAME, username, expiresAt);
                 return response;
             }
 
-            // Verifica database per i ruoli B2B/Staff (Collaboratori)
             const user = await prisma.user.findUnique({
                 where: { email: username.toLowerCase() },
             });
@@ -68,20 +110,22 @@ export async function POST(request: Request) {
                 const passwordMatch = await bcryptjs.compare(password, user.passwordHash);
 
                 if (passwordMatch) {
-                    // Aggiorna ultimo login
                     await prisma.user.update({
                         where: { id: user.id },
                         data: { lastLoginAt: new Date() },
                     });
 
-                    // Reindirizzamento intelligente in base al ruolo B2B
                     let redirectUrl = '/dashboard';
-                    if (user.systemRole === 'USER') {
+                    if (user.systemRole === UserRole.USER) {
                         redirectUrl = '/dashboard/user';
-                    } else if (user.systemRole === 'FLORIST' || user.systemRole === 'AGENCY') {
+                    } else if (user.systemRole === UserRole.FLORIST || user.systemRole === UserRole.AGENCY) {
                         redirectUrl = '/dashboard/orders';
-                    } else if (user.systemRole === 'ADMIN' || user.systemRole === 'SUPER_ADMIN') {
-                        redirectUrl = '/admin-panel';
+                    } else if (user.systemRole === UserRole.SUPER_ADMIN) {
+                        redirectUrl = SUPER_ADMIN_POST_LOGIN_REDIRECT;
+                    } else if (user.systemRole === UserRole.ADMIN) {
+                        redirectUrl = ADMIN_POST_LOGIN_REDIRECT;
+                    } else {
+                        redirectUrl = postLoginRedirectForRole(user.systemRole);
                     }
 
                     const response = NextResponse.json({
@@ -89,7 +133,6 @@ export async function POST(request: Request) {
                         redirectUrl,
                     });
 
-                    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 ore di sessione
                     setAuthCookies(response, request, user.systemRole, user.email, expiresAt);
                     return response;
                 }
@@ -104,20 +147,6 @@ export async function POST(request: Request) {
                 },
                 { status: 401 }
             );
-        }
-
-        // Fallback per l'amministratore (username 'admin')
-        if (username === 'admin') {
-            const expectedPassword = process.env.SUPER_ADMIN_LOGIN_PASSWORD?.trim() || '2212';
-            if (password === expectedPassword || password === '2212') {
-                const response = NextResponse.json({
-                    success: true,
-                    redirectUrl: '/admin-panel',
-                    hint: 'Login admin di fallback effettuato con successo.',
-                });
-                setAuthCookies(response, request, SUPER_ADMIN_ROLE_NAME);
-                return response;
-            }
         }
 
         return NextResponse.json({ success: false, message: 'Credenziali non valide' }, { status: 401 });

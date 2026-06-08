@@ -14,8 +14,9 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
     const cookieStore = await cookies();
     const userRole = cookieStore.get('fm_user_role')?.value;
 
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole || '')) {
-        redirect('/login');
+    // Hub admin-panel riservato al SUPER_ADMIN (ADMIN usa la dashboard gestionale).
+    if (!isSuperAdminRole(userRole)) {
+        redirect('/dashboard');
     }
 
     return (

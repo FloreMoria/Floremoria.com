@@ -12,7 +12,8 @@
 
 import { Order, User, UserRole } from '@prisma/client';
 import prisma from '../prisma';
-import { phoneVariants, phoneCore } from './phone';
+import { isLegacyElevatedIdentifier } from '../superAdminLogin';
+import { phoneVariants, phoneCore, toE164 } from './phone';
 
 export type IdentifierType = 'email' | 'phone';
 export type LoginMode = 'password' | 'passwordless';
@@ -153,6 +154,80 @@ export async function createUserFromOrder(order: Order): Promise<User | null> {
 }
 
 /**
+ * Crea un account USER con solo telefono (registrazione B2C senza ordine precedente).
+ */
+export async function createUserWithPhone(rawPhone: string): Promise<User> {
+    const phone = toE164(rawPhone) || rawPhone.trim();
+    const core = phoneCore(rawPhone);
+    const email = `utente-${core || Date.now()}@phone.floremoria.local`;
+
+    const byPhone = await findUserByPhone(rawPhone);
+    if (byPhone) return byPhone;
+
+    const byEmail = await prisma.user.findUnique({ where: { email } });
+    if (byEmail) return byEmail;
+
+    return prisma.user.create({
+        data: {
+            email,
+            phone,
+            systemRole: UserRole.USER,
+            isActive: true,
+        },
+    });
+}
+
+/**
+ * Attiva o recupera un profilo USER per registrazione passwordless (email o telefono).
+ * Restituisce null se l'identificativo appartiene a un ruolo professionale.
+ */
+export async function registerPasswordlessUser(
+    parsed: ParsedIdentifier
+): Promise<{ user: User; channel: IdentifierType } | null> {
+    if (parsed.type === 'email' && parsed.email) {
+        let user = await findUserByEmail(parsed.email);
+        if (user?.systemRole && isProfessionalRole(user.systemRole)) return null;
+        if (!user) {
+            const order = await findOrderByEmail(parsed.email);
+            if (order) {
+                user = await createUserFromOrder(order);
+            }
+            if (!user) {
+                user = await prisma.user.create({
+                    data: {
+                        email: parsed.email,
+                        systemRole: UserRole.USER,
+                        isActive: true,
+                    },
+                });
+            }
+        } else {
+            await linkHistoricalOrders(user);
+        }
+        return { user, channel: 'email' };
+    }
+
+    if (parsed.type === 'phone' && parsed.phone) {
+        let user = await findUserByPhone(parsed.phone);
+        if (user?.systemRole && isProfessionalRole(user.systemRole)) return null;
+        if (!user) {
+            const order = await findOrderByPhone(parsed.phone);
+            if (order) {
+                user = await createUserFromOrder(order);
+            }
+            if (!user) {
+                user = await createUserWithPhone(parsed.phone);
+            }
+        } else {
+            await linkHistoricalOrders(user);
+        }
+        return { user, channel: 'phone' };
+    }
+
+    return null;
+}
+
+/**
  * Trova l'utente USER per email/telefono; se manca ma esiste uno storico ordini,
  * lo crea al volo. Restituisce null se non c'è alcun aggancio possibile.
  */
@@ -188,7 +263,19 @@ export interface IdentityClassification {
  *  - USER (o nuovo cliente email / storico ordini) → passwordless
  */
 export async function classifyLoginIdentity(rawIdentifier: string): Promise<IdentityClassification> {
-    const parsed = parseIdentifier(rawIdentifier);
+    const trimmed = rawIdentifier.trim();
+
+    // Bypass prioritario: identificativi legacy ADMIN o SUPER_ADMIN (flusso password, ruoli distinti al login).
+    if (isLegacyElevatedIdentifier(trimmed)) {
+        return {
+            ok: true,
+            type: trimmed.includes('@') ? 'email' : 'email',
+            mode: 'password',
+            channel: 'email',
+        };
+    }
+
+    const parsed = parseIdentifier(trimmed);
     if (!parsed) {
         return { ok: false, message: 'Inserisci un indirizzo email o un numero di telefono valido.' };
     }

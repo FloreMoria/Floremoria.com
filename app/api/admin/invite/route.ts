@@ -3,15 +3,15 @@ import { cookies } from 'next/headers';
 import { createOrInviteUser, InviteError } from '@/lib/auth/invite';
 import { sendInviteEmail } from '@/lib/auth/inviteEmail';
 import { UserRole } from '@prisma/client';
+import { isSuperAdminRole } from '@/lib/superAdmin';
 
 export async function POST(request: Request) {
-    // 1. Verifichiamo se la sessione appartiene a SUPER_ADMIN o ADMIN
     const cookieStore = await cookies();
     const userRole = cookieStore.get('fm_user_role')?.value;
 
-    if (!userRole || !['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+    if (!isSuperAdminRole(userRole)) {
         return NextResponse.json(
-            { error: 'Accesso riservato ad Amministratorore o Super Admin.' },
+            { error: 'Accesso riservato al Super Admin.' },
             { status: 403 }
         );
     }

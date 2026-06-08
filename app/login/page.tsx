@@ -14,6 +14,7 @@ export default function LoginPage() {
     const [otpTempToken, setOtpTempToken] = useState('');
 
     const [stage, setStage] = useState<Stage>('identify');
+    const [isRegisterMode, setIsRegisterMode] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +30,46 @@ export default function LoginPage() {
         setOtpCode('');
         setOtpTempToken('');
         resetMessages();
+    };
+
+    const toggleRegisterMode = () => {
+        setIsRegisterMode((prev) => !prev);
+        backToStart();
+    };
+
+    // Attivazione profilo: crea USER e invia Magic Link / OTP.
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        resetMessages();
+        setIsLoading(true);
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier }),
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setErrorMsg(data.message || 'Non è stato possibile attivare il profilo.');
+                return;
+            }
+
+            if (data.channel === 'email') {
+                setSuccessMsg(data.message || 'Controlla la tua email per completare l\'attivazione.');
+                setStage('magic-sent');
+                return;
+            }
+
+            setOtpTempToken(data.tempToken);
+            setSuccessMsg(data.message || 'Codice inviato.');
+            setStage('otp');
+        } catch {
+            setErrorMsg('Errore di connessione al server.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Passo 1: il backend decide la via in base al ruolo a database.
@@ -157,9 +198,15 @@ export default function LoginPage() {
         stage === 'password'
             ? 'Accesso Collaboratori'
             : stage === 'otp'
-            ? 'Conferma la tua identità'
+            ? isRegisterMode
+                ? 'Conferma l\'attivazione'
+                : 'Conferma la tua identità'
             : stage === 'magic-sent'
-            ? 'Controlla la tua email'
+            ? isRegisterMode
+                ? 'Attivazione inviata'
+                : 'Controlla la tua email'
+            : isRegisterMode
+            ? 'Attiva il tuo profilo'
             : 'Accedi alla tua bacheca';
     const subheading =
         stage === 'password'
@@ -168,6 +215,8 @@ export default function LoginPage() {
             ? 'Abbiamo inviato un codice al tuo telefono'
             : stage === 'magic-sent'
             ? 'Ti abbiamo inviato un collegamento sicuro'
+            : isRegisterMode
+            ? 'Inserisci email o telefono per creare il tuo spazio personale'
             : 'Inserisci la tua email o il tuo numero di telefono';
 
     return (
@@ -190,7 +239,7 @@ export default function LoginPage() {
 
                     {/* STADIO 1 — Identificativo unico */}
                     {stage === 'identify' && (
-                        <form className="space-y-6" onSubmit={handleIdentify}>
+                        <form className="space-y-6" onSubmit={isRegisterMode ? handleRegister : handleIdentify}>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2" htmlFor="identifier">
                                     Email o numero di telefono
@@ -214,8 +263,24 @@ export default function LoginPage() {
                             )}
 
                             <button type="submit" disabled={isLoading} className={buttonClass(isLoading)}>
-                                {isLoading ? 'Verifica in corso...' : 'Continua'}
+                                {isLoading
+                                    ? 'Elaborazione...'
+                                    : isRegisterMode
+                                    ? 'Attiva profilo'
+                                    : 'Continua'}
                             </button>
+
+                            <div className="text-center pt-1">
+                                <button
+                                    type="button"
+                                    onClick={toggleRegisterMode}
+                                    className="text-xs font-medium text-slate-500 hover:text-fm-gold transition-colors tracking-wide"
+                                >
+                                    {isRegisterMode
+                                        ? 'Hai già un account? Accedi'
+                                        : 'Non hai ancora un account? Attiva il tuo profilo'}
+                                </button>
+                            </div>
                         </form>
                     )}
 
@@ -313,9 +378,11 @@ export default function LoginPage() {
                                 {successMsg || 'Ti abbiamo inviato un collegamento di accesso via email.'}
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                Apri il messaggio e tocca il collegamento per entrare. È valido per 15 minuti.
+                                {isRegisterMode
+                                    ? 'Apri il messaggio e tocca il collegamento per completare l\'attivazione. È valido per 15 minuti.'
+                                    : 'Apri il messaggio e tocca il collegamento per entrare. È valido per 15 minuti.'}
                             </p>
-                            <button type="button" onClick={backToStart} className="text-xs text-slate-500 hover:text-fm-gold underline font-semibold transition-colors">
+                            <button type="button" onClick={() => { setIsRegisterMode(false); backToStart(); }} className="text-xs text-slate-500 hover:text-fm-gold underline font-semibold transition-colors">
                                 Torna all&apos;accesso
                             </button>
                         </div>

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { isSuperAdminRole, SUPER_ADMIN_ROLE_NAME } from '@/lib/superAdmin';
+import { isAdminRole, isSuperAdminRole, SUPER_ADMIN_ROLE_NAME } from '@/lib/superAdmin';
 
 export { SUPER_ADMIN_ROLE_NAME };
 
@@ -11,6 +11,10 @@ export async function getSessionRoleName(): Promise<string | undefined> {
 
 export async function isSessionSuperAdmin(): Promise<boolean> {
     return isSuperAdminRole(await getSessionRoleName());
+}
+
+export async function isSessionAdmin(): Promise<boolean> {
+    return isAdminRole(await getSessionRoleName());
 }
 
 /** Per Route Handlers: null se autorizzato, altrimenti risposta 403. */

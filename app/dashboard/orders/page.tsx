@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
+import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 
 // MOCK: ID dell'utente loggato, per test fiorista (sostituire in produzione con session.user.id)
-const MOCK_FLORIST_ID = "mock-florist-id";
+const MOCK_FLORIST_ID = 'mock-florist-id';
 
 export const metadata = {
     title: 'Gestione Ordini - FloreMoria Dashboard',
@@ -16,19 +17,16 @@ export default async function OrdersPage() {
     const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
     const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
-    // 1. Risolvi RBAC per vedere se può cambiare stato
-    let canChangeStatus = false;
-    let isGlobalAdmin = false;
+    const isGlobalAdmin = hasGlobalOrdersView(roleName);
+    let canChangeStatus = canEditOrderStatus(roleName);
 
-    if (roleName === 'SUPER_ADMIN') {
-        canChangeStatus = true;
-        isGlobalAdmin = true;
-    } else if (hasDatabaseUrl) {
+    // Permessi granulari da tabella Role (override per ruoli custom non elevati).
+    if (hasDatabaseUrl && !canChangeStatus) {
         try {
             const role = await prisma.role.findUnique({ where: { name: roleName } });
             if (role && typeof role.permissions === 'object' && role.permissions !== null) {
                 const perms = role.permissions as Record<string, boolean>;
-                canChangeStatus = !!perms['change_status'];
+                canChangeStatus = !!perms['change_status'] || !!perms['edit_order_status'];
             }
         } catch {
             if (process.env.NODE_ENV === 'development') {
@@ -37,17 +35,14 @@ export default async function OrdersPage() {
                 );
             }
         }
-        if (roleName === 'OPERATOR') isGlobalAdmin = true;
-    } else if (roleName === 'OPERATOR') {
-        isGlobalAdmin = true;
     }
 
-    // 2. Query Ordini: solo consegne reali (no carrelli abbandonati, no CANCELLED)
-    const ordersQuery: any = {
-        where: visibleDashboardOrdersWhere(),
+    // Query ordini: solo consegne reali (no carrelli abbandonati, no CANCELLED).
+    const ordersQuery: { where: Record<string, unknown> } = {
+        where: visibleDashboardOrdersWhere() as Record<string, unknown>,
     };
     if (!isGlobalAdmin) {
-        // Se è un partner, filtra solo i suoi ordini
+        // Partner B2B: solo ordini assegnati al proprio account.
         ordersQuery.where = { ...ordersQuery.where, userId: MOCK_FLORIST_ID };
     }
 
@@ -61,19 +56,19 @@ export default async function OrdersPage() {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     user: true,
-                    partner: true, // Fiorista Assegnato reale
+                    partner: true,
                     items: {
                         include: {
-                            product: true // Serve per Nome e Immagine
-                        }
-                    }
-                }
+                            product: true,
+                        },
+                    },
+                },
             });
 
             florists = await prisma.partner.findMany({
                 where: { deletedAt: null, isB2B: false },
                 orderBy: { shopName: 'asc' },
-                select: { id: true, shopName: true, ownerName: true }
+                select: { id: true, shopName: true, ownerName: true },
             });
         } catch {
             if (process.env.NODE_ENV === 'development') {
@@ -84,15 +79,19 @@ export default async function OrdersPage() {
         }
     }
 
-    const displayOrders = ordersData.map(o => ({
+    const displayOrders = ordersData.map((o) => ({
         ...o,
-        specialNotes: o.additionalInstructions || ''
+        specialNotes: o.additionalInstructions || '',
     }));
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Interactive Client Component */}
-            <ClientOrdersTable orders={displayOrders} florists={florists} canChangeStatus={canChangeStatus} isGlobalAdmin={isGlobalAdmin} />
+            <ClientOrdersTable
+                orders={displayOrders}
+                florists={florists}
+                canChangeStatus={canChangeStatus}
+                isGlobalAdmin={isGlobalAdmin}
+            />
         </div>
     );
 }

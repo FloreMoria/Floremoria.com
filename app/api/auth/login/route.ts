@@ -15,6 +15,7 @@ import {
     verifyLegacySuperAdminPassword,
     verifySuperAdminCredentials,
 } from '@/lib/superAdminLogin';
+import { ensureElevatedUserRecord } from '@/lib/auth/ensureElevatedUser';
 import prisma from '@/lib/prisma';
 
 function setAuthCookies(response: NextResponse, request: Request, roleName: string, email?: string, expiresAt?: Date) {
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
         if (legacyRole === SUPER_ADMIN_ROLE_NAME) {
             if (verifyLegacySuperAdminPassword(password)) {
                 const sessionEmail = username.includes('@') ? username.toLowerCase() : 'superadmin@floremoria.local';
+                await ensureElevatedUserRecord(sessionEmail, SUPER_ADMIN_ROLE_NAME);
                 const response = NextResponse.json({
                     success: true,
                     redirectUrl: SUPER_ADMIN_POST_LOGIN_REDIRECT,
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
         if (legacyRole === ADMIN_ROLE_NAME) {
             if (verifyLegacyAdminPassword(password)) {
                 const sessionEmail = username.includes('@') ? username.toLowerCase() : 'admin@floremoria.local';
+                await ensureElevatedUserRecord(sessionEmail, ADMIN_ROLE_NAME);
                 const response = NextResponse.json({
                     success: true,
                     redirectUrl: ADMIN_POST_LOGIN_REDIRECT,

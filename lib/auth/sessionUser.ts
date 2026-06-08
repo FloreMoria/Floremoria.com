@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { User, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { ADMIN_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from '../superAdmin';
+import { isElevatedLoginEmail } from '../superAdminLogin';
 import { ensureElevatedUserRecord } from './ensureElevatedUser';
 
 export interface SessionContext {
@@ -14,9 +15,9 @@ export interface SessionContext {
     user: User | null;
 }
 
-/** Email generate dal bypass legacy: l'identificativo di login resta stabile. */
+/** Email di bypass (legacy .local o ufficiali env): identificativo login non modificabile dal profilo. */
 export function isBypassElevatedEmail(email: string): boolean {
-    return email.trim().toLowerCase().endsWith('@floremoria.local');
+    return isElevatedLoginEmail(email);
 }
 
 export function isElevatedDashboardRole(role: string): boolean {

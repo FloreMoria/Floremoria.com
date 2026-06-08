@@ -20,22 +20,62 @@ export type SuperAdminLoginResult =
 
 export type ElevatedLegacyRole = typeof ADMIN_ROLE_NAME | typeof SUPER_ADMIN_ROLE_NAME;
 
-function adminLoginEmails(): string[] {
+/** Email ufficiale SUPER_ADMIN (override con SUPER_ADMIN_LOGIN_EMAIL su Vercel). */
+export const DEFAULT_SUPER_ADMIN_LOGIN_EMAIL = 'ceo@floremoria.com';
+/** Email ufficiale ADMIN staff (override con ADMIN_LOGIN_EMAIL su Vercel). */
+export const DEFAULT_ADMIN_LOGIN_EMAIL = 'staff.floremoria@gmail.com';
+/** Alias legacy generati dal bypass storico — solo login/migrazione. */
+export const LEGACY_SUPER_ADMIN_EMAIL = 'superadmin@floremoria.local';
+export const LEGACY_ADMIN_EMAIL = 'admin@floremoria.local';
+
+function uniqueEmails(values: Array<string | undefined>): string[] {
     return [
-        process.env.ADMIN_LOGIN_EMAIL?.trim(),
-        ...(process.env.ADMIN_LOGIN_EMAILS?.split(',') ?? []),
-    ]
-        .map((e) => e?.trim().toLowerCase())
-        .filter(Boolean) as string[];
+        ...new Set(
+            values
+                .map((e) => e?.trim().toLowerCase())
+                .filter(Boolean) as string[]
+        ),
+    ];
 }
 
-function superAdminLoginEmails(): string[] {
-    return [
+/** Email canonica del record User per login username "superadmin" (senza @). */
+export function canonicalSuperAdminEmail(): string {
+    return (
+        process.env.SUPER_ADMIN_LOGIN_EMAIL?.trim().toLowerCase() ||
+        DEFAULT_SUPER_ADMIN_LOGIN_EMAIL
+    );
+}
+
+/** Email canonica del record User per login username "admin" (senza @). */
+export function canonicalAdminEmail(): string {
+    return (
+        process.env.ADMIN_LOGIN_EMAIL?.trim().toLowerCase() || DEFAULT_ADMIN_LOGIN_EMAIL
+    );
+}
+
+export function adminLoginEmails(): string[] {
+    return uniqueEmails([
+        canonicalAdminEmail(),
+        process.env.ADMIN_LOGIN_EMAIL?.trim(),
+        ...(process.env.ADMIN_LOGIN_EMAILS?.split(',') ?? []),
+        LEGACY_ADMIN_EMAIL,
+    ]);
+}
+
+export function superAdminLoginEmails(): string[] {
+    return uniqueEmails([
+        canonicalSuperAdminEmail(),
         process.env.SUPER_ADMIN_LOGIN_EMAIL?.trim(),
         ...(process.env.SUPER_ADMIN_LOGIN_EMAILS?.split(',') ?? []),
-    ]
-        .map((e) => e?.trim().toLowerCase())
-        .filter(Boolean) as string[];
+        LEGACY_SUPER_ADMIN_EMAIL,
+    ]);
+}
+
+/** Email collegate al bypass legacy: profilo in sola lettura sull'identificativo di login. */
+export function isElevatedLoginEmail(email: string): boolean {
+    const value = email.trim().toLowerCase();
+    if (!value.includes('@')) return false;
+    return adminLoginEmails().includes(value) || superAdminLoginEmails().includes(value);
 }
 
 /**

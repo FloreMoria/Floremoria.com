@@ -8,6 +8,8 @@ import {
     SUPER_ADMIN_ROLE_NAME,
 } from '@/lib/superAdmin';
 import {
+    canonicalAdminEmail,
+    canonicalSuperAdminEmail,
     postLoginRedirectForRole,
     resolveLegacyElevatedRole,
     superAdminLoginDevHint,
@@ -65,7 +67,9 @@ export async function POST(request: Request) {
         const legacyRole = resolveLegacyElevatedRole(username);
         if (legacyRole === SUPER_ADMIN_ROLE_NAME) {
             if (verifyLegacySuperAdminPassword(password)) {
-                const sessionEmail = username.includes('@') ? username.toLowerCase() : 'superadmin@floremoria.local';
+                const sessionEmail = username.includes('@')
+                    ? username.toLowerCase()
+                    : canonicalSuperAdminEmail();
                 await ensureElevatedUserRecord(sessionEmail, SUPER_ADMIN_ROLE_NAME);
                 const response = NextResponse.json({
                     success: true,
@@ -80,7 +84,9 @@ export async function POST(request: Request) {
         // Legacy ADMIN: cookie ADMIN → Overview dashboard (no Ruoli).
         if (legacyRole === ADMIN_ROLE_NAME) {
             if (verifyLegacyAdminPassword(password)) {
-                const sessionEmail = username.includes('@') ? username.toLowerCase() : 'admin@floremoria.local';
+                const sessionEmail = username.includes('@')
+                    ? username.toLowerCase()
+                    : canonicalAdminEmail();
                 await ensureElevatedUserRecord(sessionEmail, ADMIN_ROLE_NAME);
                 const response = NextResponse.json({
                     success: true,

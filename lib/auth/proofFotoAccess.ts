@@ -45,6 +45,35 @@ export function getProofFotoPublicBase(): string {
     return base.replace('://www.', '://');
 }
 
+function signProofFotoOrder(orderNumber: string): string {
+    const hmac = crypto.createHmac('sha256', getProofFotoSecret());
+    hmac.update(`proof-foto:${orderNumber.trim()}`);
+    return hmac.digest('base64url').slice(0, 8);
+}
+
+export function verifyProofFotoOrderSignature(orderNumber: string, sig: string): boolean {
+    if (!sig?.trim() || sig.length !== 8) return false;
+    const expected = signProofFotoOrder(orderNumber);
+    try {
+        return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig.trim()));
+    } catch {
+        return false;
+    }
+}
+
+/** URL firmato per orderNumber — funziona anche senza colonna DB (ideale per test cross-env). */
+export function buildProofFotoAccessUrlForOrder(order: {
+    orderNumber?: string | null;
+}): string {
+    const base = getProofFotoPublicBase();
+    const orderNumber = order.orderNumber?.trim();
+    if (!orderNumber) {
+        throw new Error('[proof-foto] orderNumber mancante per generare link firmato.');
+    }
+    const sig = signProofFotoOrder(orderNumber);
+    return `${base}/f/o/${encodeURIComponent(orderNumber)}/${sig}`;
+}
+
 /**
  * Crea o riusa un codice corto persistente sull'ordine.
  * Evita token lunghi in firma HMAC dentro l'URL WhatsApp.
@@ -102,8 +131,14 @@ export async function resolveProofFotoOrderId(code: string): Promise<string | nu
     return order.id;
 }
 
-/** URL corto per WhatsApp — es. https://floremoria.com/f/Ab3k9Xm2 */
-export async function buildProofFotoAccessUrl(orderId: string): Promise<string> {
+/** URL corto per WhatsApp — preferisce firma su orderNumber (stateless). */
+export async function buildProofFotoAccessUrl(
+    orderId: string,
+    orderNumber?: string | null
+): Promise<string> {
+    if (orderNumber?.trim()) {
+        return buildProofFotoAccessUrlForOrder({ orderNumber });
+    }
     const code = await ensureProofFotoAccessCode(orderId);
     return `${getProofFotoPublicBase()}/f/${code}`;
 }

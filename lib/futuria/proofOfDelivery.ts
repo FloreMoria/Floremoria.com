@@ -128,7 +128,7 @@ export async function sendProofOfDeliveryNotification(
     const partnerCity = resolvePartnerCity(order);
     const deceasedName = (order.deceasedName || 'chi ama').trim();
     const buyerName = (order.buyerFullName || 'Utente').trim();
-    const fotoUrl = await buildProofFotoAccessUrl(order.orderId);
+    const fotoUrl = await buildProofFotoAccessUrl(order.orderId, order.orderNumber);
 
     const bodyMessage = renderProofOfDeliveryWhatsAppMessage({
         partnerCity,

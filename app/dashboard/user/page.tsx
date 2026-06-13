@@ -32,7 +32,12 @@ function getStatusLabel(status: string) {
     }
 }
 
-export default async function UserDashboardPage() {
+export default async function UserDashboardPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ highlight?: string }>;
+}) {
+    const { highlight } = await searchParams;
     const cookieStore = await cookies();
     const userRole = cookieStore.get('fm_user_role')?.value;
     const userEmail = cookieStore.get('fm_user_email')?.value;
@@ -159,11 +164,17 @@ export default async function UserDashboardPage() {
                         orders.map((order) => {
                             const status = getStatusLabel(order.status);
                             const isCompleted = order.status === 'COMPLETED';
+                            const isHighlighted = highlight === order.id;
                             
                             return (
                                 <div 
                                     key={order.id}
-                                    className="bg-white rounded-[24px] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden"
+                                    id={`order-${order.id}`}
+                                    className={`bg-white rounded-[24px] border shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden scroll-mt-24 ${
+                                        isHighlighted
+                                            ? 'border-[#c5a880] ring-2 ring-[#c5a880]/40'
+                                            : 'border-slate-100'
+                                    }`}
                                 >
                                     {/* Intestazione ordine */}
                                     <div className="bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex flex-wrap justify-between items-center gap-4">

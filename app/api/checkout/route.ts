@@ -339,6 +339,22 @@ export async function POST(request: Request) {
             }
         });
 
+        // Onboarding silenzioso anche solo telefono (oltre all'email).
+        if (!buyerUserId) {
+            try {
+                const { ensureUserForOrder } = await import('@/lib/auth/ensureOrderUser');
+                const ensured = await ensureUserForOrder(order);
+                if (ensured) {
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: { userId: ensured.id },
+                    });
+                }
+            } catch (err) {
+                console.error('[checkout-onboarding] ensureUserForOrder fallito:', err);
+            }
+        }
+
         if (newsletterOptIn === true && buyerEmail) {
             await prisma.newsletterLog.upsert({
                 where: { email: buyerEmail.trim().toLowerCase() },

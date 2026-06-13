@@ -1,6 +1,7 @@
     "use server";
 
     import prisma from '@/lib/prisma';
+    import { sendProofOfDeliveryNotification } from '@/lib/futuria/proofOfDelivery';
     import { revalidatePath } from 'next/cache';
     import { writeFile } from 'fs/promises';
     import path from 'path';
@@ -132,6 +133,24 @@
                      where: { id: order.id },
                      data: { status: 'COMPLETED' }
                  });
+            }
+
+            // Notifica WhatsApp Proof of Delivery via Futuria (fire-and-forget).
+            if (newStatus === 'COMPLETED' && photoAfterUrl) {
+                void sendProofOfDeliveryNotification({
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                    buyerFullName: order.buyerFullName,
+                    buyerEmail: order.buyerEmail,
+                    customerPhone: order.customerPhone,
+                    deceasedName: order.deceasedName,
+                    cemeteryCity: order.cemeteryCity,
+                    cemeteryName: order.cemeteryName,
+                    deliveryProvince: order.deliveryProvince,
+                    photoAfterUrl,
+                }).catch((err) => {
+                    console.error('[delivery-proof] Notifica Futuria non riuscita (non bloccante):', err);
+                });
             }
 
             revalidatePath('/dashboard');

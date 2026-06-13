@@ -114,6 +114,9 @@ model Order {
   partnerPaymentStatus   PaymentStatus     @default(UNPAID)
   orderNumber            String?           @unique
   deliveryProvince       String?           @db.VarChar(2)
+  /** Codice corto per link WhatsApp post-consegna (/f/{code}). */
+  proofFotoCode          String?           @unique @map("proof_foto_code") @db.VarChar(10)
+  proofFotoExpiresAt     DateTime?         @map("proof_foto_expires_at")
   deceasedProfileId      String?
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
   partner                Partner?          @relation(fields: [partnerId], references: [id])

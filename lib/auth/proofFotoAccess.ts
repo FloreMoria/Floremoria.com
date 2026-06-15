@@ -25,6 +25,14 @@ function getProofFotoSecret(): string {
     return 'default-fallback-magic-link-secret-floremoria-2026';
 }
 
+function getProofFotoSecretSafe(): string | null {
+    try {
+        return getProofFotoSecret();
+    } catch {
+        return null;
+    }
+}
+
 function generateShortCode(length = 8): string {
     const bytes = crypto.randomBytes(length);
     let code = '';
@@ -45,8 +53,10 @@ export function getProofFotoPublicBase(): string {
     return base.replace('://www.', '://');
 }
 
-function signProofFotoOrder(orderNumber: string): string {
-    const hmac = crypto.createHmac('sha256', getProofFotoSecret());
+function signProofFotoOrder(orderNumber: string): string | null {
+    const secret = getProofFotoSecretSafe();
+    if (!secret) return null;
+    const hmac = crypto.createHmac('sha256', secret);
     hmac.update(`proof-foto:${orderNumber.trim()}`);
     return hmac.digest('base64url').slice(0, 8);
 }
@@ -54,6 +64,7 @@ function signProofFotoOrder(orderNumber: string): string {
 export function verifyProofFotoOrderSignature(orderNumber: string, sig: string): boolean {
     if (!sig?.trim() || sig.length !== 8) return false;
     const expected = signProofFotoOrder(orderNumber);
+    if (!expected) return false;
     try {
         return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig.trim()));
     } catch {
@@ -71,6 +82,9 @@ export function buildProofFotoAccessUrlForOrder(order: {
         throw new Error('[proof-foto] orderNumber mancante per generare link firmato.');
     }
     const sig = signProofFotoOrder(orderNumber);
+    if (!sig) {
+        throw new Error('[proof-foto] MAGIC_LINK_SECRET mancante: impossibile firmare il link.');
+    }
     return `${base}/f/o/${encodeURIComponent(orderNumber)}/${sig}`;
 }
 

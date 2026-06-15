@@ -144,6 +144,9 @@ export async function sendProofOfDeliveryNotification(
         const contactId = await upsertFuturiaContact({
             phone,
             name: buyerName,
+            ...(order.buyerEmail ? { email: order.buyerEmail } : {}),
+            deceasedName,
+            orderNumber: order.orderNumber,
             tags: ['floremoria-proof-of-delivery'],
         });
 

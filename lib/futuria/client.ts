@@ -6,10 +6,18 @@ import {
     getFuturiaApiBase,
     getFuturiaApiKey,
     getFuturiaApiVersion,
+    getFuturiaDeceasedFieldConfig,
     getFuturiaLocationId,
     getFuturiaBusinessWhatsAppPhone,
     isFuturiaConfigured,
 } from './config';
+import {
+    buildDeceasedCustomFieldsPayload,
+    buildDeceasedSlotKeys,
+    type FuturiaCustomFieldEntry,
+    type FuturiaCustomFieldWrite,
+} from './deceasedContactFields';
+import { resolveFuturiaCustomFieldIds } from './customFieldRegistry';
 
 export type FuturiaMessageType = 'Email' | 'WhatsApp' | 'SMS';
 
@@ -20,6 +28,9 @@ export interface FuturiaUpsertContactInput {
     lastName?: string;
     name?: string;
     tags?: string[];
+    /** Nome defunto ordine corrente — merge append-only sui custom field Futuria. */
+    deceasedName?: string | null;
+    orderNumber?: string | null;
 }
 
 export interface FuturiaSendEmailInput {
@@ -151,10 +162,133 @@ async function futuriaFetch<T>(path: string, init: RequestInit): Promise<T> {
     return JSON.parse(text) as T;
 }
 
+export interface FuturiaContactRecord {
+    id: string;
+    customFields?: FuturiaCustomFieldEntry[];
+    tags?: string[];
+}
+
+/** Interroga Futuria/GHL per contatto esistente (telefono o email). */
+export async function findFuturiaDuplicateContact(params: {
+    phone?: string;
+    email?: string;
+}): Promise<FuturiaContactRecord | null> {
+    const locationId = getFuturiaLocationId();
+    if (!locationId) return null;
+
+    const qs = new URLSearchParams({ locationId });
+    if (params.phone?.trim()) {
+        qs.set('number', params.phone.trim());
+    } else if (params.email?.trim()) {
+        qs.set('email', params.email.trim().toLowerCase());
+    } else {
+        return null;
+    }
+
+    try {
+        const data = await futuriaFetch<{ contact?: FuturiaContactRecord }>(
+            `/contacts/search/duplicate?${qs.toString()}`,
+            { method: 'GET' }
+        );
+        return data.contact?.id ? data.contact : null;
+    } catch (error) {
+        if (error instanceof FuturiaApiError && (error.status === 400 || error.status === 404)) {
+            return null;
+        }
+        throw error;
+    }
+}
+
+function mergeContactTags(existing?: string[], incoming?: string[]): string[] | undefined {
+    if (!incoming?.length) return incoming;
+    if (!existing?.length) return incoming;
+    
+    let merged = [...new Set([...existing, ...incoming])];
+    
+    const existingLower = existing.map(t => t.toLowerCase());
+    const incomingLower = incoming.map(t => t.toLowerCase());
+    
+    const hasExistingNuovoUtente = existingLower.includes('nuovo-utente');
+    const hasExistingUtenteStorico = existingLower.includes('utente-storico') || existingLower.includes('cliente-storico');
+    const hasIncomingNuovoUtente = incomingLower.includes('nuovo-utente');
+    const hasIncomingUtenteStorico = incomingLower.includes('utente-storico') || incomingLower.includes('cliente-storico');
+    
+    // Se l'incoming contiene utente-storico, O se l'incoming contiene nuovo-utente
+    // ma il contatto esistente ha già nuovo-utente o utente-storico:
+    // il contatto finale deve avere utente-storico e deve essere rimosso nuovo-utente.
+    if (hasIncomingUtenteStorico || (hasIncomingNuovoUtente && (hasExistingNuovoUtente || hasExistingUtenteStorico))) {
+        // Rimuoviamo nuovo-utente
+        merged = merged.filter(t => t.toLowerCase() !== 'nuovo-utente');
+        // Rimuoviamo anche cliente-storico se presente per uniformità
+        merged = merged.filter(t => t.toLowerCase() !== 'cliente-storico');
+        // Assicuriamo utente-storico
+        if (!merged.some(t => t.toLowerCase() === 'utente-storico')) {
+            merged.push('utente-storico');
+        }
+    } else {
+        // Altrimenti, se tra i tag finali c'è utente-storico/cliente-storico, rimuoviamo nuovo-utente
+        const hasFinalUtenteStorico = merged.some(t => t.toLowerCase() === 'utente-storico' || t.toLowerCase() === 'cliente-storico');
+        if (hasFinalUtenteStorico) {
+            merged = merged.filter(t => t.toLowerCase() !== 'nuovo-utente');
+            // Rinominiamo cliente-storico in utente-storico per uniformità
+            merged = merged.filter(t => t.toLowerCase() !== 'cliente-storico');
+            if (!merged.some(t => t.toLowerCase() === 'utente-storico')) {
+                merged.push('utente-storico');
+            }
+        } else if (merged.some(t => t.toLowerCase() === 'nuovo-utente')) {
+            // Se c'è nuovo-utente, assicuriamo che non ci sia utente-storico
+            merged = merged.filter(t => t.toLowerCase() !== 'utente-storico' && t.toLowerCase() !== 'cliente-storico');
+        }
+    }
+    
+    return merged;
+}
+
+/** Espone la logica merge defunti per script di test / dry-run. */
+export async function prepareDeceasedCustomFieldsForUpsert(
+    existingCustomFields: FuturiaCustomFieldEntry[] | undefined,
+    deceasedName: string
+): Promise<FuturiaCustomFieldWrite[]> {
+    const config = getFuturiaDeceasedFieldConfig();
+    const keys = [
+        config.storicoKey,
+        config.defuntoKey,
+        config.defuntoUltimoKey,
+        ...buildDeceasedSlotKeys(config),
+    ];
+    const fieldIdMap = await resolveFuturiaCustomFieldIds(
+        keys,
+        futuriaFetch,
+        existingCustomFields
+    );
+    return buildDeceasedCustomFieldsPayload({
+        existingCustomFields,
+        newDeceasedName: deceasedName,
+        fieldIdMap,
+        config,
+    }).customFields;
+}
+
 /** Crea o aggiorna un contatto nella location Futuria configurata. */
 export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Promise<string> {
     const locationId = getFuturiaLocationId();
     if (!locationId) throw new FuturiaApiError('FUTURIA_LOCATION_ID mancante', 0);
+
+    const existingContact = await findFuturiaDuplicateContact({
+        phone: input.phone,
+        email: input.email,
+    });
+
+    let customFields: FuturiaCustomFieldWrite[] | undefined;
+    if (input.deceasedName?.trim()) {
+        customFields = await prepareDeceasedCustomFieldsForUpsert(
+            existingContact?.customFields,
+            input.deceasedName
+        );
+        if (process.env.FUTURIA_DEBUG === '1') {
+            console.info('[futuria-contact] customFields upsert:', JSON.stringify(customFields));
+        }
+    }
 
     const nameParts = splitFullName(input.name);
     const body: Record<string, unknown> = {
@@ -167,7 +301,10 @@ export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Pr
         ...(input.lastName || nameParts.lastName
             ? { lastName: input.lastName || nameParts.lastName }
             : {}),
-        ...(input.tags?.length ? { tags: input.tags } : {}),
+        ...(mergeContactTags(existingContact?.tags, input.tags)
+            ? { tags: mergeContactTags(existingContact?.tags, input.tags) }
+            : {}),
+        ...(customFields?.length ? { customFields } : {}),
     };
 
     const data = await futuriaFetch<{ contact?: { id?: string }; id?: string }>(

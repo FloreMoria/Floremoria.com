@@ -53,3 +53,28 @@ export function getFuturiaBusinessWhatsAppPhone(): string {
 export function getFuturiaWhatsAppProofTemplateId(): string | null {
     return process.env.FUTURIA_WHATSAPP_PROOF_TEMPLATE_ID?.trim() || null;
 }
+
+/** Config campi custom Futuria per storico defunti (append-only). */
+export interface FuturiaDeceasedFieldConfig {
+    /** Elenco testuale cronologico (una riga per defunto). */
+    storicoKey: string;
+    /** Slot 1 — non sovrascritto se già valorizzato. */
+    defuntoKey: string;
+    /** Sempre aggiornato con il defunto dell'ordine corrente. */
+    defuntoUltimoKey: string;
+    maxProgressiveSlots: number;
+}
+
+export function getFuturiaDeceasedFieldConfig(): FuturiaDeceasedFieldConfig {
+    return {
+        storicoKey:
+            process.env.FUTURIA_CF_DEFUNTI_STORICO_KEY?.trim() || 'contact.defunti_storico',
+        defuntoKey: process.env.FUTURIA_CF_DEFUNTO_KEY?.trim() || 'contact.defunto',
+        defuntoUltimoKey:
+            process.env.FUTURIA_CF_DEFUNTO_ULTIMO_KEY?.trim() || 'contact.defunto_ultimo',
+        maxProgressiveSlots: Math.min(
+            20,
+            Math.max(2, Number(process.env.FUTURIA_CF_DEFUNTO_MAX_SLOTS || 10) || 10)
+        ),
+    };
+}

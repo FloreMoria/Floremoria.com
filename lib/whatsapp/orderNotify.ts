@@ -12,6 +12,12 @@
  */
 import twilio from 'twilio';
 import { addMessage, updateSessionProfile } from '@/lib/chatStore';
+import prisma from '@/lib/prisma';
+import {
+    isFuturiaConfigured,
+    normalizeFuturiaPhone,
+    upsertFuturiaContact,
+} from '@/lib/futuria/client';
 
 /** Sottoinsieme strutturale dei campi Order necessari: disaccoppia dal tipo Prisma completo. */
 export interface OrderWelcomeInput {
@@ -20,13 +26,14 @@ export interface OrderWelcomeInput {
     buyerFullName?: string | null;
     customerPhone?: string | null;
     deceasedName?: string | null;
+    buyerEmail?: string | null;
 }
 
 export interface OrderWelcomeResult {
     ok: boolean;
     skipped?: string;
     sid?: string;
-    channel?: 'template' | 'freetext';
+    channel?: 'template' | 'freetext' | 'futuria_webhook';
 }
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -53,7 +60,7 @@ export function toWhatsAppAddress(raw: string | null | undefined): string | null
 export function renderOrderWelcomeText(name: string, deceased: string): string {
     const safeName = name || 'Utente';
     const safeDeceased = deceased || 'del Suo caro';
-    return `Gentile ${safeName}, il suo ordine per la tomba di ${safeDeceased} è confermato. Le va bene ricevere le foto della posa direttamente qui su WhatsApp?`;
+    return `Gentile ${safeName}, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di ${safeDeceased}. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹`;
 }
 
 /** Registra in dashboard (chatStore) il messaggio inviato, senza mai bloccare l'invio. */
@@ -76,8 +83,68 @@ async function logToDashboard(toAddress: string, name: string, text: string, ord
 /**
  * Invia il messaggio di benvenuto post-ordine. Idempotenza garantita dal chiamante
  * (webhook Stripe, solo alla prima transizione a PAID).
+ * 
+ * Se Futuria è configurato, esegue l'upsert del contatto su Futuria con il tag 'floremoria-nuovo-ordine'
+ * e il tag dello storico ordini ('utente-storico' o 'Nuovo-Utente') per avviare l'automazione. Altrimenti ricade su Twilio.
  */
 export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promise<OrderWelcomeResult> {
+    const name = (order.buyerFullName || '').trim();
+    const deceased = (order.deceasedName || '').trim();
+    const humanText = renderOrderWelcomeText(name, deceased);
+
+    // Integrazione prioritaria: Futuria CRM
+    if (isFuturiaConfigured()) {
+        const phone = normalizeFuturiaPhone(order.customerPhone);
+        if (!phone) {
+            console.warn(`[order-welcome] Telefono non valido su Futuria per ordine ${order.orderNumber || order.id}.`);
+            return { ok: false, skipped: 'invalid_phone' };
+        }
+
+        try {
+            console.info(`[order-welcome] Calcolo storico ordini per ${order.buyerEmail || phone} dal DB...`);
+            let isHistorical = false;
+            try {
+                const pastOrdersCount = await prisma.order.count({
+                    where: {
+                        id: { not: order.id },
+                        partnerPaymentStatus: 'PAID',
+                        OR: [
+                            ...(order.buyerEmail ? [{ buyerEmail: order.buyerEmail }] : []),
+                            ...(order.customerPhone ? [{ customerPhone: order.customerPhone }] : []),
+                        ],
+                    },
+                });
+                isHistorical = pastOrdersCount > 0;
+                console.info(`[order-welcome] Storico ordini calcolato: ${pastOrdersCount} ordini passati pagati. Storico=${isHistorical}`);
+            } catch (dbErr) {
+                console.error('[order-welcome] Errore calcolo storico ordini dal DB (tratto come nuovo):', dbErr);
+            }
+
+            const tags = ['floremoria-nuovo-ordine', isHistorical ? 'utente-storico' : 'Nuovo-Utente'];
+
+            console.info(`[order-welcome] Sincronizzazione contatto su Futuria per ordine ${order.orderNumber || order.id} con tag ${tags.join(', ')}...`);
+            const contactId = await upsertFuturiaContact({
+                phone,
+                email: order.buyerEmail || undefined,
+                name: name || undefined,
+                deceasedName: deceased || undefined,
+                tags,
+                orderNumber: order.orderNumber
+            });
+
+            // Registra localmente nella chat dashboard FloreMoria per tenere traccia dello storico
+            const toAddress = `whatsapp:${phone}`;
+            await logToDashboard(toAddress, name, humanText, order);
+
+            console.info(`[order-welcome] Sincronizzato con successo su Futuria (contactId=${contactId}). Trigger attivo.`);
+            return { ok: true, sid: contactId, channel: 'futuria_webhook' };
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error(`[order-welcome] Sincronizzazione Futuria fallita: ${msg}. Provo fallback Twilio...`);
+        }
+    }
+
+    // Fallback: Twilio (se Futuria non è configurato o fallisce)
     if (!accountSid || !authToken) {
         console.warn('[order-welcome] Credenziali Twilio mancanti: invio saltato.');
         return { ok: false, skipped: 'twilio_not_configured' };
@@ -89,10 +156,7 @@ export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promis
         return { ok: false, skipped: 'invalid_phone' };
     }
 
-    const name = (order.buyerFullName || '').trim();
-    const deceased = (order.deceasedName || '').trim();
     const templateSid = process.env.WHATSAPP_ORDER_WELCOME_TEMPLATE_SID?.trim();
-    const humanText = renderOrderWelcomeText(name, deceased);
 
     try {
         const client = twilio(accountSid, authToken);
@@ -122,12 +186,11 @@ export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promis
         }
 
         await logToDashboard(toAddress, name, humanText, order);
-        console.info(`[order-welcome] Inviato (${channel}) per ordine ${order.orderNumber || order.id}, sid=${messageSid}`);
+        console.info(`[order-welcome] Inviato (${channel}) via Twilio per ordine ${order.orderNumber || order.id}, sid=${messageSid}`);
         return { ok: true, sid: messageSid, channel };
     } catch (e) {
-        // Set-and-Forget: logghiamo e usciamo senza propagare l'errore al webhook.
         const msg = e instanceof Error ? e.message : String(e);
-        console.error(`[order-welcome] Invio fallito per ordine ${order.orderNumber || order.id}:`, msg);
+        console.error(`[order-welcome] Invio fallito via Twilio per ordine ${order.orderNumber || order.id}:`, msg);
         return { ok: false, skipped: 'send_failed' };
     }
 }

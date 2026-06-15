@@ -12,17 +12,22 @@ export async function GET(
     request: Request,
     context: { params: Promise<{ orderNumber: string; sig: string }> }
 ) {
-    const { orderNumber, sig } = await context.params;
-    const decodedNumber = decodeURIComponent(orderNumber).trim();
-    const errorUrl = `${getSiteBaseUrl()}/login?error=proof_foto_invalid`;
+    try {
+        const { orderNumber, sig } = await context.params;
+        const decodedNumber = decodeURIComponent(orderNumber).trim();
+        const errorUrl = `${getSiteBaseUrl()}/login?error=proof_foto_invalid`;
 
-    const order = await prisma.order.findFirst({
-        where: { orderNumber: decodedNumber },
-    });
+        const order = await prisma.order.findFirst({
+            where: { orderNumber: decodedNumber },
+        });
 
-    if (!order || !verifyProofFotoOrderSignature(decodedNumber, sig)) {
-        return NextResponse.redirect(errorUrl);
+        if (!order || !verifyProofFotoOrderSignature(decodedNumber, sig)) {
+            return NextResponse.redirect(errorUrl);
+        }
+
+        return handleProofFotoAccess(request, order.id);
+    } catch (error) {
+        console.error('[proof-foto] Errore route /f/o:', error);
+        return NextResponse.redirect(`${getSiteBaseUrl()}/login?error=proof_foto_invalid`);
     }
-
-    return handleProofFotoAccess(request, order.id);
 }

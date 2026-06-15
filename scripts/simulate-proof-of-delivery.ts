@@ -11,10 +11,16 @@ import { loadEnvFiles } from '../lib/loadEnvFiles';
 loadEnvFiles();
 
 import prisma from '../lib/prisma';
+import {
+    findFuturiaDuplicateContact,
+    normalizeFuturiaPhone,
+    prepareDeceasedCustomFieldsForUpsert,
+} from '../lib/futuria/client';
 import { sendProofOfDeliveryNotification } from '../lib/futuria/proofOfDelivery';
 
 const orderNumber = process.argv[2]?.trim() || 'FT-CO-26-001';
 const phoneOverride = process.argv[3]?.trim() || '+393204105305';
+const previewContactsOnly = process.argv.includes('--preview-contacts');
 
 async function main() {
     console.log(`→ Simulazione Proof of Delivery`);
@@ -41,13 +47,31 @@ async function main() {
         order?.deliveryProof?.photoAfterUrl ||
         '/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp';
 
+    const deceasedName = order?.deceasedName || 'Santo Sancono';
+
+    const phone = normalizeFuturiaPhone(phoneOverride);
+    if (phone) {
+        const existing = await findFuturiaDuplicateContact({ phone });
+        const customFields = await prepareDeceasedCustomFieldsForUpsert(
+            existing?.customFields,
+            deceasedName
+        );
+        console.log('--- Payload customFields (append defunti) ---');
+        console.log(JSON.stringify(customFields, null, 2));
+        console.log('');
+        if (previewContactsOnly) {
+            console.log('Modalità --preview-contacts: invio WhatsApp saltato.');
+            return;
+        }
+    }
+
     const result = await sendProofOfDeliveryNotification({
         orderId: order?.id || `sim-${orderNumber}`,
         orderNumber,
         buyerFullName: order?.buyerFullName || 'Salvatore Marsiglione',
         buyerEmail: order?.buyerEmail || undefined,
         customerPhone: phoneOverride,
-        deceasedName: order?.deceasedName || 'Santo Sancono',
+        deceasedName,
         cemeteryCity: order?.cemeteryCity || 'Reggio Calabria',
         cemeteryName: order?.cemeteryName,
         deliveryProvince: order?.deliveryProvince,

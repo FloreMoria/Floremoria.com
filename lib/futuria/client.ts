@@ -14,6 +14,7 @@ import {
 import {
     buildDeceasedCustomFieldsPayload,
     buildDeceasedSlotKeys,
+    readFuturiaCustomFieldId,
     type FuturiaCustomFieldEntry,
     type FuturiaCustomFieldWrite,
 } from './deceasedContactFields';
@@ -31,6 +32,8 @@ export interface FuturiaUpsertContactInput {
     /** Nome defunto ordine corrente — merge append-only sui custom field Futuria. */
     deceasedName?: string | null;
     orderNumber?: string | null;
+    /** Campi personalizzati aggiuntivi passati come chiave-valore. */
+    additionalCustomFields?: Record<string, string | number | null>;
 }
 
 export interface FuturiaSendEmailInput {
@@ -279,7 +282,7 @@ export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Pr
         email: input.email,
     });
 
-    let customFields: FuturiaCustomFieldWrite[] | undefined;
+    let customFields: FuturiaCustomFieldWrite[] = [];
     if (input.deceasedName?.trim()) {
         customFields = await prepareDeceasedCustomFieldsForUpsert(
             existingContact?.customFields,
@@ -287,6 +290,26 @@ export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Pr
         );
         if (process.env.FUTURIA_DEBUG === '1') {
             console.info('[futuria-contact] customFields upsert:', JSON.stringify(customFields));
+        }
+    }
+
+    if (input.additionalCustomFields) {
+        const additionalKeys = Object.keys(input.additionalCustomFields);
+        const resolvedIds = await resolveFuturiaCustomFieldIds(
+            additionalKeys,
+            futuriaFetch,
+            existingContact?.customFields
+        );
+        for (const [key, value] of Object.entries(input.additionalCustomFields)) {
+            if (value === undefined || value === null) continue;
+            const existingId = resolvedIds[key] || readFuturiaCustomFieldId(existingContact?.customFields, key);
+            // Evita duplicati di chiavi
+            customFields = customFields.filter(f => f.key.toLowerCase() !== key.toLowerCase());
+            customFields.push({
+                ...(existingId ? { id: existingId } : {}),
+                key,
+                field_value: String(value)
+            });
         }
     }
 
@@ -430,6 +453,90 @@ export async function ensureFuturiaContactForRecipient(
         email: recipientEmail,
         name: displayName,
         tags: ['floremoria-transactional'],
+    });
+}
+
+export interface FloristSyncInput {
+    shopName: string;
+    ownerName: string;
+    whatsappNumber: string | null;
+    pecAddress: string | null;
+    order?: {
+        deceasedName: string;
+        cemeteryCity: string;
+        gravePosition?: string | null;
+        deceasedDeathDate?: Date | null;
+        additionalInstructions?: string | null;
+        totalPriceCents: number;
+        partnerNotifyEmail?: string | null;
+        items?: Array<{
+            priceCents: number;
+            product?: { name: string } | null;
+        }> | null;
+    } | null;
+}
+
+export function calculateFloristCut(order: any): number {
+    const totalCustomerPrice = (order.totalPriceCents || 0) / 100;
+    const COMPENSATION_MAP: Record<string, number> = {
+        'Bouquet Tradizione': 32.50,
+        'Corona Funebre': 97.50,
+        'Cuscino Funerale': 65.00,
+        'Fiori per Loculo': 26.00,
+        'Lumino': 0.00,
+        'Nastro': 0.00,
+        'Biglietto': 0.00,
+        'Cesto di Gigli': 52.00,
+        'Mazzo Stagionale': 29.25
+    };
+
+    if (order.items && order.items.length > 0) {
+        return order.items.reduce((sum: number, item: any) => {
+            const prodName = item.product?.name || '';
+            if (prodName in COMPENSATION_MAP) {
+                return sum + COMPENSATION_MAP[prodName];
+            }
+            const itemPrice = (item.priceCents || 0) / 100;
+            return sum + (itemPrice * 0.65);
+        }, 0);
+    }
+    return totalCustomerPrice * 0.65;
+}
+
+export async function syncFloristPartnerToFuturia(input: FloristSyncInput): Promise<string | null> {
+    if (!isFuturiaConfigured()) return null;
+    
+    const phone = normalizeFuturiaPhone(input.whatsappNumber);
+    if (!phone) {
+        console.warn(`[sync-florist] Telefono fiorista non valido: ${input.whatsappNumber}`);
+        return null;
+    }
+    
+    const email = input.pecAddress || input.order?.partnerNotifyEmail || undefined;
+    const name = input.shopName || input.ownerName;
+    
+    const tags = ['Nuovo-Fiorista'];
+    
+    const additionalCustomFields: Record<string, string> = {};
+    
+    if (input.order) {
+        const costoServizio = calculateFloristCut(input.order);
+        additionalCustomFields['contact.costo_servizio'] = `${costoServizio.toFixed(2)} €`;
+        additionalCustomFields['contact.nome_defunto'] = input.order.deceasedName;
+        additionalCustomFields['contact.comune_cimitero'] = input.order.cemeteryCity;
+        additionalCustomFields['contact.posizione_tomba'] = input.order.gravePosition || 'Non specificato';
+        additionalCustomFields['contact.data_decesso'] = input.order.deceasedDeathDate 
+            ? new Date(input.order.deceasedDeathDate).toLocaleDateString('it-IT') 
+            : 'Non specificata';
+        additionalCustomFields['contact.note_logistiche'] = input.order.additionalInstructions || 'Nessuna nota';
+    }
+    
+    return upsertFuturiaContact({
+        phone,
+        email,
+        name,
+        tags,
+        additionalCustomFields
     });
 }
 

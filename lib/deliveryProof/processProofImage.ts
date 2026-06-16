@@ -49,7 +49,16 @@ export async function processProofImageFile(
     const seoSlug = slugify(`${serviceName}-${city}-${province}-${orderNum}`);
     const filename = `${seoSlug}-${slot}-${index + 1}.webp`;
 
-    const optimizedBuffer = await sharp(buffer).webp({ quality: 80 }).toBuffer();
+    let optimizedBuffer: Buffer;
+    try {
+        optimizedBuffer = await sharp(buffer, { failOn: 'none' })
+            .rotate()
+            .webp({ quality: 80 })
+            .toBuffer();
+    } catch (err) {
+        console.error('[processProofImage] Sharp conversion failed:', err);
+        throw new Error('Impossibile elaborare una o più foto. Riprova scattando in JPG.');
+    }
 
     const blobPath = `delivery-proof/${order.id}/${filename}`;
     const { url } = await put(blobPath, optimizedBuffer, {

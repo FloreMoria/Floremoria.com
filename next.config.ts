@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["swagger-ui-react"],
+  experimental: {
+    // Foto multi-foto da iPhone: evita 413 sul POST /api/partner/order/upload-proof
+    middlewareClientMaxBodySize: '12mb',
+  },
   async redirects() {
     return [
       {

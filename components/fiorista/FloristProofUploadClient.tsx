@@ -14,10 +14,98 @@ type Props = {
     cemeteryCity: string;
 };
 
+type UploadApiResponse = { ok?: boolean; error?: string };
+
 const MAX = 3;
+const GPS_CACHE_PREFIX = 'fm-florist-gps:';
 
 function readFilesAsPreviews(files: File[]): string[] {
     return files.map((f) => URL.createObjectURL(f));
+}
+
+function gpsCacheKey(orderId: string): string {
+    return `${GPS_CACHE_PREFIX}${orderId}`;
+}
+
+function readCachedGps(orderId: string): { lat: number; lng: number } | null {
+    if (typeof sessionStorage === 'undefined') return null;
+    try {
+        const raw = sessionStorage.getItem(gpsCacheKey(orderId));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { lat?: number; lng?: number };
+        if (typeof parsed.lat !== 'number' || typeof parsed.lng !== 'number') return null;
+        if (!Number.isFinite(parsed.lat) || !Number.isFinite(parsed.lng)) return null;
+        return { lat: parsed.lat, lng: parsed.lng };
+    } catch {
+        return null;
+    }
+}
+
+function writeCachedGps(orderId: string, coords: { lat: number; lng: number }): void {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+        sessionStorage.setItem(gpsCacheKey(orderId), JSON.stringify(coords));
+    } catch {
+        // sessionStorage pieno o disabilitato — non bloccante
+    }
+}
+
+/** Riduce peso/formato HEIC iPhone → JPEG prima dell'upload (evita 413 e errori Sharp). */
+async function prepareUploadFile(file: File): Promise<File> {
+    if (typeof createImageBitmap !== 'function') return file;
+    try {
+        const bitmap = await createImageBitmap(file);
+        const maxDim = 1600;
+        const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height, 1));
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            bitmap.close();
+            return file;
+        }
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+        const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, 'image/jpeg', 0.82);
+        });
+        if (!blob) return file;
+        const baseName = file.name.replace(/\.[^.]+$/, '') || 'foto';
+        return new File([blob], `${baseName}.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+        });
+    } catch {
+        return file;
+    }
+}
+
+/** Safari fallisce con "string did not match pattern" se response.json() riceve HTML/vuoto. */
+async function parseUploadResponse(res: Response): Promise<UploadApiResponse> {
+    if (res.status === 204) return {};
+
+    const raw = await res.text();
+    if (!raw.trim()) {
+        if (res.status === 413) {
+            return { ok: false, error: 'Le foto sono troppo pesanti. Prova con meno immagini.' };
+        }
+        return { ok: false, error: `Invio non riuscito (${res.status}). Riprova tra poco.` };
+    }
+
+    try {
+        return JSON.parse(raw) as UploadApiResponse;
+    } catch {
+        return {
+            ok: false,
+            error:
+                res.status === 413
+                    ? 'Le foto sono troppo pesanti. Prova con meno immagini.'
+                    : `Invio non riuscito (${res.status}). Riprova tra poco.`,
+        };
+    }
 }
 
 export default function FloristProofUploadClient({
@@ -29,35 +117,50 @@ export default function FloristProofUploadClient({
 }: Props) {
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
-    const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(() =>
+        readCachedGps(orderId)
+    );
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const beforeInputRef = useRef<HTMLInputElement>(null);
     const afterInputRef = useRef<HTMLInputElement>(null);
+    const gpsRequestedRef = useRef(false);
 
     const beforePreviews = useMemo(() => readFilesAsPreviews(beforeFiles), [beforeFiles]);
     const afterPreviews = useMemo(() => readFilesAsPreviews(afterFiles), [afterFiles]);
 
     const canSubmit = beforeFiles.length > 0 && afterFiles.length > 0 && !submitting;
 
-    // Permesso GPS all'apertura: niente popup invasivo al momento dell'invio.
+    // Una sola richiesta GPS all'apertura (no doppio pop-up iOS / remount React).
     useEffect(() => {
-        if (!navigator.geolocation) return;
+        const cached = readCachedGps(orderId);
+        if (cached) {
+            setGpsCoords(cached);
+            return;
+        }
+        if (gpsRequestedRef.current || typeof navigator === 'undefined' || !navigator.geolocation) {
+            return;
+        }
+        gpsRequestedRef.current = true;
+
         navigator.geolocation.getCurrentPosition(
-            (pos) =>
-                setGpsCoords({
+            (pos) => {
+                const coords = {
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
-                }),
+                };
+                setGpsCoords(coords);
+                writeCachedGps(orderId, coords);
+            },
             () => setGpsCoords(null),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 }
+            { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
         );
-    }, []);
+    }, [orderId]);
 
     const addFiles = useCallback((slot: Slot, incoming: FileList | null) => {
         if (!incoming?.length) return;
-        const list = Array.from(incoming).filter((f) => f.type.startsWith('image/'));
+        const list = Array.from(incoming).filter((f) => f.type.startsWith('image/') || f.name.match(/\.(heic|heif)$/i));
         const setter = slot === 'before' ? setBeforeFiles : setAfterFiles;
         setter((prev) => [...prev, ...list].slice(0, MAX));
     }, []);
@@ -72,20 +175,23 @@ export default function FloristProofUploadClient({
         setSubmitting(true);
         setError(null);
         try {
+            const preparedBefore = await Promise.all(beforeFiles.map(prepareUploadFile));
+            const preparedAfter = await Promise.all(afterFiles.map(prepareUploadFile));
+
             const form = new FormData();
             form.append('orderId', orderId);
             if (gpsCoords) {
-                form.append('gpsLatitude', String(gpsCoords.lat));
-                form.append('gpsLongitude', String(gpsCoords.lng));
+                form.append('gpsLatitude', gpsCoords.lat.toFixed(6));
+                form.append('gpsLongitude', gpsCoords.lng.toFixed(6));
             }
-            beforeFiles.forEach((f) => form.append('beforePhotos', f));
-            afterFiles.forEach((f) => form.append('afterPhotos', f));
+            preparedBefore.forEach((f) => form.append('beforePhotos', f));
+            preparedAfter.forEach((f) => form.append('afterPhotos', f));
 
             const res = await fetch('/api/partner/order/upload-proof', {
                 method: 'POST',
                 body: form,
             });
-            const data = (await res.json()) as { ok?: boolean; error?: string };
+            const data = await parseUploadResponse(res);
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'Invio non riuscito.');
             }
@@ -159,10 +265,10 @@ export default function FloristProofUploadClient({
 
                 <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
-                    All&apos;apertura della pagina chiederemo il permesso GPS per attestare la consegna sul posto.
+                    All&apos;apertura chiederemo una sola volta il permesso GPS per attestare la consegna.
                     {gpsCoords
                         ? ' Posizione acquisita: l\'invio userà queste coordinate senza ulteriori richieste.'
-                        : ' Se non autorizzi il GPS, la consegna potrà comunque essere registrata senza mappa.'}
+                        : ' Se non autorizzi il GPS, la consegna verrà registrata comunque senza mappa.'}
                 </p>
 
                 {error ? (

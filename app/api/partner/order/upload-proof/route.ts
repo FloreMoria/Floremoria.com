@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { evaluateFloristDeliveryAccess } from '@/lib/deliveryProof/floristAccess';
+import { parseGpsPair } from '@/lib/deliveryProof/parseGps';
 import { submitFloristDeliveryProof } from '@/lib/deliveryProof/submitFloristProof';
 import prisma from '@/lib/prisma';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
     try {
@@ -32,17 +34,14 @@ export async function POST(request: Request) {
         const beforeFiles = form.getAll('beforePhotos').filter((v): v is File => v instanceof File && v.size > 0);
         const afterFiles = form.getAll('afterPhotos').filter((v): v is File => v instanceof File && v.size > 0);
 
-        const latRaw = form.get('gpsLatitude');
-        const lngRaw = form.get('gpsLongitude');
-        const gpsLatitude = latRaw != null ? parseFloat(String(latRaw)) : null;
-        const gpsLongitude = lngRaw != null ? parseFloat(String(lngRaw)) : null;
+        const { gpsLatitude, gpsLongitude } = parseGpsPair(form.get('gpsLatitude'), form.get('gpsLongitude'));
 
         const result = await submitFloristDeliveryProof({
             orderId,
             beforeFiles,
             afterFiles,
-            gpsLatitude: Number.isFinite(gpsLatitude!) ? gpsLatitude : null,
-            gpsLongitude: Number.isFinite(gpsLongitude!) ? gpsLongitude : null,
+            gpsLatitude,
+            gpsLongitude,
         });
 
         if (!result.ok) {

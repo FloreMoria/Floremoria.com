@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluateFloristDeliveryAccess } from '@/lib/deliveryProof/floristAccess';
 import { parseGpsPair } from '@/lib/deliveryProof/parseGps';
 import { submitFloristDeliveryProof } from '@/lib/deliveryProof/submitFloristProof';
+import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
 import prisma from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -15,15 +16,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ ok: false, error: 'orderId mancante.' }, { status: 400 });
         }
 
-        const order = await prisma.order.findFirst({
-            where: { id: orderId, deletedAt: null },
-            select: {
-                id: true,
-                status: true,
-                updatedAt: true,
-                deletedAt: true,
-                partnerPaymentStatus: true,
-            },
+        const order = await resolveOrderByPublicRef(orderId, {
+            id: true,
+            orderNumber: true,
+            status: true,
+            updatedAt: true,
+            deletedAt: true,
+            partnerPaymentStatus: true,
         });
 
         const access = evaluateFloristDeliveryAccess(order);

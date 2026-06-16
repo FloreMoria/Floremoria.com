@@ -4,6 +4,7 @@ import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 import { buildMagicPhotoDeliveryUrl } from '@/lib/auth/magicPhotoDelivery';
 import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
+import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 
 export type SubmitFloristProofInput = {
     orderId: string;
@@ -107,6 +108,8 @@ export async function submitFloristDeliveryProof(
             data: { userId: linkedUser.id },
         });
     }
+
+    await syncDeceasedRelationsForOrder(order.id);
 
     const magicLinkUrl = buildMagicPhotoDeliveryUrl(order.id);
 

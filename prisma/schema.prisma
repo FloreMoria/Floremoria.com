@@ -60,8 +60,14 @@ model User {
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]
+  /** Relazione M2M con profili defunto (più parenti → stesso defunto). */
+  deceasedLinks   UserDeceasedLink[]
 }
 
+/**
+ * Entità dominio «Defunto» (profilo commemorativo condiviso tra parenti e fioristi).
+ * Nome tabella storico: DeceasedProfile.
+ */
 model DeceasedProfile {
   id            String   @id @default(cuid())
   uniqueCode    String?  @unique
@@ -70,8 +76,40 @@ model DeceasedProfile {
   cemeteryName  String?
   verifiedNotes String?  @db.Text
   orders        Order[]
+  userLinks     UserDeceasedLink[]
+  partnerLinks  PartnerDeceasedAssignment[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+/// Pivot User ↔ Defunto (DeceasedProfile): più utenti possono seguire lo stesso defunto.
+model UserDeceasedLink {
+  id                String          @id @default(cuid())
+  userId            String          @map("user_id")
+  deceasedProfileId String          @map("deceased_profile_id")
+  relationship      String?         @db.VarChar(80)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deceasedProfile   DeceasedProfile @relation(fields: [deceasedProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deceasedProfileId])
+  @@index([deceasedProfileId])
+  @@map("user_deceased_links")
+}
+
+/// Pivot Fiorista (Partner) ↔ Defunto: custode floreale di zona/tomba.
+model PartnerDeceasedAssignment {
+  id                String          @id @default(cuid())
+  partnerId         String          @map("partner_id")
+  deceasedProfileId String          @map("deceased_profile_id")
+  isPrimary         Boolean         @default(true) @map("is_primary")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  partner           Partner         @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  deceasedProfile   DeceasedProfile @relation(fields: [deceasedProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, deceasedProfileId])
+  @@index([deceasedProfileId])
+  @@map("partner_deceased_assignments")
 }
 
 model Order {
@@ -259,6 +297,7 @@ model Partner {
   deliveryProofs  DeliveryProof[]
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
+  deceasedAssignments PartnerDeceasedAssignment[]
 }
 
 /**

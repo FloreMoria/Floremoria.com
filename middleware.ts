@@ -7,7 +7,7 @@ import {
     isDashboardSubdomainRoutingEnabled,
     type DashboardHostContext,
 } from '@/lib/dashboardRouting';
-import { isSuperAdminRole } from '@/lib/superAdmin';
+import { isSuperAdminRole, isDashboardAdminRole } from '@/lib/superAdmin';
 
 /**
  * Middleware Centrale FloreMoria
@@ -188,8 +188,11 @@ export function middleware(request: NextRequest) {
             );
         }
 
-        // Inibisce l'accesso a /dashboard/user per lo staff e i partner B2B
+        // Inibisce l'accesso a /dashboard/user per lo staff operativo (non ADMIN di sistema).
         if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
+            if (isDashboardAdminRole(userRole)) {
+                return applyDashboardSecurityHeaders(request, NextResponse.next());
+            }
             const dashboardHome = isLocal
                 ? new URL('/dashboard', request.nextUrl.origin)
                 : new URL('/dashboard', dashboardOrigin);

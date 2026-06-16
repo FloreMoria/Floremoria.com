@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { evaluateFloristDeliveryAccess, isFloristTestOrder } from '@/lib/deliveryProof/floristAccess';
+import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
 import Link from 'next/link';
 
@@ -25,28 +26,27 @@ function BlockedPage({ title, message }: { title: string; message: string }) {
     );
 }
 
+const orderSelect = {
+    id: true,
+    orderNumber: true,
+    deceasedName: true,
+    cemeteryName: true,
+    cemeteryCity: true,
+    status: true,
+    updatedAt: true,
+    deletedAt: true,
+    partnerPaymentStatus: true,
+    deliveryProof: { select: { status: true } },
+} as const;
+
 export default async function FloristConsegnaPage({
     params,
 }: {
     params: Promise<{ orderId: string }>;
 }) {
-    const { orderId } = await params;
+    const { orderId: orderRef } = await params;
 
-    const order = await prisma.order.findFirst({
-        where: { id: orderId, deletedAt: null },
-        select: {
-            id: true,
-            orderNumber: true,
-            deceasedName: true,
-            cemeteryName: true,
-            cemeteryCity: true,
-            status: true,
-            updatedAt: true,
-            deletedAt: true,
-            partnerPaymentStatus: true,
-            deliveryProof: { select: { status: true } },
-        },
-    });
+    const order = await resolveOrderByPublicRef(orderRef, orderSelect);
 
     const access = evaluateFloristDeliveryAccess(order);
     if (!access.allowed) {
@@ -66,7 +66,7 @@ export default async function FloristConsegnaPage({
         );
     }
 
-    if (order!.deliveryProof?.status === 'COMPLETED' && !isFloristTestOrder(order!.id)) {
+    if (order!.deliveryProof?.status === 'COMPLETED' && !isFloristTestOrder(order!)) {
         return (
             <BlockedPage
                 title="Consegna già registrata"

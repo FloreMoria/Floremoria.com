@@ -31,8 +31,7 @@ type OrderMeta = {
 };
 
 /**
- * Ottimizza in WebP via Sharp e carica su Vercel Blob (storage persistente).
- * Restituisce l'URL pubblico https://*.public.blob.vercel-storage.com/…
+ * Ottimizza in WebP via Sharp (rotazione EXIF automatica) e carica su Vercel Blob.
  */
 export async function processProofImageFile(
     file: File,
@@ -57,7 +56,7 @@ export async function processProofImageFile(
             .toBuffer();
     } catch (err) {
         console.error('[processProofImage] Sharp conversion failed:', err);
-        throw new Error('Impossibile elaborare una o più foto. Riprova scattando in JPG.');
+        throw new Error('Impossibile elaborare una o più foto. Riprova con un formato immagine standard.');
     }
 
     const blobPath = `delivery-proof/${order.id}/${filename}`;

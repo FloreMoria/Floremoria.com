@@ -50,7 +50,7 @@ function writeCachedGps(orderId: string, coords: { lat: number; lng: number }): 
     }
 }
 
-/** Riduce peso/formato HEIC iPhone → JPEG prima dell'upload (evita 413 e errori Sharp). */
+/** Comprime foto ad alta risoluzione (HEIC/JPEG/PNG) in JPEG leggero prima dell'upload. */
 async function prepareUploadFile(file: File): Promise<File> {
     if (typeof createImageBitmap !== 'function') return file;
     try {
@@ -83,7 +83,7 @@ async function prepareUploadFile(file: File): Promise<File> {
     }
 }
 
-/** Safari fallisce con "string did not match pattern" se response.json() riceve HTML/vuoto. */
+/** Parsing sicuro della risposta API (evita errori generici del browser su body non-JSON). */
 async function parseUploadResponse(res: Response): Promise<UploadApiResponse> {
     if (res.status === 204) return {};
 
@@ -160,7 +160,9 @@ export default function FloristProofUploadClient({
 
     const addFiles = useCallback((slot: Slot, incoming: FileList | null) => {
         if (!incoming?.length) return;
-        const list = Array.from(incoming).filter((f) => f.type.startsWith('image/') || f.name.match(/\.(heic|heif)$/i));
+        const list = Array.from(incoming).filter(
+            (f) => f.type.startsWith('image/') || /\.(heic|heif|jpg|jpeg|png|webp)$/i.test(f.name)
+        );
         const setter = slot === 'before' ? setBeforeFiles : setAfterFiles;
         setter((prev) => [...prev, ...list].slice(0, MAX));
     }, []);
@@ -265,10 +267,11 @@ export default function FloristProofUploadClient({
 
                 <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
-                    All&apos;apertura chiederemo una sola volta il permesso GPS per attestare la consegna.
+                    All&apos;apertura chiederemo una sola volta il permesso di localizzazione del browser per
+                    attestare la consegna sul posto.
                     {gpsCoords
                         ? ' Posizione acquisita: l\'invio userà queste coordinate senza ulteriori richieste.'
-                        : ' Se non autorizzi il GPS, la consegna verrà registrata comunque senza mappa.'}
+                        : ' Se non autorizzi la posizione, la consegna verrà registrata comunque senza mappa.'}
                 </p>
 
                 {error ? (

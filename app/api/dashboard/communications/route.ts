@@ -1,30 +1,35 @@
 import { NextResponse } from 'next/server';
 import { getChatStore, addMessage, setSessionStatus } from '@/lib/chatStore';
-import twilio from 'twilio';
+import { isFuturiaConfigured, findFuturiaDuplicateContact, upsertFuturiaContact, sendFuturiaWhatsApp } from '@/lib/futuria/client';
 
-// Load Twilio credentials to allow actual outbound messaging from dashboard
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
-async function sendTwilioMessage(to: string, text: string) {
-    if (!accountSid || !authToken) {
-        console.log(`[Twilio Mock Send Dashboard] To: ${to} | Text: ${text}`);
+async function sendFuturiaMessage(to: string, text: string) {
+    if (!isFuturiaConfigured()) {
+        console.log(`[Futuria Mock Send Dashboard] To: ${to} | Text: ${text}`);
         return true;
     }
     try {
-        const client = twilio(accountSid, authToken);
-        await client.messages.create({
-            body: text,
-            from: twilioNumber,
-            to: to
+        // 1. Cerca il contatto esistente per telefono
+        let contact = await findFuturiaDuplicateContact({ phone: to });
+        let contactId = contact?.id;
+
+        // 2. Se non esiste, crea il contatto al volo
+        if (!contactId) {
+            contactId = await upsertFuturiaContact({ phone: to });
+        }
+
+        // 3. Invia il messaggio WhatsApp tramite Futuria
+        await sendFuturiaWhatsApp({
+            contactId,
+            message: text,
         });
-        console.log(`[Twilio Dashboard Success] Sent to ${to}`);
+
+        console.log(`[Futuria Dashboard Success] Sent to ${to}`);
         return true;
     } catch (err: any) {
-        console.error('[Twilio Dashboard Send Error]', err);
-        throw new Error(err.message || 'Errore durante l\'invio del messaggio tramite Twilio.');
+        console.error('[Futuria Dashboard Send Error]', err);
+        throw new Error(err.message || 'Errore durante l\'invio del messaggio tramite Futuria.');
     }
 }
 
@@ -85,8 +90,8 @@ export async function POST(req: Request) {
                 return NextResponse.json({ success: false, error: 'Parametro "messageText" vuoto o mancante.' }, { status: 400 });
             }
 
-            // 1. Send via Twilio
-            await sendTwilioMessage(phone, messageText);
+            // 1. Send via Futuria
+            await sendFuturiaMessage(phone, messageText);
 
             // 2. Save in local database
             const session = await addMessage(phone, 'OUTBOUND', messageText);

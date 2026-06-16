@@ -3,7 +3,7 @@ import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { parseIdentifier, registerPasswordlessUser } from '@/lib/auth/identity';
 import { generateOtpToken } from '@/lib/auth/otp';
-import { sendSMSMessage, sendWhatsAppMessage } from '@/lib/auth/twilio';
+import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
 
 /**
  * Attivazione profilo B2C: crea l'account USER (se assente) e invia Magic Link o OTP.
@@ -49,9 +49,36 @@ export async function POST(request: Request) {
 
             let sentWhatsApp = false;
             if (user.phone) {
-                const messageText = `Gentile utente, ecco il Suo link di attivazione profilo FloreMoria (valido 15 minuti):\n\n${setupLink}`;
-                const waResult = await sendWhatsAppMessage(user.phone, messageText);
-                sentWhatsApp = waResult.ok;
+                if (isFuturiaConfigured()) {
+                    try {
+                        // Passo 1: upsert contatto impostando il magic link (senza tag)
+                        await upsertFuturiaContact({
+                            phone: user.phone,
+                            email: user.email,
+                            name: user.name || undefined,
+                            additionalCustomFields: {
+                                'contact.magic_link': setupLink,
+                            },
+                        });
+
+                        // Passo 2: upsert contatto con tag di innesco del workflow
+                        await upsertFuturiaContact({
+                            phone: user.phone,
+                            email: user.email,
+                            name: user.name || undefined,
+                            tags: ['floremoria-invia-magic-link'],
+                            additionalCustomFields: {
+                                'contact.magic_link': setupLink,
+                            },
+                        });
+                        sentWhatsApp = true;
+                    } catch (err) {
+                        console.error('[auth-register] Errore invio WhatsApp Magic Link tramite Futuria:', err);
+                    }
+                } else {
+                    console.log(`[Futuria MOCK Send Magic Link] To: ${user.phone} | Link: ${setupLink}`);
+                    sentWhatsApp = true;
+                }
             }
 
             return NextResponse.json({
@@ -76,16 +103,37 @@ export async function POST(request: Request) {
         const messageText = `Il tuo codice di attivazione profilo FloreMoria è: ${code}. Valido per 5 minuti.`;
 
         let sentMethod = 'whatsapp';
-        const waResult = await sendWhatsAppMessage(user.phone, messageText);
-        if (!waResult.ok) {
-            const smsResult = await sendSMSMessage(user.phone, messageText);
-            if (!smsResult.ok) {
+        if (isFuturiaConfigured()) {
+            try {
+                // Passo 1: upsert contatto impostando il codice OTP (senza tag)
+                await upsertFuturiaContact({
+                    phone: user.phone,
+                    email: user.email,
+                    name: user.name || undefined,
+                    additionalCustomFields: {
+                        'contact.otp_code': code,
+                    },
+                });
+
+                // Passo 2: upsert contatto con tag di innesco del workflow
+                await upsertFuturiaContact({
+                    phone: user.phone,
+                    email: user.email,
+                    name: user.name || undefined,
+                    tags: ['floremoria-invia-otp'],
+                    additionalCustomFields: {
+                        'contact.otp_code': code,
+                    },
+                });
+            } catch (err) {
+                console.error('[auth-register] Errore invio OTP tramite Futuria:', err);
                 return NextResponse.json(
                     { success: false, message: 'Impossibile inviare il codice di attivazione. Riprova più tardi.' },
                     { status: 500 }
                 );
             }
-            sentMethod = 'sms';
+        } else {
+            console.log(`[Futuria MOCK Send OTP] To: ${user.phone} | Code: ${code}`);
         }
 
         return NextResponse.json({
@@ -93,7 +141,7 @@ export async function POST(request: Request) {
             channel: 'phone',
             tempToken,
             method: sentMethod,
-            message: `Profilo attivato: codice inviato tramite ${sentMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`,
+            message: `Profilo attivato: codice inviato tramite WhatsApp.`,
         });
     } catch (error) {
         console.error('[auth-register] Errore:', error);

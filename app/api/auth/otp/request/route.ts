@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import { generateOtpToken } from '@/lib/auth/otp';
-import { sendWhatsAppMessage, sendSMSMessage } from '@/lib/auth/twilio';
 import { parseIdentifier, findOrCreatePasswordlessUser } from '@/lib/auth/identity';
+import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
 
 export async function POST(request: Request) {
     try {
@@ -50,29 +50,45 @@ export async function POST(request: Request) {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const tempToken = generateOtpToken(email, phone, code);
 
-        const messageText = `Il tuo codice di verifica FloreMoria è: ${code}. Inseriscilo nella pagina di accesso. Valido per 5 minuti.`;
+                let sentMethod = 'whatsapp';
 
-        // WhatsApp con fallback SMS.
-        let sentMethod = 'whatsapp';
-        const waResult = await sendWhatsAppMessage(phone, messageText);
+        if (isFuturiaConfigured()) {
+            try {
+                // Passo 1: upsert contatto impostando il codice (senza tag)
+                await upsertFuturiaContact({
+                    phone,
+                    email: email || undefined,
+                    name: user.name || undefined,
+                    additionalCustomFields: {
+                        'contact.otp_code': code,
+                    },
+                });
 
-        if (!waResult.ok) {
-            console.warn('[OTP] Invio WhatsApp fallito, provo fallback su SMS...');
-            const smsResult = await sendSMSMessage(phone, messageText);
-            if (!smsResult.ok) {
-                console.error('[OTP] Invio SMS fallito:', smsResult.error);
+                // Passo 2: upsert contatto con tag di innesco del workflow
+                await upsertFuturiaContact({
+                    phone,
+                    email: email || undefined,
+                    name: user.name || undefined,
+                    tags: ['floremoria-invia-otp'],
+                    additionalCustomFields: {
+                        'contact.otp_code': code,
+                    },
+                });
+            } catch (err: any) {
+                console.error('[OTP-request] Errore invio tramite Futuria:', err);
                 return NextResponse.json(
                     { success: false, message: 'Impossibile inviare il codice di verifica. Riprova più tardi.' },
                     { status: 500 }
                 );
             }
-            sentMethod = 'sms';
+        } else {
+            console.log(`[Futuria MOCK Send OTP] To: ${phone} | Code: ${code}`);
         }
 
         return NextResponse.json({
             success: true,
             tempToken,
-            message: `Ti abbiamo inviato un codice di verifica di 6 cifre tramite ${sentMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`,
+            message: `Ti abbiamo inviato un codice di verifica di 6 cifre tramite WhatsApp.`,
             method: sentMethod,
         });
     } catch (error) {

@@ -3,8 +3,8 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
-import { sendWhatsAppMessage } from '@/lib/auth/twilio';
 import { findUserByEmail, findOrderByEmail, createUserFromOrder, isProfessionalRole, linkHistoricalOrders } from '@/lib/auth/identity';
+import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
 
 export async function POST(request: Request) {
     try {
@@ -71,12 +71,39 @@ export async function POST(request: Request) {
             );
         }
 
-        // Se l'utente ha registrato un numero di telefono, inviamo il magic link anche via WhatsApp
+                // Se l'utente ha registrato un numero di telefono, inviamo il magic link anche via WhatsApp
         let sentWhatsApp = false;
         if (user.phone) {
-            const messageText = `Gentile cliente, ecco il Suo link di accesso rapido (valido per 15 minuti) per accedere alla bacheca FloreMoria e tracciare la posa degli omaggi floreali:\n\n${setupLink}`;
-            const waResult = await sendWhatsAppMessage(user.phone, messageText);
-            sentWhatsApp = waResult.ok;
+            if (isFuturiaConfigured()) {
+                try {
+                    // Passo 1: upsert contatto impostando il magic link (senza tag)
+                    await upsertFuturiaContact({
+                        phone: user.phone,
+                        email: user.email,
+                        name: user.name || undefined,
+                        additionalCustomFields: {
+                            'contact.magic_link': setupLink,
+                        },
+                    });
+
+                    // Passo 2: upsert contatto con tag di innesco del workflow
+                    await upsertFuturiaContact({
+                        phone: user.phone,
+                        email: user.email,
+                        name: user.name || undefined,
+                        tags: ['floremoria-invia-magic-link'],
+                        additionalCustomFields: {
+                            'contact.magic_link': setupLink,
+                        },
+                    });
+                    sentWhatsApp = true;
+                } catch (err) {
+                    console.error('[magic-link-request] Errore invio WhatsApp tramite Futuria:', err);
+                }
+            } else {
+                console.log(`[Futuria MOCK Send Magic Link] To: ${user.phone} | Link: ${setupLink}`);
+                sentWhatsApp = true;
+            }
         }
 
         return NextResponse.json({

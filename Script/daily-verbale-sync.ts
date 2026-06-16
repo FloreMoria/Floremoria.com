@@ -148,17 +148,13 @@ async function main(): Promise<void> {
         mdBody = readFileSync(pathGiornaliero, 'utf8');
         shortSummary = `Verbale giornaliero (${iso}).`;
     } else {
-        if (forceIso) {
-            console.error(
-                `VERBALE_FORCE_ISO=${iso}: mancano sia ${pathConsolidato} sia ${pathGiornaliero}. Creare almeno uno dei due file.`
-            );
-            process.exit(1);
-        }
         const label = italianLongDate(iso);
         mdBody = TEMPLATE(iso, label);
         writeFileSync(pathGiornaliero, mdBody, 'utf8');
         sourcePath = pathGiornaliero;
-        shortSummary = `Scaffold verbale giornaliero (${iso}) — da completare in Obsidian.`;
+        shortSummary = forceIso
+            ? `Scaffold verbale giornaliero (${iso}) — creato in rettifica VERBALE_FORCE_ISO.`
+            : `Scaffold verbale giornaliero (${iso}) — da completare in Obsidian.`;
         console.log(`Creato ${pathGiornaliero}`);
     }
 

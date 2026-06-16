@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
+import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
+import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 
 // MOCK: ID dell'utente loggato, per test fiorista (sostituire in produzione con session.user.id)
 const MOCK_FLORIST_ID = 'mock-florist-id';
@@ -48,10 +50,11 @@ export default async function OrdersPage() {
 
     let ordersData: any[] = [];
     let florists: Array<{ id: string; shopName: string; ownerName: string | null }> = [];
+    const dbErrors: string[] = [];
 
     if (hasDatabaseUrl) {
-        try {
-            ordersData = await prisma.order.findMany({
+        const ordersResult = await runDashboardQuery('orders/list', [], () =>
+            prisma.order.findMany({
                 ...ordersQuery,
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -63,20 +66,20 @@ export default async function OrdersPage() {
                         },
                     },
                 },
-            });
+            })
+        );
+        ordersData = ordersResult.data;
+        if (!ordersResult.ok) dbErrors.push(ordersResult.error);
 
-            florists = await prisma.partner.findMany({
+        const floristsResult = await runDashboardQuery('orders/florists', [], () =>
+            prisma.partner.findMany({
                 where: { deletedAt: null, isB2B: false },
                 orderBy: { shopName: 'asc' },
                 select: { id: true, shopName: true, ownerName: true },
-            });
-        } catch {
-            if (process.env.NODE_ENV === 'development') {
-                console.warn(
-                    '[FloreMoria] Dashboard Orders: DB non raggiungibile, renderizzo tabella vuota senza crash.'
-                );
-            }
-        }
+            })
+        );
+        florists = floristsResult.data;
+        if (!floristsResult.ok) dbErrors.push(floristsResult.error);
     }
 
     const displayOrders = ordersData.map((o) => ({
@@ -86,6 +89,7 @@ export default async function OrdersPage() {
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <DashboardDbAlert page="Ordini" errors={dbErrors} />
             <ClientOrdersTable
                 orders={displayOrders}
                 florists={florists}

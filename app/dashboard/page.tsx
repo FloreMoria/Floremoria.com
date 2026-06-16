@@ -6,6 +6,8 @@ import prisma from '@/lib/prisma';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { buildGa4ConsoleUrl } from '@/lib/ga4/config';
 import { fetchGa4OverviewResult } from '@/lib/ga4/fetchOverview';
+import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
+import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 
 export const revalidate = 3600;
 
@@ -26,30 +28,44 @@ export default async function AdminOverview() {
     const ga4ApiConfigured = initialGa4Overview.status !== 'config_missing';
     const ga4ConsoleUrl = buildGa4ConsoleUrl('realtime');
 
-    const orders = await prisma.order.findMany({
-        where: visibleDashboardOrdersWhere(),
-        include: {
-            items: { include: { product: true } },
-            partner: true,
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+    const ordersResult = await runDashboardQuery('overview/orders', [], () =>
+        prisma.order.findMany({
+            where: visibleDashboardOrdersWhere(),
+            include: {
+                items: { include: { product: true } },
+                partner: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+    );
 
-    const latestLogs = await prisma.floremoriaLog.findMany({
-        take: 10,
-        orderBy: { sessionDate: 'desc' },
-    });
+    const logsResult = await runDashboardQuery('overview/logs', [], () =>
+        prisma.floremoriaLog.findMany({
+            take: 10,
+            orderBy: { sessionDate: 'desc' },
+        })
+    );
+
+    const dbErrors = [
+        !ordersResult.ok ? ordersResult.error : null,
+        !logsResult.ok ? logsResult.error : null,
+    ].filter(Boolean) as string[];
 
     const csvData = loadCSV();
 
     return (
-        <AnalyticsOverviewClient
-            initialGa4Overview={initialGa4Overview}
-            ga4ApiConfigured={ga4ApiConfigured}
-            ga4ConsoleUrl={ga4ConsoleUrl}
-            initialOrders={orders as any[]}
-            csvData={csvData}
-            latestLogs={latestLogs}
-        />
+        <>
+            <div className="max-w-7xl mx-auto px-6 pt-6">
+                <DashboardDbAlert page="Overview" errors={dbErrors} />
+            </div>
+            <AnalyticsOverviewClient
+                initialGa4Overview={initialGa4Overview}
+                ga4ApiConfigured={ga4ApiConfigured}
+                ga4ConsoleUrl={ga4ConsoleUrl}
+                initialOrders={ordersResult.data as any[]}
+                csvData={csvData}
+                latestLogs={logsResult.data}
+            />
+        </>
     );
 }

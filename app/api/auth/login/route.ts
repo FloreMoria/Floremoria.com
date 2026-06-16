@@ -161,11 +161,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, message: 'Credenziali non valide' }, { status: 401 });
     } catch (error) {
         console.error('Login error:', error);
-        const isDev = process.env.NODE_ENV === 'development';
-        const message =
-            isDev && error instanceof Error && error.message.includes('system_role')
-                ? 'Database non aggiornato: esegui npx prisma migrate deploy'
-                : 'Errore interno del server';
+        const errMsg = error instanceof Error ? error.message : '';
+        const schemaDrift =
+            errMsg.includes('system_role') ||
+            errMsg.includes('UserRole') ||
+            errMsg.toLowerCase().includes('invalid input value for enum');
+        const message = schemaDrift
+            ? 'Database non aggiornato: eseguire migrate deploy sul database di produzione.'
+            : 'Errore interno del server';
         return NextResponse.json({ success: false, message }, { status: 500 });
     }
 }

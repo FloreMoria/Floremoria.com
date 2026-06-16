@@ -1,25 +1,35 @@
 import prisma from '@/lib/prisma';
 import ClientPartnersTable from './ClientPartnersTable';
+import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
+import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PartnersPage() {
-    const partners = await prisma.partner.findMany({
-        where: { deletedAt: null, isB2B: false },
-        orderBy: { shopName: 'asc' },
-        include: {
-            orders: {
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    user: true,
-                    items: { include: { product: true } }
-                }
-            }
-        }
-    });
+    const partnersResult = await runDashboardQuery('fioristi/partners', [], () =>
+        prisma.partner.findMany({
+            where: { deletedAt: null, isB2B: false },
+            orderBy: { shopName: 'asc' },
+            include: {
+                orders: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        user: true,
+                        items: { include: { product: true } },
+                    },
+                },
+            },
+        })
+    );
+
+    const partners = partnersResult.data;
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-10 pb-20 fade-in">
+            <DashboardDbAlert
+                page="Fioristi"
+                errors={!partnersResult.ok ? [partnersResult.error] : []}
+            />
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Florem Hub 2.0 (Rete Fioristi)</h1>

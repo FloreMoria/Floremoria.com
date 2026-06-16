@@ -78,3 +78,8 @@ export function getFuturiaDeceasedFieldConfig(): FuturiaDeceasedFieldConfig {
         ),
     };
 }
+
+/** Custom field Futuria per il Magic Link foto consegna (24h). */
+export function getFuturiaMagicPhotoLinkFieldKey(): string {
+    return process.env.FUTURIA_CF_MAGIC_PHOTO_LINK_KEY?.trim() || 'contact.magic_link_foto';
+}

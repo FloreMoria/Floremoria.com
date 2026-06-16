@@ -3,48 +3,7 @@
     import prisma from '@/lib/prisma';
     import { sendProofOfDeliveryNotification } from '@/lib/futuria/proofOfDelivery';
     import { revalidatePath } from 'next/cache';
-    import { writeFile } from 'fs/promises';
-    import path from 'path';
-    import { randomUUID } from 'crypto';
-    import sharp from 'sharp';
-
-    // Helper SEO per generare nomi sicuri e leggibili
-    function slugify(text: string): string {
-        return text.toString().toLowerCase()
-            .replace(/\s+/g, '-')           // Sostituisce spazi con -
-            .replace(/[^\w\-]+/g, '')       // Rimuove caratteri non parola
-            .replace(/\-\-+/g, '-')         // Sostituisce multipli - con un -
-            .replace(/^-+/, '')             // Rimuove - all'inizio
-            .replace(/-+$/, '');            // Rimuove - alla fine
-    }
-
-    // Helper SEO Visual Engine: Conversione in WebP e Naming Intelligente
-    async function processAndUploadSEOImage(file: File, type: 'before' | 'after', order: any): Promise<string> {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
-        // Estrazione metadati per SEO
-        const serviceName = order.items?.[0]?.product?.name || 'consegna-floreale';
-        const city = order.cemeteryCity || 'citta';
-        const province = order.deliveryProvince || 'provincia';
-        const orderNum = order.orderNumber || order.id.substring(0, 8);
-
-        // Generazione stringa SEO-friendly es. fiori-sulla-tomba-curno-bergamo-FF001-before.webp
-        const seoSlug = slugify(`${serviceName}-${city}-${province}-${orderNum}`);
-        const filename = `${seoSlug}-${type}.webp`;
-
-        // Compressione hardware in Next-Gen WebP via Sharp
-        const optimizedBuffer = await sharp(buffer)
-            .webp({ quality: 80 })
-            .toBuffer();
-
-        // Local storage per ora (sostituibile con Vercel Blob o S3)
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        const filepath = path.join(uploadDir, filename);
-        await writeFile(filepath, optimizedBuffer);
-
-        return `/uploads/${filename}`;
-    }
+    import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 
     export async function submitDeliveryProof(formData: FormData) {
         try {
@@ -90,12 +49,12 @@
             let photoBeforeUrl: string | null = null;
             let photoAfterUrl: string | null = null;
 
-            // Processing via Sharp e SEO Engine
+            // Processing via Sharp + Vercel Blob
             if (photoBefore && photoBefore.size > 0) {
-                photoBeforeUrl = await processAndUploadSEOImage(photoBefore, 'before', order);
+                photoBeforeUrl = await processProofImageFile(photoBefore, 'before', order, 0);
             }
             if (photoAfter && photoAfter.size > 0) {
-                photoAfterUrl = await processAndUploadSEOImage(photoAfter, 'after', order);
+                photoAfterUrl = await processProofImageFile(photoAfter, 'after', order, 0);
             }
 
             let newStatus: 'PENDING' | 'BEFORE_UPLOADED' | 'COMPLETED' = 'PENDING';
@@ -108,8 +67,16 @@
             const deliveryProof = await prisma.deliveryProof.upsert({
                 where: { orderId: order.id },
                 update: {
-                    ...(photoBeforeUrl && { photoBeforeUrl, timestampBefore: new Date() }),
-                    ...(photoAfterUrl && { photoAfterUrl, timestampAfter: new Date() }),
+                    ...(photoBeforeUrl && {
+                        photoBeforeUrl,
+                        photosBeforeUrls: [photoBeforeUrl],
+                        timestampBefore: new Date(),
+                    }),
+                    ...(photoAfterUrl && {
+                        photoAfterUrl,
+                        photosAfterUrls: [photoAfterUrl],
+                        timestampAfter: new Date(),
+                    }),
                     ...(gpsLatitude !== null && { gpsLatitude }),
                     ...(gpsLongitude !== null && { gpsLongitude }),
                     status: newStatus
@@ -119,6 +86,8 @@
                     partnerId: partnerId,
                     photoBeforeUrl: photoBeforeUrl || null,
                     photoAfterUrl: photoAfterUrl || null,
+                    photosBeforeUrls: photoBeforeUrl ? [photoBeforeUrl] : [],
+                    photosAfterUrls: photoAfterUrl ? [photoAfterUrl] : [],
                     timestampBefore: photoBeforeUrl ? new Date() : null,
                     timestampAfter: photoAfterUrl ? new Date() : null,
                     gpsLatitude: gpsLatitude,

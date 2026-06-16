@@ -412,6 +412,8 @@ model DeliveryProof {
   userId          String?
   photoBeforeUrl  String?
   photoAfterUrl   String?
+  photosBeforeUrls String[]           @default([]) @map("photos_before_urls")
+  photosAfterUrls  String[]           @default([]) @map("photos_after_urls")
   timestampBefore DateTime?
   timestampAfter  DateTime?
   gpsLatitude     Float?

@@ -288,20 +288,85 @@ export default async function UserDashboardPage({
                                                 <ImageIcon size={13} /> Testimonianza Fotografica
                                             </div>
 
-                                            {order.deliveryProof && order.deliveryProof.photoAfterUrl ? (
+                                            {order.deliveryProof &&
+                                            (order.deliveryProof.photosAfterUrls.length > 0 ||
+                                                order.deliveryProof.photoAfterUrl) ? (
                                                 <div className="space-y-4 animate-in fade-in">
-                                                    <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50 group">
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img 
-                                                            src={order.deliveryProof.photoAfterUrl} 
-                                                            alt="Foto della posa reale" 
-                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                        />
+                                                    {order.deliveryProof.photosBeforeUrls.length > 0 ? (
+                                                        <div>
+                                                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                                                Prima della posa
+                                                            </p>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {order.deliveryProof.photosBeforeUrls.map((url, i) => (
+                                                                    <a
+                                                                        key={`before-${i}`}
+                                                                        href={url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="relative aspect-square overflow-hidden rounded-xl border border-slate-200"
+                                                                    >
+                                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                        <img
+                                                                            src={url}
+                                                                            alt={`Prima ${i + 1}`}
+                                                                            className="h-full w-full object-cover"
+                                                                        />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
+
+                                                    <div>
+                                                        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                                            Dopo la posa
+                                                        </p>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {(order.deliveryProof.photosAfterUrls.length > 0
+                                                                ? order.deliveryProof.photosAfterUrls
+                                                                : order.deliveryProof.photoAfterUrl
+                                                                  ? [order.deliveryProof.photoAfterUrl]
+                                                                  : []
+                                                            ).map((url, i) => (
+                                                                <a
+                                                                    key={`after-${i}`}
+                                                                    href={url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="relative aspect-square overflow-hidden rounded-xl border border-slate-200"
+                                                                >
+                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                    <img
+                                                                        src={url}
+                                                                        alt={`Dopo ${i + 1}`}
+                                                                        className="h-full w-full object-cover"
+                                                                    />
+                                                                </a>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    
+
+                                                    {(order.latitude ?? order.deliveryProof.gpsLatitude) &&
+                                                    (order.longitude ?? order.deliveryProof.gpsLongitude) ? (
+                                                        <div className="overflow-hidden rounded-2xl border border-slate-200">
+                                                            <iframe
+                                                                title="Mappa consegna"
+                                                                className="h-40 w-full"
+                                                                loading="lazy"
+                                                                referrerPolicy="no-referrer-when-downgrade"
+                                                                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(order.longitude ?? order.deliveryProof.gpsLongitude)! - 0.005}%2C${(order.latitude ?? order.deliveryProof.gpsLatitude)! - 0.005}%2C${(order.longitude ?? order.deliveryProof.gpsLongitude)! + 0.005}%2C${(order.latitude ?? order.deliveryProof.gpsLatitude)! + 0.005}&layer=mapnik&marker=${order.latitude ?? order.deliveryProof.gpsLatitude}%2C${order.longitude ?? order.deliveryProof.gpsLongitude}`}
+                                                            />
+                                                        </div>
+                                                    ) : null}
+
                                                     <div className="flex flex-col sm:flex-row gap-2">
-                                                        <a 
-                                                            href={order.deliveryProof.photoAfterUrl}
+                                                        <a
+                                                            href={
+                                                                order.deliveryProof.photoAfterUrl ||
+                                                                order.deliveryProof.photosAfterUrls[0] ||
+                                                                '#'
+                                                            }
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-slate-200 hover:border-[#c5a880] hover:text-[#c5a880] rounded-xl text-xs font-bold transition-colors text-slate-700 bg-white"
@@ -309,8 +374,8 @@ export default async function UserDashboardPage({
                                                             <Download size={13} />
                                                             Vedi / Scarica
                                                         </a>
-                                                        <a 
-                                                            href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${order.deceasedName}: ${order.deliveryProof.photoAfterUrl}`)}`}
+                                                        <a
+                                                            href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${order.deceasedName}: ${order.deliveryProof.photoAfterUrl || order.deliveryProof.photosAfterUrls[0] || ''}`)}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-colors bg-white font-bold text-xs"

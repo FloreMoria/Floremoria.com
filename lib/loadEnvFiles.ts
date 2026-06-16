@@ -39,25 +39,25 @@ export function loadEnvFiles(cwd = process.cwd()): void {
 
 export function printDatabaseReachabilityHelp(): void {
     console.error(`
-Impossibile raggiungere PostgreSQL (errore P1001).
+Impossibile raggiungere PostgreSQL (errore P1001 o connessione rifiutata).
 
-Il tuo DATABASE_URL punta probabilmente al VPS (94.177.198.140:5432).
-Di solito quella porta NON è aperta da Internet per sicurezza.
+Stack produzione: Vercel + Neon (non VPS).
 
-Scegli UNA di queste strade:
+Controlla:
+  1. Stringa COMPLETA da Vercel → DATABASE_URL_UNPOOLED (connessione diretta Neon, non pooled).
+  2. Deve iniziare con postgresql:// e includere ?sslmode=require (Neon).
+  3. Password con caratteri speciali → URL-encode (@ → %40, ecc.).
+  4. Progetto Neon attivo (non sospeso) su console.neon.tech
 
-── A) Database locale (Docker sul Mac) ──
+Setup consigliato:
+  npx vercel env pull .env.production.local --environment=production
+  npm run db:neon:push
+
+Oppure inline (tutta la URL reale, mai "...):
+  DATABASE_URL_UNPOOLED='postgresql://…@ep-….neon.tech/neondb?sslmode=require' npm run db:neon:push
+
+Locale (Docker):
   docker compose up -d db
   DATABASE_URL="postgresql://floremoria:floremoria_pw@localhost:5432/floremoria?schema=public" npm run db:migrate:deploy
-
-── B) Migrazione SUL SERVER (consigliato per produzione) ──
-  ssh root@94.177.198.140
-  cd /var/www/floremoria
-  npx prisma migrate deploy
-
-── C) Tunnel SSH (Postgres solo in ascolto su 127.0.0.1 sul VPS) ──
-  ssh -L 5433:127.0.0.1:5432 root@94.177.198.140
-  # altro terminale:
-  DATABASE_URL="postgresql://USER:PASS@127.0.0.1:5433/floremoria?schema=public" npm run db:migrate:deploy
 `);
 }

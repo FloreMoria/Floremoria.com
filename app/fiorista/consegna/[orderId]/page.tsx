@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { evaluateFloristDeliveryAccess } from '@/lib/deliveryProof/floristAccess';
+import { evaluateFloristDeliveryAccess, isFloristTestOrder } from '@/lib/deliveryProof/floristAccess';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
 import Link from 'next/link';
 
@@ -66,7 +66,7 @@ export default async function FloristConsegnaPage({
         );
     }
 
-    if (order!.deliveryProof?.status === 'COMPLETED') {
+    if (order!.deliveryProof?.status === 'COMPLETED' && !isFloristTestOrder(order!.id)) {
         return (
             <BlockedPage
                 title="Consegna già registrata"

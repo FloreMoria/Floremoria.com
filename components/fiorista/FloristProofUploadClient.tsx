@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Camera, Loader2, MapPin, Send, Trash2 } from 'lucide-react';
 
@@ -29,6 +29,7 @@ export default function FloristProofUploadClient({
 }: Props) {
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
+    const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
@@ -39,6 +40,20 @@ export default function FloristProofUploadClient({
     const afterPreviews = useMemo(() => readFilesAsPreviews(afterFiles), [afterFiles]);
 
     const canSubmit = beforeFiles.length > 0 && afterFiles.length > 0 && !submitting;
+
+    // Permesso GPS all'apertura: niente popup invasivo al momento dell'invio.
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            (pos) =>
+                setGpsCoords({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                }),
+            () => setGpsCoords(null),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 }
+        );
+    }, []);
 
     const addFiles = useCallback((slot: Slot, incoming: FileList | null) => {
         if (!incoming?.length) return;
@@ -52,30 +67,16 @@ export default function FloristProofUploadClient({
         setter((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const requestGps = (): Promise<{ lat: number; lng: number } | null> =>
-        new Promise((resolve) => {
-            if (!navigator.geolocation) {
-                resolve(null);
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => resolve(null),
-                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
-            );
-        });
-
     const handleSubmit = async () => {
         if (!canSubmit) return;
         setSubmitting(true);
         setError(null);
         try {
-            const gps = await requestGps();
             const form = new FormData();
             form.append('orderId', orderId);
-            if (gps) {
-                form.append('gpsLatitude', String(gps.lat));
-                form.append('gpsLongitude', String(gps.lng));
+            if (gpsCoords) {
+                form.append('gpsLatitude', String(gpsCoords.lat));
+                form.append('gpsLongitude', String(gpsCoords.lng));
             }
             beforeFiles.forEach((f) => form.append('beforePhotos', f));
             afterFiles.forEach((f) => form.append('afterPhotos', f));
@@ -158,7 +159,10 @@ export default function FloristProofUploadClient({
 
                 <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
                     <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
-                    All&apos;invio cattureremo la posizione GPS del dispositivo per attestare la consegna sul posto.
+                    All&apos;apertura della pagina chiederemo il permesso GPS per attestare la consegna sul posto.
+                    {gpsCoords
+                        ? ' Posizione acquisita: l\'invio userà queste coordinate senza ulteriori richieste.'
+                        : ' Se non autorizzi il GPS, la consegna potrà comunque essere registrata senza mappa.'}
                 </p>
 
                 {error ? (
@@ -174,7 +178,7 @@ export default function FloristProofUploadClient({
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0f172a] py-4 text-sm font-bold text-white transition enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    {submitting ? 'Invio in corso…' : 'Invia testimonianza'}
+                    {submitting ? 'Invio in corso…' : 'Invia foto'}
                 </button>
             </div>
         </div>

@@ -77,8 +77,49 @@ async function main() {
             });
         }
     }
+    // 4) Seed Partner B2B Annunci Funebri & Credenziali di Test
+    const partnerId = 'f067beff-e351-4484-81b2-5b16bdf27801';
+    await prisma.partner.upsert({
+        where: { id: partnerId },
+        update: {
+            shopName: 'Annunci Funebri',
+            ownerName: 'Referral Partner',
+            uniqueCode: 'ANNUNCI_FUNEBRI',
+            isActive: true,
+        },
+        create: {
+            id: partnerId,
+            shopName: 'Annunci Funebri',
+            ownerName: 'Referral Partner',
+            uniqueCode: 'ANNUNCI_FUNEBRI',
+            address: 'Milano',
+            province: 'MI',
+            whatsappNumber: '393111111111',
+            isActive: true,
+        },
+    });
 
-    console.log(`Database seeded successfully with ${catalogProducts.length} products.`);
+    const testPublicId = 'fmp_test_annuncifunebri_2026';
+    const testSecretPlain = 'fms_test_secret_af_99';
+    const { hashPartnerApiSecret } = require('../lib/partnerApiSecret');
+    const secretHash = hashPartnerApiSecret(testSecretPlain);
+
+    await prisma.partnerApiCredential.upsert({
+        where: { publicId: testPublicId },
+        update: {
+            partnerId,
+            isActive: true,
+        },
+        create: {
+            partnerId,
+            label: 'Test Annunci Funebri',
+            publicId: testPublicId,
+            secretHash,
+            isActive: true,
+        },
+    });
+
+    console.log(`Database seeded successfully with ${catalogProducts.length} products and B2B credentials.`);
 }
 
 main()

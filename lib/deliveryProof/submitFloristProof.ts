@@ -38,6 +38,7 @@ export async function submitFloristDeliveryProof(
             partner: true,
             items: { include: { product: true } },
             deliveryProof: true,
+            deceasedProfile: true,
         },
     });
 

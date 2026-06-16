@@ -40,8 +40,10 @@ export default async function UserDashboardPage({
         redirect('/login?error=user_not_found');
     }
 
-    const showFinancialDetails = isDashboardAdminRole(user.systemRole);
-    const showGpsMap = showFinancialDetails;
+    const isAdminView = isDashboardAdminRole(user.systemRole);
+    const showFinancialDetails = isAdminView;
+    const showGpsMap = isAdminView;
+    const showAdminUpload = isAdminView;
 
     try {
         await prisma.order.updateMany({
@@ -53,7 +55,7 @@ export default async function UserDashboardPage({
     }
 
     const orders = await prisma.order.findMany({
-        where: { userId: user.id },
+        where: isAdminView ? { deletedAt: null } : { userId: user.id },
         include: {
             items: { include: { product: true } },
             deliveryProof: true,
@@ -167,7 +169,7 @@ export default async function UserDashboardPage({
                                             highlight={highlight}
                                             showFinancialDetails={showFinancialDetails}
                                             showGpsMap={showGpsMap}
-                                            showAdminUpload={showFinancialDetails}
+                                            showAdminUpload={showAdminUpload}
                                         />
                                     ))}
                                 </div>

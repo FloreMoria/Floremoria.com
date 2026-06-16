@@ -4,12 +4,22 @@ import sharp from 'sharp';
 function slugify(text: string): string {
     return text
         .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^\w-]+/g, '')
         .replace(/-+/g, '-')
         .replace(/^-+/, '')
         .replace(/-+$/, '');
+}
+
+/** Data consegna in formato CEO: gg-mm-aaaa (es. 16-06-2026). */
+function formatDeliveryDate(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 function getBlobToken(): string {
@@ -24,10 +34,8 @@ function getBlobToken(): string {
 
 type OrderMeta = {
     id: string;
-    orderNumber?: string | null;
-    cemeteryCity?: string | null;
-    deliveryProvince?: string | null;
-    items?: Array<{ product?: { name?: string | null } | null }>;
+    deceasedName?: string | null;
+    deceasedProfile?: { fullName?: string | null } | null;
 };
 
 /**
@@ -35,18 +43,17 @@ type OrderMeta = {
  */
 export async function processProofImageFile(
     file: File,
-    slot: 'before' | 'after',
+    _slot: 'before' | 'after',
     order: OrderMeta,
-    index: number
+    _index: number
 ): Promise<string> {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const serviceName = order.items?.[0]?.product?.name || 'consegna-floreale';
-    const city = order.cemeteryCity || 'citta';
-    const province = order.deliveryProvince || 'prov';
-    const orderNum = order.orderNumber || order.id.substring(0, 8);
-    const seoSlug = slugify(`${serviceName}-${city}-${province}-${orderNum}`);
-    const filename = `${seoSlug}-${slot}-${index + 1}.webp`;
+    const deceasedFullName =
+        order.deceasedProfile?.fullName?.trim() || order.deceasedName?.trim() || 'defunto';
+    const deceasedSlug = slugify(deceasedFullName) || 'defunto';
+    const deliveryDate = formatDeliveryDate(new Date());
+    const filename = `${deceasedSlug}-${deliveryDate}.webp`;
 
     let optimizedBuffer: Buffer;
     try {
@@ -64,7 +71,7 @@ export async function processProofImageFile(
         access: 'public',
         contentType: 'image/webp',
         token: getBlobToken(),
-        addRandomSuffix: false,
+        addRandomSuffix: true,
     });
 
     return url;

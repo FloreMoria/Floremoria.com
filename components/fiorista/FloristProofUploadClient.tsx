@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Camera, Loader2, MapPin, Send, Trash2 } from 'lucide-react';
 
 type Slot = 'before' | 'after';
@@ -12,6 +13,12 @@ type Props = {
     deceasedName: string;
     cemeteryName: string;
     cemeteryCity: string;
+    /** Layout compatto per bacheca admin (no header full-page). */
+    embedded?: boolean;
+    /** Bypass restrizioni fiorista lato API (solo admin autenticato). */
+    adminUpload?: boolean;
+    /** Dopo upload: refresh bacheca invece della schermata successo full-page. */
+    onUploadComplete?: () => void;
 };
 
 type UploadApiResponse = { ok?: boolean; error?: string };
@@ -114,7 +121,11 @@ export default function FloristProofUploadClient({
     deceasedName,
     cemeteryName,
     cemeteryCity,
+    embedded = false,
+    adminUpload = false,
+    onUploadComplete,
 }: Props) {
+    const router = useRouter();
     const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
     const [afterFiles, setAfterFiles] = useState<File[]>([]);
     const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(() =>
@@ -182,6 +193,9 @@ export default function FloristProofUploadClient({
 
             const form = new FormData();
             form.append('orderId', orderId);
+            if (adminUpload) {
+                form.append('adminBypass', '1');
+            }
             if (gpsCoords) {
                 form.append('gpsLatitude', gpsCoords.lat.toFixed(6));
                 form.append('gpsLongitude', gpsCoords.lng.toFixed(6));
@@ -197,7 +211,12 @@ export default function FloristProofUploadClient({
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'Invio non riuscito.');
             }
-            setSuccess(true);
+            if (onUploadComplete) {
+                onUploadComplete();
+            } else {
+                setSuccess(true);
+            }
+            router.refresh();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore durante l\'invio.');
         } finally {
@@ -205,7 +224,7 @@ export default function FloristProofUploadClient({
         }
     };
 
-    if (success) {
+    if (success && !embedded) {
         return (
             <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-4 text-center">
                 <div className="mb-4 text-4xl">✓</div>
@@ -213,6 +232,76 @@ export default function FloristProofUploadClient({
                 <p className="mt-2 text-sm text-slate-600">
                     Le foto sono state inviate. Il cliente riceverà il link per visualizzarle.
                 </p>
+            </div>
+        );
+    }
+
+    const uploadFields = (
+        <>
+            <PhotoSlot
+                title="Prima"
+                subtitle="Fino a 3 foto prima della posa"
+                previews={beforePreviews}
+                count={beforeFiles.length}
+                onPick={() => beforeInputRef.current?.click()}
+                onRemove={(i) => removeAt('before', i)}
+            />
+            <input
+                ref={beforeInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                className="hidden"
+                onChange={(e) => addFiles('before', e.target.files)}
+            />
+
+            <PhotoSlot
+                title="Dopo"
+                subtitle="Fino a 3 foto dopo la posa"
+                previews={afterPreviews}
+                count={afterFiles.length}
+                onPick={() => afterInputRef.current?.click()}
+                onRemove={(i) => removeAt('after', i)}
+            />
+            <input
+                ref={afterInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                className="hidden"
+                onChange={(e) => addFiles('after', e.target.files)}
+            />
+
+            <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
+                <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
+                All&apos;apertura chiederemo una sola volta il permesso di localizzazione del browser per
+                attestare la consegna sul posto.
+                {gpsCoords
+                    ? ' Posizione acquisita: l\'invio userà queste coordinate senza ulteriori richieste.'
+                    : ' Se non autorizzi la posizione, la consegna verrà registrata comunque senza mappa.'}
+            </p>
+
+            {error ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+            ) : null}
+        </>
+    );
+
+    if (embedded) {
+        return (
+            <div className="space-y-4">
+                {uploadFields}
+                <button
+                    type="button"
+                    disabled={!canSubmit}
+                    onClick={handleSubmit}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] py-3 text-sm font-bold text-white transition enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    {submitting ? 'Invio in corso…' : 'Invia foto alla bacheca'}
+                </button>
             </div>
         );
     }
@@ -228,56 +317,7 @@ export default function FloristProofUploadClient({
                 </p>
             </header>
 
-            <div className="space-y-6 px-4 py-6">
-                <PhotoSlot
-                    title="Prima"
-                    subtitle="Fino a 3 foto prima della posa"
-                    previews={beforePreviews}
-                    count={beforeFiles.length}
-                    onPick={() => beforeInputRef.current?.click()}
-                    onRemove={(i) => removeAt('before', i)}
-                />
-                <input
-                    ref={beforeInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => addFiles('before', e.target.files)}
-                />
-
-                <PhotoSlot
-                    title="Dopo"
-                    subtitle="Fino a 3 foto dopo la posa"
-                    previews={afterPreviews}
-                    count={afterFiles.length}
-                    onPick={() => afterInputRef.current?.click()}
-                    onRemove={(i) => removeAt('after', i)}
-                />
-                <input
-                    ref={afterInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => addFiles('after', e.target.files)}
-                />
-
-                <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
-                    <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
-                    All&apos;apertura chiederemo una sola volta il permesso di localizzazione del browser per
-                    attestare la consegna sul posto.
-                    {gpsCoords
-                        ? ' Posizione acquisita: l\'invio userà queste coordinate senza ulteriori richieste.'
-                        : ' Se non autorizzi la posizione, la consegna verrà registrata comunque senza mappa.'}
-                </p>
-
-                {error ? (
-                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-                ) : null}
-            </div>
+            <div className="space-y-6 px-4 py-6">{uploadFields}</div>
 
             <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 p-4 backdrop-blur">
                 <button

@@ -1,5 +1,6 @@
 import type { DeliveryProof, DeceasedProfile, Order, OrderItem, Product } from '@prisma/client';
 import { Calendar, Download, Heart, Image as ImageIcon, MapPin, Share2 } from 'lucide-react';
+import AdminManualProofUploadPanel from '@/components/dashboard/AdminManualProofUploadPanel';
 
 export type BachecaOrder = Order & {
     items: (OrderItem & { product: Product })[];
@@ -62,9 +63,16 @@ type OrderCardProps = {
     highlight?: string;
     showFinancialDetails: boolean;
     showGpsMap: boolean;
+    showAdminUpload: boolean;
 };
 
-export function UserBachecaOrderCard({ order, highlight, showFinancialDetails, showGpsMap }: OrderCardProps) {
+export function UserBachecaOrderCard({
+    order,
+    highlight,
+    showFinancialDetails,
+    showGpsMap,
+    showAdminUpload,
+}: OrderCardProps) {
     const status = getStatusLabel(order.status);
     const isHighlighted = highlight === order.id || highlight === order.orderNumber;
     const lat = order.latitude ?? order.deliveryProof?.gpsLatitude;
@@ -240,6 +248,16 @@ export function UserBachecaOrderCard({ order, highlight, showFinancialDetails, s
                             </p>
                         </div>
                     )}
+
+                    {showAdminUpload ? (
+                        <AdminManualProofUploadPanel
+                            orderId={order.id}
+                            orderNumber={order.orderNumber}
+                            deceasedName={order.deceasedName}
+                            cemeteryName={order.cemeteryName}
+                            cemeteryCity={order.cemeteryCity}
+                        />
+                    ) : null}
                 </div>
             </div>
         </div>

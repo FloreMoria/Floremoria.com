@@ -167,6 +167,7 @@ export default async function UserDashboardPage({
                                             highlight={highlight}
                                             showFinancialDetails={showFinancialDetails}
                                             showGpsMap={showGpsMap}
+                                            showAdminUpload={showFinancialDetails}
                                         />
                                     ))}
                                 </div>

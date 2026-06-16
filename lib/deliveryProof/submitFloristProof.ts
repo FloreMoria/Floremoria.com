@@ -129,6 +129,9 @@ export async function submitFloristDeliveryProof(
     revalidatePath('/dashboard/user');
     revalidatePath('/dashboard');
     revalidatePath(`/fiorista/consegna/${order.id}`);
+    if (order.orderNumber) {
+        revalidatePath(`/fiorista/consegna/${order.orderNumber}`);
+    }
 
     return { ok: true, orderId: order.id, magicLinkUrl };
 }

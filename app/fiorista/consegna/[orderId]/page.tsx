@@ -1,5 +1,4 @@
-import prisma from '@/lib/prisma';
-import { evaluateFloristDeliveryAccess, isFloristTestOrder } from '@/lib/deliveryProof/floristAccess';
+import { evaluateFloristDeliveryAccess, isFloristTestOrder, isFloristTestOrderRef } from '@/lib/deliveryProof/floristAccess';
 import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
 import Link from 'next/link';
@@ -48,7 +47,25 @@ export default async function FloristConsegnaPage({
 
     const order = await resolveOrderByPublicRef(orderRef, orderSelect);
 
-    const access = evaluateFloristDeliveryAccess(order);
+    if (!order && !isFloristTestOrderRef(orderRef)) {
+        return (
+            <BlockedPage
+                title="Ordine non trovato"
+                message="Verifica il codice ordine nel link e riprova."
+            />
+        );
+    }
+
+    if (!order) {
+        return (
+            <BlockedPage
+                title="Ordine non trovato"
+                message="L'ordine di test non è presente nel database."
+            />
+        );
+    }
+
+    const access = evaluateFloristDeliveryAccess(order, orderRef);
     if (!access.allowed) {
         if (access.reason === 'expired') {
             return (

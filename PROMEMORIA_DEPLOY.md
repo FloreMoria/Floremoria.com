@@ -55,6 +55,8 @@ Crea `/var/www/floremoria/.env` (o `.env.production`) sul VPS, **mai** committar
 | `SUPER_ADMIN_SETUP_TOKEN` | Solo per `node scripts/server-promote-super-admin.cjs` sul VPS |
 | `SUPER_ADMIN_LOGIN_PASSWORD` | Password login web Super Admin (email su /login) |
 | `ADMIN_LOGIN_PASSWORD` | Password login web Admin staff (`admin` o `staff.floremoria@gmail.com`) |
+
+**Nota Vercel:** non eseguire `prisma migrate deploy` nel `buildCommand` di Vercel se il DB di produzione è stato allineato con `db push` (storico comune su VPS). In quel caso applicare lo schema sul server con `npx prisma db push` o `migrate deploy` via SSH/tunnel, non in fase di build Vercel.
 | `FLOREMORIA_WEBHOOK_KEY` | Se usi `/api/logs/update` |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Checkout / mappe |
 | `GOOGLE_PLACES_API_KEY` / `GOOGLE_PLACE_ID` | Recensioni / Places |

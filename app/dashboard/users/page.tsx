@@ -14,6 +14,7 @@ export default async function UsersPage() {
             include: {
                 items: { include: { product: true } },
                 user: true,
+                deliveryProof: true,
             },
         })
     );

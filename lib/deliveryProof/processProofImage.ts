@@ -1,26 +1,6 @@
 import { put } from '@vercel/blob';
-import sharp from 'sharp';
-
-function slugify(text: string): string {
-    return text
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/-+/g, '-')
-        .replace(/^-+/, '')
-        .replace(/-+$/, '');
-}
-
-/** Data consegna in formato CEO: gg-mm-aaaa (es. 16-06-2026). */
-function formatDeliveryDate(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-}
+import { buildElegantProofFilename, slugifyProofName } from '@/lib/deliveryProof/proofFilenames';
+import { normalizeProofImageBuffer } from '@/lib/deliveryProof/imagePipeline';
 
 function getBlobToken(): string {
     const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -39,7 +19,7 @@ type OrderMeta = {
 };
 
 /**
- * Ottimizza in WebP via Sharp (rotazione EXIF automatica) e carica su Vercel Blob.
+ * Ottimizza in WebP via Sharp (rotazione EXIF + strip orientamento) e carica su Vercel Blob.
  */
 export async function processProofImageFile(
     file: File,
@@ -51,16 +31,11 @@ export async function processProofImageFile(
     const buffer = Buffer.from(bytes);
     const deceasedFullName =
         order.deceasedProfile?.fullName?.trim() || order.deceasedName?.trim() || 'defunto';
-    const deceasedSlug = slugify(deceasedFullName) || 'defunto';
-    const deliveryDate = formatDeliveryDate(new Date());
-    const filename = `${deceasedSlug}-${deliveryDate}.webp`;
+    const filename = buildElegantProofFilename(deceasedFullName);
 
     let optimizedBuffer: Buffer;
     try {
-        optimizedBuffer = await sharp(buffer, { failOn: 'none' })
-            .rotate()
-            .webp({ quality: 80 })
-            .toBuffer();
+        optimizedBuffer = await normalizeProofImageBuffer(buffer);
     } catch (err) {
         console.error('[processProofImage] Sharp conversion failed:', err);
         throw new Error('Impossibile elaborare una o più foto. Riprova con un formato immagine standard.');
@@ -76,3 +51,5 @@ export async function processProofImageFile(
 
     return url;
 }
+
+export { slugifyProofName, buildElegantProofFilename };

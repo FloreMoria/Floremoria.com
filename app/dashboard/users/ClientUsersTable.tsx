@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Phone, Calendar, Mail, Camera, Edit2 } from 'lucide-react';
-import Image from 'next/image';
+import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
+import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 const formatITDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -356,22 +357,18 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                                     </form>
                                                 </div>
                                                 
-                                                <div className="lg:w-[380px] shrink-0 bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col items-center text-center">
-                                                    <div className="flex items-center gap-2 mb-4 w-full justify-center">
-                                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100">Prove Visive Custodite</span>
-                                                    </div>
-                                                    {order.photos && order.photos.length > 0 ? (
-                                                        <div className="flex gap-4 w-full overflow-x-auto pb-2 snap-x">
-                                                            {order.photos.map((photo: string, idx: number) => (
-                                                                <img key={idx} src={photo} alt="Memoria Visiva" className="w-32 h-32 object-cover rounded-xl border-2 border-white shadow-md shrink-0 snap-center transition-transform hover:scale-105 cursor-zoom-in" />
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-sm text-gray-400 flex flex-col items-center justify-center p-6 gap-2 bg-white rounded-xl w-full border border-dashed border-gray-200">
-                                                            <ImageIcon className="w-8 h-8 opacity-20 mb-1" />
-                                                            <span>Foto in attesa dal fiorista</span>
-                                                        </div>
-                                                    )}
+                                                <div className="lg:w-[420px] shrink-0 bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col items-stretch">
+                                                    <CustodiedProofGallery
+                                                        orderId={order.id}
+                                                        deceasedName={order.deceasedName}
+                                                        initialBefore={getOrderProofPhotos(order).before}
+                                                        initialAfter={getOrderProofPhotos(order).after}
+                                                        lat={order.latitude ?? order.deliveryProof?.gpsLatitude}
+                                                        lng={order.longitude ?? order.deliveryProof?.gpsLongitude}
+                                                        isAdmin
+                                                        showGpsMap
+                                                        compact
+                                                    />
                                                 </div>
                                             </div>
                                         </div>

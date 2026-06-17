@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
+import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { sendOrderWelcomeWhatsApp } from '@/lib/whatsapp/orderNotify';
 
 export const runtime = 'nodejs';
@@ -98,6 +99,10 @@ export async function POST(request: Request) {
     if (isFirstPaidTransition) {
         await sendOrderWelcomeWhatsApp(order).catch((waErr) => {
             console.error('[stripe-webhook] Benvenuto WhatsApp fallito (non bloccante):', waErr);
+        });
+
+        await autoAssignKnownTombOrder(orderId).catch((autoErr) => {
+            console.error('[stripe-webhook] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
         });
     }
 

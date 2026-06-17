@@ -6,6 +6,7 @@ import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
 import { generatePartnerTunnelOrderNumber } from '@/lib/partnerV1OrderNumber';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderStaffHtml } from '@/lib/orderEmails';
+import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 
 export const runtime = 'nodejs';
 
@@ -291,6 +292,12 @@ export async function POST(request: Request) {
             await touchPartnerCredentialLastUsed(auth.credentialId);
         } catch (touchErr) {
             console.error('[B2B Partner API] touchPartnerCredentialLastUsed failed (non-blocking):', touchErr);
+        }
+
+        if (partnerAlreadyPaid) {
+            await autoAssignKnownTombOrder(order.id).catch((autoErr) => {
+                console.error('[B2B Partner API] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
+            });
         }
 
         return NextResponse.json(

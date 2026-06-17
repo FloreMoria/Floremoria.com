@@ -83,3 +83,19 @@ export function getFuturiaDeceasedFieldConfig(): FuturiaDeceasedFieldConfig {
 export function getFuturiaMagicPhotoLinkFieldKey(): string {
     return process.env.FUTURIA_CF_MAGIC_PHOTO_LINK_KEY?.trim() || 'contact.magic_link_foto';
 }
+
+/** Custom field Futuria con URL mini-app consegna fiorista (codice parlante). */
+export function getFuturiaFloristDeliveryLinkFieldKey(): string {
+    return (
+        process.env.FUTURIA_CF_FLORIST_DELIVERY_LINK_KEY?.trim() ||
+        'contact.link_mini_app_consegna'
+    );
+}
+
+/** Tag workflow Futuria che invia WhatsApp al fiorista con link consegna. */
+export function getFuturiaFloristDeliveryLinkTag(): string {
+    return (
+        process.env.FUTURIA_TAG_FLORIST_DELIVERY_LINK?.trim() ||
+        'floremoria-invia-link-consegna-fiorista'
+    );
+}

@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
+import { shouldNotifyFloristDeliveryLink } from '@/lib/futuria/floristDeliveryLinkNotify';
+import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
 export async function PUT(request: Request, context: any) {
     try {
         const { id } = await context.params;
         const body = await request.json();
+
+        const previousOrder = await prisma.order.findUnique({
+            where: { id },
+            select: { status: true, partnerId: true },
+        });
 
         // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
         const safeData: any = {};
@@ -61,6 +68,16 @@ export async function PUT(request: Request, context: any) {
             where: { id },
             data: safeData
         });
+
+        const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
+        if (
+            nextStatus &&
+            shouldNotifyFloristDeliveryLink(previousOrder?.status, nextStatus)
+        ) {
+            void notifyFloristDeliveryLinkForOrder(id).catch((err) => {
+                console.error('[orders-put] Invio link consegna fiorista Futuria fallito (non bloccante):', err);
+            });
+        }
 
         if (body.partnerId && isFuturiaConfigured()) {
             // Esegui in background senza bloccare la risposta HTTP

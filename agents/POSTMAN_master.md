@@ -1,6 +1,5 @@
             FLOREM ORIA                                                                             ITALIA
 
-
                                                                                  Como, 11 marzo 2026
 
 Protocollo Master per POSTMAN
@@ -46,24 +45,15 @@ DEVIN (Tecnico): "Salvatore, ho appena aggiornato il file
 DEVELOPER_LOG.md con le specifiche di POSTMAN. Ecco i nuovi parametri
 tecnici inseriti:"
 
-\[CORE-COMM\] \> - Protocollo: REST API / Webhooks / SMTP.
+\[CORECOMM\] \> - Protocollo: REST API / Webhooks / SMTP.
 
-           Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                     assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-• Integrazioni Standard: Stripe (Eventi), WhatsApp (Twilio/Official
+           • Integrazioni Standard: Stripe (Eventi), WhatsApp (Twilio/Official
 API), Email (Mailgun).
 
-• Security Layer: HMAC Signature Verification + IP Allow-listing.
+• Security Layer: HMAC Signature Verification + IP Allowlisting.
 
 • Agent Handshake: POSTMAN riceve il trigger da Petra → Richiede il
 payload a Devin → Richiede il copy a Axel → Barbara valida la conformità
 → POSTMAN esegue l'invio.
 
-FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
-04188260139
-
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-
+         

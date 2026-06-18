@@ -1,6 +1,5 @@
          FLOREM ORIA                                                                             ITALIA
 
-
                                                                             Como, 10 marzo 2025
 
 MANUALE OPERATIVO CUSTOMER CARE, CUSTOMER SUCCESS E GESTIONE DELLE CRISI
@@ -9,7 +8,7 @@ Protocollo professionale per servizi ad alto impatto emotivo (2026)
 Ruolo operativo: Customer Success Manager -- "VERA" 1. PRINCIPIO
 FONDAMENTALE Customer Success prima del Customer Care Nel Customer Care
 tradizionale l'obiettivo è rispondere ai problemi. Nel Customer Success
-moderno l'obiettivo è evitare che i problemi arrivino al clien- te.
+moderno l'obiettivo è evitare che i problemi arrivino al cliente.
 Questo principio è ancora più importante nei settori ad alto impatto
 emotivo:
 
@@ -22,7 +21,7 @@ che:
 
 qualcuno si sta occupando personalmente della sua richiesta il problema
 è compreso la soluzione è già in corso 2. EMPATIA OPERATIVA E
-DE-ESCALATION In contesti emotivi, molte richieste arrivano con:
+DEESCALATION In contesti emotivi, molte richieste arrivano con:
 
 tristezza ansia frustrazione senso di urgenza VERA deve possedere
 empatia operativa, cioè la capacità di comprendere lo stato emotivo del
@@ -31,9 +30,7 @@ Riconoscere l'emozione Prima di parlare della soluzione, riconoscere lo
 stato emotivo. Esempio: "Capisco quanto sia importante questo gesto." 2.
 Rassicurare Il cliente deve capire che qualcuno sta prendendo in carico
 il problema. Esempio: "Mi occupo personalmente di verificare la
-situazione." Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it 3. Agire Solo dopo empatia e
+situazione." 3. Agire Solo dopo empatia e
 rassicurazione si entra nella soluzione. Esempio: "Sto contattando il
 fiorista in questo momento." Evitare escalation emotive Mai rispondere
 con:
@@ -42,8 +39,8 @@ frasi difensive giustificazioni interne linguaggio tecnico Esempio da
 evitare: "Il problema dipende dal nostro fornitore." Meglio: "Verifico
 subito con il nostro fiorista e le faccio sapere." 3. SERVICE RECOVERY
 PARADOX Uno dei principi più studiati nel Customer Experience Management
-è il Service Re- covery Paradox. Quando un problema viene risolto in
-modo eccellente, la fiducia del cliente può di- ventare più forte di
+è il Service Recovery Paradox. Quando un problema viene risolto in
+modo eccellente, la fiducia del cliente può diventare più forte di
 prima. Trasformare un reclamo in fidelizzazione Passaggi operativi:
 
 risposta rapida presa di responsabilità soluzione concreta piccolo gesto
@@ -60,9 +57,7 @@ con:
 
 operations logistica fornitori locali per intercettare eventuali
 criticità prima che il cliente le scopra. Esempi di prevenzione
-Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
-floremoria@pec.it Situazioni tipiche:
+Situazioni tipiche:
 
 cimitero chiuso fiorista senza disponibilità di un fiore maltempo errore
 nella localizzazione della tomba Azione proattiva Quando emerge un
@@ -85,10 +80,7 @@ semplice e umano. Email Ideale per:
 
 spiegazioni dettagliate riepiloghi documentazione 6. AI + HUMAN TOUCH
 L'intelligenza artificiale può supportare l'assistenza, ma non deve mai
-sostituire la dimensione umana. L'AI deve servire per: Floremoria s.r.l.
-Sede centrale: Via Bellinzona, 82/B - 22100 Como \| www.floremoria.com
-assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it
-raccogliere dati del problema classificare richieste suggerire soluzioni
+sostituire la dimensione umana. L'AI deve servire per: raccogliere dati del problema classificare richieste suggerire soluzioni
 operative VERA rimane la figura che:
 
 interpreta il contesto emotivo decide il tono costruisce la risposta
@@ -112,9 +104,7 @@ risolvere internamente proteggere la relazione. 8. TONE OF VOICE
 DELL'ASSISTENZA Il linguaggio dell'assistenza deve essere:
 
 empatico semplice rispettoso umano Parole consigliate capisco
-verifichiamo Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it mi occupo grazie per averci scritto
+verifichiamo mi occupo grazie per averci scritto
 restiamo in contatto Parole da evitare ticket procedura sistema policy
 errore tecnico Frasi da evitare "Non è possibile." Meglio: "Vediamo
 insieme come possiamo risolvere." 9. TEMPI DI RISPOSTA IDEALI Nei
@@ -132,9 +122,7 @@ Elementi che generano fiducia:
 risposta personale continuità nella comunicazione attenzione ai dettagli
 12. METRICHE CUSTOMER SUCCESS Indicatori fondamentali: tempo medio
 risposta Customer Satisfaction (CSAT) Net Promoter Score (NPS)
-Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
-floremoria@pec.it tasso di reclami risolti tempo medio risoluzione
+tasso di reclami risolti tempo medio risoluzione
 problemi 13. OBIETTIVO FINALE Una Customer Success Manager eccellente
 non si limita a risolvere problemi. Costruisce fiducia duratura. Il
 cliente deve percepire che dietro il servizio esiste:
@@ -143,10 +131,4 @@ una persona attenta un team affidabile un'organizzazione responsabile.
 Quando questo accade, il Customer Care diventa qualcosa di più: diventa
 relazione.
 
-FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
-04188260139
-
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-
+        

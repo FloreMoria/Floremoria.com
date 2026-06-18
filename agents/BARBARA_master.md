@@ -1,6 +1,5 @@
           FLOREM ORIA                                                                             ITALIA
 
-
                                                                              Como, 10 marzo 2025
 
 REPORT STRATEGICO
@@ -46,10 +45,7 @@ BARBARA è una professionista:
 
 La sua filosofia è semplice:
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-il diritto deve aiutare il business a funzionare.
+         il diritto deve aiutare il business a funzionare.
 
 2.  LEGAL DESIGN
 
@@ -96,10 +92,7 @@ Titolo chiaro
 
 "Sostituzione dei fiori"
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-Spiegazione semplice
+         Spiegazione semplice
 
 "In alcuni periodi dell'anno alcuni fiori potrebbero non essere
 disponibili."
@@ -142,10 +135,7 @@ condizioni meteo estreme o cimitero chiuso.
 
 4.  CONTRATTUALISTICA MARKETPLACE
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-    Rapporti con i fioristi
+          Rapporti con i fioristi
 
 FloreMoria opera come piattaforma marketplace.
 
@@ -184,9 +174,7 @@ penale economica possibile esclusione dalla rete.
 
 Gli SLA (Service Level Agreement) definiscono gli standard operativi.
 
-esempi di SLA Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it tempo massimo consegna qualità bouquet
+esempi di SLA tempo massimo consegna qualità bouquet
 qualità fotografia rispetto istruzioni cliente.
 
 sistema di penalità
@@ -220,10 +208,7 @@ foto di consegna
 
 immagini della tomba con i fiori.
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-9. DATI DEI DEFUNTI
+         9. DATI DEI DEFUNTI
 
 Nel diritto europeo i dati dei defunti non sono considerati dati
 personali.
@@ -261,9 +246,7 @@ regole operative
 foto limitate alla tomba evitare persone riconoscibili archiviazione
 sicura.
 
-12. PROBLEM SOLVING LEGALE Floremoria s.r.l. Sede centrale: Via
-    Bellinzona, 82/B - 22100 Como \| www.floremoria.com
-    assistenza@floremoria.com \| +39 3204105305 \| floremoria@pec.it Il
+12. PROBLEM SOLVING LEGALE Il
     ruolo moderno del General Counsel non è dire:
 
 "non si può fare".
@@ -302,10 +285,7 @@ Le moderne funzioni legali utilizzano strumenti di Legal AI.
 
 piattaforme rilevanti
 
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-Harvey CoCounsel Spellbook.
+         Harvey CoCounsel Spellbook.
 
 applicazioni
 
@@ -341,10 +321,7 @@ La decisione finale resta umana.
 
 BARBARA deve mantenere due approcci differenti.
 
-          Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                    assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-con i partner
+          con i partner
 
 rigore contrattuale standard chiari penali applicabili.
 
@@ -367,10 +344,4 @@ Il diritto diventa allora ciò che dovrebbe sempre essere:
 
 uno strumento di fiducia.
 
-FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
-04188260139
-
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-
+         

@@ -416,5 +416,117 @@
       }
     ],
     "updatedAt": "2026-05-26T11:57:52.805Z"
+  },
+  "whatsapp:+393287521463": {
+    "phone": "whatsapp:+393287521463",
+    "name": "Salvatore Marsiglione",
+    "userType": "UTENTE",
+    "status": "AI_ACTIVE",
+    "welcomeSent": false,
+    "lastMessage": "Il nostro partner di Como CO, Italia ha posato i suoi fiori per onorare il ricordo di test prova.\n\nClicca qui\nhttps://floremoria.com/f/o/FT-CO-26-001/EvLq9jcW",
+    "date": "oggi",
+    "time": "11:02",
+    "initials": "63",
+    "messages": [
+      {
+        "id": "msg-3noe0i7yz",
+        "direction": "OUTBOUND",
+        "body": "Il nostro partner di Como CO, Italia ha posato i suoi fiori per onorare il ricordo di test prova.\n\nClicca qui\nhttps://floremoria.com/f/o/FT-CO-26-001/EvLq9jcW",
+        "metadata": {
+          "eventType": "PROOF_OF_DELIVERY",
+          "orderId": "cmp1dbqhv00018ov226yexyka",
+          "orderNumber": "FT-CO-26-001"
+        },
+        "timestamp": "18:44",
+        "createdAt": "2026-06-13T16:44:45.918Z"
+      },
+      {
+        "id": "msg-a6s4m4ont",
+        "direction": "OUTBOUND",
+        "body": "Il nostro partner di Como CO, Italia ha posato i suoi fiori per onorare il ricordo di test prova.\n\nClicca qui\nhttps://floremoria.com/f/o/FT-CO-26-001/EvLq9jcW",
+        "metadata": {
+          "eventType": "PROOF_OF_DELIVERY",
+          "orderId": "cmp1dbqhv00018ov226yexyka",
+          "orderNumber": "FT-CO-26-001"
+        },
+        "timestamp": "11:02",
+        "createdAt": "2026-06-14T09:02:23.250Z"
+      }
+    ],
+    "updatedAt": "2026-06-14T09:02:23.285Z"
+  },
+  "whatsapp:+393204105305": {
+    "phone": "whatsapp:+393204105305",
+    "name": "Salvatore Marsiglione",
+    "userType": "UTENTE",
+    "status": "AI_ACTIVE",
+    "welcomeSent": false,
+    "lastMessage": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+    "date": "oggi",
+    "time": "12:15",
+    "initials": "05",
+    "messages": [
+      {
+        "id": "msg-2k93snghd",
+        "direction": "OUTBOUND",
+        "body": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+        "metadata": {
+          "eventType": "ORDER_WELCOME",
+          "orderId": "test-order-id-12345",
+          "orderNumber": "FT-CO-26-999"
+        },
+        "timestamp": "12:23",
+        "createdAt": "2026-06-14T10:23:54.934Z"
+      },
+      {
+        "id": "msg-jvczv4gns",
+        "direction": "OUTBOUND",
+        "body": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+        "metadata": {
+          "eventType": "ORDER_WELCOME",
+          "orderId": "test-order-id-12345",
+          "orderNumber": "FT-CO-26-999"
+        },
+        "timestamp": "12:00",
+        "createdAt": "2026-06-15T10:00:38.789Z"
+      },
+      {
+        "id": "msg-9e4mce8fq",
+        "direction": "OUTBOUND",
+        "body": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+        "metadata": {
+          "eventType": "ORDER_WELCOME",
+          "orderId": "test-order-id-12345",
+          "orderNumber": "FT-CO-26-999"
+        },
+        "timestamp": "12:01",
+        "createdAt": "2026-06-15T10:01:00.275Z"
+      },
+      {
+        "id": "msg-37h24qo69",
+        "direction": "OUTBOUND",
+        "body": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+        "metadata": {
+          "eventType": "ORDER_WELCOME",
+          "orderId": "test-order-id-12345",
+          "orderNumber": "FT-CO-26-999"
+        },
+        "timestamp": "12:05",
+        "createdAt": "2026-06-15T10:05:20.148Z"
+      },
+      {
+        "id": "msg-5qfjxx5mt",
+        "direction": "OUTBOUND",
+        "body": "Gentile Salvatore Marsiglione, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di Ermelinda Rossi. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹",
+        "metadata": {
+          "eventType": "ORDER_WELCOME",
+          "orderId": "test-order-id-12345",
+          "orderNumber": "FT-CO-26-999"
+        },
+        "timestamp": "12:15",
+        "createdAt": "2026-06-15T10:15:58.635Z"
+      }
+    ],
+    "updatedAt": "2026-06-15T10:15:58.653Z"
   }
 }

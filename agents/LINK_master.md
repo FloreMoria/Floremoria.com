@@ -1,6 +1,5 @@
              FLOREM ORIA                                                                          ITALIA
 
-
                                                                                Como, 11 marzo 2026
 
 Protocollo Master per LINK
@@ -40,10 +39,4 @@ Mansioni Operative (Il Flusso di LINK)
 Comando di Sistema per l'Attivazione: "LINK, scansiona questo URL ed
 estrai i dati per la Task Force."
 
-FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
-04188260139
-
-         Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                   assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-
+         

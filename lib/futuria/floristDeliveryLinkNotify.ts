@@ -1,13 +1,20 @@
 /**
- * Futuria: upsert contatto fiorista + custom field link mini-app + tag workflow WhatsApp.
- * Pattern doppio passaggio (come magic photo): dati → tag `floremoria-invia-link-consegna-fiorista`.
+ * Notifica link mini-app consegna al fiorista via Futuria.
+ *
+ * Modalità default `workflow` (come benvenuto utente e foto consegna):
+ * upsert contatto + custom field → tag trigger → workflow Futuria invia WhatsApp.
+ *
+ * Modalità `api` (env FUTURIA_FLORIST_DELIVERY_SEND_MODE=api): invio diretto API Futuria,
+ * senza workflow/tag trigger — utile se il builder Futuria non espone Send WhatsApp nativo.
  */
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { isFuturiaConfigured, normalizeFuturiaPhone, upsertFuturiaContact } from './client';
 import {
     getFuturiaFloristDeliveryLinkFieldKey,
     getFuturiaFloristDeliveryLinkTag,
+    getFuturiaFloristDeliverySendMode,
 } from './config';
+import { sendFloristDeliveryLinkWhatsApp } from './sendFloristDeliveryLinkWhatsApp';
 
 export interface FloristDeliveryLinkNotifyInput {
     orderId: string;
@@ -24,7 +31,7 @@ export interface FloristDeliveryLinkNotifyInput {
 }
 
 export type FloristDeliveryLinkNotifyResult =
-    | { ok: true; contactId: string; deliveryUrl: string }
+    | { ok: true; contactId: string; deliveryUrl: string; channel: 'workflow' | 'api' }
     | { ok: false; skipped: string };
 
 /** Stati ordine che innescano l'invio del link consegna al fiorista (ASSEGNATO / IN CONSEGNA). */
@@ -59,6 +66,9 @@ export async function sendFloristDeliveryLinkToFuturia(
     const linkFieldKey = getFuturiaFloristDeliveryLinkFieldKey();
     const workflowTag = getFuturiaFloristDeliveryLinkTag();
     const partnerName = input.partnerShopName || input.partnerOwnerName;
+    const deliveryDateLabel = input.deliveryDate
+        ? input.deliveryDate.toLocaleDateString('it-IT')
+        : 'Da programmare';
 
     const contactId = await upsertFuturiaContact({
         phone,
@@ -73,12 +83,48 @@ export async function sendFloristDeliveryLinkToFuturia(
             'contact.comune_cimitero': input.cemeteryCity,
             'contact.cimitero': input.cemeteryName || 'Non specificato',
             'contact.posizione_tomba': input.gravePosition || 'Non specificata',
-            'contact.data_consegna': input.deliveryDate
-                ? input.deliveryDate.toLocaleDateString('it-IT')
-                : 'Da programmare',
+            'contact.data_consegna': deliveryDateLabel,
         },
     });
 
+    const sendMode = getFuturiaFloristDeliverySendMode();
+
+    if (sendMode === 'api') {
+        const sendResult = await sendFloristDeliveryLinkWhatsApp({
+            contactId,
+            phone,
+            codice_ordine: input.orderNumber || input.orderId.slice(0, 8),
+            nome_defunto: input.deceasedName,
+            cimitero: input.cemeteryName || 'Non specificato',
+            comune_cimitero: input.cemeteryCity,
+            posizione_tomba: input.gravePosition || 'Non specificata',
+            data_consegna: deliveryDateLabel,
+            link_mini_app_consegna: deliveryUrl,
+        });
+
+        if (!sendResult.ok) {
+            console.error(
+                `[florist-delivery-link] Invio API fallito ordine ${input.orderNumber || input.orderId}:`,
+                'skipped' in sendResult ? sendResult.skipped : 'unknown',
+                'deliveryError' in sendResult ? sendResult.deliveryError : ''
+            );
+            return { ok: false, skipped: sendResult.skipped };
+        }
+
+        await upsertFuturiaContact({
+            phone,
+            name: partnerName,
+            tags: ['floremoria-link-inviato'],
+        });
+
+        console.info(
+            `[florist-delivery-link] WhatsApp API OK contact=${contactId} order=${input.orderNumber || input.orderId} url=${deliveryUrl}`
+        );
+
+        return { ok: true, contactId, deliveryUrl, channel: 'api' };
+    }
+
+    // Stesso pattern di benvenuto utente / foto consegna: tag → workflow Futuria
     await upsertFuturiaContact({
         phone,
         name: partnerName,
@@ -86,8 +132,8 @@ export async function sendFloristDeliveryLinkToFuturia(
     });
 
     console.info(
-        `[florist-delivery-link] Futuria OK contact=${contactId} order=${input.orderNumber || input.orderId} url=${deliveryUrl}`
+        `[florist-delivery-link] Futuria workflow trigger OK contact=${contactId} order=${input.orderNumber || input.orderId} url=${deliveryUrl}`
     );
 
-    return { ok: true, contactId, deliveryUrl };
+    return { ok: true, contactId, deliveryUrl, channel: 'workflow' };
 }

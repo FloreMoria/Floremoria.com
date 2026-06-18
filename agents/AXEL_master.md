@@ -1,11 +1,10 @@
          FLOREM ORIA                                                                             ITALIA
 
-
                                                                             Como, 10 marzo 2025
 
 MANUALE DELLE REGOLE DI VISIBILITÀ Protocollo strategico SEO · AEO · GEO
 -- 2026 Agent AI responsabile: AXEL Missione: garantire la massima
-visibilità organica per FloreMoria nei motori di ricer- ca tradizionali
+visibilità organica per FloreMoria nei motori di ricerca tradizionali
 e nei motori generativi. 1. LA NUOVA ERA DELLA RICERCA Dal 2024 in poi
 il panorama della ricerca è cambiato radicalmente. Non esiste più solo
 la Search Engine Optimization (SEO). Oggi la visibilità dipende da tre
@@ -26,9 +25,7 @@ ricerca costruzione di contenuti utili anticipazione delle domande degli
 utenti Quando queste due dimensioni lavorano insieme nasce la visibilità
 dominante. 3. GEO -- GENERATIVE ENGINE OPTIMIZATION I motori generativi
 non funzionano come i motori di ricerca tradizionali. Non restituiscono
-semplici link. Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it Producono risposte sintetizzate basate
+semplici link. Producono risposte sintetizzate basate
 su fonti considerate autorevoli. Per essere citati bisogna soddisfare
 tre criteri:
 
@@ -39,7 +36,7 @@ in modo che l'AI possa:
 capire il contesto estrarre le informazioni citarle facilmente Struttura
 consigliata: titolo chiaro paragrafo esplicativo sezioni con sottotitoli
 liste strutturate. Information Gain Le AI privilegiano contenuti che
-aggiungono informazioni nuove rispetto al web esi- stente. Questo
+aggiungono informazioni nuove rispetto al web esistente. Questo
 significa:
 
 spiegazioni più complete esempi concreti dati originali prospettive non
@@ -55,10 +52,7 @@ definizioni spiegazioni FAQ Struttura ideale per AEO Domanda Risposta
 sintetica Approfondimento. Esempio: Domanda "È possibile far portare
 fiori su una tomba da lontano?" Risposta
 
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-Sì. Alcuni servizi permettono di ordinare online e far consegnare i
+        Sì. Alcuni servizi permettono di ordinare online e far consegnare i
 fiori da un fiorista locale. Approfondimento descrizione del
 funzionamento. Featured Snippets Molte AI utilizzano contenuti che già
 dominano i featured snippets. Per questo motivo i contenuti devono
@@ -71,7 +65,7 @@ Esempi: fiori cimitero Milano fiori tomba Roma consegna fiori cimitero
 Napoli Strategia territoriale AXEL deve costruire pagine locali
 dedicate. Struttura ideale: pagina per città pagina per provincia pagina
 per cimitero. Dati strutturati I motori di ricerca interpretano meglio i
-contenuti quando sono presenti dati struttu- rati Schema.org. Schema
+contenuti quando sono presenti dati strutturati Schema.org. Schema
 consigliati: LocalBusiness Florist FuneralHome Product FAQPage.
 Citazioni territoriali Per rafforzare la presenza locale bisogna
 generare:
@@ -81,9 +75,7 @@ locali. 6. RIGORE TECNICO SEO La base della visibilità è la salute
 tecnica del sito. Core Web Vitals Metriche fondamentali: LCP -- Largest
 Contentful Paint velocità caricamento contenuto principale. INP --
 Interaction to Next Paint reattività dell'interfaccia. CLS -- Cumulative
-Layout Shift Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B -
-22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it stabilità visiva. Architettura del sito
+Layout Shift stabilità visiva. Architettura del sito
 Un sito ben progettato ha:
 
 struttura logica profondità limitata link interni coerenti. Ideale:
@@ -103,9 +95,7 @@ una persona cara da lontano". AXEL deve costruire cluster di contenuti
 che coprano tutti questi intenti. 8. CONTENT CLUSTER STRATEGY Un cluster
 di contenuti è formato da: pagina pilastro articoli correlati FAQ guide.
 Esempio cluster FloreMoria Pagina principale: fiori sulla tomba
-Contenuti correlati: Floremoria s.r.l. Sede centrale: Via Bellinzona,
-82/B - 22100 Como \| www.floremoria.com assistenza@floremoria.com \| +39
-3204105305 \| floremoria@pec.it come mandare fiori al cimitero da
+Contenuti correlati: come mandare fiori al cimitero da
 lontano quanto costa portare fiori su una tomba idee per ricordare un
 anniversario di morte. 9. EEAT -- IL NUOVO STANDARD Google e i motori
 generativi privilegiano contenuti che dimostrano: Experience Expertise
@@ -125,11 +115,8 @@ massivo di backlink di bassa qualità. duplicazione contenuti contenuti
 identici su più pagine. manipolazione algoritmica strategie aggressive e
 artificiali. 12. STRATEGIA DI AUTORITÀ Per dominare le risposte AI
 bisogna diventare fonte autorevole. Questo avviene tramite: contenuti di
-qualità citazioni esterne collaborazioni menzioni mediatiche. Floremoria
-s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como \|
-www.floremoria.com assistenza@floremoria.com \| +39 3204105305 \|
-floremoria@pec.it 13. METRICHE DI VISIBILITÀ AXEL deve monitorare:
-traffico organico posizionamento keyword click-through rate tempo medio
+qualità citazioni esterne collaborazioni menzioni mediatiche. 13. METRICHE DI VISIBILITÀ AXEL deve monitorare:
+traffico organico posizionamento keyword clickthrough rate tempo medio
 pagina citazioni nei motori generativi. 14. OBIETTIVO FINALE La missione
 di AXEL non è semplicemente migliorare il ranking. È trasformare
 FloreMoria in:
@@ -138,10 +125,4 @@ fonte autorevole risposta primaria riferimento nel settore. Quando SEO,
 AEO e GEO lavorano insieme, accade qualcosa di molto potente: il web non
 cerca più FloreMoria. lo raccomanda.
 
-FloreMoria s.r.l. Via Bellinzona, 82/b 22100 Como CF, R.I. e P. Iva : IT
-04188260139
-
-        Floremoria s.r.l. Sede centrale: Via Bellinzona, 82/B - 22100 Como | www.floremoria.com
-                  assistenza@floremoria.com | +39 3204105305 | floremoria@pec.it
-
-
+        

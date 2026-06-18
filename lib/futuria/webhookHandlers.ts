@@ -2,6 +2,10 @@
  * Dispatcher eventi webhook Futuria CRM → flussi FloreMoria.
  */
 import prisma from '@/lib/prisma';
+import {
+    sendFloristDeliveryLinkWhatsAppFromWebhook,
+    type FloristDeliveryLinkWebhookInput,
+} from './floristDeliveryLinkWebhook';
 import { sendProofOfDeliveryNotification, type ProofOfDeliveryInput } from './proofOfDelivery';
 
 /** Eventi riconosciuti (Futuria workflow / automazioni custom). */
@@ -97,6 +101,52 @@ export async function handleFuturiaWebhookPayload(
 
     const normalizedEvent = event?.toLowerCase().replace(/\s+/g, '_') ?? '';
     const floremAction = asString(data.floremAction) || asString(payload.floremAction);
+
+    const isFloristDeliveryLink =
+        floremAction === 'florist_delivery_link' ||
+        normalizedEvent === 'florist_delivery_link' ||
+        normalizedEvent === 'invia_link_consegna_fiorista';
+
+    if (isFloristDeliveryLink) {
+        const floristInput: FloristDeliveryLinkWebhookInput = {
+            contactId:
+                asString(data.contactId) ||
+                asString(data.contact_id) ||
+                asString(payload.contactId),
+            phone:
+                asString(data.phone) ||
+                asString(data.phoneNumber) ||
+                asString(payload.phone),
+            name: asString(data.name) || asString(payload.name),
+            codice_ordine:
+                asString(data.codice_ordine) ||
+                asString(data.orderNumber) ||
+                asString(data.order_number),
+            nome_defunto: asString(data.nome_defunto) || asString(data.deceasedName),
+            cimitero: asString(data.cimitero) || asString(data.cemeteryName),
+            comune_cimitero: asString(data.comune_cimitero) || asString(data.cemeteryCity),
+            posizione_tomba: asString(data.posizione_tomba) || asString(data.gravePosition),
+            data_consegna: asString(data.data_consegna) || asString(data.deliveryDate),
+            link_mini_app_consegna:
+                asString(data.link_mini_app_consegna) ||
+                asString(data.deliveryUrl) ||
+                asString(data.link),
+        };
+
+        const notifyResult = await sendFloristDeliveryLinkWhatsAppFromWebhook(floristInput);
+
+        return {
+            handled: true,
+            event: event ?? 'florist_delivery_link',
+            action: 'florist_delivery_link_whatsapp',
+            detail: {
+                notifyOk: notifyResult.ok,
+                skipped: 'skipped' in notifyResult ? notifyResult.skipped : undefined,
+                messageId: 'messageId' in notifyResult ? notifyResult.messageId : undefined,
+                deliveryError: 'deliveryError' in notifyResult ? notifyResult.deliveryError : undefined,
+            },
+        };
+    }
 
     const isDeliveryProof =
         (event &&

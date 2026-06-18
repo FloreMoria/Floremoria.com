@@ -99,3 +99,17 @@ export function getFuturiaFloristDeliveryLinkTag(): string {
         'floremoria-invia-link-consegna-fiorista'
     );
 }
+
+/** Template Meta opzionale per WhatsApp link consegna fiorista (invio diretto API). */
+export function getFuturiaFloristDeliveryLinkTemplateId(): string | null {
+    return process.env.FUTURIA_WHATSAPP_FLORIST_DELIVERY_TEMPLATE_ID?.trim() || null;
+}
+
+/**
+ * Come il benvenuto utente: `workflow` = solo tag → Futuria invia (default).
+ * `api` = FloreMoria invia WhatsApp via API Futuria (se il builder non ha azione nativa).
+ */
+export function getFuturiaFloristDeliverySendMode(): 'workflow' | 'api' {
+    const mode = process.env.FUTURIA_FLORIST_DELIVERY_SEND_MODE?.trim().toLowerCase();
+    return mode === 'api' ? 'api' : 'workflow';
+}

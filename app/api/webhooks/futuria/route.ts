@@ -72,7 +72,8 @@ export async function GET() {
 
 /**
  * Webhook Futuria CRM — riceve trigger HTTP POST da automazioni / messaggistica.
- * Eventi delivery proof → Magic Link + WhatsApp "Condividi con i tuoi cari".
+ * - floremAction florist_delivery_link → WhatsApp fiorista con link mini-app
+ * - delivery proof → Magic Link + WhatsApp cliente
  */
 export async function POST(request: Request) {
     try {

@@ -11,6 +11,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { runVerbalePipeline } from '../lib/verbali/verbalePipeline';
 
 function loadEnvFiles(): void {
     for (const name of ['.env', '.env.local']) {
@@ -127,6 +128,14 @@ async function main(): Promise<void> {
 
     const iso = resolveSessionISO();
     const forceIso = Boolean(process.env.VERBALE_FORCE_ISO?.trim());
+
+    // BARBARA (Second Brain) + docs/verbali → Obsidian repo
+    for (const r of runVerbalePipeline(process.cwd())) {
+        if (r.action !== 'skipped') {
+            console.log(`Pipeline (${r.iso}): ${r.action} ← ${r.sources.join(' + ')}`);
+        }
+    }
+
     const verbaliDir = resolve(process.cwd(), 'notes/obsidian/verbali');
     if (!existsSync(verbaliDir)) {
         mkdirSync(verbaliDir, { recursive: true });

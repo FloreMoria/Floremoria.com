@@ -38,8 +38,16 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Sync verbale (ieri, Europe/Rome)
+      - name: Checkout verbali BARBARA (Second Brain Sync)
+        uses: actions/checkout@v4
+        with:
+          repository: FloreMoria/Second_Brain_Sync
+          path: .barbara-sync
+          token: ${{ secrets.BARBARA_SYNC_GITHUB_TOKEN || github.token }}
+
+      - name: Sync verbale (ieri, Europe/Rome) — include pipeline BARBARA + docs
         env:
+          BARBARA_VERBALI_REPO_DIR: .barbara-sync
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CI: 'true'
         run: npm run log:verbale:daily

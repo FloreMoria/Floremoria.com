@@ -21,6 +21,8 @@
     "log:verbale-barbara-home": "tsx Script/insert-verbale-barbara-dashboard-home-maggio-2026.ts",
     "log:verbale:consolidato:2026-05-03": "tsx Script/consolidate-verbale-2026-05-03.ts",
     "log:verbale:daily": "tsx Script/daily-verbale-sync.ts",
+    "log:verbale:pipeline": "tsx Script/verbale-pipeline.ts",
+    "log:verbale:sync-docs": "tsx Script/sync-verbale-docs-to-obsidian.ts",
     "log:seed-operational": "tsx Script/seed-operational-logs.ts",
     "pdf:volantino": "node Script/export-volantino-pdf.mjs",
     "master-key": "tsx scripts/master-key.ts",

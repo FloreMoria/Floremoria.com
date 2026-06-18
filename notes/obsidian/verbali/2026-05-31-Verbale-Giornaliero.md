@@ -1,28 +1,31 @@
 ---
 date: 2026-05-31
-tipo: verbale_giornaliero_auto
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sync_sources: ["barbara:2026-05-31_PROT_015.md"]
+synced_at: 2026-06-18T13:53:36.611Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-# Verbale Operativo FloreMoria — 31 Maggio 2026
+> Pipeline automatica FloreMoria — un giorno, un verbale. Fonti: barbara:2026-05-31_PROT_015.md.
 
-**Redazione:** BARBARA / DEVIN (generazione automatica mattutina).  
-**Giornata di riferimento (chiusura):** 2026-05-31.
+# Strategia Partner — Gruppo Battistella
 
-> Scheda generata alle 08:00 (Europe/Rome) del giorno successivo. Completare le sezioni e consolidare se necessario rinominando in `2026-05-31-Verbale-Consolidato.md`.
+**Riassunto (BARBARA):** Definizione della strategia di partnership con il gruppo Battistella (rete onoranze/settore funerario).
 
-## Sezione 1 — Infrastruttura
+1. PREMESSA
+Impostazione della strategia di collaborazione con il partner Battistella per ampliare copertura e volumi nel settore funerario.
 
-- (Da compilare)
+2. ANALISI
+Valutazione del modello di collaborazione (referral / integrazione B2B), condizioni economiche e copertura territoriale; allineamento con i flussi ordini e rendicontazione partner.
 
-## Sezione 2 — Strategia
+3. CONCLUSIONE
+Linee guida della partnership definite; prossimi passi su accordo operativo e integrazione tecnica. — PROT_MAG_004.
 
-- (Da compilare)
+## Dettagli operativi
 
-## Sezione 3 — Sviluppo
-
-- (Da compilare)
-
-## Sezione 4 — Logistica
-
-- (Da compilare)
+- **Prompt Chiave:** BARBARA/VINCE — Verbale strategia partner Battistella (31/05/2026)
+- **Punti Discussi:** Modello referral/B2B; condizioni economiche; copertura territoriale.
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** Formalizzare accordo operativo e integrazione tecnica.
+- **Risultati Raggiunti:** Linee guida partnership definite.

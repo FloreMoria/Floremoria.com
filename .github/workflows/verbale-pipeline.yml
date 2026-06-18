@@ -1,0 +1,69 @@
+# Pipeline verbali: BARBARA (Second_Brain_Sync) + docs/ → Obsidian repo + DB.
+# Mac spento = OK. Antigravity continua a scrivere nel Second Brain; GitHub fa il resto.
+
+name: Verbale pipeline (BARBARA + DEVIN)
+
+on:
+  schedule:
+    # Ogni 4 ore + allineamento notturno
+    - cron: '0 */4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/verbali/**'
+  workflow_dispatch:
+
+concurrency:
+  group: verbale-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout verbali BARBARA (Second Brain Sync)
+        uses: actions/checkout@v4
+        with:
+          repository: FloreMoria/Second_Brain_Sync
+          path: .barbara-sync
+          # Se il checkout fallisce (repo privato cross-org), aggiungi secret BARBARA_SYNC_GITHUB_TOKEN (PAT read).
+          token: ${{ secrets.BARBARA_SYNC_GITHUB_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installa dipendenze
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Pipeline BARBARA + docs → Obsidian
+        env:
+          BARBARA_VERBALI_REPO_DIR: .barbara-sync
+        run: npm run log:verbale:pipeline
+
+      - name: Sync dashboard floremoria_logs (ieri, Europe/Rome)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CI: 'true'
+        run: npm run log:verbale:daily
+
+      - name: Commit e push (Obsidian + docs se modificati)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notes/obsidian/verbali/ docs/verbali/
+          if git diff --staged --quiet; then
+            echo "Verbali già allineati."
+          else
+            git commit -m "chore(verbali): pipeline BARBARA + DEVIN → Obsidian"
+            git push
+          fi

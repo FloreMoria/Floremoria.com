@@ -49,3 +49,33 @@ Se Antigravity e Cursor discutono della stessa cosa **senza** questo handoff, ha
 ## Revisione
 
 Ogni trimestre (o dopo un progetto grosso): 15 minuti — “abbiamo rispettato la tabella?” Se no, correggi processo, non aggiungere un quarto tool.
+
+---
+
+## Verbali giornalieri (BARBARA + DEVIN) — automatico
+
+**Problema risolto:** BARBARA (Antigravity/Gemini) scrive nel Second Brain; DEVIN (Cursor) scrive in `docs/verbali/`. Entrambi devono finire in Obsidian repo e dashboard **senza copia manuale**.
+
+| Chi | Dove scrive | Strumento |
+|-----|-------------|-------------|
+| **BARBARA** | Second Brain → repo GitHub `FloreMoria/Second_Brain_Sync` | Antigravity |
+| **DEVIN** | `docs/verbali/DD-MM-YYYY.md` nel repo `floremoria` | Cursor |
+| **Pipeline** | `notes/obsidian/verbali/YYYY-MM-DD-Verbale-Giornaliero.md` + `floremoria_logs` | GitHub Actions |
+
+**Flusso (Mac spento = OK):**
+
+1. BARBARA redige in Antigravity → auto-sync al repo `Second_Brain_Sync` (già attivo sul Mac).
+2. DEVIN/Cursor aggiorna `docs/verbali/` e fa push su `main`.
+3. GitHub Actions (`verbale-pipeline.yml`, ogni 4h + push su `docs/verbali/`): scarica `Second_Brain_Sync`, unisce BARBARA + DEVIN, committa Obsidian, aggiorna dashboard.
+4. Alle ~08:00 Roma: `daily-verbale.yml` chiude il giorno precedente (Regola Aurea).
+
+**Comandi locali (debug):**
+
+```bash
+npm run log:verbale:pipeline   # merge BARBARA (vault locale o .barbara-sync) + docs → Obsidian
+npm run log:verbale:daily      # + riga dashboard per ieri
+```
+
+**Secret opzionale GitHub:** `BARBARA_SYNC_GITHUB_TOKEN` (PAT read) se il checkout cross-repo di `Second_Brain_Sync` fallisce con il token predefinito.
+
+**Regola Aurea:** un giorno = un verbale in `notes/obsidian/verbali/`. Per bloccare overwrite manuale: `lock_manual: true` nel frontmatter.

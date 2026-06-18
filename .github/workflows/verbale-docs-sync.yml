@@ -1,0 +1,27 @@
+# Deprecato: sostituito da verbale-pipeline.yml (BARBARA Second Brain + docs + DB).
+# Mantenuto solo come alias manuale docs→Obsidian senza checkout Barbara.
+
+name: Verbale docs → Obsidian (legacy)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run log:verbale:sync-docs
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notes/obsidian/verbali/
+          git diff --staged --quiet || (git commit -m "chore(verbali): sync docs → Obsidian" && git push)

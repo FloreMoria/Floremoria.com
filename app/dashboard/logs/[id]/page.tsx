@@ -29,6 +29,19 @@ export default async function LogDetailPage({ params }: { params: Promise<{ id: 
         notFound();
     }
 
+    const isAssistenza =
+        log.tag?.includes('POSTMAN_ASSISTENZA') ||
+        log.tag?.includes('assistenza@floremoria.com') ||
+        log.topic?.includes('assistenza@floremoria.com') ||
+        log.shortSummary?.includes('assistenza@floremoria.com') ||
+        log.keyPrompt?.includes('assistenza@floremoria.com') ||
+        log.fullText?.includes('assistenza@floremoria.com') ||
+        log.discussedPoints?.includes('assistenza@floremoria.com');
+
+    if (isAssistenza) {
+        notFound();
+    }
+
     return (
         <div className="min-h-screen bg-white relative text-slate-900 selection:bg-fm-cta/20">
             <div className="max-w-[800px] mx-auto px-6 py-20 fade-in">

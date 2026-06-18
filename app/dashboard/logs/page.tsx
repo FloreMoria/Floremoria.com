@@ -39,7 +39,21 @@ export default async function SystemLogsPage({
     const from = resolvedParams.from?.trim() || '';
     const to = resolvedParams.to?.trim() || '';
 
-    const andClauses: Prisma.FloremoriaLogWhereInput[] = [];
+    const andClauses: Prisma.FloremoriaLogWhereInput[] = [
+        {
+            NOT: {
+                OR: [
+                    { tag: { contains: 'POSTMAN_ASSISTENZA', mode: 'insensitive' as const } },
+                    { tag: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { topic: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { shortSummary: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { keyPrompt: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { fullText: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { discussedPoints: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                ]
+            }
+        }
+    ];
 
     if (category) {
         andClauses.push({ tag: { contains: category, mode: 'insensitive' } });

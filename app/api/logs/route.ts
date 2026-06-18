@@ -11,8 +11,24 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const filter = searchParams.get('filter');
 
+        const excludeFilter = {
+            NOT: {
+                OR: [
+                    { tag: { contains: 'POSTMAN_ASSISTENZA', mode: 'insensitive' as const } },
+                    { tag: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { topic: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { shortSummary: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { keyPrompt: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { fullText: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    { discussedPoints: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                ]
+            }
+        };
+
         const latestLogs = await prisma.floremoriaLog.findMany({
-            where: filter ? { tag: { contains: filter, mode: 'insensitive' } } : {},
+            where: filter
+                ? { AND: [{ tag: { contains: filter, mode: 'insensitive' } }, excludeFilter] }
+                : excludeFilter,
             orderBy: [
                 { sessionDate: 'desc' },
                 { id: 'desc' }

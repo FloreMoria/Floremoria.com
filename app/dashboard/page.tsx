@@ -41,6 +41,19 @@ export default async function AdminOverview() {
 
     const logsResult = await runDashboardQuery('overview/logs', [], () =>
         prisma.floremoriaLog.findMany({
+            where: {
+                NOT: {
+                    OR: [
+                        { tag: { contains: 'POSTMAN_ASSISTENZA', mode: 'insensitive' as const } },
+                        { tag: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                        { topic: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                        { shortSummary: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                        { keyPrompt: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                        { fullText: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                        { discussedPoints: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
+                    ]
+                }
+            },
             take: 10,
             orderBy: { sessionDate: 'desc' },
         })

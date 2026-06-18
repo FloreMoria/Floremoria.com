@@ -2,21 +2,17 @@
 date: 2026-04-01
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
-sync_sources: ["barbara:2026-04-01_PROT_001.md"]
-synced_at: 2026-06-18T13:53:36.610Z
+sync_sources: ["barbara:2026-04-01_PROT_010.md"]
+synced_at: 2026-06-18T14:38:03.411Z
 redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Pipeline automatica FloreMoria — un giorno, un verbale. Fonti: barbara:2026-04-01_PROT_001.md.
+> Pipeline automatica FloreMoria — un giorno, un verbale. Fonti: barbara:2026-04-01_PROT_010.md.
 
 # Protocollo Omniscienza Florem (Silent Intelligence)
 
 **Riassunto (BARBARA):** Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile.
 
-1. PREMESSA
-Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile.
-
-2. ANALISI
 VERBALE DEL LEGAL & COMPLIANCE DEPT. - FLOREMORIA S.R.L.
 
 A cura di Barbara (Resp. Legale e Strategia Asset Proprietari)
@@ -37,9 +33,6 @@ La modifica ha i seguenti impatti societari:
 L'operazione segna un salto strategico: il passaggio di FloreMoria da mero intermediario di servizi ad infrastruttura di tracciamento territoriale avanzata per la cura cimiteriale.
 
 Documento siglato e archiviato.
-
-3. CONCLUSIONE
-Disposizioni ratificate e archiviate dal Legal & Compliance Dept. (Barbara) — PROT_10.
 
 ## Dettagli operativi
 

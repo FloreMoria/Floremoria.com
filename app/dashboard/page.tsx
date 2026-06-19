@@ -10,7 +10,8 @@ import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { floremoriaLogPublicWhere } from '@/lib/floremoriaLogFilters';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function loadCSV() {
     try {

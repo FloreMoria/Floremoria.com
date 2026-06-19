@@ -32,7 +32,7 @@ async function main(): Promise<void> {
     }
 
     const markdown = readFileSync(docsPath, 'utf8');
-    const response = await fetch(`${baseUrl}/api/admin/sync-verbale`, {
+    const response = await fetch(`${baseUrl}/api/logs/sync-verbale`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -1,13 +1,12 @@
 /**
- * Inserisce/aggiorna un verbale su produzione via webhook /api/logs/update (upsert se deploy recente).
- * Fallback quando Neon non è raggiungibile in locale.
+ * Inserisce un verbale su produzione via webhook /api/logs/update (endpoint già deployato).
  *
  * Uso:
  *   VERBALE_FORCE_ISO=2026-06-19 FLOREMORIA_WEBHOOK_KEY=... npm run log:verbale:push-webhook
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { loadEnvFiles } from '../lib/loadEnvFiles';
-import { docsVerbalePath } from '../lib/verbali/paths';
+import { docsVerbalePath, docsVerbaleRel } from '../lib/verbali/paths';
 
 loadEnvFiles();
 
@@ -57,7 +56,7 @@ async function main(): Promise<void> {
             key_prompt: 'BARBARA / VITO / PETRA — Consolidamento sessione e sync dashboard Neon',
             achieved_results:
                 'Verbale BARBARA sincronizzato su Obsidian e floremoria_logs (dashboard admin).',
-            source_rel: `docs/verbali/${d.toString().padStart(2, '0')}-${m.toString().padStart(2, '0')}-${y}.md`,
+            source_rel: docsVerbaleRel(iso),
         }),
     });
 

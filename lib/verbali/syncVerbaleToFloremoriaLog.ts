@@ -20,7 +20,14 @@ function italianLongDate(iso: string): string {
 }
 
 function stripYamlFrontmatter(markdown: string): string {
-    return markdown.replace(/^---[\s\S]*?---\n?/m, '').trim();
+    // Solo frontmatter YAML in testa (key: value), non le regole orizzontali --- nel corpo.
+    if (!markdown.startsWith('---\n') && !markdown.startsWith('---\r\n')) {
+        return markdown.trim();
+    }
+    const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(markdown);
+    if (!match) return markdown.trim();
+    if (!/^[\w.-]+:\s/m.test(match[1])) return markdown.trim();
+    return markdown.slice(match[0].length).trim();
 }
 
 function extractShortSummary(bodyMarkdown: string, iso: string): string {

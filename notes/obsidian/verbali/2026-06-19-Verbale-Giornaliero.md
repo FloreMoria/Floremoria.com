@@ -3,22 +3,36 @@ date: 2026-06-19
 tipo: verbale_sviluppo
 tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sync_source: docs/verbali/19-06-2026.md
-synced_at: 2026-06-19T17:57:25.414Z
+synced_at: 2026-06-19T18:50:15.649Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/19-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
-> Fonte canonica: `docs/verbali/19-06-2026.md` · [Google Docs BARBARA](https://docs.google.com/document/d/1pCmUS7L6c4PMDnIRutgd0fcTBq_ryegtfRsxTIHb3_c/edit)
-
 # Verbale di Sviluppo FloreMoria — 19 Giugno 2026
 
-**Redazione:** BARBARA / VITO / PETRA (Consolidamento Sessione Pomeridiana)  
-**Stato infrastruttura:** Database sincronizzato (Neon AWS Production) · Politica restrittiva Futuria live  
+**Redazione:** BARBARA / VITO / PETRA / DEVIN (Consolidamento Sessione)  
+**Stato infrastruttura:** Neon AWS Production · Futuria gate live · Sync verbali automatizzata (Drive + Dashboard)  
 **Fonte canonica:** [Google Docs BARBARA](https://docs.google.com/document/d/1pCmUS7L6c4PMDnIRutgd0fcTBq_ryegtfRsxTIHb3_c/edit)
 
----
+## 1. Infrastruttura — traguardi e configurazioni live
 
-## 1. Traguardi raggiunti e configurazioni live
+### Automazione sync verbali, chiavi auth e ponte Google Drive
+
+Intervento strutturale completato e deployato in produzione (**commit `e6b0de4`**):
+
+1. **Risoluzione blocco 401 sul middleware:** allineata `ADMIN_API_KEY` su Vercel Production al valore `nu0v08170` (identico a `.env.local` sul Mac). Il middleware consente ora chiamate server-to-server con header `x-admin-key` verso `/api/admin/*` e `/api/logs/sync-verbale` senza cookie Super Admin. Auth centralizzata in `lib/auth/verbaleSyncAuth.ts`.
+
+2. **Ponte automatico bidirezionale Google Drive Desktop:** attivato nel percorso  
+   `/Users/floremoria/Google Drive/Il mio Drive/FloreMoria - Verbali`  
+   con sottocartelle operative:
+   - `Ingresso-Barbara/` — ingresso Google Doc esportati .md (BARBARA / Antigravity)
+   - `Obsidian-Mirror/` — mirror pipeline verso vault Obsidian
+   - `Docs-Mirror/` — mirror `docs/verbali/DD-MM-YYYY.md`  
+   Integrazione: `lib/verbali/googleDriveBridge.ts`, setup `npm run verbali:setup-drive`, lettura in `barbaraSource.ts`, scrittura in `mirrorPaths.ts`.
+
+3. **Test connessione automatica:** `npm run verbali:verify-keys` — esito **positivo totale** su produzione (`https://www.floremoria.com`) per **`x-admin-key`** e **`x-api-key`** dopo redeploy Vercel. Push consolidato verbali: `npm run log:verbale:push-api`.
+
+Documentazione operativa: `docs/VERBALI_SYNC_SETUP.md`.
 
 ### Risoluzione definitiva dei doppioni anagrafici (fase storica e futura)
 
@@ -55,9 +69,7 @@ Correzione tecnica aggiuntiva: il filtro `NOT tag contains POSTMAN_ASSISTENZA` e
 
 ### Allineamento file di configurazione ambientale (`.env.local`)
 
-Mappata ed esplicitata la variabile `FUTURIA_TAG_CLIENTE_PAGANTE=floremoria-cliente-pagante` nel file locale del Mac, in allineamento con l'ambiente di produzione Vercel.
-
----
+Mappata ed esplicitata la variabile `FUTURIA_TAG_CLIENTE_PAGANTE=floremoria-cliente-pagante` nel file locale del Mac, in allineamento con l'ambiente di produzione Vercel. Aggiunte `FLOREMORIA_WEBHOOK_KEY`, `GOOGLE_DRIVE_VERBALI_DIR` e `VERBALI_SYNC_PRODUCTION_URL` per la pipeline verbali automatizzata.
 
 ## 2. Mappa strategica Futuria AI Workflow
 
@@ -68,26 +80,20 @@ Analizzata la documentazione interna dell'azione **Agente AI** nei workflow di F
 - L'azione premium basata su LLM resterà in modalità **OFF** per i flussi transazionali critici (es. invio link mini-app ai fioristi), gestiti in modalità deterministica tramite tag gratuiti per massima sicurezza e velocità.
 - Verrà testata in futuro come leva di marketing per il recupero lead e per i flussi empatici di **Nutrimento Parenti / Custodi del Ricordo** nelle ricorrenze annuali.
 
----
-
 ## 3. Backlog e prossimi passi (riavvio sessione successiva)
 
 - Monitoraggio sul campo dei link reali inviati ai fioristi di **Tortora** (`FT-CS-26-002`) e **Palermo** (`FT-PA-26-004`) per il caricamento delle prove visive e delle coordinate GPS delle tombe.
 - Verifica della tenuta del Contact Gate su Futuria per confermare il blocco totale delle iscrizioni estranee.
 - Template Meta link consegna fiorista e workflow `floremoria-invia-link-consegna-fiorista` (integrazione avviata 18/06, commit `0025fa8`, `f477244`, `0cdb703`).
 
----
-
 ## Agenti coinvolti
 
 | Agent | Ruolo |
 |-------|-------|
 | BARBARA | Redazione verbale, consolidamento sessione CEO |
-| VITO | Gate Futuria, segreti env, scope CRM |
+| VITO | Gate Futuria, segreti env, scope CRM, auth sync verbali |
 | PETRA | Flusso ordine → fiorista → consegna e collaudo campo |
-| DEVIN | Backend Stripe, deduplica defunti, filtri log dashboard |
+| DEVIN | Backend Stripe, deduplica defunti, pipeline verbali + Drive |
 | POSTMAN | Template WhatsApp e workflow Futuria |
 
----
-
-Sincronizzazione automatica bidirezionale completata con successo su Dashboard Admin (Log di Sistema) e nel Vault locale Obsidian nel percorso canonico `notes/obsidian/verbali/2026-06-19-Verbale-Giornaliero.md`.
+**Consolidamento 19/06/2026:** verbale definitivo rigenerato e sincronizzato su Dashboard Admin (`floremoria_logs`, log id=53 aggiornato via upsert), Obsidian (`notes/obsidian/verbali/2026-06-19-Verbale-Giornaliero.md`) e mirror Google Drive (`Obsidian-Mirror/` + `Docs-Mirror/`).

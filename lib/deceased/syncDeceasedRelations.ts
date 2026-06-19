@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { resolveDeceasedProfileForOrder } from '@/lib/deceased/deceasedProfileIdentity';
 
 /**
  * Garantisce profilo defunto + link M2M User/Partner quando un ordine viene consolidato.
@@ -18,28 +19,13 @@ export async function syncDeceasedRelationsForOrder(orderId: string): Promise<vo
     });
     if (!order) return;
 
-    let profileId = order.deceasedProfileId;
-    if (!profileId) {
-        const existing = await prisma.deceasedProfile.findFirst({
-            where: {
-                fullName: order.deceasedName,
-                cemeteryCity: order.cemeteryCity,
-            },
-            select: { id: true },
-        });
+    const profileId = await resolveDeceasedProfileForOrder({
+        deceasedName: order.deceasedName,
+        cemeteryCity: order.cemeteryCity,
+        cemeteryName: order.cemeteryName,
+    });
 
-        const profile =
-            existing ??
-            (await prisma.deceasedProfile.create({
-                data: {
-                    fullName: order.deceasedName,
-                    cemeteryCity: order.cemeteryCity,
-                    cemeteryName: order.cemeteryName,
-                },
-                select: { id: true },
-            }));
-
-        profileId = profile.id;
+    if (order.deceasedProfileId !== profileId) {
         await prisma.order.update({
             where: { id: order.id },
             data: { deceasedProfileId: profileId },

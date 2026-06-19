@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
+import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
 import { shouldNotifyFloristDeliveryLink } from '@/lib/futuria/floristDeliveryLinkNotify';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
@@ -34,10 +35,14 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         return { assigned: false, reason: 'status_not_accepted' };
     }
 
-    const candidates = await prisma.deceasedProfile.findMany({
+    const matched = await findMatchingDeceasedProfile(order.deceasedName, order.cemeteryCity);
+    if (!matched) {
+        return { assigned: false, reason: 'no_censited_tomb_with_florist' };
+    }
+
+    const profileWithFlorist = await prisma.deceasedProfile.findFirst({
         where: {
-            fullName: order.deceasedName,
-            cemeteryCity: order.cemeteryCity,
+            id: matched.id,
             partnerLinks: {
                 some: {
                     isPrimary: true,
@@ -57,20 +62,11 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         },
     });
 
-    if (candidates.length === 0) {
+    if (!profileWithFlorist) {
         return { assigned: false, reason: 'no_censited_tomb_with_florist' };
     }
 
-    let profile = candidates[0]!;
-    if (candidates.length > 1 && order.cemeteryName?.trim()) {
-        const normalizedCemetery = order.cemeteryName.trim().toLowerCase();
-        const exactMatch = candidates.find(
-            (candidate) => candidate.cemeteryName?.trim().toLowerCase() === normalizedCemetery
-        );
-        if (exactMatch) {
-            profile = exactMatch;
-        }
-    }
+    const profile = profileWithFlorist;
 
     const assignment = profile.partnerLinks[0];
     if (!assignment) {

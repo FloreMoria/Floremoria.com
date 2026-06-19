@@ -2,6 +2,12 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
+import {
+    findMatchingDeceasedProfile,
+    formatDeceasedIdentityField,
+    normalizeDeceasedIdentityField,
+    resolveDeceasedProfileForOrder,
+} from '@/lib/deceased/deceasedProfileIdentity';
 import { setDeceasedFlorist } from '@/lib/deceased/setDeceasedFlorist';
 
 /** Registra un gruppo orfano (stesso nome + cimitero) creando il DeceasedProfile e collegando gli ordini. */
@@ -27,55 +33,48 @@ export async function registerOrphanDeceasedFromSeedOrder(seedOrderId: string): 
     const siblings = await prisma.order.findMany({
         where: {
             deceasedProfileId: null,
-            deceasedName: seed.deceasedName,
-            cemeteryCity: seed.cemeteryCity,
-            cemeteryName: seed.cemeteryName,
+            cemeteryCity: { equals: seed.cemeteryCity, mode: 'insensitive' },
             ...visibleDashboardOrdersWhere(),
         },
-        select: { id: true },
+        select: { id: true, deceasedName: true, cemeteryCity: true, cemeteryName: true },
     });
 
-    let profile = await prisma.deceasedProfile.findFirst({
-        where: {
-            fullName: seed.deceasedName,
-            cemeteryCity: seed.cemeteryCity,
-        },
-        select: { id: true },
+    const seedNameKey = normalizeDeceasedIdentityField(seed.deceasedName);
+    const seedCityKey = normalizeDeceasedIdentityField(seed.cemeteryCity);
+    const matchingSiblings = siblings.filter(
+        (order) =>
+            normalizeDeceasedIdentityField(order.deceasedName) === seedNameKey &&
+            normalizeDeceasedIdentityField(order.cemeteryCity) === seedCityKey
+    );
+
+    const profileId = await resolveDeceasedProfileForOrder({
+        deceasedName: seed.deceasedName,
+        cemeteryCity: seed.cemeteryCity,
+        cemeteryName: seed.cemeteryName,
     });
 
-    if (!profile) {
-        profile = await prisma.deceasedProfile.create({
-            data: {
-                fullName: seed.deceasedName,
-                cemeteryCity: seed.cemeteryCity,
-                cemeteryName: seed.cemeteryName,
-            },
-            select: { id: true },
-        });
-    }
-
-    for (const order of siblings) {
+    for (const order of matchingSiblings) {
         await prisma.order.update({
             where: { id: order.id },
-            data: { deceasedProfileId: profile.id },
+            data: { deceasedProfileId: profileId },
         });
         await syncDeceasedRelationsForOrder(order.id);
     }
 
     const latestWithPartner = await prisma.order.findFirst({
-        where: { deceasedProfileId: profile.id, partnerId: { not: null }, deletedAt: null },
+        where: { deceasedProfileId: profileId, partnerId: { not: null }, deletedAt: null },
         orderBy: { createdAt: 'desc' },
         select: { partnerId: true },
     });
 
     if (latestWithPartner?.partnerId) {
-        await setDeceasedFlorist(profile.id, latestWithPartner.partnerId);
+        await setDeceasedFlorist(profileId, latestWithPartner.partnerId);
     }
 
     revalidatePath('/dashboard/defunti');
     revalidatePath('/dashboard/users');
 
-    return profile.id;
+    return profileId;
 }
 
 export type CreateDeceasedManualInput = {
@@ -94,11 +93,19 @@ export async function createDeceasedManual(input: CreateDeceasedManualInput): Pr
         throw new Error('Nome defunto e comune sono obbligatori.');
     }
 
+    const existing = await findMatchingDeceasedProfile(fullName, cemeteryCity);
+    if (existing) {
+        revalidatePath('/dashboard/defunti');
+        return existing.id;
+    }
+
     const profile = await prisma.deceasedProfile.create({
         data: {
-            fullName,
-            cemeteryCity,
-            cemeteryName: input.cemeteryName?.trim() || null,
+            fullName: formatDeceasedIdentityField(fullName),
+            cemeteryCity: formatDeceasedIdentityField(cemeteryCity),
+            cemeteryName: input.cemeteryName?.trim()
+                ? formatDeceasedIdentityField(input.cemeteryName)
+                : null,
             verifiedNotes: input.verifiedNotes?.trim() || null,
         },
         select: { id: true },

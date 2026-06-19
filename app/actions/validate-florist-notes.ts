@@ -2,37 +2,39 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import {
+    findMatchingDeceasedProfile,
+    resolveDeceasedProfileForOrder,
+} from '@/lib/deceased/deceasedProfileIdentity';
 
 export async function validateFloristNote(deliveryProofId: string, deceasedName: string, cemeteryCity: string, cemeteryName: string | null, validatedNotes: string) {
     try {
-        // 1. Cerca il DeceasedProfile o crealo
-        // In un caso reale potremmo dover stabilire una stringa uniqueCode migliore
         const code = `DEF-${cemeteryCity.substring(0,2).toUpperCase()}-${Date.now().toString().slice(-4)}`;
-        
-        let deceasedProfile = await prisma.deceasedProfile.findFirst({
-            where: { 
-                fullName: deceasedName,
-                cemeteryCity: cemeteryCity
-            }
-        });
+
+        let deceasedProfile = await findMatchingDeceasedProfile(deceasedName, cemeteryCity);
 
         if (!deceasedProfile) {
-            deceasedProfile = await prisma.deceasedProfile.create({
+            const profileId = await resolveDeceasedProfileForOrder({
+                deceasedName,
+                cemeteryCity,
+                cemeteryName,
+            });
+            deceasedProfile = await prisma.deceasedProfile.update({
+                where: { id: profileId },
                 data: {
                     uniqueCode: code,
-                    fullName: deceasedName,
-                    cemeteryCity: cemeteryCity,
-                    cemeteryName: cemeteryName,
-                    verifiedNotes: validatedNotes
-                }
+                    verifiedNotes: validatedNotes,
+                },
             });
         } else {
-            // Aggiorna le note validate se esiste già
             deceasedProfile = await prisma.deceasedProfile.update({
                 where: { id: deceasedProfile.id },
                 data: {
                     verifiedNotes: validatedNotes,
-                }
+                    ...(cemeteryName && !deceasedProfile.cemeteryName
+                        ? { cemeteryName }
+                        : {}),
+                },
             });
         }
 

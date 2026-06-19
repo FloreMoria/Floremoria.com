@@ -141,14 +141,17 @@ export async function sendProofOfDeliveryNotification(
         : undefined;
 
     try {
-        const contactId = await upsertFuturiaContact({
-            phone,
-            name: buyerName,
-            ...(order.buyerEmail ? { email: order.buyerEmail } : {}),
-            deceasedName,
-            orderNumber: order.orderNumber,
-            tags: ['floremoria-proof-of-delivery'],
-        });
+        const contactId = await upsertFuturiaContact(
+            {
+                phone,
+                name: buyerName,
+                ...(order.buyerEmail ? { email: order.buyerEmail } : {}),
+                deceasedName,
+                orderNumber: order.orderNumber,
+                tags: ['floremoria-proof-of-delivery'],
+            },
+            { source: 'paid_order_followup', orderId: order.orderId }
+        );
 
         // 1) Foto del fiorista (se presente)
         if (photoAttachment) {

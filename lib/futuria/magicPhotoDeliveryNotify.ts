@@ -31,22 +31,28 @@ export async function sendMagicPhotoDeliveryToFuturia(
     const magicFieldKey = getFuturiaMagicPhotoLinkFieldKey();
     const buyerName = (input.buyerFullName || 'Utente').trim();
 
-    const contactId = await upsertFuturiaContact({
-        phone,
-        name: buyerName,
-        ...(input.buyerEmail ? { email: input.buyerEmail } : {}),
-        deceasedName: input.deceasedName,
-        orderNumber: input.orderNumber,
-        additionalCustomFields: {
-            [magicFieldKey]: input.magicLinkUrl,
+    const contactId = await upsertFuturiaContact(
+        {
+            phone,
+            name: buyerName,
+            ...(input.buyerEmail ? { email: input.buyerEmail } : {}),
+            deceasedName: input.deceasedName,
+            orderNumber: input.orderNumber,
+            additionalCustomFields: {
+                [magicFieldKey]: input.magicLinkUrl,
+            },
         },
-    });
+        { source: 'paid_order_followup', orderId: input.orderId }
+    );
 
-    await upsertFuturiaContact({
-        phone,
-        name: buyerName,
-        tags: ['floremoria-invia-foto-consegna'],
-    });
+    await upsertFuturiaContact(
+        {
+            phone,
+            name: buyerName,
+            tags: ['floremoria-invia-foto-consegna'],
+        },
+        { source: 'paid_order_followup', orderId: input.orderId }
+    );
 
     console.info(
         `[magic-photo-delivery] Futuria upsert OK contact=${contactId} order=${input.orderNumber || input.orderId}`

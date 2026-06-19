@@ -3,7 +3,7 @@ import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { parseIdentifier, registerPasswordlessUser } from '@/lib/auth/identity';
 import { generateOtpToken } from '@/lib/auth/otp';
-import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
+import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 
 /**
  * Attivazione profilo B2C: crea l'account USER (se assente) e invia Magic Link o OTP.
@@ -51,8 +51,7 @@ export async function POST(request: Request) {
             if (user.phone) {
                 if (isFuturiaConfigured()) {
                     try {
-                        // Passo 1: upsert contatto impostando il magic link (senza tag)
-                        await upsertFuturiaContact({
+                        await updateFuturiaExistingContactIfPresent({
                             phone: user.phone,
                             email: user.email,
                             name: user.name || undefined,
@@ -61,8 +60,7 @@ export async function POST(request: Request) {
                             },
                         });
 
-                        // Passo 2: upsert contatto con tag di innesco del workflow
-                        await upsertFuturiaContact({
+                        const contactId = await updateFuturiaExistingContactIfPresent({
                             phone: user.phone,
                             email: user.email,
                             name: user.name || undefined,
@@ -71,7 +69,7 @@ export async function POST(request: Request) {
                                 'contact.magic_link': setupLink,
                             },
                         });
-                        sentWhatsApp = true;
+                        sentWhatsApp = Boolean(contactId);
                     } catch (err) {
                         console.error('[auth-register] Errore invio WhatsApp Magic Link tramite Futuria:', err);
                     }
@@ -105,8 +103,7 @@ export async function POST(request: Request) {
         let sentMethod = 'whatsapp';
         if (isFuturiaConfigured()) {
             try {
-                // Passo 1: upsert contatto impostando il codice OTP (senza tag)
-                await upsertFuturiaContact({
+                await updateFuturiaExistingContactIfPresent({
                     phone: user.phone,
                     email: user.email,
                     name: user.name || undefined,
@@ -115,8 +112,7 @@ export async function POST(request: Request) {
                     },
                 });
 
-                // Passo 2: upsert contatto con tag di innesco del workflow
-                await upsertFuturiaContact({
+                const contactId = await updateFuturiaExistingContactIfPresent({
                     phone: user.phone,
                     email: user.email,
                     name: user.name || undefined,
@@ -125,6 +121,12 @@ export async function POST(request: Request) {
                         'contact.otp_code': code,
                     },
                 });
+                if (!contactId) {
+                    return NextResponse.json(
+                        { success: false, message: 'Impossibile inviare il codice di attivazione. Riprova più tardi.' },
+                        { status: 500 }
+                    );
+                }
             } catch (err) {
                 console.error('[auth-register] Errore invio OTP tramite Futuria:', err);
                 return NextResponse.json(

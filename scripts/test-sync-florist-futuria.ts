@@ -74,20 +74,26 @@ async function runTwoStepTest() {
 
     try {
         console.log('\n1️⃣ Fase 1: Creazione contatto SENZA tag per registrare l\'anagrafica...');
-        const contactId = await upsertFuturiaContact({
-            ...basePayload,
-            tags: [] // Nessun tag per ora
-        });
+        const contactId = await upsertFuturiaContact(
+            {
+                ...basePayload,
+                tags: [],
+            },
+            { source: 'partner_florist' }
+        );
         console.log(`✅ Contatto creato! ID: ${contactId}`);
 
         console.log('\n⏳ Attesa di 3 secondi per la propagazione sul database del CRM...');
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
         console.log('\n2️⃣ Fase 2: Aggiornamento contatto AGGIUNGENDO il tag "Nuovo-Fiorista"...');
-        const updatedContactId = await upsertFuturiaContact({
-            ...basePayload,
-            tags: ['Nuovo-Fiorista'] // Aggiungiamo il tag per simulare l'evento Tag Added
-        });
+        const updatedContactId = await upsertFuturiaContact(
+            {
+                ...basePayload,
+                tags: ['Nuovo-Fiorista'],
+            },
+            { source: 'partner_florist' }
+        );
 
         if (updatedContactId) {
             console.log(`\n✅ Tag aggiunto con successo! ID contatto: ${updatedContactId}`);

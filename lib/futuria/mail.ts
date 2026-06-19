@@ -44,6 +44,10 @@ export async function sendViaFuturia(
 
         try {
             const contactId = await ensureFuturiaContactForRecipient(normalized);
+            if (!contactId) {
+                errors.push(`${normalized}: futuria_contact_not_found`);
+                continue;
+            }
             await sendFuturiaEmail({
                 contactId,
                 emailFrom,

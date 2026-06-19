@@ -113,3 +113,8 @@ export function getFuturiaFloristDeliverySendMode(): 'workflow' | 'api' {
     const mode = process.env.FUTURIA_FLORIST_DELIVERY_SEND_MODE?.trim().toLowerCase();
     return mode === 'api' ? 'api' : 'workflow';
 }
+
+/** Tag ufficiale: cliente verificato con acquisto pagato su FloreMoria.com. */
+export function getFuturiaClientePaganteTag(): string {
+    return process.env.FUTURIA_TAG_CLIENTE_PAGANTE?.trim() || 'floremoria-cliente-pagante';
+}

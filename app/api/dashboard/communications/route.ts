@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getChatStore, addMessage, setSessionStatus } from '@/lib/chatStore';
-import { isFuturiaConfigured, findFuturiaDuplicateContact, upsertFuturiaContact, sendFuturiaWhatsApp } from '@/lib/futuria/client';
+import { isFuturiaConfigured, findFuturiaDuplicateContact, sendFuturiaWhatsApp } from '@/lib/futuria/client';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -12,14 +12,13 @@ async function sendFuturiaMessage(to: string, text: string) {
     try {
         // 1. Cerca il contatto esistente per telefono
         let contact = await findFuturiaDuplicateContact({ phone: to });
-        let contactId = contact?.id;
+        const contactId = contact?.id;
 
-        // 2. Se non esiste, crea il contatto al volo
         if (!contactId) {
-            contactId = await upsertFuturiaContact({ phone: to });
+            throw new Error(
+                'Contatto Futuria non trovato: i messaggi dashboard sono consentiti solo verso clienti sincronizzati post-pagamento.'
+            );
         }
-
-        // 3. Invia il messaggio WhatsApp tramite Futuria
         await sendFuturiaWhatsApp({
             contactId,
             message: text,

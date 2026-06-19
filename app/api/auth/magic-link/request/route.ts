@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { findUserByEmail, findOrderByEmail, createUserFromOrder, isProfessionalRole, linkHistoricalOrders } from '@/lib/auth/identity';
-import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
+import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 
 export async function POST(request: Request) {
     try {
@@ -76,8 +76,7 @@ export async function POST(request: Request) {
         if (user.phone) {
             if (isFuturiaConfigured()) {
                 try {
-                    // Passo 1: upsert contatto impostando il magic link (senza tag)
-                    await upsertFuturiaContact({
+                    await updateFuturiaExistingContactIfPresent({
                         phone: user.phone,
                         email: user.email,
                         name: user.name || undefined,
@@ -86,8 +85,7 @@ export async function POST(request: Request) {
                         },
                     });
 
-                    // Passo 2: upsert contatto con tag di innesco del workflow
-                    await upsertFuturiaContact({
+                    const contactId = await updateFuturiaExistingContactIfPresent({
                         phone: user.phone,
                         email: user.email,
                         name: user.name || undefined,
@@ -96,7 +94,7 @@ export async function POST(request: Request) {
                             'contact.magic_link': setupLink,
                         },
                     });
-                    sentWhatsApp = true;
+                    sentWhatsApp = Boolean(contactId);
                 } catch (err) {
                     console.error('[magic-link-request] Errore invio WhatsApp tramite Futuria:', err);
                 }

@@ -12,11 +12,9 @@
  */
 import twilio from 'twilio';
 import { addMessage, updateSessionProfile } from '@/lib/chatStore';
-import prisma from '@/lib/prisma';
 import {
     isFuturiaConfigured,
     normalizeFuturiaPhone,
-    upsertFuturiaContact,
 } from '@/lib/futuria/client';
 
 /** Sottoinsieme strutturale dei campi Order necessari: disaccoppia dal tipo Prisma completo. */
@@ -84,15 +82,15 @@ async function logToDashboard(toAddress: string, name: string, text: string, ord
  * Invia il messaggio di benvenuto post-ordine. Idempotenza garantita dal chiamante
  * (webhook Stripe, solo alla prima transizione a PAID).
  * 
- * Se Futuria è configurato, esegue l'upsert del contatto su Futuria con il tag 'floremoria-nuovo-ordine'
- * e il tag dello storico ordini ('utente-storico' o 'Nuovo-Utente') per avviare l'automazione. Altrimenti ricade su Twilio.
+ * Se Futuria è configurato, il contatto è già sincronizzato dal webhook Stripe
+ * (`syncPaidCustomerToFuturia`); qui si registra solo lo storico dashboard locale.
  */
 export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promise<OrderWelcomeResult> {
     const name = (order.buyerFullName || '').trim();
     const deceased = (order.deceasedName || '').trim();
     const humanText = renderOrderWelcomeText(name, deceased);
 
-    // Integrazione prioritaria: Futuria CRM
+    // Integrazione Futuria: sync contatto già eseguita in webhook Stripe (ingresso unico autorizzato).
     if (isFuturiaConfigured()) {
         const phone = normalizeFuturiaPhone(order.customerPhone);
         if (!phone) {
@@ -101,46 +99,15 @@ export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promis
         }
 
         try {
-            console.info(`[order-welcome] Calcolo storico ordini per ${order.buyerEmail || phone} dal DB...`);
-            let isHistorical = false;
-            try {
-                const pastOrdersCount = await prisma.order.count({
-                    where: {
-                        id: { not: order.id },
-                        partnerPaymentStatus: 'PAID',
-                        OR: [
-                            ...(order.buyerEmail ? [{ buyerEmail: order.buyerEmail }] : []),
-                            ...(order.customerPhone ? [{ customerPhone: order.customerPhone }] : []),
-                        ],
-                    },
-                });
-                isHistorical = pastOrdersCount > 0;
-                console.info(`[order-welcome] Storico ordini calcolato: ${pastOrdersCount} ordini passati pagati. Storico=${isHistorical}`);
-            } catch (dbErr) {
-                console.error('[order-welcome] Errore calcolo storico ordini dal DB (tratto come nuovo):', dbErr);
-            }
-
-            const tags = ['floremoria-nuovo-ordine', isHistorical ? 'utente-storico' : 'Nuovo-Utente'];
-
-            console.info(`[order-welcome] Sincronizzazione contatto su Futuria per ordine ${order.orderNumber || order.id} con tag ${tags.join(', ')}...`);
-            const contactId = await upsertFuturiaContact({
-                phone,
-                email: order.buyerEmail || undefined,
-                name: name || undefined,
-                deceasedName: deceased || undefined,
-                tags,
-                orderNumber: order.orderNumber
-            });
-
-            // Registra localmente nella chat dashboard FloreMoria per tenere traccia dello storico
             const toAddress = `whatsapp:${phone}`;
             await logToDashboard(toAddress, name, humanText, order);
-
-            console.info(`[order-welcome] Sincronizzato con successo su Futuria (contactId=${contactId}). Trigger attivo.`);
-            return { ok: true, sid: contactId, channel: 'futuria_webhook' };
+            console.info(
+                `[order-welcome] Benvenuto registrato (Futuria già sincronizzato post-pagamento) ordine ${order.orderNumber || order.id}.`
+            );
+            return { ok: true, channel: 'futuria_webhook' };
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            console.error(`[order-welcome] Sincronizzazione Futuria fallita: ${msg}. Provo fallback Twilio...`);
+            console.error(`[order-welcome] Registrazione dashboard fallita: ${msg}. Provo fallback Twilio...`);
         }
     }
 

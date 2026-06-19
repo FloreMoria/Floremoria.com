@@ -18,7 +18,10 @@ async function runUpsertTest() {
     console.log('Payload:', JSON.stringify(testPayload, null, 2));
 
     try {
-        const contactId = await upsertFuturiaContact(testPayload);
+        const contactId = await upsertFuturiaContact(testPayload, {
+            source: 'paid_order',
+            orderId: process.env.FUTURIA_TEST_ORDER_ID || 'test-order-id',
+        });
         console.log('--- Upsert Successful ---');
         console.log(`Contact ID: ${contactId}`);
     } catch (e) {

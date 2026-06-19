@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
+import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
+import { syncPaidCustomerToFuturia } from '@/lib/futuria/syncPaidCustomerContact';
 import { sendOrderWelcomeWhatsApp } from '@/lib/whatsapp/orderNotify';
 
 export const runtime = 'nodejs';
@@ -94,9 +96,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
-    // Benvenuto WhatsApp (VERA): solo alla prima transizione a pagato, una volta per ordine.
-    // Fire-and-forget: non deve mai bloccare le email né far ritentare Stripe.
+    // Prima transizione a pagato: allinea DB locale, sync Futuria protetta, benvenuto WhatsApp.
     if (isFirstPaidTransition) {
+        await ensurePaidOrderEntities(orderId).catch((entityErr) => {
+            console.error('[stripe-webhook] Allineamento User/Defunto fallito (non bloccante):', entityErr);
+        });
+
+        await syncPaidCustomerToFuturia(orderId).catch((futuriaErr) => {
+            console.error('[stripe-webhook] Sync Futuria cliente pagante fallita (non bloccante):', futuriaErr);
+        });
+
         await sendOrderWelcomeWhatsApp(order).catch((waErr) => {
             console.error('[stripe-webhook] Benvenuto WhatsApp fallito (non bloccante):', waErr);
         });

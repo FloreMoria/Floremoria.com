@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import { generateOtpToken } from '@/lib/auth/otp';
 import { parseIdentifier, findOrCreatePasswordlessUser } from '@/lib/auth/identity';
-import { isFuturiaConfigured, upsertFuturiaContact } from '@/lib/futuria/client';
+import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 
 export async function POST(request: Request) {
     try {
@@ -54,8 +54,7 @@ export async function POST(request: Request) {
 
         if (isFuturiaConfigured()) {
             try {
-                // Passo 1: upsert contatto impostando il codice (senza tag)
-                await upsertFuturiaContact({
+                await updateFuturiaExistingContactIfPresent({
                     phone,
                     email: email || undefined,
                     name: user.name || undefined,
@@ -64,8 +63,7 @@ export async function POST(request: Request) {
                     },
                 });
 
-                // Passo 2: upsert contatto con tag di innesco del workflow
-                await upsertFuturiaContact({
+                const contactId = await updateFuturiaExistingContactIfPresent({
                     phone,
                     email: email || undefined,
                     name: user.name || undefined,
@@ -74,6 +72,12 @@ export async function POST(request: Request) {
                         'contact.otp_code': code,
                     },
                 });
+                if (!contactId) {
+                    return NextResponse.json(
+                        { success: false, message: 'Impossibile inviare il codice di verifica. Riprova più tardi.' },
+                        { status: 500 }
+                    );
+                }
             } catch (err: any) {
                 console.error('[OTP-request] Errore invio tramite Futuria:', err);
                 return NextResponse.json(

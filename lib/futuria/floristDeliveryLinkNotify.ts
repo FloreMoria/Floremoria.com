@@ -70,22 +70,25 @@ export async function sendFloristDeliveryLinkToFuturia(
         ? input.deliveryDate.toLocaleDateString('it-IT')
         : 'Da programmare';
 
-    const contactId = await upsertFuturiaContact({
-        phone,
-        email: input.partnerEmail ?? undefined,
-        name: partnerName,
-        deceasedName: input.deceasedName,
-        orderNumber: input.orderNumber,
-        additionalCustomFields: {
-            [linkFieldKey]: deliveryUrl,
-            'contact.codice_ordine': input.orderNumber || input.orderId.slice(0, 8),
-            'contact.nome_defunto': input.deceasedName,
-            'contact.comune_cimitero': input.cemeteryCity,
-            'contact.cimitero': input.cemeteryName || 'Non specificato',
-            'contact.posizione_tomba': input.gravePosition || 'Non specificata',
-            'contact.data_consegna': deliveryDateLabel,
+    const contactId = await upsertFuturiaContact(
+        {
+            phone,
+            email: input.partnerEmail ?? undefined,
+            name: partnerName,
+            deceasedName: input.deceasedName,
+            orderNumber: input.orderNumber,
+            additionalCustomFields: {
+                [linkFieldKey]: deliveryUrl,
+                'contact.codice_ordine': input.orderNumber || input.orderId.slice(0, 8),
+                'contact.nome_defunto': input.deceasedName,
+                'contact.comune_cimitero': input.cemeteryCity,
+                'contact.cimitero': input.cemeteryName || 'Non specificato',
+                'contact.posizione_tomba': input.gravePosition || 'Non specificata',
+                'contact.data_consegna': deliveryDateLabel,
+            },
         },
-    });
+        { source: 'partner_florist' }
+    );
 
     const sendMode = getFuturiaFloristDeliverySendMode();
 
@@ -111,11 +114,14 @@ export async function sendFloristDeliveryLinkToFuturia(
             return { ok: false, skipped: sendResult.skipped };
         }
 
-        await upsertFuturiaContact({
-            phone,
-            name: partnerName,
-            tags: ['floremoria-link-inviato'],
-        });
+        await upsertFuturiaContact(
+            {
+                phone,
+                name: partnerName,
+                tags: ['floremoria-link-inviato'],
+            },
+            { source: 'partner_florist' }
+        );
 
         console.info(
             `[florist-delivery-link] WhatsApp API OK contact=${contactId} order=${input.orderNumber || input.orderId} url=${deliveryUrl}`
@@ -125,11 +131,14 @@ export async function sendFloristDeliveryLinkToFuturia(
     }
 
     // Stesso pattern di benvenuto utente / foto consegna: tag → workflow Futuria
-    await upsertFuturiaContact({
-        phone,
-        name: partnerName,
-        tags: [workflowTag],
-    });
+    await upsertFuturiaContact(
+        {
+            phone,
+            name: partnerName,
+            tags: [workflowTag],
+        },
+        { source: 'partner_florist' }
+    );
 
     console.info(
         `[florist-delivery-link] Futuria workflow trigger OK contact=${contactId} order=${input.orderNumber || input.orderId} url=${deliveryUrl}`

@@ -11,10 +11,11 @@ function unauthorized(): NextResponse {
 function verifyFuturiaWebhookAuth(request: Request): boolean {
     const secret = process.env.FUTURIA_WEBHOOK_SECRET?.trim();
     if (!secret) {
-        // In dev permette test locali; in prod logga warning ma non blocca finché il segreto non è impostato.
         if (process.env.NODE_ENV === 'production') {
-            console.warn('[futuria-webhook] FUTURIA_WEBHOOK_SECRET assente: endpoint non autenticato.');
+            console.error('[futuria-webhook] FUTURIA_WEBHOOK_SECRET assente in produzione: richiesta rifiutata.');
+            return false;
         }
+        console.warn('[futuria-webhook] FUTURIA_WEBHOOK_SECRET assente: endpoint aperto solo in dev.');
         return true;
     }
 

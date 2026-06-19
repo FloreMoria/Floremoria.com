@@ -19,6 +19,14 @@ import {
     type FuturiaCustomFieldWrite,
 } from './deceasedContactFields';
 import { resolveFuturiaCustomFieldIds } from './customFieldRegistry';
+import {
+    assertFuturiaContactAllowed,
+    type FuturiaContactAuth,
+    FuturiaContactGateError,
+} from './contactGate';
+
+export type { FuturiaContactAuth };
+export { FuturiaContactGateError };
 
 export type FuturiaMessageType = 'Email' | 'WhatsApp' | 'SMS';
 
@@ -272,8 +280,11 @@ export async function prepareDeceasedCustomFieldsForUpsert(
     }).customFields;
 }
 
-/** Crea o aggiorna un contatto nella location Futuria configurata. */
-export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Promise<string> {
+/** Crea o aggiorna un contatto nella location Futuria configurata. Richiede autorizzazione esplicita. */
+export async function upsertFuturiaContact(
+    input: FuturiaUpsertContactInput,
+    auth: FuturiaContactAuth
+): Promise<string> {
     const locationId = getFuturiaLocationId();
     if (!locationId) throw new FuturiaApiError('FUTURIA_LOCATION_ID mancante', 0);
 
@@ -281,6 +292,8 @@ export async function upsertFuturiaContact(input: FuturiaUpsertContactInput): Pr
         phone: input.phone,
         email: input.email,
     });
+
+    await assertFuturiaContactAllowed(auth, existingContact);
 
     let customFields: FuturiaCustomFieldWrite[] = [];
     if (input.deceasedName?.trim()) {
@@ -448,12 +461,41 @@ export async function sendFuturiaWhatsAppCtaUrl(
 export async function ensureFuturiaContactForRecipient(
     recipientEmail: string,
     displayName?: string
-): Promise<string> {
-    return upsertFuturiaContact({
-        email: recipientEmail,
-        name: displayName,
-        tags: ['floremoria-transactional'],
+): Promise<string | null> {
+    const existing = await findFuturiaDuplicateContact({ email: recipientEmail });
+    if (!existing?.id) {
+        console.warn(
+            `[futuria-mail] Nessun contatto Futuria per ${recipientEmail}: email non instradata su Futuria (solo clienti paganti).`
+        );
+        return null;
+    }
+    return upsertFuturiaContact(
+        {
+            email: recipientEmail,
+            name: displayName,
+        },
+        { source: 'existing_contact_update' }
+    );
+}
+
+/**
+ * Aggiorna un contatto Futuria già esistente (auth OTP / magic link).
+ * Non crea mai nuovi contatti: ingresso cliente solo post-pagamento Stripe.
+ */
+export async function updateFuturiaExistingContactIfPresent(
+    input: FuturiaUpsertContactInput
+): Promise<string | null> {
+    const existing = await findFuturiaDuplicateContact({
+        phone: input.phone,
+        email: input.email,
     });
+    if (!existing?.id) {
+        console.warn(
+            '[futuria] Aggiornamento saltato: contatto assente (sincronizzazione solo post-ordine pagato).'
+        );
+        return null;
+    }
+    return upsertFuturiaContact(input, { source: 'existing_contact_update' });
 }
 
 export interface FloristSyncInput {
@@ -531,13 +573,16 @@ export async function syncFloristPartnerToFuturia(input: FloristSyncInput): Prom
         additionalCustomFields['contact.note_logistiche'] = input.order.additionalInstructions || 'Nessuna nota';
     }
     
-    return upsertFuturiaContact({
-        phone,
-        email,
-        name,
-        tags,
-        additionalCustomFields
-    });
+    return upsertFuturiaContact(
+        {
+            phone,
+            email,
+            name,
+            tags,
+            additionalCustomFields,
+        },
+        { source: 'partner_florist' }
+    );
 }
 
 export { isFuturiaConfigured };

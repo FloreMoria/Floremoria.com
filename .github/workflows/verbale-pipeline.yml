@@ -12,6 +12,11 @@ on:
     paths:
       - 'docs/verbali/**'
   workflow_dispatch:
+    inputs:
+      verbale_iso:
+        description: 'Forza ISO (YYYY-MM-DD). Vuoto = ieri Europe/Rome o file pushati'
+        required: false
+        type: string
 
 concurrency:
   group: verbale-pipeline-${{ github.ref }}
@@ -50,11 +55,38 @@ jobs:
           BARBARA_VERBALI_REPO_DIR: .barbara-sync
         run: npm run log:verbale:pipeline
 
-      - name: Sync dashboard floremoria_logs (ieri, Europe/Rome)
+      - name: Sync dashboard floremoria_logs (Neon produzione)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CI: 'true'
-        run: npm run log:verbale:daily
+        run: |
+          set -e
+          if [ -n "${{ inputs.verbale_iso }}" ]; then
+            echo "→ Sync forzato ISO ${{ inputs.verbale_iso }}"
+            VERBALE_FORCE_ISO="${{ inputs.verbale_iso }}" npm run log:verbale:daily
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+              CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" -- 'docs/verbali/*.md' || true)
+              if [ -n "$CHANGED" ]; then
+                for f in $CHANGED; do
+                  base=$(basename "$f" .md)
+                  dd="${base%%-*}"
+                  rest="${base#*-}"
+                  mm="${rest%%-*}"
+                  yyyy="${rest##*-}"
+                  iso="${yyyy}-${mm}-${dd}"
+                  echo "→ Sync verbale $iso ($f)"
+                  VERBALE_FORCE_ISO="$iso" npm run log:verbale:daily
+                done
+                exit 0
+              fi
+            fi
+          fi
+          npm run log:verbale:daily
 
       - name: Commit e push (Obsidian + docs se modificati)
         run: |

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { syncVerbaleToFloremoriaLog } from '@/lib/verbali/syncVerbaleToFloremoriaLog';
+import { docsVerbaleRel } from '@/lib/verbali/paths';
 
 const prisma = new PrismaClient();
+
+const BARBARA_VERBALE_TAG =
+    /^#BARBARA_VERBALE_(GIORNO|CONSOLIDATO)_(\d{4}-\d{2}-\d{2})$/;
 
 export async function POST(request: Request) {
   try {
@@ -40,14 +45,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Transform payload to database fields
-    const sessionDate = date ? new Date(date) : new Date();
-    
     // Automatically craft a tag based on the agent name if not explicitly provided
     let tagString = data.tag;
     if (!tagString) {
       tagString = `#${agent_name.toUpperCase().replace(/\s+/g, '_')}`;
     }
+
+    const barbaraMatch = tagString.match(BARBARA_VERBALE_TAG);
+    if (data.upsert === true && barbaraMatch) {
+      const iso = barbaraMatch[2];
+      const result = await syncVerbaleToFloremoriaLog(prisma, {
+        iso,
+        bodyMarkdown: log_content,
+        sourceRelPath:
+          typeof data.source_rel === 'string' && data.source_rel.trim()
+            ? data.source_rel.trim()
+            : docsVerbaleRel(iso),
+        keyPrompt: typeof data.key_prompt === 'string' ? data.key_prompt : undefined,
+      });
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Verbale BARBARA upserted via WebHook.',
+          upserted: true,
+          log_id: result.id,
+          action: result.action,
+        },
+        { status: result.action === 'created' ? 201 : 200 }
+      );
+    }
+
+    // Transform payload to database fields
+    const sessionDate = date ? new Date(date) : new Date();
 
     // Set topic to the status line provided
     const topic = status || `Update by ${agent_name}`;
@@ -63,6 +92,7 @@ export async function POST(request: Request) {
       tag: tagString,
       topic: topic,
       shortSummary: shortSummary,
+      fullText: log_content,
       discussedPoints: log_content,
       achievedResults: data.achieved_results || null,
       pendingTasks: data.pending_tasks || null,

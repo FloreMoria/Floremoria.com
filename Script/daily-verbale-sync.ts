@@ -5,7 +5,7 @@
  * - Non crea mai schede vuote "(Da compilare)".
  * - Sincronizza floremoria_logs solo se esiste contenuto reale.
  */
-import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runVerbalePipeline } from '../lib/verbali/verbalePipeline';
 import { generateVerbaleFromOperations } from '../lib/verbali/generateFromOperations';
@@ -20,7 +20,7 @@ import {
     obsidianGiornalieroPath,
     docsVerbalePath,
 } from '../lib/verbali/paths';
-import { applyVerbaleContentPolicy } from '../lib/verbali/contentPolicy';
+import { syncVerbaleToFloremoriaLog } from '../lib/verbali/syncVerbaleToFloremoriaLog';
 
 function loadEnvFiles(): void {
     for (const name of ['.env', '.env.local']) {
@@ -61,20 +61,6 @@ function getYesterdayRomeISO(): string {
     const mm = String(anchor.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(anchor.getUTCDate()).padStart(2, '0');
     return `${yy}-${mm}-${dd}`;
-}
-
-function sessionDateAtNoon(iso: string): Date {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-}
-
-function italianLongDate(iso: string): string {
-    const [y, m, d] = iso.split('-').map(Number);
-    const names = [
-        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
-    ];
-    return `${d} ${names[m - 1]} ${y}`;
 }
 
 function resolveSessionISO(): string {
@@ -204,41 +190,15 @@ async function main(): Promise<void> {
             return;
         }
 
-        const tag = `#BARBARA_VERBALE_GIORNO_${iso}`;
-        const sessionDate = sessionDateAtNoon(iso);
-        const legacyTag = `#BARBARA_VERBALE_CONSOLIDATO_${iso}`;
-
-        const existing = await prisma.floremoriaLog.findFirst({
-            where: { sessionDate, OR: [{ tag }, { tag: legacyTag }] },
-            orderBy: { id: 'desc' },
-        });
-
-        const rel = source.path;
-        const bodyForDb = applyVerbaleContentPolicy(
-            source.body.replace(/^---[\s\S]*?---\n/m, '').trim()
-        );
-        const data = {
-            sessionDate,
-            tag,
-            topic: `Verbale operativo ${italianLongDate(iso)} (Regola Aurea)`,
-            shortSummary: source.summary,
+        const result = await syncVerbaleToFloremoriaLog(prisma, {
+            iso,
+            bodyMarkdown: source.body,
+            sourceRelPath: source.path,
             keyPrompt: forceIso
                 ? 'BARBARA (Segreteria Senior) — rettifica consolidato e allineamento dashboard'
                 : 'BARBARA / DEVIN — Sync da operatività reale (Git + pipeline)',
-            fullText: `${bodyForDb.slice(0, 48000)}\n\n---\nSorgente: ${rel}`,
-            discussedPoints: `Contenuto in ${rel} e ${docsVerbalePath(cwd, iso).replace(cwd + '/', '')}.`,
-            achievedResults: `Sincronizzazione dashboard; fonte canonica Obsidian + docs/verbali.`,
-            pendingTasks: null as string | null,
-            criticalAlarms: null as string | null,
-        };
-
-        if (existing) {
-            await prisma.floremoriaLog.update({ where: { id: existing.id }, data: { ...data, tag } });
-            console.log(`Aggiornato log id=${existing.id} per ${iso}`);
-        } else {
-            await prisma.floremoriaLog.create({ data });
-            console.log(`Inserito nuovo log per ${iso}`);
-        }
+        });
+        console.log(`${result.action === 'updated' ? 'Aggiornato' : 'Inserito'} log id=${result.id} per ${iso}`);
     } finally {
         await prisma.$disconnect();
     }

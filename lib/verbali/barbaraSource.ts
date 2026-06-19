@@ -5,6 +5,11 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { isEmptyScaffold } from './docsToObsidian';
+import {
+    googleDriveIngressDir,
+    listGoogleDriveIngressMarkdown,
+    resolveGoogleDriveVerbaliRoot,
+} from './googleDriveBridge';
 
 export type BarbaraVerbaleFile = {
     iso: string;
@@ -18,10 +23,14 @@ export type BarbaraVerbaleFile = {
 const BARBARA_FILE =
     /^(\d{4}-\d{2}-\d{2})(?:_PROT_\d+|(?:-Verbale-(?:Giornaliero|Consolidato)))\.md$/i;
 
-/** Percorsi candidati: env → repo Second Brain in CI → vault locale Mac. */
+/** Percorsi candidati: env → Google Drive → repo Second Brain in CI → vault locale Mac. */
 export function resolveBarbaraDir(cwd: string = process.cwd()): string | null {
+    const driveRoot = resolveGoogleDriveVerbaliRoot(cwd);
+    const driveIngress = driveRoot ? googleDriveIngressDir(driveRoot) : null;
+
     const candidates = [
         process.env.BARBARA_VERBALI_DIR?.trim(),
+        driveIngress,
         process.env.BARBARA_VERBALI_REPO_DIR?.trim(),
         resolve(cwd, '.barbara-sync'),
         '/Users/floremoria/Documents/Second Brain/10_FLOREMORIA/20_ARCHIVIO_LOG/Verbali_Barbara',
@@ -89,8 +98,32 @@ export function barbaraBodyToMarkdown(body: string, fileName: string): string {
 
 export function listBarbaraVerbali(cwd: string = process.cwd()): BarbaraVerbaleFile[] {
     const dir = resolveBarbaraDir(cwd);
-    if (!dir) return [];
+    const fromDir = dir ? readBarbaraDir(dir) : [];
 
+    // Unisce anche file .md da Google Drive Ingresso-Barbara (Google Doc esportati).
+    const driveFiles = listGoogleDriveIngressMarkdown().flatMap((f) => {
+        if (!hasBarbaraSubstance(f.body)) return [];
+        return [
+            {
+                iso: f.iso,
+                fileName: f.fileName,
+                absPath: f.absPath,
+                kind: 'giornaliero' as const,
+                body: f.body,
+                mtimeMs: f.mtimeMs,
+            },
+        ];
+    });
+
+    const byIso = new Map<string, BarbaraVerbaleFile>();
+    for (const f of [...fromDir, ...driveFiles]) {
+        const existing = byIso.get(f.iso);
+        if (!existing || f.mtimeMs > existing.mtimeMs) byIso.set(f.iso, f);
+    }
+    return [...byIso.values()].sort((a, b) => a.iso.localeCompare(b.iso));
+}
+
+function readBarbaraDir(dir: string): BarbaraVerbaleFile[] {
     const out: BarbaraVerbaleFile[] = [];
     for (const fileName of readdirSync(dir)) {
         if (!fileName.endsWith('.md')) continue;
@@ -110,8 +143,6 @@ export function listBarbaraVerbali(cwd: string = process.cwd()): BarbaraVerbaleF
     }
     return out.sort((a, b) => a.iso.localeCompare(b.iso));
 }
-
-/** Per ogni giorno, il file BARBARA più autorevole (consolidato > prot > giornaliero, poi mtime). */
 export function pickBarbaraForDay(files: BarbaraVerbaleFile[], iso: string): BarbaraVerbaleFile | null {
     const day = files.filter((f) => f.iso === iso);
     if (day.length === 0) return null;

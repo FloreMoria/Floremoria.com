@@ -8,6 +8,7 @@ import {
     docsVerbaleRel,
     obsidianGiornalieroRel,
 } from './paths';
+import { mirrorVerbaleToGoogleDrive } from './googleDriveBridge';
 
 /** Scrive lo stesso contenuto in docs/verbali/ e notes/obsidian/verbali/ (naming canonico). */
 export function writeCanonicalVerbaleFiles(
@@ -44,6 +45,12 @@ ${bodyMarkdown.trim()}
 
     writeFileSync(docsPath, bodyMarkdown.trim() + '\n', 'utf8');
     writeFileSync(obsidianPath, obsidianContent, 'utf8');
+
+    try {
+        mirrorVerbaleToGoogleDrive(iso, bodyMarkdown, obsidianContent);
+    } catch {
+        // Drive non montato sul Mac CI/Mac spento: non bloccare la pipeline repo.
+    }
 
     return { docsPath, obsidianPath };
 }

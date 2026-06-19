@@ -8,6 +8,7 @@ import {
     type DashboardHostContext,
 } from '@/lib/dashboardRouting';
 import { isSuperAdminRole, isDashboardAdminRole } from '@/lib/superAdmin';
+import { hasValidAdminApiKeyHeader } from '@/lib/auth/verbaleSyncAuth';
 
 /**
  * Middleware Centrale FloreMoria
@@ -51,12 +52,6 @@ function isSuperAdminOnlyPath(pathname: string): boolean {
         pathname.startsWith('/dashboard/settings/roles') ||
         pathname.startsWith('/api/admin/')
     );
-}
-
-function hasValidAdminApiKey(request: NextRequest): boolean {
-    const key = request.headers.get('x-admin-key');
-    const expected = process.env.ADMIN_API_KEY?.trim();
-    return Boolean(key && expected && key === expected);
 }
 
 function getHostContext(request: NextRequest): DashboardHostContext {
@@ -150,7 +145,7 @@ export function middleware(request: NextRequest) {
     }
 
     if (isSuperAdminOnlyPath(pathname)) {
-        if (pathname.startsWith('/api/admin/') && hasValidAdminApiKey(request)) {
+        if (pathname.startsWith('/api/admin/') && hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
             return NextResponse.next();
         }
         if (!userRole) {

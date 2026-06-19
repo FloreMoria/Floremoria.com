@@ -25,6 +25,8 @@
     "log:verbale:production": "tsx Script/sync-verbale-dashboard-production.ts",
     "log:verbale:push-api": "tsx Script/push-verbale-production-api.ts",
     "log:verbale:push-webhook": "tsx Script/push-verbale-production-webhook.ts",
+    "verbali:verify-keys": "tsx Script/verify-verbale-sync-keys.ts",
+    "verbali:setup-drive": "tsx Script/setup-google-drive-verbali-bridge.ts",
     "log:verbale:pipeline": "tsx Script/verbale-pipeline.ts",
     "log:verbale:sync-docs": "tsx Script/sync-verbale-docs-to-obsidian.ts",
     "log:seed-operational": "tsx Script/seed-operational-logs.ts",

@@ -17,8 +17,9 @@ async function main(): Promise<void> {
     }
 
     const adminKey = process.env.ADMIN_API_KEY?.trim();
-    if (!adminKey) {
-        throw new Error('ADMIN_API_KEY mancante in .env.local');
+    const webhookKey = process.env.FLOREMORIA_WEBHOOK_KEY?.trim();
+    if (!adminKey && !webhookKey) {
+        throw new Error('ADMIN_API_KEY o FLOREMORIA_WEBHOOK_KEY mancante in .env.local');
     }
 
     const baseUrl = (process.env.PRODUCTION_BASE_URL?.trim() || 'https://www.floremoria.com').replace(
@@ -35,34 +36,45 @@ async function main(): Promise<void> {
     const payload = { iso, markdown };
 
     const endpoints = [`${baseUrl}/api/logs/sync-verbale`, `${baseUrl}/api/admin/sync-verbale`];
+    const authAttempts: Array<{ headers: Record<string, string>; label: string }> = [];
+    if (adminKey) authAttempts.push({ headers: { 'x-admin-key': adminKey }, label: 'x-admin-key' });
+    if (webhookKey) authAttempts.push({ headers: { 'x-api-key': webhookKey }, label: 'x-api-key' });
+
     let lastError = 'nessun endpoint raggiungibile';
 
     for (const endpoint of endpoints) {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-key': adminKey,
-            },
-            body: JSON.stringify(payload),
-        });
+        for (const auth of authAttempts) {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...auth.headers,
+                },
+                body: JSON.stringify(payload),
+            });
 
-        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-        if (response.ok) {
-            console.log(
-                `✓ Produzione (${endpoint}): ${body.action} log id=${body.id} tag=${body.tag} (${iso})`
+            const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+            if (response.ok) {
+                console.log(
+                    `✓ Produzione (${endpoint}, ${auth.label}): ${body.action} log id=${body.id} tag=${body.tag} (${iso})`
+                );
+                return;
+            }
+
+            if (response.status === 401) {
+                lastError = `401 con ${auth.label} — allinea chiavi: npm run verbali:verify-keys`;
+                continue;
+            }
+
+            if (response.status === 404) {
+                lastError = `${endpoint} non ancora deployato`;
+                break;
+            }
+
+            throw new Error(
+                `Sync API fallita (${response.status} @ ${endpoint}): ${JSON.stringify(body.error ?? body)}`
             );
-            return;
         }
-
-        if (response.status === 404) {
-            lastError = `${endpoint} non ancora deployato`;
-            continue;
-        }
-
-        throw new Error(
-            `Sync API fallita (${response.status} @ ${endpoint}): ${JSON.stringify(body.error ?? body)}`
-        );
     }
 
     throw new Error(`Sync API fallita: ${lastError}. Attendi il deploy Vercel e riprova.`);

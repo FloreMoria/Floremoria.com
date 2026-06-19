@@ -1,29 +1,28 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { isVerbaleSyncAuthorized } from '@/lib/auth/verbaleSyncAuth';
 import { syncVerbaleToFloremoriaLog } from '@/lib/verbali/syncVerbaleToFloremoriaLog';
 import { docsVerbalePath, obsidianGiornalieroRel } from '@/lib/verbali/paths';
 
-function isAuthorized(request: Request): boolean {
-    const webhookKey = process.env.FLOREMORIA_WEBHOOK_KEY?.trim();
-    const adminKey = process.env.ADMIN_API_KEY?.trim();
-    const apiKeyHeader = request.headers.get('x-api-key')?.trim();
-    const adminKeyHeader = request.headers.get('x-admin-key')?.trim();
-    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    const bearer = authHeader?.replace(/^Bearer\s/i, '').trim();
-
-    if (webhookKey && (apiKeyHeader === webhookKey || bearer === webhookKey)) return true;
-    if (adminKey && adminKeyHeader === adminKey) return true;
-    return false;
+export async function GET(request: Request) {
+    if (!isVerbaleSyncAuthorized(request.headers)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.json({ ok: true, endpoint: 'sync-verbale', auth: 'valid' });
 }
 
 export async function POST(request: Request) {
-    if (!isAuthorized(request)) {
+    if (!isVerbaleSyncAuthorized(request.headers)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
         const body = await request.json();
+        if (body?.dryRun === true) {
+            return NextResponse.json({ ok: true, endpoint: 'sync-verbale', auth: 'valid', dryRun: true });
+        }
+
         const iso = typeof body.iso === 'string' ? body.iso.trim() : '';
         if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
             return NextResponse.json({ error: 'Campo iso obbligatorio (YYYY-MM-DD).' }, { status: 400 });

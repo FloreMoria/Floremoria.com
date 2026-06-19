@@ -72,9 +72,14 @@ Ogni trimestre (o dopo un progetto grosso): 15 minuti — “abbiamo rispettato 
 **Comandi locali (debug):**
 
 ```bash
-npm run log:verbale:pipeline   # merge BARBARA (vault locale o .barbara-sync) + docs → Obsidian
-npm run log:verbale:daily      # + riga dashboard per ieri
+npm run verbali:setup-drive      # ponte Google Drive Desktop (una tantum)
+npm run verbali:verify-keys      # allineamento ADMIN_API_KEY / WEBHOOK vs Vercel
+npm run log:verbale:pipeline     # merge BARBARA (vault + Drive + docs) → Obsidian
+npm run log:verbale:daily        # + riga dashboard per ieri
+npm run log:verbale:push-api     # push manuale Neon produzione
 ```
+
+Documentazione completa: `docs/VERBALI_SYNC_SETUP.md`
 
 **Secret opzionale GitHub:** `BARBARA_SYNC_GITHUB_TOKEN` (PAT read) se il checkout cross-repo di `Second_Brain_Sync` fallisce con il token predefinito.
 

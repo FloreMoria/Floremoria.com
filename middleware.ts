@@ -53,6 +53,12 @@ function isSuperAdminOnlyPath(pathname: string): boolean {
     );
 }
 
+function hasValidAdminApiKey(request: NextRequest): boolean {
+    const key = request.headers.get('x-admin-key');
+    const expected = process.env.ADMIN_API_KEY?.trim();
+    return Boolean(key && expected && key === expected);
+}
+
 function getHostContext(request: NextRequest): DashboardHostContext {
     const hostFull = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').toLowerCase();
     const hostname = hostFull.split(':')[0];
@@ -144,6 +150,9 @@ export function middleware(request: NextRequest) {
     }
 
     if (isSuperAdminOnlyPath(pathname)) {
+        if (pathname.startsWith('/api/admin/') && hasValidAdminApiKey(request)) {
+            return NextResponse.next();
+        }
         if (!userRole) {
             if (pathname.startsWith('/api/admin/')) {
                 return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });

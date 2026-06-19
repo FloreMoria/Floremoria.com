@@ -3,7 +3,7 @@ date: 2026-03-14
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sync_sources: ["barbara:2026-03-14_PROT_003.md"]
-synced_at: 2026-06-18T21:57:05.361Z
+synced_at: 2026-06-19T02:53:57.559Z
 redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 

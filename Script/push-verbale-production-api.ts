@@ -32,25 +32,40 @@ async function main(): Promise<void> {
     }
 
     const markdown = readFileSync(docsPath, 'utf8');
-    const response = await fetch(`${baseUrl}/api/logs/sync-verbale`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-admin-key': adminKey,
-        },
-        body: JSON.stringify({ iso, markdown }),
-    });
+    const payload = { iso, markdown };
 
-    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!response.ok) {
+    const endpoints = [`${baseUrl}/api/logs/sync-verbale`, `${baseUrl}/api/admin/sync-verbale`];
+    let lastError = 'nessun endpoint raggiungibile';
+
+    for (const endpoint of endpoints) {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-key': adminKey,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        if (response.ok) {
+            console.log(
+                `✓ Produzione (${endpoint}): ${body.action} log id=${body.id} tag=${body.tag} (${iso})`
+            );
+            return;
+        }
+
+        if (response.status === 404) {
+            lastError = `${endpoint} non ancora deployato`;
+            continue;
+        }
+
         throw new Error(
-            `Sync API fallita (${response.status}): ${JSON.stringify(payload.error ?? payload)}`
+            `Sync API fallita (${response.status} @ ${endpoint}): ${JSON.stringify(body.error ?? body)}`
         );
     }
 
-    console.log(
-        `✓ Produzione: ${payload.action} log id=${payload.id} tag=${payload.tag} (${iso})`
-    );
+    throw new Error(`Sync API fallita: ${lastError}. Attendi il deploy Vercel e riprova.`);
 }
 
 main().catch((error) => {

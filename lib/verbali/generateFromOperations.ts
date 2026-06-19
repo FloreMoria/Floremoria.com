@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { applyVerbaleContentPolicy } from './contentPolicy';
 import {
     getGitCommitsForSessionDay,
     formatCommitsBullets,
@@ -132,7 +133,7 @@ ${sectionBlock('## Sezione 4 — Logistica', sections.logistica)}
 `;
 
     return {
-        markdown: markdown.trim() + '\n',
+        markdown: applyVerbaleContentPolicy(markdown.trim()) + '\n',
         shortSummary: `Verbale operativo ${iso}: ${commitSummary}.`,
     };
 }

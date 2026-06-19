@@ -24,6 +24,7 @@ import {
     resolveBarbaraDir,
     hasBarbaraSubstance,
 } from './barbaraSource';
+import { applyVerbaleContentPolicy } from './contentPolicy';
 import { docsVerbalePath } from './paths';
 import {
     syncAllDocsVerbali,
@@ -176,7 +177,9 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
             }
         }
 
-        const merged = mergeBodies(barbaraMd, docs);
+        const merged = applyVerbaleContentPolicy(
+            mergeBodies(barbaraMd, docs)
+        );
         if (!merged || merged.length < 80) continue;
 
         const obsidianPath = obsidianGiornalieroPath(cwd, iso);

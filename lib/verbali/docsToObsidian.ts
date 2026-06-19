@@ -11,6 +11,7 @@ import {
     statSync,
 } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { applyVerbaleContentPolicy } from './contentPolicy';
 
 export type VerbaleSyncResult = {
     iso: string;
@@ -57,7 +58,7 @@ export function normalizeDocsBody(raw: string): string {
 }
 
 export function buildObsidianMarkdown(iso: string, docsRel: string, body: string): string {
-    const normalized = normalizeDocsBody(body);
+    const normalized = applyVerbaleContentPolicy(normalizeDocsBody(body));
     const syncedAt = new Date().toISOString();
     return `---
 date: ${iso}

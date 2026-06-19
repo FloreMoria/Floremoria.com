@@ -20,6 +20,7 @@ import {
     obsidianGiornalieroPath,
     docsVerbalePath,
 } from '../lib/verbali/paths';
+import { applyVerbaleContentPolicy } from '../lib/verbali/contentPolicy';
 
 function loadEnvFiles(): void {
     for (const name of ['.env', '.env.local']) {
@@ -213,6 +214,9 @@ async function main(): Promise<void> {
         });
 
         const rel = source.path;
+        const bodyForDb = applyVerbaleContentPolicy(
+            source.body.replace(/^---[\s\S]*?---\n/m, '').trim()
+        );
         const data = {
             sessionDate,
             tag,
@@ -221,7 +225,7 @@ async function main(): Promise<void> {
             keyPrompt: forceIso
                 ? 'BARBARA (Segreteria Senior) — rettifica consolidato e allineamento dashboard'
                 : 'BARBARA / DEVIN — Sync da operatività reale (Git + pipeline)',
-            fullText: `${source.body.slice(0, 48000)}\n\n---\nSorgente: ${rel}`,
+            fullText: `${bodyForDb.slice(0, 48000)}\n\n---\nSorgente: ${rel}`,
             discussedPoints: `Contenuto in ${rel} e ${docsVerbalePath(cwd, iso).replace(cwd + '/', '')}.`,
             achievedResults: `Sincronizzazione dashboard; fonte canonica Obsidian + docs/verbali.`,
             pendingTasks: null as string | null,

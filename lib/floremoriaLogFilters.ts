@@ -3,40 +3,17 @@ import type { Prisma } from '@prisma/client';
 /** Casella assistenza — esclusa da overview, timeline e API log (POSTMAN). */
 export const ASSISTENZA_EMAIL = 'assistenza@floremoria.com';
 
-const ASSISTENZA_FIELDS = [
-    'tag',
-    'topic',
-    'shortSummary',
-    'keyPrompt',
-    'fullText',
-    'discussedPoints',
-    'achievedResults',
-    'pendingTasks',
-    'criticalAlarms',
-] as const;
+/** Campi dove l'email assistenza può essere valore esatto del record (non menzione nel corpo). */
+const ASSISTENZA_EXACT_FIELDS = ['tag', 'topic', 'shortSummary', 'keyPrompt'] as const;
 
-function assistenzaContainsClauses(): Prisma.FloremoriaLogWhereInput[] {
+function assistenzaExcludeClauses(): Prisma.FloremoriaLogWhereInput[] {
     return [
         { tag: { contains: 'POSTMAN_ASSISTENZA', mode: 'insensitive' } },
-        ...ASSISTENZA_FIELDS.map((field) => ({
-            [field]: { contains: ASSISTENZA_EMAIL, mode: 'insensitive' as const },
+        ...ASSISTENZA_EXACT_FIELDS.map((field) => ({
+            [field]: { equals: ASSISTENZA_EMAIL, mode: 'insensitive' as const },
         })),
     ];
 }
-
-/** Schede auto-generate vuote (legacy cron) — non devono comparire in dashboard. */
-export const EXCLUDE_EMPTY_VERBALE_SCAFFOLD: Prisma.FloremoriaLogWhereInput = {
-    AND: [
-        { fullText: { contains: '(Da compilare)' } },
-        {
-            OR: [
-                { fullText: { contains: 'verbale_giornaliero_auto' } },
-                { shortSummary: { contains: 'Scaffold verbale', mode: 'insensitive' } },
-                { shortSummary: { contains: 'da completare in Obsidian', mode: 'insensitive' } },
-            ],
-        },
-    ],
-};
 
 /** Filtro unificato per query dashboard/API log. */
 export function floremoriaLogPublicWhere(
@@ -44,38 +21,25 @@ export function floremoriaLogPublicWhere(
 ): Prisma.FloremoriaLogWhereInput {
     const base: Prisma.FloremoriaLogWhereInput = {
         NOT: {
-            OR: [...assistenzaContainsClauses(), EXCLUDE_EMPTY_VERBALE_SCAFFOLD],
+            OR: assistenzaExcludeClauses(),
         },
     };
     if (!extra) return base;
     return { AND: [base, extra] };
 }
 
-/** Blocca dettaglio log assistenza o scaffold vuoto. */
+/** Blocca dettaglio log assistenza POSTMAN o record la cui chiave è l'email assistenza. */
 export function isLogHiddenFromDashboard(log: {
     tag?: string | null;
     topic?: string | null;
     shortSummary?: string | null;
     keyPrompt?: string | null;
-    fullText?: string | null;
-    discussedPoints?: string | null;
-    achievedResults?: string | null;
-    pendingTasks?: string | null;
-    criticalAlarms?: string | null;
 }): boolean {
-    const blob = ASSISTENZA_FIELDS.map((f) => log[f] ?? '').join('\n');
-    if (blob.includes('POSTMAN_ASSISTENZA') || blob.toLowerCase().includes(ASSISTENZA_EMAIL)) {
+    if (log.tag?.toUpperCase().includes('POSTMAN_ASSISTENZA')) {
         return true;
     }
-    const ft = log.fullText ?? '';
-    const ss = log.shortSummary ?? '';
-    if (
-        ft.includes('(Da compilare)') &&
-        (ft.includes('verbale_giornaliero_auto') ||
-            ss.toLowerCase().includes('scaffold verbale') ||
-            ss.toLowerCase().includes('da completare in obsidian'))
-    ) {
-        return true;
-    }
-    return false;
+    const email = ASSISTENZA_EMAIL.toLowerCase();
+    return ASSISTENZA_EXACT_FIELDS.some(
+        (field) => log[field]?.trim().toLowerCase() === email
+    );
 }

@@ -1,17 +1,25 @@
 /**
  * Regola Aurea + automazione cloud (GitHub Actions):
  * - Calcola il giorno precedente nel fuso Europe/Rome.
- * - Assicura un file in notes/obsidian/verbali/ (Consolidato preferito, altrimenti Giornaliero + template se manca).
- * - Sincronizza un solo record in floremoria_logs (tag #BARBARA_VERBALE_GIORNO_YYYY-MM-DD).
- *
- * DATABASE_URL: opzionale in CI; se assente si aggiorna solo Obsidian in repo al prossimo commit manuale
- * (in Actions il commit è step separato). In locale: carica .env / .env.local.
- *
- * VERBALE_FORCE_ISO=YYYY-MM-DD (opzionale): forza la data di sessione (es. rettifica consolidato) invece di «ieri».
+ * - Unisce BARBARA + docs/verbali (pipeline) o genera da Git/operatività reale.
+ * - Non crea mai schede vuote "(Da compilare)".
+ * - Sincronizza floremoria_logs solo se esiste contenuto reale.
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runVerbalePipeline } from '../lib/verbali/verbalePipeline';
+import { generateVerbaleFromOperations } from '../lib/verbali/generateFromOperations';
+import {
+    purgeEmptyVerbaleScaffolds,
+    mirrorCanonicalIfMissing,
+    writeCanonicalVerbaleFiles,
+} from '../lib/verbali/mirrorPaths';
+import { isEmptyScaffold } from '../lib/verbali/docsToObsidian';
+import {
+    obsidianConsolidatoPath,
+    obsidianGiornalieroPath,
+    docsVerbalePath,
+} from '../lib/verbali/paths';
 
 function loadEnvFiles(): void {
     for (const name of ['.env', '.env.local']) {
@@ -37,7 +45,6 @@ function loadEnvFiles(): void {
     }
 }
 
-/** Ieri a calendario in Europe/Rome → YYYY-MM-DD */
 function getYesterdayRomeISO(): string {
     const tz = 'Europe/Rome';
     const todayStr = new Intl.DateTimeFormat('en-CA', {
@@ -63,120 +70,117 @@ function sessionDateAtNoon(iso: string): Date {
 function italianLongDate(iso: string): string {
     const [y, m, d] = iso.split('-').map(Number);
     const names = [
-        'Gennaio',
-        'Febbraio',
-        'Marzo',
-        'Aprile',
-        'Maggio',
-        'Giugno',
-        'Luglio',
-        'Agosto',
-        'Settembre',
-        'Ottobre',
-        'Novembre',
-        'Dicembre',
+        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
     ];
     return `${d} ${names[m - 1]} ${y}`;
 }
 
-const TEMPLATE = (iso: string, label: string) => `---
-date: ${iso}
-tipo: verbale_giornaliero_auto
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
----
-
-# Verbale Operativo FloreMoria — ${label}
-
-**Redazione:** BARBARA / DEVIN (generazione automatica mattutina).  
-**Giornata di riferimento (chiusura):** ${iso}.
-
-> Scheda generata alle 08:00 (Europe/Rome) del giorno successivo. Completare le sezioni e consolidare se necessario rinominando in \`${iso}-Verbale-Consolidato.md\`.
-
-## Sezione 1 — Infrastruttura
-
-- (Da compilare)
-
-## Sezione 2 — Strategia
-
-- (Da compilare)
-
-## Sezione 3 — Sviluppo
-
-- (Da compilare)
-
-## Sezione 4 — Logistica
-
-- (Da compilare)
-`;
-
 function resolveSessionISO(): string {
     const raw = process.env.VERBALE_FORCE_ISO?.trim();
-    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        return raw;
-    }
-    if (raw) {
-        console.warn(`VERBALE_FORCE_ISO ignorato (formato non valido): ${raw}`);
-    }
+    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    if (raw) console.warn(`VERBALE_FORCE_ISO ignorato (formato non valido): ${raw}`);
     return getYesterdayRomeISO();
+}
+
+function readVerbaleSource(cwd: string, iso: string): { path: string; body: string; summary: string } | null {
+    const consolidato = obsidianConsolidatoPath(cwd, iso);
+    if (existsSync(consolidato)) {
+        const body = readFileSync(consolidato, 'utf8');
+        if (isEmptyScaffold(body)) return null;
+        return {
+            path: consolidato.replace(cwd + '/', ''),
+            body,
+            summary: `Verbale consolidato archiviato (${iso}).`,
+        };
+    }
+
+    const giornaliero = obsidianGiornalieroPath(cwd, iso);
+    if (existsSync(giornaliero)) {
+        const body = readFileSync(giornaliero, 'utf8');
+        if (isEmptyScaffold(body)) {
+            unlinkSync(giornaliero);
+            return null;
+        }
+        return {
+            path: giornaliero.replace(cwd + '/', ''),
+            body,
+            summary: `Verbale giornaliero (${iso}).`,
+        };
+    }
+
+    const docs = docsVerbalePath(cwd, iso);
+    if (existsSync(docs)) {
+        const body = readFileSync(docs, 'utf8');
+        if (isEmptyScaffold(body)) {
+            unlinkSync(docs);
+            return null;
+        }
+        mirrorCanonicalIfMissing(cwd, iso);
+        return {
+            path: giornaliero.replace(cwd + '/', ''),
+            body: readFileSync(giornaliero, 'utf8'),
+            summary: `Verbale giornaliero (${iso}).`,
+        };
+    }
+
+    return null;
 }
 
 async function main(): Promise<void> {
     const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
-    if (!isCI) {
-        loadEnvFiles();
-    }
+    if (!isCI) loadEnvFiles();
 
+    const cwd = process.cwd();
     const iso = resolveSessionISO();
     const forceIso = Boolean(process.env.VERBALE_FORCE_ISO?.trim());
 
-    // BARBARA (Second Brain) + docs/verbali → Obsidian repo
-    for (const r of runVerbalePipeline(process.cwd())) {
+    const purged = purgeEmptyVerbaleScaffolds(cwd);
+    if (purged.length > 0) {
+        console.log(`Rimossi ${purged.length} scaffold vuoti legacy.`);
+    }
+
+    for (const r of runVerbalePipeline(cwd)) {
         if (r.action !== 'skipped') {
             console.log(`Pipeline (${r.iso}): ${r.action} ← ${r.sources.join(' + ')}`);
         }
     }
 
-    const verbaliDir = resolve(process.cwd(), 'notes/obsidian/verbali');
-    if (!existsSync(verbaliDir)) {
-        mkdirSync(verbaliDir, { recursive: true });
+    mirrorCanonicalIfMissing(cwd, iso);
+
+    let source = readVerbaleSource(cwd, iso);
+
+    if (!source) {
+        const dbUrl = process.env.DATABASE_URL?.trim();
+        let prisma: import('@prisma/client').PrismaClient | undefined;
+        if (dbUrl) {
+            const { PrismaClient } = await import('@prisma/client');
+            prisma = new PrismaClient();
+        }
+        try {
+            const generated = await generateVerbaleFromOperations(cwd, iso, prisma);
+            if (generated) {
+                writeCanonicalVerbaleFiles(cwd, iso, generated.markdown, {
+                    syncSources: ['git:24h', dbUrl ? 'prisma:operativita' : 'git-only'],
+                });
+                source = {
+                    path: obsidianGiornalieroPath(cwd, iso).replace(cwd + '/', ''),
+                    body: readFileSync(obsidianGiornalieroPath(cwd, iso), 'utf8'),
+                    summary: generated.shortSummary,
+                };
+                console.log(`Generato verbale ${iso} da Git/operatività.`);
+            } else {
+                console.log(`Nessun dato per ${iso}: verbale non creato (Regola Aurea).`);
+            }
+        } finally {
+            await prisma?.$disconnect();
+        }
     }
-
-    const pathConsolidato = resolve(verbaliDir, `${iso}-Verbale-Consolidato.md`);
-    const pathGiornaliero = resolve(verbaliDir, `${iso}-Verbale-Giornaliero.md`);
-
-    let sourcePath: string;
-    let mdBody: string;
-    let shortSummary: string;
-
-    if (existsSync(pathConsolidato)) {
-        sourcePath = pathConsolidato;
-        mdBody = readFileSync(pathConsolidato, 'utf8');
-        shortSummary = `Verbale consolidato archiviato (${iso}).`;
-    } else if (existsSync(pathGiornaliero)) {
-        sourcePath = pathGiornaliero;
-        mdBody = readFileSync(pathGiornaliero, 'utf8');
-        shortSummary = `Verbale giornaliero (${iso}).`;
-    } else {
-        const label = italianLongDate(iso);
-        mdBody = TEMPLATE(iso, label);
-        writeFileSync(pathGiornaliero, mdBody, 'utf8');
-        sourcePath = pathGiornaliero;
-        shortSummary = forceIso
-            ? `Scaffold verbale giornaliero (${iso}) — creato in rettifica VERBALE_FORCE_ISO.`
-            : `Scaffold verbale giornaliero (${iso}) — da completare in Obsidian.`;
-        console.log(`Creato ${pathGiornaliero}`);
-    }
-
-    const rel = sourcePath.replace(process.cwd() + '/', '');
-    const tag = `#BARBARA_VERBALE_GIORNO_${iso}`;
-    const sessionDate = sessionDateAtNoon(iso);
 
     const dbUrl = process.env.DATABASE_URL?.trim();
     if (!dbUrl) {
-        console.warn(
-            'DATABASE_URL assente: skip floremoria_logs. Imposta il secret su GitHub Actions per la dashboard in cloud.'
-        );
-        console.log(`Obsidian/fonte: ${rel}`);
+        if (source) console.log(`Obsidian/fonte: ${source.path}`);
+        else console.warn('DATABASE_URL assente: skip floremoria_logs.');
         return;
     }
 
@@ -184,50 +188,48 @@ async function main(): Promise<void> {
     const prisma = new PrismaClient();
 
     try {
-        const legacyTag = `#BARBARA_VERBALE_CONSOLIDATO_${iso}`;
-        const existing = await prisma.floremoriaLog.findFirst({
+        // Pulizia record scaffold vuoti legacy in dashboard
+        await prisma.floremoriaLog.deleteMany({
             where: {
-                sessionDate,
-                OR: [{ tag }, { tag: legacyTag }],
+                AND: [
+                    { fullText: { contains: '(Da compilare)' } },
+                    { fullText: { contains: 'verbale_giornaliero_auto' } },
+                ],
             },
+        });
+
+        if (!source) {
+            console.log(`Skip DB per ${iso}: nessun contenuto reale.`);
+            return;
+        }
+
+        const tag = `#BARBARA_VERBALE_GIORNO_${iso}`;
+        const sessionDate = sessionDateAtNoon(iso);
+        const legacyTag = `#BARBARA_VERBALE_CONSOLIDATO_${iso}`;
+
+        const existing = await prisma.floremoriaLog.findFirst({
+            where: { sessionDate, OR: [{ tag }, { tag: legacyTag }] },
             orderBy: { id: 'desc' },
         });
 
-        const topic = `Verbale operativo ${italianLongDate(iso)} (Regola Aurea)`;
-        const keyPrompt = forceIso
-            ? 'BARBARA (Segreteria Senior) — deposito / rettifica consolidato e allineamento dashboard (coordinamento con referente di progetto Salvatore)'
-            : 'BARBARA / DEVIN — Sync automatico mattutino (ieri, Europe/Rome)';
-        const discussed = forceIso
-            ? `Riscrittura integrale verbale ${iso} secondo standard redazionale FLOREM_NET; contenuto in Obsidian (${rel}).`
-            : 'Vedi file Obsidian allegato; sezioni Infrastruttura, Strategia, Sviluppo, Logistica.';
-        const achieved = forceIso
-            ? `Aggiornamento record floremoria_logs da consolidato; sorgente: ${rel}`
-            : `Sincronizzazione automatica su dashboard; fonte: ${rel}`;
-        const pending = forceIso
-            ? 'Verifica lettura su /dashboard/logs; eventuale push su main del file Obsidian.'
-            : 'Completare il verbale in Obsidian e push su main se non già consolidato.';
-
+        const rel = source.path;
         const data = {
             sessionDate,
             tag,
-            topic,
-            shortSummary,
-            keyPrompt,
-            fullText: `${mdBody.slice(0, 48000)}\n\n---\nSorgente: ${rel}`,
-            discussedPoints: discussed,
-            achievedResults: achieved,
-            pendingTasks: pending,
+            topic: `Verbale operativo ${italianLongDate(iso)} (Regola Aurea)`,
+            shortSummary: source.summary,
+            keyPrompt: forceIso
+                ? 'BARBARA (Segreteria Senior) — rettifica consolidato e allineamento dashboard'
+                : 'BARBARA / DEVIN — Sync da operatività reale (Git + pipeline)',
+            fullText: `${source.body.slice(0, 48000)}\n\n---\nSorgente: ${rel}`,
+            discussedPoints: `Contenuto in ${rel} e ${docsVerbalePath(cwd, iso).replace(cwd + '/', '')}.`,
+            achievedResults: `Sincronizzazione dashboard; fonte canonica Obsidian + docs/verbali.`,
+            pendingTasks: null as string | null,
             criticalAlarms: null as string | null,
         };
 
         if (existing) {
-            await prisma.floremoriaLog.update({
-                where: { id: existing.id },
-                data: {
-                    ...data,
-                    tag,
-                },
-            });
+            await prisma.floremoriaLog.update({ where: { id: existing.id }, data: { ...data, tag } });
             console.log(`Aggiornato log id=${existing.id} per ${iso}`);
         } else {
             await prisma.floremoriaLog.create({ data });

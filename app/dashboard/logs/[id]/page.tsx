@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Terminal, LayoutList, CheckCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
+import { isLogHiddenFromDashboard } from '@/lib/floremoriaLogFilters';
 
 export const metadata = {
     title: 'Memoria Storica | Dettaglio Verbale | Floremoria',
@@ -29,16 +30,7 @@ export default async function LogDetailPage({ params }: { params: Promise<{ id: 
         notFound();
     }
 
-    const isAssistenza =
-        log.tag?.includes('POSTMAN_ASSISTENZA') ||
-        log.tag?.includes('assistenza@floremoria.com') ||
-        log.topic?.includes('assistenza@floremoria.com') ||
-        log.shortSummary?.includes('assistenza@floremoria.com') ||
-        log.keyPrompt?.includes('assistenza@floremoria.com') ||
-        log.fullText?.includes('assistenza@floremoria.com') ||
-        log.discussedPoints?.includes('assistenza@floremoria.com');
-
-    if (isAssistenza) {
+    if (isLogHiddenFromDashboard(log)) {
         notFound();
     }
 

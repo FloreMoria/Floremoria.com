@@ -396,7 +396,7 @@ export default function AnalyticsOverviewClient({
                                                                     className="text-base font-serif font-bold text-slate-800 mt-0.5 leading-snug group-hover:text-fm-cta transition-colors drop-shadow-sm hover:underline cursor-pointer"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        router.push('/logs/' + log.id);
+                                                                        router.push(`/dashboard/logs/${log.id}`);
                                                                     }}
                                                                 >{log.topic}</h3>
                                                             </div>

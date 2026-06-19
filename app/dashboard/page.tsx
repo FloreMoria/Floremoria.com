@@ -8,6 +8,7 @@ import { buildGa4ConsoleUrl } from '@/lib/ga4/config';
 import { fetchGa4OverviewResult } from '@/lib/ga4/fetchOverview';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
+import { floremoriaLogPublicWhere } from '@/lib/floremoriaLogFilters';
 
 export const revalidate = 3600;
 
@@ -41,19 +42,7 @@ export default async function AdminOverview() {
 
     const logsResult = await runDashboardQuery('overview/logs', [], () =>
         prisma.floremoriaLog.findMany({
-            where: {
-                NOT: {
-                    OR: [
-                        { tag: { contains: 'POSTMAN_ASSISTENZA', mode: 'insensitive' as const } },
-                        { tag: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                        { topic: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                        { shortSummary: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                        { keyPrompt: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                        { fullText: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                        { discussedPoints: { contains: 'assistenza@floremoria.com', mode: 'insensitive' as const } },
-                    ]
-                }
-            },
+            where: floremoriaLogPublicWhere(),
             take: 10,
             orderBy: { sessionDate: 'desc' },
         })

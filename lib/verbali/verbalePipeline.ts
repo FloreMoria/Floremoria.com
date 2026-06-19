@@ -18,9 +18,16 @@ import {
 } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+    listBarbaraVerbali,
+    pickBarbaraForDay,
+    barbaraBodyToMarkdown,
+    resolveBarbaraDir,
+    hasBarbaraSubstance,
+} from './barbaraSource';
+import { docsVerbalePath } from './paths';
+import {
     syncAllDocsVerbali,
     parseDocsVerbaleFilename,
-    docsVerbalePath,
     obsidianGiornalieroPath,
     obsidianConsolidatoPath,
     isEmptyScaffold,
@@ -28,12 +35,9 @@ import {
     type VerbaleSyncResult,
 } from './docsToObsidian';
 import {
-    listBarbaraVerbali,
-    pickBarbaraForDay,
-    barbaraBodyToMarkdown,
-    resolveBarbaraDir,
-    hasBarbaraSubstance,
-} from './barbaraSource';
+    purgeEmptyVerbaleScaffolds,
+    mirrorCanonicalIfMissing,
+} from './mirrorPaths';
 
 export type PipelineResult = VerbaleSyncResult & {
     sources: string[];
@@ -114,6 +118,8 @@ function collectIsoDates(cwd: string): string[] {
 
 /** Esegue merge BARBARA + docs → Obsidian repo per tutti i giorni con almeno una fonte. */
 export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[] {
+    purgeEmptyVerbaleScaffolds(cwd);
+
     const barbaraDir = resolveBarbaraDir(cwd);
     const barbaraFiles = listBarbaraVerbali(cwd);
     if (barbaraDir) {
@@ -178,6 +184,7 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
 
         if (!existsSync(obsidianPath)) {
             writeFileSync(obsidianPath, next, 'utf8');
+            writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
             results.push({
                 iso,
                 action: 'created',
@@ -202,6 +209,7 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
         }
 
         writeFileSync(obsidianPath, next, 'utf8');
+        writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
         results.push({
             iso,
             action: 'updated',
@@ -209,6 +217,10 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
             obsidianPath,
             sources,
         });
+    }
+
+    for (const iso of collectIsoDates(cwd)) {
+        mirrorCanonicalIfMissing(cwd, iso);
     }
 
     // Solo docs/verbali senza data già gestita dalla pipeline (evita righe duplicate in log)

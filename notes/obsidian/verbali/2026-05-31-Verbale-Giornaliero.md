@@ -1,13 +1,12 @@
 ---
 date: 2026-05-31
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
-sync_sources: ["barbara:2026-05-31_PROT_015.md"]
-synced_at: 2026-06-18T13:53:36.611Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+tipo: verbale_sviluppo
+tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sync_source: docs/verbali/31-05-2026.md
+synced_at: 2026-06-19T15:35:25.289Z
 ---
 
-> Pipeline automatica FloreMoria — un giorno, un verbale. Fonti: barbara:2026-05-31_PROT_015.md.
+> Copia sincronizzata automaticamente da `docs/verbali/31-05-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Strategia Partner — Gruppo Battistella
 

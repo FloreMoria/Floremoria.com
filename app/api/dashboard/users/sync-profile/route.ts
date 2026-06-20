@@ -7,7 +7,7 @@ import { updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { orderIds, name, phone, city, email } = body;
+        const { orderIds, name, phone, email } = body;
 
         if (!orderIds || !Array.isArray(orderIds)) {
             return NextResponse.json({ error: 'Missing orderIds' }, { status: 400 });
@@ -20,7 +20,6 @@ export async function PUT(request: Request) {
             data: {
                 buyerFullName: name,
                 customerPhone: phone,
-                buyerCity: city,
                 ...(typeof email === 'string' && email.trim()
                     ? { buyerEmail: normalizeMagicLinkEmail(email) }
                     : {}),

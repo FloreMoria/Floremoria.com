@@ -44,17 +44,16 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
         const name = (form.elements.namedItem('userName') as HTMLInputElement).value;
         const email = (form.elements.namedItem('userEmail') as HTMLInputElement).value;
         const phone = (form.elements.namedItem('userPhone') as HTMLInputElement).value;
-        const city = (form.elements.namedItem('userCity') as HTMLInputElement).value;
         const orderIds = selectedUser.orders.map((o: any) => o.id);
 
         try {
             const res = await fetch('/api/dashboard/users/sync-profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, phone, city, orderIds })
+                body: JSON.stringify({ name, email, phone, orderIds })
             });
             if (res.ok) {
-                const updatedModUser = { ...selectedUser, name, email, phone, city };
+                const updatedModUser = { ...selectedUser, name, email, phone };
                 setSelectedUser(updatedModUser);
                 setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedModUser : u));
                 alert('Profilo Utente aggiornato nei database storici!');
@@ -266,12 +265,6 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                         <input type="text" name="userName" defaultValue={selectedUser.name} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                                            <Mail className="w-3 h-3" /> Email
-                                        </label>
-                                        <input type="email" name="userEmail" defaultValue={selectedUser.email || ''} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
-                                    </div>
-                                    <div>
                                         <label className="block text-xs font-semibold text-gray-500 mb-1">Telefono (WhatsApp)</label>
                                         <div className="flex gap-2">
                                             <input type="text" name="userPhone" defaultValue={selectedUser.phone} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
@@ -281,8 +274,10 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Città di Residenza</label>
-                                        <input type="text" name="userCity" defaultValue={selectedUser.city} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                                            <Mail className="w-3 h-3" /> Mail
+                                        </label>
+                                        <input type="email" name="userEmail" defaultValue={selectedUser.email || selectedUser.orders?.[0]?.buyerEmail || ''} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
                                     </div>
                                     <div className="flex items-end">
                                         <button type="submit" disabled={isSavingUser} className="w-full text-sm font-medium bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">

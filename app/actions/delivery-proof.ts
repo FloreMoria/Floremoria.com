@@ -1,10 +1,10 @@
     "use server";
 
     import prisma from '@/lib/prisma';
-    import { buildMagicPhotoDeliveryUrl } from '@/lib/auth/magicPhotoDelivery';
     import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
     import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
     import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
+    import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
     import { revalidatePath } from 'next/cache';
     import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 
@@ -25,6 +25,7 @@
                 },
                 include: {
                     partner: true,
+                    user: { select: { email: true, name: true } },
                     items: {
                         include: {
                             product: true
@@ -112,27 +113,29 @@
                 });
             }
 
-            // Notifica WhatsApp post-consegna via Futuria (workflow tag + custom field dinamici).
+            // Notifica WhatsApp post-consegna via Futuria (chiave email utente).
             if (newStatus === 'COMPLETED' && photoAfterUrl) {
-                const magicLinkUrl = buildMagicPhotoDeliveryUrl(order.id);
+                const linkedUser = await ensureUserForOrder(order);
+                const userEmail = linkedUser?.email?.trim() || order.user?.email?.trim();
                 const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
 
-                void sendMagicPhotoDeliveryToFuturia({
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
-                    buyerFullName: order.buyerFullName,
-                    buyerEmail: order.buyerEmail,
-                    customerPhone: order.customerPhone,
-                    deceasedName: order.deceasedName,
-                    cemeteryCity: order.cemeteryCity,
-                    cemeteryName: order.cemeteryName,
-                    deliveryProvince: order.deliveryProvince,
-                    deliveredProductsSummary,
-                    magicLinkUrl,
-                    photoAfterUrl,
-                }).catch((err) => {
-                    console.error('[delivery-proof] Notifica Futuria non riuscita (non bloccante):', err);
-                });
+                if (userEmail) {
+                    void sendMagicPhotoDeliveryToFuturia({
+                        orderId: order.id,
+                        orderNumber: order.orderNumber,
+                        userEmail,
+                        buyerFullName: linkedUser?.name || order.buyerFullName,
+                        customerPhone: order.customerPhone,
+                        deceasedName: order.deceasedName,
+                        cemeteryCity: order.cemeteryCity,
+                        cemeteryName: order.cemeteryName,
+                        deliveryProvince: order.deliveryProvince,
+                        deliveredProductsSummary,
+                        photoAfterUrl,
+                    }).catch((err) => {
+                        console.error('[delivery-proof] Notifica Futuria non riuscita (non bloccante):', err);
+                    });
+                }
             }
 
             revalidatePath('/dashboard');

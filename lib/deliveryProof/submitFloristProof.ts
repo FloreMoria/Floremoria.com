@@ -2,7 +2,6 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
-import { buildMagicPhotoDeliveryUrl } from '@/lib/auth/magicPhotoDelivery';
 import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
@@ -41,6 +40,7 @@ export async function submitFloristDeliveryProof(
             items: { include: { product: true } },
             deliveryProof: true,
             deceasedProfile: true,
+            user: { select: { id: true, email: true, name: true } },
         },
     });
 
@@ -109,25 +109,44 @@ export async function submitFloristDeliveryProof(
 
     await syncDeceasedRelationsForOrder(order.id);
 
-    const magicLinkUrl = buildMagicPhotoDeliveryUrl(order.id);
+    const userEmail = linkedUser?.email?.trim() || order.user?.email?.trim();
     const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
 
-    void sendMagicPhotoDeliveryToFuturia({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        buyerFullName: order.buyerFullName,
-        buyerEmail: order.buyerEmail,
-        customerPhone: order.customerPhone,
-        deceasedName: order.deceasedName,
-        cemeteryCity: order.cemeteryCity,
-        cemeteryName: order.cemeteryName,
-        deliveryProvince: order.deliveryProvince,
-        deliveredProductsSummary,
-        magicLinkUrl,
-        photoAfterUrl,
-    }).catch((err) => {
-        console.error('[submitFloristDeliveryProof] Futuria magic-photo notify failed:', err);
-    });
+    let magicLinkUrl = '';
+
+    if (!userEmail) {
+        console.error(
+            `[submitFloristDeliveryProof] Futuria sync skipped: ordine ${order.orderNumber || order.id} senza user.email`
+        );
+    } else {
+        try {
+            const futuriaResult = await sendMagicPhotoDeliveryToFuturia({
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                userEmail,
+                buyerFullName: linkedUser?.name || order.buyerFullName,
+                customerPhone: order.customerPhone,
+                deceasedName: order.deceasedName,
+                cemeteryCity: order.cemeteryCity,
+                cemeteryName: order.cemeteryName,
+                deliveryProvince: order.deliveryProvince,
+                deliveredProductsSummary,
+                photoAfterUrl,
+            });
+
+            if (futuriaResult.magicLinkUrl) {
+                magicLinkUrl = futuriaResult.magicLinkUrl;
+            }
+
+            if (!futuriaResult.ok) {
+                console.error(
+                    `[submitFloristDeliveryProof] Futuria sync non riuscita order=${order.orderNumber || order.id} skipped=${futuriaResult.skipped}`
+                );
+            }
+        } catch (err) {
+            console.error('[submitFloristDeliveryProof] Futuria magic-photo notify failed:', err);
+        }
+    }
 
     revalidatePath('/dashboard/user');
     revalidatePath('/dashboard');

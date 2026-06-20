@@ -175,6 +175,8 @@ async function futuriaFetch<T>(path: string, init: RequestInit): Promise<T> {
 
 export interface FuturiaContactRecord {
     id: string;
+    email?: string;
+    phone?: string;
     customFields?: FuturiaCustomFieldEntry[];
     tags?: string[];
 }

@@ -11,10 +11,10 @@ File: `lib/deliveryProof/submitFloristProof.ts` → `sendMagicPhotoDeliveryToFut
 
 1. Il fiorista carica foto prima/dopo nella mini-app consegna.
 2. Le foto vengono salvate su `DeliveryProof` e **iniettate esplicitamente** su `Order.photos` (oltre a Giardino utente, profilo defunto e portfolio fiorista).
-3. FloreMoria effettua **un solo upsert** contatto via `lib/futuria/contactGate.ts`:
+3. FloreMoria effettua **un solo upsert** contatto via `lib/futuria/contactGate.ts`, con **chiave canonica email** (`order.user.email`):
    - contatto già presente → `paid_order_followup`
    - contatto assente ma ordine pagato → `paid_order`
-4. Viene applicato il tag `floremoria-consegna-effettuata`.
+4. Viene applicato il tag `floremoria-consegna-effettuata` solo dopo verifica corrispondenza email sul contatto Futuria.
 
 ## Custom field da creare su Futuria (modello Contact)
 
@@ -23,7 +23,7 @@ File: `lib/deliveryProof/submitFloristProof.ts` → `sendMagicPhotoDeliveryToFut
 | `contact.ultimo_prodotto_consegnato` | `{{ contact.ultimo_prodotto_consegnato }}` | Bouquet Cordoglio Sincero con Candele |
 | `contact.ultimo_defunto_associato` | `{{ contact.ultimo_defunto_associato }}` | Maria Rossi |
 | `contact.ultimo_cimitero_comune` | `{{ contact.ultimo_cimitero_comune }}` | Palermo |
-| `contact.ultimo_magic_link` | `{{ contact.ultimo_magic_link }}` | `https://www.floremoria.com/auth/magic-photo?token=…` |
+| `contact.ultimo_magic_link` | `{{ contact.ultimo_magic_link }}` | `https://www.floremoria.com/api/auth/magic-login?token=…` (24h) |
 
 Override opzionali via env:
 
@@ -60,7 +60,7 @@ Adattare il saluto se `first_name` non è valorizzato (fallback su nome completo
 | Testo pulsante | `Vedi le foto` (o `FOTO`) |
 | URL | `{{ contact.ultimo_magic_link }}` |
 
-Il magic link scade dopo **24 ore** e atterra su `/auth/magic-photo`, che reindirizza l'utente alla dashboard ordine/Giardino.
+Il magic link scade dopo **24 ore** e atterra su `/api/auth/magic-login`, che autentica l'utente e reindirizza alla dashboard/Giardino.
 
 ### 4. Note operative
 

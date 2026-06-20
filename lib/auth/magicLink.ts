@@ -22,13 +22,17 @@ export interface MagicLinkPayload {
     expiresAt: number;
 }
 
+/** TTL magic login post-consegna (WhatsApp Futuria → area riservata). */
+export const MAGIC_LOGIN_DELIVERY_TTL_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Genera un token crittografato e firmato digitalmente con scadenza a 15 minuti.
+ * Genera un token crittografato e firmato digitalmente.
+ * Default: 15 minuti (login standard). Post-consegna: passare `MAGIC_LOGIN_DELIVERY_TTL_MS`.
  */
-export function generateMagicLinkToken(email: string): string {
+export function generateMagicLinkToken(email: string, ttlMs = 15 * 60 * 1000): string {
     const payload: MagicLinkPayload = {
         email: email.trim().toLowerCase(),
-        expiresAt: Date.now() + 15 * 60 * 1000, // 15 minuti di validità
+        expiresAt: Date.now() + ttlMs,
     };
     
     const payloadStr = JSON.stringify(payload);
@@ -83,4 +87,19 @@ export function verifyMagicLinkToken(token: string): string | null {
         console.error('[magic-link] Parsing del token fallito:', e);
         return null;
     }
+}
+
+export function normalizeMagicLinkEmail(email: string): string {
+    return email.trim().toLowerCase();
+}
+
+/** Magic login 24h post-consegna → `/api/auth/magic-login?token=…` */
+export function buildMagicLoginUrl(email: string): string {
+    const base = (
+        process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+        process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
+        'https://www.floremoria.com'
+    ).replace(/\/$/, '');
+    const token = generateMagicLinkToken(email, MAGIC_LOGIN_DELIVERY_TTL_MS);
+    return `${base}/api/auth/magic-login?token=${encodeURIComponent(token)}`;
 }

@@ -67,15 +67,14 @@ export async function assertFuturiaContactAllowed(
 /**
  * Auth per follow-up post-consegna: aggiorna contatto esistente (paid_order_followup)
  * oppure crea da ordine pagato se mancante (paid_order).
+ * Chiave canonica: email utente (Caso B).
  */
 export async function resolveDeliveryFollowupContactAuth(params: {
     orderId: string;
-    phone: string;
-    email?: string | null;
+    email: string;
 }): Promise<FuturiaContactAuth> {
     const existing = await findFuturiaDuplicateContact({
-        phone: params.phone,
-        email: params.email ?? undefined,
+        email: params.email,
     });
 
     if (existing?.id) {

@@ -31,6 +31,7 @@ export default async function UsersPage() {
             usersMap.set(key, {
                 id: order.userId || `virtual_${order.id}`,
                 name: order.user?.name || order.buyerFullName || 'Utente Sconosciuto',
+                email: order.user?.email || order.buyerEmail || '',
                 phone: order.user?.phone || order.customerPhone || 'Non specificato',
                 city: order.buyerCity || 'Non specificata',
                 orders: [],

@@ -9,6 +9,7 @@ import {
     groupOrdersByDeceased,
     UserBachecaOrderCard,
 } from '@/components/dashboard/UserBachecaOrderCard';
+import UserPersonalDataForm from '@/components/dashboard/UserPersonalDataForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +124,15 @@ export default async function UserDashboardPage({
                         ) : null}
                     </div>
                 </div>
+
+                {!showFinancialDetails ? (
+                    <UserPersonalDataForm
+                        initialName={user.name ?? ''}
+                        initialEmail={user.email}
+                        saveEndpoint="/api/dashboard/user/profile"
+                        sectionTitle="I Suoi Dati Personali"
+                    />
+                ) : null}
 
                 <div className="space-y-10">
                     <h2 className="text-lg font-bold text-slate-800 tracking-tight">I Suoi Omaggi Floreali</h2>

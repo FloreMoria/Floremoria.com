@@ -20,6 +20,7 @@ interface ProfileFormProps {
 
 export default function ProfileForm({ initialProfile }: ProfileFormProps) {
     const [name, setName] = useState(initialProfile.name);
+    const [email, setEmail] = useState(initialProfile.email);
     const [phone, setPhone] = useState(initialProfile.phone);
     const [company, setCompany] = useState(initialProfile.company);
     const [vatNumber, setVatNumber] = useState(initialProfile.vatNumber);
@@ -40,7 +41,13 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
             const res = await fetch('/api/dashboard/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, company, vatNumber }),
+                body: JSON.stringify({
+                    name,
+                    email: initialProfile.emailReadOnly ? undefined : email,
+                    phone,
+                    company,
+                    vatNumber,
+                }),
             });
             const data = await res.json();
 
@@ -51,11 +58,16 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
 
             if (data.profile) {
                 setName(data.profile.name ?? '');
+                setEmail(data.profile.email ?? '');
                 setPhone(data.profile.phone ?? '');
                 setCompany(data.profile.company ?? '');
                 setVatNumber(data.profile.vatNumber ?? '');
             }
             setSuccessMsg(data.message || 'Profilo aggiornato con successo.');
+
+            if (data.emailChanged) {
+                window.location.reload();
+            }
         } catch {
             setErrorMsg('Errore di connessione al server.');
         } finally {
@@ -93,13 +105,14 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
                         <input
                             id="profile-email"
                             type="email"
-                            readOnly
-                            value={initialProfile.email}
-                            className={`${inputClass} bg-gray-100 text-gray-600 cursor-not-allowed`}
+                            readOnly={initialProfile.emailReadOnly}
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className={`${inputClass} ${initialProfile.emailReadOnly ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`}
                             title={
                                 initialProfile.emailReadOnly
                                     ? 'Email di sessione account elevato: non modificabile per preservare il bypass di login.'
-                                    : 'Email di accesso gestita dal sistema di autenticazione.'
+                                    : 'Email di accesso e chiave di sincronizzazione CRM.'
                             }
                         />
                     </div>

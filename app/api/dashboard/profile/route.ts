@@ -6,6 +6,8 @@ import {
     isBypassElevatedEmail,
     resolveSessionUser,
 } from '@/lib/auth/sessionUser';
+import { applySessionEmailCookie } from '@/lib/auth/sessionEmailCookie';
+import { saveUserProfileFields, UserEmailUpdateError } from '@/lib/auth/userProfileSave';
 
 /** GET — profilo dell'utente di sessione (allineato a ensureElevatedUserRecord). */
 export async function GET() {
@@ -49,8 +51,7 @@ export async function GET() {
 }
 
 /**
- * PUT — aggiorna solo campi anagrafici whitelisted.
- * Isolamento password: passwordHash e credenziali env bypass non sono mai modificabili.
+ * PUT — aggiorna campi anagrafici whitelisted (+ email se consentita) con sync Futuria.
  */
 export async function PUT(request: Request) {
     try {
@@ -72,13 +73,11 @@ export async function PUT(request: Request) {
 
         const body = await request.json();
 
-        // Blocco esplicito: nessun campo sensibile può essere inviato dal client.
         const forbiddenKeys = [
             'password',
             'passwordHash',
             'systemRole',
             'roleId',
-            'email',
             'isActive',
             'invitationToken',
             'inviteExpiresAt',
@@ -95,22 +94,35 @@ export async function PUT(request: Request) {
             }
         }
 
+        const emailReadOnly = isBypassElevatedEmail(user.email);
+        if (emailReadOnly && typeof body.email === 'string' && body.email.trim().toLowerCase() !== user.email) {
+            return NextResponse.json(
+                { success: false, message: 'Email di sessione elevata: non modificabile.' },
+                { status: 400 }
+            );
+        }
+
         const updateData = buildSafeProfileUpdate(body);
-        if (Object.keys(updateData).length === 0) {
+        const hasEmailField = typeof body.email === 'string';
+        if (Object.keys(updateData).length === 0 && !hasEmailField) {
             return NextResponse.json(
                 { success: false, message: 'Nessun dato valido da aggiornare.' },
                 { status: 400 }
             );
         }
 
-        const updated = await prisma.user.update({
-            where: { id: user.id },
-            data: updateData,
+        const { user: updated, emailChanged } = await saveUserProfileFields({
+            user,
+            body,
+            allowEmailChange: !emailReadOnly,
         });
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
-            message: 'Profilo aggiornato con successo.',
+            message: emailChanged
+                ? 'Profilo e email aggiornati con successo.'
+                : 'Profilo aggiornato con successo.',
+            emailChanged,
             profile: {
                 id: updated.id,
                 name: updated.name ?? '',
@@ -122,7 +134,16 @@ export async function PUT(request: Request) {
                 emailReadOnly: isBypassElevatedEmail(updated.email),
             },
         });
+
+        if (emailChanged) {
+            applySessionEmailCookie(response, request, updated.email);
+        }
+
+        return response;
     } catch (error) {
+        if (error instanceof UserEmailUpdateError) {
+            return NextResponse.json({ success: false, message: error.message }, { status: 400 });
+        }
         console.error('[profile PUT]', error);
         return NextResponse.json(
             { success: false, message: 'Errore interno durante il salvataggio del profilo.' },

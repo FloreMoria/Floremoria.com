@@ -357,6 +357,33 @@ export async function upsertFuturiaContact(
     return contactId;
 }
 
+/** Aggiorna un contatto Futuria esistente per id (es. cambio email Caso B). */
+export async function updateFuturiaContactById(
+    contactId: string,
+    input: Pick<FuturiaUpsertContactInput, 'email' | 'phone' | 'name'>
+): Promise<void> {
+    if (!contactId?.trim()) {
+        throw new FuturiaApiError('contactId mancante per update Futuria', 0);
+    }
+
+    const nameParts = splitFullName(input.name);
+    const body: Record<string, unknown> = {
+        ...(input.email ? { email: input.email.trim().toLowerCase() } : {}),
+        ...(input.phone ? { phone: input.phone } : {}),
+        ...(nameParts.firstName || input.name
+            ? { firstName: nameParts.firstName || input.name?.trim() }
+            : {}),
+        ...(nameParts.lastName ? { lastName: nameParts.lastName } : {}),
+    };
+
+    if (Object.keys(body).length === 0) return;
+
+    await futuriaFetch(`/contacts/${contactId}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+    });
+}
+
 export async function sendFuturiaEmail(input: FuturiaSendEmailInput): Promise<{ messageId?: string }> {
     const payload: Record<string, unknown> = {
         type: 'Email',

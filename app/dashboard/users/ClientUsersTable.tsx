@@ -42,6 +42,7 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
         setIsSavingUser(true);
         const form = e.target as HTMLFormElement;
         const name = (form.elements.namedItem('userName') as HTMLInputElement).value;
+        const email = (form.elements.namedItem('userEmail') as HTMLInputElement).value;
         const phone = (form.elements.namedItem('userPhone') as HTMLInputElement).value;
         const city = (form.elements.namedItem('userCity') as HTMLInputElement).value;
         const orderIds = selectedUser.orders.map((o: any) => o.id);
@@ -50,11 +51,10 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
             const res = await fetch('/api/dashboard/users/sync-profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, city, orderIds })
+                body: JSON.stringify({ name, email, phone, city, orderIds })
             });
             if (res.ok) {
-                // Notifichiamo success logicamente e aggiorniamo la UI Modale + Tabella genitore
-                const updatedModUser = { ...selectedUser, name, phone, city };
+                const updatedModUser = { ...selectedUser, name, email, phone, city };
                 setSelectedUser(updatedModUser);
                 setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedModUser : u));
                 alert('Profilo Utente aggiornato nei database storici!');
@@ -264,6 +264,12 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 mb-1">Nome Completo</label>
                                         <input type="text" name="userName" defaultValue={selectedUser.name} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                                            <Mail className="w-3 h-3" /> Email
+                                        </label>
+                                        <input type="email" name="userEmail" defaultValue={selectedUser.email || ''} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-fm-gold outline-none" required />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 mb-1">Telefono (WhatsApp)</label>

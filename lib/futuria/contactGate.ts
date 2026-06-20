@@ -4,7 +4,7 @@
  * restano consentiti per auth, consegna e partner B2B.
  */
 import prisma from '@/lib/prisma';
-import type { FuturiaContactRecord } from './client';
+import { findFuturiaDuplicateContact, type FuturiaContactRecord } from './client';
 
 export class FuturiaContactGateError extends Error {
     constructor(message: string) {
@@ -62,4 +62,25 @@ export async function assertFuturiaContactAllowed(
         default:
             throw new FuturiaContactGateError('Creazione contatto Futuria non autorizzata.');
     }
+}
+
+/**
+ * Auth per follow-up post-consegna: aggiorna contatto esistente (paid_order_followup)
+ * oppure crea da ordine pagato se mancante (paid_order).
+ */
+export async function resolveDeliveryFollowupContactAuth(params: {
+    orderId: string;
+    phone: string;
+    email?: string | null;
+}): Promise<FuturiaContactAuth> {
+    const existing = await findFuturiaDuplicateContact({
+        phone: params.phone,
+        email: params.email ?? undefined,
+    });
+
+    if (existing?.id) {
+        return { source: 'paid_order_followup', orderId: params.orderId };
+    }
+
+    return { source: 'paid_order', orderId: params.orderId };
 }

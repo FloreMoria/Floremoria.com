@@ -1,10 +1,12 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
+import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { buildMagicPhotoDeliveryUrl } from '@/lib/auth/magicPhotoDelivery';
 import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
+import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
 
 export type SubmitFloristProofInput = {
     orderId: string;
@@ -91,14 +93,9 @@ export async function submitFloristDeliveryProof(
             },
         });
 
-        await tx.order.update({
-            where: { id: order.id },
-            data: {
-                status: 'COMPLETED',
-                latitude: gpsLatitude ?? order.latitude,
-                longitude: gpsLongitude ?? order.longitude,
-                photos: [...photosBeforeUrls, ...photosAfterUrls],
-            },
+        await injectDeliveryPhotosOnOrder(tx, order.id, photosBeforeUrls, photosAfterUrls, {
+            latitude: gpsLatitude ?? order.latitude,
+            longitude: gpsLongitude ?? order.longitude,
         });
     });
 
@@ -113,6 +110,7 @@ export async function submitFloristDeliveryProof(
     await syncDeceasedRelationsForOrder(order.id);
 
     const magicLinkUrl = buildMagicPhotoDeliveryUrl(order.id);
+    const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
 
     void sendMagicPhotoDeliveryToFuturia({
         orderId: order.id,
@@ -121,6 +119,10 @@ export async function submitFloristDeliveryProof(
         buyerEmail: order.buyerEmail,
         customerPhone: order.customerPhone,
         deceasedName: order.deceasedName,
+        cemeteryCity: order.cemeteryCity,
+        cemeteryName: order.cemeteryName,
+        deliveryProvince: order.deliveryProvince,
+        deliveredProductsSummary,
         magicLinkUrl,
         photoAfterUrl,
     }).catch((err) => {

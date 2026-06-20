@@ -84,6 +84,37 @@ export function getFuturiaMagicPhotoLinkFieldKey(): string {
     return process.env.FUTURIA_CF_MAGIC_PHOTO_LINK_KEY?.trim() || 'contact.magic_link_foto';
 }
 
+/** Campi custom Futuria per workflow WhatsApp post-consegna (variabili dinamiche). */
+export interface FuturiaDeliveryCompletionFieldConfig {
+    ultimoProdottoConsegnatoKey: string;
+    ultimoDefuntoAssociatoKey: string;
+    ultimoCimiteroComuneKey: string;
+    ultimoMagicLinkKey: string;
+}
+
+export function getFuturiaDeliveryCompletionFieldConfig(): FuturiaDeliveryCompletionFieldConfig {
+    return {
+        ultimoProdottoConsegnatoKey:
+            process.env.FUTURIA_CF_ULTIMO_PRODOTTO_CONSEGNATO_KEY?.trim() ||
+            'contact.ultimo_prodotto_consegnato',
+        ultimoDefuntoAssociatoKey:
+            process.env.FUTURIA_CF_ULTIMO_DEFUNTO_ASSOCIATO_KEY?.trim() ||
+            'contact.ultimo_defunto_associato',
+        ultimoCimiteroComuneKey:
+            process.env.FUTURIA_CF_ULTIMO_CIMITERO_COMUNE_KEY?.trim() ||
+            'contact.ultimo_cimitero_comune',
+        ultimoMagicLinkKey:
+            process.env.FUTURIA_CF_ULTIMO_MAGIC_LINK_KEY?.trim() || 'contact.ultimo_magic_link',
+    };
+}
+
+/** Tag workflow Futuria: WhatsApp Link foto consegna al cliente. */
+export function getFuturiaDeliveryCompletedTag(): string {
+    return (
+        process.env.FUTURIA_TAG_CONSEGNA_EFFETTUATA?.trim() || 'floremoria-consegna-effettuata'
+    );
+}
+
 /** Custom field Futuria con URL mini-app consegna fiorista (codice parlante). */
 export function getFuturiaFloristDeliveryLinkFieldKey(): string {
     return (

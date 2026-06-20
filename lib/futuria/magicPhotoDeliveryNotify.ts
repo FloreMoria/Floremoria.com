@@ -1,9 +1,19 @@
 /**
- * Futuria: upsert contatto + custom field Magic Link + tag workflow foto consegna.
- * Pattern doppio passaggio: upsert dati → tag `floremoria-invia-foto-consegna`.
+ * Futuria: upsert contatto post-consegna con custom field dinamici + tag workflow.
+ * Gate: paid_order_followup (contatto esistente) o paid_order (primo sync).
  */
-import { isFuturiaConfigured, normalizeFuturiaPhone, upsertFuturiaContact } from './client';
-import { getFuturiaMagicPhotoLinkFieldKey } from './config';
+import {
+    findFuturiaDuplicateContact,
+    isFuturiaConfigured,
+    normalizeFuturiaPhone,
+    upsertFuturiaContact,
+} from './client';
+import {
+    getFuturiaDeliveryCompletedTag,
+    getFuturiaDeliveryCompletionFieldConfig,
+} from './config';
+import { resolveDeliveryFollowupContactAuth } from './contactGate';
+import { resolvePartnerCity } from './proofOfDelivery';
 
 export interface MagicPhotoDeliveryNotifyInput {
     orderId: string;
@@ -12,8 +22,29 @@ export interface MagicPhotoDeliveryNotifyInput {
     buyerEmail?: string | null;
     customerPhone?: string | null;
     deceasedName?: string | null;
+    cemeteryCity?: string | null;
+    cemeteryName?: string | null;
+    deliveryProvince?: string | null;
+    deliveredProductsSummary: string;
     magicLinkUrl: string;
     photoAfterUrl?: string | null;
+}
+
+function buildDeliveryCompletionCustomFields(input: MagicPhotoDeliveryNotifyInput): Record<string, string> {
+    const fields = getFuturiaDeliveryCompletionFieldConfig();
+    const deceasedName = (input.deceasedName || 'chi ama').trim();
+    const cemeteryCity = resolvePartnerCity({
+        cemeteryCity: input.cemeteryCity,
+        cemeteryName: input.cemeteryName,
+        deliveryProvince: input.deliveryProvince,
+    });
+
+    return {
+        [fields.ultimoProdottoConsegnatoKey]: input.deliveredProductsSummary.trim(),
+        [fields.ultimoDefuntoAssociatoKey]: deceasedName,
+        [fields.ultimoCimiteroComuneKey]: cemeteryCity,
+        [fields.ultimoMagicLinkKey]: input.magicLinkUrl.trim(),
+    };
 }
 
 export async function sendMagicPhotoDeliveryToFuturia(
@@ -28,8 +59,15 @@ export async function sendMagicPhotoDeliveryToFuturia(
         return { ok: false, skipped: 'invalid_phone' };
     }
 
-    const magicFieldKey = getFuturiaMagicPhotoLinkFieldKey();
     const buyerName = (input.buyerFullName || 'Utente').trim();
+    const deliveryTag = getFuturiaDeliveryCompletedTag();
+    const customFields = buildDeliveryCompletionCustomFields(input);
+
+    const auth = await resolveDeliveryFollowupContactAuth({
+        orderId: input.orderId,
+        phone,
+        email: input.buyerEmail,
+    });
 
     const contactId = await upsertFuturiaContact(
         {
@@ -38,25 +76,26 @@ export async function sendMagicPhotoDeliveryToFuturia(
             ...(input.buyerEmail ? { email: input.buyerEmail } : {}),
             deceasedName: input.deceasedName,
             orderNumber: input.orderNumber,
-            additionalCustomFields: {
-                [magicFieldKey]: input.magicLinkUrl,
-            },
+            tags: [deliveryTag],
+            additionalCustomFields: customFields,
         },
-        { source: 'paid_order_followup', orderId: input.orderId }
-    );
-
-    await upsertFuturiaContact(
-        {
-            phone,
-            name: buyerName,
-            tags: ['floremoria-invia-foto-consegna'],
-        },
-        { source: 'paid_order_followup', orderId: input.orderId }
+        auth
     );
 
     console.info(
-        `[magic-photo-delivery] Futuria upsert OK contact=${contactId} order=${input.orderNumber || input.orderId}`
+        `[magic-photo-delivery] Futuria upsert OK contact=${contactId} order=${input.orderNumber || input.orderId} tag=${deliveryTag} auth=${auth.source}`
     );
 
     return { ok: true, contactId };
+}
+
+/** Solo per test: verifica presenza contatto prima dell'upsert. */
+export async function findFuturiaContactForDeliveryNotify(params: {
+    phone: string;
+    email?: string | null;
+}) {
+    return findFuturiaDuplicateContact({
+        phone: params.phone,
+        email: params.email ?? undefined,
+    });
 }

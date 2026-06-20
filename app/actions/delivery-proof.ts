@@ -1,7 +1,10 @@
     "use server";
 
     import prisma from '@/lib/prisma';
-    import { sendProofOfDeliveryNotification } from '@/lib/futuria/proofOfDelivery';
+    import { buildMagicPhotoDeliveryUrl } from '@/lib/auth/magicPhotoDelivery';
+    import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
+    import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
+    import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
     import { revalidatePath } from 'next/cache';
     import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 
@@ -96,17 +99,25 @@
                 }
             });
 
-            // Sincronizzazione status ordine principale se completo
+            // Sincronizzazione status ordine principale se completo + iniezione foto su Order
             if (newStatus === 'COMPLETED' && order.status !== 'COMPLETED') {
-                 await prisma.order.update({
-                     where: { id: order.id },
-                     data: { status: 'COMPLETED' }
-                 });
+                const photosBefore = photoBeforeUrl ? [photoBeforeUrl] : [];
+                const photosAfter = photoAfterUrl ? [photoAfterUrl] : [];
+                await prisma.order.update({
+                    where: { id: order.id },
+                    data: {
+                        status: 'COMPLETED',
+                        photos: syncOrderPhotosArray(photosBefore, photosAfter),
+                    },
+                });
             }
 
-            // Notifica WhatsApp Proof of Delivery via Futuria (fire-and-forget).
+            // Notifica WhatsApp post-consegna via Futuria (workflow tag + custom field dinamici).
             if (newStatus === 'COMPLETED' && photoAfterUrl) {
-                void sendProofOfDeliveryNotification({
+                const magicLinkUrl = buildMagicPhotoDeliveryUrl(order.id);
+                const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
+
+                void sendMagicPhotoDeliveryToFuturia({
                     orderId: order.id,
                     orderNumber: order.orderNumber,
                     buyerFullName: order.buyerFullName,
@@ -116,6 +127,8 @@
                     cemeteryCity: order.cemeteryCity,
                     cemeteryName: order.cemeteryName,
                     deliveryProvince: order.deliveryProvince,
+                    deliveredProductsSummary,
+                    magicLinkUrl,
                     photoAfterUrl,
                 }).catch((err) => {
                     console.error('[delivery-proof] Notifica Futuria non riuscita (non bloccante):', err);

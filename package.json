@@ -14,6 +14,8 @@
     "db:migrate:deploy": "tsx scripts/db-migrate-deploy.ts",
     "db:neon:push": "tsx scripts/db-neon-sync.ts push",
     "db:neon:migrate": "tsx scripts/db-neon-sync.ts migrate",
+    "db:migrate:resolve-failed": "tsx scripts/db-resolve-failed-local-migration.ts",
+    "db:verify:email-blacklist": "tsx scripts/verify-email-blacklist-table.ts",
     "db:neon:fix-partner-b2b": "tsx scratch/fix-partner-b2b.ts",
     "db:check-dashboard": "tsx scripts/check-dashboard-schema.ts",
     "db:seed": "prisma db seed",

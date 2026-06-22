@@ -20,6 +20,9 @@ export interface EvolutionInstanceState {
     state?: 'open' | 'connecting' | 'close' | 'refused';
     qrCodeBase64?: string;
     error?: string;
+    /** Nomi variabili env assenti su Vercel (solo se error === not_configured). */
+    missingEnv?: string[];
+    instance?: string;
 }
 
 /**
@@ -43,12 +46,25 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
     return p;
 }
 
-function getEvolutionConfig(): { baseUrl: string; apiKey: string; instance: string } | null {
-    const baseUrl = process.env.EVOLUTION_API_BASE_URL?.trim().replace(/\/$/, '');
-    const apiKey = process.env.EVOLUTION_API_KEY?.trim();
+/** Elenco env mancanti (solo nomi — per diagnostica admin, senza esporre segreti). */
+export function getEvolutionEnvDiagnostics(): {
+    configured: boolean;
+    missing: string[];
+    instance: string;
+} {
+    const missing: string[] = [];
+    if (!process.env.EVOLUTION_API_BASE_URL?.trim()) missing.push('EVOLUTION_API_BASE_URL');
+    if (!process.env.EVOLUTION_API_KEY?.trim()) missing.push('EVOLUTION_API_KEY');
     const instance = process.env.EVOLUTION_INSTANCE_NAME?.trim() || 'floremoria';
-    if (!baseUrl || !apiKey) return null;
-    return { baseUrl, apiKey, instance };
+    return { configured: missing.length === 0, missing, instance };
+}
+
+function getEvolutionConfig(): { baseUrl: string; apiKey: string; instance: string } | null {
+    const diag = getEvolutionEnvDiagnostics();
+    if (!diag.configured) return null;
+    const baseUrl = process.env.EVOLUTION_API_BASE_URL!.trim().replace(/\/$/, '');
+    const apiKey = process.env.EVOLUTION_API_KEY!.trim();
+    return { baseUrl, apiKey, instance: diag.instance };
 }
 
 /**
@@ -122,7 +138,15 @@ export async function sendEvolutionTextMessage(
  */
 export async function getEvolutionInstanceState(): Promise<EvolutionInstanceState> {
     const config = getEvolutionConfig();
-    if (!config) return { ok: false, error: 'not_configured' };
+    if (!config) {
+        const diag = getEvolutionEnvDiagnostics();
+        return {
+            ok: false,
+            error: 'not_configured',
+            missingEnv: diag.missing,
+            instance: diag.instance,
+        };
+    }
 
     try {
         const url = `${config.baseUrl}/instance/connectionState/${config.instance}`;

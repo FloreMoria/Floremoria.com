@@ -22,8 +22,13 @@ export async function GET(): Promise<NextResponse> {
 
     if (!result.ok) {
         return NextResponse.json(
-            { ok: false, error: result.error ?? 'evolution_api_error' },
-            { status: 502 }
+            {
+                ok: false,
+                error: result.error ?? 'evolution_api_error',
+                ...(result.missingEnv?.length ? { missingEnv: result.missingEnv } : {}),
+                ...(result.instance ? { instance: result.instance } : {}),
+            },
+            { status: result.error === 'not_configured' ? 503 : 502 }
         );
     }
 

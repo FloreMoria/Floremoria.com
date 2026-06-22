@@ -1,0 +1,38 @@
+# Applica le migration Prisma su Neon produzione (workflow manuale).
+# Usa il secret GitHub DATABASE_URL (stesso Neon di Vercel Production).
+
+name: Database migrate deploy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: db-migrate-deploy
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installa dipendenze
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (Neon produzione)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Verifica tabella email_blacklist
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx scripts/verify-email-blacklist-table.ts

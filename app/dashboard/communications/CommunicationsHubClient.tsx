@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, MessageCircle, Settings, BarChart2, CheckCircle2, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon } from 'lucide-react';
+import { Eye, MessageCircle, Settings, BarChart2, CheckCircle2, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2 } from 'lucide-react';
 
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
@@ -462,7 +462,10 @@ function FotoTab({ proofs }: { proofs: any[] }) {
 // -------------------------------------------------------------
 function ManutenzioneTab() {
   return (
-    <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-10">
+      <EmailBlacklistPanel />
+
+      <div>
       <div className="mb-8">
          <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Integrazione Gateway (Twilio)</h2>
          <p className="text-[#6F6F6F] mt-1">Configurazione delle variabili d'ambiente. I token reali risiedono nel file <span className="font-mono bg-gray-100 px-2 py-1 rounded mx-1">.env</span> (Server-Side).</p>
@@ -486,6 +489,153 @@ function ManutenzioneTab() {
                </span>
              </div>
           ))}
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function EmailBlacklistPanel() {
+  const [entries, setEntries] = useState<{ id: string; email: string; createdAt: string }[]>([]);
+  const [emailInput, setEmailInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchEntries = async () => {
+    try {
+      const res = await fetch('/api/dashboard/email-blacklist');
+      const data = await res.json();
+      if (data.ok) {
+        setEntries(data.entries || []);
+        setError(null);
+      } else {
+        setError(data.error || 'Impossibile caricare la blacklist.');
+      }
+    } catch {
+      setError('Errore di rete durante il caricamento.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEntries();
+  }, []);
+
+  const handleBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = emailInput.trim();
+    if (!raw || submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/dashboard/email-blacklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: raw }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setEmailInput('');
+        await fetchEntries();
+      } else {
+        setError(data.error || 'Impossibile bloccare l\'indirizzo.');
+      }
+    } catch {
+      setError('Errore di rete durante il salvataggio.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/dashboard/email-blacklist?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setEntries(prev => prev.filter(e => e.id !== id));
+      }
+    } catch {
+      setError('Errore durante la rimozione.');
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-display font-medium text-[#2B2B2B] flex items-center gap-2">
+          <Mail className="w-6 h-6 text-[#B89F78]" />
+          Blacklist email assistenza@
+        </h2>
+        <p className="text-[#6F6F6F] mt-1">
+          Mittenti esclusi dal risponditore automatico (newsletter, robot di notifica, comunicazioni@staff.aruba.it).
+          Le mail in blacklist vengono ignorate senza risposta e senza log in bacheca.
+        </p>
+      </div>
+
+      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden">
+        <div className="p-6 border-b border-[#EAE3D9] bg-white">
+          <form onSubmit={handleBlock} className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder="es. comunicazioni@staff.aruba.it"
+              className="flex-1 bg-white rounded-xl px-4 py-3 border border-[#DFDFDF] text-[15px] outline-none focus:border-[#C0A062] transition-colors"
+              disabled={submitting}
+            />
+            <button
+              type="submit"
+              disabled={!emailInput.trim() || submitting}
+              className="px-6 py-3 rounded-xl font-semibold text-sm bg-[#2B2B2B] text-white hover:bg-[#111] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+            >
+              <Ban className="w-4 h-4" />
+              Blocca
+            </button>
+          </form>
+          {error && (
+            <p className="mt-3 text-sm text-red-600 flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <p className="text-[#6F6F6F] text-sm">Caricamento...</p>
+          ) : entries.length === 0 ? (
+            <p className="text-[#6F6F6F] text-sm">Nessun indirizzo bloccato.</p>
+          ) : (
+            <ul className="space-y-2">
+              {entries.map(entry => (
+                <li
+                  key={entry.id}
+                  className="flex items-center justify-between bg-white border border-[#EAE3D9] rounded-xl px-4 py-3"
+                >
+                  <div>
+                    <span className="font-mono text-sm text-[#2B2B2B]">{entry.email}</span>
+                    <span className="block text-[11px] text-[#8696A0] mt-0.5">
+                      Aggiunto il {new Date(entry.createdAt).toLocaleDateString('it-IT')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(entry.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Rimuovi dalla blacklist"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

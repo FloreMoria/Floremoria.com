@@ -390,6 +390,15 @@ model FloremoriaLog {
   @@map("floremoria_logs")
 }
 
+/** Mittenti email esclusi dal risponditore automatico assistenza@ (spam, newsletter, robot). */
+model EmailBlacklist {
+  id        String   @id @default(cuid())
+  email     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("email_blacklist")
+}
+
 model WhatsAppChatSession {
   id         String               @id @default(cuid())
   phone      String               @unique

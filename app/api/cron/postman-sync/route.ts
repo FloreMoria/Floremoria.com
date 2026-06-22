@@ -1,24 +1,20 @@
 /**
- * POSTMAN SYNC — Cron Human-in-the-Loop per assistenza@floremoria.com.
+ * POSTMAN SYNC — Cron per assistenza@floremoria.com (risposte automatiche VERA/POSTMAN).
  *
- * Flusso: legge le mail UNSEEN via IMAP (Aruba) → l'agent LLM classifica (FF/FT/PA) e redige una bozza
- * → la bozza viene salvata nei Drafts via IMAP APPEND (mai inviata) → si registra un record in
- * floremoria_logs (visibile/approvabile in dashboard) → la mail viene marcata come letta (idempotenza).
- *
- * Protezione: header Authorization "Bearer <CRON_SECRET>" (compatibile con i Vercel Cron) oppure
- * header "x-cron-key". Senza segreto configurato l'endpoint è disabilitato.
+ * Flusso: legge mail UNSEEN via IMAP → filtra blacklist → classifica e redige risposta →
+ * invio diretto SMTP (thread In-Reply-To / References) → log audit → marca come letta.
  */
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { classifyAndDraft, PostmanConfigError } from '@/lib/postman/agent';
+import { isEmailBlacklisted } from '@/lib/postman/emailBlacklist';
 import {
-    appendDraftReply,
     createImapClient,
     fetchUnseenEmails,
     getMailboxConfigFromEnv,
     markEmailSeen,
     MailboxConfigError,
-    resolveDraftsPath,
+    sendDirectReply,
 } from '@/lib/postman/mailbox';
 
 export const runtime = 'nodejs';
@@ -27,7 +23,7 @@ export const maxDuration = 60;
 
 function isAuthorized(request: Request): boolean {
     const secret = process.env.POSTMAN_CRON_SECRET?.trim() || process.env.CRON_SECRET?.trim();
-    if (!secret) return false; // endpoint disabilitato finché non è configurato un segreto
+    if (!secret) return false;
     const auth = request.headers.get('authorization') || '';
     if (auth.replace(/^Bearer\s+/i, '').trim() === secret) return true;
     const headerKey = request.headers.get('x-cron-key')?.trim();
@@ -48,7 +44,7 @@ interface ProcessResult {
     messageId: string | null;
     from: string;
     category?: string;
-    status: 'draft_created' | 'skipped_duplicate' | 'error';
+    status: 'reply_sent' | 'skipped_blacklist' | 'skipped_duplicate' | 'error';
     error?: string;
 }
 
@@ -61,7 +57,7 @@ async function runSync(): Promise<{
 }> {
     const config = getMailboxConfigFromEnv();
     const limit = Math.max(1, Number(process.env.POSTMAN_MAX_EMAILS?.trim() || '10') || 10);
-    const markSeen = process.env.POSTMAN_MARK_SEEN?.trim() !== 'false'; // default: true
+    const markSeen = process.env.POSTMAN_MARK_SEEN?.trim() !== 'false';
 
     const client = createImapClient(config);
     const results: ProcessResult[] = [];
@@ -73,8 +69,6 @@ async function runSync(): Promise<{
             return { ok: true, found: 0, processed: 0, results, note: 'Nessuna mail non letta.' };
         }
 
-        const draftsPath = await resolveDraftsPath(client, config.draftsFolder);
-
         for (const email of emails) {
             const r: ProcessResult = {
                 uid: email.uid,
@@ -83,7 +77,13 @@ async function runSync(): Promise<{
                 status: 'error',
             };
             try {
-                // Deduplica: se esiste già un log per questo messageId, non rigeneriamo la bozza.
+                if (await isEmailBlacklisted(email.fromEmail)) {
+                    r.status = 'skipped_blacklist';
+                    results.push(r);
+                    if (markSeen) await markEmailSeen(client, email.uid).catch(() => undefined);
+                    continue;
+                }
+
                 if (email.messageId) {
                     const existing = await prisma.floremoriaLog.findFirst({
                         where: { keyPrompt: { contains: email.messageId } },
@@ -105,22 +105,23 @@ async function runSync(): Promise<{
                 });
                 r.category = draft.category;
 
-                await appendDraftReply(client, draftsPath, {
+                await sendDirectReply(config, {
                     fromAddress: config.user,
                     toAddress: email.fromEmail,
                     subject: draft.subject,
                     body: draft.body,
                     inReplyToMessageId: email.messageId,
+                    references: email.references,
                 });
 
                 const today = romeDateIso(new Date());
                 const fullText = [
-                    `BOZZA DI RISPOSTA (Human-in-the-Loop) — salvata nei Drafts di Aruba, NON inviata.`,
+                    `RISPOSTA AUTOMATICA INVIATA — assistenza@floremoria.com`,
                     `Da: ${email.fromName || ''} <${email.fromEmail}>`,
                     `Categoria: ${draft.category} — ${draft.reasoning}`,
-                    `Oggetto bozza: ${draft.subject}`,
+                    `Oggetto: ${draft.subject}`,
                     '',
-                    '--- Testo della bozza (firma e messaggio originale inclusi) ---',
+                    '--- Testo inviato (firma e messaggio originale inclusi) ---',
                     draft.body,
                 ].join('\n');
 
@@ -129,18 +130,18 @@ async function runSync(): Promise<{
                         sessionDate: new Date(),
                         tag: `#POSTMAN_ASSISTENZA_${today}, #${draft.category}`,
                         topic: email.subject || '(senza oggetto)',
-                        shortSummary: draft.reasoning || `Bozza categoria ${draft.category} pronta per revisione.`,
+                        shortSummary: draft.reasoning || `Risposta categoria ${draft.category} inviata.`,
                         keyPrompt: `POSTMAN msgid:${email.messageId || `uid-${email.uid}-${today}`}`,
                         fullText,
                         discussedPoints: `Email da ${email.fromEmail} classificata come ${draft.category}.`,
-                        achievedResults: 'Bozza salvata nei Drafts, in attesa di approvazione umana.',
-                        pendingTasks: 'Revisione e invio manuale della bozza dalla casella Aruba.',
+                        achievedResults: 'Risposta inviata direttamente al mittente via SMTP.',
+                        pendingTasks: null,
                         criticalAlarms: null,
                     },
                 });
 
                 if (markSeen) await markEmailSeen(client, email.uid);
-                r.status = 'draft_created';
+                r.status = 'reply_sent';
             } catch (e) {
                 r.error = e instanceof Error ? e.message : String(e);
                 console.error(`[postman] Errore elaborazione uid=${email.uid}:`, r.error);
@@ -148,7 +149,7 @@ async function runSync(): Promise<{
             results.push(r);
         }
 
-        const processed = results.filter((x) => x.status === 'draft_created').length;
+        const processed = results.filter((x) => x.status === 'reply_sent').length;
         return { ok: true, found: emails.length, processed, results };
     } finally {
         await client.logout().catch(() => undefined);

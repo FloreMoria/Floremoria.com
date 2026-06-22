@@ -4,7 +4,7 @@
  * Operazioni:
  *  - connessione IMAPS sicura (default imaps.aruba.it:993, SSL);
  *  - lettura delle mail NON LETTE (UNSEEN) della INBOX con parsing del testo;
- *  - salvataggio della BOZZA di risposta nella cartella Drafts via IMAP APPEND (nessun invio);
+ *  - invio diretto della risposta via SMTP (thread In-Reply-To / References);
  *  - marcatura della mail come letta (\Seen) per garantire l'idempotenza tra esecuzioni del cron.
  *
  * Stack: imapflow (IMAP), mailparser (parsing), nodemailer/MailComposer (composizione MIME della bozza).
@@ -12,10 +12,12 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import MailComposer from 'nodemailer/lib/mail-composer';
+import nodemailer from 'nodemailer';
 
 export interface IncomingEmail {
     uid: number;
     messageId: string | null;
+    references: string | null;
     fromName: string;
     fromEmail: string;
     subject: string;
@@ -110,9 +112,17 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
                         .trim();
                 }
 
+                let references: string | null = null;
+                if (parsed.references) {
+                    references = Array.isArray(parsed.references)
+                        ? parsed.references.join(' ')
+                        : String(parsed.references);
+                }
+
                 out.push({
                     uid: message.uid,
                     messageId,
+                    references,
                     fromName: from.name,
                     fromEmail: from.address,
                     subject: (parsed.subject || message.envelope?.subject || '').trim(),
@@ -144,6 +154,21 @@ export async function resolveDraftsPath(client: ImapFlow, configured?: string): 
     return 'Drafts';
 }
 
+function buildReferencesHeader(
+    inReplyToMessageId?: string | null,
+    priorReferences?: string | null
+): string | undefined {
+    const parts: string[] = [];
+    if (priorReferences?.trim()) {
+        parts.push(...priorReferences.trim().split(/\s+/).filter(Boolean));
+    }
+    if (inReplyToMessageId?.trim()) {
+        const id = inReplyToMessageId.trim();
+        if (!parts.includes(id)) parts.push(id);
+    }
+    return parts.length ? parts.join(' ') : undefined;
+}
+
 function buildMimeMessage(opts: {
     from: string;
     to: string;
@@ -169,7 +194,44 @@ function buildMimeMessage(opts: {
     });
 }
 
-/** Salva una bozza di risposta nella cartella Drafts (flag \Draft). Nessun invio. */
+/** Invia direttamente la risposta al cliente via SMTP (Aruba assistenza@). */
+export async function sendDirectReply(
+    config: MailboxConfig,
+    params: {
+        fromAddress: string;
+        toAddress: string;
+        subject: string;
+        body: string;
+        inReplyToMessageId?: string | null;
+        references?: string | null;
+    }
+): Promise<void> {
+    const host = process.env.ASSISTENZA_SMTP_HOST?.trim() || 'smtps.aruba.it';
+    const port = Number(process.env.ASSISTENZA_SMTP_PORT?.trim() || '465');
+    const secure = process.env.ASSISTENZA_SMTP_SECURE?.trim() !== 'false';
+
+    const transporter = nodemailer.createTransport({
+        host,
+        port: Number.isFinite(port) ? port : 465,
+        secure: secure || port === 465,
+        auth: { user: config.user, pass: config.password },
+    });
+
+    const references = buildReferencesHeader(params.inReplyToMessageId, params.references);
+
+    await transporter.sendMail({
+        from: params.fromAddress.includes('<')
+            ? params.fromAddress
+            : `FloreMoria Assistenza <${params.fromAddress}>`,
+        to: params.toAddress,
+        subject: params.subject,
+        text: params.body,
+        inReplyTo: params.inReplyToMessageId || undefined,
+        references,
+    });
+}
+
+/** @deprecated Usare sendDirectReply. Mantenuto per compatibilità test. */
 export async function appendDraftReply(
     client: ImapFlow,
     draftsPath: string,
@@ -179,6 +241,7 @@ export async function appendDraftReply(
         subject: string;
         body: string;
         inReplyToMessageId?: string | null;
+        references?: string | null;
     }
 ): Promise<void> {
     const mime = await buildMimeMessage({
@@ -186,8 +249,8 @@ export async function appendDraftReply(
         to: params.toAddress,
         subject: params.subject,
         text: params.body,
-        inReplyTo: params.inReplyToMessageId,
-        references: params.inReplyToMessageId,
+        inReplyTo: params.inReplyToMessageId || undefined,
+        references: buildReferencesHeader(params.inReplyToMessageId, params.references),
     });
     await client.append(draftsPath, mime, ['\\Draft'], new Date());
 }

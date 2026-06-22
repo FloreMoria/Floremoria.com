@@ -399,6 +399,20 @@ model EmailBlacklist {
   @@map("email_blacklist")
 }
 
+/**
+ * Numeri di telefono WhatsApp bloccati dal risponditore automatico VERA.
+ * Formato atteso: E.164 senza prefisso «whatsapp:», es. "+393204105305".
+ * La logica di controllo vive in /api/whatsapp/webhook.
+ */
+model PhoneBlacklist {
+  id        String   @id @default(cuid())
+  phone     String   @unique @db.VarChar(30)
+  note      String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("phone_blacklist")
+}
+
 model WhatsAppChatSession {
   id         String               @id @default(cuid())
   phone      String               @unique

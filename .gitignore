@@ -39,6 +39,7 @@ yarn-error.log*
 .env.production.local
 .env.development.local
 .env.test.local
+.env.evolution
 
 # vercel
 .vercel
@@ -46,6 +47,9 @@ env-per-vercel.txt
 env.host.docker.example
 *.txt
 *.example
+# Whitelist template senza segreti (da versionare)
+!.env.example
+!.env.evolution.example
 # Permetti il tracciamento dei file di conoscenza di VERA
 !/docs/whatsapp/knowledge_base_whatsapp.txt
 !/docs/whatsapp/knowledge_base_whatsapp_examples.txt

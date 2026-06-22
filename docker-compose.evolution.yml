@@ -1,0 +1,81 @@
+# Evolution API — Gateway WhatsApp FloreMoria
+# Guida completa: vedi docs/evolution-api-deploy.md nel progetto, oppure nell'artifact della conversazione.
+#
+# USO:
+#   1. Crea il file .env nella stessa cartella (vedi .env.evolution.example)
+#   2. docker compose up -d
+#   3. Vai su /admin-panel/whatsapp-setup per generare il QR e collegare l'iPhone 12
+
+
+services:
+
+  # ── Evolution API — Gateway WhatsApp ─────────────────────────────────────────
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: floremoria-evolution
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.evolution
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_healthy
+    networks:
+      - evolution-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # ── PostgreSQL locale (sessioni WhatsApp e log Evolution) ─────────────────────
+  # NOTA: i dati di business FloreMoria (ordini, chat, blacklist) stanno su Neon/Vercel Postgres,
+  # NON qui. Questo DB serve solo a Evolution API per le sue sessioni interne.
+  evolution-postgres:
+    image: postgres:15-alpine
+    container_name: floremoria-evo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: evolution_db
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVO_POSTGRES_PASSWORD:-floremoria_evo_pw}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - evolution-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis locale (cache sessioni WhatsApp) ────────────────────────────────────
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: floremoria-evo-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - evolution-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  evolution_instances:   # Sessioni WhatsApp (QR, chiavi crittografiche) — NON cancellare
+  postgres_data:         # DB interno Evolution API
+  redis_data:            # Cache Redis
+
+networks:
+  evolution-net:
+    driver: bridge

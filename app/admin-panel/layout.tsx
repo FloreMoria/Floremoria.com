@@ -41,6 +41,12 @@ export default async function AdminPanelLayout({ children }: { children: ReactNo
                             Ruoli & Admin
                         </Link>
                         <Link
+                            href="/admin-panel/whatsapp-setup"
+                            className="px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-green-400/90"
+                        >
+                            📱 WhatsApp
+                        </Link>
+                        <Link
                             href="/dashboard/orders"
                             className="px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/70"
                         >

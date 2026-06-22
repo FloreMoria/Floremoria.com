@@ -32,7 +32,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx prisma migrate deploy
 
-      - name: Verifica tabella email_blacklist
+      - name: Verifica tabelle blacklist (email + phone)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/verify-email-blacklist-table.ts
+        run: |
+          npx tsx scripts/verify-email-blacklist-table.ts
+          npx tsx scripts/verify-phone-blacklist-table.ts

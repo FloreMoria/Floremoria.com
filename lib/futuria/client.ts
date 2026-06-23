@@ -531,6 +531,7 @@ export interface FloristSyncInput {
     shopName: string;
     ownerName: string;
     whatsappNumber: string | null;
+    email?: string | null;
     pecAddress: string | null;
     order?: {
         deceasedName: string;
@@ -583,7 +584,7 @@ export async function syncFloristPartnerToFuturia(input: FloristSyncInput): Prom
         return null;
     }
     
-    const email = input.pecAddress || input.order?.partnerNotifyEmail || undefined;
+    const email = input.email?.trim() || input.pecAddress || input.order?.partnerNotifyEmail || undefined;
     const name = input.shopName || input.ownerName;
     
     const tags = ['Nuovo-Fiorista'];

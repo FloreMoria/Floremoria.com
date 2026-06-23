@@ -80,6 +80,10 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                             <div className="text-gray-900 font-semibold font-mono uppercase">{partner.sdiCode || '-'}</div>
                         </div>
                         <div>
+                            <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Email</div>
+                            <div className="text-blue-600 font-semibold truncate" title={partner.email || ''}>{partner.email || '-'}</div>
+                        </div>
+                        <div>
                             <div className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Indirizzo PEC</div>
                             <div className="text-blue-600 font-semibold truncate" title={partner.pecAddress || ''}>{partner.pecAddress || '-'}</div>
                         </div>

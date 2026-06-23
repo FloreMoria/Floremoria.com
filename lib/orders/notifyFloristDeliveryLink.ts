@@ -23,6 +23,7 @@ export async function notifyFloristDeliveryLinkForOrder(
                     shopName: true,
                     ownerName: true,
                     whatsappNumber: true,
+                    email: true,
                     pecAddress: true,
                     deletedAt: true,
                 },
@@ -59,7 +60,7 @@ export async function notifyFloristDeliveryLinkForOrder(
         partnerShopName: order.partner.shopName,
         partnerOwnerName: order.partner.ownerName,
         partnerWhatsapp: order.partner.whatsappNumber,
-        partnerEmail: order.partner.pecAddress,
+        partnerEmail: order.partner.email || order.partner.pecAddress,
     });
 
     if (futuriaResult.ok || futuriaResult.skipped !== 'futuria_not_configured') {

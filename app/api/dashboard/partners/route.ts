@@ -27,6 +27,7 @@ export async function POST(request: Request) {
                 shopName: partner.shopName,
                 ownerName: partner.ownerName,
                 whatsappNumber: partner.whatsappNumber,
+                email: partner.email,
                 pecAddress: partner.pecAddress,
             }).catch((err) => {
                 console.error('[partners-post] Error syncing new partner to Futuria:', err);

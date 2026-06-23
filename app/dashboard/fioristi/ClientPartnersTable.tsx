@@ -39,6 +39,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         taxCode: '',
         sdiCode: '',
         pecAddress: '',
+        email: '',
         activeOrders: 0,
         adminRating: 5.0,
         internalNotes: '',
@@ -69,6 +70,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 taxCode: '',
                 sdiCode: '',
                 pecAddress: '',
+                email: '',
                 activeOrders: 0,
                 adminRating: 5.0,
                 internalNotes: '',
@@ -483,6 +485,21 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Email</label>
+                                <div className="relative">
+                                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
+                                    <input
+                                        type="email"
+                                        value={formData.email || ''}
+                                        onChange={e => setFormData({ ...formData, email: e.target.value.trim().toLowerCase() })}
+                                        placeholder="fiorista@gmail.com"
+                                        className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                                <p className="mt-1.5 text-[10px] text-gray-400 font-medium">Posta elettronica ordinaria (non PEC)</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

@@ -100,6 +100,7 @@ export async function PUT(request: Request, context: any) {
                             shopName: partner.shopName,
                             ownerName: partner.ownerName,
                             whatsappNumber: partner.whatsappNumber,
+                            email: partner.email,
                             pecAddress: partner.pecAddress,
                             order: orderWithItems
                         });

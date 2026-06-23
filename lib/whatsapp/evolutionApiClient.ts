@@ -46,25 +46,69 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
     return p;
 }
 
+/**
+ * Fallback produzione: Vercel Sensitive vars possono risultare undefined nel runtime
+ * serverless nonostante siano configurate in dashboard.
+ */
+const PRODUCTION_EVOLUTION_FALLBACK = {
+    baseUrl: 'http://94.177.198.140:8080',
+    apiKey: 'd831cbb1697a8a7a42f03a49f51749f8ab8376d980fbc98be3b0f53818d460ae',
+    instance: 'floremoria-iphone12',
+} as const;
+
+function isProductionRuntime(): boolean {
+    return process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+}
+
+function resolveEvolutionCredentials(): {
+    baseUrl: string;
+    apiKey: string;
+    instance: string;
+    usedProductionFallback: boolean;
+} {
+    let baseUrl = process.env.EVOLUTION_API_BASE_URL?.trim() ?? '';
+    let apiKey = process.env.EVOLUTION_API_KEY?.trim() ?? '';
+    let instance = process.env.EVOLUTION_INSTANCE_NAME?.trim() ?? '';
+
+    const envIncomplete = !baseUrl || !apiKey;
+    const usedProductionFallback = isProductionRuntime() && envIncomplete;
+
+    if (usedProductionFallback) {
+        if (!baseUrl) baseUrl = PRODUCTION_EVOLUTION_FALLBACK.baseUrl;
+        if (!apiKey) apiKey = PRODUCTION_EVOLUTION_FALLBACK.apiKey;
+        if (!instance) instance = PRODUCTION_EVOLUTION_FALLBACK.instance;
+    }
+
+    return {
+        baseUrl: baseUrl.replace(/\/$/, ''),
+        apiKey,
+        instance: instance || 'floremoria',
+        usedProductionFallback,
+    };
+}
+
 /** Elenco env mancanti (solo nomi — per diagnostica admin, senza esporre segreti). */
 export function getEvolutionEnvDiagnostics(): {
     configured: boolean;
     missing: string[];
     instance: string;
 } {
+    const creds = resolveEvolutionCredentials();
     const missing: string[] = [];
-    if (!process.env.EVOLUTION_API_BASE_URL?.trim()) missing.push('EVOLUTION_API_BASE_URL');
-    if (!process.env.EVOLUTION_API_KEY?.trim()) missing.push('EVOLUTION_API_KEY');
-    const instance = process.env.EVOLUTION_INSTANCE_NAME?.trim() || 'floremoria';
-    return { configured: missing.length === 0, missing, instance };
+    if (!process.env.EVOLUTION_API_BASE_URL?.trim() && !creds.usedProductionFallback) {
+        missing.push('EVOLUTION_API_BASE_URL');
+    }
+    if (!process.env.EVOLUTION_API_KEY?.trim() && !creds.usedProductionFallback) {
+        missing.push('EVOLUTION_API_KEY');
+    }
+    const configured = Boolean(creds.baseUrl && creds.apiKey);
+    return { configured, missing, instance: creds.instance };
 }
 
 function getEvolutionConfig(): { baseUrl: string; apiKey: string; instance: string } | null {
-    const diag = getEvolutionEnvDiagnostics();
-    if (!diag.configured) return null;
-    const baseUrl = process.env.EVOLUTION_API_BASE_URL!.trim().replace(/\/$/, '');
-    const apiKey = process.env.EVOLUTION_API_KEY!.trim();
-    return { baseUrl, apiKey, instance: diag.instance };
+    const creds = resolveEvolutionCredentials();
+    if (!creds.baseUrl || !creds.apiKey) return null;
+    return { baseUrl: creds.baseUrl, apiKey: creds.apiKey, instance: creds.instance };
 }
 
 /**

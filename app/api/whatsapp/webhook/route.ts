@@ -102,7 +102,7 @@ function extractMediaUrl(data: EvolutionWebhookPayload['data']): string | undefi
     );
 }
 
-// ── GET — verifica token ──────────────────────────────────────────────────────
+// ── GET — verifica webhook Meta (hub.challenge) ───────────────────────────────
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
@@ -111,11 +111,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const challenge = searchParams.get('hub.challenge');
 
     const secret = process.env.WHATSAPP_WEBHOOK_SECRET?.trim() || '';
-    if (mode === 'subscribe' && token === secret && challenge) {
-        return new NextResponse(challenge, { status: 200 });
+
+    // Meta Cloud API: deve ricevere SOLO hub.challenge in plain text (no JSON).
+    if (mode === 'subscribe' && challenge) {
+        if (!secret || token !== secret) {
+            console.warn('[wa-webhook] Verifica Meta fallita: secret assente o verify_token non valido.');
+            return new NextResponse('Forbidden', { status: 403 });
+        }
+        return new NextResponse(challenge, {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
     }
 
-    // Evolution API non usa questa verifica: risponde 200 generico
+    // Health check (Evolution / monitoraggio — non handshake Meta)
     return NextResponse.json({ status: 'ok', service: 'VERA WhatsApp Webhook' }, { status: 200 });
 }
 

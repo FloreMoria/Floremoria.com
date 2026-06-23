@@ -93,6 +93,10 @@ export function getEvolutionEnvDiagnostics(): {
     missing: string[];
     instance: string;
 } {
+    if (isMetaCloudConfigured()) {
+        return { configured: true, missing: [], instance: 'whatsapp-meta-cloud' };
+    }
+
     const creds = resolveEvolutionCredentials();
     const missing: string[] = [];
     if (!process.env.EVOLUTION_API_BASE_URL?.trim() && !creds.usedProductionFallback) {
@@ -111,39 +115,83 @@ function getEvolutionConfig(): { baseUrl: string; apiKey: string; instance: stri
     return { baseUrl: creds.baseUrl, apiKey: creds.apiKey, instance: creds.instance };
 }
 
-/**
- * Invia un messaggio di testo via Evolution API.
- * @param phone Numero destinatario (qualsiasi formato: viene normalizzato internamente)
- * @param text Testo del messaggio
- */
-export async function sendEvolutionTextMessage(
+function resolveMetaCloudCredentials(): { apiKey: string; phoneNumberId: string } {
+    return {
+        apiKey: process.env.WHATSAPP_CLOUD_API_KEY?.trim() ?? '',
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() ?? '',
+    };
+}
+
+function isMetaCloudConfigured(): boolean {
+    const { apiKey, phoneNumberId } = resolveMetaCloudCredentials();
+    return Boolean(apiKey && phoneNumberId);
+}
+
+async function sendMetaCloudTextMessage(
     phone: string,
     text: string
 ): Promise<EvolutionSendResult> {
-    const config = getEvolutionConfig();
-    if (!config) {
-        console.warn('[evolution-api] EVOLUTION_API_BASE_URL o EVOLUTION_API_KEY non configurati: invio saltato.');
-        return { ok: false, error: 'not_configured' };
+    const config = resolveMetaCloudCredentials();
+    const normalized = normalizePhoneE164(phone);
+    if (!normalized) {
+        console.warn(`[whatsapp-cloud-api] Numero non valido: "${phone}"`);
+        return { ok: false, error: 'invalid_phone' };
     }
 
+    const metaPhone = normalized.replace(/^\+/, '');
+    const url = `https://graph.facebook.com/v19.0/${config.phoneNumberId}/messages`;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${config.apiKey}`,
+            },
+            body: JSON.stringify({
+                messaging_product: 'whatsapp',
+                recipient_type: 'individual',
+                to: metaPhone,
+                type: 'text',
+                text: { preview_url: false, body: text },
+            }),
+            signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            console.error(`[whatsapp-cloud-api] HTTP ${res.status} su messages:`, body.slice(0, 300));
+            return { ok: false, error: `http_${res.status}` };
+        }
+
+        const data = (await res.json()) as { messages?: Array<{ id?: string }> };
+        const messageId = data?.messages?.[0]?.id;
+        console.info(`[whatsapp-cloud-api] Messaggio inviato a ${normalized} (id: ${messageId ?? 'N/A'})`);
+        return { ok: true, messageId };
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error('[whatsapp-cloud-api] Errore invio messaggio:', msg);
+        return { ok: false, error: msg };
+    }
+}
+
+async function sendEvolutionApiTextMessage(
+    phone: string,
+    text: string,
+    config: { baseUrl: string; apiKey: string; instance: string }
+): Promise<EvolutionSendResult> {
     const normalized = normalizePhoneE164(phone);
     if (!normalized) {
         console.warn(`[evolution-api] Numero non valido: "${phone}"`);
         return { ok: false, error: 'invalid_phone' };
     }
 
-    // Evolution API vuole il numero senza il "+": es. "393204105305"
     const evolutionPhone = normalized.replace(/^\+/, '');
-
     const url = `${config.baseUrl}/message/sendText/${config.instance}`;
-    const payload = {
-        number: evolutionPhone,
-        text,
-        options: {
-            delay: 1200,      // ms di "sta scrivendo..." realistico
-            presence: 'composing',
-        },
-    };
 
     try {
         const controller = new AbortController();
@@ -155,7 +203,11 @@ export async function sendEvolutionTextMessage(
                 'Content-Type': 'application/json',
                 apikey: config.apiKey,
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                number: evolutionPhone,
+                text,
+                options: { delay: 1200, presence: 'composing' },
+            }),
             signal: controller.signal,
         });
         clearTimeout(timeout);
@@ -178,9 +230,33 @@ export async function sendEvolutionTextMessage(
 }
 
 /**
+ * Invia un messaggio di testo: Meta Cloud API se configurata, altrimenti Evolution API.
+ */
+export async function sendEvolutionTextMessage(
+    phone: string,
+    text: string
+): Promise<EvolutionSendResult> {
+    if (isMetaCloudConfigured()) {
+        return sendMetaCloudTextMessage(phone, text);
+    }
+
+    const config = getEvolutionConfig();
+    if (!config) {
+        console.warn('[whatsapp] Nessun gateway configurato (Meta Cloud o Evolution): invio saltato.');
+        return { ok: false, error: 'not_configured' };
+    }
+
+    return sendEvolutionApiTextMessage(phone, text, config);
+}
+
+/**
  * Recupera lo stato di connessione dell'istanza Evolution (aperta, in connessione, chiusa).
  */
 export async function getEvolutionInstanceState(): Promise<EvolutionInstanceState> {
+    if (isMetaCloudConfigured()) {
+        return { ok: true, state: 'open', instance: 'whatsapp-meta-cloud' };
+    }
+
     const config = getEvolutionConfig();
     if (!config) {
         const diag = getEvolutionEnvDiagnostics();
@@ -212,6 +288,10 @@ export async function getEvolutionInstanceState(): Promise<EvolutionInstanceStat
  * Restituisce la stringa base64 dell'immagine PNG (senza il prefisso data:image/...).
  */
 export async function getEvolutionQrCode(): Promise<EvolutionInstanceState> {
+    if (isMetaCloudConfigured()) {
+        return { ok: false, error: 'not_required', state: 'open', instance: 'whatsapp-meta-cloud' };
+    }
+
     const config = getEvolutionConfig();
     if (!config) return { ok: false, error: 'not_configured' };
 

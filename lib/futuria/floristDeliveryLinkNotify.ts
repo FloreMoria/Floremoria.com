@@ -7,6 +7,7 @@
  * Modalità `api` (env FUTURIA_FLORIST_DELIVERY_SEND_MODE=api): invio diretto API Futuria,
  * senza workflow/tag trigger — utile se il builder Futuria non espone Send WhatsApp nativo.
  */
+import { FLORIST_DELIVERY_PHOTO_INSTRUCTION } from '@/lib/orders/floristDeliveryLinkMessage';
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { isFuturiaConfigured, normalizeFuturiaPhone, upsertFuturiaContact } from './client';
 import {
@@ -47,6 +48,34 @@ export function shouldNotifyFloristDeliveryLink(
     return (FLORIST_DELIVERY_LINK_ORDER_STATUSES as readonly string[]).includes(nextStatus);
 }
 
+/** Nuovo fiorista assegnato (o sostituito) — invia link mini-app con codice ordine. */
+export function shouldNotifyFloristOnPartnerAssignment(
+    previousPartnerId: string | null | undefined,
+    nextPartnerId: string | null | undefined
+): boolean {
+    const next = nextPartnerId?.trim();
+    if (!next) return false;
+    return previousPartnerId?.trim() !== next;
+}
+
+/** Assegnazione fiorista o passaggio a IN_PROGRESS / DELIVERING. */
+export function shouldNotifyFloristDeliveryLinkOnOrderUpdate(
+    previous: { status?: string | null; partnerId?: string | null },
+    next: { status?: string | null; partnerId?: string | null }
+): boolean {
+    const nextStatus = next.status ?? previous.status;
+    if (
+        nextStatus &&
+        shouldNotifyFloristDeliveryLink(previous.status, nextStatus)
+    ) {
+        return true;
+    }
+    if (next.partnerId !== undefined) {
+        return shouldNotifyFloristOnPartnerAssignment(previous.partnerId, next.partnerId);
+    }
+    return false;
+}
+
 export async function sendFloristDeliveryLinkToFuturia(
     input: FloristDeliveryLinkNotifyInput
 ): Promise<FloristDeliveryLinkNotifyResult> {
@@ -85,6 +114,7 @@ export async function sendFloristDeliveryLinkToFuturia(
                 'contact.cimitero': input.cemeteryName || 'Non specificato',
                 'contact.posizione_tomba': input.gravePosition || 'Non specificata',
                 'contact.data_consegna': deliveryDateLabel,
+                'contact.raccomandazione_foto_consegna': FLORIST_DELIVERY_PHOTO_INSTRUCTION,
             },
         },
         { source: 'partner_florist' }

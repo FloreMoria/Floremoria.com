@@ -10,6 +10,7 @@ import {
     sendFuturiaWhatsApp,
     sendFuturiaWhatsAppCtaUrl,
 } from './client';
+import { buildFloristDeliveryWhatsAppText } from '@/lib/orders/floristDeliveryLinkMessage';
 import { getFuturiaFloristDeliveryLinkTemplateId } from './config';
 
 export interface FloristDeliveryLinkWhatsAppInput {
@@ -29,18 +30,15 @@ export type FloristDeliveryLinkWhatsAppResult =
     | { ok: false; skipped: string; deliveryError?: string };
 
 function buildFloristDeliveryMessageBody(input: FloristDeliveryLinkWhatsAppInput): string {
-    const codice = input.codice_ordine?.trim() || '—';
-    const defunto = input.nome_defunto?.trim() || '—';
-    const cimitero = [input.cimitero?.trim(), input.comune_cimitero?.trim()]
-        .filter(Boolean)
-        .join(' / ') || 'Non specificato';
-    const tomba = input.posizione_tomba?.trim() || 'Non specificata';
-    const data = input.data_consegna?.trim() || 'Da programmare';
-
-    return (
-        `Nuovo incarico FloreMoria — ordine ${codice} per ${defunto}. ` +
-        `Cimitero: ${cimitero}. Tomba: ${tomba}. Consegna: ${data}.`
-    );
+    return buildFloristDeliveryWhatsAppText({
+        codice_ordine: input.codice_ordine,
+        nome_defunto: input.nome_defunto,
+        cimitero: input.cimitero,
+        comune_cimitero: input.comune_cimitero,
+        posizione_tomba: input.posizione_tomba,
+        data_consegna: input.data_consegna,
+        deliveryUrl: input.link_mini_app_consegna,
+    });
 }
 
 export async function sendFloristDeliveryLinkWhatsApp(
@@ -71,7 +69,7 @@ export async function sendFloristDeliveryLinkWhatsApp(
             const send = await sendFuturiaWhatsApp({
                 contactId: input.contactId,
                 templateId,
-                message: `${body} Apri la mini-app: ${deliveryUrl}`,
+                message: body,
                 toNumber: phone,
             });
             const failed =
@@ -103,7 +101,7 @@ export async function sendFloristDeliveryLinkWhatsApp(
 
         const fallbackSend = await sendFuturiaWhatsApp({
             contactId: input.contactId,
-            message: `${body}\nApri la mini-app:\n${deliveryUrl}`,
+            message: body,
             toNumber: phone,
         });
         const failed =

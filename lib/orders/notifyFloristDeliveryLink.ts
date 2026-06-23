@@ -1,16 +1,20 @@
 import prisma from '@/lib/prisma';
+import { buildFloristDeliveryWhatsAppText } from '@/lib/orders/floristDeliveryLinkMessage';
+import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
+import { sendEvolutionTextMessage } from '@/lib/whatsapp/evolutionApiClient';
 import {
     sendFloristDeliveryLinkToFuturia,
     type FloristDeliveryLinkNotifyResult,
 } from '@/lib/futuria/floristDeliveryLinkNotify';
 
 /**
- * Carica ordine + fiorista e invia link mini-app con codice parlante via Futuria/WhatsApp.
+ * Carica ordine + fiorista e invia link mini-app con codice parlante via Futuria/WhatsApp
+ * (fallback Evolution API se Futuria non configurato).
  * Fire-and-forget dal PUT ordine dashboard: non blocca la risposta HTTP.
  */
 export async function notifyFloristDeliveryLinkForOrder(
     orderId: string
-): Promise<FloristDeliveryLinkNotifyResult> {
+): Promise<FloristDeliveryLinkNotifyResult | { ok: true; deliveryUrl: string; channel: 'evolution' }> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
         include: {
@@ -36,7 +40,15 @@ export async function notifyFloristDeliveryLinkForOrder(
         return { ok: false, skipped: 'partner_whatsapp_missing' };
     }
 
-    return sendFloristDeliveryLinkToFuturia({
+    const deliveryUrl = buildFloristDeliveryUrl({
+        id: order.id,
+        orderNumber: order.orderNumber,
+    });
+    const deliveryDateLabel = order.deliveryDate
+        ? order.deliveryDate.toLocaleDateString('it-IT')
+        : 'Da programmare';
+
+    const futuriaResult = await sendFloristDeliveryLinkToFuturia({
         orderId: order.id,
         orderNumber: order.orderNumber,
         deceasedName: order.deceasedName,
@@ -49,4 +61,33 @@ export async function notifyFloristDeliveryLinkForOrder(
         partnerWhatsapp: order.partner.whatsappNumber,
         partnerEmail: order.partner.pecAddress,
     });
+
+    if (futuriaResult.ok || futuriaResult.skipped !== 'futuria_not_configured') {
+        return futuriaResult;
+    }
+
+    const message = buildFloristDeliveryWhatsAppText({
+        codice_ordine: order.orderNumber,
+        nome_defunto: order.deceasedName,
+        cimitero: order.cemeteryName,
+        comune_cimitero: order.cemeteryCity,
+        posizione_tomba: order.gravePosition,
+        data_consegna: deliveryDateLabel,
+        deliveryUrl,
+    });
+
+    const evolutionSend = await sendEvolutionTextMessage(order.partner.whatsappNumber, message);
+    if (!evolutionSend.ok) {
+        console.error(
+            `[florist-delivery-link] Evolution fallback fallito ordine ${order.orderNumber || order.id}:`,
+            evolutionSend.error
+        );
+        return { ok: false, skipped: evolutionSend.error ?? 'evolution_send_failed' };
+    }
+
+    console.info(
+        `[florist-delivery-link] Evolution WhatsApp OK order=${order.orderNumber || order.id} url=${deliveryUrl}`
+    );
+
+    return { ok: true, deliveryUrl, channel: 'evolution' };
 }

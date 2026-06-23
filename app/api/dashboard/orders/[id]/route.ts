@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
-import { shouldNotifyFloristDeliveryLink } from '@/lib/futuria/floristDeliveryLinkNotify';
+import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/futuria/floristDeliveryLinkNotify';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
 export async function PUT(request: Request, context: any) {
@@ -70,12 +70,17 @@ export async function PUT(request: Request, context: any) {
         });
 
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
+        const nextPartnerId =
+            body.partnerId !== undefined ? (body.partnerId || null) : previousOrder?.partnerId ?? null;
+
         if (
-            nextStatus &&
-            shouldNotifyFloristDeliveryLink(previousOrder?.status, nextStatus)
+            shouldNotifyFloristDeliveryLinkOnOrderUpdate(
+                { status: previousOrder?.status, partnerId: previousOrder?.partnerId },
+                { status: nextStatus, partnerId: nextPartnerId }
+            )
         ) {
             void notifyFloristDeliveryLinkForOrder(id).catch((err) => {
-                console.error('[orders-put] Invio link consegna fiorista Futuria fallito (non bloccante):', err);
+                console.error('[orders-put] Invio link consegna fiorista fallito (non bloccante):', err);
             });
         }
 

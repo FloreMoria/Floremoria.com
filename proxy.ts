@@ -11,7 +11,7 @@ import { isSuperAdminRole, isDashboardAdminRole } from '@/lib/superAdmin';
 import { hasValidAdminApiKeyHeader } from '@/lib/auth/verbaleSyncAuth';
 
 /**
- * Middleware Centrale FloreMoria
+ * Proxy centrale FloreMoria
  *
  * Sicurezza, RBAC, redirect dashboard (opzionale su sottodominio).
  * Con DASHBOARD_SUBDOMAIN_ENABLED≠true la dashboard resta su www.floremoria.com/dashboard.
@@ -63,7 +63,7 @@ function getHostContext(request: NextRequest): DashboardHostContext {
     return { hostname, isLocal, isDashboardHost, isPrimaryHost };
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     if (isPartnerApiDocsPath(pathname)) {

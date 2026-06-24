@@ -1,21 +1,31 @@
-import { resolveProofFotoOrderId } from '@/lib/auth/proofFotoAccess';
-import { handleProofFotoAccess } from '@/lib/auth/proofFotoRoute';
+import { lookupProofFotoOrderByCode } from '@/lib/auth/proofFotoAccess';
+import {
+    handleProofFotoAccess,
+    handleProofFotoExpiredAccess,
+} from '@/lib/auth/proofFotoRoute';
 import { getSiteBaseUrl } from '@/lib/futuria/config';
 import { NextResponse } from 'next/server';
 
 /**
- * Link corto WhatsApp: /f/{code} → bacheca foto senza login manuale.
+ * Link corto WhatsApp: /f/{code} → bacheca foto (valido 24h; poi login passwordless).
  */
 export async function GET(
     request: Request,
     context: { params: Promise<{ code: string }> }
 ) {
     const { code } = await context.params;
-    const orderId = await resolveProofFotoOrderId(code);
+    const lookup = await lookupProofFotoOrderByCode(code);
 
-    if (!orderId) {
+    if (!lookup) {
         return NextResponse.redirect(`${getSiteBaseUrl()}/login?error=proof_foto_invalid`);
     }
 
-    return handleProofFotoAccess(request, orderId);
+    if (lookup.expired) {
+        return handleProofFotoExpiredAccess(request, lookup.orderId, {
+            buyerEmail: lookup.buyerEmail,
+            customerPhone: lookup.customerPhone,
+        });
+    }
+
+    return handleProofFotoAccess(request, lookup.orderId);
 }

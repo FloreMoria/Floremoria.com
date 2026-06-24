@@ -1,6 +1,6 @@
 /**
  * Accesso diretto alla bacheca foto post-consegna (senza schermata login).
- * Link corto DB-backed: /f/{code} — adatto a WhatsApp.
+ * Link corto DB-backed: /f/{code} — adatto a WhatsApp (scadenza 24h).
  */
 import crypto from 'crypto';
 import prisma from '../prisma';
@@ -13,8 +13,11 @@ interface ProofFotoPayload {
 /** Caratteri URL-safe senza ambiguità visiva (0/O, 1/l/I). */
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
 
-/** 7 giorni: tempo sufficiente per aprire la testimonianza con calma (ALMA). */
-export const PROOF_FOTO_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Finestra link post-consegna: 24 ore dalla notifica (ALMA / sicurezza). */
+export const PROOF_FOTO_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Sessione bacheca cliente dopo primo accesso via link valido. */
+export const USER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getProofFotoSecret(): string {
     const secret = process.env.MAGIC_LINK_SECRET?.trim();
@@ -72,7 +75,7 @@ export function verifyProofFotoOrderSignature(orderNumber: string, sig: string):
     }
 }
 
-/** URL firmato per orderNumber — funziona anche senza colonna DB (ideale per test cross-env). */
+/** URL firmato legacy /f/o/{orderNumber}/{sig} — rispetta la stessa finestra DB 24h all'accesso. */
 export function buildProofFotoAccessUrlForOrder(order: {
     orderNumber?: string | null;
 }): string {
@@ -88,8 +91,36 @@ export function buildProofFotoAccessUrlForOrder(order: {
     return `${base}/f/o/${encodeURIComponent(orderNumber)}/${sig}`;
 }
 
+export function isProofFotoWindowOpen(expiresAt: Date | null | undefined, now = Date.now()): boolean {
+    return Boolean(expiresAt && expiresAt.getTime() > now);
+}
+
 /**
- * Crea o riusa un codice corto persistente sull'ordine.
+ * Finestra attiva: colonna DB oppure, per link legacy senza scadenza,
+ * entro 24h dalla foto di consegna.
+ */
+export async function isOrderProofFotoAccessAllowed(orderId: string): Promise<boolean> {
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+            proofFotoExpiresAt: true,
+            deliveryProof: { select: { timestampAfter: true } },
+        },
+    });
+    if (!order) return false;
+
+    const now = Date.now();
+    if (isProofFotoWindowOpen(order.proofFotoExpiresAt, now)) return true;
+
+    if (!order.proofFotoExpiresAt && order.deliveryProof?.timestampAfter) {
+        return order.deliveryProof.timestampAfter.getTime() + PROOF_FOTO_TTL_MS > now;
+    }
+
+    return false;
+}
+
+/**
+ * Crea o riusa un codice corto persistente sull'ordine (TTL 24h).
  * Evita token lunghi in firma HMAC dentro l'URL WhatsApp.
  */
 export async function ensureProofFotoAccessCode(orderId: string): Promise<string> {
@@ -128,31 +159,67 @@ export async function ensureProofFotoAccessCode(orderId: string): Promise<string
     throw new Error('[proof-foto] Impossibile generare codice univoco.');
 }
 
-/** Risolve codice corto → orderId se valido e non scaduto. */
-export async function resolveProofFotoOrderId(code: string): Promise<string | null> {
+/** Imposta la finestra 24h senza rigenerare il codice (link firmati legacy). */
+export async function ensureProofFotoDeliveryWindow(orderId: string): Promise<void> {
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { proofFotoExpiresAt: true },
+    });
+    if (!order) return;
+    if (isProofFotoWindowOpen(order.proofFotoExpiresAt)) return;
+
+    await prisma.order.update({
+        where: { id: orderId },
+        data: { proofFotoExpiresAt: new Date(Date.now() + PROOF_FOTO_TTL_MS) },
+    });
+}
+
+export interface ProofFotoCodeLookup {
+    orderId: string;
+    expired: boolean;
+    buyerEmail: string | null;
+    customerPhone: string | null;
+}
+
+/** Risolve codice corto → ordine (anche se scaduto, per auto-login con sessione). */
+export async function lookupProofFotoOrderByCode(code: string): Promise<ProofFotoCodeLookup | null> {
     const normalized = code.trim();
     if (!normalized || normalized.length > 10) return null;
 
     const order = await prisma.order.findFirst({
         where: { proofFotoCode: normalized },
-        select: { id: true, proofFotoExpiresAt: true },
+        select: {
+            id: true,
+            proofFotoExpiresAt: true,
+            buyerEmail: true,
+            customerPhone: true,
+        },
     });
 
-    if (!order?.proofFotoExpiresAt || order.proofFotoExpiresAt.getTime() < Date.now()) {
-        return null;
-    }
+    if (!order) return null;
 
-    return order.id;
+    const expired = !(await isOrderProofFotoAccessAllowed(order.id));
+
+    return {
+        orderId: order.id,
+        expired,
+        buyerEmail: order.buyerEmail?.trim().toLowerCase() || null,
+        customerPhone: order.customerPhone?.trim() || null,
+    };
 }
 
-/** URL corto per WhatsApp — preferisce firma su orderNumber (stateless). */
+/** @deprecated Usare lookupProofFotoOrderByCode per gestire link scaduti. */
+export async function resolveProofFotoOrderId(code: string): Promise<string | null> {
+    const lookup = await lookupProofFotoOrderByCode(code);
+    if (!lookup || lookup.expired) return null;
+    return lookup.orderId;
+}
+
+/** URL corto /f/{code} per WhatsApp — sempre DB-backed con scadenza 24h. */
 export async function buildProofFotoAccessUrl(
     orderId: string,
-    orderNumber?: string | null
+    _orderNumber?: string | null
 ): Promise<string> {
-    if (orderNumber?.trim()) {
-        return buildProofFotoAccessUrlForOrder({ orderNumber });
-    }
     const code = await ensureProofFotoAccessCode(orderId);
     return `${getProofFotoPublicBase()}/f/${code}`;
 }

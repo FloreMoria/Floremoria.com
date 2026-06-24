@@ -57,6 +57,7 @@ model User {
   invitationToken String?         @unique @map("invitation_token")
   inviteExpiresAt DateTime?       @map("invite_expires_at")
   lastLoginAt     DateTime?       @map("last_login_at")
+  avatarUrl       String?         @map("avatar_url")
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]
@@ -75,6 +76,7 @@ model DeceasedProfile {
   cemeteryCity  String
   cemeteryName  String?
   verifiedNotes String?  @db.Text
+  photoUrl      String?  @map("photo_url")
   orders        Order[]
   userLinks     UserDeceasedLink[]
   partnerLinks  PartnerDeceasedAssignment[]

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Stage = 'identify' | 'password' | 'otp' | 'magic-sent';
@@ -23,6 +23,34 @@ export default function LoginPage() {
         setErrorMsg('');
         setSuccessMsg('');
     };
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get('error');
+        const expired = params.get('expired');
+        const prefillEmail = params.get('email')?.trim().toLowerCase();
+        const prefillPhone = params.get('phone')?.trim();
+
+        if (prefillEmail) {
+            setIdentifier(prefillEmail);
+        } else if (prefillPhone) {
+            setIdentifier(prefillPhone);
+        }
+
+        if (error === 'proof_foto_expired') {
+            setErrorMsg(
+                'Il link alla testimonianza fotografica è scaduto (valido 24 ore). Accedi con la stessa email o telefono dell\'ordine per ritrovare il Giardino della Memoria — non serve registrarsi di nuovo.'
+            );
+            return;
+        }
+        if (error === 'proof_foto_invalid') {
+            setErrorMsg('Questo link non è valido o non è più utilizzabile. Accedi con email o telefono se hai già ricevuto una consegna.');
+            return;
+        }
+        if (expired === '1') {
+            setErrorMsg('La sessione è scaduta. Accedi di nuovo con email o telefono per continuare.');
+        }
+    }, []);
 
     const backToStart = () => {
         setStage('identify');

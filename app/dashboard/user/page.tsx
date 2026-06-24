@@ -4,6 +4,7 @@ import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
 import { LogOut, Heart } from 'lucide-react';
+import Image from 'next/image';
 import { isDashboardAdminRole } from '@/lib/superAdmin';
 import {
     groupOrdersByDeceased,
@@ -97,7 +98,24 @@ export default async function UserDashboardPage({
 
             <main className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in">
                 <div className="bg-white/80 backdrop-blur-xl border border-white/60 p-6 sm:p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
+                    <div className="flex items-center gap-4">
+                        {user.avatarUrl ? (
+                            <Image
+                                src={user.avatarUrl}
+                                alt={user.name || 'Profilo'}
+                                width={64}
+                                height={64}
+                                className="w-16 h-16 rounded-full object-cover border-2 border-[#c5a880]/30 shadow-sm shrink-0"
+                                unoptimized
+                            />
+                        ) : (
+                            <div className="w-16 h-16 rounded-full bg-[#c5a880]/10 border-2 border-[#c5a880]/20 flex items-center justify-center shrink-0">
+                                <span className="text-xl font-display font-semibold text-[#c5a880]">
+                                    {(user.name || user.email).charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                        )}
+                        <div>
                         <h1 className="text-2xl font-bold text-slate-900">
                             Gentile {user.name || 'Cliente'},
                         </h1>
@@ -106,6 +124,7 @@ export default async function UserDashboardPage({
                                 ? 'Panoramica completa degli omaggi, con dettaglio economico e tracciamento operativo.'
                                 : 'In questa pagina può tracciare in tempo reale la posa e lo stato dei Suoi omaggi commemorativi.'}
                         </p>
+                        </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                         <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 px-4 py-2.5 rounded-xl inline-flex items-center gap-2">
@@ -156,15 +175,29 @@ export default async function UserDashboardPage({
                         deceasedGroups.map((group) => (
                             <section key={group.key} className="space-y-4">
                                 <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-3">
-                                    <div>
+                                    <div className="flex items-start gap-4">
+                                        {group.photoUrl ? (
+                                            <Image
+                                                src={group.photoUrl}
+                                                alt={group.deceasedName}
+                                                width={56}
+                                                height={56}
+                                                className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 shadow-sm shrink-0"
+                                                unoptimized
+                                            />
+                                        ) : null}
+                                        <div>
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                             In memoria di
                                         </p>
                                         <h3 className="text-xl font-display font-semibold text-slate-900 flex items-center gap-2">
-                                            <Heart size={16} className="text-red-500 fill-red-500" />
+                                            {!group.photoUrl ? (
+                                                <Heart size={16} className="text-red-500 fill-red-500" />
+                                            ) : null}
                                             {group.deceasedName}
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-1">{group.cemeteryLabel}</p>
+                                        </div>
                                     </div>
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                         {group.orders.length}{' '}

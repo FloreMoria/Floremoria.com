@@ -7,6 +7,7 @@ export type DeceasedLeaderRow = {
     deceasedProfileId: string | null;
     orphanSeedOrderId: string | null;
     fullName: string;
+    photoUrl: string | null;
     birthDate: string | null;
     deathDate: string | null;
     cemeteryCity: string;
@@ -65,6 +66,7 @@ export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
             deceasedProfileId: profile.id,
             orphanSeedOrderId: null,
             fullName: profile.fullName,
+            photoUrl: profile.photoUrl ?? null,
             birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,
             deathDate: latest?.deceasedDeathDate?.toISOString() ?? null,
             cemeteryCity: profile.cemeteryCity,
@@ -113,6 +115,7 @@ export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
             deceasedProfileId: null,
             orphanSeedOrderId: latest.id,
             fullName: latest.deceasedName,
+            photoUrl: null,
             birthDate: latest.deceasedBirthDate?.toISOString() ?? null,
             deathDate: latest.deceasedDeathDate?.toISOString() ?? null,
             cemeteryCity: latest.cemeteryCity,

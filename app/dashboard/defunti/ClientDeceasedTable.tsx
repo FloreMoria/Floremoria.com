@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Search, ChevronRight, Plus, Heart, AlertTriangle } from 'lucide-react';
 import DeceasedDetailModal from '@/components/dashboard/DeceasedDetailModal';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
@@ -185,9 +186,20 @@ export default function ClientDeceasedTable({
                                     >
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-[#EFEAE2] flex items-center justify-center text-[#8a7349]">
-                                                    <Heart size={14} className="fill-current" />
-                                                </div>
+                                                {row.photoUrl ? (
+                                                    <Image
+                                                        src={row.photoUrl}
+                                                        alt={row.fullName}
+                                                        width={36}
+                                                        height={36}
+                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                                        unoptimized
+                                                    />
+                                                ) : (
+                                                    <div className="w-9 h-9 rounded-full bg-[#EFEAE2] flex items-center justify-center text-[#8a7349]">
+                                                        <Heart size={14} className="fill-current" />
+                                                    </div>
+                                                )}
                                                 <span className="font-semibold text-gray-900">{row.fullName}</span>
                                             </div>
                                         </td>

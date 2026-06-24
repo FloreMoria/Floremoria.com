@@ -1,5 +1,8 @@
-import { verifyProofFotoToken } from '@/lib/auth/proofFotoAccess';
-import { handleProofFotoAccess } from '@/lib/auth/proofFotoRoute';
+import { isOrderProofFotoAccessAllowed, verifyProofFotoToken } from '@/lib/auth/proofFotoAccess';
+import {
+    handleProofFotoAccess,
+    handleProofFotoExpiredAccess,
+} from '@/lib/auth/proofFotoRoute';
 import { getSiteBaseUrl } from '@/lib/futuria/config';
 import { NextResponse } from 'next/server';
 
@@ -13,6 +16,11 @@ export async function GET(
 
     if (!orderId) {
         return NextResponse.redirect(`${getSiteBaseUrl()}/login?error=proof_foto_invalid`);
+    }
+
+    const allowed = await isOrderProofFotoAccessAllowed(orderId);
+    if (!allowed) {
+        return handleProofFotoExpiredAccess(request, orderId);
     }
 
     return handleProofFotoAccess(request, orderId);

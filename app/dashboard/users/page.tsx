@@ -34,6 +34,7 @@ export default async function UsersPage() {
                 email: order.user?.email || order.buyerEmail || '',
                 phone: order.user?.phone || order.customerPhone || 'Non specificato',
                 city: order.buyerCity || 'Non specificata',
+                profilePicUrl: order.user?.avatarUrl || null,
                 orders: [],
                 totalSpentCents: 0,
                 lastOrderDate: order.createdAt,
@@ -43,6 +44,9 @@ export default async function UsersPage() {
         const userGroup = usersMap.get(key);
         userGroup.orders.push(order);
         userGroup.totalSpentCents += order.totalPriceCents;
+        if (!userGroup.profilePicUrl && order.user?.avatarUrl) {
+            userGroup.profilePicUrl = order.user.avatarUrl;
+        }
     });
 
     const groupedUsers = Array.from(usersMap.values());

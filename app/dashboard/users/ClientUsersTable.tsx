@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Phone, Calendar, Mail, Camera, Edit2 } from 'lucide-react';
+import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Calendar, Mail } from 'lucide-react';
+import Image from 'next/image';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
+import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 const formatITDate = (dateStr: string | null) => {
@@ -35,7 +37,17 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
 
     const [isSavingUser, setIsSavingUser] = useState(false);
     const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
-    const [avatarKey, setAvatarKey] = useState(Date.now()); // mock trigger resync
+
+    const resolveOrderIdForUser = (u: { id: string; orders: { id: string }[] }) =>
+        u.orders[0]?.id || (u.id.startsWith('virtual_') ? u.id.slice('virtual_'.length) : undefined);
+
+    const handleAvatarUploaded = (url: string, meta?: { userId?: string }) => {
+        if (!selectedUser) return;
+        const nextId = meta?.userId || selectedUser.id;
+        const updated = { ...selectedUser, profilePicUrl: url, id: nextId };
+        setSelectedUser(updated);
+        setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? updated : u)));
+    };
 
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -127,24 +139,6 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
         }
     };
 
-    const handleAvatarClick = () => {
-        document.getElementById('avatar-upload')?.click();
-    };
-
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const localPreviewUrl = URL.createObjectURL(file);
-            
-            // Applichiamo la preview visiva all'utente selezionato in memoria 
-            // (La persistenza richiederà il collegamento Server AWS S3)
-            const updatedModUser = { ...selectedUser, profilePicUrl: localPreviewUrl };
-            setSelectedUser(updatedModUser);
-            setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedModUser : u));
-            setAvatarKey(Date.now());
-        }
-    };
-
     return (
         <div>
             {/* Search Bar */}
@@ -190,7 +184,14 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 {u.profilePicUrl ? (
-                                                    <img src={u.profilePicUrl} alt={u.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm" />
+                                                    <Image
+                                                        src={u.profilePicUrl}
+                                                        alt={u.name || 'Utente'}
+                                                        width={40}
+                                                        height={40}
+                                                        className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm"
+                                                        unoptimized
+                                                    />
                                                 ) : (
                                                     <div className="w-10 h-10 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold">
                                                         {u.name?.charAt(0) || '?'}
@@ -228,19 +229,14 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                         {/* Modal Header */}
                         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                             <div className="flex items-center gap-5">
-                                <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                                    <div className="w-20 h-20 bg-gray-200 rounded-full border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
-                                        {selectedUser.profilePicUrl ? (
-                                            <img src={selectedUser.profilePicUrl} alt="Profilo" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User key={avatarKey} className="w-10 h-10 text-gray-400" />
-                                        )}
-                                    </div>
-                                    <div className="absolute bottom-0 right-0 bg-white p-1.5 rounded-full shadow border border-gray-100 text-gray-600 hover:text-fm-gold hover:bg-gray-50 transition-colors">
-                                        <Camera className="w-4 h-4" />
-                                    </div>
-                                    <input type="file" id="avatar-upload" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                                </div>
+                                <AdminMediaUploadAvatar
+                                    imageUrl={selectedUser.profilePicUrl}
+                                    fallbackLabel={selectedUser.name}
+                                    entity="user"
+                                    entityId={selectedUser.id.startsWith('virtual_') ? undefined : selectedUser.id}
+                                    orderId={resolveOrderIdForUser(selectedUser)}
+                                    onUploaded={handleAvatarUploaded}
+                                />
                                 <div>
                                     <h2 className="text-2xl font-display font-bold text-gray-900 leading-tight">Il Giardino di {selectedUser.name}</h2>
                                     <p className="text-sm text-gray-500 font-medium">Scatola della Memoria Infinita &bull; {selectedUser.orders.length} Consegnati</p>

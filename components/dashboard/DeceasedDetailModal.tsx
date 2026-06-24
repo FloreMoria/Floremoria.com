@@ -14,6 +14,7 @@ import {
     Link2,
     AlertCircle,
 } from 'lucide-react';
+import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
@@ -160,7 +161,23 @@ export default function DeceasedDetailModal({ row, partners, onClose, onRegister
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-[#FAF9F6]">
-                    <div>
+                    <div className="flex items-center gap-5">
+                        {row.deceasedProfileId ? (
+                            <AdminMediaUploadAvatar
+                                imageUrl={detail?.photoUrl ?? row.photoUrl}
+                                fallbackLabel={row.fullName}
+                                entity="deceased"
+                                entityId={row.deceasedProfileId}
+                                onUploaded={(url) =>
+                                    setDetail((prev) => (prev ? { ...prev, photoUrl: url } : prev))
+                                }
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-full bg-[#EFEAE2] flex items-center justify-center border-4 border-white shadow-md">
+                                <Heart size={28} className="text-red-400 fill-red-400" />
+                            </div>
+                        )}
+                        <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880] mb-1">
                             {detail?.kind === 'orphan' ? 'Scheda orfana — da registrare' : 'Scheda defunto registrato'}
                         </p>
@@ -172,11 +189,17 @@ export default function DeceasedDetailModal({ row, partners, onClose, onRegister
                             {row.cemeteryName || 'Cimitero'} · {row.cemeteryCity}
                             {row.gravePosition ? ` · ${row.gravePosition}` : ''}
                         </p>
+                        {detail?.kind === 'orphan' ? (
+                            <p className="text-xs text-amber-700 mt-2">
+                                Registra il defunto in anagrafica per caricare una foto commemorativa.
+                            </p>
+                        ) : null}
+                        </div>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors shrink-0"
                     >
                         ✕
                     </button>

@@ -14,6 +14,7 @@ export type DeceasedOrderGroup = {
     key: string;
     deceasedName: string;
     cemeteryLabel: string;
+    photoUrl: string | null;
     orders: BachecaOrder[];
 };
 
@@ -31,7 +32,13 @@ export function groupOrdersByDeceased(orders: BachecaOrder[]): DeceasedOrderGrou
         if (group) {
             group.orders.push(order);
         } else {
-            map.set(key, { key, deceasedName, cemeteryLabel, orders: [order] });
+            map.set(key, {
+                key,
+                deceasedName,
+                cemeteryLabel,
+                photoUrl: order.deceasedProfile?.photoUrl ?? null,
+                orders: [order],
+            });
         }
     }
 

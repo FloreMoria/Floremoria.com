@@ -1,5 +1,5 @@
 /**
- * VERA AI Reply — Generatore di risposte WhatsApp per il canale proprietario FloreMoria.
+ * VERA AI Reply — Generatore di risposte WhatsApp (Meta Cloud API) per FloreMoria.
  *
  * Strategia ibrida (Recommended C):
  *  1. Prova le regole deterministiche di `buildWhatsAppAiReply` (whatsappKnowledge.ts).

@@ -27,7 +27,7 @@ export async function GET(
 
     try {
         // Step A: Get Meta Media metadata to retrieve the download URL
-        const metaUrl = `https://graph.facebook.com/v19.0/${mediaId}`;
+        const metaUrl = `https://graph.facebook.com/v21.0/${mediaId}`;
         const metaRes = await fetch(metaUrl, {
             headers: {
                 Authorization: `Bearer ${apiKey}`,

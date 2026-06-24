@@ -1,23 +1,15 @@
 /**
- * POST /api/whatsapp/webhook  — Ricezione messaggi WhatsApp in entrata.
- * GET  /api/whatsapp/webhook  — Verifica token (handshake Meta Cloud API).
+ * GET  /api/whatsapp/webhook  — Verifica webhook Meta (hub.challenge).
+ * POST /api/whatsapp/webhook  — Messaggi in entrata Meta Cloud API → risposta VERA AI.
  *
- * Supporta due sorgenti payload:
- *  - Meta Cloud API (object: whatsapp_business_account)
- *  - Evolution API (event: messages.upsert / MESSAGES_UPSERT / message)
+ * Flusso POST:
+ *  1. Verifica firma X-Hub-Signature-256 (WHATSAPP_APP_SECRET)
+ *  2. Parse payload Meta (object: whatsapp_business_account)
+ *  3. Blacklist → silenzio
+ *  4. Sessione chat + HUMAN_INTERVENTION → silenzio
+ *  5. generateVeraReply → sendWhatsAppTextMessage
  *
- * Flusso comune:
- *  1. Verifica firma (X-Hub-Signature-256 Meta, Bearer/apikey Evolution)
- *  2. Estrai phone, testo, mediaUrl
- *  3. Controllo PhoneBlacklist → 200 silenzioso se bloccato
- *  4. Recupera/crea WhatsAppChatSession
- *  5. Se status = HUMAN_INTERVENTION → 200 silenzioso (operatore umano attivo)
- *  6. Registra messaggio in entrata nel DB (addMessage INBOUND)
- *  7. generateVeraReply → risposta AI VERA
- *  8. sendEvolutionTextMessage → invio risposta (Meta Cloud o Evolution)
- *  9. Registra messaggio in uscita nel DB (addMessage OUTBOUND)
- *
- * Principio di robustezza: risponde 200 ai provider dopo parsing (evita retry loop).
+ * Risponde sempre 200 dopo parsing valido (evita retry loop Meta).
  */
 
 import crypto from 'crypto';
@@ -25,35 +17,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
-import { sendEvolutionTextMessage, normalizePhoneE164 } from '@/lib/whatsapp/evolutionApiClient';
+import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// ── Tipi payload ────────────────────────────────────────────────────────────────
-
-interface EvolutionWebhookPayload {
-    event?: string;
-    data?: {
-        key?: {
-            remoteJid?: string;
-            fromMe?: boolean;
-            id?: string;
-        };
-        message?: {
-            conversation?: string;
-            extendedTextMessage?: { text?: string };
-            imageMessage?: { caption?: string; url?: string };
-            audioMessage?: { url?: string };
-            documentMessage?: { caption?: string; url?: string };
-        };
-        messageType?: string;
-        pushName?: string;
-        messageTimestamp?: number;
-    };
-    instance?: string;
-}
 
 interface MetaWebhookMessage {
     from?: string;
@@ -67,9 +35,8 @@ interface MetaWebhookMessage {
     video?: { caption?: string; id?: string };
     sticker?: { id?: string };
     interactive?: {
-        type?: string;
-        button_reply?: { id?: string; title?: string };
-        list_reply?: { id?: string; title?: string; description?: string };
+        button_reply?: { title?: string };
+        list_reply?: { title?: string };
     };
     button?: { text?: string; payload?: string };
 }
@@ -81,7 +48,6 @@ interface MetaWebhookPayload {
             field?: string;
             value?: {
                 messages?: MetaWebhookMessage[];
-                statuses?: unknown[];
                 contacts?: Array<{ profile?: { name?: string }; wa_id?: string }>;
             };
         }>;
@@ -96,44 +62,36 @@ interface ParsedIncomingMessage {
     senderName: string;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function verifyMetaSignature(rawBody: string, signatureHeader: string, secret: string): boolean {
+function verifyMetaSignature(rawBody: string, signatureHeader: string, appSecret: string): boolean {
     if (!signatureHeader.startsWith('sha256=')) return false;
     const receivedHex = signatureHeader.slice('sha256='.length);
     if (!/^[0-9a-f]+$/i.test(receivedHex)) return false;
 
-    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest();
+    const expected = crypto.createHmac('sha256', appSecret).update(rawBody).digest();
     const received = Buffer.from(receivedHex, 'hex');
     if (expected.length !== received.length) return false;
 
     return crypto.timingSafeEqual(expected, received);
 }
 
-/** Verifica firma Meta (X-Hub-Signature-256) o token Bearer/apikey Evolution. */
-function verifyWebhookSecret(request: NextRequest, rawBody?: string): boolean {
-    const secret = process.env.WHATSAPP_WEBHOOK_SECRET?.trim();
-    const appSecret = process.env.WHATSAPP_APP_SECRET?.trim() || secret;
+/** Verifica firma webhook Meta (POST). */
+function verifyMetaWebhookSignature(request: NextRequest, rawBody: string): boolean {
+    const appSecret =
+        process.env.WHATSAPP_APP_SECRET?.trim() ||
+        process.env.WHATSAPP_WEBHOOK_SECRET?.trim();
 
-    if (!secret && !appSecret) {
-        console.warn('[wa-webhook] WHATSAPP_WEBHOOK_SECRET non configurato: accetto senza verifica.');
+    if (!appSecret) {
+        console.warn('[wa-webhook] WHATSAPP_APP_SECRET non configurato: accetto POST senza verifica (solo dev).');
         return true;
     }
 
     const signature = request.headers.get('x-hub-signature-256');
-    if (signature && rawBody && appSecret) {
-        if (verifyMetaSignature(rawBody, signature, appSecret)) return true;
+    if (!signature) {
+        console.warn('[wa-webhook] POST senza X-Hub-Signature-256.');
+        return false;
     }
 
-    if (secret) {
-        const auth = request.headers.get('authorization') ?? '';
-        if (auth === `Bearer ${secret}`) return true;
-
-        const apiKeyHeader = request.headers.get('apikey') ?? '';
-        if (apiKeyHeader === secret) return true;
-    }
-
-    return false;
+    return verifyMetaSignature(rawBody, signature, appSecret);
 }
 
 function metaMediaProxyUrl(mediaId: string): string {
@@ -177,9 +135,7 @@ function extractMetaMessageContent(msg: MetaWebhookMessage): { text: string; med
             return { text: reply };
         }
         case 'button':
-            return {
-                text: msg.button?.text?.trim() ?? msg.button?.payload?.trim() ?? '',
-            };
+            return { text: msg.button?.text?.trim() ?? msg.button?.payload?.trim() ?? '' };
         default:
             return { text: msg.type ? `[${msg.type}]` : '' };
     }
@@ -206,7 +162,7 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
 
                 const phoneE164 = normalizePhoneE164(from);
                 if (!phoneE164) {
-                    console.warn('[wa-webhook] Meta from non convertibile in E.164:', from);
+                    console.warn('[wa-webhook] from non convertibile in E.164:', from);
                     continue;
                 }
 
@@ -227,60 +183,6 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
     return results;
 }
 
-function jidToPhone(jid: string): string | null {
-    const number = jid.split('@')[0];
-    if (!number) return null;
-    return normalizePhoneE164(number);
-}
-
-function extractEvolutionMessageText(data: EvolutionWebhookPayload['data']): string {
-    const msg = data?.message;
-    if (!msg) return '';
-    return (
-        msg.conversation ??
-        msg.extendedTextMessage?.text ??
-        msg.imageMessage?.caption ??
-        msg.documentMessage?.caption ??
-        ''
-    ).trim();
-}
-
-function extractEvolutionMediaUrl(data: EvolutionWebhookPayload['data']): string | undefined {
-    const msg = data?.message;
-    if (!msg) return undefined;
-    return msg.imageMessage?.url ?? msg.audioMessage?.url ?? msg.documentMessage?.url;
-}
-
-function parseEvolutionIncomingMessage(payload: EvolutionWebhookPayload): ParsedIncomingMessage | null {
-    const { event, data } = payload;
-
-    const supportedEvents = ['messages.upsert', 'MESSAGES_UPSERT', 'message'];
-    if (event && !supportedEvents.includes(event)) return null;
-
-    if (data?.key?.fromMe === true) return null;
-
-    const remoteJid = data?.key?.remoteJid ?? '';
-    if (!remoteJid || remoteJid.includes('@g.us')) return null;
-
-    const phoneE164 = jidToPhone(remoteJid);
-    if (!phoneE164) {
-        console.warn('[wa-webhook] JID non convertibile in phone E.164:', remoteJid);
-        return null;
-    }
-
-    const messageText = extractEvolutionMessageText(data);
-    const mediaUrl = extractEvolutionMediaUrl(data);
-    if (!messageText && !mediaUrl) return null;
-
-    return {
-        phoneE164,
-        phoneKey: `whatsapp:${phoneE164}`,
-        messageText,
-        mediaUrl,
-        senderName: data?.pushName?.trim() || phoneE164,
-    };
-}
-
 async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): Promise<{
     ok: boolean;
     skipped?: string;
@@ -289,12 +191,13 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     sent?: boolean;
 }> {
     const { phoneE164, phoneKey, messageText, mediaUrl, senderName } = incoming;
+    const inboundBody = messageText || (mediaUrl ? '[media]' : '');
 
-    console.info(`[wa-webhook] Messaggio in entrata da ${phoneE164}: "${messageText.slice(0, 80)}"`);
+    console.info(`[wa-webhook] Messaggio da ${phoneE164} (${senderName}): "${inboundBody.slice(0, 80)}"`);
 
     const blacklisted = await prisma.phoneBlacklist.findUnique({ where: { phone: phoneE164 } });
     if (blacklisted) {
-        console.info(`[wa-webhook] Numero in blacklist, silenzio: ${phoneE164}`);
+        console.info(`[wa-webhook] Blacklist: ${phoneE164}`);
         return { ok: true, skipped: 'blacklisted' };
     }
 
@@ -319,21 +222,21 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     }
 
     if (session.status === 'HUMAN_INTERVENTION') {
-        await addMessage(phoneKey, 'INBOUND', messageText || '[media]', mediaUrl);
+        await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
         console.info(`[wa-webhook] HUMAN_INTERVENTION attivo per ${phoneE164}: messaggio registrato, nessuna risposta AI.`);
         return { ok: true, skipped: 'human_intervention' };
     }
 
-    await addMessage(phoneKey, 'INBOUND', messageText || '[media]', mediaUrl);
+    await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
 
     const updatedSession = await getSession(phoneKey);
-    const veraResult = await generateVeraReply(messageText || '[media]', updatedSession, mediaUrl);
+    const veraResult = await generateVeraReply(inboundBody, updatedSession, mediaUrl);
 
     if (veraResult.shouldEscalate) {
         await setSessionStatus(phoneKey, 'HUMAN_INTERVENTION');
     }
 
-    const sendResult = await sendEvolutionTextMessage(phoneE164, veraResult.text);
+    const sendResult = await sendWhatsAppTextMessage(phoneE164, veraResult.text);
 
     if (!sendResult.ok) {
         console.error(
@@ -345,12 +248,11 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     await addMessage(phoneKey, 'OUTBOUND', veraResult.text, undefined, {
         source: veraResult.source,
         escalated: veraResult.shouldEscalate ? 'true' : 'false',
-        ...(sendResult.messageId ? { evolutionMessageId: sendResult.messageId } : {}),
+        ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
     });
 
     console.info(
-        `[wa-webhook] Risposta VERA inviata a ${phoneE164} (source: ${veraResult.source}, ` +
-            `escalated: ${veraResult.shouldEscalate}, ok: ${sendResult.ok})`
+        `[wa-webhook] VERA → ${phoneE164} (source: ${veraResult.source}, escalated: ${veraResult.shouldEscalate}, sent: ${sendResult.ok})`
     );
 
     return {
@@ -360,8 +262,6 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
         sent: sendResult.ok,
     };
 }
-
-// ── GET — verifica webhook Meta (hub.challenge) ───────────────────────────────
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
@@ -373,7 +273,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (mode === 'subscribe' && challenge) {
         if (!secret || token !== secret) {
-            console.warn('[wa-webhook] Verifica Meta fallita: secret assente o verify_token non valido.');
+            console.warn('[wa-webhook] Verifica Meta fallita: verify_token non valido.');
             return new NextResponse('Forbidden', { status: 403 });
         }
         return new NextResponse(challenge, {
@@ -382,54 +282,38 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         });
     }
 
-    return NextResponse.json({ status: 'ok', service: 'VERA WhatsApp Webhook' }, { status: 200 });
+    return NextResponse.json({ status: 'ok', service: 'VERA WhatsApp Webhook (Meta Cloud API)' });
 }
-
-// ── POST — ricezione messaggi ─────────────────────────────────────────────────
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
     const rawBody = await request.text();
 
-    if (!verifyWebhookSecret(request, rawBody)) {
-        console.warn('[wa-webhook] Richiesta non autorizzata: firma non valida.');
+    if (!verifyMetaWebhookSignature(request, rawBody)) {
+        console.warn('[wa-webhook] POST non autorizzato: firma Meta non valida.');
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    let payload: MetaWebhookPayload & EvolutionWebhookPayload;
+    let payload: MetaWebhookPayload;
     try {
-        payload = JSON.parse(rawBody) as MetaWebhookPayload & EvolutionWebhookPayload;
+        payload = JSON.parse(rawBody) as MetaWebhookPayload;
     } catch {
-        console.warn('[wa-webhook] Payload non parsabile come JSON.');
+        console.warn('[wa-webhook] Payload JSON non valido.');
         return NextResponse.json({ ok: true, skipped: 'parse_error' });
     }
 
-    // Meta Cloud API
-    if (payload.object === 'whatsapp_business_account') {
-        const incomingMessages = parseMetaIncomingMessages(payload);
-        if (!incomingMessages.length) {
-            return NextResponse.json({ ok: true, skipped: 'meta_no_messages' });
-        }
-
-        const results = [];
-        for (const incoming of incomingMessages) {
-            results.push(await processIncomingWhatsAppMessage(incoming));
-        }
-
-        return NextResponse.json({
-            ok: true,
-            provider: 'meta',
-            processed: results.length,
-            results,
-        });
+    if (payload.object !== 'whatsapp_business_account') {
+        return NextResponse.json({ ok: true, skipped: 'unsupported_object' });
     }
 
-    // Evolution API (retrocompatibile)
-    const incoming = parseEvolutionIncomingMessage(payload);
-    if (!incoming) {
-        const event = payload.event ?? 'unknown';
-        return NextResponse.json({ ok: true, skipped: `event:${event}` });
+    const incomingMessages = parseMetaIncomingMessages(payload);
+    if (!incomingMessages.length) {
+        return NextResponse.json({ ok: true, skipped: 'no_messages' });
     }
 
-    const result = await processIncomingWhatsAppMessage(incoming);
-    return NextResponse.json({ provider: 'evolution', ...result });
+    const results = [];
+    for (const incoming of incomingMessages) {
+        results.push(await processIncomingWhatsAppMessage(incoming));
+    }
+
+    return NextResponse.json({ ok: true, provider: 'meta', processed: results.length, results });
 }

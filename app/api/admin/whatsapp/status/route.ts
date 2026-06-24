@@ -1,14 +1,10 @@
 /**
  * GET /api/admin/whatsapp/status
  *
- * Proxy autenticato (SUPER_ADMIN) per controllare lo stato di connessione
- * dell'istanza Evolution API (iPhone 12 FloreMoria).
- *
- * Risposta:
- *   { ok: true, state: "open" | "connecting" | "close" | "refused" }
+ * Stato connessione Meta WhatsApp Cloud API (SUPER_ADMIN).
  */
 import { NextResponse } from 'next/server';
-import { getEvolutionInstanceState } from '@/lib/whatsapp/evolutionApiClient';
+import { getWhatsAppConnectionState } from '@/lib/whatsapp/metaCloudApiClient';
 import { requireSuperAdminApi } from '@/lib/superAdminAuth';
 
 export const runtime = 'nodejs';
@@ -18,19 +14,24 @@ export async function GET(): Promise<NextResponse> {
     const guardResult = await requireSuperAdminApi();
     if (guardResult) return guardResult;
 
-    const result = await getEvolutionInstanceState();
+    const result = await getWhatsAppConnectionState();
 
     if (!result.ok) {
         return NextResponse.json(
             {
                 ok: false,
-                error: result.error ?? 'evolution_api_error',
+                provider: 'meta_cloud',
+                error: result.error ?? 'meta_api_error',
                 ...(result.missingEnv?.length ? { missingEnv: result.missingEnv } : {}),
-                ...(result.instance ? { instance: result.instance } : {}),
             },
             { status: result.error === 'not_configured' ? 503 : 502 }
         );
     }
 
-    return NextResponse.json({ ok: true, state: result.state });
+    return NextResponse.json({
+        ok: true,
+        provider: 'meta_cloud',
+        state: result.state,
+        displayPhoneNumber: result.displayPhoneNumber,
+    });
 }

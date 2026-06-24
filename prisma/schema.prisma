@@ -162,6 +162,7 @@ model Order {
   items                  OrderItem[]
   offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
+  memoryGardenOpens      MemoryGardenOpen[]
 }
 
 model OrderItem {
@@ -494,4 +495,18 @@ enum DeliveryProofStatus {
   PENDING
   BEFORE_UPLOADED
   COMPLETED
+}
+
+model MemoryGardenOpen {
+  id         String   @id @default(cuid())
+  orderId    String   @map("order_id")
+  buyerEmail String?  @map("buyer_email")
+  buyerName  String?  @map("buyer_name")
+  userAgent  String?  @map("user_agent")
+  ipAddress  String?  @map("ip_address")
+  openedAt   DateTime @default(now()) @map("opened_at")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("memory_garden_opens")
 }

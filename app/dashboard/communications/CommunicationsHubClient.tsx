@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, MessageCircle, Settings, BarChart2, CheckCircle2, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2 } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2 } from 'lucide-react';
 
-export default function CommunicationsHubClient({ initialProofs }: { initialProofs: any[] }) {
+export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,10 +30,9 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
   }, []);
 
   const tabs = [
-    { id: 'visione', label: 'Monitoraggio', icon: Eye },
-    { id: 'foto', label: 'Foto (Approvazione)', icon: ImageIcon },
-    { id: 'manutenzione', label: 'Configurazione', icon: Settings },
-    { id: 'controllo', label: 'Analytics', icon: Activity },
+    { id: 'visione', label: 'Monitoraggio Live', icon: Eye },
+    { id: 'controllo', label: 'Analytics Consegne', icon: Activity },
+    { id: 'manutenzione', label: 'Blacklist & Filtri', icon: Ban },
   ];
 
   return (
@@ -61,36 +60,34 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
       <div className="p-8 md:p-12 min-h-[650px] bg-white">
         {activeTab === 'visione' && (
           <VisioneTab 
-            proofs={initialProofs} 
             sessions={sessions} 
             setSessions={setSessions}
             loading={loading}
           />
         )}
-        {activeTab === 'foto' && <FotoTab proofs={initialProofs} />}
-        {activeTab === 'manutenzione' && <ManutenzioneTab />}
         {activeTab === 'controllo' && <ControlloTab />}
+        {activeTab === 'manutenzione' && <ManutenzioneTab />}
       </div>
     </div>
   );
 }
 
 // -------------------------------------------------------------
-// 1. VISIONE (Monitoring Feed WhatsApp Style)
+// 1. VISIONE (Monitoring Workspace WhatsApp Style)
 // -------------------------------------------------------------
 function VisioneTab({ 
-  proofs, 
   sessions, 
   setSessions, 
   loading 
 }: { 
-  proofs: any[]; 
   sessions: any[]; 
   setSessions: React.Dispatch<React.SetStateAction<any[]>>; 
   loading: boolean;
 }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'ALL' | 'CLIENT' | 'FLORIST'>('ALL');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -151,7 +148,6 @@ function VisioneTab({
       }
     } catch (err) {
       console.error('Error sending message:', err);
-      // Rollback input if failed
       setInputText(textToSend);
     } finally {
       setSending(false);
@@ -169,7 +165,7 @@ function VisioneTab({
             href={part}
             target="_blank"
             rel="noreferrer"
-            className="text-[#0B57D0] underline break-all"
+            className="text-[#0B57D0] underline break-all font-medium hover:text-[#00A884] transition-colors"
           >
             {part}
           </a>
@@ -179,319 +175,398 @@ function VisioneTab({
     });
   };
 
-  const ChatRow = ({ chat }: { chat: any }) => {
-    const latestMsg = chat.messages?.[chat.messages.length - 1] || null;
-    return (
-      <div 
-        onClick={() => setActiveChatId(chat.phone)}
-        className={`flex items-center gap-4 p-4 hover:bg-[#F0F2F5] cursor-pointer border-b border-[#F0F2F5] last:border-0 transition-colors
-        ${activeChatId === chat.phone ? 'bg-[#F0F2F5]' : ''}`}
-      >
-        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#EAE3D9] to-[#DFDFDF] flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0 border border-gray-200">
-           {chat.initials}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-baseline mb-1">
-            <h4 className="font-display font-medium text-[#111B21] truncate flex items-center gap-2">
-              {chat.name}
-              {chat.status === 'HUMAN_INTERVENTION' && (
-                <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" title="Richiede Intervento Umano" />
-              )}
-            </h4>
-            <span className={`text-[12px] font-medium ${chat.status === 'HUMAN_INTERVENTION' ? 'text-red-500 font-bold animate-pulse' : 'text-[#667781]'}`}>
-               {chat.time}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[14px] text-[#667781]">
-            {latestMsg && renderStatus(chat.status, latestMsg.direction)}
-            <span className="truncate flex items-center gap-1.5">
-              {chat.hasPhoto && <ImageIcon className="w-4 h-4 text-emerald-600" />}
-              {chat.lastMessage || 'Nessun messaggio'}
-            </span>
-          </div>
-        </div>
-        {chat.status === 'HUMAN_INTERVENTION' && (
-          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm animate-pulse">
-            SOS
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Filter and Search logic
+  const filteredSessions = sessions.filter(chat => {
+    const matchesSearch = 
+      chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      chat.phone?.includes(searchQuery);
 
-  // Filter users and florists from sessions
-  const clienti = sessions.filter(s => s.userType === 'UTENTE' || s.userType === 'UNKNOWN');
-  const fioristi = sessions.filter(s => s.userType === 'FLORIST');
+    if (!matchesSearch) return false;
 
-  const humanInterventionsCount = clienti.filter(c => c.status === 'HUMAN_INTERVENTION').length;
-  const newVisualsCount = fioristi.filter(f => f.hasPhoto).length;
+    if (filterType === 'CLIENT') {
+      return chat.userType === 'UTENTE' || chat.userType === 'UNKNOWN';
+    }
+    if (filterType === 'FLORIST') {
+      return chat.userType === 'FLORIST';
+    }
+    return true;
+  });
+
+  const humanInterventionsCount = sessions.filter(s => s.status === 'HUMAN_INTERVENTION' && (s.userType === 'UTENTE' || s.userType === 'UNKNOWN')).length;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-        {/* COLONNA UTENTI */}
-        <div className="bg-white rounded-2xl border border-[#EAE3D9] overflow-hidden shadow-sm flex flex-col h-[520px]">
-          <div className="bg-[#F0F2F5] p-4 border-b border-[#EAE3D9] flex justify-between items-center">
-             <h3 className="font-display font-semibold text-[#111B21] flex items-center gap-2">
-               <UserIcon className="w-4 h-4 text-gray-600" />
-               Chat Utenti (Clienti)
-             </h3>
-             {humanInterventionsCount > 0 ? (
-               <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1">
-                 <AlertCircle className="w-3 h-3" /> {humanInterventionsCount} Richiesta Umano
-               </span>
-             ) : (
-               <span className="bg-[#00A884] text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">AI Vito Attivo</span>
-             )}
+    <div className="animate-in fade-in duration-300">
+      <div className="flex border border-[#EAE3D9] rounded-3xl overflow-hidden h-[680px] bg-[#FAF9F6] shadow-sm">
+        
+        {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
+        <div className="w-[38%] border-r border-[#EAE3D9] flex flex-col h-full bg-white">
+          {/* Header Sidebar */}
+          <div className="p-4 border-b border-[#EAE3D9] space-y-3 bg-[#FAF8F5]">
+            <div className="flex justify-between items-center">
+              <h3 className="font-display font-bold text-[#111B21] flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-[#B89F78]" />
+                Conversazioni
+              </h3>
+              {humanInterventionsCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+                  <AlertCircle className="w-3 h-3" /> {humanInterventionsCount} SOS
+                </span>
+              )}
+            </div>
+
+            {/* Cerca Input */}
+            <div className="relative">
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Cerca per nome o telefono..." 
+                className="w-full bg-white rounded-xl pl-9 pr-4 py-2 text-sm border border-[#EAE3D9] focus:outline-none focus:border-[#C0A062] transition-colors"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            </div>
+
+            {/* Pill Filters */}
+            <div className="flex gap-1.5 pt-1">
+              {[
+                { id: 'ALL', label: 'Tutte' },
+                { id: 'CLIENT', label: 'Clienti' },
+                { id: 'FLORIST', label: 'Fioristi' },
+              ].map(pill => (
+                <button
+                  key={pill.id}
+                  onClick={() => setFilterType(pill.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all border
+                  ${filterType === pill.id 
+                    ? 'bg-[#B89F78] border-[#B89F78] text-white shadow-sm' 
+                    : 'bg-white border-[#EAE3D9] text-[#6F6F6F] hover:bg-[#FAF8F5]'}`}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="overflow-y-auto flex-1 custom-scrollbar">
+
+          {/* List Area */}
+          <div className="overflow-y-auto flex-1 divide-y divide-gray-50 custom-scrollbar">
             {loading ? (
-              <div className="p-8 text-center text-[#6F6F6F]">Caricamento chat...</div>
-            ) : clienti.length === 0 ? (
-              <div className="p-8 text-center text-[#6F6F6F]">Nessuna chat utente registrata.</div>
+              <div className="p-8 text-center text-[#6F6F6F] text-sm animate-pulse">Caricamento conversazioni...</div>
+            ) : filteredSessions.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">Nessuna conversazione trovata.</div>
             ) : (
-              clienti.map(c => <ChatRow key={c.phone} chat={c} />)
+              filteredSessions.map(chat => {
+                const latestMsg = chat.messages?.[chat.messages.length - 1] || null;
+                const isSelected = activeChatId === chat.phone;
+                return (
+                  <div 
+                    key={chat.phone} 
+                    onClick={() => setActiveChatId(chat.phone)}
+                    className={`flex items-center gap-3.5 p-4 hover:bg-[#FAF8F5] cursor-pointer transition-colors relative
+                    ${isSelected ? 'bg-[#FAF6EE] hover:bg-[#FAF6EE]' : ''}`}
+                  >
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#EAE3D9] to-[#DFDFDF] flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0 border border-gray-200 shadow-sm">
+                      {chat.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline mb-0.5">
+                        <h4 className="font-display font-semibold text-[14px] text-[#111B21] truncate flex items-center gap-1.5">
+                          {chat.name}
+                          {chat.userType === 'FLORIST' && (
+                            <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded border border-emerald-100 font-bold uppercase tracking-wider">Fiorista</span>
+                          )}
+                        </h4>
+                        <span className={`text-[11px] font-medium ${chat.status === 'HUMAN_INTERVENTION' ? 'text-red-500 font-bold' : 'text-[#667781]'}`}>
+                          {chat.time || chat.timeLabel}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[13px] text-[#667781]">
+                        {latestMsg && renderStatus(chat.status, latestMsg.direction)}
+                        <span className="truncate flex items-center gap-1.5 flex-1">
+                          {chat.hasPhoto && <ImageIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                          <span className="truncate">{chat.lastMessage || 'Nessun messaggio'}</span>
+                        </span>
+                      </div>
+                    </div>
+                    {chat.status === 'HUMAN_INTERVENTION' && (
+                      <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-sm animate-pulse shrink-0">
+                        SOS
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* COLONNA FIORISTI */}
-        <div className="bg-white rounded-2xl border border-[#EAE3D9] overflow-hidden shadow-sm flex flex-col h-[520px]">
-          <div className="bg-[#F0F2F5] p-4 border-b border-[#EAE3D9] flex justify-between items-center">
-             <h3 className="font-display font-semibold text-[#111B21] flex items-center gap-2">
-               <Camera className="w-4 h-4 text-gray-600" />
-               Chat Fioristi (Partner)
-             </h3>
-             {newVisualsCount > 0 ? (
-               <span className="bg-[#25D366] text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-                 {newVisualsCount} Prove Foto Caricate
-               </span>
-             ) : (
-               <span className="bg-gray-400 text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">In Attesa</span>
-             )}
-          </div>
-          <div className="overflow-y-auto flex-1 custom-scrollbar">
-            {loading ? (
-              <div className="p-8 text-center text-[#6F6F6F]">Caricamento chat...</div>
-            ) : fioristi.length === 0 ? (
-              <div className="p-8 text-center text-[#6F6F6F]">Nessuna chat fiorista registrata.</div>
-            ) : (
-              fioristi.map(f => <ChatRow key={f.phone} chat={f} />)
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* CHAT MODAL OVERLAY */}
-      {activeChat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all">
-           <div className="bg-[#EFEAE2] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[650px] animate-in zoom-in-95 duration-200">
-             
-             {/* Header WhatsApp Style */}
-             <div className="bg-[#00A884] text-white p-4 flex items-center gap-4 relative shadow-md">
-               <button onClick={() => setActiveChatId(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors mr-1">
-                 <X className="w-5 h-5"/>
-               </button>
-               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-display font-bold text-white shadow-sm border border-white/30 flex-shrink-0">
-                 {activeChat.initials}
-               </div>
-               <div className="flex-1 min-w-0 mr-4">
-                 <h4 className="font-semibold text-[16px] leading-tight truncate">{activeChat.name}</h4>
-                 <p className="text-white/80 text-[12px] font-medium truncate">Twilio: {activeChat.phone.replace('whatsapp:', '')}</p>
-               </div>
-
-               {/* UMANO / AI TOGGLE BUTTON */}
-               <button 
-                 onClick={() => toggleStatus(activeChat.phone, activeChat.status)}
-                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm border
-                 ${activeChat.status === 'AI_ACTIVE' 
-                   ? 'bg-emerald-900/40 text-emerald-100 hover:bg-emerald-800/60 border-emerald-400' 
-                   : 'bg-red-600 text-white hover:bg-red-700 border-red-300 animate-pulse'}`}
-               >
-                 {activeChat.status === 'AI_ACTIVE' ? (
-                   <>
-                     <Bot className="w-3.5 h-3.5" />
-                     🤖 AI VITO
-                   </>
-                 ) : (
-                   <>
-                     <UserIcon className="w-3.5 h-3.5" />
-                     👤 UMANO
-                   </>
-                 )}
-               </button>
-             </div>
-             
-             {/* Body Chat */}
-             <div className="flex-1 overflow-y-auto p-6 space-y-6" style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundSize: 'cover' }}>
-                <div className="flex justify-center">
-                  <span className="bg-[#FFEECD] text-[#54656F] text-[12px] px-4 py-1.5 rounded-lg shadow-sm font-medium border border-[#F0E6D2]">
-                    I messaggi e le foto sono sincronizzati end-to-end con le API di Twilio.
-                  </span>
+        {/* ── COLONNA 2: ACTIVE CHAT PANE ── */}
+        <div className="w-[62%] flex flex-col h-full bg-[#EFEAE2] relative">
+          {activeChat ? (
+            <>
+              {/* Header WhatsApp Style */}
+              <div className="bg-[#00A884] text-white px-6 py-3.5 flex justify-between items-center shadow-md z-10 shrink-0">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-display font-bold text-white shadow-sm border border-white/30 flex-shrink-0">
+                    {activeChat.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-[15px] leading-tight truncate">{activeChat.name}</h4>
+                    <p className="text-white/80 text-[11px] font-medium truncate">WhatsApp: {activeChat.phone.replace('whatsapp:', '')}</p>
+                  </div>
                 </div>
-                
-                {/* Dynamically render messages */}
-                {activeChat.messages.map((m: any, idx: number) => {
+
+                {/* AI / MANUAL TAKEOVER TOGGLE */}
+                <button 
+                  onClick={() => toggleStatus(activeChat.phone, activeChat.status)}
+                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm border
+                  ${activeChat.status === 'AI_ACTIVE' 
+                    ? 'bg-emerald-950/40 text-emerald-200 border-emerald-400 hover:bg-emerald-800/50' 
+                    : 'bg-red-600 text-white border-red-400 hover:bg-red-700 animate-pulse'}`}
+                >
+                  {activeChat.status === 'AI_ACTIVE' ? (
+                    <>
+                      <Bot className="w-3.5 h-3.5" />
+                      🤖 VERA AI ATTIVA
+                    </>
+                  ) : (
+                    <>
+                      <UserIcon className="w-3.5 h-3.5" />
+                      👤 UMANO ATTIVO
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex justify-center mt-2">
+                <span className="bg-[#FFEECD] text-[#54656F] text-[11px] px-3.5 py-1.5 rounded-lg shadow-sm font-semibold border border-[#F0E6D2] uppercase tracking-wide">
+                  {activeChat.status === 'AI_ACTIVE' ? 'VERA AI sta monitorando ed assistendo questa chat.' : 'Controllo Manuale attivato dallo Staff.'}
+                </span>
+              </div>
+
+              <div 
+                className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-repeat" 
+                style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")' }}
+              >
+                {activeChat.messages?.map((m: any, idx: number) => {
                   const isOutbound = m.direction === 'OUTBOUND';
                   return (
                     <div key={m.id || idx} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
                       <div 
-                        className={`p-2.5 rounded-xl shadow-sm relative text-[14.5px] text-[#111B21] max-w-[85%] sm:max-w-[70%] leading-relaxed border
+                        className={`p-3 rounded-2xl shadow-sm relative text-[14px] text-[#111B21] max-w-[80%] leading-relaxed border
                         ${isOutbound 
                           ? 'bg-[#D9FDD3] rounded-tr-none border-[#C1E7B9]' 
                           : 'bg-white rounded-tl-none border-[#E6E6E6]'}`}
                       >
                         {m.mediaUrl ? (
-                           <div className="space-y-1.5">
-                             <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-gray-200">
-                               <img src={m.mediaUrl} alt="Visual Proof" className="w-full h-auto max-h-[300px] object-cover hover:scale-105 transition-transform duration-300" />
-                             </a>
-                             {m.body && <p className="pt-2 px-1 pb-1 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>}
-                           </div>
+                          <div>
+                            <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                              <img src={m.mediaUrl} alt="Visual Proof" className="w-full h-auto max-h-[250px] object-contain hover:scale-102 transition-transform duration-300" />
+                            </a>
+                            {m.body && <p className="pt-1.5 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>}
+                          </div>
                         ) : (
-                           <p className="px-1 py-0.5 pb-2 pr-12 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>
+                          <p className="pb-3 pr-10 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>
                         )}
-                        <div className="absolute bottom-1 right-2 flex items-center gap-1.5">
-                          <span className="text-[10px] text-[#8696A0]">{m.timestamp || m.time}</span>
-                          {isOutbound && <CheckCheck className="w-[14px] h-[14px] text-[#53BDEB]" />}
+                        <div className="absolute bottom-1 right-2.5 flex items-center gap-1">
+                          <span className="text-[9px] text-[#8696A0] font-medium">{m.timestampLabel || m.timestamp || 'ora'}</span>
+                          {isOutbound && <CheckCheck className="w-[13px] h-[13px] text-[#53BDEB]" />}
                         </div>
                       </div>
                     </div>
                   );
                 })}
                 <div ref={messagesEndRef} />
-             </div>
-             
-             {/* Input Bar */}
-             <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-3 md:p-4 flex items-center gap-3 border-t border-[#DFDFDF]">
-                <input 
-                  type="text" 
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder={activeChat.status === 'AI_ACTIVE' ? "Vito sta rispondendo... disattiva l'AI per scrivere manuale" : "Scrivi un messaggio... (Invia per inoltrare su WhatsApp)"}
-                  className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[15px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
-                  disabled={activeChat.status === 'AI_ACTIVE'}
-                />
-                <button 
-                  type="submit"
-                  disabled={activeChat.status === 'AI_ACTIVE' || !inputText.trim() || sending}
-                  className={`w-12 h-12 rounded-full text-white flex items-center justify-center shadow-md transition-all flex-shrink-0
-                  ${activeChat.status === 'AI_ACTIVE' || !inputText.trim() || sending
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-[#00A884] hover:bg-[#008f6f] active:scale-95'}`}
-                >
-                  <Send className="w-5 h-5 ml-1" />
-                </button>
-             </form>
-           </div>
+              </div>
+
+              {/* Chat Input Bar */}
+              <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-3.5 flex items-center gap-3 border-t border-[#DFDFDF] shrink-0">
+                {activeChat.status === 'AI_ACTIVE' ? (
+                  <div className="flex-1 bg-white/75 text-[#54656F] text-center py-3.5 px-6 rounded-full border border-dashed border-[#C0A062]/30 text-sm font-medium shadow-inner">
+                    🤖 <b>VERA AI sta gestendo la conversazione.</b> Disattiva VERA in alto per intervenire.
+                  </div>
+                ) : (
+                  <>
+                    <input 
+                      type="text" 
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder="Scrivi un messaggio... (Invia per inoltrare su WhatsApp)"
+                      className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[14px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={!inputText.trim() || sending}
+                      className={`w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition-all flex-shrink-0
+                      ${!inputText.trim() || sending
+                        ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                        : 'bg-[#00A884] hover:bg-[#008f6f] active:scale-95'}`}
+                    >
+                      <Send className="w-4.5 h-4.5 ml-0.5" />
+                    </button>
+                  </>
+                )}
+              </form>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-white">
+              <div className="w-16 h-16 rounded-full bg-[#FAF8F5] border border-[#EAE3D9] flex items-center justify-center mb-3">
+                <MessageCircle className="w-8 h-8 text-[#B89F78] opacity-60" />
+              </div>
+              <h4 className="font-display font-semibold text-[#111B21] text-base mb-1">Bacheca Messaggi VERA</h4>
+              <p className="text-sm text-gray-500 max-w-sm text-center px-6 leading-relaxed">Seleziona una chat dalla barra laterale per visualizzare lo storico dei messaggi in tempo reale e prendere il controllo.</p>
+            </div>
+          )}
         </div>
-      )}
+
+      </div>
     </div>
   );
 }
 
 // -------------------------------------------------------------
-// 2. FOTO (Approvazione & Inoltro Postman)
+// 2. CONTROLLO (Analytics & Metriche)
 // -------------------------------------------------------------
-function FotoTab({ proofs }: { proofs: any[] }) {
+function ControlloTab() {
+  const [data, setData] = useState({
+    veraAutonomyRate: 85,
+    humanEscalationRate: 15,
+    gdmOpens: [
+      {
+        id: 'mock-1',
+        buyerName: 'Riccardo Segantini',
+        buyerEmail: 'riccardo.segantini@example.com',
+        orderNumber: 'FT-2026-004',
+        deceasedName: 'Giovanni Segantini',
+        openedAt: '24/06/2026, 14:15:22',
+        device: 'Chrome'
+      }
+    ]
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Mock dati Controllo Qualità
-  const mockPhotos = [
-    { id: 'ORD-75', fiorista: 'Medda Gabriele', utente: 'Marsiglione S.', data: 'Oggi, 11:44', status: 'In Attesa' },
-    { id: 'ORD-78', fiorista: 'Fioraia Civitanova Alta', utente: 'Cesaroni I.', data: 'Ieri, 16:30', status: 'In Attesa' },
-    { id: 'ORD-81', fiorista: 'Capitano Davide', utente: 'Capellini D.', data: 'Oggi, 09:12', status: 'In Attesa' },
-  ];
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        const res = await fetch('/api/dashboard/communications/analytics');
+        const analytics = await res.json();
+        if (analytics.success) {
+          setData({
+            veraAutonomyRate: analytics.veraAutonomyRate,
+            humanEscalationRate: analytics.humanEscalationRate,
+            gdmOpens: analytics.gdmOpens
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching communications analytics:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAnalytics();
+  }, []);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 flex justify-between items-center">
+    <div className="animate-in fade-in duration-500 space-y-10">
+      <div className="flex justify-between items-center">
          <div>
-           <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Controllo Qualità: Foto Consegne</h2>
-           <p className="text-[#6F6F6F] mt-1">Verifica le immagini caricate dai fioristi prima che il bot Postman le inoltri in automatico agli Utenti via WhatsApp.</p>
-         </div>
-         <div className="bg-orange-50 text-orange-600 px-4 py-2 rounded-full border border-orange-200 flex items-center gap-2 shadow-sm">
-            <Camera className="w-4 h-4" />
-            <span className="text-sm font-bold uppercase tracking-wider">3 in Coda</span>
+           <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Analytics di Consegna</h2>
+           <p className="text-[#6F6F6F] mt-1">Efficienza operativa e tracciamento dell'interazione emotiva dei clienti.</p>
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockPhotos.map((photo, i) => (
-           <div key={i} className="bg-white border border-[#EAE3D9] rounded-[24px] overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition-all">
-              <div className="w-full h-56 bg-gradient-to-tr from-gray-100 to-gray-200 flex items-center justify-center relative overflow-hidden">
-                 <Camera className="w-10 h-10 text-gray-400 opacity-60 group-hover:scale-110 transition-transform duration-500" />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                 <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                    <span className="text-white font-semibold font-display text-lg shadow-sm">{photo.id}</span>
-                    <span className="bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                      {photo.status}
-                    </span>
-                 </div>
-              </div>
-              <div className="p-6 flex-1 flex flex-col justify-between bg-white relative z-10">
-                <div>
-                   <p className="text-xs text-[#8696A0] font-semibold uppercase tracking-wider">{photo.data}</p>
-                   <h4 className="text-[17px] font-display font-semibold text-[#111B21] mt-3">Da: {photo.fiorista}</h4>
-                   <h5 className="text-[14px] font-display text-[#54656F] mt-1">Per: {photo.utente}</h5>
-                   
-                   <div className="mt-4 bg-[#FAF8F5] p-2.5 rounded-xl border border-[#EAE3D9] flex items-start gap-2">
-                     <ShieldCheck className="w-4 h-4 text-[#B89F78] mt-0.5" />
-                     <p className="text-[12px] text-[#2B2B2B] font-medium leading-snug">
-                       Analisi pre-inoltro superata. Assenza di imperfezioni visive gravi (Controllo AI).
-                     </p>
-                   </div>
-                </div>
-                <div className="flex gap-3 mt-6">
-                   <button className="flex-1 bg-[#25D366] text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-[#1DA851] transition-colors flex items-center justify-center gap-1.5 shadow-sm">
-                     <Send className="w-4 h-4"/> Approva & Inoltra
-                   </button>
-                   <button className="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-semibold hover:bg-red-100 transition-colors border border-red-200" title="Rifiuta e chiedi nuova foto">
-                     <X className="w-5 h-5"/>
-                   </button>
-                </div>
-              </div>
-           </div>
-        ))}
+      {/* Metriche Principali */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-[#6F6F6F] font-semibold text-sm">Tasso Autonomia VERA</h4>
+            <span className="w-8 h-8 rounded-full bg-[#E6F3EA] flex items-center justify-center"><Bot className="w-4 h-4 text-[#2F6B43]" /></span>
+          </div>
+          <div>
+            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : `${data.veraAutonomyRate}%`}</p>
+            <p className="text-xs font-semibold text-[#2F6B43] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Risposte gestite autonomamente dall'AI</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-[#6F6F6F] font-semibold text-sm">Richiesta Intervento Umano</h4>
+            <span className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center"><UserIcon className="w-4 h-4 text-red-600" /></span>
+          </div>
+          <div>
+            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : `${data.humanEscalationRate}%`}</p>
+            <p className="text-xs font-semibold text-red-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5"/> Richieste di SOS / Intervento manuale</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-4">
+            <h4 className="text-[#6F6F6F] font-semibold text-sm">Aperture Giardino della Memoria</h4>
+            <span className="w-8 h-8 rounded-full bg-[#EFF6FF] flex items-center justify-center"><Activity className="w-4 h-4 text-[#2563EB]" /></span>
+          </div>
+          <div>
+            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : data.gdmOpens.length}</p>
+            <p className="text-xs font-semibold text-[#2563EB] flex items-center gap-1"><CheckCheck className="w-3.5 h-3.5"/> Clic tracciati sui link foto di consegna</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Feed Attività GdM */}
+      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden">
+        <div className="p-6 border-b border-[#EAE3D9] bg-white flex items-center gap-3">
+          <SlidersHorizontal className="w-5 h-5 text-[#B89F78]" />
+          <div>
+            <h4 className="font-display font-semibold text-base text-[#111B21]">Tracciamento Apertura Link Consegna (Giardino della Memoria)</h4>
+            <p className="text-xs text-gray-500 mt-0.5">Visualizzazioni in tempo reale dei link inviati ai clienti via WhatsApp.</p>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="py-6 text-center text-[#6F6F6F] text-sm animate-pulse">Caricamento attività...</div>
+          ) : data.gdmOpens.length === 0 ? (
+            <div className="py-6 text-center text-gray-400 text-sm">Nessuna attività di apertura registrata.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-[#EAE3D9] text-[#6F6F6F] text-xs uppercase tracking-wider font-semibold">
+                    <th className="pb-3 pr-4">Cliente</th>
+                    <th className="pb-3 pr-4">Ordine</th>
+                    <th className="pb-3 pr-4">Caro Estinto</th>
+                    <th className="pb-3 pr-4">Orario Apertura</th>
+                    <th className="pb-3">Dispositivo / Browser</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {data.gdmOpens.map(open => (
+                    <tr key={open.id} className="hover:bg-[#FAF8F5]/50 transition-colors">
+                      <td className="py-3.5 pr-4">
+                        <span className="font-medium text-[#111B21]">{open.buyerName}</span>
+                        <span className="block text-[11px] text-[#8696A0]">{open.buyerEmail}</span>
+                      </td>
+                      <td className="py-3.5 pr-4 font-mono text-xs">{open.orderNumber}</td>
+                      <td className="py-3.5 pr-4">{open.deceasedName}</td>
+                      <td className="py-3.5 pr-4 text-xs font-medium text-gray-500">{open.openedAt}</td>
+                      <td className="py-3.5 text-xs text-[#8696A0] max-w-[200px] truncate" title={open.device}>{open.device}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 // -------------------------------------------------------------
-// 3. MANUTENZIONE (Configurazione Env)
+// 3. MANUTENZIONE & BLACKLIST (Email Blacklist Panel)
 // -------------------------------------------------------------
 function ManutenzioneTab() {
   return (
-    <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-10">
+    <div className="max-w-3xl animate-in fade-in duration-500">
       <EmailBlacklistPanel />
-
-      <div>
-      <div className="mb-8">
-         <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Integrazione Gateway (Twilio)</h2>
-         <p className="text-[#6F6F6F] mt-1">Configurazione delle variabili d'ambiente. I token reali risiedono nel file <span className="font-mono bg-gray-100 px-2 py-1 rounded mx-1">.env</span> (Server-Side).</p>
-      </div>
-
-      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden">
-        <div className="p-6 border-b border-[#EAE3D9] flex items-center gap-4 bg-white">
-          <div className="w-12 h-12 bg-[#EFF6FF] rounded-full flex items-center justify-center"><Settings className="text-[#2563EB] w-6 h-6" /></div>
-          <div>
-            <h4 className="font-display font-semibold text-lg">Chiavi API & Permessi</h4>
-            <p className="text-sm text-gray-500">Credenziali lette dinamicamente in ambiente sicuro.</p>
-          </div>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_NUMBER'].map(v => (
-             <div key={v} className="flex justify-between items-center bg-white border border-[#DFDFDF] p-4 rounded-xl">
-               <span className="font-mono text-sm font-semibold">{v}</span>
-               <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-500 px-3 py-1 rounded-md">
-                 Confidenziale
-               </span>
-             </div>
-          ))}
-        </div>
-      </div>
-      </div>
     </div>
   );
 }
@@ -566,19 +641,19 @@ function EmailBlacklistPanel() {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-2xl font-display font-medium text-[#2B2B2B] flex items-center gap-2">
           <Mail className="w-6 h-6 text-[#B89F78]" />
-          Blacklist email assistenza@
+          Blacklist Email Assistenza
         </h2>
         <p className="text-[#6F6F6F] mt-1">
-          Mittenti esclusi dal risponditore automatico (newsletter, robot di notifica, comunicazioni@staff.aruba.it).
-          Le mail in blacklist vengono ignorate senza risposta e senza log in bacheca.
+          Mittenti esclusi dal risponditore automatico (es. newsletter, avvisi di notifica, comunicazioni@staff.aruba.it).
+          Le email in blacklist vengono ignorate senza risposte automatiche e senza essere registrate in bacheca.
         </p>
       </div>
 
-      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden">
+      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden shadow-sm">
         <div className="p-6 border-b border-[#EAE3D9] bg-white">
           <form onSubmit={handleBlock} className="flex flex-col sm:flex-row gap-3">
             <input
@@ -595,32 +670,32 @@ function EmailBlacklistPanel() {
               className="px-6 py-3 rounded-xl font-semibold text-sm bg-[#2B2B2B] text-white hover:bg-[#111] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
             >
               <Ban className="w-4 h-4" />
-              Blocca
+              Blocca Email
             </button>
           </form>
           {error && (
-            <p className="mt-3 text-sm text-red-600 flex items-center gap-1.5">
+            <p className="mt-3 text-sm text-red-600 flex items-center gap-1.5 font-medium">
               <AlertCircle className="w-4 h-4" />
               {error}
             </p>
           )}
         </div>
 
-        <div className="p-6">
+        <div className="p-6 bg-white">
           {loading ? (
-            <p className="text-[#6F6F6F] text-sm">Caricamento...</p>
+            <p className="text-[#6F6F6F] text-sm animate-pulse">Caricamento indirizzi bloccati...</p>
           ) : entries.length === 0 ? (
-            <p className="text-[#6F6F6F] text-sm">Nessun indirizzo bloccato.</p>
+            <p className="text-gray-400 text-sm italic">Nessun indirizzo inserito in blacklist.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
               {entries.map(entry => (
                 <li
                   key={entry.id}
-                  className="flex items-center justify-between bg-white border border-[#EAE3D9] rounded-xl px-4 py-3"
+                  className="flex items-center justify-between bg-white border border-[#EAE3D9] rounded-xl px-4 py-3 hover:bg-[#FAF8F5] transition-colors"
                 >
                   <div>
-                    <span className="font-mono text-sm text-[#2B2B2B]">{entry.email}</span>
-                    <span className="block text-[11px] text-[#8696A0] mt-0.5">
+                    <span className="font-mono text-sm text-[#2B2B2B] font-semibold">{entry.email}</span>
+                    <span className="block text-[10px] text-[#8696A0] mt-0.5">
                       Aggiunto il {new Date(entry.createdAt).toLocaleDateString('it-IT')}
                     </span>
                   </div>
@@ -636,54 +711,6 @@ function EmailBlacklistPanel() {
               ))}
             </ul>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -------------------------------------------------------------
-// 4. CONTROLLO (Analytics & Metriche)
-// -------------------------------------------------------------
-function ControlloTab() {
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-8 flex justify-between items-center">
-         <div>
-           <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Analytics di Consegna</h2>
-           <p className="text-[#6F6F6F] mt-1">Monitoraggio dell'efficienza logistica dei Fioristi Partner.</p>
-         </div>
-         <button className="text-sm font-semibold text-[#B89F78] hover:text-[#C0A062] flex items-center gap-2 bg-[#FAF8F5] px-4 py-2 flex rounded-full border border-[#EAE3D9]">
-            Scarica Report CSV
-         </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">Tasso Apertura WhatsApp</h4>
-            <span className="w-8 h-8 rounded-full bg-[#E6F3EA] flex items-center justify-center"><Mail className="w-4 h-4 text-[#2F6B43]" /></span>
-          </div>
-          <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">91.4%</p>
-          <p className="text-sm font-medium text-[#2F6B43] flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Eccellente conversione emotiva</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm">
-           <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">SLA Rispettate (Funerale)</h4>
-            <span className="w-8 h-8 rounded-full bg-[#EFF6FF] flex items-center justify-center"><Activity className="w-4 h-4 text-[#2563EB]" /></span>
-          </div>
-          <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">98.2%</p>
-          <p className="text-sm font-medium text-[#2563EB]">Consegne in Priorità Rossa puntuali</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">Costo Medio Twilio / Ordine</h4>
-            <span className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center"><AlertCircle className="w-4 h-4 text-orange-600" /></span>
-          </div>
-          <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">€0.14</p>
-          <p className="text-sm font-medium text-orange-600">Entro le stime del Quartale</p>
         </div>
       </div>
     </div>

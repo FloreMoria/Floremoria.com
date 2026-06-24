@@ -130,6 +130,9 @@ Claude opera con tre ruoli simultanei:
 - Ogni script autonomo: try/catch globale + log strutturato + exit code significativo
 - Ogni cron/job: alert su failure obbligatorio
 
+### Vercel
+- **IMPORTANTE:** Il dominio reale `www.floremoria.com` è servito dal progetto Vercel `floremoria-dashboard` e NON dal progetto `floremoria`.
+
 ---
 
 ## 🗂️ Decisioni Architetturali

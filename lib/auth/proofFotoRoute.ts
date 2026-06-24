@@ -6,6 +6,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
+import { recordMemoryGardenOpen } from '@/lib/memoryGarden/trackOpen';
 import { getSiteBaseUrl } from '@/lib/futuria/config';
 
 function setUserSessionCookies(
@@ -45,6 +46,11 @@ export async function handleProofFotoAccess(
     if (!user || user.systemRole !== UserRole.USER) {
         return NextResponse.redirect(errorUrl);
     }
+
+    void recordMemoryGardenOpen(order.id, request, {
+        email: user.email,
+        name: user.name || order.buyerFullName,
+    });
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const redirectUrl = `${baseUrl}/dashboard/user?highlight=${encodeURIComponent(order.id)}`;

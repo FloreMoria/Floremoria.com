@@ -428,19 +428,17 @@ function VisioneTab({
 // -------------------------------------------------------------
 function ControlloTab() {
   const [data, setData] = useState({
-    veraAutonomyRate: 85,
-    humanEscalationRate: 15,
-    gdmOpens: [
-      {
-        id: 'mock-1',
-        buyerName: 'Riccardo Segantini',
-        buyerEmail: 'riccardo.segantini@example.com',
-        orderNumber: 'FT-2026-004',
-        deceasedName: 'Giovanni Segantini',
-        openedAt: '24/06/2026, 14:15:22',
-        device: 'Chrome'
-      }
-    ]
+    veraAutonomyRate: 0,
+    humanEscalationRate: 0,
+    gdmOpens: [] as Array<{
+      id: string;
+      buyerName: string;
+      buyerEmail: string;
+      orderNumber: string;
+      deceasedName: string;
+      openedAt: string;
+      device: string;
+    }>,
   });
   const [loading, setLoading] = useState(true);
 

@@ -40,6 +40,11 @@ function parseEnvFile(path: string): Record<string, string> {
     return out;
 }
 
+function isLocalDatabaseUrl(url: string): boolean {
+    const host = url.match(/@([^/:?]+)/)?.[1] ?? '';
+    return host === 'localhost' || host === '127.0.0.1';
+}
+
 export function resolveProductionDatabaseUrl(cwd: string = process.cwd()): string | null {
     const merged: Record<string, string> = {};
     for (const name of PRODUCTION_ENV_FILES) {
@@ -48,7 +53,7 @@ export function resolveProductionDatabaseUrl(cwd: string = process.cwd()): strin
 
     for (const key of DB_URL_KEYS) {
         const v = process.env[key]?.trim() || merged[key]?.trim();
-        if (v) return v;
+        if (v && !isLocalDatabaseUrl(v)) return v;
     }
 
     const host =

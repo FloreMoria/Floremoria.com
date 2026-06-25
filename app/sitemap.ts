@@ -59,6 +59,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
             lastModified: new Date(),
             changeFrequency: 'monthly',
             priority: 0.6,
+        },
+        {
+            url: `${baseUrl}/eliminazione-dati`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.5,
         }
     ];
 

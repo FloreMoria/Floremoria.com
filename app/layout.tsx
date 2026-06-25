@@ -198,6 +198,7 @@ export default function RootLayout({
               Cookie Policy
             </a>
             <FooterLegalLink href="/termini-condizioni">Termini e Condizioni</FooterLegalLink>
+            <FooterLegalLink href="/eliminazione-dati">Eliminazione dati</FooterLegalLink>
           </div>
         </div>
       </div>

@@ -39,6 +39,7 @@ import {
     purgeEmptyVerbaleScaffolds,
     mirrorCanonicalIfMissing,
 } from './mirrorPaths';
+import { mirrorVerbaleToGoogleDrive } from './googleDriveBridge';
 
 export type PipelineResult = VerbaleSyncResult & {
     sources: string[];
@@ -188,6 +189,11 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
         if (!existsSync(obsidianPath)) {
             writeFileSync(obsidianPath, next, 'utf8');
             writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
+            try {
+                mirrorVerbaleToGoogleDrive(iso, merged, next);
+            } catch {
+                // Drive non montato
+            }
             results.push({
                 iso,
                 action: 'created',
@@ -213,6 +219,11 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
 
         writeFileSync(obsidianPath, next, 'utf8');
         writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
+        try {
+            mirrorVerbaleToGoogleDrive(iso, merged, next);
+        } catch {
+            // Drive non montato
+        }
         results.push({
             iso,
             action: 'updated',

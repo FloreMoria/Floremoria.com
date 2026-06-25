@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { applyVerbaleContentPolicy } from './contentPolicy';
+import { mirrorVerbaleToGoogleDrive } from './googleDriveBridge';
 
 export type VerbaleSyncResult = {
     iso: string;
@@ -126,6 +127,11 @@ export function syncDocsVerbaleToObsidian(cwd: string, iso: string): VerbaleSync
 
     if (!existsSync(obsidianPath)) {
         writeFileSync(obsidianPath, nextContent, 'utf8');
+        try {
+            mirrorVerbaleToGoogleDrive(iso, normalizeDocsBody(docsBody), nextContent);
+        } catch {
+            // Drive non montato: repo resta fonte per CI/Git.
+        }
         return { iso, action: 'created', docsPath, obsidianPath };
     }
 
@@ -141,6 +147,11 @@ export function syncDocsVerbaleToObsidian(cwd: string, iso: string): VerbaleSync
     }
 
     writeFileSync(obsidianPath, nextContent, 'utf8');
+    try {
+        mirrorVerbaleToGoogleDrive(iso, normalizeDocsBody(docsBody), nextContent);
+    } catch {
+        // Drive non montato
+    }
     return { iso, action: 'updated', docsPath, obsidianPath };
 }
 

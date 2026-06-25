@@ -92,6 +92,35 @@ Pipeline: npm run log:verbale:pipeline
     return { root: base, ingress, mirror, docs };
 }
 
+/** Copia tutti i verbali Obsidian del repo sul Drive locale (backfill). */
+export function mirrorAllRepoVerbaliToGoogleDrive(cwd: string = process.cwd()): number {
+    const obsidianDir = resolve(cwd, 'notes/obsidian/verbali');
+    if (!existsSync(obsidianDir)) return 0;
+
+    let count = 0;
+    for (const fileName of readdirSync(obsidianDir)) {
+        if (!fileName.endsWith('-Verbale-Giornaliero.md') && !fileName.endsWith('-Verbale-Consolidato.md')) {
+            continue;
+        }
+        const iso =
+            isoFromObsidianGiornaliero(fileName) ??
+            fileName.replace(/-Verbale-(Giornaliero|Consolidato)\.md$/, '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
+
+        const absPath = resolve(obsidianDir, fileName);
+        const obsidianContent = readFileSync(absPath, 'utf8');
+        const body = obsidianContent
+            .replace(/^---[\s\S]*?---\n/m, '')
+            .replace(/^> Copia sincronizzata[^\n]*\n\n/m, '')
+            .replace(/^> Pipeline automatica[^\n]*\n\n/m, '')
+            .trim();
+
+        mirrorVerbaleToGoogleDrive(iso, body, obsidianContent);
+        count += 1;
+    }
+    return count;
+}
+
 /** Copia verbale canonico sul Drive locale (sync Desktop → cloud). */
 export function mirrorVerbaleToGoogleDrive(
     iso: string,

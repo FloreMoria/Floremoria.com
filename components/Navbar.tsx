@@ -54,7 +54,7 @@ export default function Navbar() {
     ];
 
     return (
-        <header className="bg-fm-section border-b border-fm-rose-soft/30 shadow-sm fixed w-full z-[999] top-0 left-0">
+        <header className="bg-fm-section border-b border-fm-rose-soft/30 shadow-sm fixed w-full z-[999] top-[var(--fm-maint-banner-h,0px)] left-0">
             <div className="w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px]">
                 <div className="flex justify-between items-center h-[72px]">
                     <div className="flex items-center">
@@ -127,7 +127,7 @@ export default function Navbar() {
                         aria-label="Chiudi menu"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 top-[72px] h-[calc(100dvh-72px)] w-[84vw] max-w-[360px] bg-fm-bg border-l border-fm-rose-soft/30 shadow-2xl overflow-y-auto">
+                    <div className="absolute right-0 top-[calc(72px+var(--fm-maint-banner-h,0px))] h-[calc(100dvh-72px-var(--fm-maint-banner-h,0px))] w-[84vw] max-w-[360px] bg-fm-bg border-l border-fm-rose-soft/30 shadow-2xl overflow-y-auto">
                         <div className="px-4 py-4 space-y-2">
                             {navLinks.map((link) => {
                                 const isActive = isNavLinkActive(pathname, link.href);

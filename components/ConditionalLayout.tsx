@@ -4,6 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import FloatingWhatsAppButton from '@/components/FloatingWhatsAppButton';
+import { WHATSAPP_MAINTENANCE_BANNER_ENABLED } from '@/lib/site/maintenanceBanner';
 
 interface ConditionalLayoutProps {
     children: React.ReactNode;
@@ -35,10 +36,10 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
     return (
         <>
             <Navbar />
-            <main className="flex-grow w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px] py-12 lg:py-20 mt-[72px]">
+            <main className="flex-grow w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px] py-12 lg:py-20 mt-[calc(72px+var(--fm-maint-banner-h,0px))]">
                 {children}
             </main>
-            <FloatingWhatsAppButton />
+            {!WHATSAPP_MAINTENANCE_BANNER_ENABLED && <FloatingWhatsAppButton />}
             {footer}
         </>
     );

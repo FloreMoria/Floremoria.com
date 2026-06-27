@@ -3,7 +3,7 @@ date: 2026-04-27
 tipo: verbale_sviluppo
 tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-06-27T16:56:13.508Z
+synced_at: 2026-06-27T20:50:14.294Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -18,44 +18,6 @@ DISPOSIZIONI: Sostituzione totale del termine clinico "Animale" con la locuzione
 ## Dettagli operativi
 
 - **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 103
-- **Punti Discussi:** N/A
-- **Allarmi Critici:** N/A
-- **Task in Sospeso:** N/A
-- **Risultati Raggiunti:** N/A
-
----
-
-## Sviluppo tecnico (repo DEVIN)
-
-# PROTOCOLLO 104 - Sblocco Dominio floremoria.com
-
-**Riassunto (BARBARA):** Sblocco Dominio floremoria.com.
-
-STATO: Sblocco Dominio floremoria.com.
-DISPOSIZIONI: Gestione crisi trasferimento Wix-Aruba. Autorizzato lo sblocco del lucchetto ICANN (clientTransferProhibited) tramite comando "Desidero ancora trasferire" su pannello Wix.
-
-## Dettagli operativi
-
-- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 104
-- **Punti Discussi:** N/A
-- **Allarmi Critici:** N/A
-- **Task in Sospeso:** N/A
-- **Risultati Raggiunti:** N/A
-
----
-
-## Sviluppo tecnico (repo DEVIN)
-
-# PROTOCOLLO 105 - Business Continuity & Hosting
-
-**Riassunto (BARBARA):** Business Continuity & Hosting.
-
-STATO: Business Continuity & Hosting.
-DISPOSIZIONI: Autorizzato rinnovo tecnico Hosting Linux Aruba per evitare blackout. Mantenimento partnership "Annunci Funebri" attiva durante la migrazione al nuovo VPS.
-
-## Dettagli operativi
-
-- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 105
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A
 - **Task in Sospeso:** N/A

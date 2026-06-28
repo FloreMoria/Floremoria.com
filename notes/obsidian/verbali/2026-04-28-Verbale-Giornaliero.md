@@ -3,21 +3,21 @@ date: 2026-04-28
 tipo: verbale_sviluppo
 tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-06-28T09:23:48.078Z
+synced_at: 2026-06-28T10:20:10.955Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
-# PROTOCOLLO 107 - Trust Identity "Made in Italy"
+# PROTOCOLLO 106 - Pivot Progetto Istituzionale
 
-**Riassunto (BARBARA):** Trust Identity "Made in Italy".
+**Riassunto (BARBARA):** Pivot Progetto Istituzionale.
 
-STATO: Trust Identity "Made in Italy".
-DISPOSIZIONI: Approvazione del logo "Made in Italy" come sigillo di garanzia per residenti all'estero. Posizionamento: Footer, Checkout e sezione Identità.
+STATO: Pivot Progetto Istituzionale.
+DISPOSIZIONI: Conversione progetto "Manutenzione" in "Servizi Civici FloreMoria". Focus: Cerimoniale e Cultura. Approvata la scalabilità a carnet (3 Corone automatiche + bouquet a scalare).
 
 ## Dettagli operativi
 
-- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 107
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 106
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A
 - **Task in Sospeso:** N/A

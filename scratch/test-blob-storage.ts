@@ -37,7 +37,7 @@ async function main() {
     console.log('   contentType:', meta.contentType);
 
     const blobResult = await get(pathname, { access: 'private', token, useCache: false });
-    if (blobResult.statusCode !== 200 || !blobResult.stream) {
+    if (!blobResult || blobResult.statusCode !== 200 || !blobResult.stream) {
         console.warn('⚠️ get() non ha restituito uno stream.');
         process.exit(1);
     }

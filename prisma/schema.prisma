@@ -512,3 +512,36 @@ model MemoryGardenOpen {
   @@index([orderId])
   @@map("memory_garden_opens")
 }
+
+/// Stato workflow campagne marketing Futuria (generazione → review Guardiani → pubblicazione).
+enum CampaignStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+/// Canale di distribuzione campagna (Meta, Google Ads, LinkedIn).
+enum MarketingChannel {
+  META_FACEBOOK
+  META_INSTAGRAM
+  GOOGLE_ADS
+  LINKEDIN
+}
+
+/// Campagna marketing orchestrata da Futuria (Blob + copy CLEO + hashtag AXEL).
+model MarketingCampaign {
+  id              String           @id @default(cuid())
+  status          CampaignStatus   @default(DRAFT)
+  imageUrl        String           // URL dell'immagine su Vercel Blob
+  copy            String           @db.Text // Testo generato da CLEO
+  hashtags        String[]         // Hashtag ed elementi semantici generati da AXEL
+  targetChannel   MarketingChannel // Canale di destinazione (Meta, Google, LinkedIn)
+  category        String           // Categoria FF (Funerale) o FT (Fiori sulle Tombe)
+  rejectionReason String?          // Nota di rifiuto dei Guardiani per la correzione
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("marketing_campaigns")
+}

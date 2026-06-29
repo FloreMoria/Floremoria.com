@@ -46,7 +46,21 @@ function applyDashboardSecurityHeaders(request: NextRequest, response: NextRespo
     return response;
 }
 
+function isWhatsAppAdminApiPath(pathname: string): boolean {
+    return pathname === '/api/admin/whatsapp/status' || pathname.startsWith('/api/admin/whatsapp/status/');
+}
+
+function isWhatsAppSetupPath(pathname: string): boolean {
+    return (
+        pathname === '/admin-panel/whatsapp-setup' ||
+        pathname.startsWith('/admin-panel/whatsapp-setup/')
+    );
+}
+
 function isSuperAdminOnlyPath(pathname: string): boolean {
+    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname)) {
+        return false;
+    }
     return (
         pathname.startsWith('/admin-panel') ||
         pathname.startsWith('/dashboard/settings/roles') ||
@@ -142,6 +156,28 @@ export function proxy(request: NextRequest) {
             clearAuthCookies(response);
             return applyDashboardSecurityHeaders(request, response);
         }
+    }
+
+    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname)) {
+        if (!userRole) {
+            if (isWhatsAppAdminApiPath(pathname)) {
+                return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+            }
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+            );
+        }
+        if (!isDashboardAdminRole(userRole)) {
+            if (isWhatsAppAdminApiPath(pathname)) {
+                return NextResponse.json({ error: 'Accesso riservato agli admin.' }, { status: 403 });
+            }
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
+            );
+        }
+        return applyDashboardSecurityHeaders(request, NextResponse.next());
     }
 
     if (isSuperAdminOnlyPath(pathname)) {

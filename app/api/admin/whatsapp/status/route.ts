@@ -5,14 +5,14 @@
  */
 import { NextResponse } from 'next/server';
 import { getWhatsAppConnectionState } from '@/lib/whatsapp/metaCloudApiClient';
-import { requireSuperAdminApi } from '@/lib/superAdminAuth';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(): Promise<NextResponse> {
-    const guardResult = await requireSuperAdminApi();
-    if (guardResult) return guardResult;
+    const guardResult = await requireDashboardAdmin();
+    if (!guardResult.ok) return guardResult.response;
 
     const result = await getWhatsAppConnectionState();
 

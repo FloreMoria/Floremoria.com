@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
 import TopNavLink from '@/components/dashboard/TopNavLink';
-import { isSuperAdminRole } from '@/lib/superAdmin';
+import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 
 export const metadata = {
     title: 'FloreMoria Dashboard',
@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     // Configura i ruoli che triggerano System-Clean
     const isSystemClean = ['SUPER_ADMIN', 'OPERATOR', 'MARKETING_MANAGER'].includes(userRole);
     const isSuperAdmin = isSuperAdminRole(userRole);
+    const isDashboardAdmin = isDashboardAdminRole(userRole);
 
     return (
         <div className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}>
@@ -48,6 +49,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         <TopNavLink href="/dashboard/logs" label="Log di Sistema" />
                         <TopNavLink href="/dashboard/communications" label="Messaggi" />
                         <TopNavLink href="/dashboard/offers" label="Buoni" />
+                        {isDashboardAdmin ? (
+                            <TopNavLink href="/admin-panel/whatsapp-setup" label="WhatsApp" />
+                        ) : null}
                         {isSuperAdmin ? (
                             <TopNavLink href="/dashboard/settings/roles" label="Ruoli" />
                         ) : null}

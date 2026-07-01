@@ -3,7 +3,7 @@ date: 2026-04-27
 tipo: verbale_sviluppo
 tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-07-01T17:46:32.871Z
+synced_at: 2026-07-01T21:17:31.021Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -18,25 +18,6 @@ DISPOSIZIONI: Sostituzione totale del termine clinico "Animale" con la locuzione
 ## Dettagli operativi
 
 - **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 103
-- **Punti Discussi:** N/A
-- **Allarmi Critici:** N/A
-- **Task in Sospeso:** N/A
-- **Risultati Raggiunti:** N/A
-
----
-
-## Sviluppo tecnico (repo DEVIN)
-
-# PROTOCOLLO 104 - Sblocco Dominio floremoria.com
-
-**Riassunto (BARBARA):** Sblocco Dominio floremoria.com.
-
-STATO: Sblocco Dominio floremoria.com.
-DISPOSIZIONI: Gestione crisi trasferimento Wix-Aruba. Autorizzato lo sblocco del lucchetto ICANN (clientTransferProhibited) tramite comando "Desidero ancora trasferire" su pannello Wix.
-
-## Dettagli operativi
-
-- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 104
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A
 - **Task in Sospeso:** N/A

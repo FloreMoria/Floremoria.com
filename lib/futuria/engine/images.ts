@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { MarketingChannel } from '@prisma/client';
 import { put } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
 import { FuturiaEngineConfigError } from './generation';
 
@@ -138,7 +139,7 @@ export async function generateAndStorageCampaignImage(
 
   const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;
   const { url } = await put(blobPath, buffer, {
-    access: 'private',
+    access: getBlobStoreAccess(),
     contentType: mimeType,
     token: getBlobToken(),
     addRandomSuffix: false,

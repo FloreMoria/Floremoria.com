@@ -1,4 +1,5 @@
 import { del, get, head, put } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 
 /** Rimuove em-dash, ellipsis e altri non-ASCII che rompono fetch (ByteString). */
 export function sanitizeAsciiUrl(raw: string): string {
@@ -41,7 +42,7 @@ function isPrivateBlobUrl(url: string): boolean {
 
 async function fetchPrivateBlobBuffer(url: string, token: string): Promise<Buffer> {
     const pathname = pathnameFromBlobUrl(url);
-    const blobResult = await get(pathname, { access: 'private', token, useCache: false });
+    const blobResult = await get(pathname, { access: getBlobStoreAccess(), token, useCache: false });
     if (!blobResult || blobResult.statusCode !== 200 || !blobResult.stream) {
         throw new Error(
             `Impossibile scaricare la foto dal Blob privato (HTTP ${blobResult?.statusCode ?? 'n/a'}).`
@@ -83,7 +84,7 @@ export async function overwriteProofBlob(url: string, buffer: Buffer): Promise<s
     const token = getBlobToken();
     const meta = await head(sanitizeAsciiUrl(url), { token });
     const { url: updatedUrl } = await put(meta.pathname, buffer, {
-        access: 'private',
+        access: getBlobStoreAccess(),
         contentType: 'image/webp',
         token,
         addRandomSuffix: false,

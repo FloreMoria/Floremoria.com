@@ -3,6 +3,7 @@
  */
 import { MarketingChannel } from '@prisma/client';
 import { get } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
 import prisma from '@/lib/prisma';
 import {
@@ -151,7 +152,7 @@ async function fetchImageBytes(imageUrl: string, blobToken?: string): Promise<Bu
       throw new Error('BLOB_READ_WRITE_TOKEN mancante per leggere immagine privata.');
     }
     const pathname = new URL(imageUrl).pathname.replace(/^\//, '');
-    const blobResult = await get(pathname, { access: 'private', token: blobToken, useCache: false });
+    const blobResult = await get(pathname, { access: getBlobStoreAccess(), token: blobToken, useCache: false });
     if (!blobResult?.stream || blobResult.statusCode !== 200) {
       throw new Error('Impossibile scaricare immagine da Vercel Blob privato.');
     }

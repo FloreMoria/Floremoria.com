@@ -1,4 +1,5 @@
 import { put } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { buildElegantProofFilename, slugifyProofName } from '@/lib/deliveryProof/proofFilenames';
 import { normalizeProofImageBuffer } from '@/lib/deliveryProof/imagePipeline';
 import { DELIVERY_PROOF_PRIVATE_PREFIX } from '@/lib/deliveryProof/storagePaths';
@@ -44,7 +45,7 @@ export async function processProofImageFile(
 
     const blobPath = `${DELIVERY_PROOF_PRIVATE_PREFIX}/${order.id}/${filename}`;
     const { url } = await put(blobPath, optimizedBuffer, {
-        access: 'private',
+        access: getBlobStoreAccess(),
         contentType: 'image/webp',
         token: getBlobToken(),
         addRandomSuffix: true,

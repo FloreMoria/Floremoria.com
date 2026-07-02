@@ -1,5 +1,6 @@
 import { put } from '@vercel/blob';
 import { randomUUID } from 'node:crypto';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
 import { fetchProofImageBuffer, sanitizeAsciiUrl } from '@/lib/deliveryProof/blobProofStorage';
 import { sanitizeDeliveryPhotoForSocial } from '@/lib/deliveryProof/socialSanitizer';
@@ -65,7 +66,7 @@ export async function sanitizeAndUploadSocialReadyProof(
   const blobPath = `${DELIVERY_PROOF_SOCIAL_READY_PREFIX}/${orderId}/${slot}-${index}-${randomUUID()}.webp`;
 
   const { url: socialReadyUrl } = await put(blobPath, sanitizedBuffer, {
-    access: 'private',
+    access: getBlobStoreAccess(),
     contentType: 'image/webp',
     token,
     addRandomSuffix: false,
@@ -167,7 +168,7 @@ export async function uploadSanitizedBufferToSocialReady(
   const blobPath = `${DELIVERY_PROOF_SOCIAL_READY_PREFIX}/${orderId}/${slot}-${index}-${randomUUID()}.webp`;
 
   const { url } = await put(blobPath, sanitizedBuffer, {
-    access: 'private',
+    access: getBlobStoreAccess(),
     contentType: 'image/webp',
     token,
     addRandomSuffix: false,

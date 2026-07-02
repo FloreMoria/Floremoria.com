@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { get, put } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { fetchProofImageBuffer } from '@/lib/deliveryProof/blobProofStorage';
 
 const STAGING_PREFIX = 'futuria/campagne/publish-staging';
@@ -108,7 +109,7 @@ export async function ensureMetaFetchableImageUrl(
   const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.${ext}`;
 
   await put(pathname, bytes, {
-    access: 'private',
+    access: getBlobStoreAccess(),
     contentType,
     token,
     addRandomSuffix: false,
@@ -131,7 +132,7 @@ export async function fetchStagedImageBytes(
   blobToken: string
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
-  const blobResult = await get(pathname, { access: 'private', token, useCache: false });
+  const blobResult = await get(pathname, { access: getBlobStoreAccess(), token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }

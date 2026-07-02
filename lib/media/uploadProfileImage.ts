@@ -3,6 +3,7 @@
  * Prefisso bucket logico: floremoria-media/ (equivalente al bucket Supabase richiesto in spec).
  */
 import { put } from '@vercel/blob';
+import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { normalizeProofImageBuffer } from '@/lib/deliveryProof/imagePipeline';
 
 const MEDIA_PREFIX = 'floremoria-media';
@@ -39,7 +40,7 @@ export async function uploadProfileImage(
     const blobPath = `${MEDIA_PREFIX}/${folder}/${entityId}/portrait.webp`;
 
     const { url } = await put(blobPath, optimized, {
-        access: 'private',
+        access: getBlobStoreAccess(),
         contentType: 'image/webp',
         token: getBlobToken(),
         addRandomSuffix: true,

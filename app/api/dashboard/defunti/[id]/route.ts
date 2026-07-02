@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
     getDeceasedProfileDetail,
@@ -48,17 +49,91 @@ export async function PUT(
     try {
         const { id: deceasedProfileId } = await context.params;
         const body = await request.json();
-        const partnerId = String(body.partnerId || '').trim();
+        const action = String(body.action || 'set_florist').trim();
 
-        if (!partnerId) {
-            return NextResponse.json({ ok: false, error: 'partnerId mancante.' }, { status: 400 });
+        if (action === 'set_florist') {
+            const partnerId = String(body.partnerId || '').trim();
+            if (!partnerId) {
+                return NextResponse.json({ ok: false, error: 'partnerId mancante.' }, { status: 400 });
+            }
+            await setDeceasedFlorist(deceasedProfileId, partnerId);
+            const detail = await getDeceasedProfileDetail(deceasedProfileId);
+            return NextResponse.json({ ok: true, detail });
         }
 
-        await setDeceasedFlorist(deceasedProfileId, partnerId);
-        const detail = await getDeceasedProfileDetail(deceasedProfileId);
-        return NextResponse.json({ ok: true, detail });
+        if (action === 'update_profile') {
+            const fullName = String(body.fullName || '').trim();
+            const cemeteryCity = String(body.cemeteryCity || '').trim();
+            const cemeteryName =
+                typeof body.cemeteryName === 'string' ? body.cemeteryName.trim() : '';
+
+            if (!fullName || !cemeteryCity) {
+                return NextResponse.json(
+                    { ok: false, error: 'Nome defunto e comune sono obbligatori.' },
+                    { status: 400 }
+                );
+            }
+
+            await prisma.deceasedProfile.update({
+                where: { id: deceasedProfileId },
+                data: {
+                    fullName,
+                    cemeteryCity,
+                    cemeteryName: cemeteryName || null,
+                },
+            });
+
+            await prisma.order.updateMany({
+                where: { deceasedProfileId },
+                data: {
+                    deceasedName: fullName,
+                    cemeteryCity,
+                    cemeteryName: cemeteryName || null,
+                },
+            });
+
+            const detail = await getDeceasedProfileDetail(deceasedProfileId);
+            return NextResponse.json({ ok: true, detail });
+        }
+
+        return NextResponse.json({ ok: false, error: 'Azione non supportata.' }, { status: 400 });
     } catch (error) {
         console.error('[defunti PUT florist]', error);
+        const message = error instanceof Error ? error.message : 'Errore interno.';
+        return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    }
+}
+
+export async function DELETE(
+    _request: Request,
+    context: { params: Promise<{ id: string }> }
+) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const { id: deceasedProfileId } = await context.params;
+        const linkedOrders = await prisma.order.count({
+            where: { deceasedProfileId, deletedAt: null },
+        });
+
+        if (linkedOrders > 0) {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    error: 'Impossibile cancellare un defunto con ordini associati.',
+                },
+                { status: 400 }
+            );
+        }
+
+        await prisma.userDeceasedLink.deleteMany({ where: { deceasedProfileId } });
+        await prisma.partnerDeceasedAssignment.deleteMany({ where: { deceasedProfileId } });
+        await prisma.deceasedProfile.delete({ where: { id: deceasedProfileId } });
+
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        console.error('[defunti DELETE]', error);
         const message = error instanceof Error ? error.message : 'Errore interno.';
         return NextResponse.json({ ok: false, error: message }, { status: 400 });
     }

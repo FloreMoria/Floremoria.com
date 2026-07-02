@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Filter, MoreHorizontal, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy } from 'lucide-react';
+import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
@@ -34,6 +34,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [toast, setToast] = useState<string | null>(null);
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [duplicateSource, setDuplicateSource] = useState<any | null>(null);
+    const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+    const [rowOrderSavingId, setRowOrderSavingId] = useState<string | null>(null);
+    const [rowOrderDraft, setRowOrderDraft] = useState<
+        Record<string, { buyerFullName: string; customerPhone: string; deceasedName: string; cemeteryName: string; cemeteryCity: string; totalPriceCents: number; status: string }>
+    >({});
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -72,6 +77,79 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const closeDrawer = () => {
         setSelectedOrder(null);
+    };
+
+    const beginRowOrderEdit = (order: any) => {
+        setEditingOrderId(order.id);
+        setRowOrderDraft((prev) => ({
+            ...prev,
+            [order.id]: {
+                buyerFullName: order.buyerFullName || '',
+                customerPhone: order.customerPhone || '',
+                deceasedName: order.deceasedName || '',
+                cemeteryName: order.cemeteryName || '',
+                cemeteryCity: order.cemeteryCity || '',
+                totalPriceCents: Number(order.totalPriceCents || 0),
+                status: order.status || 'PENDING',
+            },
+        }));
+    };
+
+    const cancelRowOrderEdit = () => {
+        setEditingOrderId(null);
+    };
+
+    const saveRowOrderEdit = async (order: any) => {
+        const draft = rowOrderDraft[order.id];
+        if (!draft) return;
+        setRowOrderSavingId(order.id);
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    buyerFullName: draft.buyerFullName,
+                    customerPhone: draft.customerPhone,
+                    deceasedName: draft.deceasedName,
+                    cemeteryName: draft.cemeteryName,
+                    cemeteryCity: draft.cemeteryCity,
+                    totalPriceCents: draft.totalPriceCents,
+                    status: draft.status,
+                }),
+            });
+            if (!res.ok) {
+                throw new Error('Salvataggio ordine non riuscito.');
+            }
+            setLocalOrders((prev: any[]) =>
+                prev.map((o) => (o.id === order.id ? { ...o, ...draft } : o))
+            );
+            if (selectedOrder?.id === order.id) {
+                setSelectedOrder((prev: any) => ({ ...prev, ...draft }));
+            }
+            setEditingOrderId(null);
+            showToast('Ordine aggiornato');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore salvataggio ordine.');
+        } finally {
+            setRowOrderSavingId(null);
+        }
+    };
+
+    const deleteRowOrder = async (order: any) => {
+        const ok = window.confirm(`Confermi cancellazione ordine ${order.orderNumber || order.id}?`);
+        if (!ok) return;
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || 'Cancellazione non riuscita.');
+            }
+            setLocalOrders((prev: any[]) => prev.filter((o) => o.id !== order.id));
+            if (selectedOrder?.id === order.id) closeDrawer();
+            showToast('Ordine cancellato');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore cancellazione ordine.');
+        }
     };
 
     const StatusBadge = ({ status }: { status: string }) => {
@@ -325,12 +403,74 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            <div className="font-bold text-gray-900 leading-tight break-words">{order.deceasedName || 'Non specificato'}</div>
-                                            <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5 flex items-center gap-1"><MapPin size={10} /> {order.cemeteryName || 'Cimitero n.d.'}</div>
+                                            {editingOrderId === order.id ? (
+                                                <div className="space-y-1.5">
+                                                    <input
+                                                        value={rowOrderDraft[order.id]?.deceasedName || ''}
+                                                        onChange={(e) =>
+                                                            setRowOrderDraft((prev) => ({
+                                                                ...prev,
+                                                                [order.id]: { ...prev[order.id], deceasedName: e.target.value },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                                                        placeholder="Defunto"
+                                                    />
+                                                    <input
+                                                        value={rowOrderDraft[order.id]?.cemeteryName || ''}
+                                                        onChange={(e) =>
+                                                            setRowOrderDraft((prev) => ({
+                                                                ...prev,
+                                                                [order.id]: { ...prev[order.id], cemeteryName: e.target.value },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                                                        placeholder="Cimitero"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="font-bold text-gray-900 leading-tight break-words">{order.deceasedName || 'Non specificato'}</div>
+                                                    <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5 flex items-center gap-1"><MapPin size={10} /> {order.cemeteryName || 'Cimitero n.d.'}</div>
+                                                </>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            <div className="font-medium text-black leading-tight break-words">{order.buyerFullName || 'Utente Sconosciuto'}</div>
-                                            <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5">{order.customerPhone || 'Nessun Recapito'}</div>
+                                            {editingOrderId === order.id ? (
+                                                <div className="space-y-1.5">
+                                                    <input
+                                                        value={rowOrderDraft[order.id]?.buyerFullName || ''}
+                                                        onChange={(e) =>
+                                                            setRowOrderDraft((prev) => ({
+                                                                ...prev,
+                                                                [order.id]: { ...prev[order.id], buyerFullName: e.target.value },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                                                        placeholder="Cliente"
+                                                    />
+                                                    <input
+                                                        value={rowOrderDraft[order.id]?.customerPhone || ''}
+                                                        onChange={(e) =>
+                                                            setRowOrderDraft((prev) => ({
+                                                                ...prev,
+                                                                [order.id]: { ...prev[order.id], customerPhone: e.target.value },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                                                        placeholder="Telefono"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="font-medium text-black leading-tight break-words">{order.buyerFullName || 'Utente Sconosciuto'}</div>
+                                                    <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5">{order.customerPhone || 'Nessun Recapito'}</div>
+                                                </>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3">
                                             <div className="text-gray-700 text-[13px] leading-tight break-words">{order.buyerCity || 'Città n.d.'}</div>
@@ -341,16 +481,52 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             <div className="text-gray-500 text-[12px] mt-0.5 whitespace-nowrap">{order.items?.length > 1 ? `+ ${order.items.length - 1} altri articoli` : '1 Articolo'}</div>
                                         </td>
                                         <td className="py-3 px-3 text-right">
-                                            <span className="font-semibold text-black bg-gray-50 border border-gray-100 px-2 py-1 rounded-md text-[13px] whitespace-nowrap inline-block">
-                                                {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(order.totalPriceCents / 100)}
-                                            </span>
+                                            {editingOrderId === order.id ? (
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    value={rowOrderDraft[order.id]?.totalPriceCents ?? 0}
+                                                    onChange={(e) =>
+                                                        setRowOrderDraft((prev) => ({
+                                                            ...prev,
+                                                            [order.id]: {
+                                                                ...prev[order.id],
+                                                                totalPriceCents: Number(e.target.value || 0),
+                                                            },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-28 border border-gray-200 rounded px-2 py-1 text-xs text-right"
+                                                />
+                                            ) : (
+                                                <span className="font-semibold text-black bg-gray-50 border border-gray-100 px-2 py-1 rounded-md text-[13px] whitespace-nowrap inline-block">
+                                                    {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(order.totalPriceCents / 100)}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            <div className="font-medium text-black flex items-start gap-1.5">
-                                                <MapPin size={13} className="text-gray-400 shrink-0 mt-0.5" />
-                                                <span className="leading-tight break-words">{order.cemeteryCity}</span>
-                                            </div>
-                                            <div className="text-gray-500 text-[12px] leading-tight break-words mt-0.5">{order.cemeteryName}</div>
+                                            {editingOrderId === order.id ? (
+                                                <input
+                                                    value={rowOrderDraft[order.id]?.cemeteryCity || ''}
+                                                    onChange={(e) =>
+                                                        setRowOrderDraft((prev) => ({
+                                                            ...prev,
+                                                            [order.id]: { ...prev[order.id], cemeteryCity: e.target.value },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
+                                                    placeholder="Comune destinazione"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <div className="font-medium text-black flex items-start gap-1.5">
+                                                        <MapPin size={13} className="text-gray-400 shrink-0 mt-0.5" />
+                                                        <span className="leading-tight break-words">{order.cemeteryCity}</span>
+                                                    </div>
+                                                    <div className="text-gray-500 text-[12px] leading-tight break-words mt-0.5">{order.cemeteryName}</div>
+                                                </>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3 text-center">
                                             {order.isRecurring ? (
@@ -380,7 +556,23 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             )}
                                         </td>
                                         <td className="py-3 px-3">
-                                            {canChangeStatus ? (
+                                            {editingOrderId === order.id ? (
+                                                <select
+                                                    value={rowOrderDraft[order.id]?.status || order.status}
+                                                    onChange={(e) =>
+                                                        setRowOrderDraft((prev) => ({
+                                                            ...prev,
+                                                            [order.id]: { ...prev[order.id], status: e.target.value },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="px-2 py-1.5 pr-6 rounded-full text-[11px] font-semibold tracking-wide appearance-none outline-none cursor-pointer border border-gray-200 bg-white"
+                                                >
+                                                    {Object.entries(statusMap).map(([key, val]) => (
+                                                        <option key={key} value={key} className="bg-white text-black font-sans">{val.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : canChangeStatus ? (
                                                 <select
                                                     value={order.status}
                                                     onChange={(e) => updateStatus(order.id, e.target.value)}
@@ -396,9 +588,56 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             )}
                                         </td>
                                         <td className="py-3 px-2 text-center">
-                                            <button className="p-1.5 text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-gray-200">
-                                                <MoreHorizontal size={16} />
-                                            </button>
+                                            <div className="inline-flex items-center gap-1">
+                                                {editingOrderId === order.id ? (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void saveRowOrderEdit(order);
+                                                            }}
+                                                            disabled={rowOrderSavingId === order.id}
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                                                        >
+                                                            Salva
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                cancelRowOrderEdit();
+                                                            }}
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Annulla
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                beginRowOrderEdit(order);
+                                                            }}
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Modifica
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void deleteRowOrder(order);
+                                                            }}
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50"
+                                                        >
+                                                            Cancella
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );

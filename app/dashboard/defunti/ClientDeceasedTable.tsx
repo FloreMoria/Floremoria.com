@@ -34,6 +34,11 @@ export default function ClientDeceasedTable({
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
+    const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
+    const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
+    const [rowDrafts, setRowDrafts] = useState<
+        Record<string, { fullName: string; cemeteryCity: string; cemeteryName: string }>
+    >({});
 
     useEffect(() => {
         setRows(initialRows);
@@ -83,6 +88,102 @@ export default function ClientDeceasedTable({
             setCreateError(err instanceof Error ? err.message : 'Errore creazione.');
         } finally {
             setCreating(false);
+        }
+    };
+
+    const beginRowEdit = (row: DeceasedLeaderRow) => {
+        if (!row.deceasedProfileId || row.isOrphan) return;
+        setEditingRowKey(row.rowKey);
+        setRowDrafts((prev) => ({
+            ...prev,
+            [row.rowKey]: {
+                fullName: row.fullName,
+                cemeteryCity: row.cemeteryCity,
+                cemeteryName: row.cemeteryName || '',
+            },
+        }));
+    };
+
+    const cancelRowEdit = () => {
+        setEditingRowKey(null);
+    };
+
+    const saveRowEdit = async (row: DeceasedLeaderRow) => {
+        if (!row.deceasedProfileId || row.isOrphan) return;
+        const draft = rowDrafts[row.rowKey];
+        if (!draft) return;
+
+        setSavingRowKey(row.rowKey);
+        try {
+            const res = await fetch(`/api/dashboard/defunti/${row.deceasedProfileId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_profile',
+                    fullName: draft.fullName,
+                    cemeteryCity: draft.cemeteryCity,
+                    cemeteryName: draft.cemeteryName || null,
+                }),
+            });
+            const data = (await res.json()) as { ok?: boolean; error?: string };
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Salvataggio non riuscito.');
+            }
+
+            setRows((prev) =>
+                prev.map((r) =>
+                    r.rowKey === row.rowKey
+                        ? {
+                            ...r,
+                            fullName: draft.fullName,
+                            cemeteryCity: draft.cemeteryCity,
+                            cemeteryName: draft.cemeteryName || null,
+                        }
+                        : r
+                )
+            );
+
+            if (selectedRow?.rowKey === row.rowKey) {
+                setSelectedRow((prev) =>
+                    prev
+                        ? {
+                            ...prev,
+                            fullName: draft.fullName,
+                            cemeteryCity: draft.cemeteryCity,
+                            cemeteryName: draft.cemeteryName || null,
+                        }
+                        : prev
+                );
+            }
+
+            setEditingRowKey(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore salvataggio defunto.');
+        } finally {
+            setSavingRowKey(null);
+        }
+    };
+
+    const deleteRow = async (row: DeceasedLeaderRow) => {
+        if (!row.deceasedProfileId || row.isOrphan) {
+            alert('I gruppi orfani non si cancellano da qui: vanno prima registrati o gestiti dagli ordini.');
+            return;
+        }
+        const ok = window.confirm(`Confermi cancellazione anagrafica di ${row.fullName}?`);
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/api/dashboard/defunti/${row.deceasedProfileId}`, {
+                method: 'DELETE',
+            });
+            const data = (await res.json()) as { ok?: boolean; error?: string };
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Cancellazione non riuscita.');
+            }
+            setRows((prev) => prev.filter((r) => r.rowKey !== row.rowKey));
+            if (selectedRow?.rowKey === row.rowKey) setSelectedRow(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore cancellazione defunto.');
         }
     };
 
@@ -200,13 +301,80 @@ export default function ClientDeceasedTable({
                                                         <Heart size={14} className="fill-current" />
                                                     </div>
                                                 )}
-                                                <span className="font-semibold text-gray-900">{row.fullName}</span>
+                                                {editingRowKey === row.rowKey ? (
+                                                    <input
+                                                        value={rowDrafts[row.rowKey]?.fullName || ''}
+                                                        onChange={(e) =>
+                                                            setRowDrafts((prev) => ({
+                                                                ...prev,
+                                                                [row.rowKey]: {
+                                                                    ...(prev[row.rowKey] || {
+                                                                        fullName: '',
+                                                                        cemeteryCity: '',
+                                                                        cemeteryName: '',
+                                                                    }),
+                                                                    fullName: e.target.value,
+                                                                },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="border border-gray-200 rounded px-2 py-1 text-sm"
+                                                    />
+                                                ) : (
+                                                    <span className="font-semibold text-gray-900">{row.fullName}</span>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-5 py-4 text-sm text-gray-600">{formatDisplayDate(row.birthDate)}</td>
                                         <td className="px-5 py-4 text-sm text-gray-600">{formatDisplayDate(row.deathDate)}</td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{row.cemeteryCity}</td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{row.cemeteryName || '—'}</td>
+                                        <td className="px-5 py-4 text-sm text-gray-600">
+                                            {editingRowKey === row.rowKey ? (
+                                                <input
+                                                    value={rowDrafts[row.rowKey]?.cemeteryCity || ''}
+                                                    onChange={(e) =>
+                                                        setRowDrafts((prev) => ({
+                                                            ...prev,
+                                                            [row.rowKey]: {
+                                                                ...(prev[row.rowKey] || {
+                                                                    fullName: '',
+                                                                    cemeteryCity: '',
+                                                                    cemeteryName: '',
+                                                                }),
+                                                                cemeteryCity: e.target.value,
+                                                            },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
+                                                />
+                                            ) : (
+                                                row.cemeteryCity
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-4 text-sm text-gray-600">
+                                            {editingRowKey === row.rowKey ? (
+                                                <input
+                                                    value={rowDrafts[row.rowKey]?.cemeteryName || ''}
+                                                    onChange={(e) =>
+                                                        setRowDrafts((prev) => ({
+                                                            ...prev,
+                                                            [row.rowKey]: {
+                                                                ...(prev[row.rowKey] || {
+                                                                    fullName: '',
+                                                                    cemeteryCity: '',
+                                                                    cemeteryName: '',
+                                                                }),
+                                                                cemeteryName: e.target.value,
+                                                            },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
+                                                />
+                                            ) : (
+                                                row.cemeteryName || '—'
+                                            )}
+                                        </td>
                                         <td className="px-5 py-4 text-sm text-gray-600 max-w-[180px] truncate">
                                             {row.gravePosition || '—'}
                                         </td>
@@ -229,7 +397,68 @@ export default function ClientDeceasedTable({
                                             )}
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            <ChevronRight className="w-5 h-5 text-gray-400 inline-block" />
+                                            <div className="inline-flex items-center gap-2">
+                                                {editingRowKey === row.rowKey ? (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void saveRowEdit(row);
+                                                            }}
+                                                            disabled={savingRowKey === row.rowKey}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                                                        >
+                                                            Salva
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                cancelRowEdit();
+                                                            }}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Annulla
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                beginRowEdit(row);
+                                                            }}
+                                                            disabled={row.isOrphan || !row.deceasedProfileId}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                                                        >
+                                                            Modifica
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void deleteRow(row);
+                                                            }}
+                                                            disabled={row.isOrphan || !row.deceasedProfileId}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40"
+                                                        >
+                                                            Cancella
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedRow(row);
+                                                            }}
+                                                            className="px-1.5 py-1 rounded text-gray-500 hover:text-gray-700"
+                                                        >
+                                                            <ChevronRight className="w-5 h-5 inline-block" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

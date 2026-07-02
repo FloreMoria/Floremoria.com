@@ -3,8 +3,12 @@ import prisma from '@/lib/prisma';
 import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
 import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/futuria/floristDeliveryLinkNotify';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 
 export async function PUT(request: Request, context: any) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
     try {
         const { id } = await context.params;
         const body = await request.json();
@@ -20,7 +24,8 @@ export async function PUT(request: Request, context: any) {
         const validKeys = [
             'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
             'gravePosition', 'deliveryDate', 'deceasedName', 
-            'deceasedBirthDate', 'deceasedDeathDate', 'additionalInstructions', 'status'
+            'deceasedBirthDate', 'deceasedDeathDate', 'additionalInstructions', 'status',
+            'buyerFullName', 'customerPhone', 'totalPriceCents'
         ];
 
         validKeys.forEach(k => {
@@ -115,5 +120,25 @@ export async function PUT(request: Request, context: any) {
     } catch (error) {
         console.error('Error updating order:', error);
         return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
+    }
+}
+
+export async function DELETE(_request: Request, context: any) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const { id } = await context.params;
+        await prisma.order.update({
+            where: { id },
+            data: {
+                deletedAt: new Date(),
+                status: 'CANCELLED',
+            },
+        });
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        return NextResponse.json({ ok: false, error: 'Failed to delete order' }, { status: 500 });
     }
 }

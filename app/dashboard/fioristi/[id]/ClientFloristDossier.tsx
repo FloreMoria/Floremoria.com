@@ -4,12 +4,33 @@ import { useState } from 'react';
 import { Partner } from '@prisma/client';
 import {
     Download, Maximize2,
-    Package, Calendar, Euro, AlertCircle, CheckCircle2, X, Link2
+    Package, Calendar, Euro, AlertCircle, CheckCircle2, X, Link2, Pencil, Trash2, Save
 } from 'lucide-react';
 import Image from 'next/image';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
+import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 
 import { PaymentStatus, OrderStatus } from '@prisma/client';
+
+const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
+    { value: 'ACCEPTED', label: 'Ricevuto' },
+    { value: 'IN_PROGRESS', label: 'In lavorazione' },
+    { value: 'DELIVERING', label: 'In consegna' },
+    { value: 'COMPLETED', label: 'Completato' },
+    { value: 'PENDING', label: 'In attesa' },
+    { value: 'CANCELLED', label: 'Annullato' },
+];
+
+type OrderEditDraft = {
+    cemeteryName: string;
+    cemeteryCity: string;
+    gravePosition: string;
+    deliveryDate: string;
+    deceasedName: string;
+    buyerFullName: string;
+    customerPhone: string;
+    status: OrderStatus;
+};
 
 interface DossierProps {
     partner: Partner;
@@ -19,11 +40,124 @@ interface DossierProps {
 export default function ClientFloristDossier({ partner, orders: initialOrders }: DossierProps) {
     const [orders, setOrders] = useState(initialOrders);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+    const [orderDraft, setOrderDraft] = useState<Record<string, OrderEditDraft>>({});
+    const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+    const [toast, setToast] = useState<string | null>(null);
 
     // Lightbox State
     const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
     const selectedOrder = orders.find((o) => o.id === selectedOrderId) ?? null;
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3200);
+    };
+
+    const toDatetimeLocal = (value: string | Date | null | undefined): string => {
+        if (!value) return '';
+        const d = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const beginOrderEdit = (order: any) => {
+        setEditingOrderId(order.id);
+        setOrderDraft((prev) => ({
+            ...prev,
+            [order.id]: {
+                cemeteryName: order.cemeteryName || '',
+                cemeteryCity: order.cemeteryCity || '',
+                gravePosition: order.gravePosition || '',
+                deliveryDate: toDatetimeLocal(order.deliveryDate),
+                deceasedName: order.deceasedName || '',
+                buyerFullName: order.buyerFullName || '',
+                customerPhone: order.customerPhone || '',
+                status: order.status || 'ACCEPTED',
+            },
+        }));
+    };
+
+    const cancelOrderEdit = () => {
+        setEditingOrderId(null);
+    };
+
+    const patchOrderInState = (orderId: string, patch: Record<string, unknown>) => {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...patch } : o)));
+    };
+
+    const saveOrderEdit = async (order: any) => {
+        const draft = orderDraft[order.id];
+        if (!draft) return;
+
+        setSavingOrderId(order.id);
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cemeteryName: draft.cemeteryName,
+                    cemeteryCity: draft.cemeteryCity,
+                    gravePosition: draft.gravePosition || null,
+                    deliveryDate: draft.deliveryDate || null,
+                    deceasedName: draft.deceasedName,
+                    buyerFullName: draft.buyerFullName,
+                    customerPhone: draft.customerPhone,
+                    status: draft.status,
+                }),
+            });
+            if (!res.ok) {
+                throw new Error('Salvataggio non riuscito.');
+            }
+            const updated = await res.json();
+            const patch =
+                draft.status === 'CANCELLED' || updated.deletedAt
+                    ? {
+                          ...draft,
+                          status: 'CANCELLED',
+                          deletedAt: updated.deletedAt ?? new Date().toISOString(),
+                      }
+                    : {
+                          ...draft,
+                          deliveryDate: updated.deliveryDate ?? draft.deliveryDate,
+                      };
+            patchOrderInState(order.id, patch);
+            setEditingOrderId(null);
+            showToast(
+                draft.status === 'CANCELLED' ? 'Ordine annullato' : 'Ordine aggiornato'
+            );
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore salvataggio ordine.');
+        } finally {
+            setSavingOrderId(null);
+        }
+    };
+
+    const cancelAssignedOrder = async (order: any) => {
+        const ok = window.confirm(
+            `Confermi cancellazione ordine ${order.orderNumber || order.id}?`
+        );
+        if (!ok) return;
+
+        setSavingOrderId(order.id);
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || 'Cancellazione non riuscita.');
+            }
+            const cancelledAt = data.order?.deletedAt ?? new Date().toISOString();
+            patchOrderInState(order.id, { status: 'CANCELLED', deletedAt: cancelledAt });
+            setEditingOrderId(null);
+            showToast('Ordine cancellato');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore cancellazione ordine.');
+        } finally {
+            setSavingOrderId(null);
+        }
+    };
 
     const getStatusColor = (status: OrderStatus) => {
         switch (status) {
@@ -80,6 +214,11 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
 
     return (
         <div className="space-y-12 pb-24">
+            {toast ? (
+                <div className="fixed bottom-6 right-6 z-[90] bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg">
+                    {toast}
+                </div>
+            ) : null}
 
             {/* GRID LAYOUT: Orders (Full) then Gallery (Full) */}
             <div className="flex flex-col gap-12">
@@ -115,15 +254,29 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                             const netEarned = Math.floor((order.totalPriceCents / 100) * 0.65);
                                             const productList = order.items?.map((i: any) => i.product?.name).join(', ') || '-';
                                             const hasPhoto = order.photos && order.photos.length > 0;
+                                            const cancelled = isOrderCancelled(order);
 
                                             return (
                                                 <tr
                                                     key={order.id}
-                                                    className={`transition-colors cursor-pointer ${selectedOrderId === order.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/50 group'}`}
+                                                    className={`transition-colors cursor-pointer ${
+                                                        cancelled
+                                                            ? 'bg-red-50/80'
+                                                            : selectedOrderId === order.id
+                                                              ? 'bg-blue-50/60'
+                                                              : 'hover:bg-gray-50/50 group'
+                                                    }`}
                                                     onClick={() => setSelectedOrderId((prev) => (prev === order.id ? null : order.id))}
                                                 >
-                                                    <td className="py-3 px-4 font-bold text-gray-900 text-xs">
-                                                        {order.orderNumber || `#${order.id.slice(-6).toUpperCase()}`}
+                                                    <td className="py-3 px-4 font-bold text-xs">
+                                                        <span className={cancelled ? 'text-red-800 line-through' : 'text-gray-900'}>
+                                                            {order.orderNumber || `#${order.id.slice(-6).toUpperCase()}`}
+                                                        </span>
+                                                        {cancelled ? (
+                                                            <span className="ml-2 text-[10px] font-bold uppercase text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                                                                Annullato
+                                                            </span>
+                                                        ) : null}
                                                     </td>
                                                     <td className="py-3 px-4 text-gray-800 text-xs font-medium">{order.buyerFullName || order.customerPhone || 'Anonimo'}</td>
                                                     <td className="py-3 px-4 text-gray-600 font-medium text-xs">{order.deceasedName || '-'}</td>
@@ -156,8 +309,9 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                                     </td>
                                                     <td className="py-3 px-4 text-center">
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); handlePaymentToggle(order.id, order.partnerPaymentStatus || 'UNPAID'); }}
-                                                            className={`inline-flex items-center justify-center px-2.5 py-1.5 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all hover:scale-105 active:scale-95 whitespace-nowrap shadow-sm border ${(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300' :
+                                                            onClick={(e) => { e.stopPropagation(); if (!cancelled) handlePaymentToggle(order.id, order.partnerPaymentStatus || 'UNPAID'); }}
+                                                            disabled={cancelled}
+                                                            className={`inline-flex items-center justify-center px-2.5 py-1.5 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all hover:scale-105 active:scale-95 whitespace-nowrap shadow-sm border disabled:opacity-40 disabled:cursor-not-allowed ${(order.partnerPaymentStatus || 'UNPAID') === 'UNPAID' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300' :
                                                                 order.partnerPaymentStatus === 'PROCESSING' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300' :
                                                                     'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
                                                                 }`}
@@ -176,10 +330,16 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                     </div>
 
                     {selectedOrder ? (
-                        <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-5 space-y-4 animate-in fade-in">
+                        <div className={`rounded-2xl border p-5 space-y-4 animate-in fade-in ${
+                            isOrderCancelled(selectedOrder)
+                                ? 'border-red-200 bg-red-50/40'
+                                : 'border-blue-100 bg-blue-50/30'
+                        }`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 flex items-center gap-1.5">
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${
+                                        isOrderCancelled(selectedOrder) ? 'text-red-600' : 'text-blue-600'
+                                    }`}>
                                         <Link2 size={12} /> Dettaglio ordine assegnato
                                     </p>
                                     <h3 className="text-lg font-bold text-gray-900 mt-1">
@@ -191,17 +351,167 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                             ? ` · Consegna ${new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT')}`
                                             : ''}
                                     </p>
+                                    {isOrderCancelled(selectedOrder) ? (
+                                        <p className="text-sm text-red-700 font-medium mt-2">
+                                            Ordine annullato — non più attivo per il fiorista.
+                                        </p>
+                                    ) : null}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedOrderId(null)}
-                                    className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-white border border-transparent hover:border-gray-200"
-                                    aria-label="Chiudi dettaglio"
-                                >
-                                    <X size={16} />
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {!isOrderCancelled(selectedOrder) && editingOrderId !== selectedOrder.id ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => beginOrderEdit(selectedOrder)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <Pencil size={14} /> Modifica
+                                        </button>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedOrderId(null);
+                                            setEditingOrderId(null);
+                                        }}
+                                        className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-white border border-transparent hover:border-gray-200"
+                                        aria-label="Chiudi dettaglio"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
                             </div>
-                            {selectedOrder.floristDeliveryUrl ? (
+
+                            {editingOrderId === selectedOrder.id && orderDraft[selectedOrder.id] ? (
+                                <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+                                    <h4 className="text-sm font-bold text-gray-900">Modifica ordine</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <input
+                                            placeholder="Nome defunto"
+                                            value={orderDraft[selectedOrder.id]!.deceasedName}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, deceasedName: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        />
+                                        <input
+                                            placeholder="Cliente"
+                                            value={orderDraft[selectedOrder.id]!.buyerFullName}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, buyerFullName: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        />
+                                        <input
+                                            placeholder="Telefono"
+                                            value={orderDraft[selectedOrder.id]!.customerPhone}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, customerPhone: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        />
+                                        <select
+                                            value={orderDraft[selectedOrder.id]!.status}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: {
+                                                        ...prev[selectedOrder.id]!,
+                                                        status: e.target.value as OrderStatus,
+                                                    },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        >
+                                            {ORDER_STATUS_OPTIONS.map((o) => (
+                                                <option key={o.value} value={o.value}>
+                                                    {o.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            placeholder="Cimitero"
+                                            value={orderDraft[selectedOrder.id]!.cemeteryName}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, cemeteryName: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        />
+                                        <input
+                                            placeholder="Comune"
+                                            value={orderDraft[selectedOrder.id]!.cemeteryCity}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, cemeteryCity: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                        />
+                                        <input
+                                            placeholder="Loculo / posizione"
+                                            value={orderDraft[selectedOrder.id]!.gravePosition}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, gravePosition: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm md:col-span-2"
+                                        />
+                                        <input
+                                            type="datetime-local"
+                                            value={orderDraft[selectedOrder.id]!.deliveryDate}
+                                            onChange={(e) =>
+                                                setOrderDraft((prev) => ({
+                                                    ...prev,
+                                                    [selectedOrder.id]: { ...prev[selectedOrder.id]!, deliveryDate: e.target.value },
+                                                }))
+                                            }
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm md:col-span-2"
+                                        />
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={cancelOrderEdit}
+                                            className="px-4 py-2 rounded-full text-sm font-semibold text-gray-600 hover:bg-gray-100"
+                                        >
+                                            Annulla modifiche
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void cancelAssignedOrder(selectedOrder)}
+                                            disabled={savingOrderId === selectedOrder.id}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                                        >
+                                            <Trash2 size={14} /> Cancella ordine
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void saveOrderEdit(selectedOrder)}
+                                            disabled={savingOrderId === selectedOrder.id}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                                        >
+                                            <Save size={14} />
+                                            {savingOrderId === selectedOrder.id ? 'Salvataggio…' : 'Salva'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {selectedOrder.floristDeliveryUrl && !isOrderCancelled(selectedOrder) ? (
                                 <ShareableLinkPanel
                                     label="Link mini-app fiorista (foto consegna)"
                                     url={selectedOrder.floristDeliveryUrl}

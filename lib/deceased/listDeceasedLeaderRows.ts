@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
+import { compareByRecentActivity, compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 
 export type DeceasedLeaderRow = {
     rowKey: string;
@@ -17,6 +18,7 @@ export type DeceasedLeaderRow = {
     linkedUserCount: number;
     floristName: string | null;
     floristPartnerId: string | null;
+    updatedAt: string;
 };
 
 function buildOrphanRowKey(deceasedName: string, cemeteryCity: string, cemeteryName: string): string {
@@ -53,7 +55,7 @@ export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
                 take: 1,
             },
         },
-        orderBy: { fullName: 'asc' },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
     const profileRows: DeceasedLeaderRow[] = profiles.map((profile) => {
@@ -76,6 +78,7 @@ export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
             linkedUserCount: profile.userLinks.length,
             floristName: assignment?.partner.shopName ?? null,
             floristPartnerId: assignment?.partner.id ?? null,
+            updatedAt: profile.updatedAt.toISOString(),
         };
     });
 
@@ -125,11 +128,15 @@ export async function listDeceasedLeaderRows(): Promise<DeceasedLeaderRow[]> {
             linkedUserCount: 0,
             floristName: null,
             floristPartnerId: null,
+            updatedAt: latest.createdAt.toISOString(),
         };
     });
 
     return [...profileRows, ...orphanRows].sort((a, b) =>
-        a.fullName.localeCompare(b.fullName, 'it', { sensitivity: 'base' })
+        compareByRecentActivity(
+            { updatedAt: a.updatedAt, createdAt: a.updatedAt },
+            { updatedAt: b.updatedAt, createdAt: b.updatedAt }
+        )
     );
 }
 

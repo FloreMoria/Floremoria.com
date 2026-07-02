@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Search, ChevronRight, Plus, Heart, AlertTriangle } from 'lucide-react';
 import DeceasedDetailModal from '@/components/dashboard/DeceasedDetailModal';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
+import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
 
 type PartnerOption = {
     id: string;
@@ -46,14 +47,21 @@ export default function ClientDeceasedTable({
 
     const filteredRows = useMemo(() => {
         const q = searchTerm.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(
-            (row) =>
-                row.fullName.toLowerCase().includes(q) ||
-                row.cemeteryCity.toLowerCase().includes(q) ||
-                (row.cemeteryName || '').toLowerCase().includes(q) ||
-                (row.gravePosition || '').toLowerCase().includes(q) ||
-                (row.floristName || '').toLowerCase().includes(q)
+        const base = q
+            ? rows.filter(
+                  (row) =>
+                      row.fullName.toLowerCase().includes(q) ||
+                      row.cemeteryCity.toLowerCase().includes(q) ||
+                      (row.cemeteryName || '').toLowerCase().includes(q) ||
+                      (row.gravePosition || '').toLowerCase().includes(q) ||
+                      (row.floristName || '').toLowerCase().includes(q)
+              )
+            : rows;
+        return [...base].sort((a, b) =>
+            compareByRecentActivity(
+                { updatedAt: a.updatedAt, createdAt: a.updatedAt },
+                { updatedAt: b.updatedAt, createdAt: b.updatedAt }
+            )
         );
     }, [rows, searchTerm]);
 

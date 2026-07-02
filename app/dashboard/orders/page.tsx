@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
 import { visibleDashboardOrdersWhere, ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
+import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
@@ -60,7 +61,7 @@ export default async function OrdersPage() {
         const ordersResult = await runDashboardQuery('orders/list', [], () =>
             prisma.order.findMany({
                 ...ordersQuery,
-                orderBy: { createdAt: 'desc' },
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
                 include: {
                     user: true,
                     partner: true,
@@ -99,19 +100,25 @@ export default async function OrdersPage() {
         const usersResult = await runDashboardQuery('orders/users', [], () =>
             prisma.user.findMany({
                 where: { deletedAt: null, systemRole: 'USER' },
-                orderBy: { updatedAt: 'desc' },
-                take: 150,
-                select: { id: true, name: true, email: true, phone: true },
+                take: 300,
+                select: { id: true, name: true, email: true, phone: true, createdAt: true, updatedAt: true },
             })
         );
-        dashboardUsers = usersResult.data;
+        dashboardUsers = [...usersResult.data].sort((a, b) => compareBySurname(a.name, b.name));
         if (!usersResult.ok) dbErrors.push(usersResult.error);
 
         const deceasedResult = await runDashboardQuery('orders/deceased', [], () =>
             prisma.deceasedProfile.findMany({
-                orderBy: { updatedAt: 'desc' },
-                take: 200,
-                select: { id: true, fullName: true, cemeteryCity: true, cemeteryName: true },
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 300,
+                select: {
+                    id: true,
+                    fullName: true,
+                    cemeteryCity: true,
+                    cemeteryName: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
             })
         );
         deceasedProfiles = deceasedResult.data;

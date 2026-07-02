@@ -1,4 +1,9 @@
 /** Campi precompilati per duplicare un ordine in modale dashboard. */
+import {
+    isDashboardAccessoryProduct,
+    isDashboardMainProduct,
+} from '@/lib/orders/dashboardProductRole';
+
 export type DuplicateOrderDraft = {
     orderCategory: string;
     deliveryProvince: string;
@@ -95,13 +100,21 @@ export function orderToDuplicateDraft(order: Record<string, any>): DuplicateOrde
 
     const firstItem = order.items?.[0];
     const mainItem =
-        order.items?.find((item: { product?: { isBouquet?: boolean } }) => item.product?.isBouquet !== false) ??
-        firstItem;
+        order.items?.find((item: { product?: { slug?: string; name?: string; isBouquet?: boolean } }) =>
+            isDashboardMainProduct({
+                slug: item.product?.slug,
+                name: item.product?.name,
+                isBouquet: item.product?.isBouquet,
+            })
+        ) ?? firstItem;
     const productId = mainItem?.productId || mainItem?.product?.id || '';
     const accessoryItems =
-        order.items?.filter(
-            (item: { product?: { isBouquet?: boolean }; productId?: string }) =>
-                item.product?.isBouquet === false && item.productId !== productId
+        order.items?.filter((item: { product?: { slug?: string; name?: string; isBouquet?: boolean }; productId?: string }) =>
+            isDashboardAccessoryProduct({
+                slug: item.product?.slug,
+                name: item.product?.name,
+                isBouquet: item.product?.isBouquet,
+            })
         ) ?? [];
     const isRecurring = Boolean(order.isRecurring);
 

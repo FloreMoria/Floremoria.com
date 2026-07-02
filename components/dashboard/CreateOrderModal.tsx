@@ -10,6 +10,11 @@ import {
     orderCategoryToCatalogSlug,
     productRequiresCustomMessage,
 } from '@/lib/orders/productCustomText';
+import {
+    filterDashboardAccessories,
+    filterDashboardMainProducts,
+} from '@/lib/orders/dashboardProductRole';
+import { compareByRecentActivity, compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 
 type FloristOption = { id: string; shopName: string; ownerName: string | null };
 type ProductOption = {
@@ -31,6 +36,8 @@ type DeceasedOption = {
     fullName: string;
     cemeteryCity: string;
     cemeteryName: string | null;
+    updatedAt?: string | Date;
+    createdAt?: string | Date;
 };
 
 const CATEGORY_OPTIONS = [
@@ -102,12 +109,11 @@ export default function CreateOrderModal({
     const [ticketMessage, setTicketMessage] = useState('');
 
     const catalogSlug = orderCategoryToCatalogSlug(orderCategory);
-    const mainProducts = products.filter((p) => p.isBouquet !== false);
-    const availableAccessories = products.filter(
-        (p) =>
-            p.isBouquet === false &&
-            (!catalogSlug || p.category?.slug === catalogSlug)
-    );
+    const mainProducts = filterDashboardMainProducts(products);
+    const availableAccessories = filterDashboardAccessories(products, orderCategory);
+
+    const sortedUsers = [...users].sort((a, b) => compareBySurname(a.name, b.name));
+    const sortedDeceasedProfiles = [...deceasedProfiles].sort(compareByRecentActivity);
     const showCustomTextField = selectedAccessoryIds.some((id) => {
         const p = products.find((x) => x.id === id);
         return productRequiresCustomMessage(p?.slug);
@@ -423,7 +429,7 @@ export default function CreateOrderModal({
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
                                 >
                                     <option value="">— Nuovo / compila sotto —</option>
-                                    {users.map((u) => (
+                                    {sortedUsers.map((u) => (
                                         <option key={u.id} value={u.id}>
                                             {u.name || u.email} · {u.phone || 'no tel'}
                                         </option>
@@ -463,7 +469,7 @@ export default function CreateOrderModal({
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
                                 >
                                     <option value="">— Nuovo / compila sotto —</option>
-                                    {deceasedProfiles.map((d) => (
+                                    {sortedDeceasedProfiles.map((d) => (
                                         <option key={d.id} value={d.id}>
                                             {d.fullName} · {d.cemeteryCity}
                                         </option>

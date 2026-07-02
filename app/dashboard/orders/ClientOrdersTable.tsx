@@ -10,6 +10,7 @@ import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
+import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -217,8 +218,12 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     // Sort Logic
     filteredOrders = filteredOrders.sort((a, b) => {
         let cmp = 0;
-        if (sortField === 'date') cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        else if (sortField === 'price') cmp = a.totalPriceCents - b.totalPriceCents;
+        if (sortField === 'date') {
+            cmp = compareByRecentActivity(a, b);
+            if (sortDirection === 'asc') cmp = -cmp;
+            return cmp;
+        }
+        if (sortField === 'price') cmp = a.totalPriceCents - b.totalPriceCents;
         else if (sortField === 'alpha') cmp = (a.buyerFullName || '').localeCompare(b.buyerFullName || '');
         return sortDirection === 'asc' ? cmp : -cmp;
     });

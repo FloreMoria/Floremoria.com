@@ -4,6 +4,7 @@ import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
+import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export default async function UsersPage() {
     const ordersResult = await runDashboardQuery('users/orders', [], () =>
         prisma.order.findMany({
             where: visibleDashboardOrdersWhere(),
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
             include: {
                 items: { include: { product: true } },
                 user: true,
@@ -68,9 +69,9 @@ export default async function UsersPage() {
         }
     });
 
-    const groupedUsers = Array.from(usersMap.values()).filter(
-        (u) => u.orders.length > 0 && u.totalSpentCents > 0
-    );
+    const groupedUsers = Array.from(usersMap.values())
+        .filter((u) => u.orders.length > 0 && u.totalSpentCents > 0)
+        .sort((a, b) => compareBySurname(a.name, b.name));
     const dbErrors: string[] = [];
     if (!ordersResult.ok) dbErrors.push(ordersResult.error);
     if (!floristsResult.ok) dbErrors.push(floristsResult.error);

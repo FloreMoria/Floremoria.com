@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
+import { ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -14,7 +14,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
         where: { id },
         include: {
             orders: {
-                where: visibleDashboardOrdersWhere(),
+                where: ordersListPageWhere(),
                 include: {
                     items: {
                         include: {
@@ -22,7 +22,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                         }
                     }
                 },
-                orderBy: { createdAt: 'desc' }
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
             }
         }
     });

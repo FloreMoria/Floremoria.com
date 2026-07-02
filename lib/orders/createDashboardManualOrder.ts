@@ -14,6 +14,10 @@ import {
     normalizeOrderCategory,
 } from '@/lib/orders/orderNumber';
 import { productRequiresCustomMessage } from '@/lib/orders/productCustomText';
+import {
+    isDashboardAccessoryProduct,
+    isDashboardMainProduct,
+} from '@/lib/orders/dashboardProductRole';
 
 export const MANUAL_ORDER_IMPORT_TAG = 'IMPORT_MANUALE: dashboard admin';
 
@@ -118,7 +122,7 @@ export async function createDashboardManualOrder(
         select: { id: true, basePriceCents: true, isBouquet: true, slug: true },
     });
     if (!product) throw new Error('Prodotto non trovato.');
-    if (!product.isBouquet) {
+    if (!isDashboardMainProduct(product)) {
         throw new Error('Seleziona un omaggio floreale principale; gli accessori vanno aggiunti sotto.');
     }
 
@@ -140,7 +144,7 @@ export async function createDashboardManualOrder(
             select: { id: true, basePriceCents: true, isBouquet: true, slug: true },
         });
         if (!accProduct) throw new Error(`Accessorio non trovato (${accId}).`);
-        if (accProduct.isBouquet) {
+        if (!isDashboardAccessoryProduct(accProduct)) {
             throw new Error(`"${accProduct.slug}" non è un accessorio.`);
         }
 

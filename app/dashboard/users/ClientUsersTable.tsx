@@ -8,6 +8,7 @@ import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvata
 import CreateUserModal from '@/components/dashboard/CreateUserModal';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
+import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 
 const formatITDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -42,10 +43,13 @@ export default function ClientUsersTable({
     const [rowDraft, setRowDraft] = useState<Record<string, { name: string; phone: string; email: string }>>({});
     const [rowSavingId, setRowSavingId] = useState<string | null>(null);
 
-    const filteredUsers = users.filter(u =>
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users
+        .filter(
+            (u) =>
+                u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => compareBySurname(a.name, b.name));
 
     const [isSavingUser, setIsSavingUser] = useState(false);
     const [savingOrderId, setSavingOrderId] = useState<string | null>(null);

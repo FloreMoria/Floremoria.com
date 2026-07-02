@@ -19,23 +19,6 @@ export default async function UsersPage() {
         })
     );
 
-    const standaloneUsersResult = await runDashboardQuery('users/standalone', [], () =>
-        prisma.user.findMany({
-            where: { deletedAt: null, systemRole: 'USER' },
-            orderBy: { updatedAt: 'desc' },
-            include: {
-                deceasedLinks: { include: { deceasedProfile: true } },
-                orders: {
-                    where: visibleDashboardOrdersWhere(),
-                    include: {
-                        items: { include: { product: true } },
-                        deliveryProof: true,
-                    },
-                },
-            },
-        })
-    );
-
     const floristsResult = await runDashboardQuery('users/florists', [], () =>
         prisma.partner.findMany({
             where: { deletedAt: null, isB2B: false },
@@ -84,27 +67,11 @@ export default async function UsersPage() {
         }
     });
 
-    for (const user of standaloneUsersResult.data) {
-        if (usersMap.has(user.id)) continue;
-
-        const visibleOrders = user.orders;
-        usersMap.set(user.id, {
-            id: user.id,
-            name: user.name || user.email,
-            email: user.email,
-            phone: user.phone || 'Non specificato',
-            city: visibleOrders[0]?.buyerCity || 'Non specificata',
-            profilePicUrl: user.avatarUrl,
-            orders: visibleOrders,
-            totalSpentCents: visibleOrders.reduce((sum, o) => sum + o.totalPriceCents, 0),
-            lastOrderDate: visibleOrders[0]?.createdAt || user.updatedAt,
-        });
-    }
-
-    const groupedUsers = Array.from(usersMap.values());
+    const groupedUsers = Array.from(usersMap.values()).filter(
+        (u) => u.orders.length > 0 && u.totalSpentCents > 0
+    );
     const dbErrors: string[] = [];
     if (!ordersResult.ok) dbErrors.push(ordersResult.error);
-    if (!standaloneUsersResult.ok) dbErrors.push(standaloneUsersResult.error);
     if (!floristsResult.ok) dbErrors.push(floristsResult.error);
 
     return (

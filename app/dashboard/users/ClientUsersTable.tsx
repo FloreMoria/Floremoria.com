@@ -37,6 +37,9 @@ export default function ClientUsersTable({
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
+    const [rowDraft, setRowDraft] = useState<Record<string, { name: string; phone: string; email: string }>>({});
+    const [rowSavingId, setRowSavingId] = useState<string | null>(null);
 
     const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -45,6 +48,89 @@ export default function ClientUsersTable({
 
     const [isSavingUser, setIsSavingUser] = useState(false);
     const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+
+    const beginRowEdit = (u: any) => {
+        if (!u.id || String(u.id).startsWith('virtual_')) return;
+        setEditingUserId(u.id);
+        setRowDraft((prev) => ({
+            ...prev,
+            [u.id]: {
+                name: u.name || '',
+                phone: u.phone === 'Non specificato' ? '' : (u.phone || ''),
+                email: u.email || '',
+            },
+        }));
+    };
+
+    const cancelRowEdit = () => {
+        setEditingUserId(null);
+    };
+
+    const saveRowEdit = async (u: any) => {
+        if (!u.id || String(u.id).startsWith('virtual_')) return;
+        const draft = rowDraft[u.id];
+        if (!draft) return;
+
+        setRowSavingId(u.id);
+        try {
+            const res = await fetch(`/api/dashboard/users/${u.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: draft.name,
+                    phone: draft.phone || null,
+                    email: draft.email || null,
+                }),
+            });
+            const payload = await res.json();
+            if (!res.ok || !payload?.ok) {
+                throw new Error(payload?.error || 'Salvataggio non riuscito.');
+            }
+
+            setUsers((prev) =>
+                prev.map((item) =>
+                    item.id === u.id
+                        ? { ...item, name: draft.name, phone: draft.phone || 'Non specificato', email: draft.email }
+                        : item
+                )
+            );
+
+            if (selectedUser?.id === u.id) {
+                setSelectedUser((prev: any) => ({
+                    ...prev,
+                    name: draft.name,
+                    phone: draft.phone || 'Non specificato',
+                    email: draft.email,
+                }));
+            }
+
+            setEditingUserId(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore salvataggio utente.');
+        } finally {
+            setRowSavingId(null);
+        }
+    };
+
+    const deleteRowUser = async (u: any) => {
+        if (!u.id || String(u.id).startsWith('virtual_')) return;
+        const ok = window.confirm(
+            'Confermi la cancellazione utente? Nota: utenti con ordini associati non possono essere cancellati.'
+        );
+        if (!ok) return;
+
+        try {
+            const res = await fetch(`/api/dashboard/users/${u.id}`, { method: 'DELETE' });
+            const payload = await res.json();
+            if (!res.ok || !payload?.ok) {
+                throw new Error(payload?.error || 'Cancellazione non riuscita.');
+            }
+            setUsers((prev) => prev.filter((item) => item.id !== u.id));
+            if (selectedUser?.id === u.id) setSelectedUser(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore cancellazione utente.');
+        }
+    };
 
     const resolveOrderIdForUser = (u: { id: string; orders: { id: string }[] }) =>
         u.orders[0]?.id || (u.id.startsWith('virtual_') ? u.id.slice('virtual_'.length) : undefined);
@@ -192,11 +278,14 @@ export default function ClientUsersTable({
                                 filteredUsers.map((u, i) => (
                                     <tr
                                         key={i}
-                                        className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                                        onClick={() => setSelectedUser(u)}
+                                        className="hover:bg-gray-50/50 transition-colors"
                                     >
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                className="flex items-center gap-3 text-left w-full"
+                                                onClick={() => setSelectedUser(u)}
+                                            >
                                                 {u.profilePicUrl ? (
                                                     <Image
                                                         src={u.profilePicUrl}
@@ -211,10 +300,45 @@ export default function ClientUsersTable({
                                                         {u.name?.charAt(0) || '?'}
                                                     </div>
                                                 )}
-                                                <span className="font-semibold text-gray-900">{u.name}</span>
-                                            </div>
+                                                {editingUserId === u.id ? (
+                                                    <input
+                                                        value={rowDraft[u.id]?.name || ''}
+                                                        onChange={(e) =>
+                                                            setRowDraft((prev) => ({
+                                                                ...prev,
+                                                                [u.id]: {
+                                                                    ...(prev[u.id] || { name: '', phone: '', email: '' }),
+                                                                    name: e.target.value,
+                                                                },
+                                                            }))
+                                                        }
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="border border-gray-200 rounded px-2 py-1 text-sm"
+                                                    />
+                                                ) : (
+                                                    <span className="font-semibold text-gray-900">{u.name}</span>
+                                                )}
+                                            </button>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-600">{u.phone}</td>
+                                        <td className="px-6 py-4 text-gray-600">
+                                            {editingUserId === u.id ? (
+                                                <input
+                                                    value={rowDraft[u.id]?.phone || ''}
+                                                    onChange={(e) =>
+                                                        setRowDraft((prev) => ({
+                                                            ...prev,
+                                                            [u.id]: {
+                                                                ...(prev[u.id] || { name: '', phone: '', email: '' }),
+                                                                phone: e.target.value,
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
+                                                />
+                                            ) : (
+                                                u.phone
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-gray-600">{u.city}</td>
                                         <td className="px-6 py-4">
                                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
@@ -225,7 +349,66 @@ export default function ClientUsersTable({
                                             € {(u.totalSpentCents / 100).toFixed(2)}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <ChevronRight className="w-5 h-5 text-gray-400 inline-block" />
+                                            <div className="inline-flex items-center gap-2">
+                                                {editingUserId === u.id ? (
+                                                    <>
+                                                        <input
+                                                            value={rowDraft[u.id]?.email || ''}
+                                                            onChange={(e) =>
+                                                                setRowDraft((prev) => ({
+                                                                    ...prev,
+                                                                    [u.id]: {
+                                                                        ...(prev[u.id] || { name: '', phone: '', email: '' }),
+                                                                        email: e.target.value,
+                                                                    },
+                                                                }))
+                                                            }
+                                                            placeholder="Email"
+                                                            className="border border-gray-200 rounded px-2 py-1 text-xs w-44"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => saveRowEdit(u)}
+                                                            disabled={rowSavingId === u.id}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                                                        >
+                                                            Salva
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={cancelRowEdit}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Annulla
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => beginRowEdit(u)}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Modifica
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => deleteRowUser(u)}
+                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50"
+                                                        >
+                                                            Cancella
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedUser(u)}
+                                                            className="px-2 py-1.5 text-xs font-semibold rounded text-gray-500 hover:text-gray-800"
+                                                            title="Apri dettaglio"
+                                                        >
+                                                            <ChevronRight className="w-4 h-4 inline-block" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -396,22 +579,8 @@ export default function ClientUsersTable({
                 open={createModalOpen}
                 onClose={() => setCreateModalOpen(false)}
                 florists={florists}
-                onCreated={({ userId, email }) => {
-                    setUsers((prev) => [
-                        {
-                            id: userId,
-                            name: 'Nuovo utente',
-                            email,
-                            phone: 'Non specificato',
-                            city: 'Non specificata',
-                            profilePicUrl: null,
-                            orders: [],
-                            totalSpentCents: 0,
-                            lastOrderDate: new Date().toISOString(),
-                        },
-                        ...prev,
-                    ]);
-                    alert('Utente e Giardino della Memoria creati. Aggiungi ordini dalla pagina Ordini.');
+                onCreated={() => {
+                    alert('Utente creato. Apparira in elenco solo dopo il primo ordine con spesa > 0.');
                 }}
             />
         </div>

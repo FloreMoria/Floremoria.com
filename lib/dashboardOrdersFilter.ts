@@ -20,9 +20,22 @@ function excludedBuyerEmailWhere(): Prisma.OrderWhereInput | undefined {
     };
 }
 
+const abandonedCartWhere: Prisma.OrderWhereInput = {
+    status: 'PENDING',
+    partnerPaymentStatus: 'UNPAID',
+    deletedAt: null,
+};
+
+export function isOrderCancelled(order: {
+    status?: string | null;
+    deletedAt?: Date | string | null;
+}): boolean {
+    return order.status === 'CANCELLED' || Boolean(order.deletedAt);
+}
+
 /**
- * Ordini visibili in dashboard (Ordini, Overview, Utenti).
- * Esclude checkout abbandonati (PENDING + UNPAID), annullati e bozze soft-deleted.
+ * Ordini attivi in dashboard (fioristi, utenti, overview, defunti, API partner).
+ * Esclude checkout abbandonati e ordini annullati.
  */
 export function visibleDashboardOrdersWhere(): Prisma.OrderWhereInput {
     const emailFilter = excludedBuyerEmailWhere();
@@ -30,10 +43,19 @@ export function visibleDashboardOrdersWhere(): Prisma.OrderWhereInput {
     return {
         deletedAt: null,
         status: { not: 'CANCELLED' },
-        NOT: {
-            status: 'PENDING',
-            partnerPaymentStatus: 'UNPAID',
-        },
+        NOT: abandonedCartWhere,
+        ...(emailFilter ?? {}),
+    };
+}
+
+/**
+ * Pagina Ordini admin: include gli annullati (con evidenza visiva), esclude solo carrelli abbandonati.
+ */
+export function ordersListPageWhere(): Prisma.OrderWhereInput {
+    const emailFilter = excludedBuyerEmailWhere();
+
+    return {
+        NOT: abandonedCartWhere,
         ...(emailFilter ?? {}),
     };
 }
@@ -42,12 +64,6 @@ export function visibleDashboardOrdersWhere(): Prisma.OrderWhereInput {
 export function abandonedDashboardOrdersWhere(): Prisma.OrderWhereInput {
     return {
         deletedAt: null,
-        OR: [
-            {
-                status: 'PENDING',
-                partnerPaymentStatus: 'UNPAID',
-            },
-            { status: 'CANCELLED' },
-        ],
+        OR: [abandonedCartWhere, { status: 'CANCELLED' }],
     };
 }

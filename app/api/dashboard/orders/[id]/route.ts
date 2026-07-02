@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
 import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/futuria/floristDeliveryLinkNotify';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 
 export async function PUT(request: Request, context: any) {
@@ -69,6 +70,11 @@ export async function PUT(request: Request, context: any) {
             safeData.user = body.userId ? { connect: { id: body.userId } } : { disconnect: true };
         }
 
+        if (body.status === 'CANCELLED') {
+            const cancelled = await cancelDashboardOrder(id);
+            return NextResponse.json(cancelled);
+        }
+
         const updatedOrder = await prisma.order.update({
             where: { id },
             data: safeData
@@ -129,14 +135,8 @@ export async function DELETE(_request: Request, context: any) {
 
     try {
         const { id } = await context.params;
-        await prisma.order.update({
-            where: { id },
-            data: {
-                deletedAt: new Date(),
-                status: 'CANCELLED',
-            },
-        });
-        return NextResponse.json({ ok: true });
+        const cancelled = await cancelDashboardOrder(id);
+        return NextResponse.json({ ok: true, order: cancelled });
     } catch (error) {
         console.error('Error deleting order:', error);
         return NextResponse.json({ ok: false, error: 'Failed to delete order' }, { status: 500 });

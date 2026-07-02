@@ -8,6 +8,7 @@ import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
 import OrderDetailProofUpload from '@/components/dashboard/OrderDetailProofUpload';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
+import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -137,11 +138,15 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             if (!res.ok) {
                 throw new Error('Salvataggio ordine non riuscito.');
             }
+            const updated = await res.json();
+            const patch = draft.status === 'CANCELLED'
+                ? { ...draft, status: 'CANCELLED', deletedAt: updated.deletedAt ?? new Date().toISOString() }
+                : draft;
             setLocalOrders((prev: any[]) =>
-                prev.map((o) => (o.id === order.id ? { ...o, ...draft } : o))
+                prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o))
             );
             if (selectedOrder?.id === order.id) {
-                setSelectedOrder((prev: any) => ({ ...prev, ...draft }));
+                setSelectedOrder((prev: any) => ({ ...prev, ...patch }));
             }
             setEditingOrderId(null);
             showToast('Ordine aggiornato');
@@ -161,8 +166,17 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             if (!res.ok || !data?.ok) {
                 throw new Error(data?.error || 'Cancellazione non riuscita.');
             }
-            setLocalOrders((prev: any[]) => prev.filter((o) => o.id !== order.id));
-            if (selectedOrder?.id === order.id) closeDrawer();
+            const cancelledAt = data.order?.deletedAt ?? new Date().toISOString();
+            setLocalOrders((prev: any[]) =>
+                prev.map((o) =>
+                    o.id === order.id ? { ...o, status: 'CANCELLED', deletedAt: cancelledAt } : o
+                )
+            );
+            if (selectedOrder?.id === order.id) {
+                setSelectedOrder((prev: any) =>
+                    prev ? { ...prev, status: 'CANCELLED', deletedAt: cancelledAt } : prev
+                );
+            }
             showToast('Ordine cancellato');
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Errore cancellazione ordine.');
@@ -400,13 +414,25 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                             )}
                             {filteredOrders.map(order => {
                                 const mainItem = order.items?.[0]?.product;
+                                const cancelled = isOrderCancelled(order);
                                 return (
                                     <tr
                                         key={order.id}
-                                        className={`transition-colors cursor-pointer ${selectedOrder?.id === order.id ? 'bg-blue-50/50' : 'hover:bg-gray-50/80 group'}`}
+                                        className={`transition-colors cursor-pointer ${
+                                            cancelled
+                                                ? 'bg-red-50/70 border-l-4 border-l-red-500'
+                                                : selectedOrder?.id === order.id
+                                                  ? 'bg-blue-50/50'
+                                                  : 'hover:bg-gray-50/80 group'
+                                        }`}
                                         onClick={() => handleSelectOrder(order)}
                                     >
                                         <td className="py-3 px-3">
+                                            {cancelled ? (
+                                                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded inline-block">
+                                                    Ordine cancellato
+                                                </div>
+                                            ) : null}
                                             <div suppressHydrationWarning className="text-gray-500 text-[11px] uppercase tracking-wider mb-0.5 whitespace-nowrap">
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
@@ -637,6 +663,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                             Annulla
                                                         </button>
                                                     </>
+                                                ) : cancelled ? (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-red-600">—</span>
                                                 ) : (
                                                     <>
                                                         <button
@@ -685,6 +713,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             <div className={`fixed top-16 right-0 w-[50vw] h-[calc(100vh-4rem)] bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col ${selectedOrder ? 'translate-x-0' : 'translate-x-full'}`}>
                 {selectedOrder && (
                     <>
+                        {isOrderCancelled(selectedOrder) ? (
+                            <div className="shrink-0 border-b border-red-200 bg-red-600 px-6 py-3 text-center text-sm font-bold uppercase tracking-wider text-white">
+                                Ordine cancellato — non visibile al fiorista né alle altre bacheche
+                            </div>
+                        ) : null}
                         {/* Drawer Header */}
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                             <div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 
 export const runtime = 'nodejs';
 
@@ -25,9 +26,9 @@ export async function GET(request: Request) {
     const offset = Math.max(0, Number(searchParams.get('offset')) || 0);
     const queryAgencyId = searchParams.get('agencyId')?.trim();
 
-    const where: any = {
+    const where: Record<string, unknown> = {
         partnerId: auth.partnerId,
-        deletedAt: null,
+        ...visibleDashboardOrdersWhere(),
     };
 
     if (queryAgencyId) {

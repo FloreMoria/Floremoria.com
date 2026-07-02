@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 
 export const runtime = 'nodejs';
 
@@ -35,8 +36,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ agencyId: s
 
     const where = {
         partnerId: auth.partnerId,
-        deletedAt: null,
         agencyName: agencyId,
+        ...visibleDashboardOrdersWhere(),
     };
 
     const [total, rows] = await Promise.all([

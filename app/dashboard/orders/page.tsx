@@ -2,7 +2,7 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
-import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
+import { visibleDashboardOrdersWhere, ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
@@ -39,9 +39,9 @@ export default async function OrdersPage() {
         }
     }
 
-    // Query ordini: solo consegne reali (no carrelli abbandonati, no CANCELLED).
+    // Query ordini: consegne reali + annullati (evidenziati in tabella); no carrelli abbandonati.
     const ordersQuery: { where: Record<string, unknown> } = {
-        where: visibleDashboardOrdersWhere() as Record<string, unknown>,
+        where: ordersListPageWhere() as Record<string, unknown>,
     };
     if (!isGlobalAdmin) {
         // Partner B2B: solo ordini assegnati al proprio account.

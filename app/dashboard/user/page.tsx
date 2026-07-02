@@ -6,6 +6,7 @@ import { UserRole } from '@prisma/client';
 import { LogOut, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { isDashboardAdminRole } from '@/lib/superAdmin';
+import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import {
     groupOrdersByDeceased,
     UserBachecaOrderCard,
@@ -57,7 +58,9 @@ export default async function UserDashboardPage({
     }
 
     const orders = await prisma.order.findMany({
-        where: isAdminView ? { deletedAt: null } : { userId: user.id },
+        where: isAdminView
+            ? visibleDashboardOrdersWhere()
+            : { userId: user.id, ...visibleDashboardOrdersWhere() },
         include: {
             items: { include: { product: true } },
             deliveryProof: true,

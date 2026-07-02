@@ -1,0 +1,144 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { get, put } from '@vercel/blob';
+import { fetchProofImageBuffer } from '@/lib/deliveryProof/blobProofStorage';
+
+const STAGING_PREFIX = 'futuria/campagne/publish-staging';
+const STAGING_TTL_MS = 20 * 60 * 1000;
+
+function getStagingSecret(): string {
+  const secret =
+    process.env.MAGIC_LINK_SECRET?.trim() ||
+    process.env.CRON_SECRET?.trim() ||
+    process.env.POSTMAN_CRON_SECRET?.trim();
+  if (!secret) {
+    throw new Error(
+      'Segreto staging Meta mancante (MAGIC_LINK_SECRET, CRON_SECRET o POSTMAN_CRON_SECRET).'
+    );
+  }
+  return secret;
+}
+
+function getSiteBaseUrl(): string {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.VERBALI_SYNC_PRODUCTION_URL?.trim() ||
+    'https://www.floremoria.com';
+  return base.replace(/\/$/, '');
+}
+
+function sanitizeStagingKey(raw: string): string {
+  return raw.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 120);
+}
+
+function contentTypeFromUrl(url: string): string {
+  const lower = url.toLowerCase();
+  if (lower.includes('.webp')) return 'image/webp';
+  if (lower.includes('.png')) return 'image/png';
+  if (lower.includes('.jpg') || lower.includes('.jpeg')) return 'image/jpeg';
+  return 'image/webp';
+}
+
+function createStagingToken(pathname: string, expiresAt: number): string {
+  const payload = `${pathname}:${expiresAt}`;
+  const sig = createHmac('sha256', getStagingSecret()).update(payload).digest('base64url');
+  const payloadB64 = Buffer.from(payload, 'utf8').toString('base64url');
+  return `${payloadB64}.${sig}`;
+}
+
+export function verifySocialStagingToken(
+  token: string
+): { pathname: string; expiresAt: number } | null {
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+
+  const [payloadB64, sig] = parts;
+  if (!payloadB64 || !sig) return null;
+
+  let payload: string;
+  try {
+    payload = Buffer.from(payloadB64, 'base64url').toString('utf8');
+  } catch {
+    return null;
+  }
+
+  const sep = payload.lastIndexOf(':');
+  if (sep <= 0) return null;
+
+  const pathname = payload.slice(0, sep);
+  const expiresAt = Number.parseInt(payload.slice(sep + 1), 10);
+  if (!pathname || !Number.isFinite(expiresAt)) return null;
+
+  const expected = createHmac('sha256', getStagingSecret())
+    .update(`${pathname}:${expiresAt}`)
+    .digest('base64url');
+
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expected);
+  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+    return null;
+  }
+
+  if (Date.now() > expiresAt) return null;
+  if (!pathname.startsWith(`${STAGING_PREFIX}/`)) return null;
+
+  return { pathname, expiresAt };
+}
+
+/**
+ * Copia temporanea su Blob privato + URL pubblico firmato (HMAC) servito da /api/social-publish/staging/.
+ * Meta/Instagram richiedono un URL HTTP raggiungibile: il nostro endpoint legge il Blob con token.
+ */
+export async function ensureMetaFetchableImageUrl(
+  campaignId: string,
+  imageUrl: string,
+  blobToken?: string
+): Promise<string> {
+  if (!imageUrl.includes('private.blob.vercel-storage.com')) {
+    return imageUrl;
+  }
+
+  const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre immagine a Meta.');
+  }
+
+  const bytes = await fetchProofImageBuffer(imageUrl);
+  const contentType = contentTypeFromUrl(imageUrl);
+  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpg' : 'webp';
+  const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.${ext}`;
+
+  await put(pathname, bytes, {
+    access: 'private',
+    contentType,
+    token,
+    addRandomSuffix: false,
+  });
+
+  const expiresAt = Date.now() + STAGING_TTL_MS;
+  const stagingToken = createStagingToken(pathname, expiresAt);
+  const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
+
+  console.log(
+    `[POSTMAN] Staging Meta — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
+  );
+
+  return publicUrl;
+}
+
+/** Legge bytes dallo staging Blob privato (route API). */
+export async function fetchStagedImageBytes(
+  pathname: string,
+  blobToken: string
+): Promise<{ bytes: Buffer; contentType: string }> {
+  const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
+  const blobResult = await get(pathname, { access: 'private', token, useCache: false });
+  if (!blobResult?.stream || blobResult.statusCode !== 200) {
+    throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
+  }
+
+  const bytes = Buffer.from(await new Response(blobResult.stream).arrayBuffer());
+  const contentType =
+    blobResult.blob?.contentType?.trim() || contentTypeFromUrl(pathname);
+
+  return { bytes, contentType };
+}

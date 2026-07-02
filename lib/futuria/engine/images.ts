@@ -1,0 +1,154 @@
+import { GoogleGenAI } from '@google/genai';
+import { MarketingChannel } from '@prisma/client';
+import { put } from '@vercel/blob';
+import prisma from '@/lib/prisma';
+import { FuturiaEngineConfigError } from './generation';
+
+const BLOB_PREFIX = 'futuria/campagne';
+const DEFAULT_IMAGEN_MODEL = 'imagen-4.0-generate-001';
+
+function getGeminiApiKey(): string {
+  const apiKey =
+    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new FuturiaEngineConfigError(
+      'GEMINI_API_KEY non configurata: impossibile generare l\'immagine.'
+    );
+  }
+  return apiKey;
+}
+
+function getBlobToken(): string {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!token) {
+    throw new FuturiaEngineConfigError(
+      'BLOB_READ_WRITE_TOKEN mancante: impossibile caricare l\'immagine su Vercel Blob.'
+    );
+  }
+  return token;
+}
+
+function aspectRatioForChannel(channel: MarketingChannel): string {
+  switch (channel) {
+    case MarketingChannel.META_INSTAGRAM:
+      return '1:1';
+    case MarketingChannel.META_FACEBOOK:
+      return '4:3';
+    case MarketingChannel.LINKEDIN:
+      return '16:9';
+    case MarketingChannel.GOOGLE_ADS:
+      return '1:1';
+    default:
+      return '1:1';
+  }
+}
+
+function buildFallbackImagePrompt(campaign: {
+  category: string;
+  targetChannel: MarketingChannel;
+  copy: string;
+}): string {
+  const copyExcerpt = campaign.copy.replace(/\s+/g, ' ').trim().slice(0, 400);
+
+  return [
+    '[STYLE]: Quiet Luxury floreale sobrio per FloreMoria.',
+    `[CATEGORY]: ${campaign.category}.`,
+    `[CHANNEL]: ${campaign.targetChannel}.`,
+    `[SUBJECT]: Composizione elegante ispirata al copy: ${copyExcerpt}.`,
+    '[LIGHTING]: Luce naturale morbida, ora d\'oro o finestra nord.',
+    '[PALETTE]: Avorio, salvia, cipria, terracotta desaturati.',
+    '[AVOID]: Loghi, scritte, grafiche, colori neon, effetto stock photo.',
+  ].join(' ');
+}
+
+async function generateImageBytes(
+  prompt: string,
+  aspectRatio: string
+): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
+  const model = process.env.FUTURIA_IMAGEN_MODEL?.trim() || DEFAULT_IMAGEN_MODEL;
+  const outputMimeType = 'image/png';
+  const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
+
+  let response;
+  try {
+    response = await ai.models.generateImages({
+      model,
+      prompt,
+      config: {
+        numberOfImages: 1,
+        aspectRatio,
+        outputMimeType,
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Errore chiamata Imagen (${model}): ${msg}`);
+  }
+
+  const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
+  if (!imageBytes) {
+    throw new Error('Imagen non ha restituito byte immagine validi.');
+  }
+
+  return {
+    buffer: Buffer.from(imageBytes, 'base64'),
+    mimeType: outputMimeType,
+    extension: 'png',
+  };
+}
+
+/**
+ * Genera l'immagine della campagna via Imagen (Gemini) e la carica su Vercel Blob (private).
+ * Aggiorna `imageUrl` su Prisma e ritorna l'URL privato del blob.
+ */
+export async function generateAndStorageCampaignImage(
+  campaignId: string,
+  options?: { force?: boolean }
+): Promise<string> {
+  console.log(`[Futuria Images] Generazione immagine per campagna ${campaignId}`);
+
+  const campaign = await prisma.marketingCampaign.findUnique({
+    where: { id: campaignId },
+  });
+
+  if (!campaign) {
+    throw new Error(`Campagna ${campaignId} non trovata.`);
+  }
+
+  const existingUrl = campaign.imageUrl?.trim();
+  if (existingUrl && !options?.force) {
+    console.log(`[Futuria Images] imageUrl già presente per ${campaignId}, skip.`);
+    return existingUrl;
+  }
+
+  if (existingUrl && options?.force) {
+    console.log(`[Futuria Images] force=true — rigenerazione immagine per ${campaignId}`);
+  }
+
+  const imagePrompt =
+    campaign.imagePrompt?.trim() ||
+    buildFallbackImagePrompt({
+      category: campaign.category,
+      targetChannel: campaign.targetChannel,
+      copy: campaign.copy,
+    });
+
+  const aspectRatio = aspectRatioForChannel(campaign.targetChannel);
+  const { buffer, mimeType, extension } = await generateImageBytes(imagePrompt, aspectRatio);
+
+  const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;
+  const { url } = await put(blobPath, buffer, {
+    access: 'private',
+    contentType: mimeType,
+    token: getBlobToken(),
+    addRandomSuffix: false,
+  });
+
+  await prisma.marketingCampaign.update({
+    where: { id: campaignId },
+    data: { imageUrl: url },
+  });
+
+  console.log(`[Futuria Images] Upload completato: ${url}`);
+  return url;
+}

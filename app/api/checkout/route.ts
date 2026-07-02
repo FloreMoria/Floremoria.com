@@ -7,6 +7,12 @@ import path from 'path';
 import Papa from 'papaparse';
 import Stripe from 'stripe';
 import { normalizeOfferCode, resolveOfferDiscount } from '@/lib/discounts';
+import {
+    allocateOrderNumberInTransaction,
+    isOrderNumberUniqueViolation,
+    normalizeDeliveryProvince,
+    normalizeOrderCategory,
+} from '@/lib/orders/orderNumber';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -153,28 +159,8 @@ export async function POST(request: Request) {
             finalTotalCents = resolution.finalTotalCents;
         }
 
-        // 1. Intelligent ID Generation
-        const prefix = orderCategory || 'FT';
-        const prov = (deliveryProvince || 'XX').substring(0, 2).toUpperCase();
-        const year = new Date().getFullYear().toString().slice(-2); // Ex: '26'
-
-        const basePattern = `${prefix}-${prov}-${year}-`;
-
-        // 2. Count existing orders for this specific prefix/prov/year
-        const count = await prisma.order.count({
-            where: {
-                orderNumber: {
-                    startsWith: basePattern
-                }
-            }
-        });
-
-        const progressive = (count + 1).toString().padStart(3, '0');
-        const orderNumber = `${basePattern}${progressive}`; // Ex: FF-CO-26-001
-
-        console.log(`[Checkout] Generato nuovo ID Immutabile: ${orderNumber}`);
-
-        // 3. Find Partner for the specific province OR Referral
+        const prefix = normalizeOrderCategory(orderCategory);
+        const prov = normalizeDeliveryProvince(deliveryProvince);
         let partner = null;
         let finalInstructions = null;
 
@@ -313,31 +299,47 @@ export async function POST(request: Request) {
             }
         }
 
-        const order = await prisma.order.create({
-            data: {
-                orderNumber,
-                buyerFullName,
-                buyerEmail,
-                isRecurring,
-                userId: buyerUserId, // Collega l'ordine al profilo utente
-                customerPhone: buyerPhone,
-                deceasedName,
-                cemeteryName,
-                gravePosition: finalGravePosition,
-                cemeteryCity: 'Non specificato', // Deprecated in favor of generic cemetery/location field but required by schema
-                deliveryProvince: prov,
-                deliveryDate: new Date(deliveryDate),
-                ticketMessage,
-                additionalInstructions,
-                totalPriceCents: finalTotalCents,
-                partnerId: partner?.id || null, // Auto-assignment
-                ...(notify ? { partnerNotifyEmail: notify } : {}),
-                status: 'PENDING',
-                items: {
-                    create: resolvedItems
-                }
+        let order: Awaited<ReturnType<typeof prisma.order.create>> | undefined;
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            try {
+                order = await prisma.$transaction(async (tx) => {
+                    const orderNumber = await allocateOrderNumberInTransaction(tx, prefix, prov);
+                    console.log(`[Checkout] Generato nuovo ID Immutabile: ${orderNumber}`);
+                    return tx.order.create({
+                        data: {
+                            orderNumber,
+                            buyerFullName,
+                            buyerEmail,
+                            isRecurring,
+                            userId: buyerUserId,
+                            customerPhone: buyerPhone,
+                            deceasedName,
+                            cemeteryName,
+                            gravePosition: finalGravePosition,
+                            cemeteryCity: 'Non specificato',
+                            deliveryProvince: prov,
+                            deliveryDate: new Date(deliveryDate),
+                            ticketMessage,
+                            additionalInstructions,
+                            totalPriceCents: finalTotalCents,
+                            partnerId: partner?.id || null,
+                            ...(notify ? { partnerNotifyEmail: notify } : {}),
+                            status: 'PENDING',
+                            items: {
+                                create: resolvedItems,
+                            },
+                        },
+                    });
+                });
+                break;
+            } catch (err) {
+                if (!isOrderNumberUniqueViolation(err) || attempt === 5) throw err;
             }
-        });
+        }
+
+        if (!order) {
+            return NextResponse.json({ error: 'Impossibile generare il codice ordine.' }, { status: 500 });
+        }
 
         // Onboarding silenzioso anche solo telefono (oltre all'email).
         if (!buyerUserId) {
@@ -435,7 +437,7 @@ export async function POST(request: Request) {
             totalMarginCents = Math.round(finalTotalCents * 0.35);
         }
 
-        console.log(`[Notification] Auto-assegnazione effettuata per ordine ${orderNumber} al Partner ${partner?.shopName || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
+        console.log(`[Notification] Auto-assegnazione effettuata per ordine ${order.orderNumber} al Partner ${partner?.shopName || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
 
         // Create Stripe Session
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51MockKey', {

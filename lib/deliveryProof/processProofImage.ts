@@ -1,6 +1,7 @@
 import { put } from '@vercel/blob';
 import { buildElegantProofFilename, slugifyProofName } from '@/lib/deliveryProof/proofFilenames';
 import { normalizeProofImageBuffer } from '@/lib/deliveryProof/imagePipeline';
+import { DELIVERY_PROOF_PRIVATE_PREFIX } from '@/lib/deliveryProof/storagePaths';
 
 function getBlobToken(): string {
     const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -41,9 +42,9 @@ export async function processProofImageFile(
         throw new Error('Impossibile elaborare una o più foto. Riprova con un formato immagine standard.');
     }
 
-    const blobPath = `delivery-proof/${order.id}/${filename}`;
+    const blobPath = `${DELIVERY_PROOF_PRIVATE_PREFIX}/${order.id}/${filename}`;
     const { url } = await put(blobPath, optimizedBuffer, {
-        access: 'public',
+        access: 'private',
         contentType: 'image/webp',
         token: getBlobToken(),
         addRandomSuffix: true,

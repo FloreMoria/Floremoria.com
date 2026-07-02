@@ -39,7 +39,7 @@ export async function uploadProfileImage(
     const blobPath = `${MEDIA_PREFIX}/${folder}/${entityId}/portrait.webp`;
 
     const { url } = await put(blobPath, optimized, {
-        access: 'public',
+        access: 'private',
         contentType: 'image/webp',
         token: getBlobToken(),
         addRandomSuffix: true,

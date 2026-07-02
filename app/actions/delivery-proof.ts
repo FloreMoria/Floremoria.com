@@ -7,6 +7,7 @@
     import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
     import { revalidatePath } from 'next/cache';
     import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
+    import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 
     export async function submitDeliveryProof(formData: FormData) {
         try {
@@ -111,6 +112,10 @@
                         photos: syncOrderPhotosArray(photosBefore, photosAfter),
                     },
                 });
+            }
+
+            if (newStatus === 'COMPLETED' && photoAfterUrl) {
+                void triggerSocialSanitizationForOrder(order.id, [photoAfterUrl]);
             }
 
             // Notifica WhatsApp post-consegna via Futuria (chiave email utente).

@@ -50,6 +50,9 @@ export default async function OrdersPage() {
 
     let ordersData: any[] = [];
     let florists: Array<{ id: string; shopName: string; ownerName: string | null }> = [];
+    let products: any[] = [];
+    let dashboardUsers: any[] = [];
+    let deceasedProfiles: any[] = [];
     const dbErrors: string[] = [];
 
     if (hasDatabaseUrl) {
@@ -80,6 +83,37 @@ export default async function OrdersPage() {
         );
         florists = floristsResult.data;
         if (!floristsResult.ok) dbErrors.push(floristsResult.error);
+
+        const productsResult = await runDashboardQuery('orders/products', [], () =>
+            prisma.product.findMany({
+                where: { deletedAt: null, isActive: true },
+                orderBy: { name: 'asc' },
+                include: { category: true },
+            })
+        );
+        products = productsResult.data;
+        if (!productsResult.ok) dbErrors.push(productsResult.error);
+
+        const usersResult = await runDashboardQuery('orders/users', [], () =>
+            prisma.user.findMany({
+                where: { deletedAt: null, systemRole: 'USER' },
+                orderBy: { updatedAt: 'desc' },
+                take: 150,
+                select: { id: true, name: true, email: true, phone: true },
+            })
+        );
+        dashboardUsers = usersResult.data;
+        if (!usersResult.ok) dbErrors.push(usersResult.error);
+
+        const deceasedResult = await runDashboardQuery('orders/deceased', [], () =>
+            prisma.deceasedProfile.findMany({
+                orderBy: { updatedAt: 'desc' },
+                take: 200,
+                select: { id: true, fullName: true, cemeteryCity: true, cemeteryName: true },
+            })
+        );
+        deceasedProfiles = deceasedResult.data;
+        if (!deceasedResult.ok) dbErrors.push(deceasedResult.error);
     }
 
     const displayOrders = ordersData.map((o) => ({
@@ -93,6 +127,9 @@ export default async function OrdersPage() {
             <ClientOrdersTable
                 orders={displayOrders}
                 florists={florists}
+                products={products}
+                users={dashboardUsers}
+                deceasedProfiles={deceasedProfiles}
                 canChangeStatus={canChangeStatus}
                 isGlobalAdmin={isGlobalAdmin}
             />

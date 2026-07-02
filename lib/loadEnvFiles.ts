@@ -26,6 +26,15 @@ export function loadEnvFiles(cwd = process.cwd()): void {
                 (val.startsWith("'") && val.endsWith("'"))
             ) {
                 val = val.slice(1, -1);
+            } else {
+                const hashIdx = val.indexOf('#');
+                if (hashIdx >= 0) {
+                    val = val.slice(0, hashIdx).trim();
+                }
+            }
+            // Evita che una riga vuota in fondo al file sovrascriva un token gia impostato.
+            if (val === '' && fromFiles[key]?.trim()) {
+                continue;
             }
             fromFiles[key] = val;
         }

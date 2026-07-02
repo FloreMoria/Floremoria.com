@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Calendar, Mail } from 'lucide-react';
+import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Calendar, Mail, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
+import CreateUserModal from '@/components/dashboard/CreateUserModal';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 const formatITDate = (dateStr: string | null) => {
@@ -25,10 +26,17 @@ const formatITDate = (dateStr: string | null) => {
     return `${day}/${month}/${paddedYear}`;
 };
 
-export default function ClientUsersTable({ initialUsers }: { initialUsers: any[] }) {
+export default function ClientUsersTable({
+    initialUsers,
+    florists = [],
+}: {
+    initialUsers: any[];
+    florists?: { id: string; shopName: string; ownerName: string | null }[];
+}) {
     const [users, setUsers] = useState(initialUsers);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
 
     const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,9 +149,8 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
 
     return (
         <div>
-            {/* Search Bar */}
-            <div className="mb-6 max-w-md">
-                <div className="relative">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                <div className="relative max-w-md flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                         type="text"
@@ -153,6 +160,13 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                         className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-fm-gold focus:ring-1 focus:ring-fm-gold outline-none transition-all"
                     />
                 </div>
+                <button
+                    type="button"
+                    onClick={() => setCreateModalOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors shadow-sm"
+                >
+                    <UserPlus size={16} /> Aggiungi utente
+                </button>
             </div>
 
             {/* Users Table */}
@@ -377,6 +391,29 @@ export default function ClientUsersTable({ initialUsers }: { initialUsers: any[]
                     </div>
                 </div>
             )}
+
+            <CreateUserModal
+                open={createModalOpen}
+                onClose={() => setCreateModalOpen(false)}
+                florists={florists}
+                onCreated={({ userId, email }) => {
+                    setUsers((prev) => [
+                        {
+                            id: userId,
+                            name: 'Nuovo utente',
+                            email,
+                            phone: 'Non specificato',
+                            city: 'Non specificata',
+                            profilePicUrl: null,
+                            orders: [],
+                            totalSpentCents: 0,
+                            lastOrderDate: new Date().toISOString(),
+                        },
+                        ...prev,
+                    ]);
+                    alert('Utente e Giardino della Memoria creati. Aggiungi ordini dalla pagina Ordini.');
+                }}
+            />
         </div>
     );
 }

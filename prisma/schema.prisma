@@ -480,6 +480,13 @@ model DeliveryProof {
   photoAfterUrl   String?
   photosBeforeUrls String[]           @default([]) @map("photos_before_urls")
   photosAfterUrls  String[]           @default([]) @map("photos_after_urls")
+  /** Canale social sanificato (crop + blur + EXIF strip) — unico ammesso per Meta/LinkedIn. */
+  socialReadyAfterUrls  String[]       @default([]) @map("social_ready_after_urls")
+  socialReadyPrimaryUrl String?        @map("social_ready_primary_url")
+  socialCopyCategory    String?        @map("social_copy_category")
+  socialSanitizedAt     DateTime?      @map("social_sanitized_at")
+  /** Canali Meta/LinkedIn già pubblicati per questo proof (es. META_INSTAGRAM). */
+  socialPublishedChannels String[]     @default([]) @map("social_published_channels")
   timestampBefore DateTime?
   timestampAfter  DateTime?
   gpsLatitude     Float?
@@ -535,6 +542,7 @@ model MarketingCampaign {
   id              String           @id @default(cuid())
   status          CampaignStatus   @default(DRAFT)
   imageUrl        String           // URL dell'immagine su Vercel Blob
+  imagePrompt     String           @default("") @db.Text // Prompt ZIGGY/ARLO per Imagen
   copy            String           @db.Text // Testo generato da CLEO
   hashtags        String[]         // Hashtag ed elementi semantici generati da AXEL
   targetChannel   MarketingChannel // Canale di destinazione (Meta, Google, LinkedIn)

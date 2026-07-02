@@ -19,14 +19,49 @@ export default async function UsersPage() {
         })
     );
 
-    const orders = ordersResult.data;
+    const standaloneUsersResult = await runDashboardQuery('users/standalone', [], () =>
+        prisma.user.findMany({
+            where: { deletedAt: null, systemRole: 'USER' },
+            orderBy: { updatedAt: 'desc' },
+            include: {
+                deceasedLinks: { include: { deceasedProfile: true } },
+                orders: {
+                    where: visibleDashboardOrdersWhere(),
+                    include: {
+                        items: { include: { product: true } },
+                        deliveryProof: true,
+                    },
+                },
+            },
+        })
+    );
 
-    // Raggruppiamo gli ordini per Utente virtuale o reale
-    const usersMap = new Map();
+    const floristsResult = await runDashboardQuery('users/florists', [], () =>
+        prisma.partner.findMany({
+            where: { deletedAt: null, isB2B: false },
+            orderBy: { shopName: 'asc' },
+            select: { id: true, shopName: true, ownerName: true },
+        })
+    );
+
+    const orders = ordersResult.data;
+    type UserRow = {
+        id: string;
+        name: string;
+        email: string;
+        phone: string;
+        city: string;
+        profilePicUrl: string | null;
+        orders: any[];
+        totalSpentCents: number;
+        lastOrderDate: Date | string;
+    };
+
+    const usersMap = new Map<string, UserRow>();
 
     orders.forEach((order) => {
         const key = order.userId || order.customerPhone || order.buyerFullName || order.id;
-        
+
         if (!usersMap.has(key)) {
             usersMap.set(key, {
                 id: order.userId || `virtual_${order.id}`,
@@ -40,8 +75,8 @@ export default async function UsersPage() {
                 lastOrderDate: order.createdAt,
             });
         }
-        
-        const userGroup = usersMap.get(key);
+
+        const userGroup = usersMap.get(key)!;
         userGroup.orders.push(order);
         userGroup.totalSpentCents += order.totalPriceCents;
         if (!userGroup.profilePicUrl && order.user?.avatarUrl) {
@@ -49,14 +84,32 @@ export default async function UsersPage() {
         }
     });
 
+    for (const user of standaloneUsersResult.data) {
+        if (usersMap.has(user.id)) continue;
+
+        const visibleOrders = user.orders;
+        usersMap.set(user.id, {
+            id: user.id,
+            name: user.name || user.email,
+            email: user.email,
+            phone: user.phone || 'Non specificato',
+            city: visibleOrders[0]?.buyerCity || 'Non specificata',
+            profilePicUrl: user.avatarUrl,
+            orders: visibleOrders,
+            totalSpentCents: visibleOrders.reduce((sum, o) => sum + o.totalPriceCents, 0),
+            lastOrderDate: visibleOrders[0]?.createdAt || user.updatedAt,
+        });
+    }
+
     const groupedUsers = Array.from(usersMap.values());
+    const dbErrors: string[] = [];
+    if (!ordersResult.ok) dbErrors.push(ordersResult.error);
+    if (!standaloneUsersResult.ok) dbErrors.push(standaloneUsersResult.error);
+    if (!floristsResult.ok) dbErrors.push(floristsResult.error);
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-10 pb-20 fade-in">
-            <DashboardDbAlert
-                page="Utenti"
-                errors={!ordersResult.ok ? [ordersResult.error] : []}
-            />
+            <DashboardDbAlert page="Utenti" errors={dbErrors} />
             <div className="mb-8">
                 <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Il Giardino della Memoria</h1>
                 <p className="text-gray-500 font-medium">
@@ -64,7 +117,7 @@ export default async function UsersPage() {
                 </p>
             </div>
 
-            <ClientUsersTable initialUsers={groupedUsers} />
+            <ClientUsersTable initialUsers={groupedUsers} florists={floristsResult.data} />
         </div>
     );
 }

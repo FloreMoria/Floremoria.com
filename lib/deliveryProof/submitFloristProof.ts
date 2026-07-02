@@ -6,6 +6,7 @@ import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliver
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
+import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 
 export type SubmitFloristProofInput = {
     orderId: string;
@@ -108,6 +109,10 @@ export async function submitFloristDeliveryProof(
     }
 
     await syncDeceasedRelationsForOrder(order.id);
+
+    if (photosAfterUrls.length) {
+        void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
+    }
 
     const userEmail = linkedUser?.email?.trim() || order.user?.email?.trim();
     const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);

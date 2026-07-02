@@ -1,45 +1,51 @@
 /**
  * GET /api/cron/publish-campaigns
  *
- * Trigger Vercel Cron — pubblicazione campagne Futuria in stato APPROVED.
- * Fase 1: conteggio record pronti (integrazione POSTMAN/canali in step successivo).
+ * Trigger Vercel Cron giornaliero Futuria (05:00 UTC):
+ * 1. Pipeline produzione — generateCampaignDraft → Imagen/Blob → checkpoint Guardiani
+ * 2. Rilevamento campagne APPROVED pronte per pubblicazione (POSTMAN — step successivo)
  */
-import { CampaignStatus } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { runFuturiaProductionPipeline } from '@/lib/futuria/engine/pipeline';
+import { runFuturiaPublishPipeline } from '@/lib/futuria/engine/publish';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
+
+function isAuthorized(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) return process.env.NODE_ENV !== 'production';
+
+  const authHeader = request.headers.get('authorization') || '';
+  if (authHeader.replace(/^Bearer\s+/i, '').trim() === secret) return true;
+
+  const cronKey = request.headers.get('x-cron-key')?.trim();
+  return cronKey === secret;
+}
 
 export async function GET(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
+  if (!isAuthorized(request)) {
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
 
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+  try {
+    console.log('[Futuria Cron] publish-campaigns — trigger ricevuto');
 
-    try {
-        const approvedCampaigns = await prisma.marketingCampaign.findMany({
-            where: { status: CampaignStatus.APPROVED },
-            select: { id: true, targetChannel: true, category: true },
-            orderBy: { createdAt: 'asc' },
-            take: 50,
-        });
+    const production = await runFuturiaProductionPipeline();
+    const publish = await runFuturiaPublishPipeline();
 
-        const processed = 0;
-
-        return NextResponse.json(
-            {
-                success: true,
-                message: 'Cron trigger eseguito con successo',
-                processed,
-                approvedCampaignsFound: approvedCampaigns.length,
-                pendingIds: approvedCampaigns.map((c) => c.id),
-            },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error('❌ Errore nel cron job publish-campaigns:', error);
-        return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
-    }
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Cron Futuria eseguito con successo',
+        production,
+        publish,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('❌ Errore nel cron job publish-campaigns:', error);
+    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+  }
 }

@@ -1,18 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Filter, MoreHorizontal, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity } from 'lucide-react';
+import { Download, Filter, MoreHorizontal, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
+import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
 
 interface ClientOrdersTableProps {
     orders: any[];
     florists: any[];
+    products: any[];
+    users: any[];
+    deceasedProfiles: any[];
     canChangeStatus: boolean;
     isGlobalAdmin?: boolean;
 }
 
-export default function ClientOrdersTable({ orders, florists, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
+export default function ClientOrdersTable({ orders, florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [currentFilter, setCurrentFilter] = useState('TUTTI');
@@ -28,6 +32,8 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
 
     const [isSaving, setIsSaving] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [duplicateSource, setDuplicateSource] = useState<any | null>(null);
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -47,6 +53,21 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
 
     const handleSelectOrder = (order: any) => {
         setSelectedOrder(order);
+    };
+
+    const openCreateModal = () => {
+        setDuplicateSource(null);
+        setCreateModalOpen(true);
+    };
+
+    const openDuplicateModal = (order: any) => {
+        setDuplicateSource(order);
+        setCreateModalOpen(true);
+    };
+
+    const closeCreateModal = () => {
+        setCreateModalOpen(false);
+        setDuplicateSource(null);
     };
 
     const closeDrawer = () => {
@@ -187,6 +208,16 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {isGlobalAdmin && (
+                        <button
+                            type="button"
+                            onClick={openCreateModal}
+                            className="flex items-center gap-2 px-4 py-2 border border-black rounded-full text-sm font-semibold text-white bg-black hover:bg-gray-800 transition-colors shadow-sm"
+                            title="Aggiungi ordine"
+                        >
+                            <Plus size={16} /> Aggiungi ordine
+                        </button>
+                    )}
                     <button onClick={() => setFilterMenuOpen(!filterMenuOpen)} className={`flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold transition-colors shadow-sm ${filterMenuOpen ? 'bg-gray-100 text-black shadow-inner' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
                         <Filter size={15} className={`${filterMenuOpen ? 'text-black' : 'text-gray-500'}`} /> Filtri avanzati
                     </button>
@@ -400,6 +431,16 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                                 </h3>
                             </div>
                             <div className="flex items-center gap-3">
+                                {isGlobalAdmin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => openDuplicateModal(selectedOrder)}
+                                        className="!bg-white !text-gray-800 !font-semibold py-2 px-4 rounded-md shadow-sm hover:!bg-gray-50 transition-all flex items-center gap-2 border border-gray-200"
+                                        title="Duplica ordine per nuova consegna"
+                                    >
+                                        <Copy size={16} /> Duplica
+                                    </button>
+                                )}
                                 <button 
                                     onClick={handleSaveOrder}
                                     disabled={isSaving}
@@ -699,6 +740,24 @@ export default function ClientOrdersTable({ orders, florists, canChangeStatus, i
                     </>
                 )}
             </div>
+
+            <CreateOrderModal
+                open={createModalOpen}
+                onClose={closeCreateModal}
+                duplicateFrom={duplicateSource}
+                florists={florists}
+                products={products}
+                users={users}
+                deceasedProfiles={deceasedProfiles}
+                onCreated={(order) => {
+                    const normalized = {
+                        ...order,
+                        specialNotes: (order as { additionalInstructions?: string }).additionalInstructions || '',
+                    };
+                    setLocalOrders((prev) => [normalized, ...prev]);
+                    showToast(`Ordine ${(order as { orderNumber?: string }).orderNumber || ''} creato`);
+                }}
+            />
 
             {/* Premium Toast Notification */}
             {toast && (

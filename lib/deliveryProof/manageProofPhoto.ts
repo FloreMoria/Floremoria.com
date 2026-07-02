@@ -6,6 +6,7 @@ import {
     syncOrderPhotosArray,
     type ProofPhotoSlot,
 } from '@/lib/deliveryProof/proofPhotoUrls';
+import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 
 type ProofArrays = {
     photosBeforeUrls: string[];
@@ -159,6 +160,11 @@ export async function replaceProofPhoto(
         arrays = setSlotUrls(arrays, located.slot, slotUrls);
 
         await persistProofUpdate(order.id, order.orderNumber, order.deliveryProof.id, arrays);
+
+        if (located.slot === 'after') {
+            void triggerSocialSanitizationForOrder(order.id, arrays.photosAfterUrls);
+        }
+
         return { ok: true, url: `${newUrl}?v=${Date.now()}` };
     } catch (err) {
         console.error('[replaceProofPhoto]', err);

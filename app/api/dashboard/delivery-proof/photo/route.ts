@@ -4,7 +4,9 @@ import {
     deleteProofPhoto,
     replaceProofPhoto,
     rotateProofPhoto,
+    uploadProofPhoto,
 } from '@/lib/deliveryProof/manageProofPhoto';
+import type { ProofPhotoSlot } from '@/lib/deliveryProof/proofPhotoUrls';
 import { isDashboardAdminRole } from '@/lib/superAdmin';
 
 export const runtime = 'nodejs';
@@ -32,8 +34,25 @@ export async function POST(request: Request) {
         const orderId = String(form.get('orderId') || '').trim();
         const url = String(form.get('url') || '').trim();
 
-        if (!action || !orderId || !url) {
+        if (!action || !orderId) {
             return NextResponse.json({ ok: false, error: 'Parametri mancanti.' }, { status: 400 });
+        }
+
+        if (action === 'upload') {
+            const slot = String(form.get('slot') || '').trim() as ProofPhotoSlot;
+            if (slot !== 'before' && slot !== 'after') {
+                return NextResponse.json({ ok: false, error: 'Slot foto non valido.' }, { status: 400 });
+            }
+            const file = form.get('file');
+            if (!(file instanceof File) || file.size === 0) {
+                return NextResponse.json({ ok: false, error: 'File non valido.' }, { status: 400 });
+            }
+            const result = await uploadProofPhoto(orderId, slot, file);
+            return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+        }
+
+        if (!url) {
+            return NextResponse.json({ ok: false, error: 'URL foto mancante.' }, { status: 400 });
         }
 
         if (action === 'rotate') {

@@ -63,6 +63,7 @@ export default async function OrdersPage() {
                 include: {
                     user: true,
                     partner: true,
+                    deliveryProof: true,
                     items: {
                         include: {
                             product: true,

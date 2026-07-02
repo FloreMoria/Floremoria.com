@@ -3,6 +3,33 @@ export type OrderItemWithProduct = {
     product: { name: string; isBouquet: boolean };
 };
 
+export type OrderProductLine = {
+    name: string;
+    quantity: number;
+};
+
+export type OrderProductSummary = {
+    mainProducts: OrderProductLine[];
+    accessories: OrderProductLine[];
+};
+
+/** Bouquet principale vs accessori (lumino, bigliettino, foto prima della posa, ecc.). */
+export function getOrderProductSummary(items: OrderItemWithProduct[]): OrderProductSummary {
+    const toLine = (item: OrderItemWithProduct): OrderProductLine => ({
+        name: item.product.name,
+        quantity: item.quantity,
+    });
+
+    const mainProducts = items.filter((item) => item.product.isBouquet).map(toLine);
+    const accessories = items.filter((item) => !item.product.isBouquet).map(toLine);
+
+    if (!mainProducts.length && items.length) {
+        return { mainProducts: [toLine(items[0]!)], accessories };
+    }
+
+    return { mainProducts, accessories };
+}
+
 /** Riepilogo testuale bouquet + accessori per WhatsApp Futuria e dashboard. */
 export function formatDeliveredProductsSummary(items: OrderItemWithProduct[]): string {
     if (!items.length) return 'composizione floreale';

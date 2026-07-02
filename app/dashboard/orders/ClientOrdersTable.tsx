@@ -5,6 +5,9 @@ import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, 
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
+import OrderDetailProofUpload from '@/components/dashboard/OrderDetailProofUpload';
+import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
+import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -766,6 +769,49 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             </div>
                                         </div>
 
+                                        {selectedOrder.items?.length > 0 ? (() => {
+                                            const { mainProducts, accessories } = getOrderProductSummary(selectedOrder.items);
+                                            return (
+                                                <div className="bg-white rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
+                                                    <h4 className="text-[13px] font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-gray-100">
+                                                        <Package size={14} className="text-fm-gold" /> Prodotto ordinato
+                                                    </h4>
+                                                    {mainProducts.length > 0 ? (
+                                                        <div>
+                                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Composizione principale</span>
+                                                            <ul className="space-y-1">
+                                                                {mainProducts.map((line, i) => (
+                                                                    <li key={`main-${i}`} className="text-sm font-semibold text-gray-900">
+                                                                        {line.name}
+                                                                        {line.quantity > 1 ? (
+                                                                            <span className="ml-1.5 text-xs font-bold text-fm-gold">×{line.quantity}</span>
+                                                                        ) : null}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    ) : null}
+                                                    {accessories.length > 0 ? (
+                                                        <div>
+                                                            <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Accessori</span>
+                                                            <ul className="space-y-1">
+                                                                {accessories.map((line, i) => (
+                                                                    <li key={`acc-${i}`} className="text-sm text-gray-800 flex items-center justify-between gap-2">
+                                                                        <span>{line.name}</span>
+                                                                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+                                                                            Qtà {line.quantity}
+                                                                        </span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-500">Nessun accessorio aggiuntivo.</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })() : null}
+
                                         {stripeMetadata && (
                                             <div className="bg-blue-50/60 rounded-2xl p-4 border border-blue-100 space-y-3 mb-6">
                                                 <h4 className="text-[13px] font-bold text-blue-800 uppercase tracking-widest flex items-center gap-2 pb-2 border-b border-blue-100/50">
@@ -935,30 +981,54 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                 </div>
                             </div>
 
-                            {/* FOTO GARANZIA UPLOAD ZONE (DRAG & DROP READY) */}
+                            {/* FOTO GARANZIA UPLOAD ZONE */}
                             <div className="space-y-3">
                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                     <Camera size={16} className="text-gray-400" /> Sincronizzazione Foto Garanzia
                                 </h4>
                                 <p className="text-xs text-gray-500 mb-2 leading-relaxed">
-                                    Le foto vengono automaticamente caricate tramite Bot WhatsApp. Qualora fosse necessario un caricamento manuale, trascina l'immagine col mouse nel riquadro sottostante.
+                                    Carica le foto prima e dopo la posa: trascina un&apos;immagine nel riquadro oppure clicca per selezionarla dal computer.
                                 </p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="border-2 border-dashed border-gray-300 rounded-2xl h-36 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 hover:bg-orange-50/50 hover:text-fm-gold hover:border-fm-gold cursor-pointer transition-all">
-                                        <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 mb-2">
-                                            <ImageIcon size={20} className="text-gray-600" />
-                                        </div>
-                                        <span className="text-[11px] font-semibold text-gray-800">Laboratorio</span>
-                                        <span className="text-[10px] font-medium text-gray-400 mt-0.5">Drag & Drop</span>
-                                    </div>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-2xl h-36 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 hover:bg-orange-50/50 hover:text-fm-gold hover:border-fm-gold cursor-pointer transition-all">
-                                        <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 mb-2">
-                                            <MapPin size={20} className="text-gray-600" />
-                                        </div>
-                                        <span className="text-[11px] font-semibold text-gray-800">Cimitero</span>
-                                        <span className="text-[10px] font-medium text-gray-400 mt-0.5">Drag & Drop</span>
-                                    </div>
-                                </div>
+                                <OrderDetailProofUpload
+                                    key={selectedOrder.id}
+                                    orderId={selectedOrder.id}
+                                    initialBefore={getOrderProofPhotos(selectedOrder).before}
+                                    initialAfter={getOrderProofPhotos(selectedOrder).after}
+                                    onPhotosUpdated={(before, after) => {
+                                        setSelectedOrder((prev: any) =>
+                                            prev
+                                                ? {
+                                                      ...prev,
+                                                      photos: [...before, ...after],
+                                                      deliveryProof: {
+                                                          ...(prev.deliveryProof ?? {}),
+                                                          photosBeforeUrls: before,
+                                                          photosAfterUrls: after,
+                                                          photoBeforeUrl: before[0] ?? null,
+                                                          photoAfterUrl: after[0] ?? null,
+                                                      },
+                                                  }
+                                                : prev
+                                        );
+                                        setLocalOrders((prev) =>
+                                            prev.map((o) =>
+                                                o.id === selectedOrder.id
+                                                    ? {
+                                                          ...o,
+                                                          photos: [...before, ...after],
+                                                          deliveryProof: {
+                                                              ...(o.deliveryProof ?? {}),
+                                                              photosBeforeUrls: before,
+                                                              photosAfterUrls: after,
+                                                              photoBeforeUrl: before[0] ?? null,
+                                                              photoAfterUrl: after[0] ?? null,
+                                                          },
+                                                      }
+                                                    : o
+                                            )
+                                        );
+                                    }}
+                                />
                             </div>
 
                             {/* CONTATTO RAPIDO */}

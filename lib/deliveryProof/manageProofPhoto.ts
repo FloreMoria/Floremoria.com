@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { deleteProofBlob, fetchProofImageBuffer, overwriteProofBlob } from '@/lib/deliveryProof/blobProofStorage';
 import { normalizeProofImageBuffer } from '@/lib/deliveryProof/imagePipeline';
+import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 import {
     syncOrderPhotosArray,
     type ProofPhotoSlot,
@@ -79,6 +80,7 @@ async function persistProofUpdate(
 
     revalidatePath('/dashboard/user');
     revalidatePath('/dashboard/users');
+    revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard');
     revalidatePath(`/fiorista/consegna/${orderId}`);
     if (orderNumber) {
@@ -208,6 +210,71 @@ export async function deleteProofPhoto(
 
     await persistProofUpdate(order.id, order.orderNumber, order.deliveryProof.id, arrays);
     return { ok: true };
+}
+
+/** Carica una foto su slot prima/dopo (dashboard admin). Sostituisce la foto esistente nello slot. */
+export async function uploadProofPhoto(
+    orderId: string,
+    slot: ProofPhotoSlot,
+    file: File
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+    const order = await prisma.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        include: {
+            deliveryProof: true,
+            deceasedProfile: true,
+        },
+    });
+
+    if (!order) {
+        return { ok: false, error: 'Ordine non trovato.' };
+    }
+    if (!order.partnerId) {
+        return { ok: false, error: 'Assegna un fiorista all\'ordine prima di caricare le foto.' };
+    }
+
+    try {
+        const newUrl = await processProofImageFile(file, slot, order, 0);
+
+        let proof = order.deliveryProof;
+        if (!proof) {
+            proof = await prisma.deliveryProof.create({
+                data: {
+                    orderId: order.id,
+                    partnerId: order.partnerId,
+                    status: 'PENDING',
+                },
+            });
+        }
+
+        let arrays: ProofArrays = {
+            photosBeforeUrls: [...proof.photosBeforeUrls],
+            photosAfterUrls: [...proof.photosAfterUrls],
+            photoBeforeUrl: proof.photoBeforeUrl,
+            photoAfterUrl: proof.photoAfterUrl,
+        };
+
+        const existingUrls = getSlotUrls(arrays, slot);
+        for (const oldUrl of existingUrls) {
+            try {
+                await deleteProofBlob(oldUrl);
+            } catch (err) {
+                console.warn('[uploadProofPhoto] Blob delete skipped:', err);
+            }
+        }
+
+        arrays = setSlotUrls(arrays, slot, [newUrl]);
+        await persistProofUpdate(order.id, order.orderNumber, proof.id, arrays);
+
+        if (slot === 'after') {
+            void triggerSocialSanitizationForOrder(order.id, arrays.photosAfterUrls);
+        }
+
+        return { ok: true, url: `${newUrl}?v=${Date.now()}` };
+    } catch (err) {
+        console.error('[uploadProofPhoto]', err);
+        return { ok: false, error: err instanceof Error ? err.message : 'Caricamento non riuscito.' };
+    }
 }
 
 /** Crea deliveryProof vuoto se manca, per upload admin su ordini senza proof. */

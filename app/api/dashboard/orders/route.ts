@@ -42,6 +42,8 @@ export async function POST(request: Request) {
             productId: String(body.productId || ''),
             quantity: body.quantity != null ? Number(body.quantity) : 1,
             priceCents: body.priceCents != null ? Number(body.priceCents) : null,
+            accessories: Array.isArray(body.accessories) ? body.accessories : undefined,
+            ticketMessage: body.ticketMessage ?? null,
             partnerId: body.partnerId ?? null,
             userId: body.userId ?? null,
             deceasedProfileId: body.deceasedProfileId ?? null,

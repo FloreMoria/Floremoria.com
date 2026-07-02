@@ -22,6 +22,8 @@ export type DuplicateOrderDraft = {
     partnerPaymentStatus: string;
     isRecurring: boolean;
     additionalInstructions: string;
+    selectedAccessoryIds: string[];
+    ticketMessage: string;
     sourceOrderNumber?: string;
 };
 
@@ -92,7 +94,15 @@ export function orderToDuplicateDraft(order: Record<string, any>): DuplicateOrde
     );
 
     const firstItem = order.items?.[0];
-    const productId = firstItem?.productId || firstItem?.product?.id || '';
+    const mainItem =
+        order.items?.find((item: { product?: { isBouquet?: boolean } }) => item.product?.isBouquet !== false) ??
+        firstItem;
+    const productId = mainItem?.productId || mainItem?.product?.id || '';
+    const accessoryItems =
+        order.items?.filter(
+            (item: { product?: { isBouquet?: boolean }; productId?: string }) =>
+                item.product?.isBouquet === false && item.productId !== productId
+        ) ?? [];
     const isRecurring = Boolean(order.isRecurring);
 
     const buyerEmail =
@@ -116,13 +126,17 @@ export function orderToDuplicateDraft(order: Record<string, any>): DuplicateOrde
         gravePosition: order.gravePosition || '',
         deliveryDate: suggestNextDeliveryDate(order.deliveryDate, isRecurring),
         productId,
-        priceCents: firstItem?.priceCents ?? '',
-        quantity: firstItem?.quantity ?? 1,
+        priceCents: mainItem?.priceCents ?? '',
+        quantity: mainItem?.quantity ?? 1,
         partnerId: order.partnerId || '',
         status: 'ACCEPTED',
         partnerPaymentStatus: order.partnerPaymentStatus || 'PAID',
         isRecurring,
         additionalInstructions: buildDuplicateNote(order),
+        selectedAccessoryIds: accessoryItems
+            .map((item: { productId?: string; product?: { id?: string } }) => item.productId || item.product?.id)
+            .filter(Boolean) as string[],
+        ticketMessage: order.ticketMessage ? String(order.ticketMessage) : '',
         sourceOrderNumber: order.orderNumber || undefined,
     };
 }

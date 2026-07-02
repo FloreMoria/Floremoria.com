@@ -13,8 +13,14 @@ import {
     normalizeDeliveryProvince,
     normalizeOrderCategory,
 } from '@/lib/orders/orderNumber';
+import { productRequiresCustomMessage } from '@/lib/orders/productCustomText';
 
 export const MANUAL_ORDER_IMPORT_TAG = 'IMPORT_MANUALE: dashboard admin';
+
+export type ManualOrderAccessoryInput = {
+    productId: string;
+    quantity?: number;
+};
 
 export type CreateDashboardManualOrderInput = {
     orderCategory: string;
@@ -32,6 +38,10 @@ export type CreateDashboardManualOrderInput = {
     productId: string;
     quantity?: number;
     priceCents?: number | null;
+    /** Accessori aggiuntivi (lumino, messaggio, nastro, ecc.). */
+    accessories?: ManualOrderAccessoryInput[];
+    /** Testo biglietto / nastro commemorativo. */
+    ticketMessage?: string | null;
     partnerId?: string | null;
     userId?: string | null;
     deceasedProfileId?: string | null;
@@ -105,16 +115,55 @@ export async function createDashboardManualOrder(
 
     const product = await prisma.product.findFirst({
         where: { id: productId, deletedAt: null },
-        select: { id: true, basePriceCents: true },
+        select: { id: true, basePriceCents: true, isBouquet: true, slug: true },
     });
     if (!product) throw new Error('Prodotto non trovato.');
+    if (!product.isBouquet) {
+        throw new Error('Seleziona un omaggio floreale principale; gli accessori vanno aggiunti sotto.');
+    }
 
     const quantity = Math.max(1, Number(input.quantity ?? 1));
     const unitPrice =
         input.priceCents != null && Number.isFinite(input.priceCents)
             ? Math.max(0, Math.round(input.priceCents))
             : product.basePriceCents;
-    const totalPriceCents = unitPrice * quantity;
+
+    const accessoryLines: { productId: string; quantity: number; priceCents: number; slug: string }[] = [];
+    const rawAccessories = Array.isArray(input.accessories) ? input.accessories : [];
+
+    for (const line of rawAccessories) {
+        const accId = line.productId?.trim();
+        if (!accId) continue;
+
+        const accProduct = await prisma.product.findFirst({
+            where: { id: accId, deletedAt: null },
+            select: { id: true, basePriceCents: true, isBouquet: true, slug: true },
+        });
+        if (!accProduct) throw new Error(`Accessorio non trovato (${accId}).`);
+        if (accProduct.isBouquet) {
+            throw new Error(`"${accProduct.slug}" non è un accessorio.`);
+        }
+
+        const accQty = Math.max(1, Number(line.quantity ?? 1));
+        accessoryLines.push({
+            productId: accProduct.id,
+            quantity: accQty,
+            priceCents: accProduct.basePriceCents,
+            slug: accProduct.slug,
+        });
+    }
+
+    const requiresTicketMessage = accessoryLines.some((line) =>
+        productRequiresCustomMessage(line.slug)
+    );
+    const ticketMessage = input.ticketMessage?.trim() || null;
+    if (requiresTicketMessage && !ticketMessage) {
+        throw new Error('Inserisci il testo per Messaggio o Nastro commemorativo.');
+    }
+
+    const totalPriceCents =
+        unitPrice * quantity +
+        accessoryLines.reduce((sum, line) => sum + line.priceCents * line.quantity, 0);
 
     const orderCategory = normalizeOrderCategory(input.orderCategory);
     const deliveryProvince = normalizeDeliveryProvince(input.deliveryProvince);
@@ -150,6 +199,7 @@ export async function createDashboardManualOrder(
         deliveryProvince,
         deliveryDate: parseOptionalDate(input.deliveryDate),
         totalPriceCents,
+        ticketMessage,
         isRecurring: Boolean(input.isRecurring),
         partnerPaymentStatus,
         status,
@@ -161,11 +211,18 @@ export async function createDashboardManualOrder(
             ? { deceasedProfile: { connect: { id: input.deceasedProfileId.trim() } } }
             : {}),
         items: {
-            create: {
-                productId: product.id,
-                quantity,
-                priceCents: unitPrice,
-            },
+            create: [
+                {
+                    productId: product.id,
+                    quantity,
+                    priceCents: unitPrice,
+                },
+                ...accessoryLines.map((line) => ({
+                    productId: line.productId,
+                    quantity: line.quantity,
+                    priceCents: line.priceCents,
+                })),
+            ],
         },
     };
 

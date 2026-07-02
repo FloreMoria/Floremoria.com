@@ -6,12 +6,18 @@ import {
     orderToDuplicateDraft,
     type DuplicateOrderDraft,
 } from '@/lib/orders/duplicateOrderDraft';
+import {
+    orderCategoryToCatalogSlug,
+    productRequiresCustomMessage,
+} from '@/lib/orders/productCustomText';
 
 type FloristOption = { id: string; shopName: string; ownerName: string | null };
 type ProductOption = {
     id: string;
     name: string;
     basePriceCents: number;
+    slug?: string;
+    isBouquet?: boolean;
     category?: { slug: string } | null;
 };
 type UserOption = {
@@ -92,6 +98,27 @@ export default function CreateOrderModal({
     const [partnerPaymentStatus, setPartnerPaymentStatus] = useState('PAID');
     const [isRecurring, setIsRecurring] = useState(false);
     const [additionalInstructions, setAdditionalInstructions] = useState('');
+    const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>([]);
+    const [ticketMessage, setTicketMessage] = useState('');
+
+    const catalogSlug = orderCategoryToCatalogSlug(orderCategory);
+    const mainProducts = products.filter((p) => p.isBouquet !== false);
+    const availableAccessories = products.filter(
+        (p) =>
+            p.isBouquet === false &&
+            (!catalogSlug || p.category?.slug === catalogSlug)
+    );
+    const showCustomTextField = selectedAccessoryIds.some((id) => {
+        const p = products.find((x) => x.id === id);
+        return productRequiresCustomMessage(p?.slug);
+    });
+
+    const estimatedTotalCents =
+        (priceCents === '' ? 0 : Number(priceCents) || 0) * quantity +
+        selectedAccessoryIds.reduce((sum, id) => {
+            const p = products.find((x) => x.id === id);
+            return sum + (p?.basePriceCents ?? 0);
+        }, 0);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -127,10 +154,26 @@ export default function CreateOrderModal({
     }, [open, refreshCodePreview]);
 
     useEffect(() => {
-        if (!productId && products[0]?.id) {
-            setProductId(products[0].id);
+        if (!productId && mainProducts[0]?.id) {
+            setProductId(mainProducts[0].id);
         }
-    }, [products, productId]);
+    }, [mainProducts, productId]);
+
+    useEffect(() => {
+        const slug = orderCategoryToCatalogSlug(orderCategory);
+        setSelectedAccessoryIds((prev) =>
+            prev.filter((id) => {
+                const p = products.find((x) => x.id === id);
+                return p?.isBouquet === false && (!slug || p.category?.slug === slug);
+            })
+        );
+    }, [orderCategory, products]);
+
+    const toggleAccessory = (id: string) => {
+        setSelectedAccessoryIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+    };
 
     const handleUserPick = (id: string) => {
         setUserId(id);
@@ -171,7 +214,7 @@ export default function CreateOrderModal({
         setCemeteryCity(draft.cemeteryCity);
         setGravePosition(draft.gravePosition);
         setDeliveryDate(draft.deliveryDate);
-        setProductId(draft.productId || products[0]?.id || '');
+        setProductId(draft.productId || mainProducts[0]?.id || products[0]?.id || '');
         setPriceCents(draft.priceCents);
         setQuantity(draft.quantity);
         setPartnerId(draft.partnerId);
@@ -179,9 +222,11 @@ export default function CreateOrderModal({
         setPartnerPaymentStatus(draft.partnerPaymentStatus);
         setIsRecurring(draft.isRecurring);
         setAdditionalInstructions(draft.additionalInstructions);
+        setSelectedAccessoryIds(draft.selectedAccessoryIds);
+        setTicketMessage(draft.ticketMessage);
         setDuplicateSourceLabel(draft.sourceOrderNumber || null);
         setError(null);
-    }, [products]);
+    }, [products, mainProducts]);
 
     useEffect(() => {
         if (!open) return;
@@ -211,12 +256,15 @@ export default function CreateOrderModal({
         setPartnerPaymentStatus('PAID');
         setIsRecurring(false);
         setAdditionalInstructions('');
+        setSelectedAccessoryIds([]);
+        setTicketMessage('');
         setOrderCategory('FT');
         setDeliveryProvince('MI');
         setDuplicateSourceLabel(null);
         if (products[0]) {
-            setProductId(products[0].id);
-            setPriceCents(products[0].basePriceCents);
+            const firstMain = products.find((p) => p.isBouquet !== false) ?? products[0];
+            setProductId(firstMain.id);
+            setPriceCents(firstMain.basePriceCents);
         }
     };
 
@@ -226,6 +274,10 @@ export default function CreateOrderModal({
         setError(null);
 
         try {
+            if (showCustomTextField && !ticketMessage.trim()) {
+                throw new Error('Inserisci il testo per Messaggio o Nastro commemorativo.');
+            }
+
             const res = await fetch('/api/dashboard/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -252,6 +304,8 @@ export default function CreateOrderModal({
                     partnerPaymentStatus,
                     isRecurring,
                     additionalInstructions: additionalInstructions || null,
+                    accessories: selectedAccessoryIds.map((productId) => ({ productId, quantity: 1 })),
+                    ticketMessage: ticketMessage.trim() || null,
                 }),
             });
 
@@ -467,7 +521,7 @@ export default function CreateOrderModal({
                                 onChange={(e) => handleProductChange(e.target.value)}
                                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm md:col-span-2"
                             >
-                                {products.map((p) => (
+                                {mainProducts.map((p) => (
                                     <option key={p.id} value={p.id}>
                                         {p.name} — €{(p.basePriceCents / 100).toFixed(2)}
                                     </option>
@@ -539,6 +593,64 @@ export default function CreateOrderModal({
                                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm md:col-span-2"
                             />
                         </div>
+
+                        {availableAccessories.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                                    Accessori
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {availableAccessories.map((acc) => (
+                                        <label
+                                            key={acc.id}
+                                            className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                                                selectedAccessoryIds.includes(acc.id)
+                                                    ? 'border-amber-300 bg-amber-50/60'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedAccessoryIds.includes(acc.id)}
+                                                onChange={() => toggleAccessory(acc.id)}
+                                                className="mt-0.5"
+                                            />
+                                            <span className="text-sm text-gray-800">
+                                                <span className="font-medium block">{acc.name}</span>
+                                                <span className="text-gray-500 text-xs">
+                                                    €{(acc.basePriceCents / 100).toFixed(2)}
+                                                </span>
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {showCustomTextField && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-1">
+                                <label className="block text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1.5">
+                                    Testo messaggio / nastro <span className="text-red-600">*</span>
+                                </label>
+                                <textarea
+                                    required
+                                    placeholder="Scrivi qui il pensiero da stampare sul biglietto o sul nastro..."
+                                    value={ticketMessage}
+                                    onChange={(e) => setTicketMessage(e.target.value)}
+                                    rows={3}
+                                    className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                                />
+                            </div>
+                        )}
+
+                        {estimatedTotalCents > 0 && (
+                            <p className="mt-3 text-sm text-gray-600">
+                                Totale stimato:{' '}
+                                <span className="font-semibold text-gray-900">
+                                    €{(estimatedTotalCents / 100).toFixed(2)}
+                                </span>
+                            </p>
+                        )}
                     </section>
 
                     <p className="text-xs text-gray-500">

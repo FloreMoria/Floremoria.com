@@ -6,6 +6,7 @@ import Image from 'next/image';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CreateUserModal from '@/components/dashboard/CreateUserModal';
+import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 const formatITDate = (dateStr: string | null) => {
@@ -517,6 +518,20 @@ export default function ClientUsersTable({
                                                         <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-fm-gold" />
                                                         <span><strong>Posizione:</strong> {order.gravePosition || 'Non specificata in ordine'}</span>
                                                     </div>
+
+                                                    {order.gdmMagicLinkUrl ? (
+                                                        <ShareableLinkPanel
+                                                            label="Magic link GdM — foto e bacheca cliente"
+                                                            url={order.gdmMagicLinkUrl}
+                                                            hint="Accesso diretto al Giardino della Memoria (valido 24 ore dal momento in cui copi/invii il link)."
+                                                            whatsappPhone={
+                                                                selectedUser.phone && selectedUser.phone !== 'Non specificato'
+                                                                    ? selectedUser.phone
+                                                                    : order.customerPhone
+                                                            }
+                                                            whatsappIntro={`Gentile ${selectedUser.name || 'cliente'}, ecco il tuo link personale FloreMoria per vedere le foto della consegna in memoria di ${order.deceasedName}:`}
+                                                        />
+                                                    ) : null}
 
                                                     {/* Form date Defunto */}
                                                     <form onSubmit={(e) => handleSaveOrderDates(e, order)} className="bg-white border text-sm border-gray-200 rounded-lg p-3">

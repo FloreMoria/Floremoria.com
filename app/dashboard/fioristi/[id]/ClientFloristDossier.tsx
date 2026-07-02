@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { Partner } from '@prisma/client';
 import {
     Download, Maximize2,
-    Package, Calendar, Euro, AlertCircle, CheckCircle2, X
+    Package, Calendar, Euro, AlertCircle, CheckCircle2, X, Link2
 } from 'lucide-react';
 import Image from 'next/image';
+import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 
 import { PaymentStatus, OrderStatus } from '@prisma/client';
 
@@ -17,9 +18,12 @@ interface DossierProps {
 
 export default function ClientFloristDossier({ partner, orders: initialOrders }: DossierProps) {
     const [orders, setOrders] = useState(initialOrders);
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
     // Lightbox State
     const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+    const selectedOrder = orders.find((o) => o.id === selectedOrderId) ?? null;
 
     const getStatusColor = (status: OrderStatus) => {
         switch (status) {
@@ -113,8 +117,14 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                             const hasPhoto = order.photos && order.photos.length > 0;
 
                                             return (
-                                                <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group">
-                                                    <td className="py-3 px-4 font-bold text-gray-900 text-xs">#{order.id.slice(-6).toUpperCase()}</td>
+                                                <tr
+                                                    key={order.id}
+                                                    className={`transition-colors cursor-pointer ${selectedOrderId === order.id ? 'bg-blue-50/60' : 'hover:bg-gray-50/50 group'}`}
+                                                    onClick={() => setSelectedOrderId((prev) => (prev === order.id ? null : order.id))}
+                                                >
+                                                    <td className="py-3 px-4 font-bold text-gray-900 text-xs">
+                                                        {order.orderNumber || `#${order.id.slice(-6).toUpperCase()}`}
+                                                    </td>
                                                     <td className="py-3 px-4 text-gray-800 text-xs font-medium">{order.buyerFullName || order.customerPhone || 'Anonimo'}</td>
                                                     <td className="py-3 px-4 text-gray-600 font-medium text-xs">{order.deceasedName || '-'}</td>
                                                     <td className="py-3 px-4 text-gray-600 text-[11px] leading-tight max-w-[120px]">
@@ -164,6 +174,44 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                             </table>
                         </div>
                     </div>
+
+                    {selectedOrder ? (
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-5 space-y-4 animate-in fade-in">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 flex items-center gap-1.5">
+                                        <Link2 size={12} /> Dettaglio ordine assegnato
+                                    </p>
+                                    <h3 className="text-lg font-bold text-gray-900 mt-1">
+                                        {selectedOrder.orderNumber || `#${selectedOrder.id.slice(-6).toUpperCase()}`} — {selectedOrder.deceasedName}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {selectedOrder.cemeteryName}, {selectedOrder.cemeteryCity}
+                                        {selectedOrder.deliveryDate
+                                            ? ` · Consegna ${new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT')}`
+                                            : ''}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedOrderId(null)}
+                                    className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-white border border-transparent hover:border-gray-200"
+                                    aria-label="Chiudi dettaglio"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            {selectedOrder.floristDeliveryUrl ? (
+                                <ShareableLinkPanel
+                                    label="Link mini-app fiorista (foto consegna)"
+                                    url={selectedOrder.floristDeliveryUrl}
+                                    hint="Stesso link inviato via WhatsApp al fiorista. Valido finché l'ordine è attivo."
+                                    whatsappPhone={partner.whatsappNumber}
+                                    whatsappIntro={`Ciao, ecco il link FloreMoria per caricare le foto di consegna — ordine ${selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()} per ${selectedOrder.deceasedName}:`}
+                                />
+                            ) : null}
+                        </div>
+                    ) : null}
                 </div>
 
             </div>

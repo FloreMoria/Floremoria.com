@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
 import { visibleDashboardOrdersWhere, ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
+import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
@@ -117,10 +118,12 @@ export default async function OrdersPage() {
         if (!deceasedResult.ok) dbErrors.push(deceasedResult.error);
     }
 
-    const displayOrders = ordersData.map((o) => ({
-        ...o,
-        specialNotes: o.additionalInstructions || '',
-    }));
+    const displayOrders = ordersData.map((o) =>
+        enrichOrderWithShareableLinks({
+            ...o,
+            specialNotes: o.additionalInstructions || '',
+        })
+    );
 
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

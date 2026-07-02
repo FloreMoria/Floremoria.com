@@ -3,6 +3,7 @@ import ClientUsersTable from './ClientUsersTable';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
+import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export default async function UsersPage() {
         }
 
         const userGroup = usersMap.get(key)!;
-        userGroup.orders.push(order);
+        userGroup.orders.push(enrichOrderWithShareableLinks(order));
         userGroup.totalSpentCents += order.totalPriceCents;
         if (!userGroup.profilePicUrl && order.user?.avatarUrl) {
             userGroup.profilePicUrl = order.user.avatarUrl;

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
 import OrderDetailProofUpload from '@/components/dashboard/OrderDetailProofUpload';
+import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
@@ -963,6 +964,24 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                         <span>{selectedOrder.partner?.shopName || selectedOrder.partner?.ownerName || 'Nessun fiorista'}</span>
                                     </div>
                                 )}
+                                {selectedOrder.partnerId && selectedOrder.floristDeliveryUrl ? (
+                                    <ShareableLinkPanel
+                                        label="Link mini-app fiorista"
+                                        url={selectedOrder.floristDeliveryUrl}
+                                        hint="Da inviare al fiorista per caricare le foto prima/dopo la posa."
+                                        whatsappPhone={selectedOrder.partner?.whatsappNumber}
+                                        whatsappIntro={`Link consegna FloreMoria — ordine ${selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()}:`}
+                                    />
+                                ) : null}
+                                {selectedOrder.gdmMagicLinkUrl ? (
+                                    <ShareableLinkPanel
+                                        label="Magic link cliente (GdM)"
+                                        url={selectedOrder.gdmMagicLinkUrl}
+                                        hint="Accesso cliente alle foto nel Giardino della Memoria (24h)."
+                                        whatsappPhone={selectedOrder.customerPhone}
+                                        whatsappIntro={`Il tuo link FloreMoria per vedere le foto in memoria di ${selectedOrder.deceasedName}:`}
+                                    />
+                                ) : null}
                             </div>
 
                             {/* DETTAGLI CONSEGNA E NOTE */}

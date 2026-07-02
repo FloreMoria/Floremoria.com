@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import ClientFloristDossier from './ClientFloristDossier';
 import ClientPrintButton from './ClientPrintButton';
+import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
     const { id } = await params;
@@ -92,7 +93,10 @@ export default async function FloristDossierPage({ params }: { params: { id: str
             </div>
 
             {/* Iniezione Moduli Interattivi */}
-            <ClientFloristDossier partner={partner} orders={partner.orders} />
+            <ClientFloristDossier
+                partner={partner}
+                orders={partner.orders.map(enrichOrderWithShareableLinks)}
+            />
         </div>
     );
 }

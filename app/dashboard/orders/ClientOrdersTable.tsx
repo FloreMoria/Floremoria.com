@@ -59,6 +59,20 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const statusTabOrder = ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
 
+    const formatDeliveryDate = (order: { deliveryDate?: string | Date | null; funeralDate?: string | Date | null }) => {
+        const raw = order.deliveryDate || order.funeralDate;
+        if (!raw) return '—';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '—';
+        const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+        return d.toLocaleDateString(
+            'it-IT',
+            hasTime
+                ? { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+                : { day: '2-digit', month: '2-digit', year: 'numeric' }
+        );
+    };
+
     const handleSelectOrder = (order: any) => {
         setSelectedOrder(order);
     };
@@ -197,6 +211,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const handleExportCSV = () => {
         const exportData = filteredOrders.map(o => ({
             'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
+            'Data Consegna': formatDeliveryDate(o),
             'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
             'Utente': o.buyerFullName || 'Sconosciuto',
             'Telefono': o.customerPhone || '',
@@ -363,6 +378,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Data e N° Ordine</th>
+                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider whitespace-nowrap">Data Consegna</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">Foto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Defunto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Utente</th>
@@ -379,7 +395,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                         <tbody className="divide-y divide-gray-100">
                             {filteredOrders.length === 0 && (
                                 <tr>
-                                    <td colSpan={12} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
+                                    <td colSpan={13} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
                                 </tr>
                             )}
                             {filteredOrders.map(order => {
@@ -395,6 +411,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
                                             <div className="font-bold text-black text-[14px]">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
+                                        </td>
+                                        <td className="py-3 px-3 whitespace-nowrap">
+                                            <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px]">
+                                                {formatDeliveryDate(order)}
+                                            </div>
                                         </td>
                                         <td className="py-3 px-3 text-center align-middle">
                                             {order.photos && order.photos.length > 0 ? (

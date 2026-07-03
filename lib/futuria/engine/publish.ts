@@ -56,7 +56,7 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
       imageUrl: { not: '' },
     },
     orderBy: { updatedAt: 'asc' },
-    take: limit,
+    take: 1, // Prendi solo la più vecchia APPROVED per frequenza giornaliera singola
   });
 
   const publishReady = campaigns.filter((c) => c.imageUrl?.trim());

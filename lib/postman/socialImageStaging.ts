@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { get, put } from '@vercel/blob';
 import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { fetchProofImageBuffer } from '@/lib/deliveryProof/blobProofStorage';
+import sharp from 'sharp';
 
 const STAGING_PREFIX = 'futuria/campagne/publish-staging';
 const STAGING_TTL_MS = 20 * 60 * 1000;
@@ -88,29 +89,32 @@ export function verifySocialStagingToken(
 /**
  * Copia temporanea su Blob privato + URL pubblico firmato (HMAC) servito da /api/social-publish/staging/.
  * Meta/Instagram richiedono un URL HTTP raggiungibile: il nostro endpoint legge il Blob con token.
+ * Converte SEMPRE in JPEG via Sharp per compatibilità Instagram Graph API.
  */
 export async function ensureMetaFetchableImageUrl(
   campaignId: string,
   imageUrl: string,
   blobToken?: string
 ): Promise<string> {
-  if (!imageUrl.includes('private.blob.vercel-storage.com')) {
-    return imageUrl;
-  }
-
   const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
   if (!token) {
     throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre immagine a Meta.');
   }
 
-  const bytes = await fetchProofImageBuffer(imageUrl);
-  const contentType = contentTypeFromUrl(imageUrl);
-  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpg' : 'webp';
-  const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.${ext}`;
+  // Scarica il buffer originale
+  const sourceBytes = await fetchProofImageBuffer(imageUrl);
 
-  await put(pathname, bytes, {
+  // Forza la conversione a JPEG progressiva con Sharp per massima compatibilità Instagram Graph API
+  const jpegBytes = await sharp(sourceBytes, { failOn: 'none' })
+    .rotate()
+    .jpeg({ quality: 90, progressive: true })
+    .toBuffer();
+
+  const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.jpg`;
+
+  await put(pathname, jpegBytes, {
     access: getBlobStoreAccess(),
-    contentType,
+    contentType: 'image/jpeg',
     token,
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -121,7 +125,7 @@ export async function ensureMetaFetchableImageUrl(
   const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
 
   console.log(
-    `[POSTMAN] Staging Meta — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
+    `[POSTMAN] Staging Meta (JPEG forzato) — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
   );
 
   return publicUrl;

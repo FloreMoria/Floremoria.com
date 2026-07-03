@@ -138,7 +138,7 @@ export async function fetchStagedImageBytes(
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
   
-  const blobResult = await get(absoluteUrl, { token, useCache: false });
+  const blobResult = await get(absoluteUrl, { access: getBlobStoreAccess(), token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }

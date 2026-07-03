@@ -81,7 +81,7 @@ export function verifySocialStagingToken(
   }
 
   if (Date.now() > expiresAt) return null;
-  if (!pathname.startsWith(`${STAGING_PREFIX}/`)) return null;
+  if (!pathname.includes(`/${STAGING_PREFIX}/`)) return null;
 
   return { pathname, expiresAt };
 }
@@ -113,7 +113,7 @@ export async function ensureMetaFetchableImageUrl(
   const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.jpg`;
 
   const { putBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
-  await putBlobWithAccessFallback(pathname, jpegBytes, {
+  const uploadResult = await putBlobWithAccessFallback(pathname, jpegBytes, {
     contentType: 'image/jpeg',
     token,
     addRandomSuffix: false,
@@ -121,7 +121,7 @@ export async function ensureMetaFetchableImageUrl(
   });
 
   const expiresAt = Date.now() + STAGING_TTL_MS;
-  const stagingToken = createStagingToken(pathname, expiresAt);
+  const stagingToken = createStagingToken(uploadResult.url, expiresAt);
   const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
 
   console.log(
@@ -131,38 +131,21 @@ export async function ensureMetaFetchableImageUrl(
   return publicUrl;
 }
 
-function getBlobUrlFromPathname(pathname: string, token: string): string {
-  // Cerchiamo prima di usare la variabile d'ambiente standard di Vercel Blob
-  let storeId = process.env.BLOB_STORE_ID?.replace('store_', '').toLowerCase().trim();
-  
-  if (!storeId) {
-    // Fallback sulla decodifica del token
-    const parts = token.split('_');
-    storeId = parts[3]?.toLowerCase().trim();
-  }
-  
-  if (!storeId) {
-    throw new Error('Impossibile determinare lo Store ID per Vercel Blob');
-  }
-  return `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
-}
-
-/** Legge bytes dallo staging Blob privato (route API). */
+/** Legge bytes dallo staging Blob (route API). */
 export async function fetchStagedImageBytes(
-  pathname: string,
+  absoluteUrl: string,
   blobToken: string
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
-  const absoluteUrl = getBlobUrlFromPathname(pathname, token);
   
-  const blobResult = await get(absoluteUrl, { access: getBlobStoreAccess(), token, useCache: false });
+  const blobResult = await get(absoluteUrl, { token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }
 
   const bytes = Buffer.from(await new Response(blobResult.stream).arrayBuffer());
   const contentType =
-    blobResult.blob?.contentType?.trim() || contentTypeFromUrl(pathname);
+    blobResult.blob?.contentType?.trim() || contentTypeFromUrl(absoluteUrl);
 
   return { bytes, contentType };
 }

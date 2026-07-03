@@ -112,8 +112,8 @@ export async function ensureMetaFetchableImageUrl(
 
   const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.jpg`;
 
-  await put(pathname, jpegBytes, {
-    access: getBlobStoreAccess(),
+  const { putBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
+  await putBlobWithAccessFallback(pathname, jpegBytes, {
     contentType: 'image/jpeg',
     token,
     addRandomSuffix: false,

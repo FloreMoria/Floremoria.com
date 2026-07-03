@@ -30,7 +30,7 @@ type PutBlobOptions = Omit<PutCommandOptions, 'access'>;
  */
 export async function putBlobWithAccessFallback(
     pathname: string,
-    body: PutCommandOptions['body'],
+    body: Parameters<typeof put>[1],
     options: PutBlobOptions
 ): Promise<PutBlobResult> {
     const preferred = getBlobStoreAccess();

@@ -434,7 +434,7 @@ async function publishToLinkedIn(
     throw new Error(message);
   }
 
-  const externalId = ugcPayload.id || asset;
+  const externalId = (typeof ugcPayload.id === 'string' ? ugcPayload.id : null) || asset;
   console.log(`[POSTMAN] LinkedIn pubblicato — ugcPost ${externalId} (campagna ${campaign.id})`);
   return externalId;
 }

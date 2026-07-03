@@ -236,7 +236,6 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                 <thead>
                                     <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-500">
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">ID Ordine</th>
-                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Utente</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Defunto</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap">Consegna</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider min-w-[150px]">Prodotto/i</th>
@@ -248,7 +247,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {orders.length === 0 ? (
-                                        <tr><td colSpan={9} className="p-8 text-center text-gray-500">Nessun ordine assegnato a questo fiorista.</td></tr>
+                                        <tr><td colSpan={8} className="p-8 text-center text-gray-500">Nessun ordine assegnato a questo fiorista.</td></tr>
                                     ) : (
                                         orders.map((order) => {
                                             const netEarned = Math.floor((order.totalPriceCents / 100) * 0.65);
@@ -278,7 +277,6 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
                                                             </span>
                                                         ) : null}
                                                     </td>
-                                                    <td className="py-3 px-4 text-gray-800 text-xs font-medium">{order.buyerFullName || order.customerPhone || 'Anonimo'}</td>
                                                     <td className="py-3 px-4 text-gray-600 font-medium text-xs">{order.deceasedName || '-'}</td>
                                                     <td className="py-3 px-4 text-gray-600 text-[11px] leading-tight max-w-[120px]">
                                                         <div className="font-semibold text-gray-800">{order.cemeteryCity || '-'}</div>

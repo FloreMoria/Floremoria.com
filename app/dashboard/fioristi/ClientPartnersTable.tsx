@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import { Partner, PaymentStatus } from '@prisma/client';
-import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar } from 'lucide-react';
+import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
 
 export type ExtendedPartner = Partner & { orders?: any[] };
+
+function sortOrdersByRecency(orders: any[]): any[] {
+    return [...orders].sort((a, b) => {
+        const aMs = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
+        const bMs = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+        return bMs - aMs;
+    });
+}
 
 interface Props {
     initialPartners: ExtendedPartner[];
@@ -175,6 +183,37 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             }
         } catch {
             alert('Errore aggiornamento missione');
+        } finally {
+            setSavingOrderId(null);
+        }
+    };
+
+    const handleCancelAssignedOrder = async (order: any) => {
+        const ok = window.confirm(
+            `Confermi eliminazione/dissociazione ordine ${order.orderNumber || order.id}?`
+        );
+        if (!ok) return;
+
+        setSavingOrderId(order.id);
+        try {
+            const res = await fetch(`/api/dashboard/orders/${order.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok || !data?.ok) {
+                throw new Error(data?.error || 'Cancellazione non riuscita.');
+            }
+            const cancelledAt = data.order?.deletedAt ?? new Date().toISOString();
+            const updatedOrders =
+                formData.orders?.map((o) =>
+                    o.id === order.id
+                        ? { ...o, status: 'CANCELLED', deletedAt: cancelledAt }
+                        : o
+                ) || [];
+            const updatedFormData = { ...formData, orders: updatedOrders };
+            setFormData(updatedFormData);
+            setPartners((prev) => prev.map((p) => (p.id === formData.id ? updatedFormData : p)));
+            alert('Ordine cancellato.');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore cancellazione ordine.');
         } finally {
             setSavingOrderId(null);
         }
@@ -658,7 +697,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                     <p className="text-gray-500 font-medium">Ancora nessun ordine assegnato a questo fiorista.</p>
                                 </div>
                             ) : (
-                                (formData.orders || []).map((order) => {
+                                sortOrdersByRecency(formData.orders || []).map((order) => {
                                     const productName = order.items?.[0]?.product?.name || 'Prodotto Sconosciuto';
                                     return (
                                     <div key={order.id} className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden flex flex-col">
@@ -684,15 +723,9 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                  
                                                  {/* Box Info Ordine */}
                                                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <span className="text-[10px] uppercase font-bold text-gray-400 block mb-0.5">Prodotto Acquistato</span>
-                                                            <span className="text-sm font-semibold text-gray-900">{productName}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] uppercase font-bold text-gray-400 block mb-0.5">Utente Appaltante</span>
-                                                            <span className="text-sm font-semibold text-gray-900">{order.buyerFullName || order.user?.name || 'Utente Sconosciuto'}</span>
-                                                        </div>
+                                                    <div>
+                                                        <span className="text-[10px] uppercase font-bold text-gray-400 block mb-0.5">Prodotto Acquistato</span>
+                                                        <span className="text-sm font-semibold text-gray-900">{productName}</span>
                                                     </div>
                                                     {(order.ticketMessage || order.additionalInstructions) && (
                                                         <div className="pt-3 border-t border-gray-200/50 space-y-2">
@@ -733,9 +766,20 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                          <label className="text-[10px] font-bold text-gray-400 uppercase">Data Target Consegna</label>
                                                          <input type="date" name="deliveryDate" defaultValue={order.deliveryDate ? new Date(order.deliveryDate).toISOString().split('T')[0] : ''} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none" required />
                                                      </div>
-                                                     <button type="submit" disabled={savingOrderId === order.id} className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-xs transition duration-200 disabled:opacity-50">
-                                                         {savingOrderId === order.id ? 'Salvataggio...' : 'Applica Modifiche Ordine'}
-                                                     </button>
+                                                     <div className="flex flex-col sm:flex-row gap-2">
+                                                         <button type="submit" disabled={savingOrderId === order.id} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-xs transition duration-200 disabled:opacity-50">
+                                                             {savingOrderId === order.id ? 'Salvataggio...' : 'Applica Modifiche Ordine'}
+                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => void handleCancelAssignedOrder(order)}
+                                                             disabled={savingOrderId === order.id || order.status === 'CANCELLED' || order.deletedAt}
+                                                             className="inline-flex items-center justify-center gap-1.5 px-4 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2 rounded-lg text-xs border border-red-200 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                         >
+                                                             <Trash2 size={14} />
+                                                             Elimina / Dissocia Ordine
+                                                         </button>
+                                                     </div>
                                                  </form>
                                              </div>
 

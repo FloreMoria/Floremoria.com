@@ -421,9 +421,17 @@ async function publishToLinkedIn(
     }),
   });
 
-  const ugcPayload = (await ugcRes.json()) as { id?: string; message?: string };
+  const ugcPayload = (await ugcRes.json()) as Record<string, unknown>;
   if (!ugcRes.ok) {
-    throw new Error(ugcPayload.message || `LinkedIn ugcPosts error (${ugcRes.status})`);
+    console.error(
+      '[POSTMAN] LinkedIn ugcPosts error — payload completo:',
+      JSON.stringify(ugcPayload, null, 2)
+    );
+    const message =
+      typeof ugcPayload.message === 'string'
+        ? ugcPayload.message
+        : `LinkedIn ugcPosts error (${ugcRes.status})`;
+    throw new Error(message);
   }
 
   const externalId = ugcPayload.id || asset;

@@ -1,5 +1,5 @@
-import { del, get, head, put } from '@vercel/blob';
-import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
+import { del, get, head } from '@vercel/blob';
+import { getBlobStoreAccess, putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 
 /** Rimuove em-dash, ellipsis e altri non-ASCII che rompono fetch (ByteString). */
 export function sanitizeAsciiUrl(raw: string): string {
@@ -83,8 +83,7 @@ export async function fetchProofImageBuffer(url: string): Promise<Buffer> {
 export async function overwriteProofBlob(url: string, buffer: Buffer): Promise<string> {
     const token = getBlobToken();
     const meta = await head(sanitizeAsciiUrl(url), { token });
-    const { url: updatedUrl } = await put(meta.pathname, buffer, {
-        access: getBlobStoreAccess(),
+    const { url: updatedUrl } = await putBlobWithAccessFallback(meta.pathname, buffer, {
         contentType: 'image/webp',
         token,
         addRandomSuffix: false,

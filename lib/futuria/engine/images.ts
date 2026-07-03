@@ -143,6 +143,7 @@ export async function generateAndStorageCampaignImage(
     contentType: mimeType,
     token: getBlobToken(),
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
 
   await prisma.marketingCampaign.update({

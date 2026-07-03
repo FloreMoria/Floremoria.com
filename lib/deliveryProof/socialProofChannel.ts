@@ -70,6 +70,7 @@ export async function sanitizeAndUploadSocialReadyProof(
     contentType: 'image/webp',
     token,
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
 
   console.log(
@@ -172,6 +173,7 @@ export async function uploadSanitizedBufferToSocialReady(
     contentType: 'image/webp',
     token,
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
 
   return url;

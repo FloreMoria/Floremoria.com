@@ -113,6 +113,7 @@ export async function ensureMetaFetchableImageUrl(
     contentType,
     token,
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
 
   const expiresAt = Date.now() + STAGING_TTL_MS;

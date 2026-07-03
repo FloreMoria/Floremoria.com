@@ -87,6 +87,7 @@ export async function overwriteProofBlob(url: string, buffer: Buffer): Promise<s
         contentType: 'image/webp',
         token,
         addRandomSuffix: false,
+        allowOverwrite: true,
     });
     return updatedUrl;
 }

@@ -132,11 +132,17 @@ export async function ensureMetaFetchableImageUrl(
 }
 
 function getBlobUrlFromPathname(pathname: string, token: string): string {
-  // Esempio token: vercel_blob_rw_OsBH260uvMWRyJi7_uPRkqcn...
-  const parts = token.split('_');
-  const storeId = parts[3]?.toLowerCase();
+  // Cerchiamo prima di usare la variabile d'ambiente standard di Vercel Blob
+  let storeId = process.env.BLOB_STORE_ID?.replace('store_', '').toLowerCase().trim();
+  
   if (!storeId) {
-    throw new Error('Impossibile estrarre lo Store ID dal token Vercel Blob');
+    // Fallback sulla decodifica del token
+    const parts = token.split('_');
+    storeId = parts[3]?.toLowerCase().trim();
+  }
+  
+  if (!storeId) {
+    throw new Error('Impossibile determinare lo Store ID per Vercel Blob');
   }
   return `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
 }

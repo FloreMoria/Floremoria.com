@@ -228,6 +228,29 @@ async function metaGraphPost<T>(
   return payload;
 }
 
+async function getFacebookPageAccessToken(
+  fbPageId: string,
+  userAccessToken: string
+): Promise<string> {
+  try {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
+    );
+    const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
+    if (!res.ok || payload.error) {
+      throw new Error(payload.error?.message || `Failed to fetch page token (${res.status})`);
+    }
+    if (!payload.access_token) {
+      throw new Error('Page access token not returned from Meta API');
+    }
+    return payload.access_token;
+  } catch (err) {
+    console.error(`[POSTMAN] Errore recupero Page Access Token per pagina ${fbPageId}:`, err);
+    // In caso di errore proviamo comunque a fare fallback sul token utente configurato
+    return userAccessToken;
+  }
+}
+
 async function publishToFacebook(
   campaign: CampaignPublishInput,
   env: SocialPublishEnv
@@ -237,10 +260,13 @@ async function publishToFacebook(
     throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
   }
 
+  // Risolviamo dinamicamente il Page Access Token per evitare errore #200 (Unpublished posts)
+  const pageAccessToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
+
   const caption = formatCampaignCaption(campaign.copy, campaign.hashtags);
   const photoRes = await metaGraphUploadPhoto(
     fbPageId,
-    metaAccessToken,
+    pageAccessToken,
     campaign.imageUrl,
     blobToken
   );
@@ -249,7 +275,7 @@ async function publishToFacebook(
     throw new Error('Meta Facebook: photo id mancante.');
   }
 
-  const feedRes = await metaGraphPost<{ id?: string }>(`/${fbPageId}/feed`, metaAccessToken, {
+  const feedRes = await metaGraphPost<{ id?: string }>(`/${fbPageId}/feed`, pageAccessToken, {
     message: caption,
     attached_media: JSON.stringify([{ media_fbid: photoRes.id }]),
   });

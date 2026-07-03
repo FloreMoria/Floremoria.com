@@ -131,13 +131,25 @@ export async function ensureMetaFetchableImageUrl(
   return publicUrl;
 }
 
+function getBlobUrlFromPathname(pathname: string, token: string): string {
+  // Esempio token: vercel_blob_rw_OsBH260uvMWRyJi7_uPRkqcn...
+  const parts = token.split('_');
+  const storeId = parts[3]?.toLowerCase();
+  if (!storeId) {
+    throw new Error('Impossibile estrarre lo Store ID dal token Vercel Blob');
+  }
+  return `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
+}
+
 /** Legge bytes dallo staging Blob privato (route API). */
 export async function fetchStagedImageBytes(
   pathname: string,
   blobToken: string
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
-  const blobResult = await get(pathname, { access: getBlobStoreAccess(), token, useCache: false });
+  const absoluteUrl = getBlobUrlFromPathname(pathname, token);
+  
+  const blobResult = await get(absoluteUrl, { access: getBlobStoreAccess(), token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }

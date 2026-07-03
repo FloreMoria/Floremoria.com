@@ -419,7 +419,7 @@ async function publishToLinkedIn(
     throw new Error(`LinkedIn upload immagine fallito (${uploadRes.status}).`);
   }
 
-  const ugcRes = await fetch(`${LINKEDIN_API_BASE}/ugcPosts`, {
+  const postsRes = await fetch(`${LINKEDIN_API_BASE}/posts`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${linkedInAccessToken}`,
@@ -428,40 +428,44 @@ async function publishToLinkedIn(
     },
     body: JSON.stringify({
       author: authorUrn,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text: caption },
-          shareMediaCategory: 'IMAGE',
-          media: [
-            {
-              status: 'READY',
-              media: asset,
-            },
-          ],
+      commentary: caption,
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+      },
+      content: {
+        media: {
+          id: asset,
         },
       },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-      },
+      lifecycleState: 'PUBLISHED',
     }),
   });
 
-  const ugcPayload = (await ugcRes.json()) as Record<string, unknown>;
-  if (!ugcRes.ok) {
+  const responseText = await postsRes.text();
+  let postsPayload: Record<string, unknown> = {};
+  try {
+    postsPayload = JSON.parse(responseText);
+  } catch {
+    // Non sempre le API RestLi restituiscono JSON valido in caso di successo 201
+  }
+
+  if (!postsRes.ok) {
     console.error(
-      '[POSTMAN] LinkedIn ugcPosts error — payload completo:',
-      JSON.stringify(ugcPayload, null, 2)
+      '[POSTMAN] LinkedIn posts error — payload completo:',
+      responseText
     );
     const message =
-      typeof ugcPayload.message === 'string'
-        ? ugcPayload.message
-        : `LinkedIn ugcPosts error (${ugcRes.status})`;
+      typeof postsPayload.message === 'string'
+        ? postsPayload.message
+        : `LinkedIn posts error (${postsRes.status})`;
     throw new Error(message);
   }
 
-  const externalId = (typeof ugcPayload.id === 'string' ? ugcPayload.id : null) || asset;
-  console.log(`[POSTMAN] LinkedIn pubblicato — ugcPost ${externalId} (campagna ${campaign.id})`);
+  // L'ID del post creato viene spesso ritornato nell'header 'x-restli-id' o nel body
+  const restliId = postsRes.headers.get('x-restli-id');
+  const externalId = restliId || (typeof postsPayload.id === 'string' ? postsPayload.id : null) || asset;
+  console.log(`[POSTMAN] LinkedIn pubblicato — post ${externalId} (campagna ${campaign.id})`);
   return externalId;
 }
 

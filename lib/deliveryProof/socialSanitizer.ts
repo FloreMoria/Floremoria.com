@@ -13,9 +13,9 @@ export interface SocialSanitizeOptions {
 
 const DEFAULTS: Required<SocialSanitizeOptions> = {
   outputSize: 1080,
-  centerCropRatio: 0.72,
-  sharpCenterRatio: 0.52,
-  backgroundBlurSigma: 28,
+  centerCropRatio: 0.60,      // Crop più stretto sul bouquet (era 0.72)
+  sharpCenterRatio: 0.45,    // Meno area a fuoco per contenere dettagli (era 0.52)
+  backgroundBlurSigma: 40,   // Blur gaussiano molto più pesante (era 28)
 };
 
 /**

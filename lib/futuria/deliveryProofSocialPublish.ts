@@ -5,11 +5,10 @@ import {
   type CampaignPublishResult,
 } from '@/lib/postman/socialPublish';
 
-/** Canali social per foto consegna sanificate (no Google Ads). */
 export const DELIVERY_PROOF_PUBLISH_CHANNELS: MarketingChannel[] = [
   MarketingChannel.META_INSTAGRAM,
   MarketingChannel.META_FACEBOOK,
-  MarketingChannel.LINKEDIN,
+  // MarketingChannel.LINKEDIN, // Disabilitato temporaneamente in attesa di app dedicata
 ];
 
 export interface DeliveryProofPublishSummary {

@@ -81,7 +81,7 @@ export function verifySocialStagingToken(
   }
 
   if (Date.now() > expiresAt) return null;
-  if (!pathname.includes(`/${STAGING_PREFIX}/`)) return null;
+  if (!pathname.includes(STAGING_PREFIX)) return null;
 
   return { pathname, expiresAt };
 }
@@ -113,7 +113,7 @@ export async function ensureMetaFetchableImageUrl(
   const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}.jpg`;
 
   const { putBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
-  const uploadResult = await putBlobWithAccessFallback(pathname, jpegBytes, {
+  await putBlobWithAccessFallback(pathname, jpegBytes, {
     contentType: 'image/jpeg',
     token,
     addRandomSuffix: false,
@@ -121,7 +121,7 @@ export async function ensureMetaFetchableImageUrl(
   });
 
   const expiresAt = Date.now() + STAGING_TTL_MS;
-  const stagingToken = createStagingToken(uploadResult.url, expiresAt);
+  const stagingToken = createStagingToken(pathname, expiresAt);
   const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
 
   console.log(
@@ -133,19 +133,19 @@ export async function ensureMetaFetchableImageUrl(
 
 /** Legge bytes dallo staging Blob (route API). */
 export async function fetchStagedImageBytes(
-  absoluteUrl: string,
+  pathname: string,
   blobToken: string
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
-  
-  const blobResult = await get(absoluteUrl, { access: getBlobStoreAccess(), token, useCache: false });
+
+  const blobResult = await get(pathname, { access: getBlobStoreAccess(), token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }
 
   const bytes = Buffer.from(await new Response(blobResult.stream).arrayBuffer());
   const contentType =
-    blobResult.blob?.contentType?.trim() || contentTypeFromUrl(absoluteUrl);
+    blobResult.blob?.contentType?.trim() || contentTypeFromUrl(pathname);
 
   return { bytes, contentType };
 }

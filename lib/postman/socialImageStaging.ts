@@ -115,6 +115,15 @@ export function verifySocialStagingToken(
   return null;
 }
 
+/** Ricostruisce URL Blob privato dal pathname staging (per lettura via fetchProofImageBuffer). */
+export function stagingPathnameToBlobUrl(pathname: string): string {
+  const storeId = process.env.BLOB_STORE_ID?.replace(/^store_/i, '').trim();
+  if (!storeId) {
+    throw new Error('BLOB_STORE_ID mancante per servire immagine staging.');
+  }
+  return `https://${storeId.toLowerCase()}.private.blob.vercel-storage.com/${pathname}`;
+}
+
 /**
  * Copia temporanea su Blob privato + URL pubblico firmato (HMAC) servito da /api/social-publish/staging/.
  * Meta/Instagram richiedono un URL HTTP raggiungibile: il nostro endpoint legge il Blob con token.
@@ -125,6 +134,11 @@ export async function ensureMetaFetchableImageUrl(
   imageUrl: string,
   blobToken?: string
 ): Promise<string> {
+  // Blob già pubblico: Meta/IG possono scaricarlo direttamente (niente staging HMAC).
+  if (imageUrl.includes('public.blob.vercel-storage.com')) {
+    return imageUrl;
+  }
+
   const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
   if (!token) {
     throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre immagine a Meta.');

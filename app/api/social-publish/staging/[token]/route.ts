@@ -1,6 +1,6 @@
 import {
-  fetchStagedImageBytes,
   verifySocialStagingToken,
+  stagingPathnameToBlobUrl,
 } from '@/lib/postman/socialImageStaging';
 
 export const runtime = 'nodejs';
@@ -19,13 +19,19 @@ export async function GET(
     return new Response('Forbidden or expired', { status: 403 });
   }
 
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  if (!blobToken) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     return new Response('Server misconfigured', { status: 500 });
   }
 
   try {
-    const { bytes, contentType } = await fetchStagedImageBytes(parsed.pathname, blobToken);
+    const blobUrl = stagingPathnameToBlobUrl(parsed.pathname);
+    const { fetchProofImageBuffer } = await import('@/lib/deliveryProof/blobProofStorage');
+    const bytes = await fetchProofImageBuffer(blobUrl);
+    const contentType = parsed.pathname.toLowerCase().endsWith('.jpg')
+      ? 'image/jpeg'
+      : parsed.pathname.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : 'image/webp';
     return new Response(new Uint8Array(bytes), {
       status: 200,
       headers: {
@@ -33,7 +39,8 @@ export async function GET(
         'Cache-Control': 'private, max-age=300',
       },
     });
-  } catch {
+  } catch (err) {
+    console.error('[social-publish/staging] fetch failed:', parsed.pathname, err);
     return new Response('Not found', { status: 404 });
   }
 }

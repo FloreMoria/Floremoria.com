@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { get } from '@vercel/blob';
-import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
+import { getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { fetchProofImageBuffer } from '@/lib/deliveryProof/blobProofStorage';
 import sharp from 'sharp';
 
@@ -166,7 +165,7 @@ export async function fetchStagedImageBytes(
 ): Promise<{ bytes: Buffer; contentType: string }> {
   const token = blobToken.replace(/[^\x20-\x7E]/g, '').trim();
 
-  const blobResult = await get(pathname, { access: getBlobStoreAccess(), token, useCache: false });
+  const blobResult = await getBlobWithAccessFallback(pathname, { token, useCache: false });
   if (!blobResult?.stream || blobResult.statusCode !== 200) {
     throw new Error(`Staging Blob non trovato (${blobResult?.statusCode ?? 'n/a'}).`);
   }

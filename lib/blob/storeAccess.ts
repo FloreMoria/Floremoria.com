@@ -1,4 +1,4 @@
-import { put, type PutCommandOptions, type PutBlobResult } from '@vercel/blob';
+import { get, put, type PutCommandOptions, type PutBlobResult } from '@vercel/blob';
 
 export type BlobStoreAccess = 'public' | 'private';
 
@@ -45,4 +45,16 @@ export async function putBlobWithAccessFallback(
         );
         return await put(pathname, body, { ...options, access: fallback });
     }
+}
+
+/** Legge da Blob provando public/private come putBlobWithAccessFallback. */
+export async function getBlobWithAccessFallback(
+    pathname: string,
+    options: Omit<NonNullable<Parameters<typeof get>[1]>, 'access'>
+) {
+    const preferred = getBlobStoreAccess();
+    const fallback: BlobStoreAccess = preferred === 'private' ? 'public' : 'private';
+    const first = await get(pathname, { ...options, access: preferred });
+    if (first?.stream && first.statusCode === 200) return first;
+    return get(pathname, { ...options, access: fallback });
 }

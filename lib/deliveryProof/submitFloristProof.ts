@@ -2,10 +2,9 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
-import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
+import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
-import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 
 export type SubmitFloristProofInput = {
@@ -17,7 +16,7 @@ export type SubmitFloristProofInput = {
 };
 
 export type SubmitFloristProofResult =
-    | { ok: true; orderId: string; magicLinkUrl: string }
+    | { ok: true; orderId: string; giardinoUrl: string }
     | { ok: false; error: string };
 
 const MAX_PHOTOS_PER_SLOT = 3;
@@ -114,43 +113,19 @@ export async function submitFloristDeliveryProof(
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
     }
 
-    const userEmail = linkedUser?.email?.trim() || order.user?.email?.trim();
-    const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
-
-    let magicLinkUrl = '';
-
-    if (!userEmail) {
-        console.error(
-            `[submitFloristDeliveryProof] Futuria sync skipped: ordine ${order.orderNumber || order.id} senza user.email`
-        );
-    } else {
-        try {
-            const futuriaResult = await sendMagicPhotoDeliveryToFuturia({
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                userEmail,
-                buyerFullName: linkedUser?.name || order.buyerFullName,
-                customerPhone: order.customerPhone,
-                deceasedName: order.deceasedName,
-                cemeteryCity: order.cemeteryCity,
-                cemeteryName: order.cemeteryName,
-                deliveryProvince: order.deliveryProvince,
-                deliveredProductsSummary,
-                photoAfterUrl,
-            });
-
-            if (futuriaResult.magicLinkUrl) {
-                magicLinkUrl = futuriaResult.magicLinkUrl;
-            }
-
-            if (!futuriaResult.ok) {
-                console.error(
-                    `[submitFloristDeliveryProof] Futuria sync non riuscita order=${order.orderNumber || order.id} skipped=${futuriaResult.skipped}`
-                );
-            }
-        } catch (err) {
-            console.error('[submitFloristDeliveryProof] Futuria magic-photo notify failed:', err);
+    let giardinoUrl = '';
+    try {
+        const notifyResult = await notifyCustomerDeliveryComplete(order.id);
+        if (notifyResult.giardinoUrl) {
+            giardinoUrl = notifyResult.giardinoUrl;
         }
+        if (!notifyResult.ok) {
+            console.warn(
+                `[submitFloristDeliveryProof] Notifica VERA non inviata order=${order.orderNumber || order.id} skipped=${notifyResult.skipped}`
+            );
+        }
+    } catch (err) {
+        console.error('[submitFloristDeliveryProof] Notifica VERA post-consegna fallita:', err);
     }
 
     revalidatePath('/dashboard/user');
@@ -160,5 +135,5 @@ export async function submitFloristDeliveryProof(
         revalidatePath(`/fiorista/consegna/${order.orderNumber}`);
     }
 
-    return { ok: true, orderId: order.id, magicLinkUrl };
+    return { ok: true, orderId: order.id, giardinoUrl };
 }

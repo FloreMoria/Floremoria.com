@@ -14,7 +14,7 @@ import {
     getFuturiaDeliveryCompletionFieldConfig,
 } from './config';
 import { resolveDeliveryFollowupContactAuth } from './contactGate';
-import { resolvePartnerCity } from './proofOfDelivery';
+import { resolvePartnerCity } from '@/lib/whatsapp/deliveryProofCopy';
 import { buildMagicLoginUrl, normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
 
 export interface MagicPhotoDeliveryNotifyInput {

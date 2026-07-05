@@ -1,93 +1,30 @@
-# Futuria — WhatsApp Link foto consegna
+# WhatsApp post-consegna — VERA nativo (Meta Cloud API)
 
-Workflow Futuria: **WhatsApp Link foto consegna**  
-Tag di attivazione: `floremoria-consegna-effettuata`
-
-FloreMoria aggiorna il contatto cliente su Futuria al momento della **convalida consegna** da parte del fiorista (ordine → `COMPLETED`). L'invio WhatsApp avviene interamente lato Futuria quando il tag viene applicato.
+FloreMoria invia direttamente foto e notifica al cliente via **Meta WhatsApp Cloud API** al completamento consegna fiorista.
 
 ## Trigger backend
 
-File: `lib/deliveryProof/submitFloristProof.ts` → `sendMagicPhotoDeliveryToFuturia` (`lib/futuria/magicPhotoDeliveryNotify.ts`)
+File: `lib/deliveryProof/submitFloristProof.ts` → `notifyCustomerDeliveryComplete` → `sendDeliveryProofWhatsApp`
 
 1. Il fiorista carica foto prima/dopo nella mini-app consegna.
-2. Le foto vengono salvate su `DeliveryProof` e **iniettate esplicitamente** su `Order.photos` (oltre a Giardino utente, profilo defunto e portfolio fiorista).
-3. FloreMoria effettua **un solo upsert** contatto via `lib/futuria/contactGate.ts`, con **chiave canonica email** (`order.user.email`):
-   - contatto già presente → `paid_order_followup`
-   - contatto assente ma ordine pagato → `paid_order`
-4. Viene applicato il tag `floremoria-consegna-effettuata` solo dopo verifica corrispondenza email sul contatto Futuria.
+2. Le foto vengono salvate su `DeliveryProof` e iniettate su `Order.photos`.
+3. `notifyCustomerDeliveryComplete(orderId)` invia:
+   - **Immagine** posa (staging URL pubblico temporaneo da Blob privato)
+   - **Testo empatico** (tono chat storiche CAPITOLO 1)
+   - **Link Giardino della Memoria** (`/f/{code}`, 24h)
 
-## Custom field da creare su Futuria (modello Contact)
+Percorsi:
+- `app/api/partner/order/upload-proof/route.ts` (fiorista)
+- `app/actions/delivery-proof.ts` (dashboard admin)
 
-| Chiave GHL (fieldKey) | Variabile workflow | Esempio |
-|----------------------|-------------------|---------|
-| `contact.ultimo_prodotto_consegnato` | `{{ contact.ultimo_prodotto_consegnato }}` | Bouquet Cordoglio Sincero con Candele |
-| `contact.ultimo_defunto_associato` | `{{ contact.ultimo_defunto_associato }}` | Maria Rossi |
-| `contact.ultimo_cimitero_comune` | `{{ contact.ultimo_cimitero_comune }}` | Palermo |
-| `contact.ultimo_magic_link` | `{{ contact.ultimo_magic_link }}` | `https://www.floremoria.com/api/auth/magic-login?token=…` (24h) |
+## Env richieste
 
-Override opzionali via env:
+- `WHATSAPP_CLOUD_API_KEY`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `BLOB_READ_WRITE_TOKEN` + `BLOB_STORE_ID` (staging foto per Meta)
+- `MAGIC_LINK_SECRET` (firma token staging)
 
-- `FUTURIA_CF_ULTIMO_PRODOTTO_CONSEGNATO_KEY`
-- `FUTURIA_CF_ULTIMO_DEFUNTO_ASSOCIATO_KEY`
-- `FUTURIA_CF_ULTIMO_CIMITERO_COMUNE_KEY`
-- `FUTURIA_CF_ULTIMO_MAGIC_LINK_KEY`
-- `FUTURIA_TAG_CONSEGNA_EFFETTUATA` (default: `floremoria-consegna-effettuata`)
+## Note
 
-## Configurazione workflow Futuria
-
-### 1. Trigger
-
-- **Tipo:** Tag applicato
-- **Tag:** `floremoria-consegna-effettuata`
-- **Filtro consigliato:** contatto con telefono valido e campo `ultimo_magic_link` non vuoto
-
-### 2. Messaggio WhatsApp (corpo)
-
-```
-Gentile {{ contact.first_name }},
-
-i tuoi fiori {{ contact.ultimo_prodotto_consegnato }} sono stati posati sulla tomba di {{ contact.ultimo_defunto_associato }} presso il cimitero di {{ contact.ultimo_cimitero_comune }}.
-
-Grazie per aver scelto FloreMoria: conserviamo per te le foto della consegna nel tuo Giardino della Memoria.
-```
-
-Adattare il saluto se `first_name` non è valorizzato (fallback su nome completo contatto).
-
-### 3. Pulsante CTA
-
-| Campo | Valore |
-|-------|--------|
-| Testo pulsante | `Vedi le foto` (o `FOTO`) |
-| URL | `{{ contact.ultimo_magic_link }}` |
-
-Il magic link scade dopo **24 ore** e atterra su `/api/auth/magic-login`, che autentica l'utente e reindirizza alla dashboard/Giardino.
-
-### 4. Note operative
-
-- **Non** inviare WhatsApp direttamente da FloreMoria per questo flusso: il backend imposta solo i custom field e il tag.
-- Il tag può essere ri-applicato su ordini successivi: i campi `ultimo_*` vengono sempre sovrascritti con l'ultima consegna.
-- `ultimo_prodotto_consegnato` include bouquet principali ed eventuali accessori (formato: `Bouquet X con Accessorio Y`).
-- Location Futuria: `FUTURIA_LOCATION_ID` (env produzione).
-
-## Flusso dati (schema)
-
-```mermaid
-sequenceDiagram
-    participant F as Fiorista mini-app
-    participant BE as FloreMoria backend
-    participant DB as PostgreSQL
-    participant CRM as Futuria CRM
-    participant WA as WhatsApp cliente
-
-    F->>BE: Upload foto consegna
-    BE->>DB: DeliveryProof + Order.photos + status COMPLETED
-    BE->>CRM: upsert contact + ultimo_* + tag consegna-effettuata
-    CRM->>WA: Workflow WhatsApp Link foto consegna
-```
-
-## Verifica post-deploy
-
-1. Completare una consegna test (ordine Palermo o staging).
-2. Su Futuria → Contatti: verificare i 4 custom field e il tag.
-3. Confermare ricezione WhatsApp con testo e pulsante corretti.
-4. Aprire `ultimo_magic_link` entro 24h e verificare accesso alle foto ordine.
+- **Futuria CRM non è più usato** per le notifiche post-consegna.
+- Fuori finestra 24h WhatsApp: serve template Meta dedicato (fase 2); attualmente fallback testuale con log.

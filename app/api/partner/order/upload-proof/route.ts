@@ -65,7 +65,9 @@ export async function POST(request: Request) {
         return NextResponse.json({
             ok: true,
             orderId: result.orderId,
-            magicLinkUrl: result.magicLinkUrl,
+            giardinoUrl: result.giardinoUrl,
+            /** @deprecated usare giardinoUrl */
+            magicLinkUrl: result.giardinoUrl,
         });
     } catch (error) {
         console.error('[upload-proof]', error);

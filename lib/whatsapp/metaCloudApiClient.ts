@@ -180,7 +180,35 @@ export async function sendWhatsAppTextMessage(
         recipient_type: 'individual',
         to: recipient,
         type: 'text',
-        text: { preview_url: false, body: text },
+        text: { preview_url: true, body: text },
+    });
+}
+
+/**
+ * Invia un'immagine via Meta WhatsApp Cloud API (link HTTPS pubblico raggiungibile da Meta).
+ */
+export async function sendWhatsAppImageMessage(
+    phone: string,
+    imageUrl: string,
+    caption?: string
+): Promise<WhatsAppSendResult> {
+    const recipient = toMetaRecipientPhone(phone);
+    if (!recipient) {
+        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
+        return { ok: false, error: 'invalid_phone' };
+    }
+
+    const image: Record<string, unknown> = { link: imageUrl };
+    if (caption?.trim()) {
+        image.caption = caption.trim().slice(0, 1024);
+    }
+
+    return postWhatsAppMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipient,
+        type: 'image',
+        image,
     });
 }
 

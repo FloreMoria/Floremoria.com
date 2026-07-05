@@ -2,8 +2,7 @@
 
     import prisma from '@/lib/prisma';
     import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
-    import { sendMagicPhotoDeliveryToFuturia } from '@/lib/futuria/magicPhotoDeliveryNotify';
-    import { formatDeliveredProductsSummary } from '@/lib/orders/formatDeliveredProducts';
+    import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
     import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
     import { revalidatePath } from 'next/cache';
     import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
@@ -116,31 +115,10 @@
 
             if (newStatus === 'COMPLETED' && photoAfterUrl) {
                 void triggerSocialSanitizationForOrder(order.id, [photoAfterUrl]);
-            }
-
-            // Notifica WhatsApp post-consegna via Futuria (chiave email utente).
-            if (newStatus === 'COMPLETED' && photoAfterUrl) {
-                const linkedUser = await ensureUserForOrder(order);
-                const userEmail = linkedUser?.email?.trim() || order.user?.email?.trim();
-                const deliveredProductsSummary = formatDeliveredProductsSummary(order.items);
-
-                if (userEmail) {
-                    void sendMagicPhotoDeliveryToFuturia({
-                        orderId: order.id,
-                        orderNumber: order.orderNumber,
-                        userEmail,
-                        buyerFullName: linkedUser?.name || order.buyerFullName,
-                        customerPhone: order.customerPhone,
-                        deceasedName: order.deceasedName,
-                        cemeteryCity: order.cemeteryCity,
-                        cemeteryName: order.cemeteryName,
-                        deliveryProvince: order.deliveryProvince,
-                        deliveredProductsSummary,
-                        photoAfterUrl,
-                    }).catch((err) => {
-                        console.error('[delivery-proof] Notifica Futuria non riuscita (non bloccante):', err);
-                    });
-                }
+                await ensureUserForOrder(order);
+                void notifyCustomerDeliveryComplete(order.id).catch((err) => {
+                    console.error('[delivery-proof] Notifica VERA post-consegna non riuscita (non bloccante):', err);
+                });
             }
 
             revalidatePath('/dashboard');

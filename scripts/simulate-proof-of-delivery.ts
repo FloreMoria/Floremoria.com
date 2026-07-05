@@ -1,96 +1,50 @@
 /**
- * Simulazione Proof of Delivery → WhatsApp via Futuria API v2.
+ * Simulazione Proof of Delivery → WhatsApp nativo VERA (Meta Cloud API).
  *
  * Uso:
- *   npx tsx scripts/simulate-proof-of-delivery.ts FT-CO-26-001 +393204105305
- *
- * Opzionale: DATABASE_URL per puntare a Neon prod.
+ *   npx tsx scripts/simulate-proof-of-delivery.ts FT-CO-26-001 +393331112222
  */
 import { loadEnvFiles } from '../lib/loadEnvFiles';
 
 loadEnvFiles();
 
 import prisma from '../lib/prisma';
-import {
-    findFuturiaDuplicateContact,
-    normalizeFuturiaPhone,
-    prepareDeceasedCustomFieldsForUpsert,
-} from '../lib/futuria/client';
-import { sendProofOfDeliveryNotification } from '../lib/futuria/proofOfDelivery';
+import { notifyCustomerDeliveryComplete } from '../lib/deliveryProof/notifyCustomerDeliveryComplete';
+import { normalizePhoneE164 } from '../lib/whatsapp/metaCloudApiClient';
 
 const orderNumber = process.argv[2]?.trim() || 'FT-CO-26-001';
-const phoneOverride = process.argv[3]?.trim() || '+393204105305';
-const previewContactsOnly = process.argv.includes('--preview-contacts');
+const phoneOverride = process.argv[3]?.trim() || '';
 
 async function main() {
-    console.log(`→ Simulazione Proof of Delivery`);
+    console.log('→ Simulazione Proof of Delivery (VERA / Meta Cloud API)');
     console.log(`  Ordine: ${orderNumber}`);
-    console.log(`  Telefono override: ${phoneOverride}`);
-    console.log(`  Futuria configurato: ${Boolean(process.env.FUTURIA_API_KEY && process.env.FUTURIA_LOCATION_ID)}`);
-    console.log(`  Template PoD: ${process.env.FUTURIA_WHATSAPP_PROOF_TEMPLATE_ID || '(non impostato — serve fuori 24h)'}`);
-    console.log('');
-    console.log('  ⚠ Il numero +39 320 410 5305 è la LINEA BUSINESS WhatsApp.');
-    console.log('    Per testare, usa un cellulare PERSONALE diverso, es: +39333xxxxxxx');
+    if (phoneOverride) console.log(`  Telefono override: ${phoneOverride}`);
     console.log('');
 
-    let order = await prisma.order.findFirst({
+    const order = await prisma.order.findFirst({
         where: { orderNumber },
         include: { deliveryProof: true },
     });
 
     if (!order) {
-        console.warn(`⚠ Ordine ${orderNumber} non trovato nel DB (${process.env.DATABASE_URL?.slice(0, 40)}...).`);
-        console.warn('  Uso payload di simulazione minimo per test Futuria.\n');
-    }
-
-    const photoAfterUrl =
-        order?.deliveryProof?.photoAfterUrl ||
-        '/images/products/fiori-sulle-tombe/bouquet-omaggio-speciale/bouquet-omaggio-speciale-fiori-sulle-tombe-servizio-professionale-FT.webp';
-
-    const deceasedName = order?.deceasedName || 'Santo Sancono';
-
-    const phone = normalizeFuturiaPhone(phoneOverride);
-    if (phone) {
-        const existing = await findFuturiaDuplicateContact({ phone });
-        const customFields = await prepareDeceasedCustomFieldsForUpsert(
-            existing?.customFields,
-            deceasedName
-        );
-        console.log('--- Payload customFields (append defunti) ---');
-        console.log(JSON.stringify(customFields, null, 2));
-        console.log('');
-        if (previewContactsOnly) {
-            console.log('Modalità --preview-contacts: invio WhatsApp saltato.');
-            return;
-        }
-    }
-
-    const result = await sendProofOfDeliveryNotification({
-        orderId: order?.id || `sim-${orderNumber}`,
-        orderNumber,
-        buyerFullName: order?.buyerFullName || 'Salvatore Marsiglione',
-        buyerEmail: order?.buyerEmail || undefined,
-        customerPhone: phoneOverride,
-        deceasedName,
-        cemeteryCity: order?.cemeteryCity || 'Reggio Calabria',
-        cemeteryName: order?.cemeteryName,
-        deliveryProvince: order?.deliveryProvince,
-        photoAfterUrl,
-    });
-
-    console.log('--- Esito ---');
-    console.log(JSON.stringify(result, null, 2));
-
-    if (!result.ok) {
+        console.error('Ordine non trovato.');
         process.exit(1);
     }
+
+    if (phoneOverride) {
+        await prisma.order.update({
+            where: { id: order.id },
+            data: { customerPhone: phoneOverride },
+        });
+        console.log(`  customerPhone aggiornato a ${normalizePhoneE164(phoneOverride)}`);
+    }
+
+    const result = await notifyCustomerDeliveryComplete(order.id);
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.ok ? 0 : 1);
 }
 
-main()
-    .catch((err) => {
-        console.error('Errore simulazione:', err);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});

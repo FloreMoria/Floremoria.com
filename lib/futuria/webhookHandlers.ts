@@ -6,7 +6,7 @@ import {
     sendFloristDeliveryLinkWhatsAppFromWebhook,
     type FloristDeliveryLinkWebhookInput,
 } from './floristDeliveryLinkWebhook';
-import { sendProofOfDeliveryNotification, type ProofOfDeliveryInput } from './proofOfDelivery';
+import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
 
 /** Eventi riconosciuti (Futuria workflow / automazioni custom). */
 export const FUTURIA_DELIVERY_PROOF_EVENTS = new Set([
@@ -52,10 +52,10 @@ function resolveNestedData(payload: FuturiaWebhookPayload): FuturiaWebhookPayloa
     return payload;
 }
 
-async function loadOrderForProof(
+async function loadOrderIdForProof(
     orderId: string | null,
     orderNumber: string | null
-): Promise<ProofOfDeliveryInput | null> {
+): Promise<string | null> {
     if (!orderId && !orderNumber) return null;
 
     const order = await prisma.order.findFirst({
@@ -65,23 +65,10 @@ async function loadOrderForProof(
                 ...(orderNumber ? [{ orderNumber }] : []),
             ],
         },
-        include: { deliveryProof: true },
+        select: { id: true, orderNumber: true },
     });
 
-    if (!order) return null;
-
-    return {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        buyerFullName: order.buyerFullName,
-        buyerEmail: order.buyerEmail,
-        customerPhone: order.customerPhone,
-        deceasedName: order.deceasedName,
-        cemeteryCity: order.cemeteryCity,
-        cemeteryName: order.cemeteryName,
-        deliveryProvince: order.deliveryProvince,
-        photoAfterUrl: order.deliveryProof?.photoAfterUrl,
-    };
+    return order?.id ?? null;
 }
 
 /**
@@ -166,8 +153,8 @@ export async function handleFuturiaWebhookPayload(
         };
     }
 
-    const proofInput = await loadOrderForProof(orderId, orderNumber);
-    if (!proofInput) {
+    const resolvedOrderId = await loadOrderIdForProof(orderId, orderNumber);
+    if (!resolvedOrderId) {
         return {
             handled: true,
             event: event ?? 'delivery_proof',
@@ -176,18 +163,18 @@ export async function handleFuturiaWebhookPayload(
         };
     }
 
-    const notifyResult = await sendProofOfDeliveryNotification(proofInput);
+    const notifyResult = await notifyCustomerDeliveryComplete(resolvedOrderId);
 
     return {
         handled: true,
         event: event ?? 'delivery_proof_completed',
         action: 'proof_of_delivery_notification',
         detail: {
-            orderId: proofInput.orderId,
-            orderNumber: proofInput.orderNumber,
+            orderId: resolvedOrderId,
+            orderNumber,
             notifyOk: notifyResult.ok,
             skipped: notifyResult.skipped,
-            messageId: notifyResult.messageId,
+            giardinoUrl: notifyResult.giardinoUrl,
         },
     };
 }

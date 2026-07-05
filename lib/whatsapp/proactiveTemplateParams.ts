@@ -7,8 +7,8 @@ export function extractFirstName(fullName: string): string {
 }
 
 /**
- * Valore per {{1}} sul template Meta approvato (inizia con "{{1}},").
- * Il saluto "Gentile" va nel parametro, non nel testo fisso del template.
+ * Valore per {{1}} sul template Meta approvato ("{{1}}, in merito all'ordine...").
+ * Il saluto completo "Gentile [Nome]" va nel parametro dinamico {{1}}.
  */
 export function formatGentileSalutation(recipientFirstName: string): string {
     const firstName = extractFirstName(recipientFirstName);

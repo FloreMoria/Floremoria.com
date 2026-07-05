@@ -110,6 +110,13 @@ VIETATO: Lei eccessivo dopo rapporto consolidato, linguaggio funebre, condoglian
 `.trim();
 
 /**
+ * Solo linee guida tono (senza estratto grezzo chat — evita contaminazione dati altrui nel prompt).
+ */
+export function buildHistoricalToneGuidelinesOnly(audience: HistoricalChatAudience): string {
+    return audience === 'FLORIST' ? LINEE_GUIDA_FIORISTA : LINEE_GUIDA_UTENTE;
+}
+
+/**
  * Blocco prompt con linee guida + estratti reali dal file storico annuale.
  * Fonte: docs/whatsapp/knowledge_base_whatsapp.txt (CAPITOLO 1 e 2).
  */

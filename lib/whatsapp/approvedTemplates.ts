@@ -18,14 +18,26 @@ export interface WhatsAppTemplateDefinition {
 export const PROACTIVE_CONVERSATION_TEMPLATE_ID = 'messaggio_personalizzato_fiorista';
 
 /**
- * Testo body template Meta (allineare a WHATSAPP_TEMPLATE_PROACTIVE_BODY su Vercel).
- * {{1}} = saluto con nome (es. "Gentile Carlo") — passato come parametro dinamico.
- * {{2}} = codice ordine.
- * {{3}} = note staff.
+ * Body template Meta approvato — il saluto "Gentile [Nome]" va nel parametro {{1}}, non nel testo fisso.
+ * {{1}} = es. "Gentile Carlo" | {{2}} = codice ordine | {{3}} = note staff.
  */
-export const PROACTIVE_CONVERSATION_BODY_TEMPLATE =
-    process.env.WHATSAPP_TEMPLATE_PROACTIVE_BODY?.trim() ||
-    '{{1}}, Le scriviamo da FloreMoria in merito all\'ordine {{2}}.\n\n{{3}}\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria';
+export const PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL =
+    "{{1}}, in merito all'ordine identificato come {{2}}.\n\n{{3}}\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria";
+
+function isUsableProactiveBodyTemplate(value: string): boolean {
+    if (!/\{\{1\}\}/.test(value) || !/\{\{2\}\}/.test(value)) return false;
+    if (/testo_esatto|approvato_da_meta|placeholder|debug/i.test(value)) return false;
+    // Evita doppio "Gentile" se l'env è stato configurato con "Gentile {{1}}"
+    if (/gentile\s*\{\{1\}\}/i.test(value)) return false;
+    return true;
+}
+
+/** Risolve il body template: env solo se valido, altrimenti canonico Meta. */
+export function resolveProactiveBodyTemplate(): string {
+    const fromEnv = process.env.WHATSAPP_TEMPLATE_PROACTIVE_BODY?.trim();
+    if (fromEnv && isUsableProactiveBodyTemplate(fromEnv)) return fromEnv;
+    return PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL;
+}
 
 function envTemplateName(key: string, fallback: string): string {
     return process.env[key]?.trim() || fallback;
@@ -39,10 +51,10 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
             'floremoria_messaggio_personalizzato_fiorista'
         ),
         label: 'Messaggio personalizzato fiorista',
-        description: 'Template Meta: {{1}} Gentile + nome, {{2}} codice ordine, {{3}} note staff.',
+        description: 'Template Meta: {{1}} Gentile+nome, {{2}} codice ordine, {{3}} note staff.',
         language: 'it',
         parameterLabels: ['Saluto (Gentile + nome)', 'Codice ordine', 'Note dello Staff'],
-        bodyTemplate: PROACTIVE_CONVERSATION_BODY_TEMPLATE,
+        bodyTemplate: resolveProactiveBodyTemplate(),
     };
 }
 
@@ -56,12 +68,21 @@ export function getApprovedWhatsAppTemplate(templateId?: string): WhatsAppTempla
     return null;
 }
 
+/** Meta rifiuta newline/tab nei parametri body (errore #132018). */
+export function sanitizeMetaTemplateParam(value: string, maxLen = 900): string {
+    return value
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+        .slice(0, maxLen);
+}
+
 export function buildTemplateBodyParameters(
     params: string[] = []
 ): Array<{ type: 'text'; text: string }> {
     return params.slice(0, 3).map((value) => ({
         type: 'text' as const,
-        text: value?.trim() || '—',
+        text: sanitizeMetaTemplateParam(value?.trim() || '—'),
     }));
 }
 
@@ -89,7 +110,7 @@ export function renderProactiveTemplateMessage(
     staffNotes: string
 ): string {
     return renderProactiveTemplateBody(
-        getProactiveWhatsAppTemplate().bodyTemplate,
+        PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
         recipientFirstName,
         orderCode,
         staffNotes

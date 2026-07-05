@@ -4,6 +4,7 @@ import {
     buildHistoricalToneContext,
     resolveHistoricalAudience,
 } from '@/lib/whatsapp/historicalToneKb';
+import { isOrderTrackingInquiry } from '@/lib/whatsapp/orderStatusInquiry';
 
 type CoreKb = {
     supportEmail: string;
@@ -301,6 +302,8 @@ export function inferCatalogIntent(
     message: string,
     history: ConversationMessage[] = []
 ): CatalogIntent | null {
+    if (isOrderTrackingInquiry(message)) return null;
+
     const combined = [message, ...history.slice(-4).map((h) => h.body)].join(' ');
     const m = normalizeMessage(combined);
     if (
@@ -365,6 +368,7 @@ export function ensureCatalogLinksInReply(
     history: ConversationMessage[] = []
 ): string {
     if (isClosingMessage(message)) return reply;
+    if (isOrderTrackingInquiry(message)) return reply;
     if (/https?:\/\/\S*floremoria\.com/i.test(reply)) return reply;
 
     const kb = loadWhatsAppCoreKb();

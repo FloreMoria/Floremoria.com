@@ -11,10 +11,8 @@
  *   "Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹"
  */
 
-import { FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT, VERA_TONE_OF_VOICE_DIRECTIVE } from '@/lib/floremDigitalAssistant';
 import {
     buildWhatsAppAiReply,
-    buildWhatsAppKnowledgeContext,
     buildSimpleThanksReply,
     ensureCatalogLinksInReply,
     ensureRespectfulOpening,
@@ -22,6 +20,13 @@ import {
     isSimpleThanksMessage,
     STANDARD_GUIDANCE_MESSAGE,
 } from '@/lib/whatsappKnowledge';
+import { isOrderTrackingInquiry, tryBuildOrderTrackingReply } from '@/lib/whatsapp/orderStatusInquiry';
+import {
+    buildVeraKnowledgeContext,
+    buildVeraWhatsAppSystemInstruction,
+    resolveVeraCallerContext,
+} from '@/lib/vera';
+import type { VeraCallerContext } from '@/lib/vera';
 import type { ChatSession } from '@/lib/chatStore';
 
 export const VERA_CLOSING_SIGNATURE =
@@ -110,13 +115,22 @@ function sanitizeVeraReplyText(text: string): string {
     return cleaned;
 }
 
-function polishVeraReply(reply: string, message: string, session: ChatSession): string {
+function polishVeraReply(
+    reply: string,
+    message: string,
+    session: ChatSession,
+    callerContext: VeraCallerContext
+): string {
     const hasPriorOutbound = session.messages.some((m) => m.direction === 'OUTBOUND');
     const closing = isClosingMessage(message);
+    const skipCatalogLinks = isOrderTrackingInquiry(message);
+    const skipOpeningPrefix = skipCatalogLinks || /^gentile\s+/i.test(reply.trim());
     let text = sanitizeVeraReplyText(stripClosingSignature(reply));
     if (!text) return reply;
-    if (!closing) {
+    if (!closing && !skipOpeningPrefix) {
         text = ensureRespectfulOpening(text, hasPriorOutbound, getDisplayNameFromSession(session));
+    }
+    if (!closing && !skipCatalogLinks) {
         text = ensureCatalogLinksInReply(
             text,
             message,
@@ -155,7 +169,7 @@ function buildHistoryBlock(session: ChatSession, maxMessages = 12): string {
 async function callGeminiVera(
     userMessage: string,
     session: ChatSession,
-    knowledgeContext: string
+    callerContext: VeraCallerContext
 ): Promise<string | null> {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
@@ -165,30 +179,16 @@ async function callGeminiVera(
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const historyBlock = buildHistoryBlock(session);
-    const registerNote =
-        session.userType === 'FLORIST'
-            ? 'REGISTRO: Tu informale con il fiorista partner (logistica, foto, ordini). Imita le chat storiche CAPITOLO 2.'
-            : 'REGISTRO: Lei formale con l\'utente finale (lutto, ricordo, garbo). Imita le chat storiche CAPITOLO 1.';
+    const knowledgeContext = buildVeraKnowledgeContext(session.userType);
 
-    const systemInstruction = `${FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT}
+    const systemInstruction = `${buildVeraWhatsAppSystemInstruction(callerContext, session.userType, knowledgeContext)}
 
 ---
-${registerNote}
-
----
-KNOWLEDGE BASE FLOREMORIA (regole, cataloghi, prezzi, link ufficiali, esempi storici di stile):
-${knowledgeContext}
-
-STORICO CONVERSAZIONE:
+STORICO CONVERSAZIONE (solo questa chat, non altre utenze):
 ${historyBlock || '(nessun messaggio precedente)'}
 ---
 
-Rispondi SOLO al messaggio dell'utente qui sotto.
-TONE OF VOICE (obbligatorio): ${VERA_TONE_OF_VOICE_DIRECTIVE}
-OUTPUT: esclusivamente italiano, testo finale per l'Utente. VIETATO inglese, note interne, ragionamento, frecce (->), asterischi.
-NON includere prefissi tipo "[VERA]:" nella risposta.
-NON inventare prezzi, URL o informazioni non presenti nella knowledge base.
-Massimo 3-4 frasi brevi; link solo se utili in quel momento della conversazione — sempre con tono umano e rispettoso del ricordo, mai come notifica fredda.`;
+Rispondi SOLO al messaggio dell'utente qui sotto.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {
@@ -267,6 +267,8 @@ export async function generateVeraReply(
 ): Promise<VeraReplyResult> {
     const { shouldEscalateToHuman, getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
 
+    const callerContext = await resolveVeraCallerContext(session);
+
     // ── Escalation a operatore umano ──────────────────────────────────────────
     const escalationReason = getHumanEscalationReason(message);
     if (escalationReason) {
@@ -284,6 +286,22 @@ export async function generateVeraReply(
             source: 'deterministic',
             shouldEscalate: false,
         };
+    }
+
+    // ── Stato ordine / foto / consegna — lookup DB, niente link catalogo ───────
+    if (session.userType !== 'FLORIST' && isOrderTrackingInquiry(message)) {
+        const orderReply = await tryBuildOrderTrackingReply(
+            session.phone,
+            session.name || '',
+            message
+        );
+        if (orderReply) {
+            let replyText = orderReply;
+            if (!isClosingMessage(message)) {
+                replyText = polishVeraReply(replyText, message, session, callerContext);
+            }
+            return { text: replyText, source: 'deterministic', shouldEscalate: false };
+        }
     }
 
     // ── Risposta deterministica (regole whatsappKnowledge) ───────────────────
@@ -314,9 +332,7 @@ export async function generateVeraReply(
         source = 'deterministic';
     } else {
         // Nessun match specifico: prova Gemini LLM
-        const knowledgeContext = buildWhatsAppKnowledgeContext(session.userType);
-
-        const geminiReply = await callGeminiVera(message, session, knowledgeContext);
+        const geminiReply = await callGeminiVera(message, session, callerContext);
 
         if (geminiReply) {
             replyText = geminiReply;
@@ -330,7 +346,7 @@ export async function generateVeraReply(
 
     // ── Rifinitura: tono commemorativo + link (non su messaggi di chiusura) ───
     if (!isClosingMessage(message)) {
-        replyText = polishVeraReply(replyText, message, session);
+        replyText = polishVeraReply(replyText, message, session, callerContext);
     } else {
         replyText = stripClosingSignature(replyText);
     }

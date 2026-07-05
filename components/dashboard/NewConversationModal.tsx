@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquarePlus, Phone, Search, Send, X } from 'lucide-react';
 import { toE164 } from '@/lib/auth/phone';
-import { renderProactiveTemplateBody } from '@/lib/whatsapp/approvedTemplates';
+import { renderProactiveTemplateBody, PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL } from '@/lib/whatsapp/approvedTemplates';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 
 type ContactType = 'UTENTE' | 'FLORIST';
@@ -17,12 +17,6 @@ interface MessagingContact {
     subtitle: string;
     initials: string;
     recipientFirstName: string;
-}
-
-interface ProactiveTemplateConfig {
-    metaName: string;
-    bodyTemplate: string;
-    parameterLabels: string[];
 }
 
 interface NewConversationModalProps {
@@ -55,7 +49,6 @@ export default function NewConversationModal({
     const [searching, setSearching] = useState(false);
     const [selected, setSelected] = useState<MessagingContact | null>(null);
     const [requiresTemplate, setRequiresTemplate] = useState<boolean | null>(null);
-    const [templateConfig, setTemplateConfig] = useState<ProactiveTemplateConfig | null>(null);
     const [recipientFirstName, setRecipientFirstName] = useState('');
     const [orderCode, setOrderCode] = useState('');
     const [staffNotes, setStaffNotes] = useState('');
@@ -78,26 +71,6 @@ export default function NewConversationModal({
         setMessageText('');
         setLoadingOrderCode(false);
         setError(null);
-
-        fetch('/api/dashboard/communications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'getTemplates' }),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                const template = data.template ?? data.templates?.[0];
-                if (data.success && template) {
-                    setTemplateConfig({
-                        metaName: template.metaName,
-                        bodyTemplate: template.bodyTemplate,
-                        parameterLabels: template.parameterLabels ?? [],
-                    });
-                }
-            })
-            .catch(() => {
-                /* fallback silenzioso */
-            });
     }, [open]);
 
     useEffect(() => {
@@ -233,9 +206,9 @@ export default function NewConversationModal({
     };
 
     const previewText =
-        templateConfig && requiresTemplate
+        requiresTemplate
             ? renderProactiveTemplateBody(
-                  templateConfig.bodyTemplate,
+                  PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
                   recipientFirstName,
                   orderCode,
                   staffNotes
@@ -433,21 +406,19 @@ export default function NewConversationModal({
                                         />
                                     </div>
 
-                                    {templateConfig && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                                Anteprima messaggio WhatsApp
-                                            </p>
-                                            <div className="rounded-2xl border border-[#D1D7DB] bg-[#E5DDD5] p-4">
-                                                <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
-                                                    {previewText}
-                                                </div>
-                                                <p className="text-[10px] text-[#667781] mt-2 text-right">
-                                                    Testo esatto che il destinatario riceverà sul telefono
-                                                </p>
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                                            Anteprima messaggio WhatsApp
+                                        </p>
+                                        <div className="rounded-2xl border border-[#D1D7DB] bg-[#E5DDD5] p-4">
+                                            <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
+                                                {previewText}
                                             </div>
+                                            <p className="text-[10px] text-[#667781] mt-2 text-right">
+                                                Testo esatto che il destinatario riceverà sul telefono
+                                            </p>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-3">

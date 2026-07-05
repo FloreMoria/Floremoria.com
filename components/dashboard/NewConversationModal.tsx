@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquarePlus, Phone, Search, Send, X } from 'lucide-react';
 import { toE164 } from '@/lib/auth/phone';
+import { renderProactiveTemplateBody } from '@/lib/whatsapp/approvedTemplates';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 
 type ContactType = 'UTENTE' | 'FLORIST';
@@ -30,18 +31,17 @@ interface NewConversationModalProps {
     onConversationStarted: (session: Record<string, unknown>) => void;
 }
 
-function renderTemplatePreview(
-    bodyTemplate: string,
-    recipientFirstName: string,
-    orderCode: string,
-    staffNotes: string
-): string {
-    const firstName = extractFirstName(recipientFirstName);
-    const code = normalizeOrderCode(orderCode);
-    return bodyTemplate
-        .replace(/\{\{1\}\}/g, firstName || '{{1}}')
-        .replace(/\{\{2\}\}/g, code || '{{2}}')
-        .replace(/\{\{3\}\}/g, staffNotes.trim() || '{{3}}');
+async function fetchLastOrderCode(type: ContactType, id: string): Promise<string | null> {
+    if (id.startsWith('manual:')) return null;
+    try {
+        const res = await fetch(
+            `/api/dashboard/communications/contacts/last-order?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`
+        );
+        const data = await res.json();
+        return data.success && typeof data.orderNumber === 'string' ? data.orderNumber : null;
+    } catch {
+        return null;
+    }
 }
 
 export default function NewConversationModal({
@@ -60,6 +60,7 @@ export default function NewConversationModal({
     const [orderCode, setOrderCode] = useState('');
     const [staffNotes, setStaffNotes] = useState('');
     const [messageText, setMessageText] = useState('');
+    const [loadingOrderCode, setLoadingOrderCode] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +76,7 @@ export default function NewConversationModal({
         setOrderCode('');
         setStaffNotes('');
         setMessageText('');
+        setLoadingOrderCode(false);
         setError(null);
 
         fetch('/api/dashboard/communications', {
@@ -122,11 +124,15 @@ export default function NewConversationModal({
         return () => window.clearTimeout(timer);
     }, [open, query]);
 
-    const applyContactSelection = (contact: MessagingContact) => {
+    const applyContactSelection = async (contact: MessagingContact) => {
         setSelected(contact);
         setRecipientFirstName(contact.recipientFirstName || extractFirstName(contact.name));
-        setOrderCode('');
         setStaffNotes('');
+
+        setLoadingOrderCode(true);
+        const lastOrder = await fetchLastOrderCode(contact.type, contact.id);
+        setOrderCode(lastOrder ? normalizeOrderCode(lastOrder) : '');
+        setLoadingOrderCode(false);
     };
 
     const resolveSelection = async (contact: MessagingContact | null, rawPhone?: string) => {
@@ -153,7 +159,7 @@ export default function NewConversationModal({
                 recipientFirstName: '',
             } as MessagingContact);
 
-        applyContactSelection(resolvedContact);
+        await applyContactSelection(resolvedContact);
 
         try {
             const res = await fetch('/api/dashboard/communications', {
@@ -228,7 +234,12 @@ export default function NewConversationModal({
 
     const previewText =
         templateConfig && requiresTemplate
-            ? renderTemplatePreview(templateConfig.bodyTemplate, recipientFirstName, orderCode, staffNotes)
+            ? renderProactiveTemplateBody(
+                  templateConfig.bodyTemplate,
+                  recipientFirstName,
+                  orderCode,
+                  staffNotes
+              )
             : '';
 
     if (!open) return null;
@@ -243,9 +254,7 @@ export default function NewConversationModal({
                             Nuova conversazione
                         </h3>
                         <p className="text-sm text-[#6F6F6F] mt-1">
-                            Template: <span className="font-mono text-xs">floremoria_messaggio_personalizzato_fiorista</span>
-                            {' · '}
-                            <span className="text-xs">{'{{1}}'} nome · {'{{2}}'} ordine · {'{{3}}'} note</span>
+                            Messaggio proattivo WhatsApp · saluto personalizzato, ordine e note staff
                         </p>
                     </div>
                     <button
@@ -369,13 +378,13 @@ export default function NewConversationModal({
                             ) : requiresTemplate ? (
                                 <div className="space-y-4">
                                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                        Chat proattiva: il template Meta userà <strong>{'{{1}}'}</strong> come incipit
-                                        (nome), senza &quot;Gentile Cliente&quot; fisso.
+                                        Il destinatario vedrà l&apos;incipit <strong>Gentile [Nome]</strong> (es.
+                                        &quot;Gentile Carlo&quot;), composto automaticamente dal nome inserito.
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Nome <span className="text-gray-400 font-normal">(variabile {'{{1}}'})</span>
+                                            Nome di battesimo
                                         </label>
                                         <input
                                             type="text"
@@ -385,27 +394,35 @@ export default function NewConversationModal({
                                             className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
                                         />
                                         <p className="text-[11px] text-gray-400 mt-1">
-                                            Pre-compilato dal DB: nome del fiorista o del cliente.
+                                            Pre-compilato dal DB. In anteprima e in invio diventa &quot;Gentile Carlo&quot;.
                                         </p>
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Codice ordine <span className="text-gray-400 font-normal">(variabile {'{{2}}'})</span>
+                                            Codice ordine
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={orderCode}
-                                            onChange={(e) => setOrderCode(e.target.value)}
-                                            onBlur={() => setOrderCode(normalizeOrderCode(orderCode))}
-                                            placeholder="Es. FF-PN-26-004"
-                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#C0A062]"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={orderCode}
+                                                onChange={(e) => setOrderCode(e.target.value)}
+                                                onBlur={() => setOrderCode(normalizeOrderCode(orderCode))}
+                                                placeholder="Es. FF-PN-26-004"
+                                                className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#C0A062]"
+                                            />
+                                            {loadingOrderCode && (
+                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-gray-400 mt-1">
+                                            Pre-compilato con l&apos;ultimo ordine del contatto, se presente. Modificabile.
+                                        </p>
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Note dello Staff <span className="text-gray-400 font-normal">(variabile {'{{3}}'})</span>
+                                            Note dello Staff
                                         </label>
                                         <textarea
                                             value={staffNotes}
@@ -416,13 +433,18 @@ export default function NewConversationModal({
                                         />
                                     </div>
 
-                                    {previewText && (
+                                    {templateConfig && (
                                         <div>
                                             <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
                                                 Anteprima messaggio WhatsApp
                                             </p>
-                                            <div className="rounded-xl border border-[#EAE3D9] bg-white p-4 text-sm text-[#111B21] whitespace-pre-wrap leading-relaxed">
-                                                {previewText}
+                                            <div className="rounded-2xl border border-[#D1D7DB] bg-[#E5DDD5] p-4">
+                                                <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
+                                                    {previewText}
+                                                </div>
+                                                <p className="text-[10px] text-[#667781] mt-2 text-right">
+                                                    Testo esatto che il destinatario riceverà sul telefono
+                                                </p>
                                             </div>
                                         </div>
                                     )}

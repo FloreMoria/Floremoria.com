@@ -11,7 +11,7 @@
  *   "Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹"
  */
 
-import { FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT } from '@/lib/floremDigitalAssistant';
+import { FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT, VERA_TONE_OF_VOICE_DIRECTIVE } from '@/lib/floremDigitalAssistant';
 import {
     buildWhatsAppAiReply,
     buildWhatsAppKnowledgeContext,
@@ -165,11 +165,18 @@ async function callGeminiVera(
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const historyBlock = buildHistoryBlock(session);
+    const registerNote =
+        session.userType === 'FLORIST'
+            ? 'REGISTRO: Tu informale con il fiorista partner (logistica, foto, ordini). Imita le chat storiche CAPITOLO 2.'
+            : 'REGISTRO: Lei formale con l\'utente finale (lutto, ricordo, garbo). Imita le chat storiche CAPITOLO 1.';
 
     const systemInstruction = `${FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT}
 
 ---
-KNOWLEDGE BASE FLOREMORIA (regole, cataloghi, prezzi, link ufficiali, esempi di stile):
+${registerNote}
+
+---
+KNOWLEDGE BASE FLOREMORIA (regole, cataloghi, prezzi, link ufficiali, esempi storici di stile):
 ${knowledgeContext}
 
 STORICO CONVERSAZIONE:
@@ -177,10 +184,11 @@ ${historyBlock || '(nessun messaggio precedente)'}
 ---
 
 Rispondi SOLO al messaggio dell'utente qui sotto.
+TONE OF VOICE (obbligatorio): ${VERA_TONE_OF_VOICE_DIRECTIVE}
 OUTPUT: esclusivamente italiano, testo finale per l'Utente. VIETATO inglese, note interne, ragionamento, frecce (->), asterischi.
 NON includere prefissi tipo "[VERA]:" nella risposta.
 NON inventare prezzi, URL o informazioni non presenti nella knowledge base.
-Massimo 3-4 frasi brevi; link solo se utili in quel momento della conversazione.`;
+Massimo 3-4 frasi brevi; link solo se utili in quel momento della conversazione — sempre con tono umano e rispettoso del ricordo, mai come notifica fredda.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {
@@ -306,7 +314,7 @@ export async function generateVeraReply(
         source = 'deterministic';
     } else {
         // Nessun match specifico: prova Gemini LLM
-        const knowledgeContext = buildWhatsAppKnowledgeContext();
+        const knowledgeContext = buildWhatsAppKnowledgeContext(session.userType);
 
         const geminiReply = await callGeminiVera(message, session, knowledgeContext);
 

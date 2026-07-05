@@ -9,8 +9,9 @@
  * logica deterministica esistente (buildWhatsAppAiReply) così il canale non resta mai senza risposta.
  */
 import { GoogleGenAI } from '@google/genai';
-import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT } from '../floremDigitalAssistant';
+import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT, VERA_TONE_OF_VOICE_DIRECTIVE } from '../floremDigitalAssistant';
 import { buildWhatsAppAiReply, loadWhatsAppCoreKb } from '../whatsappKnowledge';
+import { buildHistoricalToneContext, resolveHistoricalAudience } from '../whatsapp/historicalToneKb';
 
 export interface VeraHistoryMessage {
     direction: 'INBOUND' | 'OUTBOUND';
@@ -44,12 +45,23 @@ function getGeminiApiKey(): string | null {
  * System prompt: anima ufficiale di VERA + orchestra dei 16 Agent + regole ferree del brand.
  * I link reali vengono iniettati dal core KB per evitare URL inventati.
  */
-export function buildVeraSystemPrompt(kb: CoreKb): string {
+export function buildVeraSystemPrompt(kb: CoreKb, userType: VeraReplyInput['userType'] = 'UNKNOWN'): string {
+    const audience = resolveHistoricalAudience(userType);
     return [
         FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT,
         '',
+        '=== ARCHIVIO STORICO CHAT REALI (standard assoluto di tono) ===',
+        'Fonte: docs/whatsapp/knowledge_base_whatsapp.txt — imita fedelmente saluti, garbo ed empatia degli estratti sotto.',
+        buildHistoricalToneContext(audience),
+        '',
+        '=== REGISTRO LINGUISTICO PER TIPO CONTATTO ===',
+        audience === 'FLORIST'
+            ? '- FIORISTA PARTNER: registro Tu, operativo e cordiale (foto, ordini, bonifici). Niente condoglianze né tono funebre.'
+            : '- UTENTE FINALE: registro Lei, empatico e commemorativo. Saluti "Buongiorno Sig./Gentile [Nome]", massimo rispetto del ricordo.',
+        '',
         '=== ORCHESTRA DEI 16 AGENT (fai convergere queste competenze prima di scrivere) ===',
         '- SOFIA + ALMA: blindano etica, dignità ed empatia. Nessun dark pattern, nessuna leva sul dolore, nessuna urgenza artificiale. VINCOLO LESSICALE TASSATIVO: la parola "cliente" è VIETATA in modo assoluto; chi scrive è SEMPRE e solo l\'"utente".',
+        `- TONE OF VOICE (tassativo): ${VERA_TONE_OF_VOICE_DIRECTIVE}`,
         '- ARLO: stile "Quiet Luxury" — essenziale, pulito, elegante, d\'élite. Niente fronzoli, niente emoji a raffica.',
         '- MARK + VINCE: guidano con garbo l\'utente al passo successivo del funnel, inserendo UNA sola volta il link diretto pertinente all\'intento (mai più link nello stesso messaggio).',
         '- ALBERTO + OSCAR: prezzi e logistica. NON inventare MAI prezzi, importi, date o disponibilità del cimitero. Se servono, indirizza al link dove il prezzo è visibile e chiedi i dati mancanti (cimitero, città, nome del defunto/animale, data).',
@@ -57,7 +69,7 @@ export function buildVeraSystemPrompt(kb: CoreKb): string {
         '',
         '=== REGOLE FERREE DI SCRITTURA (vincolanti) ===',
         '1. CONCISIONE ASSOLUTA: massimo 3-4 frasi. Mai muri di testo. Una sola domanda per volta.',
-        '2. Dai sempre del "Lei", tono d\'élite, sobrio e rassicurante. Se conosci il nome proprio, usalo con garbo una sola volta a inizio frase.',
+        '2. Dai sempre del "Lei", tono d\'élite, sobrio e rassicurante — mai freddo o da bot aziendale. Se conosci il nome proprio, usalo con garbo una sola volta a inizio frase.',
         '3. VINCOLO LESSICALE ASSOLUTO: non usare MAI "cliente" (né varianti). Usa "utente" o rivolgiti direttamente con il "Lei".',
         '4. USA SOLO i link reali qui sotto, pertinenti all\'intento. È VIETATO inventare URL, prezzi, sconti o promesse.',
         '5. Orientamento al funnel: quando l\'intento è chiaro (tomba/cimitero, funerale, animale domestico), accompagna l\'utente al link corretto senza farlo perdere tempo.',
@@ -131,7 +143,7 @@ export async function generateVeraReply(input: VeraReplyInput): Promise<string> 
             model,
             contents: buildContents(input),
             config: {
-                systemInstruction: buildVeraSystemPrompt(kb),
+                systemInstruction: buildVeraSystemPrompt(kb, input.userType),
                 temperature: 0.5,
                 maxOutputTokens: 400,
             },

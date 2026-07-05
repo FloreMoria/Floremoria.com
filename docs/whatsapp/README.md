@@ -5,7 +5,8 @@ Questa cartella contiene la base conoscitiva per il flusso WhatsApp (Twilio + as
 ## File
 
 - `knowledge_base_whatsapp.txt`
-  - Archivio originale esteso (storico e materiale grezzo).
+  - Archivio originale esteso (storico annuale chat reali — CAPITOLO 1 utenti, CAPITOLO 2 fioristi).
+  - Runtime: estratto da `lib/whatsapp/historicalToneKb.ts` nel prompt VERA (non caricare l'intero file grezzo).
 - `knowledge_base_whatsapp_core.txt`
   - Versione operativa corta da usare come contesto principale runtime.
 - `knowledge_base_whatsapp_examples.txt`

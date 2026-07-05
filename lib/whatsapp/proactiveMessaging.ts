@@ -94,15 +94,16 @@ export async function startProactiveConversation(
     const { session, requiresTemplate } = await evaluateConversationOutbound(sessionPhone);
 
     if (requiresTemplate) {
-        const { recipientFirstName, orderCode, staffNotes } = resolveProactiveTemplateParams(input);
+        const { recipientFirstName, salutationParam, orderCode, staffNotes } =
+            resolveProactiveTemplateParams(input);
 
-        if (!recipientFirstName) {
+        if (!recipientFirstName || !salutationParam) {
             return {
                 ok: false,
                 requiresTemplate: true,
                 templates: listApprovedWhatsAppTemplates(),
                 session,
-                error: 'Inserisca il nome del destinatario (variabile {{1}}).',
+                error: 'Inserisca il nome del destinatario (variabile {{1}} → es. Gentile Carlo).',
             };
         }
         if (!orderCode) {
@@ -126,7 +127,7 @@ export async function startProactiveConversation(
 
         const template = getProactiveWhatsAppTemplate();
         const bodyParameters = buildTemplateBodyParameters([
-            recipientFirstName,
+            salutationParam,
             orderCode,
             staffNotes,
         ]);

@@ -1,5 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+    buildHistoricalToneContext,
+    resolveHistoricalAudience,
+} from '@/lib/whatsapp/historicalToneKb';
 
 type CoreKb = {
     supportEmail: string;
@@ -260,16 +264,23 @@ function loadWhatsAppToneRulesFromCore(): string {
     return '';
 }
 
-/** Contesto completo per Gemini: regole, cataloghi, link prodotto, esempi di stile. */
-export function buildWhatsAppKnowledgeContext(): string {
+/** Contesto completo per Gemini: regole, cataloghi, link prodotto, esempi e chat storiche per registro. */
+export function buildWhatsAppKnowledgeContext(
+    userType: 'UTENTE' | 'FLORIST' | 'UNKNOWN' = 'UTENTE'
+): string {
     const kb = loadWhatsAppCoreKb();
+    const audience = resolveHistoricalAudience(userType);
     return [
         '=== REGOLE E TONO (OBBLIGATORIE) ===',
         loadWhatsAppToneRulesFromCore(),
         '',
         '=== PRINCIPIO ===',
         'Accompagnare ogni gesto con rispetto e semplicità. Facilitare sempre l\'azione concreta tramite link pertinenti.',
-        'Tono: gentile, educato, rispettoso del lutto e della commemorazione. Usare sempre il Lei.',
+        'TONE OF VOICE (tassativo): Massima empatia, garbo, gentilezza e rispetto assoluto del contesto del ricordo. Mai sembrare un bot aziendale freddo.',
+        'Tono: gentile, educato, caloroso e rispettoso del lutto e della commemorazione. Usare sempre il Lei con gli utenti finali.',
+        'Link a foto di consegna o testimonianze: presentarli come cura e vicinanza al ricordo, non come notifica automatica.',
+        '',
+        buildHistoricalToneContext(audience),
         '',
         '=== CONTATTI ===',
         `- Email: ${kb.supportEmail}`,
@@ -279,7 +290,7 @@ export function buildWhatsAppKnowledgeContext(): string {
         '=== CATALOGHI E LINK UFFICIALI ===',
         extractHistoricalKbEssentials(),
         '',
-        '=== ESEMPI CONVERSAZIONALI ===',
+        '=== ESEMPI CONVERSAZIONALI SINTETICI ===',
         loadWhatsAppExamplesKb(),
     ]
         .filter(Boolean)
@@ -466,9 +477,9 @@ export function buildWhatsAppAiReply(params: {
 
     if (userType === 'FLORIST') {
         if (mediaUrl) {
-            return `Grazie, foto ricevuta correttamente. La sto registrando nel flusso consegna FloreMoria. Se puoi, indica anche il numero ordine nel formato FT-XX-YY-001 per associare la prova in modo preciso.`;
+            return `Grazie, foto ricevuta. La registro subito nel flusso consegna. Se puoi, indica anche il codice ordine (es. FT-RM-26-001) così la associamo in modo preciso. Buon lavoro 🌹`;
         }
-        return `Buongiorno, per favore invii la foto della posa e il numero ordine (es. FT-XX-YY-001). Appena arriva, la registriamo subito in dashboard.`;
+        return `Buongiorno, quando puoi inviami la foto della posa e il codice ordine (es. FT-RM-26-001). Appena arriva la registriamo in dashboard. Grazie e buon lavoro 🌹`;
     }
 
     if (isSimpleThanksMessage(message)) {

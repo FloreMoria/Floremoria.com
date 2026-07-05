@@ -1,4 +1,8 @@
-import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
+import {
+    extractFirstName,
+    formatGentileSalutation,
+    normalizeOrderCode,
+} from '@/lib/whatsapp/proactiveTemplateParams';
 
 export interface WhatsAppTemplateDefinition {
     id: string;
@@ -7,7 +11,7 @@ export interface WhatsAppTemplateDefinition {
     description: string;
     language: string;
     parameterLabels: string[];
-    /** Testo fisso approvato su Meta con {{1}} nome, {{2}} ordine, {{3}} note staff. */
+    /** Testo fisso approvato su Meta con {{1}} saluto, {{2}} ordine, {{3}} note staff. */
     bodyTemplate: string;
 }
 
@@ -15,7 +19,7 @@ export const PROACTIVE_CONVERSATION_TEMPLATE_ID = 'messaggio_personalizzato_fior
 
 /**
  * Testo body template Meta (allineare a WHATSAPP_TEMPLATE_PROACTIVE_BODY su Vercel).
- * {{1}} = nome destinatario (incipit dinamico, mai "Gentile Cliente" fisso).
+ * {{1}} = saluto con nome (es. "Gentile Carlo") — passato come parametro dinamico.
  * {{2}} = codice ordine.
  * {{3}} = note staff.
  */
@@ -35,9 +39,9 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
             'floremoria_messaggio_personalizzato_fiorista'
         ),
         label: 'Messaggio personalizzato fiorista',
-        description: 'Template Meta: {{1}} nome, {{2}} codice ordine, {{3}} note staff.',
+        description: 'Template Meta: {{1}} Gentile + nome, {{2}} codice ordine, {{3}} note staff.',
         language: 'it',
-        parameterLabels: ['Nome', 'Codice ordine', 'Note dello Staff'],
+        parameterLabels: ['Saluto (Gentile + nome)', 'Codice ordine', 'Note dello Staff'],
         bodyTemplate: PROACTIVE_CONVERSATION_BODY_TEMPLATE,
     };
 }
@@ -61,18 +65,35 @@ export function buildTemplateBodyParameters(
     }));
 }
 
-/** Ricostruisce il messaggio completo per lo storico chat. */
+/** Sostituisce {{1}}, {{2}}, {{3}} nel body template con i valori reali del messaggio. */
+export function renderProactiveTemplateBody(
+    bodyTemplate: string,
+    recipientFirstName: string,
+    orderCode: string,
+    staffNotes: string
+): string {
+    const salutation = formatGentileSalutation(recipientFirstName);
+    const code = normalizeOrderCode(orderCode);
+    const notes = staffNotes.trim();
+
+    return bodyTemplate
+        .replace(/\{\{1\}\}/g, salutation || '…')
+        .replace(/\{\{2\}\}/g, code || '…')
+        .replace(/\{\{3\}\}/g, notes || '…');
+}
+
+/** Ricostruisce il messaggio completo per lo storico chat e anteprima dashboard. */
 export function renderProactiveTemplateMessage(
     recipientFirstName: string,
     orderCode: string,
     staffNotes: string
 ): string {
-    const firstName = extractFirstName(recipientFirstName);
-    const code = normalizeOrderCode(orderCode);
-    return getProactiveWhatsAppTemplate()
-        .bodyTemplate.replace(/\{\{1\}\}/g, firstName)
-        .replace(/\{\{2\}\}/g, code)
-        .replace(/\{\{3\}\}/g, staffNotes.trim());
+    return renderProactiveTemplateBody(
+        getProactiveWhatsAppTemplate().bodyTemplate,
+        recipientFirstName,
+        orderCode,
+        staffNotes
+    );
 }
 
-export { extractFirstName, normalizeOrderCode };
+export { extractFirstName, formatGentileSalutation, normalizeOrderCode };

@@ -7,8 +7,8 @@ export function extractFirstName(fullName: string): string {
 }
 
 /**
- * Valore per {{1}} sul template Meta approvato ("{{1}}, in merito all'ordine...").
- * Il saluto completo "Gentile [Nome]" va nel parametro dinamico {{1}}.
+ * Valore per {{1}} sul template Meta ("Gentile {{1}}, in merito all'ordine...").
+ * Meta riceve solo il nome di battesimo.
  */
 export function formatGentileSalutation(recipientFirstName: string): string {
     const firstName = extractFirstName(recipientFirstName);
@@ -28,8 +28,8 @@ export function normalizeOrderCode(raw: string): string {
 export interface ProactiveTemplateParams {
     /** Nome di battesimo (campo UI / validazione). */
     recipientFirstName: string;
-    /** Valore inviato a Meta come {{1}} — es. "Gentile Carlo". */
-    salutationParam: string;
+    /** Valore inviato a Meta come {{1}} — solo nome, es. "Carlo". */
+    nameParam: string;
     orderCode: string;
     staffNotes: string;
 }
@@ -46,7 +46,7 @@ export function resolveProactiveTemplateParams(input: {
     const recipientFirstName = extractFirstName(rawFirst);
     return {
         recipientFirstName,
-        salutationParam: formatGentileSalutation(recipientFirstName),
+        nameParam: recipientFirstName,
         orderCode: normalizeOrderCode(input.orderCode ?? input.templateParams?.[1] ?? ''),
         staffNotes: (input.staffNotes ?? input.templateParams?.[2] ?? '').trim(),
     };

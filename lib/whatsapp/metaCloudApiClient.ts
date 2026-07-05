@@ -12,6 +12,8 @@
 
 const META_GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || 'v21.0';
 
+import { PROACTIVE_TEMPLATE_BODY_PARAM_COUNT } from '@/lib/whatsapp/approvedTemplates';
+
 export interface WhatsAppSendResult {
     ok: boolean;
     messageId?: string;
@@ -212,6 +214,23 @@ export async function sendWhatsAppImageMessage(
     });
 }
 
+function validateTemplateComponents(components: WhatsAppTemplateComponent[]): string | null {
+    const body = components.find((c) => c.type === 'body');
+    if (!body?.parameters?.length) {
+        return 'Component body mancante: il template richiede parametri.';
+    }
+    if (body.parameters.length !== PROACTIVE_TEMPLATE_BODY_PARAM_COUNT) {
+        return `Template Meta: attesi ${PROACTIVE_TEMPLATE_BODY_PARAM_COUNT} parametri body, ricevuti ${body.parameters.length}.`;
+    }
+    for (let i = 0; i < body.parameters.length; i += 1) {
+        const text = body.parameters[i]?.text?.trim();
+        if (!text) {
+            return `Parametro template {{${i + 1}}} vuoto.`;
+        }
+    }
+    return null;
+}
+
 /**
  * Invia un template WhatsApp approvato da Meta (obbligatorio fuori finestra 24h).
  */
@@ -225,6 +244,14 @@ export async function sendWhatsAppTemplateMessage(
     if (!recipient) {
         console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
         return { ok: false, error: 'invalid_phone' };
+    }
+
+    if (components.length > 0) {
+        const validationError = validateTemplateComponents(components);
+        if (validationError) {
+            console.warn(`[meta-cloud-api] Template validation: ${validationError}`);
+            return { ok: false, error: validationError, errorCode: 132000 };
+        }
     }
 
     const template: Record<string, unknown> = {

@@ -7,6 +7,7 @@ import {
 import {
     buildTemplateBodyParameters,
     PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
+    PROACTIVE_TEMPLATE_BODY_PARAM_COUNT,
     renderProactiveTemplateBody,
     renderProactiveTemplateMessage,
 } from '../lib/whatsapp/approvedTemplates';
@@ -35,16 +36,19 @@ const resolved = resolveProactiveTemplateParams({
     staffNotes: '  Buongiorno, confermiamo la consegna.  ',
 });
 console.log('resolve:', resolved);
-if (resolved.salutationParam !== 'Gentile Carlo') failed++;
+if (resolved.nameParam !== 'Carlo') failed++;
 if (resolved.orderCode !== 'FF-PN-26-004') failed++;
 
-const params = buildTemplateBodyParameters([
-    resolved.salutationParam,
+const params = buildTemplateBodyParameters(
+    resolved.nameParam,
     resolved.orderCode,
-    resolved.staffNotes,
-]);
+    resolved.staffNotes
+);
 console.log('Meta body params:', JSON.stringify(params, null, 2));
-if (params[0].text !== 'Gentile Carlo') failed++;
+if (params.length !== PROACTIVE_TEMPLATE_BODY_PARAM_COUNT) failed++;
+if (params[0].text !== 'Carlo') failed++;
+if (params[1].text !== 'FF-PN-26-004') failed++;
+if (!params[2].text.includes('Buongiorno')) failed++;
 
 const preview = renderProactiveTemplateBody(
     PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,

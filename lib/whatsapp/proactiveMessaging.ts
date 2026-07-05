@@ -7,11 +7,13 @@ import {
     type ChatSession,
 } from '@/lib/chatStore';
 import {
-    buildTemplateBodyParameters,
+    buildProactiveTemplateBodyComponent,
     getProactiveWhatsAppTemplate,
     listApprovedWhatsAppTemplates,
     PROACTIVE_CONVERSATION_TEMPLATE_ID,
+    ProactiveTemplateValidationError,
     renderProactiveTemplateMessage,
+    validateProactiveTemplateBodyValues,
     type WhatsAppTemplateDefinition,
 } from '@/lib/whatsapp/approvedTemplates';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
@@ -20,7 +22,6 @@ import {
     sendWhatsAppTextMessage,
     type WhatsAppSendResult,
 } from '@/lib/whatsapp/metaCloudApiClient';
-import { resolveProactiveTemplateParams } from '@/lib/whatsapp/proactiveTemplateParams';
 import { buildContactInitials, toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 
 export interface StartConversationInput {
@@ -94,53 +95,43 @@ export async function startProactiveConversation(
     const { session, requiresTemplate } = await evaluateConversationOutbound(sessionPhone);
 
     if (requiresTemplate) {
-        const { recipientFirstName, salutationParam, orderCode, staffNotes } =
-            resolveProactiveTemplateParams(input);
-
-        if (!recipientFirstName || !salutationParam) {
+        let templateValues;
+        try {
+            templateValues = validateProactiveTemplateBodyValues({
+                recipientFirstName: input.recipientFirstName,
+                orderCode: input.orderCode,
+                staffNotes: input.staffNotes,
+            });
+        } catch (e) {
+            const message =
+                e instanceof ProactiveTemplateValidationError
+                    ? e.message
+                    : 'Parametri template non validi.';
             return {
                 ok: false,
                 requiresTemplate: true,
                 templates: listApprovedWhatsAppTemplates(),
                 session,
-                error: 'Inserisca il nome del destinatario (variabile {{1}} → es. Gentile Carlo).',
-            };
-        }
-        if (!orderCode) {
-            return {
-                ok: false,
-                requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(),
-                session,
-                error: 'Inserisca il codice ordine (variabile {{2}}), es. FF-PN-26-004.',
-            };
-        }
-        if (!staffNotes) {
-            return {
-                ok: false,
-                requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(),
-                session,
-                error: 'Compili le note dello staff (variabile {{3}}).',
+                error: message,
             };
         }
 
         const template = getProactiveWhatsAppTemplate();
-        const bodyParameters = buildTemplateBodyParameters([
-            salutationParam,
-            orderCode,
-            staffNotes,
-        ]);
+        const bodyComponent = buildProactiveTemplateBodyComponent(templateValues);
 
         const send = await sendWhatsAppTemplateMessage(sessionPhone, template.metaName, template.language, [
-            { type: 'body', parameters: bodyParameters },
+            bodyComponent,
         ]);
 
         if (!send.ok) {
             return { ok: false, session, error: send.error ?? 'Invio template WhatsApp fallito.', send };
         }
 
-        const logBody = renderProactiveTemplateMessage(recipientFirstName, orderCode, staffNotes);
+        const logBody = renderProactiveTemplateMessage(
+            templateValues.recipientFirstName,
+            templateValues.orderCode,
+            templateValues.staffNotes
+        );
 
         await ensureStaffSession(sessionPhone, input.displayName, input.userType ?? 'UNKNOWN');
         await setSessionStatus(sessionPhone, 'HUMAN_INTERVENTION');
@@ -149,8 +140,8 @@ export async function startProactiveConversation(
             outboundMode: 'template',
             templateId: PROACTIVE_CONVERSATION_TEMPLATE_ID,
             templateName: template.metaName,
-            recipientFirstName,
-            orderCode,
+            recipientFirstName: templateValues.recipientFirstName,
+            orderCode: templateValues.orderCode,
             ...(send.messageId ? { whatsAppMessageId: send.messageId } : {}),
         });
 

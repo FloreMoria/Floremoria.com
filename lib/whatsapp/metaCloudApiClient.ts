@@ -16,6 +16,15 @@ export interface WhatsAppSendResult {
     ok: boolean;
     messageId?: string;
     error?: string;
+    errorCode?: number;
+    errorSubcode?: number;
+}
+
+export interface WhatsAppTemplateComponent {
+    type: 'body' | 'header' | 'button';
+    sub_type?: 'quick_reply' | 'url';
+    index?: string;
+    parameters?: Array<{ type: 'text'; text: string }>;
 }
 
 export interface WhatsAppConnectionState {
@@ -85,30 +94,38 @@ function graphApiUrl(path: string): string {
     return `https://graph.facebook.com/${META_GRAPH_API_VERSION}${path}`;
 }
 
-/**
- * Invia un messaggio di testo via Meta WhatsApp Cloud API.
- */
-export async function sendWhatsAppTextMessage(
-    phone: string,
-    text: string
-): Promise<WhatsAppSendResult> {
+function parseMetaGraphError(body: string): {
+    message: string;
+    code?: number;
+    subcode?: number;
+} {
+    try {
+        const data = JSON.parse(body) as {
+            error?: { message?: string; code?: number; error_subcode?: number };
+        };
+        const err = data.error;
+        return {
+            message: err?.message || body.slice(0, 200),
+            code: err?.code,
+            subcode: err?.error_subcode,
+        };
+    } catch {
+        return { message: body.slice(0, 200) };
+    }
+}
+
+async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
     const config = resolveMetaCloudCredentials();
     if (!config.apiKey || !config.phoneNumberId) {
         console.warn('[meta-cloud-api] WHATSAPP_CLOUD_API_KEY o WHATSAPP_PHONE_NUMBER_ID assenti: invio saltato.');
         return { ok: false, error: 'not_configured' };
     }
 
-    const recipient = toMetaRecipientPhone(phone);
-    if (!recipient) {
-        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
-        return { ok: false, error: 'invalid_phone' };
-    }
-
     const url = graphApiUrl(`/${config.phoneNumberId}/messages`);
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
+        const timeout = setTimeout(() => controller.abort(), 15_000);
 
         const res = await fetch(url, {
             method: 'POST',
@@ -116,25 +133,26 @@ export async function sendWhatsAppTextMessage(
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${config.apiKey}`,
             },
-            body: JSON.stringify({
-                messaging_product: 'whatsapp',
-                recipient_type: 'individual',
-                to: recipient,
-                type: 'text',
-                text: { preview_url: false, body: text },
-            }),
+            body: JSON.stringify(payload),
             signal: controller.signal,
         });
         clearTimeout(timeout);
 
         if (!res.ok) {
             const body = await res.text().catch(() => '');
-            console.error(`[meta-cloud-api] HTTP ${res.status} messages:`, body.slice(0, 300));
-            return { ok: false, error: `http_${res.status}` };
+            const parsed = parseMetaGraphError(body);
+            console.error(`[meta-cloud-api] HTTP ${res.status} messages:`, body.slice(0, 400));
+            return {
+                ok: false,
+                error: parsed.message,
+                errorCode: parsed.code,
+                errorSubcode: parsed.subcode,
+            };
         }
 
         const data = (await res.json()) as { messages?: Array<{ id?: string }> };
         const messageId = data?.messages?.[0]?.id;
+        const recipient = String(payload.to ?? '');
         console.info(`[meta-cloud-api] Messaggio inviato a +${recipient} (id: ${messageId ?? 'N/A'})`);
         return { ok: true, messageId };
     } catch (e) {
@@ -142,6 +160,60 @@ export async function sendWhatsAppTextMessage(
         console.error('[meta-cloud-api] Errore invio messaggio:', msg);
         return { ok: false, error: msg };
     }
+}
+
+/**
+ * Invia un messaggio di testo via Meta WhatsApp Cloud API.
+ */
+export async function sendWhatsAppTextMessage(
+    phone: string,
+    text: string
+): Promise<WhatsAppSendResult> {
+    const recipient = toMetaRecipientPhone(phone);
+    if (!recipient) {
+        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
+        return { ok: false, error: 'invalid_phone' };
+    }
+
+    return postWhatsAppMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipient,
+        type: 'text',
+        text: { preview_url: false, body: text },
+    });
+}
+
+/**
+ * Invia un template WhatsApp approvato da Meta (obbligatorio fuori finestra 24h).
+ */
+export async function sendWhatsAppTemplateMessage(
+    phone: string,
+    templateName: string,
+    languageCode: string,
+    components: WhatsAppTemplateComponent[] = []
+): Promise<WhatsAppSendResult> {
+    const recipient = toMetaRecipientPhone(phone);
+    if (!recipient) {
+        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
+        return { ok: false, error: 'invalid_phone' };
+    }
+
+    const template: Record<string, unknown> = {
+        name: templateName,
+        language: { code: languageCode },
+    };
+    if (components.length > 0) {
+        template.components = components;
+    }
+
+    return postWhatsAppMessage({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipient,
+        type: 'template',
+        template,
+    });
 }
 
 /**

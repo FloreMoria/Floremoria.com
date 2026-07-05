@@ -5,41 +5,130 @@
  *  1. Prova le regole deterministiche di `buildWhatsAppAiReply` (whatsappKnowledge.ts).
  *  2. Se la risposta è identica al messaggio guida standard (nessun match specifico),
  *     chiama Gemini con il system prompt completo di VERA + cronologia sessione.
- *  3. Aggiunge sempre la firma di chiusura quando la sessione si chiude o l'utente saluta.
+ *  3. Aggiunge la firma di chiusura solo quando l'Utente si congeda esplicitamente.
  *
  * Chiusura tassativa (su saluto/addio o handoff umano):
  *   "Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹"
  */
 
-import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT } from '@/lib/floremDigitalAssistant';
+import { FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT } from '@/lib/floremDigitalAssistant';
 import {
     buildWhatsAppAiReply,
+    buildWhatsAppKnowledgeContext,
+    buildSimpleThanksReply,
+    ensureCatalogLinksInReply,
+    ensureRespectfulOpening,
+    isClosingMessage,
+    isSimpleThanksMessage,
     STANDARD_GUIDANCE_MESSAGE,
-    loadWhatsAppCoreKb,
-    loadWhatsAppHistoricalKb,
 } from '@/lib/whatsappKnowledge';
 import type { ChatSession } from '@/lib/chatStore';
 
 export const VERA_CLOSING_SIGNATURE =
     'Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹';
 
-/** Parole chiave che indicano un saluto / congedo da parte dell'utente. */
-const FAREWELL_KEYWORDS = [
-    'grazie',
+/** Parole chiave che indicano un congedo esplicito (non saluti iniziali). */
+const FAREWELL_PHRASES = [
     'arrivederci',
     'a presto',
-    'ciao',
     'buona giornata',
     'buona serata',
     'buona notte',
     'ci sentiamo',
+    'va bene cosi',
     'va bene così',
     'ho finito',
+    'non serve altro',
+    'a risentirci',
 ];
 
+function normalizeForFarewell(message: string): string {
+    return message
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function isFarewellMessage(message: string): boolean {
-    const m = message.toLowerCase().trim();
-    return FAREWELL_KEYWORDS.some((k) => m.includes(k));
+    const m = normalizeForFarewell(message);
+    if (!m) return false;
+
+    // Congedo esplicito
+    if (FAREWELL_PHRASES.some((phrase) => m.includes(phrase))) return true;
+
+    // "grazie" solo come chiusura breve (es. "grazie", "grazie mille")
+    if (/^grazie(\s+mille)?$/.test(m)) return true;
+
+    // "ciao" solo come congedo breve, non come apertura ("ciao vorrei...")
+    if (/^ciao(\s+ciao)?$/.test(m)) return true;
+
+    // Ringraziamento + congedo nella stessa frase
+    if (m.includes('grazie') && FAREWELL_PHRASES.some((phrase) => m.includes(phrase))) return true;
+
+    return false;
+}
+
+function stripClosingSignature(text: string): string {
+    const escaped = VERA_CLOSING_SIGNATURE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`\\n*${escaped}\\s*$`, 'i'), '').trim();
+}
+
+function getDisplayNameFromSession(session: ChatSession): string | undefined {
+    const name = session.name?.trim();
+    if (!name || name.startsWith('+') || name.startsWith('whatsapp:')) return undefined;
+    const parts = name.split(' ').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : undefined;
+}
+
+function sanitizeVeraReplyText(text: string): string {
+    const cleaned = text
+        .split('\n')
+        .filter((line) => {
+            const l = line.trim();
+            if (!l) return true;
+            const lower = l.toLowerCase();
+            if (lower.startsWith('" ->') || lower.startsWith('->')) return false;
+            if (lower === '*' || lower.startsWith('* ')) return false;
+            if (/^(wait|let'?s|note:|thinking|output:)/i.test(l)) return false;
+            if (/wait.*respectful/i.test(l)) return false;
+            if (/^["'].*["']$/.test(l) && l.length < 80) return false;
+            return true;
+        })
+        .join('\n')
+        .replace(/^["']\s*/gm, '')
+        .replace(/\s*["']$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    // Scarta risposte quasi vuote o solo link dopo pulizia
+    if (!cleaned || cleaned.replace(/https?:\/\/\S+/g, '').trim().length < 3) {
+        return '';
+    }
+    return cleaned;
+}
+
+function polishVeraReply(reply: string, message: string, session: ChatSession): string {
+    const hasPriorOutbound = session.messages.some((m) => m.direction === 'OUTBOUND');
+    const closing = isClosingMessage(message);
+    let text = sanitizeVeraReplyText(stripClosingSignature(reply));
+    if (!text) return reply;
+    if (!closing) {
+        text = ensureRespectfulOpening(text, hasPriorOutbound, getDisplayNameFromSession(session));
+        text = ensureCatalogLinksInReply(
+            text,
+            message,
+            session.messages.map((m) => ({
+                direction: m.direction,
+                body: m.body,
+                mediaUrl: m.mediaUrl,
+                createdAt: m.createdAt,
+            }))
+        );
+    }
+    return text;
 }
 
 function shouldAppendSignature(message: string): boolean {
@@ -77,20 +166,21 @@ async function callGeminiVera(
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const historyBlock = buildHistoryBlock(session);
 
-    const systemInstruction = `${FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT}
+    const systemInstruction = `${FLOREM_WHATSAPP_ASSISTANT_SYSTEM_PROMPT}
 
 ---
-KNOWLEDGE BASE FLOREMORIA (usa solo queste informazioni per prezzi, URL, policy):
+KNOWLEDGE BASE FLOREMORIA (regole, cataloghi, prezzi, link ufficiali, esempi di stile):
 ${knowledgeContext}
 
 STORICO CONVERSAZIONE:
 ${historyBlock || '(nessun messaggio precedente)'}
 ---
 
-Rispondi SOLO al messaggio dell'utente qui sotto con una risposta breve e pertinente.
+Rispondi SOLO al messaggio dell'utente qui sotto.
+OUTPUT: esclusivamente italiano, testo finale per l'Utente. VIETATO inglese, note interne, ragionamento, frecce (->), asterischi.
 NON includere prefissi tipo "[VERA]:" nella risposta.
 NON inventare prezzi, URL o informazioni non presenti nella knowledge base.
-La risposta deve essere in italiano, sobria, empatica, mai più di 4-5 righe.`;
+Massimo 3-4 frasi brevi; link solo se utili in quel momento della conversazione.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {
@@ -136,7 +226,12 @@ La risposta deve essere in italiano, sobria, empatica, mai più di 4-5 righe.`;
             console.warn('[vera-ai] Gemini: risposta vuota o bloccata.');
             return null;
         }
-        return text;
+        const sanitized = sanitizeVeraReplyText(text);
+        if (!sanitized) {
+            console.warn('[vera-ai] Gemini: risposta scartata dopo sanitizzazione.');
+            return null;
+        }
+        return sanitized;
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error('[vera-ai] Errore chiamata Gemini:', msg);
@@ -174,6 +269,15 @@ export async function generateVeraReply(
         return { text: escalationText, source: 'deterministic', shouldEscalate: true };
     }
 
+    // ── Ringraziamento / chiusura — risposta umana breve, senza link né Gemini ─
+    if (isSimpleThanksMessage(message)) {
+        return {
+            text: `${buildSimpleThanksReply()}\n\n${VERA_CLOSING_SIGNATURE}`,
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
     // ── Risposta deterministica (regole whatsappKnowledge) ───────────────────
     const deterministicReply = buildWhatsAppAiReply({
         message,
@@ -197,22 +301,12 @@ export async function generateVeraReply(
         // Match specifico trovato: usa la risposta deterministica
         replyText = deterministicReply;
         source = 'deterministic';
+    } else if (isClosingMessage(message)) {
+        replyText = buildSimpleThanksReply();
+        source = 'deterministic';
     } else {
         // Nessun match specifico: prova Gemini LLM
-        const kb = loadWhatsAppCoreKb();
-        const historicalKb = loadWhatsAppHistoricalKb();
-        const knowledgeContext = [
-            `- Email assistenza: ${kb.supportEmail}`,
-            `- WhatsApp assistenza: ${kb.supportWhatsapp}`,
-            `- Orario assistenza: ${kb.supportHours}`,
-            `- Sito: ${kb.siteUrl}`,
-            `- Catalogo tombe: ${kb.catalogTombsUrl}`,
-            `- Funerale: ${kb.funeralUrl}`,
-            `- Animali: ${kb.petsUrl}`,
-            historicalKb ? `\nKnowledge base estesa:\n${historicalKb.slice(0, 3000)}` : '',
-        ]
-            .filter(Boolean)
-            .join('\n');
+        const knowledgeContext = buildWhatsAppKnowledgeContext();
 
         const geminiReply = await callGeminiVera(message, session, knowledgeContext);
 
@@ -226,8 +320,16 @@ export async function generateVeraReply(
         }
     }
 
-    // ── Firma di chiusura (solo su messaggi di saluto) ───────────────────────
-    if (shouldAppendSignature(message)) {
+    // ── Rifinitura: tono commemorativo + link (non su messaggi di chiusura) ───
+    if (!isClosingMessage(message)) {
+        replyText = polishVeraReply(replyText, message, session);
+    } else {
+        replyText = stripClosingSignature(replyText);
+    }
+
+    // ── Firma di chiusura (solo su congedo esplicito dell'Utente) ─────────────
+    replyText = stripClosingSignature(replyText);
+    if (shouldAppendSignature(message) && !replyText.includes(VERA_CLOSING_SIGNATURE)) {
         replyText = `${replyText}\n\n${VERA_CLOSING_SIGNATURE}`;
     }
 

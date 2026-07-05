@@ -83,3 +83,4 @@ floremoria-*-*.json
 /volantino-b2b-floremoria.pdf
 /volantino-b2b-fronte.pdf
 /volantino-b2b-retro.pdf
+.env*

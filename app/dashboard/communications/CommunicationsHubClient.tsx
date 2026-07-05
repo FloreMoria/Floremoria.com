@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2 } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus } from 'lucide-react';
+import NewConversationModal from '@/components/dashboard/NewConversationModal';
 
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
@@ -89,6 +90,7 @@ function VisioneTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'CLIENT' | 'FLORIST'>('ALL');
   const [sending, setSending] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find the currently active chat
@@ -145,6 +147,8 @@ function VisioneTab({
       const data = await res.json();
       if (data.success) {
         setSessions(prev => prev.map(s => s.phone === activeChatId ? data.session : s));
+      } else if (data.requiresTemplate) {
+        alert(data.error || 'Finestra 24h scaduta: avvii una nuova conversazione con template WhatsApp.');
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -194,24 +198,48 @@ function VisioneTab({
 
   const humanInterventionsCount = sessions.filter(s => s.status === 'HUMAN_INTERVENTION' && (s.userType === 'UTENTE' || s.userType === 'UNKNOWN')).length;
 
+  const handleConversationStarted = (session: Record<string, unknown>) => {
+    setSessions((prev) => {
+      const phone = String(session.phone || '');
+      const without = prev.filter((item) => item.phone !== phone);
+      return [session, ...without];
+    });
+    setActiveChatId(String(session.phone || ''));
+  };
+
   return (
     <div className="animate-in fade-in duration-300">
+      <NewConversationModal
+        open={newChatOpen}
+        onClose={() => setNewChatOpen(false)}
+        onConversationStarted={handleConversationStarted}
+      />
       <div className="flex border border-[#EAE3D9] rounded-3xl overflow-hidden h-[680px] bg-[#FAF9F6] shadow-sm">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
         <div className="w-[38%] border-r border-[#EAE3D9] flex flex-col h-full bg-white">
           {/* Header Sidebar */}
           <div className="p-4 border-b border-[#EAE3D9] space-y-3 bg-[#FAF8F5]">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-2">
               <h3 className="font-display font-bold text-[#111B21] flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-[#B89F78]" />
                 Conversazioni
               </h3>
-              {humanInterventionsCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
-                  <AlertCircle className="w-3 h-3" /> {humanInterventionsCount} SOS
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewChatOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00A884] text-white text-[11px] font-bold uppercase tracking-wide hover:bg-[#008f6f] transition-colors shadow-sm"
+                >
+                  <MessageSquarePlus className="w-3.5 h-3.5" />
+                  Nuova
+                </button>
+                {humanInterventionsCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+                    <AlertCircle className="w-3 h-3" /> {humanInterventionsCount} SOS
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Cerca Input */}

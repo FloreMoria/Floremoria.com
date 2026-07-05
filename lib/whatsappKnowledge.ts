@@ -20,8 +20,37 @@ type ConversationMessage = {
 
 let kbCache: CoreKb | null = null;
 let historicalKbCache: string | null = null;
+let historicalEssentialsCache: string | null = null;
+let examplesKbCache: string | null = null;
+export type CatalogIntent = 'tombs' | 'funeral' | 'pets' | 'general';
+
+/** Link prodotto ufficiali (da knowledge_base_whatsapp.txt). */
+const PRODUCT_LINKS: Record<string, string> = {
+    'ricordo affettuoso': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-ricordo-affettuoso',
+    'bouquet di rose': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-di-rose',
+    'omaggio speciale': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-omaggio-speciale',
+    'tributo eterno': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-tributo-eterno',
+    'rispetto e vicinanza': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-rispetto-vicinanza',
+    'cordoglio sincero': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-cordoglio-sincero',
+    'omaggio solenne': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-omaggio-solenne',
+    'memoria eterna': 'https://www.floremoria.com/fiori-sulle-tombe/bouquet-memoria-imperituri',
+    'copribara': 'https://www.floremoria.com/fiori-sulle-tombe/copribara',
+    'cuscino': 'https://www.floremoria.com/fiori-sulle-tombe/cuscino',
+    'piramide': 'https://www.floremoria.com/fiori-sulle-tombe/piramide',
+    'cuore': 'https://www.floremoria.com/fiori-sulle-tombe/cuore-corona',
+    'corona': 'https://www.floremoria.com/fiori-sulle-tombe/cuore-corona',
+    'un raggio di sole': 'https://www.floremoria.com/fiori-sulle-tombe/un-raggio-di-sole',
+    'abbraccio verde': 'https://www.floremoria.com/fiori-sulle-tombe/abbraccio-verde',
+    'legame eterno': 'https://www.floremoria.com/fiori-sulle-tombe/legame-eterno',
+};
+
+export const VERA_RESPECTFUL_OPENING =
+    'La ringrazio per essersi rivolto a FloreMoria in un momento così delicato. Sono qui per aiutarLa a organizzare l\'omaggio con rispetto e serenità.';
 export const STANDARD_GUIDANCE_MESSAGE =
-    "La ringrazio. Per aiutarLa al meglio, mi indica se desidera un bouquet sulla tomba o un omaggio floreale per il funerale?";
+    `${VERA_RESPECTFUL_OPENING}\n\n` +
+    'Mi indichi se desidera un bouquet sulla tomba o un omaggio floreale per il funerale?\n\n' +
+    'Catalogo tombe: https://www.floremoria.com/fiori-sulle-tombe\n' +
+    'Funerale: https://www.floremoria.com/per-il-funerale';
 
 function normalizeMessage(value: string): string {
     return value
@@ -183,6 +212,204 @@ export function loadWhatsAppHistoricalKb(): string {
     return historicalKbCache;
 }
 
+/** Blocco URL catalogo per prompt LLM e risposte con link prodotto. */
+export function buildWhatsAppProductLinksBlock(kb: CoreKb = loadWhatsAppCoreKb()): string {
+    return [
+        `Catalogo fiori sulle tombe (da EUR 29.99): ${kb.catalogTombsUrl}`,
+        `Omaggi per il funerale: ${kb.funeralUrl}`,
+        `Ricordo piccoli amici: ${kb.petsUrl}`,
+        `Sito: ${kb.siteUrl}`,
+    ].join('\n');
+}
+
+export function loadWhatsAppExamplesKb(): string {
+    if (examplesKbCache !== null) return examplesKbCache;
+    const examplesPath = path.join(process.cwd(), 'docs', 'whatsapp', 'knowledge_base_whatsapp_examples.txt');
+    try {
+        examplesKbCache = fs.readFileSync(examplesPath, 'utf-8');
+    } catch {
+        examplesKbCache = '';
+    }
+    return examplesKbCache;
+}
+
+/** Regole tono + cataloghi + link (senza le migliaia di chat storiche). */
+export function extractHistoricalKbEssentials(): string {
+    if (historicalEssentialsCache !== null) return historicalEssentialsCache;
+    const full = loadWhatsAppHistoricalKb();
+    if (!full) {
+        historicalEssentialsCache = '';
+        return historicalEssentialsCache;
+    }
+    const chapterMarker = 'CAPITOLO 1:';
+    const idx = full.indexOf(chapterMarker);
+    historicalEssentialsCache = (idx > 0 ? full.slice(0, idx) : full.slice(0, 14000)).trim();
+    return historicalEssentialsCache;
+}
+
+function loadWhatsAppToneRulesFromCore(): string {
+    const corePath = path.join(process.cwd(), 'docs', 'whatsapp', 'knowledge_base_whatsapp_core.txt');
+    try {
+        const content = fs.readFileSync(corePath, 'utf-8');
+        const start = content.indexOf('5) REGOLE ASSISTENTE');
+        const end = content.indexOf('==================================================\n7) RIMBORSI');
+        if (start >= 0 && end > start) return content.slice(start, end).trim();
+    } catch {
+        /* ignore */
+    }
+    return '';
+}
+
+/** Contesto completo per Gemini: regole, cataloghi, link prodotto, esempi di stile. */
+export function buildWhatsAppKnowledgeContext(): string {
+    const kb = loadWhatsAppCoreKb();
+    return [
+        '=== REGOLE E TONO (OBBLIGATORIE) ===',
+        loadWhatsAppToneRulesFromCore(),
+        '',
+        '=== PRINCIPIO ===',
+        'Accompagnare ogni gesto con rispetto e semplicità. Facilitare sempre l\'azione concreta tramite link pertinenti.',
+        'Tono: gentile, educato, rispettoso del lutto e della commemorazione. Usare sempre il Lei.',
+        '',
+        '=== CONTATTI ===',
+        `- Email: ${kb.supportEmail}`,
+        `- WhatsApp: ${kb.supportWhatsapp}`,
+        `- Orario: ${kb.supportHours}`,
+        '',
+        '=== CATALOGHI E LINK UFFICIALI ===',
+        extractHistoricalKbEssentials(),
+        '',
+        '=== ESEMPI CONVERSAZIONALI ===',
+        loadWhatsAppExamplesKb(),
+    ]
+        .filter(Boolean)
+        .join('\n');
+}
+
+export function inferCatalogIntent(
+    message: string,
+    history: ConversationMessage[] = []
+): CatalogIntent | null {
+    const combined = [message, ...history.slice(-4).map((h) => h.body)].join(' ');
+    const m = normalizeMessage(combined);
+    if (
+        hasAny(m, [
+            'funerale',
+            'camera mortuaria',
+            'chiesa',
+            'copribara',
+            'cuscino',
+            'piramide',
+            'corona',
+            'cordoglio',
+        ])
+    ) {
+        return 'funeral';
+    }
+    if (hasAny(m, ['animale', 'animali', 'pet', 'piccoli amici', 'cane', 'gatto'])) {
+        return 'pets';
+    }
+    if (
+        hasAny(m, [
+            'tomba',
+            'cimitero',
+            'bouquet',
+            'fiori',
+            'lumino',
+            'prezzo',
+            'prezzi',
+            'costa',
+            'catalogo',
+            'comprare',
+            'ordinare',
+            'omaggio',
+            'ricordo',
+            'commemor',
+            'lutto',
+            'defunto',
+            'caro',
+            'cara',
+            'vorrei',
+            'voglio',
+            'servono',
+        ])
+    ) {
+        return 'tombs';
+    }
+    return null;
+}
+
+function findMentionedProductLink(text: string): string | null {
+    const m = normalizeMessage(text);
+    for (const [name, url] of Object.entries(PRODUCT_LINKS)) {
+        if (m.includes(normalizeMessage(name))) return url;
+    }
+    return null;
+}
+
+/** Garantisce link catalogo/prodotto se la risposta ne è priva ma il contesto lo richiede. */
+export function ensureCatalogLinksInReply(
+    reply: string,
+    message: string,
+    history: ConversationMessage[] = []
+): string {
+    if (isClosingMessage(message)) return reply;
+    if (/https?:\/\/\S*floremoria\.com/i.test(reply)) return reply;
+
+    const kb = loadWhatsAppCoreKb();
+    const contextText = [message, ...history.slice(-3).map((h) => h.body)].join(' ');
+    const productLink = findMentionedProductLink(contextText);
+    if (productLink) {
+        return `${reply}\n\nPuò vedere il prodotto qui:\n${productLink}`;
+    }
+
+    const intent = inferCatalogIntent(message, history);
+    if (!intent) return reply;
+
+    const lines: string[] = [];
+    if (intent === 'tombs' || intent === 'general') {
+        lines.push(`Catalogo fiori sulle tombe: ${kb.catalogTombsUrl}`);
+    }
+    if (intent === 'funeral' || intent === 'general') {
+        lines.push(`Omaggi per il funerale: ${kb.funeralUrl}`);
+    }
+    if (intent === 'pets') {
+        lines.push(`Ricordo piccoli amici: ${kb.petsUrl}`);
+    }
+
+    return `${reply}\n\n${lines.join('\n')}`;
+}
+
+export function ensureRespectfulOpening(reply: string, hasPriorOutbound: boolean, displayName?: string): string {
+    if (hasPriorOutbound) return reply;
+    const lower = reply.toLowerCase();
+    if (
+        lower.includes('ringrazio per essersi rivolto') ||
+        lower.includes('momento cos') ||
+        lower.includes('condoglianze') ||
+        lower.startsWith('buongiorno')
+    ) {
+        return reply;
+    }
+    const greeting = displayName ? `Buongiorno ${displayName}, ` : 'Buongiorno, ';
+    return `${greeting}${VERA_RESPECTFUL_OPENING}\n\n${reply}`;
+}
+
+export function isSimpleThanksMessage(message: string): boolean {
+    const m = normalizeMessage(message);
+    return /^(grazie|grazie mille|ti ringrazio|la ringrazio|molte grazie)$/.test(m);
+}
+
+export function isClosingMessage(message: string): boolean {
+    if (isSimpleThanksMessage(message)) return true;
+    const m = normalizeMessage(message);
+    return ['arrivederci', 'a presto', 'buona notte', 'ciao'].some((p) => m === p || m === `${p} ciao`);
+}
+
+export function buildSimpleThanksReply(): string {
+    return 'Di nulla. Siamo vicini a Lei in questo momento delicato.';
+}
+
 export function buildWhatsAppAiReply(params: {
     message: string;
     userName: string;
@@ -218,10 +445,24 @@ export function buildWhatsAppAiReply(params: {
         'disorientato',
         'disorientata',
         'non ce la faccio',
+        'lutto',
+        'cordoglio',
+        'commemor',
+        'defunto',
+        'decedut',
+        'mort',
+        'mancat',
+        'caro',
+        'cara',
+        'mamma',
+        'papa',
+        'nonno',
+        'nonna',
     ]);
-    const emotionalPrefix = emotionalContext
-        ? 'La ringrazio per essersi rivolto a FloreMoria in un momento cosi delicato. Sono qui per aiutarLa a organizzare l\'omaggio nel modo piu sereno possibile. '
-        : '';
+    const emotionalPrefix =
+        emotionalContext && !salutoPrefix && !hasAny(m, ['condoglianze'])
+            ? `${VERA_RESPECTFUL_OPENING} `
+            : '';
 
     if (userType === 'FLORIST') {
         if (mediaUrl) {
@@ -230,12 +471,37 @@ export function buildWhatsAppAiReply(params: {
         return `Buongiorno, per favore invii la foto della posa e il numero ordine (es. FT-XX-YY-001). Appena arriva, la registriamo subito in dashboard.`;
     }
 
+    if (isSimpleThanksMessage(message)) {
+        return buildSimpleThanksReply();
+    }
+
+    // Lutto: organizzazione omaggio floreale
+    if (
+        hasAny(m, ['mort', 'mancat', 'decedut']) &&
+        hasAny(m, ['fiori', 'organizzare', 'omaggio', 'vorrei', 'voglio'])
+    ) {
+        const kin = hasAny(m, ['nonna', 'nonno'])
+            ? 'Sua nonna'
+            : hasAny(m, ['mamma'])
+              ? 'Sua mamma'
+              : 'il Suo caro';
+        return `${salutoPrefix}Le porgo le mie sincere condoglianze. Per organizzare l'omaggio floreale per ${kin}, può consultare le composizioni per il funerale:\n${kb.funeralUrl}\n\nQuando desidera, mi indichi città e luogo della cerimonia: La seguirò con calma, passo dopo passo.`;
+    }
+
+    // Lutto recente / improvviso (es. "è morta stamattina")
+    if (
+        hasAny(m, ['mort', 'mancat', 'decedut']) &&
+        hasAny(m, ['stamattina', 'oggi', 'poco fa', 'improvvis', 'stanotte', 'proprio'])
+    ) {
+        return `Le porgo le mie più sincere condoglianze per questa dolorosa perdita. Può scegliere l'omaggio per il funerale qui:\n${kb.funeralUrl}\n\nSiamo disponibili ${kb.supportHours} per aiutarLa con serenità.`;
+    }
+
     if ((m.includes('tomba') || m.includes('cimitero')) && !m.includes('funerale')) {
         return `${salutoPrefix}Se vuole farci posare il suo omaggio floreale su una tomba in qualsiasi cimitero d'Italia, puo farlo da qui: ${kb.catalogTombsUrl}`;
     }
 
     if (contextDependent && recentTopic === 'price') {
-        return `${salutoPrefix}Riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le elenco le opzioni principali e i relativi importi.`;
+        return `${salutoPrefix}Riprendo il punto precedente: per i tributi floreali sulla tomba partiamo da EUR 29.99. Può consultare il catalogo qui: ${kb.catalogTombsUrl}`;
     }
     if (contextDependent && recentTopic === 'coverage') {
         return `${salutoPrefix}Confermo che copriamo tutta Italia, anche comuni piccoli. Se vuole, mi indichi il comune e Le confermo subito la copertura.`;
@@ -263,19 +529,19 @@ export function buildWhatsAppAiReply(params: {
         m.includes('tomba')
     ) {
         if (recentInboundLocation) {
-            return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?`;
+            return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per conferma: desidera la consegna nell'area di ${recentInboundLocation}?\n\nCatalogo: ${kb.catalogTombsUrl}`;
         }
-        return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un bouquet sulla tomba. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale comune o cimitero desidera la consegna?\n\nNel frattempo può scegliere il bouquet qui: ${kb.catalogTombsUrl}`;
     }
     if (
         hasAny(lastOutboundMessage, ['tributo sulla tomba oppure un omaggio solenne', 'tributo sulla tomba o un omaggio solenne', 'bouquet sulla tomba', 'omaggio floreale']) &&
         m.includes('funerale')
     ) {
-        return `${salutoPrefix}Perfetto, procediamo con un omaggio floreale per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?`;
+        return `${salutoPrefix}Perfetto, procediamo con un omaggio floreale per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?\n\nPuò scegliere l'omaggio qui: ${kb.funeralUrl}`;
     }
 
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {
-        return `${salutoPrefix}${emotionalPrefix}Per i tributi floreali sulla tomba partiamo da EUR 29.99. Se desidera, Le presento subito le opzioni principali con i relativi prezzi.`;
+        return `${salutoPrefix}${emotionalPrefix}Per i tributi floreali sulla tomba partiamo da EUR 29.99. Può consultare tutte le opzioni qui: ${kb.catalogTombsUrl}\nPer il funerale: ${kb.funeralUrl}`;
     }
 
     if (
@@ -318,7 +584,24 @@ export function buildWhatsAppAiReply(params: {
     }
 
     if (emotionalContext) {
-        return `${salutoPrefix}${emotionalPrefix}Per aiutarLa al meglio, preferisce organizzare un bouquet sulla tomba oppure un omaggio floreale per il funerale?`;
+        return `${salutoPrefix}${emotionalPrefix}Mi dica pure come posso aiutarLa: desidera un omaggio per il funerale o un bouquet sulla tomba?\n\nFunerale: ${kb.funeralUrl}\nTombe: ${kb.catalogTombsUrl}`;
+    }
+
+    if (
+        hasAny(m, [
+            'fiori',
+            'bouquet',
+            'omaggio',
+            'vorrei',
+            'voglio',
+            'comprare',
+            'ordinare',
+            'servono',
+            'ricordo',
+            'commemor',
+        ])
+    ) {
+        return `${salutoPrefix}${emotionalPrefix}Con cura e rispetto, può scegliere l'omaggio più adatto:\n\nTombe: ${kb.catalogTombsUrl}\nFunerale: ${kb.funeralUrl}`;
     }
 
     if (looksHighlyFragmented(message, m)) {

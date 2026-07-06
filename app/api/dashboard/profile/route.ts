@@ -51,7 +51,7 @@ export async function GET() {
 }
 
 /**
- * PUT — aggiorna campi anagrafici whitelisted (+ email se consentita) con sync Futuria.
+ * PUT — aggiorna campi anagrafici whitelisted (+ email se consentita).
  */
 export async function PUT(request: Request) {
     try {

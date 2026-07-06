@@ -35,7 +35,7 @@ export async function GET() {
     });
 }
 
-/** PUT — aggiorna nome/email bacheca cliente + sync Futuria. */
+/** PUT — aggiorna nome/email bacheca cliente. */
 export async function PUT(request: Request) {
     try {
         const user = await resolveBachecaUser();

@@ -30,7 +30,7 @@ export function getOrderProductSummary(items: OrderItemWithProduct[]): OrderProd
     return { mainProducts, accessories };
 }
 
-/** Riepilogo testuale bouquet + accessori per WhatsApp Futuria e dashboard. */
+/** Riepilogo testuale bouquet + accessori per WhatsApp VERA e dashboard. */
 export function formatDeliveredProductsSummary(items: OrderItemWithProduct[]): string {
     if (!items.length) return 'composizione floreale';
 

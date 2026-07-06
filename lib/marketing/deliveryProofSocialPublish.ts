@@ -8,7 +8,6 @@ import {
 export const DELIVERY_PROOF_PUBLISH_CHANNELS: MarketingChannel[] = [
   MarketingChannel.META_INSTAGRAM,
   MarketingChannel.META_FACEBOOK,
-  // MarketingChannel.LINKEDIN, // Disabilitato temporaneamente in attesa di app dedicata
 ];
 
 export interface DeliveryProofPublishSummary {
@@ -31,13 +30,13 @@ function proofNeedsChannel(
 
 /**
  * Pubblica foto consegna sanificate (socialReadyPrimaryUrl + socialCopyCategory)
- * su Meta e LinkedIn via POSTMAN.
+ * su Meta via POSTMAN.
  */
 export async function runDeliveryProofSocialPublishPipeline(
   limit = 30
 ): Promise<DeliveryProofPublishSummary> {
   const startedAt = new Date();
-  console.log('[Futuria Publish] ═══ Avvio pubblicazione foto consegna (social-ready) ═══');
+  console.log('[Marketing Publish] ═══ Avvio pubblicazione foto consegna (social-ready) ═══');
 
   const proofs = await prisma.deliveryProof.findMany({
     where: {
@@ -63,7 +62,7 @@ export async function runDeliveryProofSocialPublishPipeline(
   });
 
   console.log(
-    `[Futuria Publish] ${eligible.length} proof con asset social-ready da pubblicare (su ${proofs.length} candidati)`
+    `[Marketing Publish] ${eligible.length} proof con asset social-ready da pubblicare (su ${proofs.length} candidati)`
   );
 
   const results: CampaignPublishResult[] = [];
@@ -79,7 +78,7 @@ export async function runDeliveryProofSocialPublishPipeline(
       const publishId = `delivery-proof:${proof.id}:${channel}`;
 
       console.log(
-        `[Futuria Publish] POSTMAN (consegna) → ${channel} · proof ${proof.id} · ordine ${proof.orderId}`
+        `[Marketing Publish] POSTMAN (consegna) → ${channel} · proof ${proof.id} · ordine ${proof.orderId}`
       );
 
       const result = await publishCampaignToChannel({
@@ -106,13 +105,13 @@ export async function runDeliveryProofSocialPublishPipeline(
         proof.socialPublishedChannels = updated.socialPublishedChannels;
 
         console.log(
-          `[Futuria Publish] ✔ Proof ${proof.id} → ${channel} PUBLISHED${
+          `[Marketing Publish] ✔ Proof ${proof.id} → ${channel} PUBLISHED${
             result.simulated ? ' (simulata)' : ''
           }`
         );
       } else {
         console.warn(
-          `[Futuria Publish] ✖ Proof ${proof.id} · ${channel} non pubblicato: ${result.error}`
+          `[Marketing Publish] ✖ Proof ${proof.id} · ${channel} non pubblicato: ${result.error}`
         );
       }
     }
@@ -131,7 +130,7 @@ export async function runDeliveryProofSocialPublishPipeline(
   };
 
   console.log(
-    `[Futuria Publish] ═══ Foto consegna — reali: ${summary.published}, simulate: ${summary.simulated}, errori: ${summary.failed} ═══`
+    `[Marketing Publish] ═══ Foto consegna — reali: ${summary.published}, simulate: ${summary.simulated}, errori: ${summary.failed} ═══`
   );
 
   return summary;

@@ -1,13 +1,13 @@
 /**
  * GET /api/cron/publish-campaigns
  *
- * Trigger Vercel Cron giornaliero Futuria (05:00 UTC):
+ * Trigger Vercel Cron giornaliero marketing (05:00 UTC):
  * 1. Pipeline produzione — copy Gemini + Imagen + checkpoint Guardiani (calendario editoriale)
  * 2. Pubblicazione POSTMAN — 1 contenuto per slot: IG/FB/TikTok post, story giornaliera, reel ogni 3 giorni
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { runFuturiaProductionPipeline } from '@/lib/futuria/engine/pipeline';
-import { runFuturiaPublishPipeline } from '@/lib/futuria/engine/publish';
+import { runMarketingProductionPipeline } from '@/lib/marketing/engine/pipeline';
+import { runMarketingPublishPipeline } from '@/lib/marketing/engine/publish';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,15 +30,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log('[Futuria Cron] publish-campaigns — trigger ricevuto');
+    console.log('[Marketing Cron] publish-campaigns — trigger ricevuto');
 
-    const production = await runFuturiaProductionPipeline();
-    const publish = await runFuturiaPublishPipeline();
+    const production = await runMarketingProductionPipeline();
+    const publish = await runMarketingPublishPipeline();
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Cron Futuria eseguito con successo',
+        message: 'Cron marketing eseguito con successo',
         production,
         publish,
       },

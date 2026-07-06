@@ -1,7 +1,7 @@
 import { evaluateCampaignDraft } from './checkpoint';
-import { FuturiaEngineConfigError, generateCampaignDraft } from './generation';
+import { MarketingEngineConfigError, generateCampaignDraft } from './generation';
 import { generateAndStorageCampaignImage } from './images';
-import { getFuturiaLaunchProducts, pickDailyLaunchProduct, type FuturiaLaunchProduct } from './launchQueue';
+import { getMarketingLaunchProducts, pickDailyLaunchProduct, type MarketingLaunchProduct } from './launchQueue';
 import { getDailyPublishSlots } from './contentCalendar';
 
 export interface PipelineCampaignResult {
@@ -22,7 +22,7 @@ export interface PipelineProductResult {
   error?: string;
 }
 
-export interface FuturiaProductionSummary {
+export interface MarketingProductionSummary {
   startedAt: string;
   finishedAt: string;
   productsProcessed: number;
@@ -34,14 +34,14 @@ export interface FuturiaProductionSummary {
 }
 
 async function processCampaignPost(
-  product: FuturiaLaunchProduct,
+  product: MarketingLaunchProduct,
   campaignId: string,
   channel: string,
   contentFormat: string,
   index: number,
   total: number
 ): Promise<PipelineCampaignResult> {
-  const label = `[Futuria Pipeline] ${product.category} · ${product.productName} · ${channel} · ${contentFormat}`;
+  const label = `[Marketing Pipeline] ${product.category} · ${product.productName} · ${channel} · ${contentFormat}`;
 
   try {
     console.log(`${label} — STEP 2/3 Imagen + Vercel Blob (${index}/${total})`);
@@ -71,13 +71,13 @@ async function processCampaignPost(
   }
 }
 
-async function runProductPipeline(product: FuturiaLaunchProduct): Promise<PipelineProductResult> {
+async function runProductPipeline(product: MarketingLaunchProduct): Promise<PipelineProductResult> {
   console.log(
-    `\n[Futuria Pipeline] ▶ Avvio prodotto ${product.category} — ${product.productName} (€${product.productPrice.toFixed(2)})`
+    `\n[Marketing Pipeline] ▶ Avvio prodotto ${product.category} — ${product.productName} (€${product.productPrice.toFixed(2)})`
   );
 
   try {
-    console.log(`[Futuria Pipeline] STEP 1/3 generateCampaignDraft — ${product.productName}`);
+    console.log(`[Marketing Pipeline] STEP 1/3 generateCampaignDraft — ${product.productName}`);
     const slots = getDailyPublishSlots();
     const draft = await generateCampaignDraft(
       product.category,
@@ -87,7 +87,7 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
     );
 
     console.log(
-      `[Futuria Pipeline] STEP 1/3 completato — ${draft.posts.length} post creati in DRAFT su Prisma`
+      `[Marketing Pipeline] STEP 1/3 completato — ${draft.posts.length} post creati in DRAFT su Prisma`
     );
 
     const campaigns: PipelineCampaignResult[] = [];
@@ -111,7 +111,7 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
     const failed = campaigns.filter((c) => c.error).length;
 
     console.log(
-      `[Futuria Pipeline] ✔ Prodotto ${product.productName} — approved: ${approved}, rejected: ${rejected}, errori: ${failed}`
+      `[Marketing Pipeline] ✔ Prodotto ${product.productName} — approved: ${approved}, rejected: ${rejected}, errori: ${failed}`
     );
 
     return {
@@ -123,7 +123,7 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(
-      `[Futuria Pipeline] ✖ Errore prodotto ${product.productName} (STEP 1): ${msg}`
+      `[Marketing Pipeline] ✖ Errore prodotto ${product.productName} (STEP 1): ${msg}`
     );
     return {
       category: product.category,
@@ -136,16 +136,16 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
 }
 
 /**
- * Esegue la pipeline completa Futuria per ogni prodotto in coda:
+ * Esegue la pipeline completa Marketing per ogni prodotto in coda:
  * generazione copy → Imagen/Blob → checkpoint Guardiani.
  */
-export async function runFuturiaProductionPipeline(
-  products = getFuturiaLaunchProducts()
-): Promise<FuturiaProductionSummary> {
+export async function runMarketingProductionPipeline(
+  products = getMarketingLaunchProducts()
+): Promise<MarketingProductionSummary> {
   const startedAt = new Date();
   const dailyProduct = pickDailyLaunchProduct(products, startedAt);
   console.log(
-    `[Futuria Pipeline] ═══ Produzione giornaliera avviata (${startedAt.toISOString()}) — prodotto del giorno: ${dailyProduct.productName} ═══`
+    `[Marketing Pipeline] ═══ Produzione giornaliera avviata (${startedAt.toISOString()}) — prodotto del giorno: ${dailyProduct.productName} ═══`
   );
 
   const productResults: PipelineProductResult[] = [];
@@ -154,7 +154,7 @@ export async function runFuturiaProductionPipeline(
   const finishedAt = new Date();
   const allCampaigns = productResults.flatMap((p) => p.campaigns);
 
-  const summary: FuturiaProductionSummary = {
+  const summary: MarketingProductionSummary = {
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     productsProcessed: productResults.length,
@@ -166,10 +166,10 @@ export async function runFuturiaProductionPipeline(
   };
 
   console.log(
-    `[Futuria Pipeline] ═══ Produzione completata — creati: ${summary.campaignsCreated}, approved: ${summary.campaignsApproved}, rejected: ${summary.campaignsRejected}, errori: ${summary.campaignsFailed} ═══`
+    `[Marketing Pipeline] ═══ Produzione completata — creati: ${summary.campaignsCreated}, approved: ${summary.campaignsApproved}, rejected: ${summary.campaignsRejected}, errori: ${summary.campaignsFailed} ═══`
   );
 
   return summary;
 }
 
-export { FuturiaEngineConfigError };
+export { MarketingEngineConfigError };

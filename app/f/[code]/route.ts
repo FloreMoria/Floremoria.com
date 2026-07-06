@@ -3,7 +3,7 @@ import {
     handleProofFotoAccess,
     handleProofFotoExpiredAccess,
 } from '@/lib/auth/proofFotoRoute';
-import { getSiteBaseUrl } from '@/lib/futuria/config';
+import { getSiteBaseUrl } from '@/lib/site/config';
 import { NextResponse } from 'next/server';
 
 /**

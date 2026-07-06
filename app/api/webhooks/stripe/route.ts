@@ -6,7 +6,6 @@ import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
-import { syncPaidCustomerToFuturia } from '@/lib/futuria/syncPaidCustomerContact';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
 
 export const runtime = 'nodejs';
@@ -96,14 +95,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
-    // Prima transizione a pagato: allinea DB locale, sync Futuria protetta, benvenuto WhatsApp.
+    // Prima transizione a pagato: allinea DB locale, benvenuto WhatsApp VERA.
     if (isFirstPaidTransition) {
         await ensurePaidOrderEntities(orderId).catch((entityErr) => {
             console.error('[stripe-webhook] Allineamento User/Defunto fallito (non bloccante):', entityErr);
-        });
-
-        await syncPaidCustomerToFuturia(orderId).catch((futuriaErr) => {
-            console.error('[stripe-webhook] Sync Futuria cliente pagante fallita (non bloccante):', futuriaErr);
         });
 
         await runVeraPostPaymentWorkflow(orderId).catch((wfErr) => {

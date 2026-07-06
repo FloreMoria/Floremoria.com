@@ -1,12 +1,11 @@
 /**
- * POSTMAN SYNC — Cron per assistenza@floremoria.com (risposte automatiche VERA/POSTMAN).
+ * POSTMAN SYNC — Fallback IMAP per assistenza@floremoria.com (polling manuale / cron esterno).
  *
- * Flusso: legge mail UNSEEN via IMAP → filtra blacklist → classifica e redige risposta →
- * invio diretto SMTP (thread In-Reply-To / References) → log audit → marca come letta.
+ * Per risposte in tempo reale su Vercel Hobby preferire:
+ * POST /api/webhooks/assistenza-email (Resend inbound o forwarder).
  */
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { classifyAndDraft, PostmanConfigError } from '@/lib/postman/agent';
+import { PostmanConfigError } from '@/lib/postman/agent';
 import { isEmailBlacklisted } from '@/lib/postman/emailBlacklist';
 import {
     createImapClient,
@@ -14,8 +13,8 @@ import {
     getMailboxConfigFromEnv,
     markEmailSeen,
     MailboxConfigError,
-    sendDirectReply,
 } from '@/lib/postman/mailbox';
+import { processAssistenzaInboundEmail } from '@/lib/postman/processAssistenzaEmail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,15 +27,6 @@ function isAuthorized(request: Request): boolean {
     if (auth.replace(/^Bearer\s+/i, '').trim() === secret) return true;
     const headerKey = request.headers.get('x-cron-key')?.trim();
     return headerKey === secret;
-}
-
-function romeDateIso(d: Date): string {
-    return new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Europe/Rome',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).format(d);
 }
 
 interface ProcessResult {
@@ -76,6 +66,7 @@ async function runSync(): Promise<{
                 from: email.fromEmail,
                 status: 'error',
             };
+
             try {
                 if (await isEmailBlacklisted(email.fromEmail)) {
                     r.status = 'skipped_blacklist';
@@ -84,68 +75,37 @@ async function runSync(): Promise<{
                     continue;
                 }
 
-                if (email.messageId) {
-                    const existing = await prisma.floremoriaLog.findFirst({
-                        where: { keyPrompt: { contains: email.messageId } },
-                        select: { id: true },
-                    });
-                    if (existing) {
-                        r.status = 'skipped_duplicate';
-                        results.push(r);
-                        if (markSeen) await markEmailSeen(client, email.uid).catch(() => undefined);
-                        continue;
-                    }
-                }
-
-                const draft = await classifyAndDraft({
-                    fromName: email.fromName,
-                    fromEmail: email.fromEmail,
-                    subject: email.subject,
-                    text: email.text,
-                });
-                r.category = draft.category;
-
-                await sendDirectReply(config, {
-                    fromAddress: config.user,
-                    toAddress: email.fromEmail,
-                    subject: draft.subject,
-                    body: draft.body,
-                    inReplyToMessageId: email.messageId,
-                    references: email.references,
-                });
-
-                const today = romeDateIso(new Date());
-                const fullText = [
-                    `RISPOSTA AUTOMATICA INVIATA — assistenza@floremoria.com`,
-                    `Da: ${email.fromName || ''} <${email.fromEmail}>`,
-                    `Categoria: ${draft.category} — ${draft.reasoning}`,
-                    `Oggetto: ${draft.subject}`,
-                    '',
-                    '--- Testo inviato (firma e messaggio originale inclusi) ---',
-                    draft.body,
-                ].join('\n');
-
-                await prisma.floremoriaLog.create({
-                    data: {
-                        sessionDate: new Date(),
-                        tag: `#POSTMAN_ASSISTENZA_${today}, #${draft.category}`,
-                        topic: email.subject || '(senza oggetto)',
-                        shortSummary: draft.reasoning || `Risposta categoria ${draft.category} inviata.`,
-                        keyPrompt: `POSTMAN msgid:${email.messageId || `uid-${email.uid}-${today}`}`,
-                        fullText,
-                        discussedPoints: `Email da ${email.fromEmail} classificata come ${draft.category}.`,
-                        achievedResults: 'Risposta inviata direttamente al mittente via SMTP.',
-                        pendingTasks: null,
-                        criticalAlarms: null,
+                const outcome = await processAssistenzaInboundEmail(
+                    {
+                        fromName: email.fromName,
+                        fromEmail: email.fromEmail,
+                        subject: email.subject,
+                        text: email.text,
+                        messageId: email.messageId,
+                        references: email.references,
                     },
-                });
+                    config
+                );
 
-                if (markSeen) await markEmailSeen(client, email.uid);
-                r.status = 'reply_sent';
+                r.category = outcome.category;
+                r.status =
+                    outcome.status === 'reply_sent'
+                        ? 'reply_sent'
+                        : outcome.status === 'skipped_duplicate'
+                          ? 'skipped_duplicate'
+                          : 'error';
+                r.error = outcome.error;
+
+                if (outcome.status === 'reply_sent' && markSeen) {
+                    await markEmailSeen(client, email.uid);
+                } else if (markSeen && outcome.status !== 'error') {
+                    await markEmailSeen(client, email.uid).catch(() => undefined);
+                }
             } catch (e) {
                 r.error = e instanceof Error ? e.message : String(e);
                 console.error(`[postman] Errore elaborazione uid=${email.uid}:`, r.error);
             }
+
             results.push(r);
         }
 

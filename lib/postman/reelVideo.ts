@@ -3,18 +3,20 @@ import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import sharp from 'sharp';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
 
-const REEL_VIDEO_PREFIX = 'futuria/campagne/reel-videos';
+const REEL_VIDEO_PREFIX = 'marketing/campagne/reel-videos';
 
 /**
  * Crea un MP4 minimale (slideshow 3s) da immagine verticale per Reel Meta/TikTok.
- * Se FUTURIA_REEL_FALLBACK_VIDEO_URL è impostato, usa quel video come fallback.
+ * Se MARKETING_REEL_FALLBACK_VIDEO_URL è impostato, usa quel video come fallback.
  */
 export async function ensureCampaignReelVideoUrl(input: {
   campaignId: string;
   imageUrl: string;
   blobToken?: string;
 }): Promise<string | null> {
-  const fallback = process.env.FUTURIA_REEL_FALLBACK_VIDEO_URL?.trim();
+  const fallback =
+    process.env.MARKETING_REEL_FALLBACK_VIDEO_URL?.trim() ||
+    process.env.FUTURIA_REEL_FALLBACK_VIDEO_URL?.trim();
   if (fallback) {
     return fallback;
   }
@@ -62,7 +64,9 @@ export async function ensureCampaignReelVideoUrl(input: {
  */
 async function buildMinimalSlideshowMp4(jpegBuffer: Buffer): Promise<Buffer | null> {
   // Per affidabilità in serverless, usiamo un template MP4 predefinito su Blob se disponibile.
-  const templateUrl = process.env.FUTURIA_REEL_TEMPLATE_MP4_URL?.trim();
+  const templateUrl =
+    process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim() ||
+    process.env.FUTURIA_REEL_TEMPLATE_MP4_URL?.trim();
   if (templateUrl) {
     const res = await fetch(templateUrl);
     if (res.ok) {

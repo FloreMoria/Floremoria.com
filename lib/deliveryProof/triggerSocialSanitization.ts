@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { syncSocialReadyProofsForOrder } from '@/lib/deliveryProof/socialProofChannel';
-import { resolveSocialCategoryFromProductSlugs } from '@/lib/futuria/socialProofCopy';
+import { resolveSocialCategoryFromProductSlugs } from '@/lib/marketing/socialProofCopy';
 
 /**
  * Avvia sanificazione social (canale parallelo) dopo upload foto consegna.

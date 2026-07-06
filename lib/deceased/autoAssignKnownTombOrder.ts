@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
-import { shouldNotifyFloristDeliveryLink } from '@/lib/futuria/floristDeliveryLinkNotify';
+import { shouldNotifyFloristDeliveryLink } from '@/lib/orders/floristDeliveryLinkRules';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
 export type AutoAssignKnownTombResult =

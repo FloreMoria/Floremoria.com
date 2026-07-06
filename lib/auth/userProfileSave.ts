@@ -2,7 +2,6 @@ import prisma from '@/lib/prisma';
 import { buildSafeProfileUpdate } from '@/lib/auth/sessionUser';
 import { applyUserEmailChange, UserEmailUpdateError } from '@/lib/auth/userEmailUpdate';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
-import { updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 import type { User } from '@prisma/client';
 
 export type SaveUserProfileInput = {
@@ -17,7 +16,7 @@ export type SaveUserProfileResult = {
 };
 
 /**
- * Salva campi profilo whitelisted e opzionalmente email con sync Futuria (Caso B).
+ * Salva campi profilo whitelisted e opzionalmente email.
  */
 export async function saveUserProfileFields(
     input: SaveUserProfileInput
@@ -59,14 +58,6 @@ export async function saveUserProfileFields(
         });
     } else if (emailChanged) {
         updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-    }
-
-    if (hasProfileFields && !emailChanged) {
-        await updateFuturiaExistingContactIfPresent({
-            email: updated.email,
-            phone: updated.phone ?? undefined,
-            name: updated.name ?? undefined,
-        });
     }
 
     return { user: updated, emailChanged };

@@ -8,7 +8,7 @@ import prisma from '@/lib/prisma';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { recordMemoryGardenOpen } from '@/lib/memoryGarden/trackOpen';
-import { getSiteBaseUrl } from '@/lib/futuria/config';
+import { getSiteBaseUrl } from '@/lib/site/config';
 import { USER_SESSION_TTL_MS } from '@/lib/auth/proofFotoAccess';
 import { getValidUserSessionFromRequest } from '@/lib/auth/userSessionFromRequest';
 

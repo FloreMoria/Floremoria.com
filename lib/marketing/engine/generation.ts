@@ -6,7 +6,7 @@ import {
   getDailyPublishSlots,
   getRomeCalendarDate,
   type PublishSlot,
-} from '@/lib/futuria/engine/contentCalendar';
+} from './contentCalendar';
 
 export interface GeneratedPost {
   campaignId: string;
@@ -23,13 +23,13 @@ export interface CampaignGenerationResult {
   posts: GeneratedPost[];
 }
 
-export class FuturiaEngineConfigError extends Error {}
+export class MarketingEngineConfigError extends Error {}
 
 const VALID_CATEGORIES = ['FF', 'FT'] as const;
 const VALID_CHANNELS = Object.values(MarketingChannel);
 const VALID_FORMATS = Object.values(ContentFormat);
 
-type FuturiaCategory = (typeof VALID_CATEGORIES)[number];
+type MarketingCategory = (typeof VALID_CATEGORIES)[number];
 
 interface GeminiGeneratedPost {
   channel: string;
@@ -47,7 +47,7 @@ interface GeminiCampaignPayload {
 
 // Prompt di sistema macro che istruisce lo sciame creativo
 const CREATIVE_SWARM_SYSTEM_PROMPT = `
-Tu sei il Core Creativo di FloreMoria (Progetto Futuria), un'orchestra di Agent AI specializzati che lavorano in sequenza per creare campagne di marketing d'élite. Non lasciare nulla al caso.
+Tu sei il Core Creativo di FloreMoria, un'orchestra di Agent AI specializzati che lavorano in sequenza per creare campagne di marketing d'élite. Non lasciare nulla al caso.
 
 Agisci impersonando contemporaneamente queste competenze:
 1. CLEO (Content Strategist): Scrivi copy sublimi. Per Instagram/Facebook usa un tono caldo, empatico, intimo e B2C (focalizzato sul ricordo). Per LinkedIn usa un tono istituzionale, solenne, professionale e B2B (focalizzato su rispetto e partnership).
@@ -89,9 +89,9 @@ function stripJsonFences(raw: string): string {
     .trim();
 }
 
-function coerceCategory(value: unknown, fallback: FuturiaCategory): FuturiaCategory {
+function coerceCategory(value: unknown, fallback: MarketingCategory): MarketingCategory {
   const v = String(value || '').toUpperCase().trim();
-  return (VALID_CATEGORIES as readonly string[]).includes(v) ? (v as FuturiaCategory) : fallback;
+  return (VALID_CATEGORIES as readonly string[]).includes(v) ? (v as MarketingCategory) : fallback;
 }
 
 function coerceChannel(value: unknown): MarketingChannel | null {
@@ -118,7 +118,7 @@ function coerceContentFormat(value: unknown): ContentFormat | null {
 }
 
 function buildUserContent(
-  category: FuturiaCategory,
+  category: MarketingCategory,
   productName: string,
   productPrice: number,
   slots: PublishSlot[]
@@ -156,7 +156,7 @@ interface ParsedCampaignPost {
 
 function parseGeminiCampaignPayload(
   rawText: string,
-  fallbackCategory: FuturiaCategory,
+  fallbackCategory: MarketingCategory,
   fallbackProductName: string,
   requiredSlots: PublishSlot[]
 ): Omit<CampaignGenerationResult, 'posts'> & { posts: ParsedCampaignPost[] } {
@@ -220,7 +220,7 @@ export async function generateCampaignDraft(
   slots = getDailyPublishSlots()
 ): Promise<CampaignGenerationResult> {
   console.log(
-    `[Futuria Engine] Chiamata API Gemini per ${category} - ${productName} (${slots.length} slot)`
+    `[Marketing Engine] Chiamata API Gemini per ${category} - ${productName} (${slots.length} slot)`
   );
 
   const scheduledFor = getRomeCalendarDate();
@@ -228,12 +228,15 @@ export async function generateCampaignDraft(
   const apiKey =
     process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
   if (!apiKey) {
-    throw new FuturiaEngineConfigError(
+    throw new MarketingEngineConfigError(
       'GEMINI_API_KEY non configurata: impossibile generare la campagna.'
     );
   }
 
-  const model = process.env.FUTURIA_GEMINI_MODEL?.trim() || 'gemini-2.5-pro';
+  const model =
+    process.env.MARKETING_GEMINI_MODEL?.trim() ||
+    process.env.FUTURIA_GEMINI_MODEL?.trim() ||
+    'gemini-2.5-pro';
   const ai = new GoogleGenAI({ apiKey });
 
   let rawText: string | undefined;

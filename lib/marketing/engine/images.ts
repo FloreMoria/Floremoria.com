@@ -3,16 +3,16 @@ import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { put } from '@vercel/blob';
 import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
-import { FuturiaEngineConfigError } from './generation';
+import { MarketingEngineConfigError } from './generation';
 
-const BLOB_PREFIX = 'futuria/campagne';
+const BLOB_PREFIX = 'marketing/campagne';
 const DEFAULT_IMAGEN_MODEL = 'imagen-4.0-generate-001';
 
 function getGeminiApiKey(): string {
   const apiKey =
     process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
   if (!apiKey) {
-    throw new FuturiaEngineConfigError(
+    throw new MarketingEngineConfigError(
       'GEMINI_API_KEY non configurata: impossibile generare l\'immagine.'
     );
   }
@@ -22,7 +22,7 @@ function getGeminiApiKey(): string {
 function getBlobToken(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   if (!token) {
-    throw new FuturiaEngineConfigError(
+    throw new MarketingEngineConfigError(
       'BLOB_READ_WRITE_TOKEN mancante: impossibile caricare l\'immagine su Vercel Blob.'
     );
   }
@@ -75,7 +75,10 @@ async function generateImageBytes(
   prompt: string,
   aspectRatio: string
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
-  const model = process.env.FUTURIA_IMAGEN_MODEL?.trim() || DEFAULT_IMAGEN_MODEL;
+  const model =
+    process.env.MARKETING_IMAGEN_MODEL?.trim() ||
+    process.env.FUTURIA_IMAGEN_MODEL?.trim() ||
+    DEFAULT_IMAGEN_MODEL;
   const outputMimeType = 'image/png';
   const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
 
@@ -115,7 +118,7 @@ export async function generateAndStorageCampaignImage(
   campaignId: string,
   options?: { force?: boolean }
 ): Promise<string> {
-  console.log(`[Futuria Images] Generazione immagine per campagna ${campaignId}`);
+  console.log(`[Marketing Images] Generazione immagine per campagna ${campaignId}`);
 
   const campaign = await prisma.marketingCampaign.findUnique({
     where: { id: campaignId },
@@ -127,12 +130,12 @@ export async function generateAndStorageCampaignImage(
 
   const existingUrl = campaign.imageUrl?.trim();
   if (existingUrl && !options?.force) {
-    console.log(`[Futuria Images] imageUrl già presente per ${campaignId}, skip.`);
+    console.log(`[Marketing Images] imageUrl già presente per ${campaignId}, skip.`);
     return existingUrl;
   }
 
   if (existingUrl && options?.force) {
-    console.log(`[Futuria Images] force=true — rigenerazione immagine per ${campaignId}`);
+    console.log(`[Marketing Images] force=true — rigenerazione immagine per ${campaignId}`);
   }
 
   const imagePrompt =
@@ -163,6 +166,6 @@ export async function generateAndStorageCampaignImage(
     data: { imageUrl: url },
   });
 
-  console.log(`[Futuria Images] Upload completato: ${url}`);
+  console.log(`[Marketing Images] Upload completato: ${url}`);
   return url;
 }

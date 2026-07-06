@@ -12,7 +12,7 @@ export interface FloristDeliveryNotifyResult {
 
 /**
  * Notifica fiorista nuovo ordine — workflow nativo VERA (Punto A).
- * Sostituisce Futuria / testo libero.
+ * Sostituisce integrazioni esterne legacy / testo libero.
  */
 export async function notifyFloristDeliveryLinkForOrder(
     orderId: string

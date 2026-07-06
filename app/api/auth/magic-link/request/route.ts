@@ -4,7 +4,8 @@ import prisma from '@/lib/prisma';
 import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { findUserByEmail, findOrderByEmail, createUserFromOrder, isProfessionalRole, linkHistoricalOrders } from '@/lib/auth/identity';
-import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
+import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
+import { getSiteBaseUrl } from '@/lib/site/config';
 
 export async function POST(request: Request) {
     try {
@@ -18,26 +19,20 @@ export async function POST(request: Request) {
             );
         }
 
-        // Cerca l'utente a database per verificare il ruolo
         let user = await findUserByEmail(email);
 
         if (user) {
-            // Se l'utente esiste ma non è un utente finale (B2C), inibisci il magic link.
-            // I fioristi, commercialisti, staff e admin devono accedere con credenziali/password.
             if (isProfessionalRole(user.systemRole)) {
                 return NextResponse.json(
-                    { 
-                        success: false, 
-                        message: 'Questo metodo di accesso è riservato agli utenti privati. Per lo Staff e i Fioristi Partner è richiesto l\'accesso tramite codice personale.' 
+                    {
+                        success: false,
+                        message: 'Questo metodo di accesso è riservato agli utenti privati. Per lo Staff e i Fioristi Partner è richiesto l\'accesso tramite codice personale.',
                     },
                     { status: 400 }
                 );
             }
-            // Aggancia eventuali ordini storici rimasti orfani a questo cliente.
             await linkHistoricalOrders(user);
         } else {
-            // Onboarding: se esiste uno storico ordini su questa email, crea l'account
-            // agganciando lo storico; altrimenti crea una nuova anagrafica USER attiva.
             const order = await findOrderByEmail(email);
             user = order ? await createUserFromOrder(order) : null;
             if (!user) {
@@ -51,13 +46,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Genera il token crittografato firmato a 15 minuti
         const token = generateMagicLinkToken(email);
+        const setupLink = `${getSiteBaseUrl()}/api/auth/magic-link/callback?token=${token}`;
 
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.floremoria.com';
-        const setupLink = `${baseUrl}/api/auth/magic-link/callback?token=${token}`;
-
-        // Invia l'email con il link magico
         const mailResult = await sendMagicLinkEmail({
             email,
             setupLink,
@@ -71,36 +62,13 @@ export async function POST(request: Request) {
             );
         }
 
-                // Se l'utente ha registrato un numero di telefono, inviamo il magic link anche via WhatsApp
         let sentWhatsApp = false;
         if (user.phone) {
-            if (isFuturiaConfigured()) {
-                try {
-                    await updateFuturiaExistingContactIfPresent({
-                        phone: user.phone,
-                        email: user.email,
-                        name: user.name || undefined,
-                        additionalCustomFields: {
-                            'contact.magic_link': setupLink,
-                        },
-                    });
-
-                    const contactId = await updateFuturiaExistingContactIfPresent({
-                        phone: user.phone,
-                        email: user.email,
-                        name: user.name || undefined,
-                        tags: ['floremoria-invia-magic-link'],
-                        additionalCustomFields: {
-                            'contact.magic_link': setupLink,
-                        },
-                    });
-                    sentWhatsApp = Boolean(contactId);
-                } catch (err) {
-                    console.error('[magic-link-request] Errore invio WhatsApp tramite Futuria:', err);
-                }
-            } else {
-                console.log(`[Futuria MOCK Send Magic Link] To: ${user.phone} | Link: ${setupLink}`);
-                sentWhatsApp = true;
+            const waText = `FloreMoria — accedi al tuo profilo con questo link (valido 15 minuti): ${setupLink}`;
+            const waResult = await sendAuthWhatsAppMessage(user.phone, waText);
+            sentWhatsApp = waResult.ok;
+            if (!waResult.ok) {
+                console.warn('[magic-link-request] WhatsApp non inviato:', waResult.error);
             }
         }
 

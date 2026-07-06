@@ -531,7 +531,7 @@ model MemoryGardenOpen {
   @@map("memory_garden_opens")
 }
 
-/// Stato workflow campagne marketing Futuria (generazione → review Guardiani → pubblicazione).
+/// Stato workflow campagne marketing interne (generazione → review Guardiani → pubblicazione).
 enum CampaignStatus {
   DRAFT
   PENDING_REVIEW
@@ -556,7 +556,7 @@ enum MarketingChannel {
   TIKTOK
 }
 
-/// Campagna marketing orchestrata da Futuria (Blob + copy CLEO + hashtag AXEL).
+/// Campagna marketing FloreMoria (Blob + copy CLEO + hashtag AXEL).
 model MarketingCampaign {
   id              String           @id @default(cuid())
   status          CampaignStatus   @default(DRAFT)

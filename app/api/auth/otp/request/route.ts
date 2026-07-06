@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import { generateOtpToken } from '@/lib/auth/otp';
 import { parseIdentifier, findOrCreatePasswordlessUser } from '@/lib/auth/identity';
-import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
+import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
 
 export async function POST(request: Request) {
     try {
@@ -17,7 +17,6 @@ export async function POST(request: Request) {
             );
         }
 
-        // Lookup robusto: trova l'utente o lo crea dallo storico ordini (clienti passati).
         const user = await findOrCreatePasswordlessUser(parsed);
 
         if (!user) {
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message }, { status: 404 });
         }
 
-        // L'OTP è riservato ai clienti privati (B2C).
         if (user.systemRole !== UserRole.USER) {
             return NextResponse.json(
                 { success: false, message: 'L\'accesso passwordless (OTP) è riservato ai clienti privati.' },
@@ -46,54 +44,25 @@ export async function POST(request: Request) {
         const email = user.email;
         const phone = user.phone;
 
-        // Codice di verifica a 6 cifre + token firmato stateless (5 minuti).
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const tempToken = generateOtpToken(email, phone, code);
 
-                let sentMethod = 'whatsapp';
+        const messageText = `Il tuo codice di accesso FloreMoria è: ${code}. Valido per 5 minuti.`;
+        const sendResult = await sendAuthWhatsAppMessage(phone, messageText);
 
-        if (isFuturiaConfigured()) {
-            try {
-                await updateFuturiaExistingContactIfPresent({
-                    phone,
-                    email: email || undefined,
-                    name: user.name || undefined,
-                    additionalCustomFields: {
-                        'contact.otp_code': code,
-                    },
-                });
-
-                const contactId = await updateFuturiaExistingContactIfPresent({
-                    phone,
-                    email: email || undefined,
-                    name: user.name || undefined,
-                    tags: ['floremoria-invia-otp'],
-                    additionalCustomFields: {
-                        'contact.otp_code': code,
-                    },
-                });
-                if (!contactId) {
-                    return NextResponse.json(
-                        { success: false, message: 'Impossibile inviare il codice di verifica. Riprova più tardi.' },
-                        { status: 500 }
-                    );
-                }
-            } catch (err: any) {
-                console.error('[OTP-request] Errore invio tramite Futuria:', err);
-                return NextResponse.json(
-                    { success: false, message: 'Impossibile inviare il codice di verifica. Riprova più tardi.' },
-                    { status: 500 }
-                );
-            }
-        } else {
-            console.log(`[Futuria MOCK Send OTP] To: ${phone} | Code: ${code}`);
+        if (!sendResult.ok) {
+            console.error('[OTP-request] Invio WhatsApp fallito:', sendResult.error);
+            return NextResponse.json(
+                { success: false, message: 'Impossibile inviare il codice di verifica. Riprova più tardi.' },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json({
             success: true,
             tempToken,
-            message: `Ti abbiamo inviato un codice di verifica di 6 cifre tramite WhatsApp.`,
-            method: sentMethod,
+            message: 'Ti abbiamo inviato un codice di verifica di 6 cifre tramite WhatsApp.',
+            method: 'whatsapp',
         });
     } catch (error) {
         console.error('[OTP-request] Errore:', error);

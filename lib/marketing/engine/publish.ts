@@ -1,18 +1,18 @@
 import { CampaignStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { runDeliveryProofSocialPublishPipeline } from '@/lib/futuria/deliveryProofSocialPublish';
+import { runDeliveryProofSocialPublishPipeline } from '@/lib/marketing/deliveryProofSocialPublish';
 import {
   getDailyPublishSlots,
   getRomeCalendarDate,
   formatLabelForSlot,
-} from '@/lib/futuria/engine/contentCalendar';
+} from '@/lib/marketing/engine/contentCalendar';
 import {
   publishCampaignToChannel,
   type CampaignPublishResult,
 } from '@/lib/postman/socialPublish';
-import type { DeliveryProofPublishSummary } from '@/lib/futuria/deliveryProofSocialPublish';
+import type { DeliveryProofPublishSummary } from '@/lib/marketing/deliveryProofSocialPublish';
 
-export interface FuturiaPublishSummary {
+export interface MarketingPublishSummary {
   startedAt: string;
   finishedAt: string;
   candidates: number;
@@ -28,7 +28,7 @@ export interface FuturiaPublishSummary {
  * Pubblica campagne marketing APPROVED + foto consegna social-ready via POSTMAN.
  * Calendario: 1 contenuto per slot editoriale del giorno (IG/FB/TikTok post, story, reel).
  */
-export async function runFuturiaPublishPipeline(limit = 50): Promise<FuturiaPublishSummary> {
+export async function runMarketingPublishPipeline(limit = 50): Promise<MarketingPublishSummary> {
   const startedAt = new Date();
 
   const campaignSummary = await runMarketingCampaignPublishPipeline(limit);
@@ -61,7 +61,7 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
   const today = getRomeCalendarDate();
 
   console.log(
-    `[Futuria Publish] ═══ Avvio pubblicazione calendario (${slots.length} slot) — ${today.toISOString().slice(0, 10)} ═══`
+    `[Marketing Publish] ═══ Avvio pubblicazione calendario (${slots.length} slot) — ${today.toISOString().slice(0, 10)} ═══`
   );
 
   const results: CampaignPublishResult[] = [];
@@ -80,13 +80,13 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
     });
 
     if (!campaign) {
-      console.log(`[Futuria Publish] Nessuna campagna APPROVED per ${formatLabelForSlot(slot)}`);
+      console.log(`[Marketing Publish] Nessuna campagna APPROVED per ${formatLabelForSlot(slot)}`);
       continue;
     }
 
     candidates += 1;
     console.log(
-      `[Futuria Publish] POSTMAN → ${formatLabelForSlot(slot)} · campagna ${campaign.id}`
+      `[Marketing Publish] POSTMAN → ${formatLabelForSlot(slot)} · campagna ${campaign.id}`
     );
 
     const result = await publishCampaignToChannel({
@@ -110,13 +110,13 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
         },
       });
       console.log(
-        `[Futuria Publish] ✔ ${formatLabelForSlot(slot)} → PUBLISHED${
+        `[Marketing Publish] ✔ ${formatLabelForSlot(slot)} → PUBLISHED${
           result.simulated ? ' (simulata)' : ''
         }`
       );
     } else {
       console.warn(
-        `[Futuria Publish] ✖ ${formatLabelForSlot(slot)} non pubblicata: ${result.error}`
+        `[Marketing Publish] ✖ ${formatLabelForSlot(slot)} non pubblicata: ${result.error}`
       );
     }
 
@@ -128,7 +128,7 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
   const failed = results.filter((r) => !r.success).length;
 
   console.log(
-    `[Futuria Publish] ═══ Campagne marketing — slot: ${slots.length}, pubblicate: ${published}, simulate: ${simulated}, errori: ${failed} ═══`
+    `[Marketing Publish] ═══ Campagne marketing — slot: ${slots.length}, pubblicate: ${published}, simulate: ${simulated}, errori: ${failed} ═══`
   );
 
   return {

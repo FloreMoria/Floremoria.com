@@ -6,7 +6,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
-import { getSiteBaseUrl } from '@/lib/futuria/config';
+import { getSiteBaseUrl } from '@/lib/site/config';
 import { verifyMagicPhotoDeliveryToken } from '@/lib/auth/magicPhotoDelivery';
 
 function setUserSessionCookies(

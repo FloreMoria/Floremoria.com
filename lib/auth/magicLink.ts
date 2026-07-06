@@ -22,7 +22,7 @@ export interface MagicLinkPayload {
     expiresAt: number;
 }
 
-/** TTL magic login post-consegna (WhatsApp Futuria → area riservata). */
+/** TTL magic login post-consegna (WhatsApp VERA → area riservata). */
 export const MAGIC_LOGIN_DELIVERY_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**

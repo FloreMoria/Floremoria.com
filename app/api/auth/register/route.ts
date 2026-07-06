@@ -3,7 +3,8 @@ import { generateMagicLinkToken } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { parseIdentifier, registerPasswordlessUser } from '@/lib/auth/identity';
 import { generateOtpToken } from '@/lib/auth/otp';
-import { isFuturiaConfigured, updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
+import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
+import { getSiteBaseUrl } from '@/lib/site/config';
 
 /**
  * Attivazione profilo B2C: crea l'account USER (se assente) e invia Magic Link o OTP.
@@ -36,8 +37,7 @@ export async function POST(request: Request) {
 
         if (channel === 'email' && parsed.email) {
             const token = generateMagicLinkToken(parsed.email);
-            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.floremoria.com';
-            const setupLink = `${baseUrl}/api/auth/magic-link/callback?token=${token}`;
+            const setupLink = `${getSiteBaseUrl()}/api/auth/magic-link/callback?token=${token}`;
 
             const mailResult = await sendMagicLinkEmail({ email: parsed.email, setupLink });
             if (!mailResult.ok) {
@@ -49,33 +49,11 @@ export async function POST(request: Request) {
 
             let sentWhatsApp = false;
             if (user.phone) {
-                if (isFuturiaConfigured()) {
-                    try {
-                        await updateFuturiaExistingContactIfPresent({
-                            phone: user.phone,
-                            email: user.email,
-                            name: user.name || undefined,
-                            additionalCustomFields: {
-                                'contact.magic_link': setupLink,
-                            },
-                        });
-
-                        const contactId = await updateFuturiaExistingContactIfPresent({
-                            phone: user.phone,
-                            email: user.email,
-                            name: user.name || undefined,
-                            tags: ['floremoria-invia-magic-link'],
-                            additionalCustomFields: {
-                                'contact.magic_link': setupLink,
-                            },
-                        });
-                        sentWhatsApp = Boolean(contactId);
-                    } catch (err) {
-                        console.error('[auth-register] Errore invio WhatsApp Magic Link tramite Futuria:', err);
-                    }
-                } else {
-                    console.log(`[Futuria MOCK Send Magic Link] To: ${user.phone} | Link: ${setupLink}`);
-                    sentWhatsApp = true;
+                const waText = `FloreMoria — attiva il tuo profilo con questo link (valido 15 minuti): ${setupLink}`;
+                const waResult = await sendAuthWhatsAppMessage(user.phone, waText);
+                sentWhatsApp = waResult.ok;
+                if (!waResult.ok) {
+                    console.warn('[auth-register] Magic link WhatsApp non inviato:', waResult.error);
                 }
             }
 
@@ -88,7 +66,6 @@ export async function POST(request: Request) {
             });
         }
 
-        // Canale telefono → OTP
         if (!user.phone) {
             return NextResponse.json(
                 { success: false, message: 'Impossibile associare un numero di telefono al profilo.' },
@@ -100,50 +77,21 @@ export async function POST(request: Request) {
         const tempToken = generateOtpToken(user.email, user.phone, code);
         const messageText = `Il tuo codice di attivazione profilo FloreMoria è: ${code}. Valido per 5 minuti.`;
 
-        let sentMethod = 'whatsapp';
-        if (isFuturiaConfigured()) {
-            try {
-                await updateFuturiaExistingContactIfPresent({
-                    phone: user.phone,
-                    email: user.email,
-                    name: user.name || undefined,
-                    additionalCustomFields: {
-                        'contact.otp_code': code,
-                    },
-                });
-
-                const contactId = await updateFuturiaExistingContactIfPresent({
-                    phone: user.phone,
-                    email: user.email,
-                    name: user.name || undefined,
-                    tags: ['floremoria-invia-otp'],
-                    additionalCustomFields: {
-                        'contact.otp_code': code,
-                    },
-                });
-                if (!contactId) {
-                    return NextResponse.json(
-                        { success: false, message: 'Impossibile inviare il codice di attivazione. Riprova più tardi.' },
-                        { status: 500 }
-                    );
-                }
-            } catch (err) {
-                console.error('[auth-register] Errore invio OTP tramite Futuria:', err);
-                return NextResponse.json(
-                    { success: false, message: 'Impossibile inviare il codice di attivazione. Riprova più tardi.' },
-                    { status: 500 }
-                );
-            }
-        } else {
-            console.log(`[Futuria MOCK Send OTP] To: ${user.phone} | Code: ${code}`);
+        const sendResult = await sendAuthWhatsAppMessage(user.phone, messageText);
+        if (!sendResult.ok) {
+            console.error('[auth-register] Invio OTP WhatsApp fallito:', sendResult.error);
+            return NextResponse.json(
+                { success: false, message: 'Impossibile inviare il codice di attivazione. Riprova più tardi.' },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json({
             success: true,
             channel: 'phone',
             tempToken,
-            method: sentMethod,
-            message: `Profilo attivato: codice inviato tramite WhatsApp.`,
+            method: 'whatsapp',
+            message: 'Profilo attivato: codice inviato tramite WhatsApp.',
         });
     } catch (error) {
         console.error('[auth-register] Errore:', error);

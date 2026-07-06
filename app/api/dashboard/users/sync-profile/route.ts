@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { applyUserEmailChange, UserEmailUpdateError } from '@/lib/auth/userEmailUpdate';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
-import { updateFuturiaExistingContactIfPresent } from '@/lib/futuria/client';
 
 export async function PUT(request: Request) {
     try {
@@ -60,14 +59,6 @@ export async function PUT(request: Request) {
                     ...(nextEmail !== existingUser.email ? { email: nextEmail } : {}),
                 },
             });
-
-            if (nextEmail === existingUser.email) {
-                await updateFuturiaExistingContactIfPresent({
-                    email: existingUser.email,
-                    phone: phone ?? undefined,
-                    name: name ?? undefined,
-                });
-            }
         }
 
         return NextResponse.json({ success: true, message: 'Dettagli Utente Sincronizzati' });

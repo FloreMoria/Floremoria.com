@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
-import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/futuria/floristDeliveryLinkNotify';
+import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/orders/floristDeliveryLinkRules';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { retryPuntoAIfBlocked } from '@/lib/vera/orderWorkflow';
 import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
@@ -111,33 +110,6 @@ export async function PUT(request: Request, context: any) {
                 .catch((err) => {
                     console.error('[orders-put] Retry Punto A dopo gravePosition fallito:', err);
                 });
-        }
-
-        if (body.partnerId && isFuturiaConfigured()) {
-            // Esegui in background senza bloccare la risposta HTTP
-            (async () => {
-                try {
-                    const partner = await prisma.partner.findUnique({
-                        where: { id: body.partnerId }
-                    });
-                    const orderWithItems = await prisma.order.findUnique({
-                        where: { id },
-                        include: { items: { include: { product: true } } }
-                    });
-                    if (partner && orderWithItems && partner.whatsappNumber) {
-                        await syncFloristPartnerToFuturia({
-                            shopName: partner.shopName,
-                            ownerName: partner.ownerName,
-                            whatsappNumber: partner.whatsappNumber,
-                            email: partner.email,
-                            pecAddress: partner.pecAddress,
-                            order: orderWithItems
-                        });
-                    }
-                } catch (err) {
-                    console.error('[orders-put] Error syncing florist to Futuria:', err);
-                }
-            })();
         }
 
         return NextResponse.json(updatedOrder);

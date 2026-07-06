@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generatePartnerCode } from '@/lib/codeGenerator';
-import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
 
 export async function POST(request: Request) {
     try {
@@ -21,18 +20,6 @@ export async function POST(request: Request) {
                 adminRating: Number(data.adminRating || 5)
             }
         });
-
-        if (isFuturiaConfigured() && partner.whatsappNumber) {
-            syncFloristPartnerToFuturia({
-                shopName: partner.shopName,
-                ownerName: partner.ownerName,
-                whatsappNumber: partner.whatsappNumber,
-                email: partner.email,
-                pecAddress: partner.pecAddress,
-            }).catch((err) => {
-                console.error('[partners-post] Error syncing new partner to Futuria:', err);
-            });
-        }
 
         return NextResponse.json(partner);
     } catch (error) {

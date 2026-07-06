@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-const SOCIAL_STAGING_PREFIX = 'futuria/campagne/publish-staging';
+const SOCIAL_STAGING_PREFIX = 'marketing/campagne/publish-staging';
 const DELIVERY_STAGING_PREFIX = 'whatsapp/delivery-staging';
 
 /** Segreti candidati per firma/verifica HMAC staging media. */

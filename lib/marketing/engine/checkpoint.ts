@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { CampaignStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { FuturiaEngineConfigError } from './generation';
+import { MarketingEngineConfigError } from './generation';
 
 export interface GuardianReport {
   passed: boolean;
@@ -155,7 +155,7 @@ function buildCheckpointUserContent(campaign: {
 export async function evaluateCampaignDraft(
   campaignId: string
 ): Promise<GuardiansCheckpointResult> {
-  console.log(`[Futuria Checkpoint] Valutazione campagna ${campaignId}`);
+  console.log(`[Marketing Checkpoint] Valutazione campagna ${campaignId}`);
 
   const campaign = await prisma.marketingCampaign.findUnique({
     where: { id: campaignId },
@@ -172,12 +172,15 @@ export async function evaluateCampaignDraft(
   const apiKey =
     process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
   if (!apiKey) {
-    throw new FuturiaEngineConfigError(
+    throw new MarketingEngineConfigError(
       'GEMINI_API_KEY non configurata: impossibile eseguire il checkpoint.'
     );
   }
 
-  const model = process.env.FUTURIA_CHECKPOINT_GEMINI_MODEL?.trim() || 'gemini-2.5-pro';
+  const model =
+    process.env.MARKETING_CHECKPOINT_GEMINI_MODEL?.trim() ||
+    process.env.FUTURIA_CHECKPOINT_GEMINI_MODEL?.trim() ||
+    'gemini-2.5-pro';
   const ai = new GoogleGenAI({ apiKey });
 
   let rawText: string | undefined;
@@ -212,7 +215,7 @@ export async function evaluateCampaignDraft(
       },
     });
 
-    console.log(`[Futuria Checkpoint] Campagna ${campaignId} APPROVED`);
+    console.log(`[Marketing Checkpoint] Campagna ${campaignId} APPROVED`);
     return { approved: true, reports };
   }
 
@@ -230,7 +233,7 @@ export async function evaluateCampaignDraft(
     .join(', ');
 
   console.log(
-    `[Futuria Checkpoint] Campagna ${campaignId} REJECTED — Guardiani in dissenso: ${failedGuardians || 'N/D'}`
+    `[Marketing Checkpoint] Campagna ${campaignId} REJECTED — Guardiani in dissenso: ${failedGuardians || 'N/D'}`
   );
 
   return { approved: false, reason: rejectionReason, reports };

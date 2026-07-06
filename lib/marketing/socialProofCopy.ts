@@ -1,4 +1,4 @@
-/** Codici categoria social Futuria (nessun dato ordine reale nei post). */
+/** Codici categoria social FloreMoria (nessun dato ordine reale nei post). */
 export type SocialProofCategoryCode = 'FF' | 'FT' | 'FA' | 'FP';
 
 export interface SocialProofCopy {

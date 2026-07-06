@@ -1,6 +1,4 @@
 import nodemailer from 'nodemailer';
-import { sendViaFuturia } from '@/lib/futuria/mail';
-import { isFuturiaConfigured } from '@/lib/futuria/client';
 
 export type SendFloremMailParams = {
     to: string | string[];
@@ -79,7 +77,7 @@ async function sendViaSmtp(from: string, params: SendFloremMailParams): Promise<
 }
 
 /**
- * Invio transazionale server-side: Futuria CRM (priorità) → Resend → SMTP (fallback).
+ * Invio transazionale server-side: Resend → SMTP (fallback).
  * Richiede `FLOREM_MAIL_FROM` (es. "FloreMoria <assistenza@floremoria.com>").
  */
 export async function sendFloremTransactionalMail(params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
@@ -90,14 +88,6 @@ export async function sendFloremTransactionalMail(params: SendFloremMailParams):
     }
 
     try {
-        if (isFuturiaConfigured()) {
-            const futuriaResult = await sendViaFuturia(from, params);
-            if (futuriaResult.ok) {
-                return futuriaResult;
-            }
-            console.warn('[mail] Futuria fallito, fallback su Resend/SMTP:', futuriaResult.error);
-        }
-
         if (process.env.RESEND_API_KEY?.trim()) {
             const resendResult = await sendViaResend(from, params);
             if (resendResult.ok) {

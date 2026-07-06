@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
-import { syncUserEmailChangeToFuturia } from '@/lib/futuria/syncUserEmailToFuturia';
 
 export class UserEmailUpdateError extends Error {
     readonly code: string;
@@ -17,7 +16,7 @@ export function isValidUserEmailFormat(email: string): boolean {
 }
 
 /**
- * Aggiorna email su Prisma (+ ordini collegati) e sincronizza Futuria CRM.
+ * Aggiorna email su Prisma (+ ordini collegati).
  */
 export async function applyUserEmailChange(params: {
     userId: string;
@@ -58,13 +57,6 @@ export async function applyUserEmailChange(params: {
             ],
         },
         data: { buyerEmail: newEmail },
-    });
-
-    await syncUserEmailChangeToFuturia({
-        previousEmail,
-        newEmail,
-        name: params.name,
-        phone: params.phone,
     });
 
     return { emailChanged: true };

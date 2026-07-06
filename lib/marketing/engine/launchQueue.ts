@@ -1,13 +1,13 @@
-export type FuturiaLaunchCategory = 'FF' | 'FT';
+export type MarketingLaunchCategory = 'FF' | 'FT';
 
-export interface FuturiaLaunchProduct {
-  category: FuturiaLaunchCategory;
+export interface MarketingLaunchProduct {
+  category: MarketingLaunchCategory;
   productName: string;
   productPrice: number;
 }
 
-/** Prodotti di default allineati alla Direttiva Futuria (FF / FT). */
-export const DEFAULT_FUTURIA_LAUNCH_PRODUCTS: FuturiaLaunchProduct[] = [
+/** Prodotti di default per il calendario editoriale (FF / FT). */
+export const DEFAULT_MARKETING_LAUNCH_PRODUCTS: MarketingLaunchProduct[] = [
   {
     category: 'FT',
     productName: 'Bouquet Ricordo Affettuoso',
@@ -20,14 +20,16 @@ export const DEFAULT_FUTURIA_LAUNCH_PRODUCTS: FuturiaLaunchProduct[] = [
   },
 ];
 
-export function getFuturiaLaunchProducts(): FuturiaLaunchProduct[] {
-  const raw = process.env.FUTURIA_LAUNCH_PRODUCTS_JSON?.trim();
+export function getMarketingLaunchProducts(): MarketingLaunchProduct[] {
+  const raw =
+    process.env.MARKETING_LAUNCH_PRODUCTS_JSON?.trim() ||
+    process.env.FUTURIA_LAUNCH_PRODUCTS_JSON?.trim();
   if (!raw) {
-    return DEFAULT_FUTURIA_LAUNCH_PRODUCTS;
+    return DEFAULT_MARKETING_LAUNCH_PRODUCTS;
   }
 
   try {
-    const parsed = JSON.parse(raw) as FuturiaLaunchProduct[];
+    const parsed = JSON.parse(raw) as MarketingLaunchProduct[];
     if (Array.isArray(parsed) && parsed.length > 0) {
       return parsed.filter(
         (item) =>
@@ -39,19 +41,19 @@ export function getFuturiaLaunchProducts(): FuturiaLaunchProduct[] {
       );
     }
   } catch {
-    console.warn('[Futuria Pipeline] FUTURIA_LAUNCH_PRODUCTS_JSON non valido — uso default.');
+    console.warn('[Marketing Pipeline] MARKETING_LAUNCH_PRODUCTS_JSON non valido — uso default.');
   }
 
-  return DEFAULT_FUTURIA_LAUNCH_PRODUCTS;
+  return DEFAULT_MARKETING_LAUNCH_PRODUCTS;
 }
 
 /** Un prodotto al giorno (rotazione) per rispettare i limiti del cron. */
 export function pickDailyLaunchProduct(
-  products = getFuturiaLaunchProducts(),
+  products = getMarketingLaunchProducts(),
   reference = new Date()
-): FuturiaLaunchProduct {
+): MarketingLaunchProduct {
   if (products.length === 0) {
-    return DEFAULT_FUTURIA_LAUNCH_PRODUCTS[0]!;
+    return DEFAULT_MARKETING_LAUNCH_PRODUCTS[0]!;
   }
   const dayIndex = Math.floor(reference.getTime() / 86_400_000);
   return products[dayIndex % products.length]!;

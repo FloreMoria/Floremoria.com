@@ -9,7 +9,7 @@ import {
   buildSocialProofCopy,
   resolveSocialCategoryFromProductSlugs,
   type SocialProofCategoryCode,
-} from '@/lib/futuria/socialProofCopy';
+} from '@/lib/marketing/socialProofCopy';
 
 function getBlobToken(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -150,7 +150,7 @@ export async function syncSocialReadyProofsForOrder(
   return { socialReadyAfterUrls, socialReadyPrimaryUrl };
 }
 
-/** Asset social pronti per Futuria/POSTMAN — rifiuta URL non sanificati. */
+/** Asset social pronti per POSTMAN — rifiuta URL non sanificati. */
 export function assertSocialReadyAssetUrl(imageUrl: string): void {
   if (!imageUrl.includes('social-ready')) {
     throw new Error(

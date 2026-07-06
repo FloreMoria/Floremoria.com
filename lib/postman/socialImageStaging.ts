@@ -3,7 +3,7 @@ import { getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { fetchProofImageBuffer } from '@/lib/deliveryProof/blobProofStorage';
 import sharp from 'sharp';
 
-const STAGING_PREFIX = 'futuria/campagne/publish-staging';
+const STAGING_PREFIX = 'marketing/campagne/publish-staging';
 const STAGING_TTL_MS = 20 * 60 * 1000;
 
 /** Segreti candidati per firma/verifica HMAC (ordine: condiviso → env noti). */

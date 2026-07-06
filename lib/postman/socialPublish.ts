@@ -1,5 +1,5 @@
 /**
- * POSTMAN — Pubblicazione campagne Futuria su Meta (Facebook/Instagram), TikTok e LinkedIn.
+ * POSTMAN — Pubblicazione campagne marketing su Meta (Facebook/Instagram), TikTok e LinkedIn.
  */
 import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { get } from '@vercel/blob';
@@ -13,7 +13,7 @@ import {
 import {
   buildSocialProofCopy,
   coerceSocialCategoryCode,
-} from '@/lib/futuria/socialProofCopy';
+} from '@/lib/marketing/socialProofCopy';
 import {
   publishToFacebookReel,
   publishToFacebookStory,
@@ -600,7 +600,7 @@ export async function publishCampaignToChannel(
         } else if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
-              'Video reel mancante. Configura FUTURIA_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+              'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
             );
           }
           externalId = await publishToFacebookReel(
@@ -620,7 +620,7 @@ export async function publishCampaignToChannel(
         } else if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
-              'Video reel mancante. Configura FUTURIA_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+              'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
             );
           }
           externalId = await publishToInstagramReel(

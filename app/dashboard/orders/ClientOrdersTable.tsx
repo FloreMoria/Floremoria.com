@@ -5,6 +5,7 @@ import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, 
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
+import VeraAlertsBanner from '@/components/dashboard/VeraAlertsBanner';
 import OrderDetailProofUpload from '@/components/dashboard/OrderDetailProofUpload';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
@@ -42,6 +43,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [duplicateSource, setDuplicateSource] = useState<any | null>(null);
     const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
     const [rowOrderSavingId, setRowOrderSavingId] = useState<string | null>(null);
+    const [alertsRefreshKey, setAlertsRefreshKey] = useState(0);
+    const bumpVeraAlerts = () => setAlertsRefreshKey((k) => k + 1);
     const [rowOrderDraft, setRowOrderDraft] = useState<
         Record<string, { buyerFullName: string; customerPhone: string; deceasedName: string; cemeteryName: string; cemeteryCity: string; totalPriceCents: number; status: string }>
     >({});
@@ -78,6 +81,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const handleSelectOrder = (order: any) => {
         setSelectedOrder(order);
+    };
+
+    const openOrderById = (orderId: string) => {
+        const order = localOrders.find((o) => o.id === orderId);
+        if (order) handleSelectOrder(order);
     };
 
     const openCreateModal = () => {
@@ -283,7 +291,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     partnerId: selectedOrder.partnerId || null,
-                    specialNotes: selectedOrder.specialNotes || ''
+                    specialNotes: selectedOrder.specialNotes || '',
+                    gravePosition: selectedOrder.gravePosition || '',
                 })
             });
 
@@ -295,10 +304,12 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     ...o,
                     partnerId: selectedOrder.partnerId,
                     specialNotes: selectedOrder.specialNotes,
+                    gravePosition: selectedOrder.gravePosition,
                     partner: florists.find(f => f.id === selectedOrder.partnerId) || null
                 } : o));
 
                 showToast('Dettagli ordine salvati con successo!');
+                bumpVeraAlerts();
                 closeDrawer();
             } else {
                 alert('Errore nel salvataggio dell\'assegnazione.');
@@ -312,6 +323,20 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     return (
         <div className="relative">
+            <VeraAlertsBanner
+                refreshKey={alertsRefreshKey}
+                onOpenOrder={openOrderById}
+                onGravePositionSaved={(orderId, gravePosition) => {
+                    setLocalOrders((prev) =>
+                        prev.map((o) => (o.id === orderId ? { ...o, gravePosition } : o))
+                    );
+                    if (selectedOrder?.id === orderId) {
+                        setSelectedOrder((prev: any) =>
+                            prev ? { ...prev, gravePosition } : prev
+                        );
+                    }
+                }}
+            />
             {/* Header Section Integrata */}
             <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4 border-b border-gray-100 pb-6">
                 <div>
@@ -805,9 +830,34 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                                 {selectedOrder.cemeteryCity} {selectedOrder.deliveryProvince ? `(${selectedOrder.deliveryProvince.toUpperCase()})` : ''}
                                                             </span>
                                                         )}
-                                                        {selectedOrder.gravePosition && <span className="text-gray-500 text-xs block mt-0.5">Posizione: {selectedOrder.gravePosition}</span>}
                                                     </div>
                                                 </div>
+                                                {canChangeStatus ? (
+                                                    <div>
+                                                        <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                                                            Indicazioni tomba / posizione consegna
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={selectedOrder.gravePosition || ''}
+                                                            onChange={(e) =>
+                                                                setSelectedOrder({
+                                                                    ...selectedOrder,
+                                                                    gravePosition: e.target.value,
+                                                                })
+                                                            }
+                                                            placeholder="Es. Settore 4, fila 12, loculo 3"
+                                                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none"
+                                                        />
+                                                        <p className="text-[10px] text-gray-400 mt-1">
+                                                            Obbligatorio per sbloccare il workflow VERA (Punto A).
+                                                        </p>
+                                                    </div>
+                                                ) : selectedOrder.gravePosition ? (
+                                                    <span className="text-gray-500 text-xs block">
+                                                        Posizione: {selectedOrder.gravePosition}
+                                                    </span>
+                                                ) : null}
                                                 <div className="flex items-start gap-2">
                                                     <Clock size={15} className="text-gray-400 mt-0.5 shrink-0" />
                                                     <div>

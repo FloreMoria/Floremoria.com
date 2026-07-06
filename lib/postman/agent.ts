@@ -143,7 +143,10 @@ export async function classifyAndDraft(input: PostmanIncoming): Promise<PostmanD
     if (!apiKey) {
         throw new PostmanConfigError('GEMINI_API_KEY non configurata: impossibile generare la bozza.');
     }
-    const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
+    const model =
+        process.env.POSTMAN_GEMINI_MODEL?.trim() ||
+        process.env.MARKETING_GEMINI_MODEL?.trim() ||
+        'gemini-2.5-flash';
     const links = getCheckoutLinks();
 
     const userContent = [

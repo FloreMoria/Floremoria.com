@@ -5,6 +5,7 @@ import {
     resolveHistoricalAudience,
 } from '@/lib/whatsapp/historicalToneKb';
 import { isOrderTrackingInquiry } from '@/lib/whatsapp/orderStatusInquiry';
+import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 
 type CoreKb = {
     supportEmail: string;
@@ -72,8 +73,8 @@ function hasAny(haystack: string, needles: string[]): boolean {
 }
 
 function getDisplayName(userName: string): string {
-    const trimmed = userName.trim();
-    if (!trimmed || trimmed.startsWith('+') || trimmed.startsWith('whatsapp:')) return '';
+    const trimmed = sanitizeWhatsAppDisplayName(userName);
+    if (!trimmed) return '';
     const parts = trimmed.split(' ').filter(Boolean);
     if (parts.length === 0) return '';
     if (parts.length === 1) return parts[0];
@@ -402,11 +403,13 @@ export function ensureRespectfulOpening(reply: string, hasPriorOutbound: boolean
         lower.includes('ringrazio per essersi rivolto') ||
         lower.includes('momento cos') ||
         lower.includes('condoglianze') ||
-        lower.startsWith('buongiorno')
+        lower.startsWith('buongiorno') ||
+        lower.startsWith('gentile ')
     ) {
         return reply;
     }
-    const greeting = displayName ? `Buongiorno ${displayName}, ` : 'Buongiorno, ';
+    const safeName = sanitizeWhatsAppDisplayName(displayName);
+    const greeting = safeName ? `Buongiorno ${safeName}, ` : 'Buongiorno, ';
     return `${greeting}${VERA_RESPECTFUL_OPENING}\n\n${reply}`;
 }
 

@@ -39,9 +39,11 @@ function toDateInput(value: string | Date | null | undefined): string {
     return d.toISOString().slice(0, 10);
 }
 
-function toDatetimeLocal(value: Date): string {
+function toDatetimeLocal(value: string | Date): string {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function parseCategoryAndProvince(orderNumber?: string | null, fallbackProvince?: string | null) {
@@ -68,6 +70,14 @@ function suggestNextDeliveryDate(sourceDate: string | Date | null | undefined, i
         const next = new Date(d);
         next.setMonth(next.getMonth() + 1);
         return toDatetimeLocal(next);
+    }
+
+    const now = new Date();
+    if (d.getTime() < now.getTime()) {
+        const suggested = new Date(now);
+        suggested.setDate(suggested.getDate() + 1);
+        suggested.setHours(10, 0, 0, 0);
+        return toDatetimeLocal(suggested);
     }
 
     return toDatetimeLocal(d);
@@ -137,7 +147,10 @@ export function orderToDuplicateDraft(order: Record<string, any>): DuplicateOrde
         cemeteryName: order.cemeteryName || '',
         cemeteryCity: order.cemeteryCity === 'Non specificato' ? '' : order.cemeteryCity || '',
         gravePosition: order.gravePosition || '',
-        deliveryDate: suggestNextDeliveryDate(order.deliveryDate, isRecurring),
+        deliveryDate: suggestNextDeliveryDate(
+            order.deliveryDate ?? order.funeralDate,
+            isRecurring
+        ),
         productId,
         priceCents: mainItem?.priceCents ?? '',
         quantity: mainItem?.quantity ?? 1,

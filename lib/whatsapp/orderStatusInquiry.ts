@@ -1,7 +1,11 @@
 import prisma from '@/lib/prisma';
+import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
+import { isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import type { DeliveryProof, Order, OrderStatus } from '@prisma/client';
+
+const VERA_ACTIVE_ORDER_STATUSES: OrderStatus[] = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'];
 
 const ORDER_TRACKING_KEYWORDS = [
     'foto',
@@ -33,9 +37,19 @@ function normalizeForMatch(value: string): string {
 
 /** Messaggio utente che chiede aggiornamenti, foto o stato di un ordine esistente. */
 export function isOrderTrackingInquiry(message: string): boolean {
+    if (isPreAcquisitionIntent(message)) return false;
+
     const m = normalizeForMatch(message);
     if (!m) return false;
     return ORDER_TRACKING_KEYWORDS.some((keyword) => m.includes(keyword));
+}
+
+export function isOrderOpenForVeraContext(
+    order: Pick<Order, 'status'> & { deliveryProof?: Pick<DeliveryProof, 'status'> | null }
+): boolean {
+    if (order.status === 'CANCELLED' || order.status === 'COMPLETED') return false;
+    if (order.deliveryProof?.status === 'COMPLETED') return false;
+    return VERA_ACTIVE_ORDER_STATUSES.includes(order.status);
 }
 
 function phoneLookupVariants(phoneE164: string): string[] {
@@ -87,8 +101,17 @@ export async function lookupLastOrderByPhone(phoneE164: string): Promise<OrderWi
     });
 }
 
+/** Ultimo ordine ancora aperto (non completato/cancellato) per contesto VERA. */
+export async function lookupActiveOrderByPhone(phoneE164: string): Promise<OrderWithProof | null> {
+    const order = await lookupLastOrderByPhone(phoneE164);
+    if (!order || !isOrderOpenForVeraContext(order)) return null;
+    return order;
+}
+
 function salutationPrefix(displayName: string): string {
-    const firstName = extractFirstName(displayName);
+    const sanitized = sanitizeWhatsAppDisplayName(displayName);
+    if (!sanitized) return '';
+    const firstName = extractFirstName(sanitized);
     return firstName ? `Gentile ${firstName}, ` : '';
 }
 
@@ -158,7 +181,7 @@ export async function tryBuildOrderTrackingReply(
     displayName: string,
     message: string
 ): Promise<string | null> {
-    if (!isOrderTrackingInquiry(message)) return null;
+    if (isPreAcquisitionIntent(message) || !isOrderTrackingInquiry(message)) return null;
 
     const e164 = normalizePhoneE164(sessionPhone.replace(/^whatsapp:/i, ''));
     if (!e164) return buildNoOrderFoundReply(displayName);

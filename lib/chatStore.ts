@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import prisma from './prisma';
+import { formatItalyTime } from '@/lib/datetime/italyTimezone';
 
 export interface ChatMessage {
     id: string;
@@ -89,7 +90,7 @@ function switchToMemoryStore(candidate?: Record<string, ChatSession>): Record<st
 }
 
 function nowTimeLabel(): string {
-    return new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    return formatItalyTime();
 }
 
 function asUserType(value: string): 'UTENTE' | 'FLORIST' | 'UNKNOWN' {
@@ -287,7 +288,7 @@ export async function addMessage(
     const store = await getChatStore();
     const session = store[phone] || (await getSession(phone));
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = formatItalyTime(now);
     const newMessage: ChatMessage = {
         id: 'msg-' + Math.random().toString(36).substr(2, 9),
         direction,

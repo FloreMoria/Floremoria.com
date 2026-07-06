@@ -20,12 +20,14 @@ import {
     isSimpleThanksMessage,
     STANDARD_GUIDANCE_MESSAGE,
 } from '@/lib/whatsappKnowledge';
-import { isOrderTrackingInquiry, tryBuildOrderTrackingReply } from '@/lib/whatsapp/orderStatusInquiry';
+import { isOrderTrackingInquiry, lookupActiveOrderByPhone, lookupLastOrderByPhone, tryBuildOrderTrackingReply } from '@/lib/whatsapp/orderStatusInquiry';
 import {
     buildVeraKnowledgeContext,
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
+import { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
+import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
     detectFloristException,
     handleFloristException,
@@ -33,7 +35,6 @@ import {
     isUserModificationRequest,
 } from '@/lib/vera/orderWorkflow/exceptionScenarios';
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
-import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import type { VeraCallerContext } from '@/lib/vera';
 import type { ChatSession } from '@/lib/chatStore';
 
@@ -89,10 +90,11 @@ function stripClosingSignature(text: string): string {
     return text.replace(new RegExp(`\\n*${escaped}\\s*$`, 'i'), '').trim();
 }
 
-function getDisplayNameFromSession(session: ChatSession): string | undefined {
-    const name = session.name?.trim();
-    if (!name || name.startsWith('+') || name.startsWith('whatsapp:')) return undefined;
-    const parts = name.split(' ').filter(Boolean);
+function getDisplayNameFromSession(session: ChatSession, callerContext?: VeraCallerContext): string | undefined {
+    if (callerContext?.firstName) return callerContext.firstName;
+    const sanitized = sanitizeWhatsAppDisplayName(session.name);
+    if (!sanitized) return undefined;
+    const parts = sanitized.split(' ').filter(Boolean);
     return parts.length ? parts[parts.length - 1] : undefined;
 }
 
@@ -136,7 +138,11 @@ function polishVeraReply(
     let text = sanitizeVeraReplyText(stripClosingSignature(reply));
     if (!text) return reply;
     if (!closing && !skipOpeningPrefix) {
-        text = ensureRespectfulOpening(text, hasPriorOutbound, getDisplayNameFromSession(session));
+        text = ensureRespectfulOpening(
+            text,
+            hasPriorOutbound,
+            getDisplayNameFromSession(session, callerContext)
+        );
     }
     if (!closing && !skipCatalogLinks) {
         text = ensureCatalogLinksInReply(
@@ -282,6 +288,15 @@ export async function generateVeraReply(
 
     const callerContext = await resolveVeraCallerContext(session);
 
+    if (
+        session.userType !== 'FLORIST' &&
+        callerContext.mode === 'pre_acquisto' &&
+        isPreAcquisitionIntent(message)
+    ) {
+        const replyText = buildPreAcquisitionLucianoReply(callerContext.firstName);
+        return { text: replyText, source: 'deterministic', shouldEscalate: false };
+    }
+
     if (session.userType === 'FLORIST') {
         const floristException = detectFloristException(message);
         if (floristException && callerContext.phoneE164) {
@@ -316,9 +331,9 @@ export async function generateVeraReply(
     }
 
     if (session.userType !== 'FLORIST' && callerContext.phoneE164) {
-        const order = await lookupLastOrderByPhone(callerContext.phoneE164);
-        if (order && isUserModificationRequest(message)) {
-            await handleUserModificationRequest({ orderId: order.id, message });
+        const activeOrder = await lookupActiveOrderByPhone(callerContext.phoneE164);
+        if (activeOrder && isUserModificationRequest(message)) {
+            await handleUserModificationRequest({ orderId: activeOrder.id, message });
             return {
                 text:
                     'La ringrazio per la Sua segnalazione. Ho trasmesso la richiesta al nostro Staff, che La ricontatterà al più presto con un aggiornamento.',
@@ -327,11 +342,12 @@ export async function generateVeraReply(
             };
         }
 
-        if (order?.deliveryProof?.status === 'COMPLETED') {
+        const recentOrder = await lookupLastOrderByPhone(callerContext.phoneE164);
+        if (recentOrder?.deliveryProof?.status === 'COMPLETED') {
             const review = await tryRunPuntoHReviewRequest({
-                orderId: order.id,
-                userId: order.userId,
-                customerPhone: order.customerPhone,
+                orderId: recentOrder.id,
+                userId: recentOrder.userId,
+                customerPhone: recentOrder.customerPhone,
                 message,
             });
             if (review.sent) {

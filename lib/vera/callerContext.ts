@@ -1,5 +1,6 @@
 import type { ChatSession } from '@/lib/chatStore';
-import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
+import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
+import { lookupActiveOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 
@@ -20,9 +21,7 @@ export interface VeraCallerContext {
 }
 
 function resolveDisplayName(session: ChatSession): string | null {
-    const name = session.name?.trim();
-    if (!name || name.startsWith('+') || name.startsWith('whatsapp:')) return null;
-    return name;
+    return sanitizeWhatsAppDisplayName(session.name);
 }
 
 function formatLocation(city: string | null | undefined, cemetery: string | null | undefined): string | null {
@@ -51,8 +50,8 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         };
     }
 
-    const order = phoneE164 ? await lookupLastOrderByPhone(phoneE164) : null;
-    const hasActiveOrder = Boolean(order && order.status !== 'CANCELLED');
+    const order = phoneE164 ? await lookupActiveOrderByPhone(phoneE164) : null;
+    const hasActiveOrder = Boolean(order);
     const proofStatus = order?.deliveryProof?.status ?? null;
 
     return {
@@ -81,8 +80,9 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
 
     if (ctx.mode === 'pre_acquisto') {
         lines.push(
-            'ORDINE DATABASE: nessuno associato a questo numero.',
-            'AZIONE: tratta come richiesta informativa o nuovo ordine. VIETATO citare codici ordine, defunti o luoghi non forniti ora dall\'utente.',
+            'ORDINE DATABASE: nessuno ordine attivo associato a questo numero (ignora ordini completati o storici di test).',
+            'METODO LUCIANO: Lei formale, tono paziente e disponibile; usa solo il nome profilo WhatsApp se valido.',
+            'Chiedi una verifica alla volta (tomba o funerale, città, orario). VIETATO citare codici ordine, defunti o luoghi non forniti ora dall\'utente.',
         );
     } else if (ctx.mode === 'ordine_attivo' && ctx.hasActiveOrder) {
         lines.push(

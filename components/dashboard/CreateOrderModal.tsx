@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import {
     orderToDuplicateDraft,
@@ -128,6 +128,19 @@ export default function CreateOrderModal({
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const appliedDuplicateIdRef = useRef<string | null>(null);
+
+    const resolveDefaultProductId = useCallback(
+        (preferredId?: string) => {
+            if (preferredId && products.some((p) => p.id === preferredId)) return preferredId;
+            return (
+                products.find((p) => p.isBouquet !== false)?.id ||
+                products[0]?.id ||
+                ''
+            );
+        },
+        [products]
+    );
 
     const refreshCodePreview = useCallback(async () => {
         const prov = deliveryProvince.trim().toUpperCase().slice(0, 2) || 'XX';
@@ -220,7 +233,7 @@ export default function CreateOrderModal({
         setCemeteryCity(draft.cemeteryCity);
         setGravePosition(draft.gravePosition);
         setDeliveryDate(draft.deliveryDate);
-        setProductId(draft.productId || mainProducts[0]?.id || products[0]?.id || '');
+        setProductId(resolveDefaultProductId(draft.productId));
         setPriceCents(draft.priceCents);
         setQuantity(draft.quantity);
         setPartnerId(draft.partnerId);
@@ -232,15 +245,27 @@ export default function CreateOrderModal({
         setTicketMessage(draft.ticketMessage);
         setDuplicateSourceLabel(draft.sourceOrderNumber || null);
         setError(null);
-    }, [products, mainProducts]);
+    }, [resolveDefaultProductId]);
 
     useEffect(() => {
-        if (!open) return;
-        if (duplicateFrom) {
-            applyDraft(orderToDuplicateDraft(duplicateFrom));
+        if (!open) {
+            appliedDuplicateIdRef.current = null;
             return;
         }
-        setDuplicateSourceLabel(null);
+        if (!duplicateFrom) {
+            setDuplicateSourceLabel(null);
+            return;
+        }
+
+        const sourceId = String(
+            (duplicateFrom as { id?: string }).id ??
+                (duplicateFrom as { orderNumber?: string }).orderNumber ??
+                ''
+        );
+        if (appliedDuplicateIdRef.current === sourceId) return;
+
+        appliedDuplicateIdRef.current = sourceId;
+        applyDraft(orderToDuplicateDraft(duplicateFrom));
     }, [open, duplicateFrom, applyDraft]);
 
     const resetForm = () => {

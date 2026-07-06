@@ -540,12 +540,20 @@ enum CampaignStatus {
   PUBLISHED
 }
 
-/// Canale di distribuzione campagna (Meta, Google Ads, LinkedIn).
+/// Formato contenuto social (feed, reel, story).
+enum ContentFormat {
+  FEED_POST
+  REEL
+  STORY
+}
+
+/// Canale di distribuzione campagna (Meta, Google Ads, LinkedIn, TikTok).
 enum MarketingChannel {
   META_FACEBOOK
   META_INSTAGRAM
   GOOGLE_ADS
   LINKEDIN
+  TIKTOK
 }
 
 /// Campagna marketing orchestrata da Futuria (Blob + copy CLEO + hashtag AXEL).
@@ -553,14 +561,18 @@ model MarketingCampaign {
   id              String           @id @default(cuid())
   status          CampaignStatus   @default(DRAFT)
   imageUrl        String           // URL dell'immagine su Vercel Blob
+  videoUrl        String?          // URL video (reel TikTok/Meta) su Blob, se generato
   imagePrompt     String           @default("") @db.Text // Prompt ZIGGY/ARLO per Imagen
   copy            String           @db.Text // Testo generato da CLEO
   hashtags        String[]         // Hashtag ed elementi semantici generati da AXEL
-  targetChannel   MarketingChannel // Canale di destinazione (Meta, Google, LinkedIn)
+  targetChannel   MarketingChannel // Canale di destinazione
+  contentFormat   ContentFormat    @default(FEED_POST) // Post feed, reel o story
+  scheduledFor    DateTime?        @db.Date // Giorno editoriale (Europe/Rome)
   category        String           // Categoria FF (Funerale) o FT (Fiori sulle Tombe)
   rejectionReason String?          // Nota di rifiuto dei Guardiani per la correzione
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
+  @@index([status, targetChannel, contentFormat, scheduledFor])
   @@map("marketing_campaigns")
 }

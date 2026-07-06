@@ -2,8 +2,8 @@
  * GET /api/cron/publish-campaigns
  *
  * Trigger Vercel Cron giornaliero Futuria (05:00 UTC):
- * 1. Pipeline produzione — generateCampaignDraft → Imagen/Blob → checkpoint Guardiani
- * 2. Rilevamento campagne APPROVED pronte per pubblicazione (POSTMAN — step successivo)
+ * 1. Pipeline produzione — copy Gemini + Imagen + checkpoint Guardiani (calendario editoriale)
+ * 2. Pubblicazione POSTMAN — 1 contenuto per slot: IG/FB/TikTok post, story giornaliera, reel ogni 3 giorni
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { runFuturiaProductionPipeline } from '@/lib/futuria/engine/pipeline';

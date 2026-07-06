@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { MarketingChannel } from '@prisma/client';
+import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { put } from '@vercel/blob';
 import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
@@ -29,16 +29,25 @@ function getBlobToken(): string {
   return token;
 }
 
-function aspectRatioForChannel(channel: MarketingChannel): string {
-  switch (channel) {
+function aspectRatioForCampaign(campaign: {
+  targetChannel: MarketingChannel;
+  contentFormat: ContentFormat;
+}): string {
+  if (
+    campaign.contentFormat === ContentFormat.STORY ||
+    campaign.contentFormat === ContentFormat.REEL ||
+    campaign.targetChannel === MarketingChannel.TIKTOK
+  ) {
+    return '9:16';
+  }
+
+  switch (campaign.targetChannel) {
     case MarketingChannel.META_INSTAGRAM:
       return '1:1';
     case MarketingChannel.META_FACEBOOK:
       return '4:3';
     case MarketingChannel.LINKEDIN:
       return '16:9';
-    case MarketingChannel.GOOGLE_ADS:
-      return '1:1';
     default:
       return '1:1';
   }
@@ -134,7 +143,10 @@ export async function generateAndStorageCampaignImage(
       copy: campaign.copy,
     });
 
-  const aspectRatio = aspectRatioForChannel(campaign.targetChannel);
+  const aspectRatio = aspectRatioForCampaign({
+    targetChannel: campaign.targetChannel,
+    contentFormat: campaign.contentFormat,
+  });
   const { buffer, mimeType, extension } = await generateImageBytes(imagePrompt, aspectRatio);
 
   const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;

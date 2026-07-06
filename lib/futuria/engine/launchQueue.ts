@@ -44,3 +44,15 @@ export function getFuturiaLaunchProducts(): FuturiaLaunchProduct[] {
 
   return DEFAULT_FUTURIA_LAUNCH_PRODUCTS;
 }
+
+/** Un prodotto al giorno (rotazione) per rispettare i limiti del cron. */
+export function pickDailyLaunchProduct(
+  products = getFuturiaLaunchProducts(),
+  reference = new Date()
+): FuturiaLaunchProduct {
+  if (products.length === 0) {
+    return DEFAULT_FUTURIA_LAUNCH_PRODUCTS[0]!;
+  }
+  const dayIndex = Math.floor(reference.getTime() / 86_400_000);
+  return products[dayIndex % products.length]!;
+}

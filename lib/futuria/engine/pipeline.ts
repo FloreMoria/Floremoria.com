@@ -1,11 +1,13 @@
 import { evaluateCampaignDraft } from './checkpoint';
 import { FuturiaEngineConfigError, generateCampaignDraft } from './generation';
 import { generateAndStorageCampaignImage } from './images';
-import { getFuturiaLaunchProducts, type FuturiaLaunchProduct } from './launchQueue';
+import { getFuturiaLaunchProducts, pickDailyLaunchProduct, type FuturiaLaunchProduct } from './launchQueue';
+import { getDailyPublishSlots } from './contentCalendar';
 
 export interface PipelineCampaignResult {
   campaignId: string;
   channel: string;
+  contentFormat: string;
   imageUrl?: string;
   approved?: boolean;
   rejectionReason?: string;
@@ -35,10 +37,11 @@ async function processCampaignPost(
   product: FuturiaLaunchProduct,
   campaignId: string,
   channel: string,
+  contentFormat: string,
   index: number,
   total: number
 ): Promise<PipelineCampaignResult> {
-  const label = `[Futuria Pipeline] ${product.category} · ${product.productName} · ${channel}`;
+  const label = `[Futuria Pipeline] ${product.category} · ${product.productName} · ${channel} · ${contentFormat}`;
 
   try {
     console.log(`${label} — STEP 2/3 Imagen + Vercel Blob (${index}/${total})`);
@@ -56,6 +59,7 @@ async function processCampaignPost(
     return {
       campaignId,
       channel,
+      contentFormat,
       imageUrl,
       approved: checkpoint.approved,
       rejectionReason: checkpoint.reason,
@@ -63,7 +67,7 @@ async function processCampaignPost(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`${label} — ERRORE: ${msg}`);
-    return { campaignId, channel, error: msg };
+    return { campaignId, channel, contentFormat, error: msg };
   }
 }
 
@@ -74,10 +78,12 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
 
   try {
     console.log(`[Futuria Pipeline] STEP 1/3 generateCampaignDraft — ${product.productName}`);
+    const slots = getDailyPublishSlots();
     const draft = await generateCampaignDraft(
       product.category,
       product.productName,
-      product.productPrice
+      product.productPrice,
+      slots
     );
 
     console.log(
@@ -93,6 +99,7 @@ async function runProductPipeline(product: FuturiaLaunchProduct): Promise<Pipeli
         product,
         post.campaignId,
         post.channel,
+        post.contentFormat,
         i + 1,
         total
       );
@@ -136,15 +143,13 @@ export async function runFuturiaProductionPipeline(
   products = getFuturiaLaunchProducts()
 ): Promise<FuturiaProductionSummary> {
   const startedAt = new Date();
+  const dailyProduct = pickDailyLaunchProduct(products, startedAt);
   console.log(
-    `[Futuria Pipeline] ═══ Produzione giornaliera avviata (${startedAt.toISOString()}) — ${products.length} prodotti in coda ═══`
+    `[Futuria Pipeline] ═══ Produzione giornaliera avviata (${startedAt.toISOString()}) — prodotto del giorno: ${dailyProduct.productName} ═══`
   );
 
   const productResults: PipelineProductResult[] = [];
-
-  for (const product of products) {
-    productResults.push(await runProductPipeline(product));
-  }
+  productResults.push(await runProductPipeline(dailyProduct));
 
   const finishedAt = new Date();
   const allCampaigns = productResults.flatMap((p) => p.campaigns);

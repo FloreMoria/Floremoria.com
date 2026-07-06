@@ -1,10 +1,17 @@
 import { GoogleGenAI } from '@google/genai';
-import { CampaignStatus, MarketingChannel } from '@prisma/client';
+import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import {
+  formatLabelForSlot,
+  getDailyPublishSlots,
+  getRomeCalendarDate,
+  type PublishSlot,
+} from '@/lib/futuria/engine/contentCalendar';
 
 export interface GeneratedPost {
   campaignId: string;
   channel: MarketingChannel;
+  contentFormat: ContentFormat;
   copy: string;
   imagePrompt: string;
   hashtags: string[];
@@ -20,11 +27,13 @@ export class FuturiaEngineConfigError extends Error {}
 
 const VALID_CATEGORIES = ['FF', 'FT'] as const;
 const VALID_CHANNELS = Object.values(MarketingChannel);
+const VALID_FORMATS = Object.values(ContentFormat);
 
 type FuturiaCategory = (typeof VALID_CATEGORIES)[number];
 
 interface GeminiGeneratedPost {
   channel: string;
+  contentFormat?: string;
   copy: string;
   imagePrompt: string;
   hashtags: string[];
@@ -50,7 +59,7 @@ INPUT RICHIESTO:
 Riceverai una categoria (FF = Per il Funerale, FT = Fiori sulle Tombe) e i dettagli di un prodotto floreale.
 
 OUTPUT RICHIESTO:
-Devi restituire MANDATORIAMENTE ed ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di testo esterni) che contenga un array di post ottimizzati per i canali richiesti (META_INSTAGRAM, META_FACEBOOK, LINKEDIN).
+Devi restituire MANDATORIAMENTE ed ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di testo esterni) con un post per OGNI slot editoriale richiesto.
 
 Struttura del JSON atteso:
 {
@@ -59,12 +68,17 @@ Struttura del JSON atteso:
   "posts": [
     {
       "channel": "META_INSTAGRAM",
+      "contentFormat": "FEED_POST",
       "copy": "Testo emotivo...",
       "imagePrompt": "[STYLE]: Quiet Luxury... [LIGHTING]: ... [SUBJECT]: ... [AVOID]: ...",
       "hashtags": ["#floremoria", "#..."]
     }
   ]
 }
+
+Canali ammessi: META_INSTAGRAM, META_FACEBOOK, TIKTOK.
+Formati ammessi: FEED_POST (post feed), STORY (story verticale che rimanda al post/reel del giorno), REEL (script reel breve e dinamico).
+Per STORY usa copy più corto (max 2 frasi + invito a vedere il feed). Per REEL copy energico adatto a video verticale 15-30s.
 `;
 
 function stripJsonFences(raw: string): string {
@@ -98,9 +112,24 @@ function normalizeHashtags(values: unknown): string[] {
     .slice(0, 12);
 }
 
-function buildUserContent(category: FuturiaCategory, productName: string, productPrice: number): string {
+function coerceContentFormat(value: unknown): ContentFormat | null {
+  const v = String(value || '').toUpperCase().trim();
+  return (VALID_FORMATS as string[]).includes(v) ? (v as ContentFormat) : null;
+}
+
+function buildUserContent(
+  category: FuturiaCategory,
+  productName: string,
+  productPrice: number,
+  slots: PublishSlot[]
+): string {
   const categoryLabel =
     category === 'FF' ? 'Per il Funerale (FF)' : 'Fiori sulle Tombe (FT)';
+
+  const slotLines = slots.map(
+    (slot, i) =>
+      `${i + 1}. ${formatLabelForSlot(slot)} → channel="${slot.channel}", contentFormat="${slot.contentFormat}"`
+  );
 
   return [
     'Genera una campagna multicanale per il prodotto seguente.',
@@ -109,13 +138,17 @@ function buildUserContent(category: FuturiaCategory, productName: string, produc
     `Nome prodotto: ${productName}`,
     `Prezzo: €${productPrice.toFixed(2)}`,
     '',
-    'Canali obbligatori: META_INSTAGRAM, META_FACEBOOK, LINKEDIN (un post per ciascun canale).',
+    'Slot editoriali OBBLIGATORI (un post JSON per ciascuno, stessi channel e contentFormat):',
+    ...slotLines,
+    '',
     'Rispetta la categoria indicata e adatta tono e immaginario di conseguenza.',
+    'TikTok: tono autentico, empatico, adatto a un pubblico più giovane ma sempre rispettoso.',
   ].join('\n');
 }
 
 interface ParsedCampaignPost {
   channel: MarketingChannel;
+  contentFormat: ContentFormat;
   copy: string;
   imagePrompt: string;
   hashtags: string[];
@@ -124,7 +157,8 @@ interface ParsedCampaignPost {
 function parseGeminiCampaignPayload(
   rawText: string,
   fallbackCategory: FuturiaCategory,
-  fallbackProductName: string
+  fallbackProductName: string,
+  requiredSlots: PublishSlot[]
 ): Omit<CampaignGenerationResult, 'posts'> & { posts: ParsedCampaignPost[] } {
   let parsed: GeminiCampaignPayload;
   try {
@@ -143,30 +177,53 @@ function parseGeminiCampaignPayload(
   const posts: ParsedCampaignPost[] = [];
   for (const post of parsed.posts) {
     const channel = coerceChannel(post.channel);
+    const contentFormat = coerceContentFormat(post.contentFormat);
     const copy = String(post.copy || '').trim();
     const imagePrompt = String(post.imagePrompt || '').trim();
     const hashtags = normalizeHashtags(post.hashtags);
 
-    if (!channel || !copy || !imagePrompt) {
+    if (!channel || !contentFormat || !copy || !imagePrompt) {
       continue;
     }
 
-    posts.push({ channel, copy, imagePrompt, hashtags });
+    posts.push({ channel, contentFormat, copy, imagePrompt, hashtags });
   }
 
-  if (posts.length === 0) {
-    throw new Error('Nessun post generato rispetta i canali e i campi obbligatori.');
+  // Allinea agli slot richiesti (ordine editoriale)
+  const aligned: ParsedCampaignPost[] = [];
+  for (const slot of requiredSlots) {
+    const match =
+      posts.find(
+        (p) => p.channel === slot.channel && p.contentFormat === slot.contentFormat
+      ) ?? posts.find((p) => p.channel === slot.channel);
+
+    if (match) {
+      aligned.push({
+        ...match,
+        channel: slot.channel,
+        contentFormat: slot.contentFormat,
+      });
+    }
   }
 
-  return { category, productName, posts };
+  if (aligned.length === 0) {
+    throw new Error('Nessun post generato rispetta gli slot editoriali richiesti.');
+  }
+
+  return { category, productName, posts: aligned };
 }
 
 export async function generateCampaignDraft(
   category: 'FF' | 'FT',
   productName: string,
-  productPrice: number
+  productPrice: number,
+  slots = getDailyPublishSlots()
 ): Promise<CampaignGenerationResult> {
-  console.log(`[Futuria Engine] Chiamata API Gemini per ${category} - ${productName}`);
+  console.log(
+    `[Futuria Engine] Chiamata API Gemini per ${category} - ${productName} (${slots.length} slot)`
+  );
+
+  const scheduledFor = getRomeCalendarDate();
 
   const apiKey =
     process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
@@ -183,7 +240,7 @@ export async function generateCampaignDraft(
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: buildUserContent(category, productName, productPrice),
+      contents: buildUserContent(category, productName, productPrice, slots),
       config: {
         systemInstruction: CREATIVE_SWARM_SYSTEM_PROMPT,
         responseMimeType: 'application/json',
@@ -200,7 +257,7 @@ export async function generateCampaignDraft(
     throw new Error('Risposta Gemini vuota.');
   }
 
-  const result = parseGeminiCampaignPayload(rawText, category, productName);
+  const result = parseGeminiCampaignPayload(rawText, category, productName, slots);
 
   const savedPosts: GeneratedPost[] = [];
 
@@ -210,6 +267,8 @@ export async function generateCampaignDraft(
         status: CampaignStatus.DRAFT,
         category: result.category,
         targetChannel: post.channel,
+        contentFormat: post.contentFormat,
+        scheduledFor,
         copy: post.copy,
         imageUrl: '',
         imagePrompt: post.imagePrompt,
@@ -220,6 +279,7 @@ export async function generateCampaignDraft(
     savedPosts.push({
       campaignId: campaign.id,
       channel: campaign.targetChannel,
+      contentFormat: campaign.contentFormat,
       copy: campaign.copy,
       imagePrompt: post.imagePrompt,
       hashtags: campaign.hashtags,

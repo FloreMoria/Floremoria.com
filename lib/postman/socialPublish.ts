@@ -1,7 +1,7 @@
 /**
- * POSTMAN — Pubblicazione campagne Futuria su Meta (Facebook/Instagram) e LinkedIn.
+ * POSTMAN — Pubblicazione campagne Futuria su Meta (Facebook/Instagram), TikTok e LinkedIn.
  */
-import { MarketingChannel } from '@prisma/client';
+import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { get } from '@vercel/blob';
 import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
@@ -14,6 +14,16 @@ import {
   buildSocialProofCopy,
   coerceSocialCategoryCode,
 } from '@/lib/futuria/socialProofCopy';
+import {
+  publishToFacebookReel,
+  publishToFacebookStory,
+  publishToInstagramReel,
+  publishToInstagramStory,
+  type MetaEnv,
+} from '@/lib/postman/metaStoriesReels';
+import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
+import { captionForFormat } from '@/lib/postman/socialStoryCopy';
+import { publishToTikTok } from '@/lib/postman/tiktokPublish';
 
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
@@ -22,9 +32,11 @@ const LINKEDIN_API_BASE = 'https://api.linkedin.com/v2';
 export interface CampaignPublishInput {
   id: string;
   targetChannel: MarketingChannel;
+  contentFormat?: ContentFormat;
   copy: string;
   hashtags: string[];
   imageUrl: string;
+  videoUrl?: string | null;
   /** Foto consegna: risolve socialReadyPrimaryUrl + copy da socialCopyCategory. */
   deliveryProofId?: string;
 }
@@ -35,17 +47,15 @@ export interface CampaignPublishResult {
   channel: MarketingChannel;
   campaignId: string;
   externalId?: string;
+  videoUrl?: string;
   error?: string;
 }
 
-interface SocialPublishEnv {
-  metaAccessToken?: string;
-  fbPageId?: string;
-  igBusinessAccountId?: string;
+interface SocialPublishEnv extends MetaEnv {
   linkedInAccessToken?: string;
   linkedInOrganizationId?: string;
   linkedInUserId?: string;
-  blobToken?: string;
+  tiktokAccessToken?: string;
 }
 
 function readSocialPublishEnv(): SocialPublishEnv {
@@ -57,6 +67,7 @@ function readSocialPublishEnv(): SocialPublishEnv {
     linkedInOrganizationId: process.env.LINKEDIN_ORGANIZATION_ID?.trim(),
     linkedInUserId: process.env.LINKEDIN_USER_ID?.trim(),
     blobToken: process.env.BLOB_READ_WRITE_TOKEN?.trim(),
+    tiktokAccessToken: process.env.TIKTOK_ACCESS_TOKEN?.trim(),
   };
 }
 
@@ -144,7 +155,7 @@ export function formatCampaignCaption(copy: string, hashtags: string[]): string 
   return tags ? `${body}\n\n${tags}` : body;
 }
 
-async function fetchImageBytes(imageUrl: string, blobToken?: string): Promise<Buffer> {
+export async function fetchImageBytes(imageUrl: string, blobToken?: string): Promise<Buffer> {
   const isPrivateBlob = imageUrl.includes('private.blob.vercel-storage.com');
 
   if (isPrivateBlob) {
@@ -263,7 +274,11 @@ async function publishToFacebook(
   // Risolviamo dinamicamente il Page Access Token per evitare errore #200 (Unpublished posts)
   const pageAccessToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
 
-  const caption = formatCampaignCaption(campaign.copy, campaign.hashtags);
+  const caption = captionForFormat(
+    campaign.contentFormat ?? ContentFormat.FEED_POST,
+    campaign.copy,
+    campaign.hashtags
+  );
   const photoRes = await metaGraphUploadPhoto(
     fbPageId,
     pageAccessToken,
@@ -297,7 +312,11 @@ async function publishToInstagram(
     throw new Error('META_ACCESS_TOKEN o IG_BUSINESS_ACCOUNT_ID assenti');
   }
 
-  const caption = formatCampaignCaption(campaign.copy, campaign.hashtags);
+  const caption = captionForFormat(
+    campaign.contentFormat ?? ContentFormat.FEED_POST,
+    campaign.copy,
+    campaign.hashtags
+  );
   const metaImageUrl = await ensureMetaFetchableImageUrl(
     campaign.id,
     campaign.imageUrl,
@@ -492,6 +511,11 @@ function channelCredentialsReady(
         return { ready: false, reason: 'LINKEDIN_ORGANIZATION_ID / LINKEDIN_USER_ID' };
       }
       return { ready: true, reason: '' };
+    case MarketingChannel.TIKTOK:
+      if (!env.tiktokAccessToken) {
+        return { ready: false, reason: 'TIKTOK_ACCESS_TOKEN' };
+      }
+      return { ready: true, reason: '' };
     case MarketingChannel.GOOGLE_ADS:
       return { ready: false, reason: 'Google Ads non ancora integrato' };
     default:
@@ -557,14 +581,77 @@ export async function publishCampaignToChannel(
 
   try {
     let externalId: string;
+    let videoUrl: string | undefined = payload.videoUrl ?? undefined;
+    const contentFormat = payload.contentFormat ?? ContentFormat.FEED_POST;
+
+    if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
+      videoUrl =
+        (await ensureCampaignReelVideoUrl({
+          campaignId: payload.id,
+          imageUrl: payload.imageUrl,
+          blobToken: env.blobToken,
+        })) ?? undefined;
+    }
 
     switch (payload.targetChannel) {
       case MarketingChannel.META_FACEBOOK:
-        externalId = await publishToFacebook(payload, env);
+        if (contentFormat === ContentFormat.STORY) {
+          externalId = await publishToFacebookStory(payload, env);
+        } else if (contentFormat === ContentFormat.REEL) {
+          if (!videoUrl) {
+            throw new Error(
+              'Video reel mancante. Configura FUTURIA_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+            );
+          }
+          externalId = await publishToFacebookReel(
+            { ...payload, videoUrl, contentFormat },
+            env
+          );
+        } else {
+          externalId = await publishToFacebook(payload, env);
+        }
         break;
       case MarketingChannel.META_INSTAGRAM:
-        externalId = await publishToInstagram(payload, env);
+        if (contentFormat === ContentFormat.STORY) {
+          externalId = await publishToInstagramStory(
+            { ...payload, contentFormat },
+            env
+          );
+        } else if (contentFormat === ContentFormat.REEL) {
+          if (!videoUrl) {
+            throw new Error(
+              'Video reel mancante. Configura FUTURIA_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+            );
+          }
+          externalId = await publishToInstagramReel(
+            { ...payload, videoUrl, contentFormat },
+            env
+          );
+        } else {
+          externalId = await publishToInstagram(payload, env);
+        }
         break;
+      case MarketingChannel.TIKTOK: {
+        const tiktokResult = await publishToTikTok({
+          campaignId: payload.id,
+          contentFormat,
+          copy: payload.copy,
+          hashtags: payload.hashtags,
+          imageUrl: payload.imageUrl,
+          videoUrl,
+        });
+        if (!tiktokResult.success) {
+          throw new Error(tiktokResult.error || 'TikTok publish failed');
+        }
+        return {
+          success: true,
+          simulated: tiktokResult.simulated,
+          channel: payload.targetChannel,
+          campaignId: payload.id,
+          externalId: tiktokResult.externalId,
+          videoUrl,
+        };
+      }
       case MarketingChannel.LINKEDIN:
         externalId = await publishToLinkedIn(payload, env);
         break;
@@ -584,6 +671,7 @@ export async function publishCampaignToChannel(
       channel: payload.targetChannel,
       campaignId: payload.id,
       externalId,
+      videoUrl,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

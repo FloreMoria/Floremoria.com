@@ -33,6 +33,8 @@ export interface WhatsAppTemplateComponent {
 export interface WhatsAppTemplateSendOptions {
     /** Se impostato, valida il conteggio parametri body prima dell'invio. */
     expectedBodyParamCount?: number;
+    /** Header testo (es. template con variabile in header). */
+    expectedHeaderTextParamCount?: number;
 }
 
 export interface WhatsAppConnectionState {
@@ -222,17 +224,31 @@ export async function sendWhatsAppImageMessage(
 
 function validateTemplateComponents(
     components: WhatsAppTemplateComponent[],
-    expectedBodyParamCount?: number
+    options?: WhatsAppTemplateSendOptions
 ): string | null {
+    if (options?.expectedHeaderTextParamCount !== undefined) {
+        const header = components.find((c) => c.type === 'header');
+        const headerTextCount =
+            header?.parameters?.filter((p) => p.type === 'text').length ?? 0;
+        if (headerTextCount !== options.expectedHeaderTextParamCount) {
+            return `Template Meta: attesi ${options.expectedHeaderTextParamCount} parametri header testo, ricevuti ${headerTextCount}.`;
+        }
+        for (const param of header?.parameters ?? []) {
+            if (param.type === 'text' && !param.text?.trim()) {
+                return 'Parametro header testo vuoto.';
+            }
+        }
+    }
+
     const body = components.find((c) => c.type === 'body');
     if (!body?.parameters?.length) {
         return 'Component body mancante: il template richiede parametri.';
     }
     if (
-        expectedBodyParamCount !== undefined &&
-        body.parameters.length !== expectedBodyParamCount
+        options?.expectedBodyParamCount !== undefined &&
+        body.parameters.length !== options.expectedBodyParamCount
     ) {
-        return `Template Meta: attesi ${expectedBodyParamCount} parametri body, ricevuti ${body.parameters.length}.`;
+        return `Template Meta: attesi ${options.expectedBodyParamCount} parametri body, ricevuti ${body.parameters.length}.`;
     }
     for (let i = 0; i < body.parameters.length; i += 1) {
         const param = body.parameters[i];
@@ -266,10 +282,7 @@ export async function sendWhatsAppTemplateMessage(
     }
 
     if (components.length > 0) {
-        const validationError = validateTemplateComponents(
-            components,
-            options?.expectedBodyParamCount
-        );
+        const validationError = validateTemplateComponents(components, options);
         if (validationError) {
             console.warn(`[meta-cloud-api] Template validation: ${validationError}`);
             return { ok: false, error: validationError, errorCode: 132000 };

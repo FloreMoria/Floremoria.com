@@ -21,6 +21,8 @@ export interface VeraTemplateSpec {
     metaName: string;
     language: string;
     bodyParamCount: number;
+    /** Header testo (es. codice ordine nel template proattivo). */
+    headerTextParamCount?: number;
     /** Header immagine (template multimediale post-consegna) */
     hasImageHeader?: boolean;
     description: string;
@@ -31,8 +33,9 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         id: 'proactive_staff',
         metaName: 'floremoria_messaggio_personalizzato_fiorista',
         language: 'it',
-        bodyParamCount: 3,
-        description: 'Messaggio staff personalizzato al fiorista',
+        bodyParamCount: 2,
+        headerTextParamCount: 1,
+        description: 'Header ordine + body nome e note staff',
     },
     florist_first_001: {
         id: 'florist_first_001',

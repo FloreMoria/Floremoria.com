@@ -5,9 +5,10 @@ import {
     resolveProactiveTemplateParams,
 } from '../lib/whatsapp/proactiveTemplateParams';
 import {
-    buildTemplateBodyParameters,
+    buildProactiveTemplateComponents,
     PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
     PROACTIVE_TEMPLATE_BODY_PARAM_COUNT,
+    PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT,
     renderProactiveTemplateBody,
     renderProactiveTemplateMessage,
 } from '../lib/whatsapp/approvedTemplates';
@@ -39,16 +40,20 @@ console.log('resolve:', resolved);
 if (resolved.nameParam !== 'Carlo') failed++;
 if (resolved.orderCode !== 'FF-PN-26-004') failed++;
 
-const params = buildTemplateBodyParameters(
-    resolved.nameParam,
-    resolved.orderCode,
-    resolved.staffNotes
-);
-console.log('Meta body params:', JSON.stringify(params, null, 2));
-if (params.length !== PROACTIVE_TEMPLATE_BODY_PARAM_COUNT) failed++;
-if (params[0].text !== 'Carlo') failed++;
-if (params[1].text !== 'FF-PN-26-004') failed++;
-if (!params[2].text.includes('Buongiorno')) failed++;
+const components = buildProactiveTemplateComponents({
+    recipientFirstName: resolved.nameParam,
+    orderCode: resolved.orderCode,
+    staffNotes: resolved.staffNotes,
+});
+console.log('Meta components:', JSON.stringify(components, null, 2));
+
+const header = components.find((c) => c.type === 'header');
+const body = components.find((c) => c.type === 'body');
+if ((header?.parameters?.length ?? 0) !== PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT) failed++;
+if ((body?.parameters?.length ?? 0) !== PROACTIVE_TEMPLATE_BODY_PARAM_COUNT) failed++;
+if (header?.parameters?.[0]?.type === 'text' && header.parameters[0].text !== 'FF-PN-26-004') failed++;
+if (body?.parameters?.[0]?.type === 'text' && body.parameters[0].text !== 'Carlo') failed++;
+if (body?.parameters?.[1]?.type === 'text' && !body.parameters[1].text.includes('Buongiorno')) failed++;
 
 const preview = renderProactiveTemplateBody(
     PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
@@ -61,11 +66,11 @@ console.log(preview);
 console.log('--- FINE ANTEPRIMA ---');
 
 if (!preview.startsWith('Gentile Carlo,')) failed++;
-if (!preview.includes('ordine identificato come FF-PN-26-004')) failed++;
 if (!preview.includes('Testo libero staff')) failed++;
 
 const logged = renderProactiveTemplateMessage('Carlo', 'FF-PN-26-004', 'Testo libero staff');
-if (logged !== preview) failed++;
+if (!logged.includes('Ordine FF-PN-26-004')) failed++;
+if (!logged.includes('Gentile Carlo,')) failed++;
 
 console.log(failed ? `FAILED ${failed} checks` : 'ALL CHECKS PASSED');
 process.exit(failed ? 1 : 0);

@@ -46,9 +46,10 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
 
             await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', [
                 floristName,
-                order.orderNumber || order.id,
                 staffNote,
-            ]);
+            ], {
+                headerTextParams: [order.orderNumber || order.id],
+            });
         }
 
         await prisma.order.update({

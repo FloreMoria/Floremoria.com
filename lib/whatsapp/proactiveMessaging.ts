@@ -7,7 +7,7 @@ import {
     type ChatSession,
 } from '@/lib/chatStore';
 import {
-    buildProactiveTemplateBodyComponent,
+    buildProactiveTemplateComponents,
     getProactiveWhatsAppTemplate,
     listApprovedWhatsAppTemplates,
     PROACTIVE_CONVERSATION_TEMPLATE_ID,
@@ -117,11 +117,12 @@ export async function startProactiveConversation(
         }
 
         const template = getProactiveWhatsAppTemplate();
-        const bodyComponent = buildProactiveTemplateBodyComponent(templateValues);
+        const components = buildProactiveTemplateComponents(templateValues);
 
-        const send = await sendWhatsAppTemplateMessage(sessionPhone, template.metaName, template.language, [
-            bodyComponent,
-        ], { expectedBodyParamCount: 3 });
+        const send = await sendWhatsAppTemplateMessage(sessionPhone, template.metaName, template.language, components, {
+            expectedBodyParamCount: 2,
+            expectedHeaderTextParamCount: 1,
+        });
 
         if (!send.ok) {
             return { ok: false, session, error: send.error ?? 'Invio template WhatsApp fallito.', send };

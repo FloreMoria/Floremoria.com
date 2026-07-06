@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquarePlus, Phone, Search, Send, X } from 'lucide-react';
 import { toE164 } from '@/lib/auth/phone';
-import { renderProactiveTemplateBody, PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL } from '@/lib/whatsapp/approvedTemplates';
+import { renderProactiveTemplateMessage } from '@/lib/whatsapp/approvedTemplates';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 
 type ContactType = 'UTENTE' | 'FLORIST';
@@ -207,8 +207,7 @@ export default function NewConversationModal({
 
     const previewText =
         requiresTemplate
-            ? renderProactiveTemplateBody(
-                  PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
+            ? renderProactiveTemplateMessage(
                   recipientFirstName,
                   orderCode,
                   staffNotes

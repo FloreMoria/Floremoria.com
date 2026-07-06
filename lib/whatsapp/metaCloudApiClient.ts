@@ -12,8 +12,6 @@
 
 const META_GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || 'v21.0';
 
-import { PROACTIVE_TEMPLATE_BODY_PARAM_COUNT } from '@/lib/whatsapp/approvedTemplates';
-
 export interface WhatsAppSendResult {
     ok: boolean;
     messageId?: string;
@@ -26,7 +24,15 @@ export interface WhatsAppTemplateComponent {
     type: 'body' | 'header' | 'button';
     sub_type?: 'quick_reply' | 'url';
     index?: string;
-    parameters?: Array<{ type: 'text'; text: string }>;
+    parameters?: Array<
+        | { type: 'text'; text: string }
+        | { type: 'image'; image: { link: string } }
+    >;
+}
+
+export interface WhatsAppTemplateSendOptions {
+    /** Se impostato, valida il conteggio parametri body prima dell'invio. */
+    expectedBodyParamCount?: number;
 }
 
 export interface WhatsAppConnectionState {
@@ -214,18 +220,30 @@ export async function sendWhatsAppImageMessage(
     });
 }
 
-function validateTemplateComponents(components: WhatsAppTemplateComponent[]): string | null {
+function validateTemplateComponents(
+    components: WhatsAppTemplateComponent[],
+    expectedBodyParamCount?: number
+): string | null {
     const body = components.find((c) => c.type === 'body');
     if (!body?.parameters?.length) {
         return 'Component body mancante: il template richiede parametri.';
     }
-    if (body.parameters.length !== PROACTIVE_TEMPLATE_BODY_PARAM_COUNT) {
-        return `Template Meta: attesi ${PROACTIVE_TEMPLATE_BODY_PARAM_COUNT} parametri body, ricevuti ${body.parameters.length}.`;
+    if (
+        expectedBodyParamCount !== undefined &&
+        body.parameters.length !== expectedBodyParamCount
+    ) {
+        return `Template Meta: attesi ${expectedBodyParamCount} parametri body, ricevuti ${body.parameters.length}.`;
     }
     for (let i = 0; i < body.parameters.length; i += 1) {
-        const text = body.parameters[i]?.text?.trim();
-        if (!text) {
-            return `Parametro template {{${i + 1}}} vuoto.`;
+        const param = body.parameters[i];
+        if (param?.type === 'text') {
+            if (!param.text?.trim()) {
+                return `Parametro template {{${i + 1}}} vuoto.`;
+            }
+        } else if (param?.type === 'image') {
+            if (!param.image?.link?.trim()) {
+                return 'Parametro header immagine mancante.';
+            }
         }
     }
     return null;
@@ -238,7 +256,8 @@ export async function sendWhatsAppTemplateMessage(
     phone: string,
     templateName: string,
     languageCode: string,
-    components: WhatsAppTemplateComponent[] = []
+    components: WhatsAppTemplateComponent[] = [],
+    options?: WhatsAppTemplateSendOptions
 ): Promise<WhatsAppSendResult> {
     const recipient = toMetaRecipientPhone(phone);
     if (!recipient) {
@@ -247,7 +266,10 @@ export async function sendWhatsAppTemplateMessage(
     }
 
     if (components.length > 0) {
-        const validationError = validateTemplateComponents(components);
+        const validationError = validateTemplateComponents(
+            components,
+            options?.expectedBodyParamCount
+        );
         if (validationError) {
             console.warn(`[meta-cloud-api] Template validation: ${validationError}`);
             return { ok: false, error: validationError, errorCode: 132000 };

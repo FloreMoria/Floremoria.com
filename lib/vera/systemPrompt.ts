@@ -5,6 +5,7 @@ import {
     VERA_SYSTEM_IDENTITY,
 } from '@/lib/vera/constants';
 import { buildCallerContextPromptBlock, type VeraCallerContext } from '@/lib/vera/callerContext';
+import { buildGenderMorphologyBlock } from '@/lib/vera/genderFromName';
 import { buildMetodoFloremoriaBlock } from '@/lib/vera/metodoFloremoria';
 import type { ChatSession } from '@/lib/chatStore';
 
@@ -37,12 +38,15 @@ function registerNote(userType: ChatSession['userType']): string {
 export function buildVeraWhatsAppSystemInstruction(
     callerContext: VeraCallerContext,
     userType: ChatSession['userType'],
-    knowledgeContext: string
+    knowledgeContext: string,
+    profileName?: string | null
 ): string {
     return [
         VERA_CORE_IDENTITY,
         '',
         CONTEXT_ISOLATION_RULES,
+        '',
+        buildGenderMorphologyBlock(profileName ?? callerContext.displayNameFromWhatsApp),
         '',
         buildCallerContextPromptBlock(callerContext),
         '',

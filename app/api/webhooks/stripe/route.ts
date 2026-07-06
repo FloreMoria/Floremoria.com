@@ -7,7 +7,7 @@ import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { syncPaidCustomerToFuturia } from '@/lib/futuria/syncPaidCustomerContact';
-import { sendOrderWelcomeWhatsApp } from '@/lib/whatsapp/orderNotify';
+import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -106,8 +106,8 @@ export async function POST(request: Request) {
             console.error('[stripe-webhook] Sync Futuria cliente pagante fallita (non bloccante):', futuriaErr);
         });
 
-        await sendOrderWelcomeWhatsApp(order).catch((waErr) => {
-            console.error('[stripe-webhook] Benvenuto WhatsApp fallito (non bloccante):', waErr);
+        await runVeraPostPaymentWorkflow(orderId).catch((wfErr) => {
+            console.error('[stripe-webhook] Workflow VERA post-pagamento fallito (non bloccante):', wfErr);
         });
 
         await autoAssignKnownTombOrder(orderId).catch((autoErr) => {

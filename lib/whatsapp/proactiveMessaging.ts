@@ -121,7 +121,7 @@ export async function startProactiveConversation(
 
         const send = await sendWhatsAppTemplateMessage(sessionPhone, template.metaName, template.language, [
             bodyComponent,
-        ]);
+        ], { expectedBodyParamCount: 3 });
 
         if (!send.ok) {
             return { ok: false, session, error: send.error ?? 'Invio template WhatsApp fallito.', send };

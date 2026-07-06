@@ -21,3 +21,6 @@ export {
 
 export { buildVeraKnowledgeContext } from '@/lib/vera/knowledgeContext';
 export { buildVeraWhatsAppSystemInstruction } from '@/lib/vera/systemPrompt';
+export { buildGenderMorphologyBlock, detectGenderFromName, extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
+export * from '@/lib/vera/orderWorkflow';

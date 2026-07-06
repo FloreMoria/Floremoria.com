@@ -58,6 +58,7 @@ model User {
   inviteExpiresAt DateTime?       @map("invite_expires_at")
   lastLoginAt     DateTime?       @map("last_login_at")
   avatarUrl       String?         @map("avatar_url")
+  hasLeftGoogleReview Boolean     @default(false) @map("has_left_google_review")
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]
@@ -157,6 +158,16 @@ model Order {
   /** Codice corto per link WhatsApp post-consegna (/f/{code}). */
   proofFotoCode          String?           @unique @map("proof_foto_code") @db.VarChar(10)
   proofFotoExpiresAt     DateTime?         @map("proof_foto_expires_at")
+  /** Primo ordine assegnato a questo fiorista (workflow VERA Punto A). */
+  isFirstOrderForPartner Boolean?          @map("is_first_order_for_partner")
+  /** Idempotenza step workflow VERA (puntoA, puntoB, …). */
+  veraWorkflowFlags      Json?             @map("vera_workflow_flags")
+  veraAlertType          String?           @map("vera_alert_type") @db.VarChar(64)
+  veraAlertMessage       String?           @map("vera_alert_message") @db.Text
+  veraAlertAt            DateTime?         @map("vera_alert_at")
+  veraAlertPriority      String?           @default("normal") @map("vera_alert_priority") @db.VarChar(16)
+  orderFrozenAt          DateTime?         @map("order_frozen_at")
+  orderFrozenReason      String?           @map("order_frozen_reason") @db.Text
   deceasedProfileId      String?
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
   partner                Partner?          @relation(fields: [partnerId], references: [id])

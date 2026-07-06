@@ -8,6 +8,8 @@ import {
 } from '@/lib/whatsapp/deliveryProofCopy';
 import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
+import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
@@ -118,22 +120,36 @@ export async function sendDeliveryProofWhatsApp(
             }
             linkMessageId = linkSend.messageId;
         } else {
-            // Fuori finestra 24h: testo con link (template multimediale dedicato in fase 2 Meta).
-            const combined = `${caption}\n\n${linkMessage}`;
-            const textSend = await sendWhatsAppTextMessage(phoneE164, combined);
-            if (!textSend.ok) {
-                console.warn(
-                    '[delivery-proof-whatsapp] Fuori finestra 24h: testo non inviato. Configurare template Meta dedicato.',
-                    textSend.error
-                );
-                return {
-                    ok: false,
-                    skipped: 'outside_24h_window',
-                    giardinoUrl,
-                    error: textSend.error,
-                };
+            const buyerFirstName = extractFirstNameFromProfile(buyerName);
+            const templateSend = await sendVeraTemplate(
+                phoneE164,
+                'customer_delivery_photo',
+                [buyerFirstName || 'Utente', deceasedName],
+                { headerImageUrl: publicImageUrl }
+            );
+
+            if (!templateSend.ok) {
+                const combined = `${caption}\n\n${linkMessage}`;
+                const textSend = await sendWhatsAppTextMessage(phoneE164, combined);
+                if (!textSend.ok) {
+                    console.warn(
+                        '[delivery-proof-whatsapp] Fuori finestra 24h: template e testo falliti.',
+                        templateSend.error,
+                        textSend.error
+                    );
+                    return {
+                        ok: false,
+                        skipped: 'outside_24h_window',
+                        giardinoUrl,
+                        error: textSend.error ?? templateSend.error,
+                    };
+                }
+                linkMessageId = textSend.messageId;
+            } else {
+                linkMessageId = templateSend.messageId;
+                const linkSend = await sendWhatsAppTextMessage(phoneE164, linkMessage);
+                if (linkSend.ok) linkMessageId = linkSend.messageId;
             }
-            linkMessageId = textSend.messageId;
         }
 
         const logBody = withinWindow

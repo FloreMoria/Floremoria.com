@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { isFuturiaConfigured, syncFloristPartnerToFuturia } from '@/lib/futuria/client';
 import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/futuria/floristDeliveryLinkNotify';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { retryPuntoAIfBlocked } from '@/lib/vera/orderWorkflow';
+import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 
@@ -16,7 +18,7 @@ export async function PUT(request: Request, context: any) {
 
         const previousOrder = await prisma.order.findUnique({
             where: { id },
-            select: { status: true, partnerId: true },
+            select: { status: true, partnerId: true, gravePosition: true, veraAlertType: true },
         });
 
         // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
@@ -93,6 +95,22 @@ export async function PUT(request: Request, context: any) {
             void notifyFloristDeliveryLinkForOrder(id).catch((err) => {
                 console.error('[orders-put] Invio link consegna fiorista fallito (non bloccante):', err);
             });
+        }
+
+        const graveFilled =
+            body.gravePosition !== undefined &&
+            String(body.gravePosition || '').trim() &&
+            !String(previousOrder?.gravePosition || '').trim();
+
+        if (
+            graveFilled &&
+            previousOrder?.veraAlertType === 'grave_position_missing'
+        ) {
+            void clearVeraOperationalAlert(id)
+                .then(() => retryPuntoAIfBlocked(id))
+                .catch((err) => {
+                    console.error('[orders-put] Retry Punto A dopo gravePosition fallito:', err);
+                });
         }
 
         if (body.partnerId && isFuturiaConfigured()) {

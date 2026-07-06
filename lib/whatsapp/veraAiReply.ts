@@ -26,6 +26,14 @@ import {
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
+import {
+    detectFloristException,
+    handleFloristException,
+    handleUserModificationRequest,
+    isUserModificationRequest,
+} from '@/lib/vera/orderWorkflow/exceptionScenarios';
+import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
+import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import type { VeraCallerContext } from '@/lib/vera';
 import type { ChatSession } from '@/lib/chatStore';
 
@@ -181,7 +189,12 @@ async function callGeminiVera(
     const historyBlock = buildHistoryBlock(session);
     const knowledgeContext = buildVeraKnowledgeContext(session.userType);
 
-    const systemInstruction = `${buildVeraWhatsAppSystemInstruction(callerContext, session.userType, knowledgeContext)}
+    const systemInstruction = `${buildVeraWhatsAppSystemInstruction(
+        callerContext,
+        session.userType,
+        knowledgeContext,
+        session.name
+    )}
 
 ---
 STORICO CONVERSAZIONE (solo questa chat, non altre utenze):
@@ -268,6 +281,68 @@ export async function generateVeraReply(
     const { shouldEscalateToHuman, getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
 
     const callerContext = await resolveVeraCallerContext(session);
+
+    if (session.userType === 'FLORIST') {
+        const floristException = detectFloristException(message);
+        if (floristException && callerContext.phoneE164) {
+            const phoneDigits = callerContext.phoneE164.replace(/\D/g, '');
+            const partner = await import('@/lib/prisma').then((m) =>
+                m.default.partner.findFirst({
+                    where: {
+                        deletedAt: null,
+                        OR: [
+                            { whatsappNumber: callerContext.phoneE164! },
+                            { whatsappNumber: { contains: phoneDigits.slice(-9) } },
+                        ],
+                    },
+                    select: { id: true },
+                })
+            );
+            if (partner) {
+                const handled = await handleFloristException({
+                    partnerId: partner.id,
+                    message,
+                    type: floristException,
+                });
+                if (handled.handled) {
+                    const reply =
+                        floristException === 'tomb_not_found'
+                            ? 'Ricevuto. Abbiamo avvisato l\'utente e il nostro staff per le indicazioni precise della tomba.'
+                            : 'Ricevuto. Consegneremo il primo giorno utile di apertura e terremo aggiornato l\'utente.';
+                    return { text: reply, source: 'deterministic', shouldEscalate: false };
+                }
+            }
+        }
+    }
+
+    if (session.userType !== 'FLORIST' && callerContext.phoneE164) {
+        const order = await lookupLastOrderByPhone(callerContext.phoneE164);
+        if (order && isUserModificationRequest(message)) {
+            await handleUserModificationRequest({ orderId: order.id, message });
+            return {
+                text:
+                    'La ringrazio per la Sua segnalazione. Ho trasmesso la richiesta al nostro Staff, che La ricontatterà al più presto con un aggiornamento.',
+                source: 'deterministic',
+                shouldEscalate: true,
+            };
+        }
+
+        if (order?.deliveryProof?.status === 'COMPLETED') {
+            const review = await tryRunPuntoHReviewRequest({
+                orderId: order.id,
+                userId: order.userId,
+                customerPhone: order.customerPhone,
+                message,
+            });
+            if (review.sent) {
+                return {
+                    text: 'La ringraziamo di cuore. Se desidera, il link per la recensione è già stato inviato in questo messaggio.',
+                    source: 'deterministic',
+                    shouldEscalate: false,
+                };
+            }
+        }
+    }
 
     // ── Escalation a operatore umano ──────────────────────────────────────────
     const escalationReason = getHumanEscalationReason(message);

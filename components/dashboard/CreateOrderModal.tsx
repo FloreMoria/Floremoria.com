@@ -1,9 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
 import {
+    buildEmptyOrderDraft,
+    joinDeliveryDatetime,
     orderToDuplicateDraft,
+    splitDeliveryDatetime,
     type DuplicateOrderDraft,
 } from '@/lib/orders/duplicateOrderDraft';
 import {
@@ -67,48 +70,84 @@ type Props = {
     duplicateFrom?: Record<string, unknown> | null;
 };
 
+type FormPanelProps = Omit<Props, 'open' | 'duplicateFrom'> & {
+    initialDraft: DuplicateOrderDraft | null;
+};
+
 export default function CreateOrderModal({
     open,
+    duplicateFrom,
+    ...panelProps
+}: Props) {
+    const duplicateId = (duplicateFrom as { id?: string } | null)?.id ?? 'new';
+    const [formInstance, setFormInstance] = useState(0);
+
+    useEffect(() => {
+        if (open) {
+            setFormInstance((n) => n + 1);
+        }
+    }, [open, duplicateId]);
+
+    if (!open) return null;
+
+    const initialDraft = duplicateFrom ? orderToDuplicateDraft(duplicateFrom) : null;
+
+    return (
+        <CreateOrderFormPanel
+            key={formInstance}
+            initialDraft={initialDraft}
+            {...panelProps}
+        />
+    );
+}
+
+function CreateOrderFormPanel({
+    initialDraft,
     onClose,
     onCreated,
     florists,
     products,
     users,
     deceasedProfiles,
-    duplicateFrom,
-}: Props) {
-    const [duplicateSourceLabel, setDuplicateSourceLabel] = useState<string | null>(null);
-    const [orderCategory, setOrderCategory] = useState('FT');
-    const [deliveryProvince, setDeliveryProvince] = useState('MI');
+}: FormPanelProps) {
+    const draft = initialDraft ?? buildEmptyOrderDraft(products);
+    const initialDelivery = splitDeliveryDatetime(draft.deliveryDate);
+
+    const [duplicateSourceLabel] = useState(initialDraft?.sourceOrderNumber ?? null);
+    const [orderCategory, setOrderCategory] = useState(draft.orderCategory);
+    const [deliveryProvince, setDeliveryProvince] = useState(draft.deliveryProvince);
     const [codePreview, setCodePreview] = useState('');
     const [loadingPreview, setLoadingPreview] = useState(false);
 
-    const [buyerFullName, setBuyerFullName] = useState('');
-    const [buyerEmail, setBuyerEmail] = useState('');
-    const [buyerPhone, setBuyerPhone] = useState('');
-    const [userId, setUserId] = useState('');
-    const [deceasedProfileId, setDeceasedProfileId] = useState('');
+    const [buyerFullName, setBuyerFullName] = useState(draft.buyerFullName);
+    const [buyerEmail, setBuyerEmail] = useState(draft.buyerEmail);
+    const [buyerPhone, setBuyerPhone] = useState(draft.buyerPhone);
+    const [userId, setUserId] = useState(draft.userId);
+    const [deceasedProfileId, setDeceasedProfileId] = useState(draft.deceasedProfileId);
 
-    const [deceasedName, setDeceasedName] = useState('');
-    const [deceasedBirthDate, setDeceasedBirthDate] = useState('');
-    const [deceasedDeathDate, setDeceasedDeathDate] = useState('');
-    const [cemeteryName, setCemeteryName] = useState('');
-    const [cemeteryCity, setCemeteryCity] = useState('');
-    const [gravePosition, setGravePosition] = useState('');
+    const [deceasedName, setDeceasedName] = useState(draft.deceasedName);
+    const [deceasedBirthDate, setDeceasedBirthDate] = useState(draft.deceasedBirthDate);
+    const [deceasedDeathDate, setDeceasedDeathDate] = useState(draft.deceasedDeathDate);
+    const [cemeteryName, setCemeteryName] = useState(draft.cemeteryName);
+    const [cemeteryCity, setCemeteryCity] = useState(draft.cemeteryCity);
+    const [gravePosition, setGravePosition] = useState(draft.gravePosition);
 
-    const [deliveryDate, setDeliveryDate] = useState('');
-    const [productId, setProductId] = useState(products[0]?.id || '');
-    const [priceCents, setPriceCents] = useState<number | ''>('');
-    const [quantity, setQuantity] = useState(1);
-    const [partnerId, setPartnerId] = useState('');
-    const [status, setStatus] = useState('ACCEPTED');
-    const [partnerPaymentStatus, setPartnerPaymentStatus] = useState('PAID');
-    const [isRecurring, setIsRecurring] = useState(false);
-    const [additionalInstructions, setAdditionalInstructions] = useState('');
-    const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>([]);
-    const [ticketMessage, setTicketMessage] = useState('');
+    const [deliveryDatePart, setDeliveryDatePart] = useState(initialDelivery.date);
+    const [deliveryTimePart, setDeliveryTimePart] = useState(initialDelivery.time);
+    const [productId, setProductId] = useState(draft.productId || products[0]?.id || '');
+    const [priceCents, setPriceCents] = useState<number | ''>(draft.priceCents);
+    const [quantity, setQuantity] = useState(draft.quantity);
+    const [partnerId, setPartnerId] = useState(draft.partnerId);
+    const [status, setStatus] = useState(draft.status);
+    const [partnerPaymentStatus, setPartnerPaymentStatus] = useState(draft.partnerPaymentStatus);
+    const [isRecurring, setIsRecurring] = useState(draft.isRecurring);
+    const [additionalInstructions, setAdditionalInstructions] = useState(draft.additionalInstructions);
+    const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>(draft.selectedAccessoryIds);
+    const [ticketMessage, setTicketMessage] = useState(draft.ticketMessage);
 
-    const catalogSlug = orderCategoryToCatalogSlug(orderCategory);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const mainProducts = filterDashboardMainProducts(products);
     const availableAccessories = filterDashboardAccessories(products, orderCategory);
 
@@ -125,22 +164,6 @@ export default function CreateOrderModal({
             const p = products.find((x) => x.id === id);
             return sum + (p?.basePriceCents ?? 0);
         }, 0);
-
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const appliedDuplicateIdRef = useRef<string | null>(null);
-
-    const resolveDefaultProductId = useCallback(
-        (preferredId?: string) => {
-            if (preferredId && products.some((p) => p.id === preferredId)) return preferredId;
-            return (
-                products.find((p) => p.isBouquet !== false)?.id ||
-                products[0]?.id ||
-                ''
-            );
-        },
-        [products]
-    );
 
     const refreshCodePreview = useCallback(async () => {
         const prov = deliveryProvince.trim().toUpperCase().slice(0, 2) || 'XX';
@@ -165,12 +188,11 @@ export default function CreateOrderModal({
     }, [deliveryProvince, orderCategory]);
 
     useEffect(() => {
-        if (!open) return;
         const t = setTimeout(() => {
             void refreshCodePreview();
         }, 250);
         return () => clearTimeout(t);
-    }, [open, refreshCodePreview]);
+    }, [refreshCodePreview]);
 
     useEffect(() => {
         if (!productId && mainProducts[0]?.id) {
@@ -218,91 +240,12 @@ export default function CreateOrderModal({
         if (product) setPriceCents(product.basePriceCents);
     };
 
-    const applyDraft = useCallback((draft: DuplicateOrderDraft) => {
-        setOrderCategory(draft.orderCategory);
-        setDeliveryProvince(draft.deliveryProvince);
-        setBuyerFullName(draft.buyerFullName);
-        setBuyerEmail(draft.buyerEmail);
-        setBuyerPhone(draft.buyerPhone);
-        setUserId(draft.userId);
-        setDeceasedProfileId(draft.deceasedProfileId);
-        setDeceasedName(draft.deceasedName);
-        setDeceasedBirthDate(draft.deceasedBirthDate);
-        setDeceasedDeathDate(draft.deceasedDeathDate);
-        setCemeteryName(draft.cemeteryName);
-        setCemeteryCity(draft.cemeteryCity);
-        setGravePosition(draft.gravePosition);
-        setDeliveryDate(draft.deliveryDate);
-        setProductId(resolveDefaultProductId(draft.productId));
-        setPriceCents(draft.priceCents);
-        setQuantity(draft.quantity);
-        setPartnerId(draft.partnerId);
-        setStatus(draft.status);
-        setPartnerPaymentStatus(draft.partnerPaymentStatus);
-        setIsRecurring(draft.isRecurring);
-        setAdditionalInstructions(draft.additionalInstructions);
-        setSelectedAccessoryIds(draft.selectedAccessoryIds);
-        setTicketMessage(draft.ticketMessage);
-        setDuplicateSourceLabel(draft.sourceOrderNumber || null);
-        setError(null);
-    }, [resolveDefaultProductId]);
-
-    useEffect(() => {
-        if (!open) {
-            appliedDuplicateIdRef.current = null;
-            return;
-        }
-        if (!duplicateFrom) {
-            setDuplicateSourceLabel(null);
-            return;
-        }
-
-        const sourceId = String(
-            (duplicateFrom as { id?: string }).id ??
-                (duplicateFrom as { orderNumber?: string }).orderNumber ??
-                ''
-        );
-        if (appliedDuplicateIdRef.current === sourceId) return;
-
-        appliedDuplicateIdRef.current = sourceId;
-        applyDraft(orderToDuplicateDraft(duplicateFrom));
-    }, [open, duplicateFrom, applyDraft]);
-
-    const resetForm = () => {
-        setError(null);
-        setBuyerFullName('');
-        setBuyerEmail('');
-        setBuyerPhone('');
-        setUserId('');
-        setDeceasedProfileId('');
-        setDeceasedName('');
-        setDeceasedBirthDate('');
-        setDeceasedDeathDate('');
-        setCemeteryName('');
-        setCemeteryCity('');
-        setGravePosition('');
-        setDeliveryDate('');
-        setPartnerId('');
-        setStatus('ACCEPTED');
-        setPartnerPaymentStatus('PAID');
-        setIsRecurring(false);
-        setAdditionalInstructions('');
-        setSelectedAccessoryIds([]);
-        setTicketMessage('');
-        setOrderCategory('FT');
-        setDeliveryProvince('MI');
-        setDuplicateSourceLabel(null);
-        if (products[0]) {
-            const firstMain = products.find((p) => p.isBouquet !== false) ?? products[0];
-            setProductId(firstMain.id);
-            setPriceCents(firstMain.basePriceCents);
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
         setError(null);
+
+        const deliveryDate = joinDeliveryDatetime(deliveryDatePart, deliveryTimePart);
 
         try {
             if (showCustomTextField && !ticketMessage.trim()) {
@@ -335,7 +278,7 @@ export default function CreateOrderModal({
                     partnerPaymentStatus,
                     isRecurring,
                     additionalInstructions: additionalInstructions || null,
-                    accessories: selectedAccessoryIds.map((productId) => ({ productId, quantity: 1 })),
+                    accessories: selectedAccessoryIds.map((accId) => ({ productId: accId, quantity: 1 })),
                     ticketMessage: ticketMessage.trim() || null,
                 }),
             });
@@ -346,7 +289,6 @@ export default function CreateOrderModal({
             }
 
             onCreated(data.order);
-            resetForm();
             onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore imprevisto.');
@@ -354,8 +296,6 @@ export default function CreateOrderModal({
             setSaving(false);
         }
     };
-
-    if (!open) return null;
 
     return (
         <div
@@ -430,16 +370,30 @@ export default function CreateOrderModal({
                                 placeholder="MI"
                             />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
-                                Data consegna
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={deliveryDate}
-                                onChange={(e) => setDeliveryDate(e.target.value)}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
-                            />
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+                                    Data consegna
+                                </label>
+                                <input
+                                    type="date"
+                                    value={deliveryDatePart}
+                                    onChange={(e) => setDeliveryDatePart(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+                                    Ora
+                                </label>
+                                <input
+                                    type="time"
+                                    step={60}
+                                    value={deliveryTimePart}
+                                    onChange={(e) => setDeliveryTimePart(e.target.value)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                                />
+                            </div>
                         </div>
                     </section>
 

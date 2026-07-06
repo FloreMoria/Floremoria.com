@@ -46,6 +46,61 @@ function toDatetimeLocal(value: string | Date): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Formato accettato da input datetime-local (YYYY-MM-DDTHH:mm). */
+export function normalizeDatetimeLocal(value: string | null | undefined): string {
+    if (!value?.trim()) return '';
+    const compact = value.trim();
+    const match = compact.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
+    if (match) return `${match[1]}T${match[2]}`;
+    const d = new Date(compact);
+    if (Number.isNaN(d.getTime())) return '';
+    return toDatetimeLocal(d);
+}
+
+export function splitDeliveryDatetime(value: string | null | undefined): { date: string; time: string } {
+    const normalized = normalizeDatetimeLocal(value);
+    if (!normalized) return { date: '', time: '10:00' };
+    const [date, time] = normalized.split('T');
+    return { date: date || '', time: time || '10:00' };
+}
+
+export function joinDeliveryDatetime(date: string, time: string): string {
+    const d = date.trim();
+    if (!d) return '';
+    const t = (time.trim() || '10:00').slice(0, 5);
+    return `${d}T${t}`;
+}
+
+export function buildEmptyOrderDraft(products: Array<{ id: string; basePriceCents: number; isBouquet?: boolean }>): DuplicateOrderDraft {
+    const main = products.find((p) => p.isBouquet !== false) ?? products[0];
+    return {
+        orderCategory: 'FT',
+        deliveryProvince: 'MI',
+        buyerFullName: '',
+        buyerEmail: '',
+        buyerPhone: '',
+        userId: '',
+        deceasedProfileId: '',
+        deceasedName: '',
+        deceasedBirthDate: '',
+        deceasedDeathDate: '',
+        cemeteryName: '',
+        cemeteryCity: '',
+        gravePosition: '',
+        deliveryDate: '',
+        productId: main?.id ?? '',
+        priceCents: main?.basePriceCents ?? '',
+        quantity: 1,
+        partnerId: '',
+        status: 'ACCEPTED',
+        partnerPaymentStatus: 'PAID',
+        isRecurring: false,
+        additionalInstructions: '',
+        selectedAccessoryIds: [],
+        ticketMessage: '',
+    };
+}
+
 function parseCategoryAndProvince(orderNumber?: string | null, fallbackProvince?: string | null) {
     let orderCategory = 'FT';
     let deliveryProvince = (fallbackProvince || 'MI').toUpperCase().slice(0, 2);

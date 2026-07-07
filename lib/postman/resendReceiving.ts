@@ -76,11 +76,27 @@ export function extractPlainTextFromResendEmail(email: ResendReceivedEmail): str
     return '';
 }
 
+export function getAssistenzaInboundAddresses(): string[] {
+    const addresses = new Set<string>([
+        'assistenza@floremoria.com',
+        'assistenza@inbound.floremoria.com',
+    ]);
+
+    const main = process.env.ASSISTENZA_EMAIL_USER?.trim().toLowerCase();
+    if (main) addresses.add(main);
+
+    const aliases = process.env.ASSISTENZA_INBOUND_ALIASES?.split(',') ?? [];
+    for (const alias of aliases) {
+        const value = alias.trim().toLowerCase();
+        if (value) addresses.add(value);
+    }
+
+    return [...addresses];
+}
+
 export function isAssistenzaRecipient(addresses: string[]): boolean {
-    const assistenza = (process.env.ASSISTENZA_EMAIL_USER || 'assistenza@floremoria.com')
-        .trim()
-        .toLowerCase();
-    return addresses.some((a) => a.trim().toLowerCase() === assistenza);
+    const allowed = new Set(getAssistenzaInboundAddresses());
+    return addresses.some((a) => allowed.has(a.trim().toLowerCase()));
 }
 
 /**

@@ -15,6 +15,7 @@ import {
     MailboxConfigError,
 } from '@/lib/postman/mailbox';
 import { processAssistenzaInboundEmail } from '@/lib/postman/processAssistenzaEmail';
+import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,7 @@ interface ProcessResult {
     messageId: string | null;
     from: string;
     category?: string;
-    status: 'reply_sent' | 'skipped_blacklist' | 'skipped_duplicate' | 'error';
+    status: 'reply_sent' | 'skipped_blacklist' | 'skipped_duplicate' | 'skipped_system_sender' | 'error';
     error?: string;
 }
 
@@ -46,7 +47,7 @@ async function runSync(): Promise<{
     note?: string;
 }> {
     const config = getMailboxConfigFromEnv();
-    const limit = Math.max(1, Number(process.env.POSTMAN_MAX_EMAILS?.trim() || '10') || 10);
+    const limit = Math.max(1, Number(process.env.POSTMAN_MAX_EMAILS?.trim() || '20') || 20);
     const markSeen = process.env.POSTMAN_MARK_SEEN?.trim() !== 'false';
 
     const client = createImapClient(config);
@@ -93,6 +94,10 @@ async function runSync(): Promise<{
                         ? 'reply_sent'
                         : outcome.status === 'skipped_duplicate'
                           ? 'skipped_duplicate'
+                          : outcome.status === 'skipped_system_sender'
+                            ? 'skipped_system_sender'
+                          : outcome.status === 'skipped_blacklist'
+                            ? 'skipped_blacklist'
                           : 'error';
                 r.error = outcome.error;
 

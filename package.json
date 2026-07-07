@@ -44,7 +44,8 @@
     "ga4:vercel-env": "node scripts/ga4-print-vercel-env.mjs",
     "ga4:oauth-setup": "node scripts/ga4-oauth-setup.mjs",
     "ga4:list-properties": "node scripts/ga4-list-properties.mjs",
-    "postman:setup-resend": "tsx scripts/setup-resend-assistenza.ts"
+    "postman:setup-resend": "tsx scripts/setup-resend-assistenza.ts",
+    "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

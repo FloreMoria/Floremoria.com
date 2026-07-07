@@ -19,9 +19,11 @@ import prisma from '@/lib/prisma';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
+import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 interface MetaWebhookMessage {
     from?: string;
@@ -309,6 +311,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!incomingMessages.length) {
         return NextResponse.json({ ok: true, skipped: 'no_messages' });
     }
+
+    void triggerPostmanBackgroundSync();
 
     const results = [];
     for (const incoming of incomingMessages) {

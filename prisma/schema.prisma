@@ -405,6 +405,15 @@ model FloremoriaLog {
   @@map("floremoria_logs")
 }
 
+/** Chiave-valore per heartbeat e flag di sistema (es. debounce sync POSTMAN). */
+model SystemState {
+  key       String   @id @db.VarChar(100)
+  value     String?  @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_state")
+}
+
 /** Mittenti email esclusi dal risponditore automatico assistenza@ (spam, newsletter, robot). */
 model EmailBlacklist {
   id        String   @id @default(cuid())

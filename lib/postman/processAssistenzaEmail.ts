@@ -6,6 +6,7 @@ import {
     sendDirectReply,
     type MailboxConfig,
 } from '@/lib/postman/mailbox';
+import { isSystemEmailSender } from '@/lib/postman/systemSenders';
 
 export interface AssistenzaEmailInput {
     fromName?: string;
@@ -21,6 +22,7 @@ export type AssistenzaEmailProcessStatus =
     | 'skipped_blacklist'
     | 'skipped_duplicate'
     | 'skipped_invalid'
+    | 'skipped_system_sender'
     | 'error';
 
 export interface AssistenzaEmailProcessResult {
@@ -49,6 +51,10 @@ export async function processAssistenzaInboundEmail(
     const fromEmail = email.fromEmail?.trim().toLowerCase();
     if (!fromEmail || !fromEmail.includes('@')) {
         return { status: 'skipped_invalid', error: 'missing_from_email' };
+    }
+
+    if (isSystemEmailSender(fromEmail)) {
+        return { status: 'skipped_system_sender' };
     }
 
     if (await isEmailBlacklisted(fromEmail)) {

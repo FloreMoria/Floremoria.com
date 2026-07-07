@@ -12,12 +12,14 @@ import { processAssistenzaInboundEmail } from '@/lib/postman/processAssistenzaEm
 import {
     extractPlainTextFromResendEmail,
     fetchResendReceivedEmail,
+    getAssistenzaInboundAddresses,
     isAssistenzaRecipient,
     isResendEmailReceivedEvent,
     parseResendFromHeader,
     verifyResendSvixWebhook,
     type ResendEmailReceivedEvent,
 } from '@/lib/postman/resendReceiving';
+import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -168,10 +170,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function GET(): Promise<NextResponse> {
+    void triggerPostmanBackgroundSync();
+
     return NextResponse.json({
         status: 'ok',
         service: 'POSTMAN assistenza email webhook',
         mailbox: process.env.ASSISTENZA_EMAIL_USER?.trim() || 'assistenza@floremoria.com',
+        inboundAliases: getAssistenzaInboundAddresses(),
         providers: ['resend:email.received', 'generic-json'],
     });
 }

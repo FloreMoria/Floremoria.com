@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { getChatStore, addMessage, setSessionStatus, getSession } from '@/lib/chatStore';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates } from '@/lib/whatsapp/approvedTemplates';
@@ -6,6 +7,7 @@ import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
+import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -22,6 +24,10 @@ function emptySessionsResponse(reason: string) {
 }
 
 export async function GET() {
+    after(() => {
+        void triggerPostmanBackgroundSync();
+    });
+
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
 

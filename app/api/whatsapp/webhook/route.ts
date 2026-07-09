@@ -20,6 +20,7 @@ import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
+import { runFloristDeliveryAutomation } from '@/lib/deliveryProof/runFloristDeliveryAutomation';
 import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
 
 export const runtime = 'nodejs';
@@ -226,6 +227,16 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
 
     if (session.status === 'HUMAN_INTERVENTION') {
         await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
+        if (mediaUrl) {
+            void runFloristDeliveryAutomation({
+                floristPhoneE164: phoneE164,
+                mediaUrl,
+                caption: messageText,
+                sessionUserType: session.userType,
+            }).catch((err) => {
+                console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
+            });
+        }
         console.info(`[wa-webhook] HUMAN_INTERVENTION attivo per ${phoneE164}: messaggio registrato, nessuna risposta AI.`);
         void notifyStaffOfWhatsAppInbound({
             senderName,
@@ -238,6 +249,17 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     }
 
     await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
+
+    if (mediaUrl) {
+        void runFloristDeliveryAutomation({
+            floristPhoneE164: phoneE164,
+            mediaUrl,
+            caption: messageText,
+            sessionUserType: session.userType,
+        }).catch((err) => {
+            console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
+        });
+    }
 
     const updatedSession = await getSession(phoneKey);
     const veraResult = await generateVeraReply(inboundBody, updatedSession, mediaUrl);

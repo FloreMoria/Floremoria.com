@@ -52,4 +52,31 @@ export async function processProofImageFile(
     return url;
 }
 
+/** Elabora buffer immagine (es. download Meta WhatsApp) e carica su Blob. */
+export async function processProofImageBuffer(
+    buffer: Buffer,
+    order: OrderMeta
+): Promise<string> {
+    const deceasedFullName =
+        order.deceasedProfile?.fullName?.trim() || order.deceasedName?.trim() || 'defunto';
+    const filename = buildElegantProofFilename(deceasedFullName);
+
+    let optimizedBuffer: Buffer;
+    try {
+        optimizedBuffer = await normalizeProofImageBuffer(buffer);
+    } catch (err) {
+        console.error('[processProofImage] Sharp conversion failed:', err);
+        throw new Error('Impossibile elaborare la foto WhatsApp del fiorista.');
+    }
+
+    const blobPath = `${DELIVERY_PROOF_PRIVATE_PREFIX}/${order.id}/${filename}`;
+    const { url } = await putBlobWithAccessFallback(blobPath, optimizedBuffer, {
+        contentType: 'image/webp',
+        token: getBlobToken(),
+        addRandomSuffix: true,
+    });
+
+    return url;
+}
+
 export { slugifyProofName, buildElegantProofFilename };

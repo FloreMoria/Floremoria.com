@@ -1,15 +1,13 @@
 /**
  * VERA AI Reply — Generatore di risposte WhatsApp (Meta Cloud API) per FloreMoria.
  *
- * Strategia ibrida (Recommended C):
- *  1. Prova le regole deterministiche di `buildWhatsAppAiReply` (whatsappKnowledge.ts).
- *  2. Se la risposta è identica al messaggio guida standard (nessun match specifico),
- *     chiama Gemini con il system prompt completo di VERA + cronologia sessione.
- *  3. Aggiunge la firma di chiusura solo quando l'Utente si congeda esplicitamente
- *     (arrivederci, buona notte — non su saluti isolati tipo "ciao" o "grazie").
+ * Routing (tassativo):
+ *  - Template Meta: solo outbound proattivo (workflow ordini / notifiche), mai risposte in chat aperta.
+ *  - Finestra 24h attiva (ultimo inbound utente/fiorista): testo in entrata → Gemini esclusivo.
+ *  - Fuori finestra: regole deterministiche di fallback + Gemini se generico.
  *
- * Chiusura tassativa (su saluto/addio o handoff umano):
- *   "Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹"
+ * Eccezioni operative prima di Gemini: escalation umana, eccezioni fiorista (tomba/chiusura),
+ * modifica ordine, recensione Punto H, pre-acquisto Luciano.
  */
 
 import {
@@ -24,6 +22,7 @@ import {
     isClosingMessage,
     STANDARD_GUIDANCE_MESSAGE,
 } from '@/lib/whatsappKnowledge';
+import { isActiveConversationWindow } from '@/lib/whatsapp/messagingWindow';
 import { isOrderTrackingInquiry, lookupActiveOrderByPhone, lookupLastOrderByPhone, tryBuildOrderTrackingReply } from '@/lib/whatsapp/orderStatusInquiry';
 import {
     buildVeraKnowledgeContext,
@@ -267,6 +266,47 @@ Rispondi SOLO al messaggio dell'utente qui sotto.`;
     }
 }
 
+/** Messaggio utente per Gemini quando il testo è vuoto ma c'è un allegato. */
+function buildGeminiUserMessage(
+    message: string,
+    mediaUrl?: string | null,
+    userType?: ChatSession['userType']
+): string {
+    const text = message.trim();
+    if (text && text !== '[media]') return text;
+    if (!mediaUrl) return text || '(messaggio vuoto)';
+    if (userType === 'FLORIST') {
+        return '[Il fiorista ha inviato un allegato (foto o media) senza testo. Rispondi in modo umano e contestuale; se è una foto di posa, ringrazia e conferma che la registriamo.]';
+    }
+    return '[L\'utente ha inviato un allegato senza testo. Rispondi con empatia e chiedi gentilmente come puoi aiutare.]';
+}
+
+async function replyViaGeminiInActiveWindow(
+    message: string,
+    session: ChatSession,
+    callerContext: VeraCallerContext,
+    mediaUrl?: string | null
+): Promise<VeraReplyResult | null> {
+    const geminiReply = await callGeminiVera(
+        buildGeminiUserMessage(message, mediaUrl, session.userType),
+        session,
+        callerContext
+    );
+    if (!geminiReply) return null;
+
+    let replyText = geminiReply;
+    if (!isClosingMessage(message)) {
+        replyText = polishVeraReply(replyText, message, session, callerContext);
+    } else {
+        replyText = stripClosingSignature(replyText);
+    }
+    replyText = stripClosingSignature(replyText);
+    if (shouldAppendSignature(message) && !replyText.includes(VERA_CLOSING_SIGNATURE)) {
+        replyText = `${replyText}\n\n${VERA_CLOSING_SIGNATURE}`;
+    }
+    return { text: replyText, source: 'gemini', shouldEscalate: false };
+}
+
 export interface VeraReplyResult {
     text: string;
     source: 'deterministic' | 'gemini' | 'fallback';
@@ -371,7 +411,24 @@ export async function generateVeraReply(
         return { text: escalationText, source: 'deterministic', shouldEscalate: true };
     }
 
-    // ── Saluto / cortesia isolata — risposta speculare, niente procedure ─────
+    // ── Finestra 24h attiva: Gemini esclusivo per testo (utenti e fioristi) ───
+    if (isActiveConversationWindow(session)) {
+        const geminiResult = await replyViaGeminiInActiveWindow(
+            message,
+            session,
+            callerContext,
+            mediaUrl
+        );
+        if (geminiResult) return geminiResult;
+
+        const fallbackText =
+            session.userType === 'FLORIST'
+                ? 'Grazie per il messaggio, lo leggo subito. Buon lavoro 🌹'
+                : STANDARD_GUIDANCE_MESSAGE;
+        return { text: fallbackText, source: 'fallback', shouldEscalate: false };
+    }
+
+    // ── Fuori finestra 24h: cortesia isolata ─────────────────────────────────
     if (isIsolatedCourtesyMessage(message)) {
         return {
             text: buildSymmetricCourtesyReply({
@@ -384,7 +441,7 @@ export async function generateVeraReply(
         };
     }
 
-    // ── Stato ordine / foto / consegna — lookup DB, niente link catalogo ───────
+    // ── Fuori finestra: stato ordine (lookup DB) ─────────────────────────────
     if (session.userType !== 'FLORIST' && isOrderTrackingInquiry(message)) {
         const orderReply = await tryBuildOrderTrackingReply(
             session.phone,
@@ -400,7 +457,7 @@ export async function generateVeraReply(
         }
     }
 
-    // ── Risposta deterministica (regole whatsappKnowledge) ───────────────────
+    // ── Fuori finestra: regole deterministiche + Gemini se generico ───────────
     const deterministicReply = buildWhatsAppAiReply({
         message,
         userName: session.name || '',

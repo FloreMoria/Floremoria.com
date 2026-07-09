@@ -8,7 +8,6 @@ import { isOrderTrackingInquiry } from '@/lib/whatsapp/orderStatusInquiry';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
     buildSymmetricCourtesyReply,
-    hasOperationalServiceIntent,
     isIsolatedCourtesyMessage,
 } from '@/lib/vera/courtesyDebounce';
 
@@ -283,6 +282,8 @@ export function buildWhatsAppKnowledgeContext(
         '',
         '=== PRINCIPIO ===',
         'Accompagnare ogni gesto con rispetto e semplicità. Facilitare sempre l\'azione concreta tramite link pertinenti.',
+        'ROUTING MESSAGGI (tassativo): i template Meta rigidi sono SOLO per il primo messaggio outbound (notifica / avvio conversazione).',
+        'Con finestra conversazione attiva (risposta utente o fiorista entro 24h), ogni messaggio di testo in entrata è gestito da Gemini: risposta umana, elastica e contestuale — mai script fissi tipo "invia la foto".',
         'TONE OF VOICE (tassativo): Massima empatia, garbo, gentilezza e rispetto assoluto del contesto del ricordo. Mai sembrare un bot aziendale freddo.',
         'Tono: gentile, educato, caloroso e rispettoso del lutto e della commemorazione. Usare sempre il Lei con gli utenti finali.',
         'Link a foto di consegna o testimonianze: presentarli come cura e vicinanza al ricordo, non come notifica automatica.',
@@ -488,15 +489,7 @@ export function buildWhatsAppAiReply(params: {
             : '';
 
     if (userType === 'FLORIST') {
-        if (mediaUrl) {
-            return `Grazie, foto ricevuta. La registro subito nel flusso consegna. Se puoi, indica anche il codice ordine (es. FT-RM-26-001) così la associamo in modo preciso. Buon lavoro 🌹`;
-        }
-        if (isIsolatedCourtesyMessage(message)) {
-            return buildSymmetricCourtesyReply({ message, userType: 'FLORIST', displayName });
-        }
-        if (hasOperationalServiceIntent(message)) {
-            return `Buongiorno, quando puoi inviami la foto della posa e il codice ordine (es. FT-RM-26-001). Appena arriva la registriamo in dashboard. Grazie e buon lavoro 🌹`;
-        }
+        // Fuori finestra 24h / fallback: nessuno script rigido; il router VERA usa Gemini in chat aperta.
         return buildSymmetricCourtesyReply({ message, userType: 'FLORIST', displayName });
     }
 

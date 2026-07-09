@@ -6,6 +6,7 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { addMessage, updateSessionProfile } from '@/lib/chatStore';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
@@ -41,11 +42,13 @@ export async function runPuntoBCustomerOrderConfirm(orderId: string): Promise<Pu
         deceasedName: order.deceasedName,
     });
 
-    const send = await sendVeraTemplate(phoneE164, 'customer_order_confirm', [
-        buyerName || 'Utente',
-        order.deceasedName,
+    const bodyParams = buildCustomerOrderConfirmParams({
+        buyerFirstName: buyerName,
+        deceasedName: order.deceasedName,
         warmThought,
-    ]);
+    });
+
+    const send = await sendVeraTemplate(phoneE164, 'customer_order_confirm', bodyParams);
 
     if (!send.ok) return { ok: false, error: send.error };
 

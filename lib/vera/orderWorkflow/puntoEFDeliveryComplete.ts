@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
+import { buildProactiveStaffParams } from '@/lib/whatsapp/veraTemplateParams';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import {
@@ -44,11 +45,14 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
             const staffNote =
                 'La ringraziamo per la consegna e per le foto inviate. Restiamo a disposizione per eventuali aggiornamenti.';
 
-            await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', [
-                floristName,
-                staffNote,
-            ], {
-                headerTextParams: [order.orderNumber || order.id],
+            const { bodyParams, headerTextParams } = buildProactiveStaffParams({
+                floristFirstName: floristName,
+                orderCode: order.orderNumber || order.id,
+                staffNotes: staffNote,
+            });
+
+            await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', bodyParams, {
+                headerTextParams,
             });
         }
 

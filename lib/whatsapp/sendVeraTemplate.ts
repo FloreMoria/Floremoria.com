@@ -4,6 +4,7 @@ import {
 } from '@/lib/whatsapp/metaCloudApiClient';
 import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
+import { describeTemplateParamMapping } from '@/lib/whatsapp/veraTemplateParams';
 
 export interface SendVeraTemplateResult {
     ok: boolean;
@@ -80,6 +81,10 @@ export async function sendVeraTemplate(
         components.push(buildTextHeaderComponent(headerTextParams));
     }
     components.push(buildBodyComponent(bodyParams));
+
+    console.info(
+        `[vera-template] ${spec.id} → Meta "${spec.metaName}" | ${describeTemplateParamMapping(spec)} | params=${JSON.stringify([...headerTextParams, ...bodyParams].map((p) => p.slice(0, 60)))}`
+    );
 
     return sendWhatsAppTemplateMessage(phone, spec.metaName, spec.language, components, {
         expectedBodyParamCount: spec.bodyParamCount,

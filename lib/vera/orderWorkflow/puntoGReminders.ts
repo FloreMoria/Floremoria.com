@@ -3,6 +3,10 @@ import { getSession } from '@/lib/chatStore';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import {
+    buildCustomerWaitingUpdateParams,
+    buildFloristReminderParams,
+} from '@/lib/whatsapp/veraTemplateParams';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import {
     isWorkflowStepDone,
@@ -66,21 +70,27 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                 : referenceTime;
 
             if (hoursSince(lastInboundAt) >= VERA_REMINDER_HOURS) {
-                const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
-                const send = await sendVeraTemplate(phoneE164, 'customer_waiting_update', [
-                    name || 'Utente',
-                    order.deceasedName,
-                ]);
-                if (send.ok) {
-                    await prisma.order.update({
-                        where: { id: order.id },
-                        data: {
-                            veraWorkflowFlags: markWorkflowStep(flags, 'puntoG_customer_wait'),
-                        },
+                try {
+                    const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
+                    const bodyParams = buildCustomerWaitingUpdateParams({
+                        buyerFirstName: name,
+                        deceasedName: order.deceasedName,
                     });
-                    result.customerReminders += 1;
-                } else if (send.error) {
-                    result.errors.push(`customer ${order.orderNumber}: ${send.error}`);
+                    const send = await sendVeraTemplate(phoneE164, 'customer_waiting_update', bodyParams);
+                    if (send.ok) {
+                        await prisma.order.update({
+                            where: { id: order.id },
+                            data: {
+                                veraWorkflowFlags: markWorkflowStep(flags, 'puntoG_customer_wait'),
+                            },
+                        });
+                        result.customerReminders += 1;
+                    } else if (send.error) {
+                        result.errors.push(`customer ${order.orderNumber}: ${send.error}`);
+                    }
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    result.errors.push(`customer ${order.orderNumber}: ${msg}`);
                 }
             }
         }
@@ -90,27 +100,33 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
             floristPhone &&
             !isWorkflowStepDone(flags, 'puntoG_florist_reminder')
         ) {
-            const floristName = extractFirstName(
-                order.partner?.ownerName || order.partner?.shopName || 'Fiorista'
-            );
-            const send = await sendVeraTemplate(floristPhone, 'florist_reminder', [
-                floristName,
-                order.orderNumber || order.id,
-                order.deceasedName,
-            ]);
-            if (send.ok) {
-                await prisma.order.update({
-                    where: { id: order.id },
-                    data: {
-                        veraWorkflowFlags: markWorkflowStep(
-                            parseWorkflowFlags(order.veraWorkflowFlags),
-                            'puntoG_florist_reminder'
-                        ),
-                    },
+            try {
+                const floristName = extractFirstName(
+                    order.partner?.ownerName || order.partner?.shopName || 'Fiorista'
+                );
+                const bodyParams = buildFloristReminderParams({
+                    floristFirstName: floristName,
+                    orderCode: order.orderNumber || order.id,
+                    deceasedName: order.deceasedName,
                 });
-                result.floristReminders += 1;
-            } else if (send.error) {
-                result.errors.push(`florist ${order.orderNumber}: ${send.error}`);
+                const send = await sendVeraTemplate(floristPhone, 'florist_reminder', bodyParams);
+                if (send.ok) {
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            veraWorkflowFlags: markWorkflowStep(
+                                parseWorkflowFlags(order.veraWorkflowFlags),
+                                'puntoG_florist_reminder'
+                            ),
+                        },
+                    });
+                    result.floristReminders += 1;
+                } else if (send.error) {
+                    result.errors.push(`florist ${order.orderNumber}: ${send.error}`);
+                }
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                result.errors.push(`florist ${order.orderNumber}: ${msg}`);
             }
         }
     }

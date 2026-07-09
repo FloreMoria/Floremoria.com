@@ -1,7 +1,5 @@
-/**
- * Orchestratore unico workflow VERA post-consegna (Punto E/F).
- */
-import { runPuntoEFDeliveryComplete } from '@/lib/vera/orderWorkflow/puntoEFDeliveryComplete';
+import prisma from '@/lib/prisma';
+import { sendDeliveryProofWhatsApp } from '@/lib/whatsapp/deliveryProofNotify';
 
 export interface NotifyCustomerDeliveryCompleteResult {
     ok: boolean;
@@ -10,8 +8,58 @@ export interface NotifyCustomerDeliveryCompleteResult {
     error?: string;
 }
 
+/**
+ * Orchestratore post-consegna: invia foto e messaggio all'utente (Punto E).
+ * Il ringraziamento al fiorista (Punto F) è gestito da runPuntoEFDeliveryComplete.
+ */
 export async function notifyCustomerDeliveryComplete(
     orderId: string
 ): Promise<NotifyCustomerDeliveryCompleteResult> {
-    return runPuntoEFDeliveryComplete(orderId);
+    const order = await prisma.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        include: {
+            deliveryProof: true,
+            user: { select: { name: true, email: true } },
+        },
+    });
+
+    if (!order) {
+        return { ok: false, skipped: 'order_not_found' };
+    }
+
+    if (order.deliveryProof?.status !== 'COMPLETED') {
+        return { ok: false, skipped: 'proof_not_completed' };
+    }
+
+    const photoAfterUrl =
+        order.deliveryProof.photoAfterUrl ||
+        order.deliveryProof.photosAfterUrls?.[0] ||
+        null;
+
+    if (!photoAfterUrl) {
+        return { ok: false, skipped: 'missing_after_photo' };
+    }
+
+    const result = await sendDeliveryProofWhatsApp({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        buyerFullName: order.user?.name || order.buyerFullName,
+        customerPhone: order.customerPhone,
+        deceasedName: order.deceasedName,
+        cemeteryCity: order.cemeteryCity,
+        cemeteryName: order.cemeteryName,
+        deliveryProvince: order.deliveryProvince,
+        photoAfterUrl,
+    });
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            skipped: result.skipped,
+            giardinoUrl: result.giardinoUrl,
+            error: result.error,
+        };
+    }
+
+    return { ok: true, giardinoUrl: result.giardinoUrl };
 }

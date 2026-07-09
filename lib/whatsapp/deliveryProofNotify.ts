@@ -10,6 +10,7 @@ import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
@@ -121,10 +122,15 @@ export async function sendDeliveryProofWhatsApp(
             linkMessageId = linkSend.messageId;
         } else {
             const buyerFirstName = extractFirstNameFromProfile(buyerName);
+            const bodyParams = buildCustomerDeliveryPhotoParams({
+                buyerFirstName,
+                partnerCity,
+                deceasedName,
+            });
             const templateSend = await sendVeraTemplate(
                 phoneE164,
                 'customer_delivery_photo',
-                [buyerFirstName || 'Utente', deceasedName],
+                bodyParams,
                 { headerImageUrl: publicImageUrl }
             );
 

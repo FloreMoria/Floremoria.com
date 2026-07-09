@@ -33,7 +33,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
     const activeOrders = partner.orders.filter((o) => o.status !== 'CANCELLED' && !o.deletedAt).length;
 
     return (
-        <div className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col print:static print:inset-auto print:z-auto">
+        <div className="fixed top-14 left-0 right-0 bottom-0 z-40 bg-[#FAF9F6] flex flex-col print:static print:inset-auto print:z-auto">
             <ClientFloristDossierHeader partner={partner} />
 
             <div className="flex-1 overflow-y-auto font-body print:overflow-visible">

@@ -69,22 +69,31 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
         <>
             <div className="shrink-0 border-b border-gray-200 bg-white shadow-sm print:hidden">
                 <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 border-b border-gray-100">
-                    <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-100 border-2 border-white shadow-md flex items-center justify-center shrink-0">
                             <UserCircle2 size={36} className="text-gray-400" />
                         </div>
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880] mb-0.5">
-                                Dossier fiorista · {partner.uniqueCode || 'N/D'}
-                            </p>
+                        <div className="min-w-0 flex-1">
                             <h1 className="text-xl sm:text-2xl font-display font-bold text-gray-900 leading-tight truncate">
                                 {partner.shopName}
                             </h1>
-                            <p className="text-sm text-gray-500 font-medium truncate">
+                            <p className="text-sm text-gray-600 font-medium truncate mt-0.5">
                                 {partner.ownerName}
-                                {partner.province ? ` · ${partner.province}` : ''}
-                                {partner.coverageArea ? ` · ${partner.coverageArea}` : ''}
                             </p>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-gray-500">
+                                <span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1.5">Codice</span>
+                                    <span className="font-mono font-semibold text-gray-800">{partner.uniqueCode || 'N/D'}</span>
+                                </span>
+                                <span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1.5">Comune</span>
+                                    <span className="font-medium text-gray-800">{partner.coverageArea || '—'}</span>
+                                </span>
+                                <span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1.5">Provincia</span>
+                                    <span className="font-bold text-gray-800">{partner.province || '—'}</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <Link

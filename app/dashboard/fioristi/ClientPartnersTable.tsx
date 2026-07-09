@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Partner, PaymentStatus } from '@prisma/client';
 import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2 } from 'lucide-react';
@@ -311,7 +311,6 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Codice</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Provincia</th>
-                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Nome Fiorista / Negozio</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Area di Copertura</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Contatto Rapido</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Ordini Attivi</th>
@@ -322,31 +321,36 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {sortedPartners.length === 0 ? (
-                                <tr><td colSpan={7} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
+                                <tr><td colSpan={8} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
                             ) : sortedPartners.map(partner => (
-                                <tr
-                                    key={partner.id}
-                                    onClick={() => router.push(`/dashboard/fioristi/${partner.id}`)}
-                                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0"
-                                >
+                                <Fragment key={partner.id}>
+                                    <tr
+                                        onClick={() => router.push(`/dashboard/fioristi/${partner.id}`)}
+                                        className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                                    >
+                                        <td colSpan={8} className="py-3 px-4 border-b-0">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                                                    <UserCircle2 size={24} className="text-gray-400" />
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors truncate">
+                                                        {partner.shopName}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 font-medium truncate">{partner.ownerName}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr
+                                        onClick={() => router.push(`/dashboard/fioristi/${partner.id}`)}
+                                        className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0"
+                                    >
                                     <td className="py-3 px-4">
                                         <div className="font-mono text-xs font-bold bg-gray-100 px-2 py-1 rounded-md text-gray-700 whitespace-nowrap">{partner.uniqueCode || 'N/D'}</div>
                                     </td>
                                     <td className="py-3 px-4">
                                         <div className="font-bold text-gray-800 text-sm">{partner.province || 'XX'}</div>
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-                                                <UserCircle2 size={24} className="text-gray-400" />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                                                    {partner.shopName}
-                                                </div>
-                                                <div className="text-xs text-gray-500 font-medium">{partner.ownerName}</div>
-                                            </div>
-                                        </div>
                                     </td>
                                     <td className="py-3 px-4">
                                         {partner.coverageArea ? (
@@ -401,6 +405,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                         </div>
                                     </td>
                                 </tr>
+                                </Fragment>
                             ))}
                         </tbody>
                     </table>

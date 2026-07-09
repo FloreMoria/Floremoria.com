@@ -1,10 +1,9 @@
 import prisma from '@/lib/prisma';
 import { ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronLeft, Building2, MapPin, MessageCircle, Star, UserCircle2 } from 'lucide-react';
+import { Building2, MapPin, MessageCircle, Star } from 'lucide-react';
 import ClientFloristDossier from './ClientFloristDossier';
-import ClientPrintButton from './ClientPrintButton';
+import ClientFloristDossierHeader from './ClientFloristDossierHeader';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
@@ -35,45 +34,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
 
     return (
         <div className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col print:static print:inset-auto print:z-auto">
-            <div className="shrink-0 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 shadow-sm print:hidden">
-                <div className="flex items-center gap-4 min-w-0">
-                    <Link
-                        href="/dashboard/fioristi"
-                        className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 shrink-0"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        Elenco fioristi
-                    </Link>
-                    <div className="w-14 h-14 rounded-full bg-gray-100 border-2 border-white shadow-md flex items-center justify-center shrink-0">
-                        <UserCircle2 size={32} className="text-gray-400" />
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880] mb-0.5">
-                            Dossier fiorista · {partner.uniqueCode || 'N/D'}
-                        </p>
-                        <h1 className="text-xl sm:text-2xl font-display font-bold text-gray-900 leading-tight truncate">
-                            {partner.shopName}
-                        </h1>
-                        <p className="text-sm text-gray-500 font-medium truncate">
-                            {partner.ownerName}
-                            {partner.province ? ` · ${partner.province}` : ''}
-                            {partner.coverageArea ? ` · ${partner.coverageArea}` : ''}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <ClientPrintButton />
-                    <Link
-                        href="/dashboard/fioristi"
-                        className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
-                        aria-label="Chiudi dossier"
-                    >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </Link>
-                </div>
-            </div>
+            <ClientFloristDossierHeader partner={partner} />
 
             <div className="flex-1 overflow-y-auto font-body print:overflow-visible">
                 <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">

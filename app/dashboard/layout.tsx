@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
 import TopNavLink from '@/components/dashboard/TopNavLink';
+import DashboardMobileNav from '@/components/dashboard/DashboardMobileNav';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 
 export const metadata: Metadata = {
@@ -33,11 +34,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <div className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}>
 
             {/* Top Navbar */}
-            <header className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 print:hidden">
+            <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 print:hidden">
 
-                <div className="flex items-center gap-8">
+                <div className="flex items-center gap-4 md:gap-8 min-w-0">
                     {/* Brand */}
-                    <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer opacity-90 hover:opacity-100 transition-opacity">
+                    <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer opacity-90 hover:opacity-100 transition-opacity shrink-0">
                         <div className={`w-7 h-7 rounded-md flex items-center justify-center font-bold text-sm shadow-sm ${isSystemClean ? 'bg-gray-100 text-gray-600 border border-gray-200' : 'bg-black text-white shadow-md'}`}>
                             F
                         </div>
@@ -46,8 +47,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         </span>
                     </Link>
 
-                    {/* Primary Navigation */}
-                    <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full scroll-smooth">
+                    {/* Primary Navigation (desktop) */}
+                    <nav className="hidden md:flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full scroll-smooth">
                         <TopNavLink href="/dashboard" label="Overview" />
                         <TopNavLink href="/dashboard/orders" label="Ordini" />
                         <TopNavLink href="/dashboard/users" label="Utenti" />
@@ -69,7 +70,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 </div>
 
                 {/* Right Bar */}
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-3 md:gap-5 shrink-0">
+                    <DashboardMobileNav
+                        isDashboardAdmin={isDashboardAdmin}
+                        isSuperAdmin={isSuperAdmin}
+                    />
                     <div className="relative hidden lg:block w-48">
                         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 
@@ -61,8 +61,8 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
   ];
 
   return (
-    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] overflow-hidden font-body">
-      <div className="px-8 pt-8">
+    <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] overflow-hidden font-body">
+      <div className="px-4 pt-4 md:px-8 md:pt-8">
         <StaffPushNotifications />
       </div>
       {/* TABS HEADER */}
@@ -74,7 +74,7 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-[200px] py-6 px-6 font-display font-semibold transition-all flex items-center justify-center gap-3 border-b-[3px]
+              className={`flex-1 min-w-[140px] md:min-w-[200px] py-4 md:py-6 px-3 md:px-6 font-display font-semibold transition-all flex items-center justify-center gap-2 md:gap-3 border-b-[3px] text-sm md:text-base
               ${isActive ? 'border-[#C0A062] text-[#B89F78] bg-[#FDFCF9]' : 'border-transparent text-[#6F6F6F] hover:text-[#4A4A4A] hover:bg-[#FAF8F5]'}`}
             >
               <Icon className="w-5 h-5" />
@@ -85,7 +85,7 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
       </div>
 
       {/* CONTENT AREA */}
-      <div className="p-8 md:p-12 min-h-[650px] bg-white">
+      <div className="p-4 md:p-8 lg:p-12 min-h-[500px] md:min-h-[650px] bg-white">
         {activeTab === 'visione' && (
           <VisioneTab 
             sessions={sessions} 
@@ -241,10 +241,14 @@ function VisioneTab({
         onClose={() => setNewChatOpen(false)}
         onConversationStarted={handleConversationStarted}
       />
-      <div className="flex border border-[#EAE3D9] rounded-3xl overflow-hidden h-[680px] bg-[#FAF9F6] shadow-sm">
+      <div className="flex border border-[#EAE3D9] rounded-2xl md:rounded-3xl overflow-hidden h-[calc(100dvh-280px)] min-h-[420px] md:h-[680px] bg-[#FAF9F6] shadow-sm">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
-        <div className="w-[38%] border-r border-[#EAE3D9] flex flex-col h-full bg-white">
+        <div
+          className={`border-r border-[#EAE3D9] flex flex-col h-full bg-white w-full md:w-[38%] ${
+            activeChatId ? 'hidden md:flex' : 'flex'
+          }`}
+        >
           {/* Header Sidebar */}
           <div className="p-4 border-b border-[#EAE3D9] space-y-3 bg-[#FAF8F5]">
             <div className="flex justify-between items-center gap-2">
@@ -355,12 +359,24 @@ function VisioneTab({
         </div>
 
         {/* ── COLONNA 2: ACTIVE CHAT PANE ── */}
-        <div className="w-[62%] flex flex-col h-full bg-[#EFEAE2] relative">
+        <div
+          className={`flex-col h-full bg-[#EFEAE2] relative w-full md:w-[62%] ${
+            activeChatId ? 'flex' : 'hidden md:flex'
+          }`}
+        >
           {activeChat ? (
             <>
               {/* Header WhatsApp Style */}
-              <div className="bg-[#00A884] text-white px-6 py-3.5 flex justify-between items-center shadow-md z-10 shrink-0">
-                <div className="flex items-center gap-3.5 min-w-0">
+              <div className="bg-[#00A884] text-white px-4 md:px-6 py-3.5 flex justify-between items-center shadow-md z-10 shrink-0 gap-2">
+                <div className="flex items-center gap-2 md:gap-3.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveChatId(null)}
+                    className="md:hidden inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-white/95 hover:bg-white/10 shrink-0"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                    Indietro
+                  </button>
                   <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-display font-bold text-white shadow-sm border border-white/30 flex-shrink-0">
                     {activeChat.initials}
                   </div>
@@ -373,7 +389,7 @@ function VisioneTab({
                 {/* AI / MANUAL TAKEOVER TOGGLE */}
                 <button 
                   onClick={() => toggleStatus(activeChat.phone, activeChat.status)}
-                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm border
+                  className={`px-2.5 md:px-3.5 py-1.5 rounded-full text-[10px] md:text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 md:gap-1.5 transition-all shadow-sm border shrink-0
                   ${activeChat.status === 'AI_ACTIVE' 
                     ? 'bg-emerald-950/40 text-emerald-200 border-emerald-400 hover:bg-emerald-800/50' 
                     : 'bg-red-600 text-white border-red-400 hover:bg-red-700 animate-pulse'}`}

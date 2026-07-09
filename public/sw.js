@@ -7,6 +7,7 @@ self.addEventListener('push', (event) => {
         body: 'Nuovo messaggio WhatsApp',
         url: '/dashboard/communications',
         tag: 'fm-whatsapp',
+        sound: 'whatsapp',
     };
 
     try {
@@ -31,7 +32,19 @@ self.addEventListener('push', (event) => {
         },
     };
 
-    event.waitUntil(self.registration.showNotification(payload.title, options));
+    event.waitUntil(
+        Promise.all([
+            self.registration.showNotification(payload.title, options),
+            clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+                for (const client of windowClients) {
+                    client.postMessage({
+                        type: 'fm-staff-alert',
+                        sound: payload.sound || 'whatsapp',
+                    });
+                }
+            }),
+        ])
+    );
 });
 
 self.addEventListener('notificationclick', (event) => {

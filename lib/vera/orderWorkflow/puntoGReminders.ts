@@ -3,6 +3,7 @@ import { getSession } from '@/lib/chatStore';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import {
     buildCustomerWaitingUpdateParams,
     buildFloristReminderParams,
@@ -78,6 +79,17 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                     });
                     const send = await sendVeraTemplate(phoneE164, 'customer_waiting_update', bodyParams);
                     if (send.ok) {
+                        await logVeraTemplateOutbound({
+                            phoneE164,
+                            templateId: 'customer_waiting_update',
+                            bodyParams,
+                            eventType: 'WAITING_UPDATE_TEMPLATE',
+                            orderId: order.id,
+                            orderNumber: order.orderNumber,
+                            messageId: send.messageId,
+                            contactName: order.user?.name || order.buyerFullName || name,
+                            userType: 'UTENTE',
+                        });
                         await prisma.order.update({
                             where: { id: order.id },
                             data: {

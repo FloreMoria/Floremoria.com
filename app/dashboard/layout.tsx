@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
 import TopNavLink from '@/components/dashboard/TopNavLink';
 import DashboardMobileNav from '@/components/dashboard/DashboardMobileNav';
+import StaffAlertPoller from '@/components/dashboard/StaffAlertPoller';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 
 export const metadata: Metadata = {
@@ -100,6 +101,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 {children}
             </main>
 
+            <StaffAlertPoller />
         </div>
     );
 }

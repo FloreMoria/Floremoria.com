@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
@@ -9,7 +9,6 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
   const [activeTab, setActiveTab] = useState('visione');
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const prevInboundCountRef = useRef(0);
 
   // Poll for new messages every 4 seconds to simulate real-time chat
   useEffect(() => {
@@ -18,29 +17,7 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
         const res = await fetch('/api/dashboard/communications');
         const data = await res.json();
         if (data.success) {
-          const nextSessions = data.sessions || [];
-          const inboundCount = nextSessions.reduce(
-            (sum: number, s: { messages?: { direction: string }[] }) =>
-              sum + (s.messages?.filter((m) => m.direction === 'INBOUND').length || 0),
-            0
-          );
-          if (
-            prevInboundCountRef.current > 0 &&
-            inboundCount > prevInboundCountRef.current &&
-            typeof Audio !== 'undefined'
-          ) {
-            try {
-              const beep = new Audio(
-                'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Onp6WjHqBk5mMgH2Gg4B8d3Z0c3Bua2lmZGFhX15bWllYV1ZUUU5MSklIR0VEQ0JBQT09PQ=='
-              );
-              beep.volume = 0.35;
-              void beep.play();
-            } catch {
-              /* ignore autoplay restrictions */
-            }
-          }
-          prevInboundCountRef.current = inboundCount;
-          setSessions(nextSessions);
+          setSessions(data.sessions || []);
         }
       } catch (err) {
         console.error('Error fetching chat sessions:', err);

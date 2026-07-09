@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, BellOff, BellRing, Loader2 } from 'lucide-react';
+import { unlockStaffAlertSounds } from '@/lib/dashboard/staffAlertSounds';
 
 type PushState = 'unsupported' | 'idle' | 'loading' | 'enabled' | 'denied' | 'error';
 
@@ -39,13 +40,14 @@ export default function StaffPushNotifications() {
             const sub = await registration.pushManager.getSubscription();
             if (sub) {
                 setState('enabled');
-                setMessage('Notifiche push attive su questo dispositivo.');
+                setMessage('Notifiche push e suoni attivi su questo dispositivo.');
+                unlockStaffAlertSounds();
                 return;
             }
         }
 
         setState('idle');
-        setMessage('Ricevi avvisi sonori e visivi quando arrivano messaggi WhatsApp.');
+        setMessage('Ricevi avvisi sonori e visivi per messaggi WhatsApp, nuovi ordini e foto fioristi.');
     }, []);
 
     useEffect(() => {
@@ -105,7 +107,8 @@ export default function StaffPushNotifications() {
             }
 
             setState('enabled');
-            setMessage('Notifiche push attive. Aggiungi a Home per uso come app (PWA).');
+            setMessage('Notifiche push e suoni attivi. Aggiungi a Home per uso come app (PWA).');
+            unlockStaffAlertSounds();
         } catch (err) {
             console.error('[staff-push]', err);
             setState('error');

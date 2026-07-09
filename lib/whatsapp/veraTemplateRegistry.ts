@@ -143,7 +143,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodyParamCount: 2,
         bodySlots: ['buyerFirstName', 'deceasedName'],
         bodyCanonical:
-            'Gentile {{1}}, La informiamo che stiamo monitorando con attenzione la consegna dei fiori nel ricordo di {{2}}. La terremo aggiornata non appena possibile.',
+            'Gentile {{1}},\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹',
         description: '{{1}} nome di battesimo, {{2}} nome defunto — NON usare testi liberi nel campo nome',
     },
     florist_reminder: {

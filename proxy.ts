@@ -65,7 +65,7 @@ function isWhatsAppSetupPath(pathname: string): boolean {
 }
 
 function isSuperAdminOnlyPath(pathname: string): boolean {
-    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname)) {
+    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
         return false;
     }
     return (

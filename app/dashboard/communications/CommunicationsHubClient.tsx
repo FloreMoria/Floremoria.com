@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronRight, User, Image as ImageIcon, MapPin, Calendar, Mail, UserPlus } from 'lucide-react';
+import { Search, ChevronLeft, User, Image as ImageIcon, MapPin, Calendar, Mail, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
@@ -283,14 +283,16 @@ export default function ClientUsersTable({
                                 filteredUsers.map((u, i) => (
                                     <tr
                                         key={i}
-                                        className="hover:bg-gray-50/50 transition-colors"
+                                        className={`hover:bg-gray-50/50 transition-colors ${
+                                            editingUserId !== u.id ? 'cursor-pointer' : ''
+                                        }`}
+                                        onClick={() => {
+                                            if (editingUserId) return;
+                                            setSelectedUser(u);
+                                        }}
                                     >
                                         <td className="px-6 py-4">
-                                            <button
-                                                type="button"
-                                                className="flex items-center gap-3 text-left w-full"
-                                                onClick={() => setSelectedUser(u)}
-                                            >
+                                            <div className="flex items-center gap-3">
                                                 {u.profilePicUrl ? (
                                                     <Image
                                                         src={u.profilePicUrl}
@@ -323,7 +325,7 @@ export default function ClientUsersTable({
                                                 ) : (
                                                     <span className="font-semibold text-gray-900">{u.name}</span>
                                                 )}
-                                            </button>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-gray-600">
                                             {editingUserId === u.id ? (
@@ -353,7 +355,7 @@ export default function ClientUsersTable({
                                         <td className="px-6 py-4 font-medium text-gray-900">
                                             € {(u.totalSpentCents / 100).toFixed(2)}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="inline-flex items-center gap-2">
                                                 {editingUserId === u.id ? (
                                                     <>
@@ -403,14 +405,6 @@ export default function ClientUsersTable({
                                                         >
                                                             Cancella
                                                         </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSelectedUser(u)}
-                                                            className="px-2 py-1.5 text-xs font-semibold rounded text-gray-500 hover:text-gray-800"
-                                                            title="Apri dettaglio"
-                                                        >
-                                                            <ChevronRight className="w-4 h-4 inline-block" />
-                                                        </button>
                                                     </>
                                                 )}
                                             </div>
@@ -423,34 +417,50 @@ export default function ClientUsersTable({
                 </div>
             </div>
 
-            {/* User Detail Modal */}
+            {/* Profilo utente — pagina intera */}
             {selectedUser && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6" onClick={() => setSelectedUser(null)}>
-                    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-                        
-                        {/* Modal Header */}
-                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                            <div className="flex items-center gap-5">
-                                <AdminMediaUploadAvatar
-                                    imageUrl={selectedUser.profilePicUrl}
-                                    fallbackLabel={selectedUser.name}
-                                    entity="user"
-                                    entityId={selectedUser.id.startsWith('virtual_') ? undefined : selectedUser.id}
-                                    orderId={resolveOrderIdForUser(selectedUser)}
-                                    onUploaded={handleAvatarUploaded}
-                                />
-                                <div>
-                                    <h2 className="text-2xl font-display font-bold text-gray-900 leading-tight">Il Giardino di {selectedUser.name}</h2>
-                                    <p className="text-sm text-gray-500 font-medium">Scatola della Memoria Infinita &bull; {selectedUser.orders.length} Consegnati</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setSelectedUser(null)} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <div className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
+                    <div className="shrink-0 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-center gap-4 min-w-0">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedUser(null)}
+                                className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 shrink-0"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Elenco utenti
                             </button>
+                            <AdminMediaUploadAvatar
+                                imageUrl={selectedUser.profilePicUrl}
+                                fallbackLabel={selectedUser.name}
+                                entity="user"
+                                entityId={selectedUser.id.startsWith('virtual_') ? undefined : selectedUser.id}
+                                orderId={resolveOrderIdForUser(selectedUser)}
+                                onUploaded={handleAvatarUploaded}
+                            />
+                            <div className="min-w-0">
+                                <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 leading-tight truncate">
+                                    Il Giardino di {selectedUser.name}
+                                </h2>
+                                <p className="text-sm text-gray-500 font-medium">
+                                    Scatola della Memoria Infinita · {selectedUser.orders.length} consegnati
+                                </p>
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedUser(null)}
+                            className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+                            aria-label="Chiudi profilo"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
 
-                        {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto flex-1 font-body bg-white space-y-8">
+                    <div className="flex-1 overflow-y-auto font-body">
+                        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
                             
                             {/* User Edit Infos */}
                             <section className="bg-gray-50 rounded-xl p-5 border border-gray-100">
@@ -588,7 +598,6 @@ export default function ClientUsersTable({
                                     ))}
                                 </div>
                             </section>
-
                         </div>
                     </div>
                 </div>

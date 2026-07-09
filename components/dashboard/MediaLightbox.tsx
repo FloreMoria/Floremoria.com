@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, Download, Share2, X } from 'lucide-react';
 import {
     setDashboardOverlayOpen,
     useEdgeSwipeBack,
@@ -20,7 +21,9 @@ export default function MediaLightbox({
     alt = 'Allegato WhatsApp',
     onClose,
 }: MediaLightboxProps) {
+    const [mounted, setMounted] = useState(false);
     const [dragX, setDragX] = useState(0);
+    const [sharing, setSharing] = useState(false);
     const touchStartRef = useRef({ x: 0, y: 0 });
 
     const handleClose = useCallback(() => {
@@ -28,9 +31,10 @@ export default function MediaLightbox({
         onClose();
     }, [onClose]);
 
-    useEdgeSwipeBack(handleClose, true);
+    useEdgeSwipeBack(handleClose, true, { allowWhenOverlayOpen: true });
 
     useEffect(() => {
+        setMounted(true);
         setDashboardOverlayOpen(true);
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -47,34 +51,82 @@ export default function MediaLightbox({
         };
     }, [handleClose]);
 
-    return (
+    const handleShare = useCallback(async () => {
+        if (sharing) return;
+        setSharing(true);
+        try {
+            const shareUrl = downloadUrl || imageUrl;
+            if (navigator.share) {
+                try {
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    const extension = blob.type.includes('png') ? 'png' : 'jpg';
+                    const file = new File([blob], `foto-floremoria.${extension}`, {
+                        type: blob.type || 'image/jpeg',
+                    });
+                    if (navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Foto FloreMoria',
+                            text: 'Foto da chat staff FloreMoria',
+                        });
+                        return;
+                    }
+                } catch {
+                    /* fallback URL sotto */
+                }
+                await navigator.share({
+                    title: 'Foto FloreMoria',
+                    text: 'Foto da chat staff FloreMoria',
+                    url: shareUrl,
+                });
+                return;
+            }
+            if (shareUrl) {
+                window.open(shareUrl, '_blank', 'noopener,noreferrer');
+            }
+        } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') return;
+            console.error('[media-lightbox] share failed', error);
+        } finally {
+            setSharing(false);
+        }
+    }, [downloadUrl, imageUrl, sharing]);
+
+    if (!mounted) return null;
+
+    return createPortal(
         <div
-            className="fixed inset-0 z-[100] flex flex-col bg-black/95"
+            className="fixed inset-0 z-[200] flex flex-col bg-black/95 touch-none"
             role="dialog"
             aria-modal="true"
             aria-label="Anteprima immagine"
-            onClick={handleClose}
         >
-            <div
-                className="flex items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shrink-0"
-                onClick={(event) => event.stopPropagation()}
-            >
+            <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shrink-0 bg-gradient-to-b from-black/80 to-transparent">
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20"
+                    className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2.5 text-sm font-semibold text-white hover:bg-white/25 active:scale-[0.98]"
                 >
                     <ArrowLeft className="w-5 h-5" />
                     Indietro
                 </button>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => void handleShare()}
+                        disabled={sharing}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/25 active:scale-[0.98] disabled:opacity-60"
+                    >
+                        <Share2 className="w-4 h-4" />
+                        Condividi
+                    </button>
                     {downloadUrl ? (
                         <a
                             href={downloadUrl}
                             download
-                            onClick={(event) => event.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/25 active:scale-[0.98]"
                         >
                             <Download className="w-4 h-4" />
                             Scarica
@@ -84,7 +136,7 @@ export default function MediaLightbox({
                         type="button"
                         onClick={handleClose}
                         aria-label="Chiudi"
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-[0.98]"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -92,8 +144,7 @@ export default function MediaLightbox({
             </div>
 
             <div
-                className="flex-1 flex items-center justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-hidden"
-                onClick={(event) => event.stopPropagation()}
+                className="relative z-0 flex-1 flex items-center justify-center px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-hidden touch-pan-y"
                 onTouchStart={(event) => {
                     const touch = event.touches[0];
                     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -102,7 +153,7 @@ export default function MediaLightbox({
                     const touch = event.touches[0];
                     const deltaX = touch.clientX - touchStartRef.current.x;
                     const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
-                    if (deltaX > 0 && deltaY < 80) {
+                    if (deltaX > 8 && deltaY < 100) {
                         setDragX(deltaX);
                     }
                 }}
@@ -110,7 +161,7 @@ export default function MediaLightbox({
                     const touch = event.changedTouches[0];
                     const deltaX = touch.clientX - touchStartRef.current.x;
                     const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
-                    if (deltaX >= 72 && deltaY <= 80) {
+                    if (deltaX >= 64 && deltaY <= 100) {
                         handleClose();
                     } else {
                         setDragX(0);
@@ -120,7 +171,7 @@ export default function MediaLightbox({
                 <img
                     src={imageUrl}
                     alt={alt}
-                    className="max-h-full max-w-full object-contain transition-transform duration-150"
+                    className="max-h-[calc(100dvh-5.5rem)] max-w-full object-contain transition-transform duration-150 select-none"
                     style={{
                         transform: dragX > 0 ? `translateX(${dragX}px)` : undefined,
                         opacity: dragX > 0 ? Math.max(0.35, 1 - dragX / 280) : 1,
@@ -128,6 +179,7 @@ export default function MediaLightbox({
                     draggable={false}
                 />
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

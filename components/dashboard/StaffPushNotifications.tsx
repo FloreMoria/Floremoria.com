@@ -1,8 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, BellOff, BellRing, Loader2 } from 'lucide-react';
-import { unlockStaffAlertSounds } from '@/lib/dashboard/staffAlertSounds';
+import {
+    setStaffAlertSoundsMuted,
+    unlockStaffAlertSounds,
+} from '@/lib/dashboard/staffAlertSounds';
 
 type PushState = 'unsupported' | 'idle' | 'loading' | 'enabled' | 'denied' | 'error';
 
@@ -18,9 +21,66 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export default function StaffPushNotifications() {
-    const [state, setState] = useState<PushState>('idle');
-    const [message, setMessage] = useState<string>('');
+    const [state, setState] = useState<PushState>('loading');
+    const [message, setMessage] = useState<string>('Attivazione notifiche e suoni in corso…');
+    const autoEnableAttemptedRef = useRef(false);
     const isLoading = state === 'loading';
+
+    const subscribeToPush = useCallback(async (): Promise<boolean> => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            return false;
+        }
+
+        const perm = Notification.permission;
+        if (perm !== 'granted') {
+            return false;
+        }
+
+        const vapidRes = await fetch('/api/dashboard/push/vapid-public-key');
+        const vapidData = await vapidRes.json();
+        if (!vapidRes.ok || !vapidData.publicKey) {
+            throw new Error(vapidData.error || 'VAPID non disponibile.');
+        }
+
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.ready;
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey) as BufferSource,
+            });
+        }
+
+        const json = subscription.toJSON();
+        if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+            throw new Error('Sottoscrizione push incompleta.');
+        }
+
+        const saveRes = await fetch('/api/dashboard/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                endpoint: json.endpoint,
+                keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+            }),
+        });
+
+        if (!saveRes.ok) {
+            const err = await saveRes.json().catch(() => ({}));
+            throw new Error(err.error || 'Salvataggio sottoscrizione fallito.');
+        }
+
+        return true;
+    }, []);
+
+    const markEnabled = useCallback(() => {
+        setStaffAlertSoundsMuted(false);
+        unlockStaffAlertSounds();
+        setState('enabled');
+        setMessage('Notifiche push e suoni attivi su questo dispositivo.');
+    }, []);
 
     const checkExisting = useCallback(async () => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -39,82 +99,76 @@ export default function StaffPushNotifications() {
         if (registration) {
             const sub = await registration.pushManager.getSubscription();
             if (sub) {
-                setState('enabled');
-                setMessage('Notifiche push e suoni attivi su questo dispositivo.');
-                unlockStaffAlertSounds();
+                markEnabled();
                 return;
             }
         }
 
+        if (Notification.permission === 'granted') {
+            try {
+                await subscribeToPush();
+                markEnabled();
+                return;
+            } catch (err) {
+                console.error('[staff-push] auto subscribe', err);
+            }
+        }
+
         setState('idle');
-        setMessage('Ricevi avvisi sonori e visivi per messaggi WhatsApp, nuovi ordini e foto fioristi.');
-    }, []);
+        setMessage('Notifiche e suoni si attivano al primo tocco su questa pagina.');
+    }, [markEnabled, subscribeToPush]);
 
     useEffect(() => {
         void checkExisting();
     }, [checkExisting]);
 
-    const enablePush = async () => {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            setState('unsupported');
-            return;
-        }
-
-        setState('loading');
-
-        try {
-            const perm = await Notification.requestPermission();
-            if (perm !== 'granted') {
-                setState('denied');
-                setMessage('Permesso notifiche negato.');
+    const enablePush = useCallback(
+        async (requestPermission = true) => {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                setState('unsupported');
                 return;
             }
 
-            const vapidRes = await fetch('/api/dashboard/push/vapid-public-key');
-            const vapidData = await vapidRes.json();
-            if (!vapidRes.ok || !vapidData.publicKey) {
-                throw new Error(vapidData.error || 'VAPID non disponibile.');
+            setState('loading');
+
+            try {
+                if (requestPermission) {
+                    const perm = await Notification.requestPermission();
+                    if (perm !== 'granted') {
+                        setState('denied');
+                        setMessage('Permesso notifiche negato.');
+                        return;
+                    }
+                } else if (Notification.permission !== 'granted') {
+                    setState('idle');
+                    setMessage('Tocca la pagina per consentire notifiche e suoni.');
+                    return;
+                }
+
+                await subscribeToPush();
+                markEnabled();
+            } catch (err) {
+                console.error('[staff-push]', err);
+                setState('error');
+                setMessage(err instanceof Error ? err.message : 'Errore attivazione push.');
             }
+        },
+        [markEnabled, subscribeToPush]
+    );
 
-            const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-            await navigator.serviceWorker.ready;
+    useEffect(() => {
+        if (autoEnableAttemptedRef.current) return;
+        if (state !== 'idle') return;
 
-            let subscription = await registration.pushManager.getSubscription();
-            if (!subscription) {
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey) as BufferSource,
-                });
-            }
+        const tryAutoEnable = () => {
+            if (autoEnableAttemptedRef.current) return;
+            autoEnableAttemptedRef.current = true;
+            void enablePush(true);
+        };
 
-            const json = subscription.toJSON();
-            if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-                throw new Error('Sottoscrizione push incompleta.');
-            }
-
-            const saveRes = await fetch('/api/dashboard/push/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    endpoint: json.endpoint,
-                    keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-                }),
-            });
-
-            if (!saveRes.ok) {
-                const err = await saveRes.json().catch(() => ({}));
-                throw new Error(err.error || 'Salvataggio sottoscrizione fallito.');
-            }
-
-            setState('enabled');
-            setMessage('Notifiche push e suoni attivi. Aggiungi a Home per uso come app (PWA).');
-            unlockStaffAlertSounds();
-        } catch (err) {
-            console.error('[staff-push]', err);
-            setState('error');
-            setMessage(err instanceof Error ? err.message : 'Errore attivazione push.');
-        }
-    };
+        window.addEventListener('pointerdown', tryAutoEnable, { once: true });
+        return () => window.removeEventListener('pointerdown', tryAutoEnable);
+    }, [enablePush, state]);
 
     const disablePush = async () => {
         setState('loading');
@@ -130,8 +184,9 @@ export default function StaffPushNotifications() {
                 });
                 await subscription.unsubscribe();
             }
+            setStaffAlertSoundsMuted(true);
             setState('idle');
-            setMessage('Notifiche push disattivate su questo dispositivo.');
+            setMessage('Notifiche push e suoni sospesi su questo dispositivo.');
         } catch (err) {
             setState('error');
             setMessage(err instanceof Error ? err.message : 'Errore disattivazione.');
@@ -168,13 +223,15 @@ export default function StaffPushNotifications() {
                         disabled={isLoading}
                         className="px-4 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-700 hover:bg-white transition-colors"
                     >
-                        Disattiva
+                        Sospendi
                     </button>
+                ) : state === 'denied' ? (
+                    <span className="px-4 py-2 text-xs text-gray-500">Abilita dalle impostazioni browser</span>
                 ) : (
                     <button
                         type="button"
-                        onClick={() => void enablePush()}
-                        disabled={isLoading || state === 'denied'}
+                        onClick={() => void enablePush(true)}
+                        disabled={isLoading}
                         className="px-4 py-2 rounded-full text-xs font-semibold bg-[#C0A062] text-white hover:bg-[#B89F78] transition-colors flex items-center gap-2"
                     >
                         {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}

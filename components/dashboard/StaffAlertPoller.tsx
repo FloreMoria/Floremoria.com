@@ -1,12 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import {
-    areStaffAlertSoundsMuted,
-    areStaffAlertSoundsUnlocked,
     playStaffAlertSound,
-    setStaffAlertSoundsMuted,
     unlockStaffAlertSounds,
     type StaffAlertSound,
 } from '@/lib/dashboard/staffAlertSounds';
@@ -27,45 +23,14 @@ interface Snapshot {
     floristInboundMediaCount: number;
 }
 
-function emptySnapshot(): Snapshot {
-    return {
-        inboundMessageCount: 0,
-        paidOrderCount: 0,
-        deliveryProofCompletedCount: 0,
-        floristInboundMediaCount: 0,
-    };
-}
-
+/** Polling silenzioso per suoni staff — attivazione/disattivazione da StaffPushNotifications. */
 export default function StaffAlertPoller() {
     const baselineRef = useRef<Snapshot | null>(null);
-    const [needsUnlock, setNeedsUnlock] = useState(false);
-    const [muted, setMuted] = useState(false);
-
-    const handleUnlock = useCallback(() => {
-        unlockStaffAlertSounds();
-        setNeedsUnlock(!areStaffAlertSoundsUnlocked());
-    }, []);
-
-    const toggleMuted = useCallback(() => {
-        const nextMuted = !areStaffAlertSoundsMuted();
-        setStaffAlertSoundsMuted(nextMuted);
-        setMuted(nextMuted);
-        if (!nextMuted) {
-            unlockStaffAlertSounds();
-            setNeedsUnlock(!areStaffAlertSoundsUnlocked());
-        }
-    }, []);
 
     useEffect(() => {
-        setMuted(areStaffAlertSoundsMuted());
-        setNeedsUnlock(!areStaffAlertSoundsUnlocked());
-
-        const onPointerDown = () => {
-            unlockStaffAlertSounds();
-            setNeedsUnlock(!areStaffAlertSoundsUnlocked());
-        };
-
-        window.addEventListener('pointerdown', onPointerDown, { once: true });
+        const unlock = () => unlockStaffAlertSounds();
+        unlock();
+        window.addEventListener('pointerdown', unlock, { once: true });
 
         const onSwMessage = (event: MessageEvent) => {
             const data = event.data as { type?: string; sound?: StaffAlertSound } | null;
@@ -77,7 +42,7 @@ export default function StaffAlertPoller() {
         navigator.serviceWorker?.addEventListener('message', onSwMessage);
 
         return () => {
-            window.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('pointerdown', unlock);
             navigator.serviceWorker?.removeEventListener('message', onSwMessage);
         };
     }, []);
@@ -133,34 +98,5 @@ export default function StaffAlertPoller() {
         };
     }, []);
 
-    return (
-        <>
-            {needsUnlock ? (
-                <button
-                    type="button"
-                    onClick={handleUnlock}
-                    className="fixed bottom-16 left-4 right-4 md:left-auto md:right-20 md:max-w-sm z-50 rounded-2xl bg-[#1A1A1A] text-white px-4 py-3 text-sm font-semibold shadow-xl print:hidden"
-                >
-                    Tocca per attivare i suoni (messaggi, ordini, foto)
-                </button>
-            ) : null}
-            <button
-                type="button"
-                onClick={toggleMuted}
-                className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6 w-11 h-11 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center hover:bg-gray-50 print:hidden"
-                aria-label={muted ? 'Attiva suoni dashboard' : 'Disattiva suoni dashboard'}
-                title={
-                    muted
-                        ? 'Suoni disattivati — messaggi, ordini, foto'
-                        : 'Suoni attivi — messaggi WhatsApp, ordini, foto fioristi'
-                }
-            >
-                {muted ? (
-                    <VolumeX className="w-5 h-5 text-gray-500" />
-                ) : (
-                    <Volume2 className="w-5 h-5 text-[#C0A062]" />
-                )}
-            </button>
-        </>
-    );
+    return null;
 }

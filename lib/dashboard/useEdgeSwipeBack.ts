@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
 
-const EDGE_ZONE_PX = 36;
-const MIN_SWIPE_PX = 64;
-const MAX_VERTICAL_DRIFT_PX = 96;
+const EDGE_ZONE_PX = 48;
+const MIN_SWIPE_PX = 56;
+const MAX_VERTICAL_DRIFT_PX = 100;
+
+export interface EdgeSwipeBackOptions {
+    /** Consente lo swipe anche con overlay aperto (es. lightbox foto). */
+    allowWhenOverlayOpen?: boolean;
+}
 
 export function setDashboardOverlayOpen(open: boolean): void {
     if (typeof document === 'undefined') return;
@@ -19,7 +24,13 @@ export function isDashboardOverlayOpen(): boolean {
 }
 
 /** Swipe da sinistra verso destra (bordo schermo) per azione indietro/chiudi. */
-export function useEdgeSwipeBack(onBack: () => void, enabled = true): void {
+export function useEdgeSwipeBack(
+    onBack: () => void,
+    enabled = true,
+    options: EdgeSwipeBackOptions = {}
+): void {
+    const allowWhenOverlayOpen = options.allowWhenOverlayOpen ?? false;
+
     useEffect(() => {
         if (!enabled || typeof window === 'undefined') return;
 
@@ -28,7 +39,7 @@ export function useEdgeSwipeBack(onBack: () => void, enabled = true): void {
         let tracking = false;
 
         const onTouchStart = (event: TouchEvent) => {
-            if (isDashboardOverlayOpen()) return;
+            if (!allowWhenOverlayOpen && isDashboardOverlayOpen()) return;
             if (event.touches.length !== 1) return;
             const touch = event.touches[0];
             if (touch.clientX > EDGE_ZONE_PX) return;
@@ -52,14 +63,14 @@ export function useEdgeSwipeBack(onBack: () => void, enabled = true): void {
             tracking = false;
         };
 
-        window.addEventListener('touchstart', onTouchStart, { passive: true });
-        window.addEventListener('touchend', onTouchEnd, { passive: true });
-        window.addEventListener('touchcancel', onTouchCancel, { passive: true });
+        document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+        document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+        document.addEventListener('touchcancel', onTouchCancel, { passive: true, capture: true });
 
         return () => {
-            window.removeEventListener('touchstart', onTouchStart);
-            window.removeEventListener('touchend', onTouchEnd);
-            window.removeEventListener('touchcancel', onTouchCancel);
+            document.removeEventListener('touchstart', onTouchStart, true);
+            document.removeEventListener('touchend', onTouchEnd, true);
+            document.removeEventListener('touchcancel', onTouchCancel, true);
         };
-    }, [enabled, onBack]);
+    }, [allowWhenOverlayOpen, enabled, onBack]);
 }

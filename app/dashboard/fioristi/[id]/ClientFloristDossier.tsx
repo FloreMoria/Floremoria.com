@@ -213,7 +213,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders }:
     };
 
     return (
-        <div className="space-y-12 pb-24">
+        <div className="space-y-8">
             {toast ? (
                 <div className="fixed bottom-6 right-6 z-[90] bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg">
                     {toast}

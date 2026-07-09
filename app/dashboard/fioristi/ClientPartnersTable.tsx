@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Partner, PaymentStatus } from '@prisma/client';
 import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function ClientPartnersTable({ initialPartners }: Props) {
+    const router = useRouter();
     const [partners, setPartners] = useState<ExtendedPartner[]>(initialPartners);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'ANAGRAFICA' | 'MISSIONI' | 'FINANZA'>('ANAGRAFICA');
@@ -322,7 +324,11 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                             {sortedPartners.length === 0 ? (
                                 <tr><td colSpan={7} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
                             ) : sortedPartners.map(partner => (
-                                <tr key={partner.id} onClick={() => openDrawer(partner)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0">
+                                <tr
+                                    key={partner.id}
+                                    onClick={() => router.push(`/dashboard/fioristi/${partner.id}`)}
+                                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer border-b border-dashed border-gray-100 last:border-0"
+                                >
                                     <td className="py-3 px-4">
                                         <div className="font-mono text-xs font-bold bg-gray-100 px-2 py-1 rounded-md text-gray-700 whitespace-nowrap">{partner.uniqueCode || 'N/D'}</div>
                                     </td>
@@ -335,7 +341,9 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                 <UserCircle2 size={24} className="text-gray-400" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <div className="font-semibold text-gray-900">{partner.shopName}</div>
+                                                <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                                                    {partner.shopName}
+                                                </div>
                                                 <div className="text-xs text-gray-500 font-medium">{partner.ownerName}</div>
                                             </div>
                                         </div>

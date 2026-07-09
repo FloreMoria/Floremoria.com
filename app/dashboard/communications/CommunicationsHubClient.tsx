@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
+import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
@@ -97,9 +99,26 @@ function VisioneTab({
   const [sending, setSending] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Find the currently active chat
   const activeChat = sessions.find(s => s.phone === activeChatId) || null;
+
+  const handleSwipeBack = useCallback(() => {
+    if (activeChatId) {
+      setActiveChatId(null);
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    }
+  }, [activeChatId, router]);
+
+  useEdgeSwipeBack(handleSwipeBack, true);
+
+  const closeActiveChat = useCallback(() => {
+    setActiveChatId(null);
+  }, []);
 
   // Scroll to bottom of chat when active chat or messages change
   useEffect(() => {
@@ -349,7 +368,7 @@ function VisioneTab({
                 <div className="flex items-center gap-2 md:gap-3.5 min-w-0">
                   <button
                     type="button"
-                    onClick={() => setActiveChatId(null)}
+                    onClick={closeActiveChat}
                     className="md:hidden inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold text-white/95 hover:bg-white/10 shrink-0"
                   >
                     <ArrowLeft className="w-5 h-5" />

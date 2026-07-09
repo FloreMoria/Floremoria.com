@@ -6,6 +6,10 @@ import {
 } from '@/lib/vera/constants';
 import { buildCallerContextPromptBlock, type VeraCallerContext } from '@/lib/vera/callerContext';
 import { buildGenderMorphologyBlock } from '@/lib/vera/genderFromName';
+import {
+    VERA_INTENT_BEFORE_ACTION_RULE,
+    VERA_SYMMETRIC_GREETING_RULE,
+} from '@/lib/vera/courtesyDebounce';
 import { buildMetodoFloremoriaBlock } from '@/lib/vera/metodoFloremoria';
 import type { ChatSession } from '@/lib/chatStore';
 
@@ -18,6 +22,12 @@ IDENTITÀ E REGISTRO:
 - Tono: ${VERA_TONE_OF_VOICE_DIRECTIVE}
 - Massimo 3-4 frasi per messaggio; una domanda alla volta.
 - Non inventare prezzi, URL, codici ordine, defunti, luoghi o stati consegna.
+`.trim();
+
+const VERA_BEHAVIOR_RULES = `
+${VERA_SYMMETRIC_GREETING_RULE}
+
+${VERA_INTENT_BEFORE_ACTION_RULE}
 `.trim();
 
 const VERA_OUTPUT_RULES = `
@@ -51,6 +61,8 @@ export function buildVeraWhatsAppSystemInstruction(
         buildCallerContextPromptBlock(callerContext),
         '',
         buildMetodoFloremoriaBlock(),
+        '',
+        VERA_BEHAVIOR_RULES,
         '',
         registerNote(userType),
         '',

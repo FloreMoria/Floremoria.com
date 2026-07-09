@@ -6,6 +6,11 @@ import {
 } from '@/lib/whatsapp/historicalToneKb';
 import { isOrderTrackingInquiry } from '@/lib/whatsapp/orderStatusInquiry';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
+import {
+    buildSymmetricCourtesyReply,
+    hasOperationalServiceIntent,
+    isIsolatedCourtesyMessage,
+} from '@/lib/vera/courtesyDebounce';
 
 type CoreKb = {
     supportEmail: string;
@@ -414,14 +419,14 @@ export function ensureRespectfulOpening(reply: string, hasPriorOutbound: boolean
 }
 
 export function isSimpleThanksMessage(message: string): boolean {
-    const m = normalizeMessage(message);
-    return /^(grazie|grazie mille|ti ringrazio|la ringrazio|molte grazie)$/.test(m);
+    return isIsolatedCourtesyMessage(message) && /grazie|ringrazio/.test(normalizeMessage(message));
 }
 
 export function isClosingMessage(message: string): boolean {
-    if (isSimpleThanksMessage(message)) return true;
     const m = normalizeMessage(message);
-    return ['arrivederci', 'a presto', 'buona notte', 'ciao'].some((p) => m === p || m === `${p} ciao`);
+    return ['arrivederci', 'a presto', 'buona notte', 'buona serata', 'buona giornata', 'a risentirci'].some(
+        (phrase) => m === phrase || m.startsWith(`${phrase} `)
+    );
 }
 
 export function buildSimpleThanksReply(): string {
@@ -486,11 +491,17 @@ export function buildWhatsAppAiReply(params: {
         if (mediaUrl) {
             return `Grazie, foto ricevuta. La registro subito nel flusso consegna. Se puoi, indica anche il codice ordine (es. FT-RM-26-001) così la associamo in modo preciso. Buon lavoro 🌹`;
         }
-        return `Buongiorno, quando puoi inviami la foto della posa e il codice ordine (es. FT-RM-26-001). Appena arriva la registriamo in dashboard. Grazie e buon lavoro 🌹`;
+        if (isIsolatedCourtesyMessage(message)) {
+            return buildSymmetricCourtesyReply({ message, userType: 'FLORIST', displayName });
+        }
+        if (hasOperationalServiceIntent(message)) {
+            return `Buongiorno, quando puoi inviami la foto della posa e il codice ordine (es. FT-RM-26-001). Appena arriva la registriamo in dashboard. Grazie e buon lavoro 🌹`;
+        }
+        return buildSymmetricCourtesyReply({ message, userType: 'FLORIST', displayName });
     }
 
-    if (isSimpleThanksMessage(message)) {
-        return buildSimpleThanksReply();
+    if (isIsolatedCourtesyMessage(message)) {
+        return buildSymmetricCourtesyReply({ message, userType, displayName });
     }
 
     // Lutto: organizzazione omaggio floreale

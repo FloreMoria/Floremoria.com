@@ -23,6 +23,13 @@ export { buildVeraKnowledgeContext } from '@/lib/vera/knowledgeContext';
 export { buildVeraWhatsAppSystemInstruction } from '@/lib/vera/systemPrompt';
 export { buildGenderMorphologyBlock, detectGenderFromName, extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 export { sanitizeWhatsAppDisplayName, isUsableWhatsAppPersonName } from '@/lib/vera/displayName';
+export {
+    buildSymmetricCourtesyReply,
+    hasOperationalServiceIntent,
+    isIsolatedCourtesyMessage,
+    VERA_INTENT_BEFORE_ACTION_RULE,
+    VERA_SYMMETRIC_GREETING_RULE,
+} from '@/lib/vera/courtesyDebounce';
 export { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 export * from '@/lib/vera/orderWorkflow';

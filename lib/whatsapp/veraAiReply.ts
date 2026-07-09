@@ -5,19 +5,23 @@
  *  1. Prova le regole deterministiche di `buildWhatsAppAiReply` (whatsappKnowledge.ts).
  *  2. Se la risposta è identica al messaggio guida standard (nessun match specifico),
  *     chiama Gemini con il system prompt completo di VERA + cronologia sessione.
- *  3. Aggiunge la firma di chiusura solo quando l'Utente si congeda esplicitamente.
+ *  3. Aggiunge la firma di chiusura solo quando l'Utente si congeda esplicitamente
+ *     (arrivederci, buona notte — non su saluti isolati tipo "ciao" o "grazie").
  *
  * Chiusura tassativa (su saluto/addio o handoff umano):
  *   "Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹"
  */
 
 import {
+    buildSymmetricCourtesyReply,
+    isIsolatedCourtesyMessage,
+} from '@/lib/vera/courtesyDebounce';
+import {
     buildWhatsAppAiReply,
     buildSimpleThanksReply,
     ensureCatalogLinksInReply,
     ensureRespectfulOpening,
     isClosingMessage,
-    isSimpleThanksMessage,
     STANDARD_GUIDANCE_MESSAGE,
 } from '@/lib/whatsappKnowledge';
 import { isOrderTrackingInquiry, lookupActiveOrderByPhone, lookupLastOrderByPhone, tryBuildOrderTrackingReply } from '@/lib/whatsapp/orderStatusInquiry';
@@ -70,14 +74,8 @@ function isFarewellMessage(message: string): boolean {
     const m = normalizeForFarewell(message);
     if (!m) return false;
 
-    // Congedo esplicito
+    // Congedo esplicito (non saluti isolati: "ciao" / "grazie" da soli → saluto simmetrico)
     if (FAREWELL_PHRASES.some((phrase) => m.includes(phrase))) return true;
-
-    // "grazie" solo come chiusura breve (es. "grazie", "grazie mille")
-    if (/^grazie(\s+mille)?$/.test(m)) return true;
-
-    // "ciao" solo come congedo breve, non come apertura ("ciao vorrei...")
-    if (/^ciao(\s+ciao)?$/.test(m)) return true;
 
     // Ringraziamento + congedo nella stessa frase
     if (m.includes('grazie') && FAREWELL_PHRASES.some((phrase) => m.includes(phrase))) return true;
@@ -131,6 +129,9 @@ function polishVeraReply(
     session: ChatSession,
     callerContext: VeraCallerContext
 ): string {
+    if (isIsolatedCourtesyMessage(message)) {
+        return reply;
+    }
     const hasPriorOutbound = session.messages.some((m) => m.direction === 'OUTBOUND');
     const closing = isClosingMessage(message);
     const skipCatalogLinks = isOrderTrackingInquiry(message);
@@ -370,10 +371,14 @@ export async function generateVeraReply(
         return { text: escalationText, source: 'deterministic', shouldEscalate: true };
     }
 
-    // ── Ringraziamento / chiusura — risposta umana breve, senza link né Gemini ─
-    if (isSimpleThanksMessage(message)) {
+    // ── Saluto / cortesia isolata — risposta speculare, niente procedure ─────
+    if (isIsolatedCourtesyMessage(message)) {
         return {
-            text: `${buildSimpleThanksReply()}\n\n${VERA_CLOSING_SIGNATURE}`,
+            text: buildSymmetricCourtesyReply({
+                message,
+                userType: session.userType,
+                displayName: getDisplayNameFromSession(session, callerContext),
+            }),
             source: 'deterministic',
             shouldEscalate: false,
         };

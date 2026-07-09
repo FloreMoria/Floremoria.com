@@ -40,9 +40,11 @@ function parseEnvFile(path: string): Record<string, string> {
     return out;
 }
 
-function isLocalDatabaseUrl(url: string): boolean {
-    const host = url.match(/@([^/:?]+)/)?.[1] ?? '';
-    return host === 'localhost' || host === '127.0.0.1';
+function isUsableDatabaseUrl(url: string | undefined): url is string {
+    if (!url?.trim()) return false;
+    const trimmed = url.trim().replace(/^["']|["']$/g, '');
+    if (!trimmed || trimmed === '""' || trimmed === "''") return false;
+    return trimmed.startsWith('postgresql://') || trimmed.startsWith('postgres://');
 }
 
 export function resolveProductionDatabaseUrl(cwd: string = process.cwd()): string | null {
@@ -53,7 +55,7 @@ export function resolveProductionDatabaseUrl(cwd: string = process.cwd()): strin
 
     for (const key of DB_URL_KEYS) {
         const v = process.env[key]?.trim() || merged[key]?.trim();
-        if (v && !isLocalDatabaseUrl(v)) return v;
+        if (isUsableDatabaseUrl(v) && !isLocalDatabaseUrl(v)) return v.replace(/^["']|["']$/g, '');
     }
 
     const host =
@@ -76,9 +78,17 @@ export function resolveProductionDatabaseUrl(cwd: string = process.cwd()): strin
         merged.DATABASE_POSTGRES_USER?.trim() ||
         'neondb_owner';
 
-    if (host && password) {
-        return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}/${database}?sslmode=require`;
+    if (host && password && password.replace(/^["']|["']$/g, '')) {
+        const cleanHost = host.replace(/^["']|["']$/g, '');
+        const cleanPassword = password.replace(/^["']|["']$/g, '');
+        if (!cleanHost || !cleanPassword) return null;
+        return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(cleanPassword)}@${cleanHost}/${database}?sslmode=require`;
     }
 
     return null;
+}
+
+function isLocalDatabaseUrl(url: string): boolean {
+    const host = url.match(/@([^/:?]+)/)?.[1] ?? '';
+    return host === 'localhost' || host === '127.0.0.1';
 }

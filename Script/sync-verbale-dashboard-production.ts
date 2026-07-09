@@ -1,15 +1,13 @@
 /**
  * Scrive il verbale canonico su Neon produzione (floremoria_logs).
- * La dashboard Vercel legge Neon — non il Postgres locale di .env.local.
- *
- * Uso:
- *   VERBALE_FORCE_ISO=2026-06-19 npx tsx Script/sync-verbale-dashboard-production.ts
+ * Prova connessione diretta; se DATABASE_URL non è nel pull Vercel, usa API admin.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
 import { resolveProductionDatabaseUrl } from '../lib/database/resolveProductionDatabaseUrl';
 import { printDatabaseReachabilityHelp } from '../lib/loadEnvFiles';
 import { syncVerbaleToFloremoriaLog } from '../lib/verbali/syncVerbaleToFloremoriaLog';
+import { pushVerbaleToProductionApi } from '../lib/verbali/pushVerbaleProductionApi';
 import { docsVerbalePath, obsidianGiornalieroRel } from '../lib/verbali/paths';
 
 async function main(): Promise<void> {
@@ -38,9 +36,14 @@ async function main(): Promise<void> {
 
     const dbUrl = resolveProductionDatabaseUrl(cwd);
     if (!dbUrl) {
-        throw new Error(
-            'DATABASE_URL produzione non trovato. Esegui: npx vercel env pull .env.vercel.production.local --environment=production'
+        console.warn(
+            'DATABASE_URL produzione non disponibile nel pull Vercel (segreti spesso vuoti in locale). Fallback via API admin…'
         );
+        const result = await pushVerbaleToProductionApi(cwd, iso);
+        console.log(
+            `✓ Produzione (API): ${result.action} log id=${result.id} tag=${result.tag} (${iso})`
+        );
+        return;
     }
 
     if (dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')) {
@@ -57,7 +60,13 @@ async function main(): Promise<void> {
             sourceRelPath: obsidianGiornalieroRel(iso),
         });
         console.log(
-            `✓ Neon produzione: ${result.action} log id=${result.id} tag=${result.tag} (${iso})`
+            `✓ Neon produzione (diretto): ${result.action} log id=${result.id} tag=${result.tag} (${iso})`
+        );
+    } catch (error) {
+        console.warn('Connessione Neon diretta fallita. Fallback via API admin…', error);
+        const result = await pushVerbaleToProductionApi(cwd, iso);
+        console.log(
+            `✓ Produzione (API): ${result.action} log id=${result.id} tag=${result.tag} (${iso})`
         );
     } finally {
         await prisma.$disconnect();

@@ -1,10 +1,18 @@
-# Applica le migration Prisma su Neon produzione (workflow manuale).
+# Applica le migration Prisma su Neon produzione.
+# Separato dal build Vercel per evitare lock P1002 su deploy paralleli.
 # Usa il secret GitHub DATABASE_URL (stesso Neon di Vercel Production).
 
 name: Database migrate deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'prisma/migrations/**'
+      - 'prisma/schema.prisma'
+      - '.github/workflows/db-migrate-deploy.yml'
 
 concurrency:
   group: db-migrate-deploy

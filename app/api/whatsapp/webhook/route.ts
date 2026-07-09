@@ -98,7 +98,7 @@ function verifyMetaWebhookSignature(request: NextRequest, rawBody: string): bool
 }
 
 function metaMediaProxyUrl(mediaId: string): string {
-    return `/api/admin/whatsapp/media/${mediaId}`;
+    return `/api/dashboard/whatsapp/media/${mediaId}`;
 }
 
 function extractMetaMessageContent(msg: MetaWebhookMessage): { text: string; mediaUrl?: string } {

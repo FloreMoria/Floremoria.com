@@ -8,7 +8,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/admin/whatsapp/media/[mediaId] — retrocompatibilità; preferire /api/dashboard/whatsapp/media/. */
+/** GET /api/dashboard/whatsapp/media/[mediaId] — proxy media Meta per staff ADMIN/SUPER_ADMIN. */
 export async function GET(
     request: NextRequest,
     context: { params: Promise<{ mediaId: string }> }
@@ -30,7 +30,7 @@ export async function GET(
         return buildWhatsAppMediaResponse(buffer, mimeType, mediaId.trim(), download);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`[wa-media-proxy] admin ${mediaId}:`, message);
+        console.error(`[wa-media-proxy] dashboard ${mediaId}:`, message);
         if (message.includes('metadata_fetch_failed') || message.includes('media_download_failed')) {
             return new Response('Failed to fetch media from Meta', { status: 502 });
         }

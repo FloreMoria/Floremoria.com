@@ -50,6 +50,13 @@ function isWhatsAppAdminApiPath(pathname: string): boolean {
     return pathname === '/api/admin/whatsapp/status' || pathname.startsWith('/api/admin/whatsapp/status/');
 }
 
+function isWhatsAppMediaApiPath(pathname: string): boolean {
+    return (
+        pathname.startsWith('/api/admin/whatsapp/media/') ||
+        pathname.startsWith('/api/dashboard/whatsapp/media/')
+    );
+}
+
 function isWhatsAppSetupPath(pathname: string): boolean {
     return (
         pathname === '/admin-panel/whatsapp-setup' ||
@@ -158,9 +165,9 @@ export function proxy(request: NextRequest) {
         }
     }
 
-    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname)) {
+    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
         if (!userRole) {
-            if (isWhatsAppAdminApiPath(pathname)) {
+            if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
                 return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
             }
             return applyDashboardSecurityHeaders(
@@ -169,7 +176,7 @@ export function proxy(request: NextRequest) {
             );
         }
         if (!isDashboardAdminRole(userRole)) {
-            if (isWhatsAppAdminApiPath(pathname)) {
+            if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
                 return NextResponse.json({ error: 'Accesso riservato agli admin.' }, { status: 403 });
             }
             return applyDashboardSecurityHeaders(

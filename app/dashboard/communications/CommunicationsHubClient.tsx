@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
+import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
@@ -407,10 +408,10 @@ function VisioneTab({
                       >
                         {m.mediaUrl ? (
                           <div>
-                            <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                              <img src={m.mediaUrl} alt="Visual Proof" className="w-full h-auto max-h-[250px] object-contain hover:scale-102 transition-transform duration-300" />
-                            </a>
-                            {m.body && <p className="pt-1.5 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>}
+                            <ChatMessageMedia
+                              mediaUrl={m.mediaUrl}
+                              caption={m.body ? renderLinkedMessage(m.body) : null}
+                            />
                           </div>
                         ) : (
                           <p className="pb-3 pr-10 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>

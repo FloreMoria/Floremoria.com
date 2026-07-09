@@ -20,6 +20,7 @@ import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
+import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -226,6 +227,13 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     if (session.status === 'HUMAN_INTERVENTION') {
         await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
         console.info(`[wa-webhook] HUMAN_INTERVENTION attivo per ${phoneE164}: messaggio registrato, nessuna risposta AI.`);
+        void notifyStaffOfWhatsAppInbound({
+            senderName,
+            phoneE164,
+            messagePreview: inboundBody,
+            userType: session.userType,
+            escalated: true,
+        }).catch((err) => console.warn('[staff-push] notify failed:', err));
         return { ok: true, skipped: 'human_intervention' };
     }
 
@@ -237,6 +245,14 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     if (veraResult.shouldEscalate) {
         await setSessionStatus(phoneKey, 'HUMAN_INTERVENTION');
     }
+
+    void notifyStaffOfWhatsAppInbound({
+        senderName,
+        phoneE164,
+        messagePreview: inboundBody,
+        userType: updatedSession.userType,
+        escalated: veraResult.shouldEscalate,
+    }).catch((err) => console.warn('[staff-push] notify failed:', err));
 
     const sendResult = await sendWhatsAppTextMessage(phoneE164, veraResult.text);
 

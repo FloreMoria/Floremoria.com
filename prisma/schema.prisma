@@ -414,6 +414,17 @@ model SystemState {
   @@map("system_state")
 }
 
+/** Sottoscrizioni Web Push (VAPID) dei dispositivi staff per avvisi WhatsApp. */
+model StaffPushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("staff_push_subscriptions")
+}
+
 /** Mittenti email esclusi dal risponditore automatico assistenza@ (spam, newsletter, robot). */
 model EmailBlacklist {
   id        String   @id @default(cuid())

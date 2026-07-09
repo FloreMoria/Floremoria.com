@@ -45,7 +45,8 @@
     "ga4:oauth-setup": "node scripts/ga4-oauth-setup.mjs",
     "ga4:list-properties": "node scripts/ga4-list-properties.mjs",
     "postman:setup-resend": "tsx scripts/setup-resend-assistenza.ts",
-    "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts"
+    "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts",
+    "push:generate-vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -71,7 +72,8 @@
     "stripe": "^22.1.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.32.6",
-    "twilio": "^6.0.0"
+    "twilio": "^6.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -83,6 +85,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/swagger-jsdoc": "^6.0.4",
+    "@types/web-push": "^3.6.4",
     "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",

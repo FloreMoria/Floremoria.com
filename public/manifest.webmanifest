@@ -1,0 +1,24 @@
+{
+  "name": "FloreMoria Staff",
+  "short_name": "FM Staff",
+  "description": "Messaggi WhatsApp e assistenza FloreMoria per lo staff.",
+  "start_url": "/dashboard/communications",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#C0A062",
+  "icons": [
+    {
+      "src": "/icon-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon-v2.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

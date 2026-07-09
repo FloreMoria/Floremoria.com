@@ -1,13 +1,23 @@
 import { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
 import TopNavLink from '@/components/dashboard/TopNavLink';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 
-export const metadata = {
+export const metadata: Metadata = {
     title: 'FloreMoria Dashboard',
     description: 'Sistema gestionale avanzato FloreMoria.',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'default',
+        title: 'FloreMoria Staff',
+    },
+    icons: {
+        apple: [{ url: '/apple-icon-v2.png', sizes: '180x180', type: 'image/png' }],
+    },
 };
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

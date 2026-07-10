@@ -1,5 +1,6 @@
 import { addMessage, updateSessionProfile } from '@/lib/chatStore';
 import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
+import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 
 const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'WHATSAPP_TEMPLATE_CUSTOMER_ORDER_CONFIRM_BODY',
@@ -22,6 +23,10 @@ export function renderVeraTemplateBodyPreview(
     }, template);
 }
 
+/**
+ * Registra in dashboard una sessione chat attiva subito dopo l'invio template VERA.
+ * Non attende la risposta inbound: la conversazione è visibile in /dashboard/communications.
+ */
 export async function logVeraTemplateOutbound(input: {
     phoneE164: string;
     templateId: VeraTemplateId;
@@ -35,20 +40,33 @@ export async function logVeraTemplateOutbound(input: {
 }): Promise<void> {
     const sessionPhone = `whatsapp:${input.phoneE164}`;
     const preview = renderVeraTemplateBodyPreview(input.templateId, input.bodyParams);
+    const contactName = input.contactName?.trim();
 
-    await addMessage(sessionPhone, 'OUTBOUND', preview, undefined, {
-        eventType: input.eventType,
-        outboundMode: 'template',
-        templateId: input.templateId,
-        ...(input.orderId ? { orderId: input.orderId } : {}),
-        ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
-        ...(input.messageId ? { whatsAppMessageId: input.messageId } : {}),
-    }).catch(() => undefined);
+    try {
+        await addMessage(sessionPhone, 'OUTBOUND', preview, undefined, {
+            eventType: input.eventType,
+            outboundMode: 'template',
+            templateId: input.templateId,
+            ...(input.orderId ? { orderId: input.orderId } : {}),
+            ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
+            ...(input.messageId ? { whatsAppMessageId: input.messageId } : {}),
+        });
 
-    if (input.contactName || input.userType) {
         await updateSessionProfile(sessionPhone, {
-            ...(input.contactName ? { name: input.contactName } : {}),
+            ...(contactName ? { name: contactName, initials: buildContactInitials(contactName) } : {}),
             ...(input.userType ? { userType: input.userType } : {}),
-        }).catch(() => undefined);
+            status: 'AI_ACTIVE',
+            welcomeSent: true,
+        });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('[vera-template-log] Impossibile registrare sessione chat dashboard:', {
+            sessionPhone,
+            templateId: input.templateId,
+            eventType: input.eventType,
+            orderId: input.orderId,
+            error: message,
+        });
+        throw err;
     }
 }

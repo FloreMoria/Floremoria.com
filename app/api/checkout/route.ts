@@ -13,6 +13,7 @@ import {
     normalizeDeliveryProvince,
     normalizeOrderCategory,
 } from '@/lib/orders/orderNumber';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -271,6 +272,9 @@ export async function POST(request: Request) {
             });
         }
 
+        const normalizedBuyerPhone =
+            typeof buyerPhone === 'string' ? normalizePhoneE164(buyerPhone.trim()) || buyerPhone.trim() : buyerPhone;
+
         // Onboarding Silenzioso: cerca o crea l'utente con ruolo USER ed email acquirente
         let buyerUserId: string | null = null;
         if (buyerEmail && typeof buyerEmail === 'string' && buyerEmail.trim().includes('@')) {
@@ -285,7 +289,7 @@ export async function POST(request: Request) {
                         data: {
                             email: emailTrim,
                             name: typeof buyerFullName === 'string' ? buyerFullName.trim() : null,
-                            phone: typeof buyerPhone === 'string' ? buyerPhone.trim() : null,
+                            phone: typeof normalizedBuyerPhone === 'string' ? normalizedBuyerPhone : null,
                             systemRole: 'USER',
                             isActive: true, // I clienti privati (USER) sono subito pronti per l'accesso Magic Link
                         },
@@ -312,7 +316,7 @@ export async function POST(request: Request) {
                             buyerEmail,
                             isRecurring,
                             userId: buyerUserId,
-                            customerPhone: buyerPhone,
+                            customerPhone: normalizedBuyerPhone,
                             deceasedName,
                             cemeteryName,
                             gravePosition: finalGravePosition,
@@ -445,7 +449,7 @@ export async function POST(request: Request) {
         });
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.floremoria.com';
-        const successUrl = `${baseUrl}/order-completed?orderId=${order.orderNumber}&margin=${totalMarginCents}&phone=${encodeURIComponent(buyerPhone)}&prov=${prov}`;
+        const successUrl = `${baseUrl}/order-completed?orderId=${order.orderNumber}&margin=${totalMarginCents}&phone=${encodeURIComponent(normalizedBuyerPhone || buyerPhone || '')}&prov=${prov}`;
 
         const buyerEmailTrimmed = typeof buyerEmail === 'string' ? buyerEmail.trim() : '';
         const validCustomerEmail =

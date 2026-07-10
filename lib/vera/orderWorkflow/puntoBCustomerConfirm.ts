@@ -8,7 +8,7 @@ import {
 } from '@/lib/vera/orderWorkflow/types';
 import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
-import { addMessage, updateSessionProfile } from '@/lib/chatStore';
+import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface PuntoBResult {
@@ -34,7 +34,14 @@ export async function runPuntoBCustomerOrderConfirm(orderId: string): Promise<Pu
     }
 
     const phoneE164 = normalizePhoneE164(order.customerPhone);
-    if (!phoneE164) return { ok: false, skipped: 'invalid_phone' };
+    if (!phoneE164) {
+        console.warn('[vera-workflow] Punto B saltato: telefono non valido', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerPhone: order.customerPhone,
+        });
+        return { ok: false, skipped: 'invalid_phone' };
+    }
 
     const buyerName = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
     const warmThought = await generateWarmOrderThought({
@@ -52,16 +59,21 @@ export async function runPuntoBCustomerOrderConfirm(orderId: string): Promise<Pu
 
     if (!send.ok) return { ok: false, error: send.error };
 
-    const sessionPhone = `whatsapp:${phoneE164}`;
-    const preview = `Gentile ${buyerName || 'Utente'}, conferma ordine per ${order.deceasedName}. ${warmThought}`;
-    await addMessage(sessionPhone, 'OUTBOUND', preview, undefined, {
-        eventType: 'ORDER_CONFIRM_TEMPLATE',
-        orderId: order.id,
-        ...(order.orderNumber ? { orderNumber: order.orderNumber } : {}),
-    }).catch(() => undefined);
-    await updateSessionProfile(sessionPhone, { userType: 'UTENTE', name: buyerName || undefined }).catch(
-        () => undefined
-    );
+    try {
+        await logVeraTemplateOutbound({
+            phoneE164,
+            templateId: 'customer_order_confirm',
+            bodyParams,
+            eventType: 'ORDER_CONFIRM_TEMPLATE',
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            messageId: send.messageId,
+            contactName: buyerName || order.buyerFullName || undefined,
+            userType: 'UTENTE',
+        });
+    } catch (logErr) {
+        console.error('[vera-workflow] Punto B inviato ma sessione dashboard non registrata:', logErr);
+    }
 
     await prisma.order.update({
         where: { id: order.id },

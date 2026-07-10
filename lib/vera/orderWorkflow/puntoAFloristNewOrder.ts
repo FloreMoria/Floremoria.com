@@ -3,6 +3,8 @@ import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristComp
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import {
     detectIsFirstOrderForPartner,
@@ -16,6 +18,7 @@ import {
     TEMPLATE_CASCADE_DELAY_MS,
     type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 
 export interface PuntoAResult {
     ok: boolean;
@@ -56,6 +59,36 @@ async function updateWorkflowFlags(orderId: string, flags: VeraWorkflowFlags): P
     });
 }
 
+async function logFloristTemplateToDashboard(input: {
+    phoneE164: string;
+    templateId: VeraTemplateId;
+    bodyParams: string[];
+    orderId: string;
+    orderNumber: string;
+    floristName: string;
+    messageId?: string;
+}): Promise<void> {
+    try {
+        await logVeraTemplateOutbound({
+            phoneE164: input.phoneE164,
+            templateId: input.templateId,
+            bodyParams: input.bodyParams,
+            eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+            messageId: input.messageId,
+            contactName: input.floristName,
+            userType: 'FLORIST',
+        });
+    } catch (logErr) {
+        console.error('[vera-workflow] Template fiorista inviato ma sessione dashboard non registrata:', {
+            orderId: input.orderId,
+            templateId: input.templateId,
+            error: logErr,
+        });
+    }
+}
+
 /**
  * PUNTO A — Notifica fiorista nuovo ordine (cascata 4 template o singolo repeat).
  */
@@ -77,7 +110,17 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
         return { ok: true, skipped: 'already_sent' };
     }
 
-    const floristPhone = order.partner.whatsappNumber.trim();
+    const floristPhoneRaw = order.partner.whatsappNumber.trim();
+    const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
+    if (!floristPhoneE164) {
+        console.warn('[vera-workflow] Punto A saltato: telefono fiorista non valido', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            whatsappNumber: floristPhoneRaw,
+        });
+        return { ok: false, skipped: 'invalid_florist_phone' };
+    }
+
     const floristName = extractFirstName(order.partner.ownerName || order.partner.shopName);
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
     const compensation = calculateFloristCompensation(order.items);
@@ -116,7 +159,7 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
 
         for (let i = 0; i < steps.length; i += 1) {
             const step = steps[i]!;
-            const result = await sendVeraTemplate(floristPhone, step.template, step.params);
+            const result = await sendVeraTemplate(floristPhoneE164, step.template, step.params);
             if (!result.ok) {
                 return {
                     ok: false,
@@ -124,20 +167,39 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
                     error: result.error ?? `cascade_step_${i + 1}_failed`,
                 };
             }
+            await logFloristTemplateToDashboard({
+                phoneE164: floristPhoneE164,
+                templateId: step.template,
+                bodyParams: step.params,
+                orderId: order.id,
+                orderNumber: orderCode,
+                floristName,
+                messageId: result.messageId,
+            });
             if (i < steps.length - 1) await sleep(TEMPLATE_CASCADE_DELAY_MS);
         }
     } else {
-        const send = await sendVeraTemplate(floristPhone, 'florist_repeat', [
+        const repeatParams = [
             floristName,
             order.deceasedName,
             cemeteryLabel,
             deliveryUrl,
             orderCode,
             compensation.totalLabel,
-        ]);
+        ];
+        const send = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', repeatParams);
         if (!send.ok) {
             return { ok: false, isFirstOrder: false, error: send.error };
         }
+        await logFloristTemplateToDashboard({
+            phoneE164: floristPhoneE164,
+            templateId: 'florist_repeat',
+            bodyParams: repeatParams,
+            orderId: order.id,
+            orderNumber: orderCode,
+            floristName,
+            messageId: send.messageId,
+        });
     }
 
     await updateWorkflowFlags(order.id, markWorkflowStep(flags, 'puntoA_florist'));

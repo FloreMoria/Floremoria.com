@@ -51,9 +51,13 @@ export interface MetaCloudCredentials {
     phoneNumberId: string;
 }
 
+/** Prefissi internazionali comuni (clienti diaspora .eu) senza + in input. */
+const INTL_COUNTRY_PREFIXES =
+    '33|49|44|41|34|31|32|43|48|30|36|40|351|352|353|358|386|420|421|45|46|47|39';
+
 /**
  * Normalizza un numero grezzo in E.164 (con prefisso +).
- * Meta invia `from` come cifre internazionali senza +; l'output è sempre +39…
+ * Default Italia (+39) solo se il numero non sembra già internazionale.
  */
 export function normalizePhoneE164(raw: string | null | undefined): string | null {
     if (!raw) return null;
@@ -62,6 +66,7 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
     if (p.startsWith('00')) p = `+${p.slice(2)}`;
     if (!p.startsWith('+')) {
         if (p.startsWith('39') && p.length >= 11) p = `+${p}`;
+        else if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) p = `+${p}`;
         else p = `+39${p}`;
     }
     if (!/^\+\d{8,15}$/.test(p)) return null;

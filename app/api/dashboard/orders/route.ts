@@ -62,7 +62,6 @@ export async function POST(request: Request) {
         scheduleVeraOnDashboardManualOrder({
             orderId: order.id,
             partnerPaymentStatus: order.partnerPaymentStatus,
-            isTest: Boolean(order.isTest),
         });
 
         return NextResponse.json({ ok: true, order });

@@ -79,7 +79,7 @@ export default function TestModeOverviewBar({ initialTestModeActive }: Props) {
                         <p className="font-semibold text-sm text-slate-900">Modalità Test</p>
                         <p className="text-xs text-slate-600 mt-0.5">
                             {testModeActive
-                                ? 'Sandbox attiva: vedi solo dati di test. I nuovi ordini/utenti manuali saranno contrassegnati.'
+                                ? 'Vedi solo dati di test. VERA e WhatsApp funzionano normalmente; i nuovi ordini/utenti manuali restano separati dalla produzione.'
                                 : 'Dashboard produzione: i record di test sono nascosti.'}
                         </p>
                         {testModeActive ? (

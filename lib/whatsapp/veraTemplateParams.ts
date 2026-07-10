@@ -1,4 +1,5 @@
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import { clampWarmThoughtForTemplate, MAX_WARM_THOUGHT_TEMPLATE_CHARS } from '@/lib/vera/clampWarmThought';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import {
@@ -82,7 +83,11 @@ export function buildCustomerOrderConfirmParams(input: {
     return buildVeraTemplateBodyParams('customer_order_confirm', {
         buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
         deceasedName: requireText(input.deceasedName || 'chi ama', 'deceasedName', 120),
-        warmThought: requireText(input.warmThought, 'warmThought'),
+        warmThought: requireText(
+            clampWarmThoughtForTemplate(input.warmThought),
+            'warmThought',
+            MAX_WARM_THOUGHT_TEMPLATE_CHARS
+        ),
     });
 }
 

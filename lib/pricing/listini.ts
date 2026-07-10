@@ -32,6 +32,11 @@ export const LISTINO_FUNERALE: readonly ListinoEntry[] = [
     { key: 'candele', label: 'Ceri / Candele', category: 'funerale', floristCents: 1000 },
     { key: 'nastro-commemorativo', label: 'Nastro commemorativo', category: 'funerale', floristCents: 0 },
     { key: 'nastro', label: 'Nastro commemorativo', category: 'funerale', floristCents: 0 },
+    { key: 'margherite-gerbere', label: 'Margherite/Gerbere', category: 'funerale', floristCents: 2300 },
+    { key: 'margherite', label: 'Margherite/Gerbere', category: 'funerale', floristCents: 2300 },
+    { key: 'gerbere', label: 'Margherite/Gerbere', category: 'funerale', floristCents: 2300 },
+    { key: 'kalonche', label: 'Kalonche', category: 'funerale', floristCents: 2200 },
+    { key: 'biglietto-messaggio', label: 'Biglietto messaggio', category: 'funerale', floristCents: 0 },
 ] as const;
 
 /** Tombe — listino ufficiale fiorista */
@@ -95,7 +100,9 @@ export function resolveListinoEntry(
     if (/5\s*rose|bouquet\s*di\s*rose/.test(label)) return listinoByKey.get('bouquet-di-rose') ?? null;
     if (/ricordo\s*affettuoso/.test(label)) return listinoByKey.get('bouquet-ricordo-affettuoso') ?? null;
     if (/lumino/.test(label)) return listinoByKey.get('lumino') ?? null;
-    if (/messaggio|bigliett/.test(label)) return listinoByKey.get('messaggio') ?? null;
+    if (/margherite|gerbere/.test(label)) return listinoByKey.get('margherite-gerbere') ?? null;
+    if (/kalonche|kalanchoe/.test(label)) return listinoByKey.get('kalonche') ?? null;
+    if (/bigliett/.test(label)) return listinoByKey.get('biglietto-messaggio') ?? null;
 
     return null;
 }

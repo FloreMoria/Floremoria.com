@@ -17,10 +17,18 @@ export interface PuntoBResult {
     error?: string;
 }
 
+export interface PuntoBOptions {
+    /** Reinvio manuale anche se puntoB_customer già marcato. */
+    force?: boolean;
+}
+
 /**
  * PUNTO B — Conferma ordine utente via template Meta + pensiero caloroso Gemini ({{3}}).
  */
-export async function runPuntoBCustomerOrderConfirm(orderId: string): Promise<PuntoBResult> {
+export async function runPuntoBCustomerOrderConfirm(
+    orderId: string,
+    options: PuntoBOptions = {}
+): Promise<PuntoBResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
         include: { user: { select: { name: true } } },
@@ -29,7 +37,7 @@ export async function runPuntoBCustomerOrderConfirm(orderId: string): Promise<Pu
     if (!order) return { ok: false, skipped: 'order_not_found' };
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-    if (isWorkflowStepDone(flags, 'puntoB_customer')) {
+    if (!options.force && isWorkflowStepDone(flags, 'puntoB_customer')) {
         return { ok: true, skipped: 'already_sent' };
     }
 

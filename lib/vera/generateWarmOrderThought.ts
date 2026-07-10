@@ -1,7 +1,8 @@
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import { clampWarmThoughtForTemplate } from '@/lib/vera/clampWarmThought';
 
 const FALLBACK_THOUGHT =
-    'Ci prendiamo cura di ogni dettaglio con la massima dedizione e Le trasmetteremo la testimonianza fotografica non appena i fiori saranno posati.';
+    'Ci prendiamo cura di ogni dettaglio con dedizione e Le invieremo la foto non appena i fiori saranno posati.';
 
 /**
  * Genera il pensiero caloroso {{3}} per floremoria_conferma_ordine_utente.
@@ -18,10 +19,10 @@ export async function generateWarmOrderThought(input: {
     if (!apiKey) return FALLBACK_THOUGHT;
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
-    const prompt = `Scrivi UNA sola frase calda e rispettosa in italiano (max 220 caratteri), senza saluti né firma.
-Destinatario: ${name}. Ricordo per: ${deceased}.
+    const prompt = `Scrivi UNA sola frase calda e rispettosa in italiano (massimo 100 caratteri), senza saluti, senza nome del destinatario, senza firma.
+Contesto: messaggio di conferma ordine floreale funebre per il ricordo di ${deceased}.
 Tono: garbo, lutto, rassicurazione sulla cura floreale e sulla foto prova imminente.
-Niente prezzi, link o codici ordine.`;
+Niente prezzi, link, codici ordine, "caro/cordiali". Inizia direttamente con il contenuto (es. "Ci prendiamo cura…").`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -33,7 +34,7 @@ Niente prezzi, link o codici ordine.`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.6, maxOutputTokens: 120 },
+                generationConfig: { temperature: 0.6, maxOutputTokens: 80 },
             }),
             signal: controller.signal,
         });
@@ -49,7 +50,8 @@ Niente prezzi, link o codici ordine.`;
             .trim();
 
         if (!text || text.length < 12) return FALLBACK_THOUGHT;
-        return text.slice(0, 900);
+        const clamped = clampWarmThoughtForTemplate(text);
+        return clamped || FALLBACK_THOUGHT;
     } catch {
         return FALLBACK_THOUGHT;
     }

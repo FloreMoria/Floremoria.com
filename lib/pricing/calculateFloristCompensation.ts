@@ -58,3 +58,10 @@ export function calculateFloristCompensation(
         unmappedProducts,
     };
 }
+
+/** Etichetta compenso per template WhatsApp: evita "0,00€" fuorviante se listino non mappato. */
+export function formatFloristCompensationForTemplate(result: FloristCompensationResult): string {
+    if (result.totalCents > 0) return result.totalLabel;
+    if (result.unmappedProducts.length > 0) return 'da confermare in app';
+    return result.totalLabel;
+}

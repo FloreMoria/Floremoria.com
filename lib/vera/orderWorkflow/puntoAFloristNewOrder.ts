@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristCompensation';
+import { calculateFloristCompensation, formatFloristCompensationForTemplate } from '@/lib/pricing/calculateFloristCompensation';
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
@@ -26,6 +26,11 @@ export interface PuntoAResult {
     blocked?: boolean;
     isFirstOrder?: boolean;
     error?: string;
+}
+
+export interface PuntoAOptions {
+    /** Reinvio manuale anche se puntoA_florist già marcato. */
+    force?: boolean;
 }
 
 function yesNo(value: boolean): string {
@@ -89,10 +94,56 @@ async function logFloristTemplateToDashboard(input: {
     }
 }
 
+type FloristCascadeStep = {
+    template: 'florist_first_001' | 'florist_first_002' | 'florist_first_003' | 'florist_first_004';
+    params: string[];
+};
+
+async function sendFloristCascade(input: {
+    phoneE164: string;
+    steps: FloristCascadeStep[];
+    orderId: string;
+    orderNumber: string;
+    floristName: string;
+    isFirstOrder: boolean;
+}): Promise<PuntoAResult> {
+    for (let i = 0; i < input.steps.length; i += 1) {
+        const step = input.steps[i]!;
+        const result = await sendVeraTemplate(input.phoneE164, step.template, step.params);
+        if (!result.ok) {
+            return {
+                ok: false,
+                isFirstOrder: input.isFirstOrder,
+                error: result.error ?? `cascade_step_${i + 1}_failed`,
+            };
+        }
+        await logFloristTemplateToDashboard({
+            phoneE164: input.phoneE164,
+            templateId: step.template,
+            bodyParams: step.params,
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+            floristName: input.floristName,
+            messageId: result.messageId,
+        });
+        if (i < input.steps.length - 1) await sleep(TEMPLATE_CASCADE_DELAY_MS);
+    }
+    return { ok: true, isFirstOrder: input.isFirstOrder };
+}
+
+function buildDeliveryPositionLabel(gravePosition: string, cemeteryLabel: string): string {
+    if (gravePosition) return gravePosition;
+    if (/casa funeraria|chiesa|sede/i.test(cemeteryLabel)) return 'Consegna in sede';
+    return 'Indicazioni in app';
+}
+
 /**
- * PUNTO A — Notifica fiorista nuovo ordine (cascata 4 template o singolo repeat).
+ * PUNTO A — Notifica fiorista nuovo ordine (cascata template leggibile, mai il vecchio monolite con pipe).
  */
-export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAResult> {
+export async function runPuntoAFloristNewOrder(
+    orderId: string,
+    options: PuntoAOptions = {}
+): Promise<PuntoAResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
         include: {
@@ -106,7 +157,7 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-    if (isWorkflowStepDone(flags, 'puntoA_florist')) {
+    if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
         return { ok: true, skipped: 'already_sent' };
     }
 
@@ -124,17 +175,31 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
     const floristName = extractFirstName(order.partner.ownerName || order.partner.shopName);
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
     const compensation = calculateFloristCompensation(order.items);
+    const compensationLabel = formatFloristCompensationForTemplate(compensation);
     const orderCode = order.orderNumber || order.id;
     const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
     const gravePosition = order.gravePosition?.trim() || '';
+    const deliveryPosition = buildDeliveryPositionLabel(gravePosition, cemeteryLabel);
+
+    if (compensation.totalCents === 0 && compensation.unmappedProducts.length > 0) {
+        await setVeraOperationalAlert({
+            orderId: order.id,
+            type: 'listino_missing',
+            message: `Compenso fiorista non calcolabile (listino): ${compensation.unmappedProducts.join(', ')}. Ordine ${orderCode}.`,
+            priority: 'urgent',
+            freezeOrder: false,
+        }).catch(() => undefined);
+    }
 
     const isFirst =
         order.isFirstOrderForPartner ??
         (await detectIsFirstOrderForPartner(order.id, order.partnerId));
     await persistFirstOrderFlag(order.id, isFirst);
 
+    let cascadeResult: PuntoAResult;
+
     if (isFirst) {
-        if (!gravePosition) {
+        if (!gravePosition && !/casa funeraria|chiesa/i.test(cemeteryLabel)) {
             await setVeraOperationalAlert({
                 orderId: order.id,
                 type: 'grave_position_missing',
@@ -150,57 +215,44 @@ export async function runPuntoAFloristNewOrder(orderId: string): Promise<PuntoAR
         const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
         const ticketText = order.ticketMessage?.trim() || '—';
 
-        const steps: Array<{ template: 'florist_first_001' | 'florist_first_002' | 'florist_first_003' | 'florist_first_004'; params: string[] }> = [
-            { template: 'florist_first_001', params: [floristName, orderCode, compensation.totalLabel] },
-            { template: 'florist_first_002', params: [yesNo(lumino), yesNo(bigliettino), ticketText] },
-            { template: 'florist_first_003', params: [order.deceasedName, cemeteryLabel, gravePosition] },
-            { template: 'florist_first_004', params: [deliveryUrl] },
-        ];
-
-        for (let i = 0; i < steps.length; i += 1) {
-            const step = steps[i]!;
-            const result = await sendVeraTemplate(floristPhoneE164, step.template, step.params);
-            if (!result.ok) {
-                return {
-                    ok: false,
-                    isFirstOrder: true,
-                    error: result.error ?? `cascade_step_${i + 1}_failed`,
-                };
-            }
-            await logFloristTemplateToDashboard({
-                phoneE164: floristPhoneE164,
-                templateId: step.template,
-                bodyParams: step.params,
-                orderId: order.id,
-                orderNumber: orderCode,
-                floristName,
-                messageId: result.messageId,
-            });
-            if (i < steps.length - 1) await sleep(TEMPLATE_CASCADE_DELAY_MS);
-        }
-    } else {
-        const repeatParams = [
-            floristName,
-            order.deceasedName,
-            cemeteryLabel,
-            deliveryUrl,
-            orderCode,
-            compensation.totalLabel,
-        ];
-        const send = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', repeatParams);
-        if (!send.ok) {
-            return { ok: false, isFirstOrder: false, error: send.error };
-        }
-        await logFloristTemplateToDashboard({
+        cascadeResult = await sendFloristCascade({
             phoneE164: floristPhoneE164,
-            templateId: 'florist_repeat',
-            bodyParams: repeatParams,
             orderId: order.id,
             orderNumber: orderCode,
             floristName,
-            messageId: send.messageId,
+            isFirstOrder: true,
+            steps: [
+                { template: 'florist_first_001', params: [floristName, orderCode, compensationLabel] },
+                { template: 'florist_first_002', params: [yesNo(lumino), yesNo(bigliettino), ticketText] },
+                { template: 'florist_first_003', params: [order.deceasedName, cemeteryLabel, deliveryPosition] },
+                { template: 'florist_first_004', params: [deliveryUrl] },
+            ],
+        });
+    } else {
+        const lumino = orderHasLumino(order.items);
+        const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
+        const repeatSteps: FloristCascadeStep[] = [
+            { template: 'florist_first_001', params: [floristName, orderCode, compensationLabel] },
+            { template: 'florist_first_003', params: [order.deceasedName, cemeteryLabel, deliveryPosition] },
+            { template: 'florist_first_004', params: [deliveryUrl] },
+        ];
+        if (lumino || bigliettino) {
+            repeatSteps.splice(1, 0, {
+                template: 'florist_first_002',
+                params: [yesNo(lumino), yesNo(bigliettino), order.ticketMessage?.trim() || '—'],
+            });
+        }
+        cascadeResult = await sendFloristCascade({
+            phoneE164: floristPhoneE164,
+            orderId: order.id,
+            orderNumber: orderCode,
+            floristName,
+            isFirstOrder: false,
+            steps: repeatSteps,
         });
     }
+
+    if (!cascadeResult.ok) return cascadeResult;
 
     await updateWorkflowFlags(order.id, markWorkflowStep(flags, 'puntoA_florist'));
     console.info(`[vera-workflow] Punto A OK ordine ${orderCode} first=${isFirst}`);

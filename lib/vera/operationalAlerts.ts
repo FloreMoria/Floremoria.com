@@ -5,7 +5,8 @@ export type VeraAlertType =
     | 'tomb_not_found'
     | 'cemetery_closed'
     | 'user_modification_request'
-    | 'workflow_blocked';
+    | 'workflow_blocked'
+    | 'listino_missing';
 
 export type VeraAlertPriority = 'normal' | 'high' | 'urgent';
 

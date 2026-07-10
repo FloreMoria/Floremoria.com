@@ -58,6 +58,47 @@ const STATUS_OPTIONS = [
     { value: 'PENDING', label: 'In attesa' },
 ];
 
+function formatVeraCreateFeedback(
+    vera?: {
+        skipped?: string;
+        customer?: { ok?: boolean; skipped?: string; error?: string };
+        florist?: { ok?: boolean; skipped?: string; blocked?: boolean; error?: string };
+    }
+): string | null {
+    if (!vera) return null;
+    if (vera.skipped === 'not_paid') {
+        return 'Ordine creato. VERA non inviata: imposta «Pagato» per attivare i messaggi automatici.';
+    }
+    if (vera.skipped === 'workflow_error') {
+        return 'Ordine creato, ma il workflow VERA ha restituito un errore. Controlla telefoni e log Vercel.';
+    }
+
+    const issues: string[] = [];
+    const c = vera.customer;
+    if (c && !c.ok && c.skipped !== 'already_sent') {
+        issues.push(
+            c.skipped === 'invalid_phone'
+                ? 'cliente: telefono non valido'
+                : `cliente: ${c.error || c.skipped || 'invio fallito'}`
+        );
+    }
+    const f = vera.florist;
+    if (f) {
+        if (f.blocked && f.error === 'grave_position_missing') {
+            issues.push('fiorista: manca posizione tomba (primo ordine)');
+        } else if (!f.ok && f.skipped !== 'already_sent') {
+            issues.push(
+                f.skipped === 'no_partner_whatsapp' || f.skipped === 'invalid_florist_phone'
+                    ? 'fiorista: WhatsApp non configurato o non valido'
+                    : `fiorista: ${f.error || f.skipped || 'invio fallito'}`
+            );
+        }
+    }
+
+    if (issues.length === 0) return null;
+    return `Ordine creato, ma VERA non ha inviato tutti i messaggi (${issues.join('; ')}).`;
+}
+
 type Props = {
     open: boolean;
     onClose: () => void;
@@ -283,12 +324,26 @@ function CreateOrderFormPanel({
                 }),
             });
 
-            const data = (await res.json()) as { ok?: boolean; order?: Record<string, unknown>; error?: string };
+            const data = (await res.json()) as {
+                ok?: boolean;
+                order?: Record<string, unknown>;
+                error?: string;
+                vera?: {
+                    skipped?: string;
+                    customer?: { ok?: boolean; skipped?: string; error?: string };
+                    florist?: { ok?: boolean; skipped?: string; blocked?: boolean; error?: string };
+                };
+            };
             if (!res.ok || !data.ok || !data.order) {
                 throw new Error(data.error || 'Creazione ordine non riuscita.');
             }
 
             onCreated(data.order);
+            const veraNote = formatVeraCreateFeedback(data.vera);
+            if (veraNote) {
+                setError(veraNote);
+                return;
+            }
             onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore imprevisto.');
@@ -639,8 +694,8 @@ function CreateOrderFormPanel({
                     </section>
 
                     <p className="text-xs text-gray-500">
-                        Nessun WhatsApp verrà inviato automaticamente. Le foto possono essere caricate dopo dal
-                        pannello admin o dal fiorista via mini-app.
+                        Con stato «Pagato» VERA invia conferma al cliente e notifica al fiorista (se assegnato).
+                        In Modalità Test i messaggi partono comunque; in dashboard vedi solo i record di test.
                     </p>
                 </form>
 

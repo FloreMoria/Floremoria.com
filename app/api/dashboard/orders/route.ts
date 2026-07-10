@@ -3,7 +3,7 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
-import { scheduleVeraOnDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
+import { runVeraAfterDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
 
 export const maxDuration = 120;
 
@@ -59,12 +59,18 @@ export async function POST(request: Request) {
             isTest: testModeActive,
         });
 
-        scheduleVeraOnDashboardManualOrder({
-            orderId: order.id,
-            partnerPaymentStatus: order.partnerPaymentStatus,
-        });
+        let vera: Awaited<ReturnType<typeof runVeraAfterDashboardManualOrder>> | undefined;
+        try {
+            vera = await runVeraAfterDashboardManualOrder({
+                orderId: order.id,
+                partnerPaymentStatus: order.partnerPaymentStatus,
+            });
+        } catch (veraError) {
+            console.error('[dashboard/orders POST] VERA workflow:', veraError);
+            vera = { skipped: 'workflow_error' };
+        }
 
-        return NextResponse.json({ ok: true, order });
+        return NextResponse.json({ ok: true, order, vera });
     } catch (error) {
         console.error('[dashboard/orders POST]', error);
         const message = error instanceof Error ? error.message : 'Creazione ordine non riuscita.';

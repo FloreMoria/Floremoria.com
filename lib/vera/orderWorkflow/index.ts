@@ -20,19 +20,31 @@ export * from '@/lib/vera/orderWorkflow/types';
  * Orchestratore post-pagamento: B (utente) poi A (fiorista se assegnato).
  */
 export async function runVeraPostPaymentWorkflow(orderId: string): Promise<void> {
-    await runPuntoBCustomerOrderConfirm(orderId).catch((e) => {
-        console.error('[vera-workflow] Punto B fallito:', e);
-    });
+    await runVeraPostPaymentWorkflowWithResults(orderId);
+}
+
+export type VeraPostPaymentResult = {
+    customer: Awaited<ReturnType<typeof runPuntoBCustomerOrderConfirm>>;
+    florist?: Awaited<ReturnType<typeof runPuntoAFloristNewOrder>>;
+};
+
+/** Come runVeraPostPaymentWorkflow ma restituisce esito per debug dashboard/test. */
+export async function runVeraPostPaymentWorkflowWithResults(
+    orderId: string
+): Promise<VeraPostPaymentResult> {
+    const customer = await runPuntoBCustomerOrderConfirm(orderId);
 
     const order = await prisma.order.findUnique({
         where: { id: orderId },
         select: { partnerId: true },
     });
+
+    let florist: VeraPostPaymentResult['florist'];
     if (order?.partnerId) {
-        await runPuntoAFloristNewOrder(orderId).catch((e) => {
-            console.error('[vera-workflow] Punto A fallito:', e);
-        });
+        florist = await runPuntoAFloristNewOrder(orderId);
     }
+
+    return { customer, florist };
 }
 
 /**

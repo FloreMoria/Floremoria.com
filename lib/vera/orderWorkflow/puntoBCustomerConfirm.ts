@@ -36,6 +36,10 @@ export async function runPuntoBCustomerOrderConfirm(
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
 
+    if (order.isTest) {
+        return { ok: true, skipped: 'test_order' };
+    }
+
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
     if (!options.force && isWorkflowStepDone(flags, 'puntoB_customer')) {
         return { ok: true, skipped: 'already_sent' };

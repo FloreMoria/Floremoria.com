@@ -3,6 +3,9 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
+import { scheduleVeraOnDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
+
+export const maxDuration = 120;
 
 export async function GET(request: Request) {
     const auth = await requireDashboardAdmin();
@@ -54,6 +57,12 @@ export async function POST(request: Request) {
             isRecurring: Boolean(body.isRecurring),
             additionalInstructions: body.additionalInstructions ?? null,
             isTest: testModeActive,
+        });
+
+        scheduleVeraOnDashboardManualOrder({
+            orderId: order.id,
+            partnerPaymentStatus: order.partnerPaymentStatus,
+            isTest: Boolean(order.isTest),
         });
 
         return NextResponse.json({ ok: true, order });

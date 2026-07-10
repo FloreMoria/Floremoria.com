@@ -164,6 +164,10 @@ export async function runPuntoAFloristNewOrder(
         return { ok: false, skipped: 'no_partner_whatsapp' };
     }
 
+    if (order.isTest) {
+        return { ok: true, skipped: 'test_order' };
+    }
+
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
     if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
         return { ok: true, skipped: 'already_sent' };

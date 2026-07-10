@@ -1,5 +1,5 @@
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
-import { finalizeCustomerConfirmWarmSlot } from '@/lib/vera/customerOrderConfirmCopy';
+import { finalizeCustomerConfirmWarmSlot, CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL } from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
@@ -106,7 +106,7 @@ export function buildCustomerOrderConfirmParams(input: {
         warmThought: requireText(
             finalizeCustomerConfirmWarmSlot(input.warmThought),
             'warmThought',
-            META_TEMPLATE_LIMITS.warmThought
+            92
         ),
     });
     logBuiltTemplateParams('customer_order_confirm', params);

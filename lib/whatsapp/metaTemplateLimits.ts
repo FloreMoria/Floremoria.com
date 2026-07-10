@@ -6,8 +6,8 @@
 export const META_TEMPLATE_LIMITS = {
     shortName: 48,
     deceasedName: 80,
-    /** Slot {{3}} conferma ordine — include CTA invito a rispondere. */
-    warmThought: 115,
+    /** Slot {{3}} conferma ordine — CTA inclusa; Meta tronca oltre ~92 caratteri. */
+    warmThought: 92,
     orderCode: 32,
     locationLabel: 120,
     priceLabel: 28,

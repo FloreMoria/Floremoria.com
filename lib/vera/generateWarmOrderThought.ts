@@ -22,11 +22,11 @@ export async function generateWarmOrderThought(input: {
     if (!apiKey) return FALLBACK_THOUGHT;
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
-    const prompt = `Scrivi UNA sola frase calda e rispettosa in italiano (massimo 90 caratteri PRIMA della CTA), senza saluti, senza nome del destinatario, senza firma.
+    const prompt = `Scrivi UNA frase breve in italiano (massimo 55 caratteri), senza saluti, senza nome del destinatario, senza invito a rispondere (lo aggiungiamo noi dopo).
 Contesto: conferma ordine floreale funebre per il ricordo di ${deceased}.
-Tono: garbo, lutto, calore umano, rassicurazione sulla cura e sulla foto prova che arriverà a consegna avvenuta.
+Tono: garbo, lutto, rassicurazione sulla cura e sulla foto prova a consegna avvenuta.
 Niente prezzi, link o codici ordine. Non iniziare con "Caro/Gentile".
-Esempio inizio: "Stiamo seguendo ogni dettaglio con cura e Le invieremo la foto della posa appena completata."`;
+Esempio: "Ci invieremo la foto della posa appena completata."`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 

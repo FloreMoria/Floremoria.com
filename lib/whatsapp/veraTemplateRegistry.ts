@@ -3,6 +3,8 @@
  * bodySlots definisce l'ordine tassativo dei parametri inviati a Meta.
  */
 
+import { CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL } from '@/lib/vera/customerOrderConfirmCopy';
+
 export type VeraTemplateId =
     | 'proactive_staff'
     | 'florist_first_001'
@@ -115,9 +117,9 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         language: 'it',
         bodyParamCount: 3,
         bodySlots: ['buyerFirstName', 'deceasedName', 'warmThought'],
-        bodyCanonical:
-            'Gentile {{1}}, la ringraziamo per averci affidato il ricordo di {{2}}. {{3}}',
-        description: '{{1}} nome, {{2}} defunto, {{3}} pensiero caloroso + invito a rispondere (max ~115 caratteri)',
+        bodyCanonical: CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
+        description:
+            '{{1}} nome, {{2}} defunto, {{3}} aggiornamento + invito a rispondere (CTA intera, max ~92 caratteri)',
     },
     customer_delivery_photo: {
         id: 'customer_delivery_photo',

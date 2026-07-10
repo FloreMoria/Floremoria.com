@@ -1,6 +1,9 @@
 import { addMessage, updateSessionProfile, markChatSessionAsTest } from '@/lib/chatStore';
 import prisma from '@/lib/prisma';
 import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
+import {
+    CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
+} from '@/lib/vera/customerOrderConfirmCopy';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 
 const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
@@ -10,6 +13,21 @@ const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
     florist_reminder: 'WHATSAPP_TEMPLATE_FLORIST_REMINDER_BODY',
 };
 
+function isUsableCustomerOrderConfirmBody(value: string): boolean {
+    return (
+        /\{\{1\}\}/.test(value) &&
+        /\{\{2\}\}/.test(value) &&
+        /\{\{3\}\}/.test(value) &&
+        /scelto\s+FloreMoria|partner\s+di\s+fiducia/i.test(value)
+    );
+}
+
+function resolveCustomerOrderConfirmBodyTemplate(): string {
+    const fromEnv = process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_CONFIRM_BODY?.trim();
+    if (fromEnv && isUsableCustomerOrderConfirmBody(fromEnv)) return fromEnv;
+    return CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL;
+}
+
 /** Anteprima testo template con {{1}}, {{2}}, … sostituiti per la cronologia chat dashboard. */
 export function renderVeraTemplateBodyPreview(
     templateId: VeraTemplateId,
@@ -17,7 +35,10 @@ export function renderVeraTemplateBodyPreview(
 ): string {
     const spec = getVeraTemplate(templateId);
     const envKey = TEMPLATE_BODY_ENV[templateId];
-    let template = (envKey ? process.env[envKey]?.trim() : '') || spec.bodyCanonical;
+    let template =
+        templateId === 'customer_order_confirm'
+            ? resolveCustomerOrderConfirmBodyTemplate()
+            : (envKey ? process.env[envKey]?.trim() : '') || spec.bodyCanonical;
 
     return bodyParams.reduce((text, param, index) => {
         return text.replace(new RegExp(`\\{\\{${index + 1}\\}\\}`, 'g'), param);

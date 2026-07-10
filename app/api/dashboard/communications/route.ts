@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { after } from 'next/server';
-import { getChatStore, addMessage, setSessionStatus, getSession } from '@/lib/chatStore';
+import { getChatStore, addMessage, setSessionStatus, getSession, markChatSessionAsTest } from '@/lib/chatStore';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates } from '@/lib/whatsapp/approvedTemplates';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
@@ -37,7 +38,8 @@ export async function GET() {
     }
 
     try {
-        const store = await getChatStore();
+        const testModeActive = await getDashboardTestModeActive();
+        const store = await getChatStore({ isTest: testModeActive });
         const sessions = Object.values(store).sort((a, b) => {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         });
@@ -54,6 +56,7 @@ export async function POST(req: Request) {
     if (!auth.ok) return auth.response;
 
     try {
+        const testModeActive = await getDashboardTestModeActive();
         const body = await req.json();
         const {
             phone,
@@ -136,6 +139,10 @@ export async function POST(req: Request) {
                 );
             }
 
+            if (testModeActive && result.session?.phone) {
+                await markChatSessionAsTest(result.session.phone);
+            }
+
             return NextResponse.json({
                 success: true,
                 session: result.session,
@@ -191,6 +198,10 @@ export async function POST(req: Request) {
                 outboundMode: 'freetext',
                 ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
             });
+
+            if (testModeActive) {
+                await markChatSessionAsTest(phone);
+            }
 
             return NextResponse.json({ success: true, session: updatedSession });
         }

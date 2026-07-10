@@ -1,6 +1,7 @@
 import CommunicationsHubClient from './CommunicationsHubClient';
 import prisma from '@/lib/prisma';
 import { Metadata } from 'next';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 export const metadata: Metadata = {
   title: 'FloreMoria | Communication Hub',
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function CommunicationsPage() {
+  const testModeActive = await getDashboardTestModeActive();
   // Recupera gli ultimi Delivery Proofs (con Fallback Protettivo per Server in cache)
   let proofs: any[] = [];
   const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
@@ -16,6 +18,7 @@ export default async function CommunicationsPage() {
   if (prisma.deliveryProof && hasDatabaseUrl) {
       try {
         proofs = await prisma.deliveryProof.findMany({
+          where: { order: { isTest: testModeActive } },
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {

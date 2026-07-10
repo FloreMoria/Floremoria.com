@@ -5,13 +5,16 @@ import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
+    const testModeActive = await getDashboardTestModeActive();
+
     const ordersResult = await runDashboardQuery('users/orders', [], () =>
         prisma.order.findMany({
-            where: visibleDashboardOrdersWhere(),
+            where: visibleDashboardOrdersWhere(testModeActive),
             orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
             include: {
                 items: { include: { product: true } },

@@ -18,6 +18,7 @@ export type CreateDashboardManualUserInput = {
     email?: string | null;
     phone?: string | null;
     deceased: ManualUserDeceasedInput[];
+    isTest?: boolean;
 };
 
 export type CreateDashboardManualUserResult = {
@@ -61,9 +62,10 @@ export async function createDashboardManualUser(
                 phone,
                 systemRole: UserRole.USER,
                 isActive: true,
+                isTest: Boolean(input.isTest),
             },
         });
-    } else if (name || phoneRaw) {
+    } else if (name || phoneRaw || input.isTest) {
         user = await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -71,6 +73,7 @@ export async function createDashboardManualUser(
                 ...(phoneRaw ? { phone: toE164(phoneRaw) || phoneRaw } : {}),
                 systemRole: UserRole.USER,
                 isActive: true,
+                ...(input.isTest ? { isTest: true } : {}),
             },
         });
     }

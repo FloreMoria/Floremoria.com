@@ -9,6 +9,8 @@ import { fetchGa4OverviewResult } from '@/lib/ga4/fetchOverview';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { floremoriaLogPublicWhere } from '@/lib/floremoriaLogFilters';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
+import TestModeOverviewBar from '@/components/dashboard/TestModeOverviewBar';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,13 +28,14 @@ function loadCSV() {
 }
 
 export default async function AdminOverview() {
+    const testModeActive = await getDashboardTestModeActive();
     const initialGa4Overview = await fetchGa4OverviewResult({ cacheTtlMs: 5 * 60 * 1000 });
     const ga4ApiConfigured = initialGa4Overview.status !== 'config_missing';
     const ga4ConsoleUrl = buildGa4ConsoleUrl('realtime');
 
     const ordersResult = await runDashboardQuery('overview/orders', [], () =>
         prisma.order.findMany({
-            where: visibleDashboardOrdersWhere(),
+            where: visibleDashboardOrdersWhere(testModeActive),
             include: {
                 items: { include: { product: true } },
                 partner: true,
@@ -58,8 +61,9 @@ export default async function AdminOverview() {
 
     return (
         <>
-            <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div className="max-w-7xl mx-auto px-6 pt-6 space-y-4">
                 <DashboardDbAlert page="Overview" errors={dbErrors} />
+                <TestModeOverviewBar initialTestModeActive={testModeActive} />
             </div>
             <AnalyticsOverviewClient
                 initialGa4Overview={initialGa4Overview}
@@ -68,6 +72,7 @@ export default async function AdminOverview() {
                 initialOrders={ordersResult.data as any[]}
                 csvData={csvData}
                 latestLogs={logsResult.data}
+                testModeActive={testModeActive}
             />
         </>
     );

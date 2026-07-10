@@ -1,4 +1,5 @@
-import { addMessage, updateSessionProfile } from '@/lib/chatStore';
+import { addMessage, updateSessionProfile, markChatSessionAsTest } from '@/lib/chatStore';
+import prisma from '@/lib/prisma';
 import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 
@@ -58,6 +59,16 @@ export async function logVeraTemplateOutbound(input: {
             status: 'AI_ACTIVE',
             welcomeSent: true,
         });
+
+        if (input.orderId) {
+            const order = await prisma.order.findUnique({
+                where: { id: input.orderId },
+                select: { isTest: true },
+            });
+            if (order?.isTest) {
+                await markChatSessionAsTest(sessionPhone);
+            }
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error('[vera-template-log] Impossibile registrare sessione chat dashboard:', {

@@ -59,6 +59,8 @@ model User {
   lastLoginAt     DateTime?       @map("last_login_at")
   avatarUrl       String?         @map("avatar_url")
   hasLeftGoogleReview Boolean     @default(false) @map("has_left_google_review")
+  /** Record creati in Modalità Test (sandbox admin). */
+  isTest          Boolean         @default(false) @map("is_test")
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]
@@ -176,6 +178,8 @@ model Order {
   offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
   memoryGardenOpens      MemoryGardenOpen[]
+  /** Record creati in Modalità Test (sandbox admin). */
+  isTest                 Boolean           @default(false) @map("is_test")
 }
 
 model OrderItem {
@@ -463,7 +467,10 @@ model WhatsAppChatSession {
   createdAt  DateTime             @default(now()) @map("created_at")
   updatedAt  DateTime             @updatedAt @map("updated_at")
   messages   WhatsAppChatMessage[]
+  /** Sessione chat di sandbox admin (Modalità Test). */
+  isTest     Boolean               @default(false) @map("is_test")
 
+  @@index([isTest])
   @@map("whatsapp_chat_sessions")
 }
 

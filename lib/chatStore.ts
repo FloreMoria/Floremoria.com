@@ -149,7 +149,7 @@ function mapDbSessionToChatSession(session: {
     };
 }
 
-async function ensureDbSession(phone: string): Promise<ChatSession> {
+async function ensureDbSession(phone: string, isTest = false): Promise<ChatSession> {
     const existing = await prisma.whatsAppChatSession.findUnique({
         where: { phone },
         include: { messages: { orderBy: { createdAt: 'asc' } } },
@@ -169,15 +169,30 @@ async function ensureDbSession(phone: string): Promise<ChatSession> {
             dateLabel: 'oggi',
             timeLabel: nowTimeLabel(),
             initials,
+            isTest,
         },
         include: { messages: { orderBy: { createdAt: 'asc' } } },
     });
     return mapDbSessionToChatSession(created);
 }
 
-export async function getChatStore(): Promise<Record<string, ChatSession>> {
+export type GetChatStoreOptions = {
+    isTest?: boolean;
+};
+
+export async function markChatSessionAsTest(phone: string): Promise<void> {
+    if (!useDatabasePersistence) return;
+    await ensureDbSession(phone);
+    await prisma.whatsAppChatSession.update({
+        where: { phone },
+        data: { isTest: true },
+    });
+}
+
+export async function getChatStore(options?: GetChatStoreOptions): Promise<Record<string, ChatSession>> {
     if (useDatabasePersistence) {
         const sessions = await prisma.whatsAppChatSession.findMany({
+            where: options?.isTest !== undefined ? { isTest: options.isTest } : undefined,
             orderBy: { updatedAt: 'desc' },
             include: { messages: { orderBy: { createdAt: 'asc' } } },
         });

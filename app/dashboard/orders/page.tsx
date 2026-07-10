@@ -8,6 +8,7 @@ import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 // MOCK: ID dell'utente loggato, per test fiorista (sostituire in produzione con session.user.id)
 const MOCK_FLORIST_ID = 'mock-florist-id';
@@ -19,6 +20,7 @@ export const metadata = {
 export default async function OrdersPage() {
     const cookieStore = await cookies();
     const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
+    const testModeActive = await getDashboardTestModeActive();
     const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
     const isGlobalAdmin = hasGlobalOrdersView(roleName);
@@ -43,7 +45,7 @@ export default async function OrdersPage() {
 
     // Query ordini: consegne reali + annullati (evidenziati in tabella); no carrelli abbandonati.
     const ordersQuery: { where: Record<string, unknown> } = {
-        where: ordersListPageWhere() as Record<string, unknown>,
+        where: ordersListPageWhere(testModeActive) as Record<string, unknown>,
     };
     if (!isGlobalAdmin) {
         // Partner B2B: solo ordini assegnati al proprio account.
@@ -99,7 +101,7 @@ export default async function OrdersPage() {
 
         const usersResult = await runDashboardQuery('orders/users', [], () =>
             prisma.user.findMany({
-                where: { deletedAt: null, systemRole: 'USER' },
+                where: { deletedAt: null, systemRole: 'USER', isTest: testModeActive },
                 take: 300,
                 select: { id: true, name: true, email: true, phone: true, createdAt: true, updatedAt: true },
             })

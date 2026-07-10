@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
 
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
+        const testModeActive = await getDashboardTestModeActive();
         const order = await createDashboardManualOrder({
             orderCategory: String(body.orderCategory || 'FT'),
             deliveryProvince: String(body.deliveryProvince || 'XX'),
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
             partnerPaymentStatus: body.partnerPaymentStatus ?? undefined,
             isRecurring: Boolean(body.isRecurring),
             additionalInstructions: body.additionalInstructions ?? null,
+            isTest: testModeActive,
         });
 
         return NextResponse.json({ ok: true, order });

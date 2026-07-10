@@ -21,6 +21,7 @@ export default function AnalyticsOverviewClient({
     initialOrders = [],
     csvData = [],
     latestLogs = [],
+    testModeActive = false,
 }: {
     initialGa4Overview: Ga4OverviewResult | null;
     ga4ApiConfigured?: boolean;
@@ -28,6 +29,7 @@ export default function AnalyticsOverviewClient({
     initialOrders?: any[];
     csvData?: any[];
     latestLogs?: any[];
+    testModeActive?: boolean;
 }) {
     const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);

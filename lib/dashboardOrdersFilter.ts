@@ -36,28 +36,42 @@ export function isOrderCancelled(order: {
 /**
  * Ordini attivi in dashboard (fioristi, utenti, overview, defunti, API partner).
  * Esclude checkout abbandonati e ordini annullati.
+ * @param testModeActive — se definito, mostra solo record test (true) o produzione (false).
  */
-export function visibleDashboardOrdersWhere(): Prisma.OrderWhereInput {
+export function visibleDashboardOrdersWhere(testModeActive?: boolean): Prisma.OrderWhereInput {
     const emailFilter = excludedBuyerEmailWhere();
 
-    return {
+    const base: Prisma.OrderWhereInput = {
         deletedAt: null,
         status: { not: 'CANCELLED' },
         NOT: abandonedCartWhere,
         ...(emailFilter ?? {}),
     };
+
+    if (testModeActive !== undefined) {
+        return { ...base, isTest: testModeActive };
+    }
+
+    return base;
 }
 
 /**
  * Pagina Ordini admin: include gli annullati (con evidenza visiva), esclude solo carrelli abbandonati.
+ * @param testModeActive — se definito, mostra solo record test (true) o produzione (false).
  */
-export function ordersListPageWhere(): Prisma.OrderWhereInput {
+export function ordersListPageWhere(testModeActive?: boolean): Prisma.OrderWhereInput {
     const emailFilter = excludedBuyerEmailWhere();
 
-    return {
+    const base: Prisma.OrderWhereInput = {
         NOT: abandonedCartWhere,
         ...(emailFilter ?? {}),
     };
+
+    if (testModeActive !== undefined) {
+        return { ...base, isTest: testModeActive };
+    }
+
+    return base;
 }
 
 /** Ordini da archiviare (soft-delete): carrelli abbandonati e annullati. */

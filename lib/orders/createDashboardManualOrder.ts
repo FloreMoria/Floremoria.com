@@ -53,6 +53,8 @@ export type CreateDashboardManualOrderInput = {
     partnerPaymentStatus?: PaymentStatus;
     isRecurring?: boolean;
     additionalInstructions?: string | null;
+    /** Sandbox admin: ordine di test (non impostare da checkout pubblico). */
+    isTest?: boolean;
 };
 
 function parseOptionalDate(value?: string | null): Date | undefined {
@@ -95,6 +97,12 @@ async function resolveUserIdForManualOrder(
     } as Parameters<typeof createUserFromOrder>[0];
 
     const created = await createUserFromOrder(draftOrder);
+    if (created?.id && input.isTest) {
+        await prisma.user.update({
+            where: { id: created.id },
+            data: { isTest: true },
+        });
+    }
     return created?.id ?? null;
 }
 
@@ -205,6 +213,7 @@ export async function createDashboardManualOrder(
         totalPriceCents,
         ticketMessage,
         isRecurring: Boolean(input.isRecurring),
+        isTest: Boolean(input.isTest),
         partnerPaymentStatus,
         status,
         additionalInstructions: buildManualInstructions(input.additionalInstructions),

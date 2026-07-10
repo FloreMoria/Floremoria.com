@@ -7,6 +7,8 @@ import TopNavLink from '@/components/dashboard/TopNavLink';
 import DashboardMobileNav from '@/components/dashboard/DashboardMobileNav';
 import StaffAlertPoller from '@/components/dashboard/StaffAlertPoller';
 import DashboardSwipeBack from '@/components/dashboard/DashboardSwipeBack';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
+import TestModeBanner from '@/components/dashboard/TestModeBanner';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 
 export const metadata: Metadata = {
@@ -31,10 +33,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     const isSystemClean = ['SUPER_ADMIN', 'OPERATOR', 'MARKETING_MANAGER'].includes(userRole);
     const isSuperAdmin = isSuperAdminRole(userRole);
     const isDashboardAdmin = isDashboardAdminRole(userRole);
+    const testModeActive = await getDashboardTestModeActive();
 
     return (
         <div className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}>
 
+            {testModeActive ? <TestModeBanner /> : null}
             {/* Top Navbar */}
             <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 print:hidden">
 

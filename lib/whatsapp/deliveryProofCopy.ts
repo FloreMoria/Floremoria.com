@@ -38,9 +38,9 @@ export function renderDeliveryProofCaption(params: {
     const defunto = (params.deceasedName || 'chi ama').trim();
     const city = params.partnerCity.trim() || 'zona';
 
-    return `${saluto}, il nostro partner di ${city} ha consegnato i fiori nel ricordo di ${defunto}. Le alleghiamo la testimonianza fotografica della consegna.`;
+    return `${saluto}, con immensa gioia Le confermiamo che i fiori nel ricordo di ${defunto} sono stati posati dal nostro partner di ${city}. In allegato la foto della consegna 🌹`;
 }
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
-    return `Per rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria le augura una buona giornata 🌹`;
+    return `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\nHa ricevuto bene la foto della posa? Scriva OK o ci risponda qui per qualsiasi richiesta 🌹\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria`;
 }

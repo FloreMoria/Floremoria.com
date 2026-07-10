@@ -5,6 +5,7 @@ export interface DeliveryProofDashboardLogInput {
     orderId: string;
     orderNumber?: string | null;
     buyerFullName?: string | null;
+    mediaUrl?: string | null;
 }
 
 function toWhatsAppSessionPhone(phoneE164: string): string {
@@ -22,15 +23,19 @@ export async function logProofToDashboard(
 ): Promise<void> {
     try {
         const address = toWhatsAppSessionPhone(phoneE164);
-        await addMessage(address, 'OUTBOUND', message, undefined, {
+        await addMessage(address, 'OUTBOUND', message, order.mediaUrl?.trim() || undefined, {
             eventType: 'PROOF_OF_DELIVERY',
             orderId: order.orderId,
             ...(order.orderNumber ? { orderNumber: order.orderNumber } : {}),
             outboundMode: 'delivery_proof',
+            ...(order.mediaUrl ? { deliveryPhotoUrl: order.mediaUrl } : {}),
         });
         await updateSessionProfile(address, {
             userType: 'UTENTE',
             ...(buyerName ? { name: buyerName } : {}),
+            status: 'AI_ACTIVE',
+            welcomeSent: true,
+            ...(order.mediaUrl ? { hasPhoto: true } : {}),
         });
     } catch (e) {
         console.warn('[delivery-proof-dashboard] Registrazione non riuscita (non bloccante):', e);

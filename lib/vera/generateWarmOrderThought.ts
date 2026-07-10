@@ -1,8 +1,11 @@
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import {
+    buildDefaultCustomerConfirmWarmSlot,
+    finalizeCustomerConfirmWarmSlot,
+} from '@/lib/vera/customerOrderConfirmCopy';
 import { clampWarmThoughtForTemplate } from '@/lib/vera/clampWarmThought';
 
-const FALLBACK_THOUGHT =
-    'Ci prendiamo cura di ogni dettaglio con dedizione e Le invieremo la foto non appena i fiori saranno posati.';
+const FALLBACK_THOUGHT = buildDefaultCustomerConfirmWarmSlot();
 
 /**
  * Genera il pensiero caloroso {{3}} per floremoria_conferma_ordine_utente.
@@ -19,10 +22,11 @@ export async function generateWarmOrderThought(input: {
     if (!apiKey) return FALLBACK_THOUGHT;
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
-    const prompt = `Scrivi UNA sola frase calda e rispettosa in italiano (massimo 100 caratteri), senza saluti, senza nome del destinatario, senza firma.
-Contesto: messaggio di conferma ordine floreale funebre per il ricordo di ${deceased}.
-Tono: garbo, lutto, rassicurazione sulla cura floreale e sulla foto prova imminente.
-Niente prezzi, link, codici ordine, "caro/cordiali". Inizia direttamente con il contenuto (es. "Ci prendiamo cura…").`;
+    const prompt = `Scrivi UNA sola frase calda e rispettosa in italiano (massimo 90 caratteri PRIMA della CTA), senza saluti, senza nome del destinatario, senza firma.
+Contesto: conferma ordine floreale funebre per il ricordo di ${deceased}.
+Tono: garbo, lutto, calore umano, rassicurazione sulla cura e sulla foto prova che arriverà a consegna avvenuta.
+Niente prezzi, link o codici ordine. Non iniziare con "Caro/Gentile".
+Esempio inizio: "Stiamo seguendo ogni dettaglio con cura e Le invieremo la foto della posa appena completata."`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -50,8 +54,7 @@ Niente prezzi, link, codici ordine, "caro/cordiali". Inizia direttamente con il 
             .trim();
 
         if (!text || text.length < 12) return FALLBACK_THOUGHT;
-        const clamped = clampWarmThoughtForTemplate(text);
-        return clamped || FALLBACK_THOUGHT;
+        return finalizeCustomerConfirmWarmSlot(text);
     } catch {
         return FALLBACK_THOUGHT;
     }

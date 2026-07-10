@@ -76,6 +76,10 @@ export async function sendVeraTemplate(
         if (!url) {
             return { ok: false, error: 'Header immagine mancante per template multimediale.' };
         }
+        if (!/^https:\/\//i.test(url)) {
+            return { ok: false, error: 'URL immagine header deve essere HTTPS pubblico per Meta.' };
+        }
+        console.info(`[vera-template] ${spec.id} header image host: ${url.replace(/^https?:\/\/([^/]+).*/, '$1')}`);
         components.push(buildImageHeaderComponent(url));
     } else if (headerTextCount > 0) {
         components.push(buildTextHeaderComponent(headerTextParams));

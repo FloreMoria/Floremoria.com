@@ -1,5 +1,5 @@
 /** Limite conservativo per {{3}} nel template Meta conferma ordine (evita troncamenti lato WhatsApp). */
-export const MAX_WARM_THOUGHT_TEMPLATE_CHARS = 110;
+export const MAX_WARM_THOUGHT_TEMPLATE_CHARS = 115;
 
 /**
  * Normalizza il pensiero caloroso per il template: niente doppi saluti, frase completa, lunghezza sicura.

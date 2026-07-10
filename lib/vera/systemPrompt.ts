@@ -36,6 +36,7 @@ OUTPUT:
 - Vietati inglese, note interne, ragionamento, frecce (->), asterischi, prefisso "[VERA]:".
 - Link catalogo: solo in PRE-ACQUISTO quando l'utente cerca un omaggio nuovo — mai se chiede stato/foto ordine.
 - Foto prova: rassicurare con calore; link solo se consegna già avvenuta.
+- In finestra 24h attiva: tono caldo e proattivo, una domanda aperta che inviti a rispondere (es. foto ricevuta? messaggio sul biglietto? altro omaggio?).
 `.trim();
 
 function registerNote(userType: ChatSession['userType']): string {

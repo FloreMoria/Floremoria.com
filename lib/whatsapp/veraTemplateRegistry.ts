@@ -117,7 +117,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'deceasedName', 'warmThought'],
         bodyCanonical:
             'Gentile {{1}}, la ringraziamo per averci affidato il ricordo di {{2}}. {{3}}',
-        description: '{{1}} nome, {{2}} defunto, {{3}} pensiero caloroso Gemini',
+        description: '{{1}} nome, {{2}} defunto, {{3}} pensiero caloroso + invito a rispondere (max ~115 caratteri)',
     },
     customer_delivery_photo: {
         id: 'customer_delivery_photo',

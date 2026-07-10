@@ -19,6 +19,14 @@ import {
     type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
 import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
+import {
+    formatFloristCompensationParam,
+    formatFloristDeceasedParam,
+    formatFloristDeliveryPositionParam,
+    formatFloristDeliveryUrlParam,
+    formatFloristLocationParam,
+    formatFloristOrderCodeParam,
+} from '@/lib/whatsapp/floristTemplateCopy';
 
 export interface PuntoAResult {
     ok: boolean;
@@ -179,7 +187,14 @@ export async function runPuntoAFloristNewOrder(
     const orderCode = order.orderNumber || order.id;
     const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
     const gravePosition = order.gravePosition?.trim() || '';
-    const deliveryPosition = buildDeliveryPositionLabel(gravePosition, cemeteryLabel);
+    const deliveryPosition = formatFloristDeliveryPositionParam(
+        buildDeliveryPositionLabel(gravePosition, cemeteryLabel)
+    );
+    const formattedOrderCode = formatFloristOrderCodeParam(orderCode);
+    const formattedCompensation = formatFloristCompensationParam(compensationLabel);
+    const formattedDeceased = formatFloristDeceasedParam(order.deceasedName);
+    const formattedLocation = formatFloristLocationParam(cemeteryLabel);
+    const formattedDeliveryUrl = formatFloristDeliveryUrlParam(deliveryUrl);
 
     if (compensation.totalCents === 0 && compensation.unmappedProducts.length > 0) {
         await setVeraOperationalAlert({
@@ -222,19 +237,19 @@ export async function runPuntoAFloristNewOrder(
             floristName,
             isFirstOrder: true,
             steps: [
-                { template: 'florist_first_001', params: [floristName, orderCode, compensationLabel] },
+                { template: 'florist_first_001', params: [floristName, formattedOrderCode, formattedCompensation] },
                 { template: 'florist_first_002', params: [yesNo(lumino), yesNo(bigliettino), ticketText] },
-                { template: 'florist_first_003', params: [order.deceasedName, cemeteryLabel, deliveryPosition] },
-                { template: 'florist_first_004', params: [deliveryUrl] },
+                { template: 'florist_first_003', params: [formattedDeceased, formattedLocation, deliveryPosition] },
+                { template: 'florist_first_004', params: [formattedDeliveryUrl] },
             ],
         });
     } else {
         const lumino = orderHasLumino(order.items);
         const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
         const repeatSteps: FloristCascadeStep[] = [
-            { template: 'florist_first_001', params: [floristName, orderCode, compensationLabel] },
-            { template: 'florist_first_003', params: [order.deceasedName, cemeteryLabel, deliveryPosition] },
-            { template: 'florist_first_004', params: [deliveryUrl] },
+            { template: 'florist_first_001', params: [floristName, formattedOrderCode, formattedCompensation] },
+            { template: 'florist_first_003', params: [formattedDeceased, formattedLocation, deliveryPosition] },
+            { template: 'florist_first_004', params: [formattedDeliveryUrl] },
         ];
         if (lumino || bigliettino) {
             repeatSteps.splice(1, 0, {

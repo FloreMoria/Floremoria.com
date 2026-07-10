@@ -7,7 +7,7 @@ import {
 } from '@/lib/whatsapp/mediaStagingShared';
 
 const DELIVERY_STAGING_PREFIX = 'whatsapp/delivery-staging';
-const STAGING_TTL_MS = 20 * 60 * 1000;
+const STAGING_TTL_MS = 60 * 60 * 1000;
 
 function sanitizeOrderKey(orderId: string): string {
     return orderId.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 80);

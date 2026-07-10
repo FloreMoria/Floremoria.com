@@ -1,7 +1,8 @@
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
-import { clampWarmThoughtForTemplate, MAX_WARM_THOUGHT_TEMPLATE_CHARS } from '@/lib/vera/clampWarmThought';
+import { finalizeCustomerConfirmWarmSlot } from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
+import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 import {
     getVeraTemplate,
     type VeraTemplateId,
@@ -16,7 +17,7 @@ export class VeraTemplateParamError extends Error {
 }
 
 const NAME_SLOT_PATTERN = /name|firstName|floristName|buyerFirstName/i;
-const MAX_NAME_LEN = 48;
+const MAX_NAME_LEN = META_TEMPLATE_LIMITS.shortName;
 
 function assertShortName(value: string, slot: string): string {
     const sanitized = sanitizeMetaTemplateParam(value, MAX_NAME_LEN);
@@ -39,7 +40,7 @@ function assertShortName(value: string, slot: string): string {
     return sanitized;
 }
 
-function requireText(value: string, slot: string, maxLen = 900): string {
+function requireText(value: string, slot: string, maxLen: number = META_TEMPLATE_LIMITS.general): string {
     const sanitized = sanitizeMetaTemplateParam(value, maxLen);
     if (!sanitized) {
         throw new VeraTemplateParamError(`Parametro "${slot}" vuoto.`);
@@ -75,30 +76,57 @@ export function buildVeraTemplateBodyParams(
     return params;
 }
 
+function logBuiltTemplateParams(templateId: VeraTemplateId, params: string[]): void {
+    const spec = getVeraTemplate(templateId);
+    params.forEach((value, index) => {
+        const slot = spec.bodySlots[index] ?? `body_${index + 1}`;
+        if (!value.trim()) {
+            console.error(`[vera-template-params] ${templateId} slot "${slot}" vuoto.`);
+        }
+        if (value.length > META_TEMPLATE_LIMITS.general) {
+            console.warn(
+                `[vera-template-params] ${templateId} slot "${slot}" lungo ${value.length} caratteri (max consigliato ${META_TEMPLATE_LIMITS.general}).`
+            );
+        }
+    });
+}
+
 export function buildCustomerOrderConfirmParams(input: {
     buyerFirstName?: string | null;
     deceasedName?: string | null;
     warmThought: string;
 }): string[] {
-    return buildVeraTemplateBodyParams('customer_order_confirm', {
+    const params = buildVeraTemplateBodyParams('customer_order_confirm', {
         buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
-        deceasedName: requireText(input.deceasedName || 'chi ama', 'deceasedName', 120),
+        deceasedName: requireText(
+            input.deceasedName || 'chi ama',
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
         warmThought: requireText(
-            clampWarmThoughtForTemplate(input.warmThought),
+            finalizeCustomerConfirmWarmSlot(input.warmThought),
             'warmThought',
-            MAX_WARM_THOUGHT_TEMPLATE_CHARS
+            META_TEMPLATE_LIMITS.warmThought
         ),
     });
+    logBuiltTemplateParams('customer_order_confirm', params);
+    return params;
 }
 
 export function buildCustomerWaitingUpdateParams(input: {
     buyerFirstName?: string | null;
     deceasedName?: string | null;
 }): string[] {
-    return buildVeraTemplateBodyParams('customer_waiting_update', {
+    const params = buildVeraTemplateBodyParams('customer_waiting_update', {
         buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
-        deceasedName: requireText(input.deceasedName || 'chi ama', 'deceasedName', 120),
+        deceasedName: requireText(
+            input.deceasedName || 'chi ama',
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
     });
+    logBuiltTemplateParams('customer_waiting_update', params);
+    return params;
 }
 
 export function buildCustomerDeliveryPhotoParams(input: {
@@ -106,11 +134,17 @@ export function buildCustomerDeliveryPhotoParams(input: {
     partnerCity?: string | null;
     deceasedName?: string | null;
 }): string[] {
-    return buildVeraTemplateBodyParams('customer_delivery_photo', {
+    const params = buildVeraTemplateBodyParams('customer_delivery_photo', {
         buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
         partnerCity: requireText(input.partnerCity || 'zona', 'partnerCity', 80),
-        deceasedName: requireText(input.deceasedName || 'chi ama', 'deceasedName', 120),
+        deceasedName: requireText(
+            input.deceasedName || 'chi ama',
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
     });
+    logBuiltTemplateParams('customer_delivery_photo', params);
+    return params;
 }
 
 export function buildFloristReminderParams(input: {

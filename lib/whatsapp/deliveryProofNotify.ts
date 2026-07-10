@@ -11,6 +11,7 @@ import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
+import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
@@ -90,6 +91,17 @@ export async function sendDeliveryProofWhatsApp(
 
     try {
         const publicImageUrl = await ensureWhatsAppDeliveryImageUrl(input.orderId, input.photoAfterUrl);
+        if (!/^https:\/\//i.test(publicImageUrl)) {
+            console.error('[delivery-proof-whatsapp] URL immagine non HTTPS pubblico:', publicImageUrl);
+            return { ok: false, skipped: 'invalid_image_url', error: 'image_url_not_https' };
+        }
+
+        console.info('[delivery-proof-whatsapp] URL immagine per Meta:', {
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+            imageHost: publicImageUrl.replace(/^https?:\/\/([^/]+).*/, '$1'),
+        });
+
         const sessionPhone = `whatsapp:${phoneE164}`;
         const session = await getSession(sessionPhone);
         const withinWindow = isWithinCustomerServiceWindow(session);
@@ -100,6 +112,11 @@ export async function sendDeliveryProofWhatsApp(
         if (withinWindow) {
             const imageSend = await sendWhatsAppImageMessage(phoneE164, publicImageUrl, caption);
             if (!imageSend.ok) {
+                console.error('[delivery-proof-whatsapp] Invio immagine in finestra aperta fallito:', {
+                    orderId: input.orderId,
+                    error: imageSend.error,
+                    imageUrl: publicImageUrl,
+                });
                 return {
                     ok: false,
                     skipped: 'image_send_failed',
@@ -135,27 +152,40 @@ export async function sendDeliveryProofWhatsApp(
             );
 
             if (!templateSend.ok) {
-                const combined = `${caption}\n\n${linkMessage}`;
-                const textSend = await sendWhatsAppTextMessage(phoneE164, combined);
-                if (!textSend.ok) {
-                    console.warn(
-                        '[delivery-proof-whatsapp] Fuori finestra 24h: template e testo falliti.',
-                        templateSend.error,
-                        textSend.error
-                    );
-                    return {
-                        ok: false,
-                        skipped: 'outside_24h_window',
-                        giardinoUrl,
-                        error: textSend.error ?? templateSend.error,
-                    };
-                }
-                linkMessageId = textSend.messageId;
-            } else {
-                linkMessageId = templateSend.messageId;
-                const linkSend = await sendWhatsAppTextMessage(phoneE164, linkMessage);
-                if (linkSend.ok) linkMessageId = linkSend.messageId;
+                console.error('[delivery-proof-whatsapp] Template foto fuori finestra 24h fallito:', {
+                    orderId: input.orderId,
+                    error: templateSend.error,
+                    imageUrl: publicImageUrl,
+                    bodyParams,
+                });
+                return {
+                    ok: false,
+                    skipped: 'template_send_failed',
+                    giardinoUrl,
+                    error: templateSend.error ?? 'customer_delivery_photo_failed',
+                };
             }
+
+            linkMessageId = templateSend.messageId;
+
+            try {
+                await logVeraTemplateOutbound({
+                    phoneE164,
+                    templateId: 'customer_delivery_photo',
+                    bodyParams,
+                    eventType: 'DELIVERY_PHOTO_TEMPLATE',
+                    orderId: input.orderId,
+                    orderNumber: input.orderNumber,
+                    messageId: templateSend.messageId,
+                    contactName: buyerName,
+                    userType: 'UTENTE',
+                });
+            } catch (logErr) {
+                console.error('[delivery-proof-whatsapp] Log dashboard template foto fallito:', logErr);
+            }
+
+            const linkSend = await sendWhatsAppTextMessage(phoneE164, linkMessage);
+            if (linkSend.ok) linkMessageId = linkSend.messageId;
         }
 
         const logBody = withinWindow
@@ -166,6 +196,7 @@ export async function sendDeliveryProofWhatsApp(
             orderId: input.orderId,
             orderNumber: input.orderNumber,
             buyerFullName: input.buyerFullName,
+            mediaUrl: publicImageUrl,
         });
 
         console.info(

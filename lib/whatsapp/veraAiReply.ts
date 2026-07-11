@@ -40,6 +40,20 @@ import {
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
 import type { VeraCallerContext } from '@/lib/vera';
 import type { ChatSession } from '@/lib/chatStore';
+import {
+    buildFloristMiniAppSupportReply,
+    buildNewOrderLocationReply,
+    buildOperatorHandoffReply,
+    buildStandalonePhotoTextReply,
+    buildWarmPraiseThanksReply,
+    countConfusionMessages,
+    isConfusionMessage,
+    isStandalonePhotoText,
+    isWarmPraiseThanks,
+    looksIncompleteReply,
+    repairIncompleteReply,
+    totalConfusionIncludingCurrent,
+} from '@/lib/vera/conversationScenarioHandlers';
 
 export const VERA_CLOSING_SIGNATURE =
     'Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹';
@@ -137,6 +151,11 @@ function polishVeraReply(
     const skipOpeningPrefix = skipCatalogLinks || /^gentile\s+/i.test(reply.trim());
     let text = sanitizeVeraReplyText(stripClosingSignature(reply));
     if (!text) return reply;
+
+    if (looksIncompleteReply(text)) {
+        text = repairIncompleteReply(text, session.userType);
+    }
+
     if (!closing && !skipOpeningPrefix) {
         text = ensureRespectfulOpening(
             text,
@@ -153,7 +172,8 @@ function polishVeraReply(
                 body: m.body,
                 mediaUrl: m.mediaUrl,
                 createdAt: m.createdAt,
-            }))
+            })),
+            { userType: session.userType, skipCatalog: looksIncompleteReply(text) }
         );
     }
     return text;
@@ -214,8 +234,8 @@ Rispondi SOLO al messaggio dell'utente qui sotto.`;
         system_instruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: 'user', parts: [{ text: userMessage }] }],
         generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 512,
+            temperature: 0.45,
+            maxOutputTokens: 720,
             topP: 0.9,
         },
         safetySettings: [
@@ -248,10 +268,14 @@ Rispondi SOLO al messaggio dell'utente qui sotto.`;
             }>;
         };
 
+        const finishReason = data?.candidates?.[0]?.finishReason;
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (!text) {
             console.warn('[vera-ai] Gemini: risposta vuota o bloccata.');
             return null;
+        }
+        if (finishReason === 'MAX_TOKENS') {
+            console.warn('[vera-ai] Gemini: risposta troncata (MAX_TOKENS).');
         }
         const sanitized = sanitizeVeraReplyText(text);
         if (!sanitized) {
@@ -401,14 +425,68 @@ export async function generateVeraReply(
         }
     }
 
-    // ── Escalation a operatore umano ──────────────────────────────────────────
+    // ── Ringraziamento caloroso (non cortesia isolata) ─────────────────────────
+    if (isWarmPraiseThanks(message)) {
+        return {
+            text: buildWarmPraiseThanksReply(session),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
+    // ── Testo "foto" senza allegato ───────────────────────────────────────────
+    if (isStandalonePhotoText(message, mediaUrl)) {
+        return {
+            text: buildStandalonePhotoTextReply(session),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
+    // ── Nuovo ordine con località (pre-acquisto attivo) ───────────────────────
+    const newOrderReply = buildNewOrderLocationReply(message, session);
+    if (newOrderReply) {
+        return { text: newOrderReply, source: 'deterministic', shouldEscalate: false };
+    }
+
+    // ── Stato ordine / foto / urgenza (anche in finestra 24h) ─────────────────
+    if (session.userType !== 'FLORIST' && isOrderTrackingInquiry(message)) {
+        const orderReply = await tryBuildOrderTrackingReply(
+            session.phone,
+            session.name || '',
+            message
+        );
+        if (orderReply) {
+            return { text: orderReply, source: 'deterministic', shouldEscalate: false };
+        }
+    }
+
+    // ── Fiorista: supporto mini-app ───────────────────────────────────────────
+    if (session.userType === 'FLORIST') {
+        const miniAppReply = buildFloristMiniAppSupportReply(message, session);
+        if (miniAppReply) {
+            return { text: miniAppReply, source: 'deterministic', shouldEscalate: false };
+        }
+    }
+
+    // ── Confusione ripetuta → operatore umano ─────────────────────────────────
+    if (isConfusionMessage(message) && totalConfusionIncludingCurrent(session, message) >= 2) {
+        return {
+            text: buildOperatorHandoffReply(),
+            source: 'deterministic',
+            shouldEscalate: true,
+        };
+    }
+
+    // ── Escalation a operatore umano (richiesta esplicita) ────────────────────
     const escalationReason = getHumanEscalationReason(message);
     if (escalationReason) {
         console.info(`[vera-ai] Escalation umana: ${escalationReason}`);
-        const escalationText =
-            'La ringrazio per averci scritto. La sto passando a un operatore umano del nostro Staff, che la contatterà il prima possibile.\n\n' +
-            VERA_CLOSING_SIGNATURE;
-        return { text: escalationText, source: 'deterministic', shouldEscalate: true };
+        return {
+            text: buildOperatorHandoffReply(),
+            source: 'deterministic',
+            shouldEscalate: true,
+        };
     }
 
     // ── Finestra 24h attiva: Gemini esclusivo per testo (utenti e fioristi) ───
@@ -439,22 +517,6 @@ export async function generateVeraReply(
             source: 'deterministic',
             shouldEscalate: false,
         };
-    }
-
-    // ── Fuori finestra: stato ordine (lookup DB) ─────────────────────────────
-    if (session.userType !== 'FLORIST' && isOrderTrackingInquiry(message)) {
-        const orderReply = await tryBuildOrderTrackingReply(
-            session.phone,
-            session.name || '',
-            message
-        );
-        if (orderReply) {
-            let replyText = orderReply;
-            if (!isClosingMessage(message)) {
-                replyText = polishVeraReply(replyText, message, session, callerContext);
-            }
-            return { text: replyText, source: 'deterministic', shouldEscalate: false };
-        }
     }
 
     // ── Fuori finestra: regole deterministiche + Gemini se generico ───────────

@@ -372,11 +372,20 @@ function findMentionedProductLink(text: string): string | null {
 export function ensureCatalogLinksInReply(
     reply: string,
     message: string,
-    history: ConversationMessage[] = []
+    history: ConversationMessage[] = [],
+    options?: { userType?: 'UTENTE' | 'FLORIST' | 'UNKNOWN'; skipCatalog?: boolean }
 ): string {
+    if (options?.skipCatalog || options?.userType === 'FLORIST') return reply;
     if (isClosingMessage(message)) return reply;
     if (isOrderTrackingInquiry(message)) return reply;
+
+    const trimmed = reply.trim();
+    if (!trimmed || !/[.!?…🌹]$/.test(trimmed)) return reply;
+
     if (/https?:\/\/\S*floremoria\.com/i.test(reply)) return reply;
+
+    const m = normalizeMessage(message);
+    if (m === 'foto' || m === 'immagine' || m === 'allegato') return reply;
 
     const kb = loadWhatsAppCoreKb();
     const contextText = [message, ...history.slice(-3).map((h) => h.body)].join(' ');

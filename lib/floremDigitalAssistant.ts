@@ -25,8 +25,10 @@ export const FLOREM_HUMAN_ESCALATION_KEYWORDS = [
   'voglio parlare con qualcuno',
   'parlare con qualcuno',
   'parlare con operatore',
-  'operatore',
+  'voglio parlare con un operatore',
+  'operatore umano',
   'persona vera',
+  'umano fiorista',
   'non ce la faccio',
   'sto piangendo',
   'sono disperato',
@@ -65,6 +67,9 @@ export function getHumanEscalationReason(rawMessage: string): string | null {
   if (!normalized) return null;
   if (normalized.includes(FLOREM_HUMAN_OPERATOR_TRIGGER.toLowerCase())) {
     return `trigger:${FLOREM_HUMAN_OPERATOR_TRIGGER}`;
+  }
+  if (normalized.includes('voglio parlare con un operatore') || normalized.includes('parlare con operatore')) {
+    return 'keyword:operatore_esplicito';
   }
   const keyword = FLOREM_HUMAN_ESCALATION_KEYWORDS.find((item) => normalized.includes(item));
   return keyword ? `keyword:${keyword}` : null;

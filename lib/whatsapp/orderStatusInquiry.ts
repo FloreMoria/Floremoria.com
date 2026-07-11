@@ -23,6 +23,8 @@ const ORDER_TRACKING_KEYWORDS = [
     'arriv',
     'spediz',
     'tracking',
+    'funerale',
+    'fiori',
 ];
 
 function normalizeForMatch(value: string): string {

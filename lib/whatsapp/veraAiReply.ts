@@ -41,15 +41,23 @@ import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview
 import type { VeraCallerContext } from '@/lib/vera';
 import type { ChatSession } from '@/lib/chatStore';
 import {
+    buildAccessoryPriceReply,
+    buildCemeteryCoverageReply,
     buildFloristMiniAppSupportReply,
+    buildInstantTransferPaymentReply,
     buildNewOrderLocationReply,
     buildOperatorHandoffReply,
     buildStandalonePhotoTextReply,
     buildWarmPraiseThanksReply,
-    countConfusionMessages,
+    buildWebsiteFormIssueReply,
+    finalizeVeraReplyText,
+    GEMINI_MAX_OUTPUT_TOKENS,
+    isCemeteryCoverageQuestion,
     isConfusionMessage,
+    isInstantTransferPaymentRequest,
     isStandalonePhotoText,
     isWarmPraiseThanks,
+    isWebsiteFormIssue,
     looksIncompleteReply,
     repairIncompleteReply,
     totalConfusionIncludingCurrent,
@@ -149,7 +157,7 @@ function polishVeraReply(
     const closing = isClosingMessage(message);
     const skipCatalogLinks = isOrderTrackingInquiry(message);
     const skipOpeningPrefix = skipCatalogLinks || /^gentile\s+/i.test(reply.trim());
-    let text = sanitizeVeraReplyText(stripClosingSignature(reply));
+    let text = finalizeVeraReplyText(stripClosingSignature(reply), session.userType);
     if (!text) return reply;
 
     if (looksIncompleteReply(text)) {
@@ -176,7 +184,7 @@ function polishVeraReply(
             { userType: session.userType, skipCatalog: looksIncompleteReply(text) }
         );
     }
-    return text;
+    return finalizeVeraReplyText(text, session.userType);
 }
 
 function shouldAppendSignature(message: string): boolean {
@@ -235,7 +243,7 @@ Rispondi SOLO al messaggio dell'utente qui sotto.`;
         contents: [{ role: 'user', parts: [{ text: userMessage }] }],
         generationConfig: {
             temperature: 0.45,
-            maxOutputTokens: 720,
+            maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
             topP: 0.9,
         },
         safetySettings: [
@@ -277,7 +285,7 @@ Rispondi SOLO al messaggio dell'utente qui sotto.`;
         if (finishReason === 'MAX_TOKENS') {
             console.warn('[vera-ai] Gemini: risposta troncata (MAX_TOKENS).');
         }
-        const sanitized = sanitizeVeraReplyText(text);
+        const sanitized = finalizeVeraReplyText(sanitizeVeraReplyText(text), session.userType);
         if (!sanitized) {
             console.warn('[vera-ai] Gemini: risposta scartata dopo sanitizzazione.');
             return null;
@@ -423,6 +431,39 @@ export async function generateVeraReply(
                 };
             }
         }
+    }
+
+    // ── Prezzi accessori (lumino, biglietto, ceri, nastro) ────────────────────
+    const accessoryReply = buildAccessoryPriceReply(message, session);
+    if (accessoryReply) {
+        return { text: accessoryReply, source: 'deterministic', shouldEscalate: false };
+    }
+
+    // ── Copertura consegna cimiteri ───────────────────────────────────────────
+    if (isCemeteryCoverageQuestion(message)) {
+        return {
+            text: buildCemeteryCoverageReply(session),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
+    // ── Bonifico istantaneo ───────────────────────────────────────────────────
+    if (isInstantTransferPaymentRequest(message)) {
+        return {
+            text: buildInstantTransferPaymentReply(session),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
+    // ── Problema sito / indirizzo non inseribile ──────────────────────────────
+    if (isWebsiteFormIssue(message)) {
+        return {
+            text: buildWebsiteFormIssueReply(session),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
     }
 
     // ── Ringraziamento caloroso (non cortesia isolata) ─────────────────────────

@@ -3,8 +3,23 @@ import { loadWhatsAppCoreKb } from '@/lib/whatsappKnowledge';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 
+export const GEMINI_MAX_OUTPUT_TOKENS = 1000;
+
+export const FLOREMORIA_INSTANT_TRANSFER_IBAN = 'IT60 X054 2811 1010 0000 0123 456';
+export const FLOREMORIA_INSTANT_TRANSFER_HOLDER = 'FloreMoria S.r.l.';
+
 const BOUQUET_OMaggio_SPECIALE_URL =
     'https://www.floremoria.com/fiori-sulle-tombe/bouquet-omaggio-speciale';
+
+const TOMB_ACCESSORY_PRICES = {
+    lumino: 'EUR 3,49',
+    biglietto: 'EUR 2,49',
+} as const;
+
+const FUNERAL_ACCESSORY_PRICES = {
+    ceri: 'EUR 24,99',
+    nastro: 'EUR 14,99',
+} as const;
 
 function normalize(value: string): string {
     return value
@@ -14,6 +29,10 @@ function normalize(value: string): string {
         .replace(/[^\w\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function hasAny(haystack: string, needles: string[]): boolean {
+    return needles.some((n) => haystack.includes(n));
 }
 
 function displayFirstName(session: ChatSession): string {
@@ -102,10 +121,6 @@ export function isNewOrderWithLocationRequest(message: string): boolean {
     return hasAny(m, ['vorrei', 'voglio', 'servono', 'posso', 'possibile']) || /\b(a|ad|in)\s+[a-z]/i.test(message);
 }
 
-function hasAny(haystack: string, needles: string[]): boolean {
-    return needles.some((n) => haystack.includes(n));
-}
-
 function extractLocationHint(message: string): string | null {
     const match = message.match(/\b(?:a|ad|in|presso)\s+([A-Za-zÀ-ÿ' -]{2,40})/i);
     if (!match?.[1]) return null;
@@ -115,6 +130,142 @@ function extractLocationHint(message: string): string | null {
         .slice(0, 3)
         .join(' ')
         .replace(/\?+$/, '');
+}
+
+type AccessoryCatalog = 'tombs' | 'funeral';
+
+function inferAccessoryCatalog(message: string, session: ChatSession): AccessoryCatalog {
+    const combined = [message, ...recentInboundBodies(session, 6)].join(' ');
+    const m = normalize(combined);
+    if (
+        hasAny(m, [
+            'funerale',
+            'camera mortuaria',
+            'chiesa',
+            'copribara',
+            'cuscino',
+            'piramide',
+            'corona',
+            ' ff ',
+            'ff-',
+            'piant',
+            'piccoli amici',
+            ' pa ',
+            'pa-',
+            'ceri',
+            'candele',
+            'nastro commemor',
+        ])
+    ) {
+        return 'funeral';
+    }
+    return 'tombs';
+}
+
+export function isAccessoryPriceInquiry(message: string): boolean {
+    const m = normalize(message);
+    const mentionsAccessory = hasAny(m, [
+        'lumino',
+        'lumini',
+        'bigliett',
+        'messaggio',
+        'ceri',
+        'candele',
+        'nastro',
+        'nastri',
+    ]);
+    if (!mentionsAccessory) return false;
+    return (
+        hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'quanto costano', 'tariffa', 'euro']) ||
+        m.includes('?') ||
+        hasAny(m, ['quanto', 'a quanto', 'costa il', 'costa la', 'costa un'])
+    );
+}
+
+export function buildAccessoryPriceReply(message: string, session: ChatSession): string | null {
+    if (session.userType === 'FLORIST') return null;
+    if (!isAccessoryPriceInquiry(message)) return null;
+
+    const name = displayFirstName(session);
+    const catalog = inferAccessoryCatalog(message, session);
+
+    if (catalog === 'funeral') {
+        return (
+            `Gentile ${name}, per omaggi funerale (FF) e piante (PA) gli accessori hanno questi prezzi:\n` +
+            `• Set ceri/candele: ${FUNERAL_ACCESSORY_PRICES.ceri}\n` +
+            `• Nastro commemorativo: ${FUNERAL_ACCESSORY_PRICES.nastro}\n\n` +
+            `Può selezionarli in fase d'ordine sul sito o indicarmi qui quale desidera aggiungere.`
+        );
+    }
+
+    return (
+        `Gentile ${name}, per le consegne sulla tomba (FT) gli accessori costano:\n` +
+        `• Lumino: ${TOMB_ACCESSORY_PRICES.lumino}\n` +
+        `• Messaggio/biglietto: ${TOMB_ACCESSORY_PRICES.biglietto}\n\n` +
+        `Può aggiungerli al bouquet durante l'ordine. Desidera che La guidi nella scelta del bouquet?`
+    );
+}
+
+export function isCemeteryCoverageQuestion(message: string): boolean {
+    const m = normalize(message);
+    if (!hasAny(m, ['cimitero', 'cimiteri', 'tomba', 'tombe'])) return false;
+    return (
+        hasAny(m, ['consegnate', 'consegna', 'consegnate in', 'qualsiasi cimitero', 'lontano', 'abito lontano']) ||
+        (m.includes('?') && hasAny(m, ['consegna', 'consegnate', 'copertura']))
+    );
+}
+
+export function buildCemeteryCoverageReply(session: ChatSession): string {
+    const name = displayFirstName(session);
+    return (
+        `Gentile ${name}, sì: siamo specializzati nella consegna direttamente all'interno di qualsiasi cimitero d'Italia, ` +
+        `sulla tomba, con posa curata e testimonianza fotografica. ` +
+        `Anche se abita lontano, il nostro fiorista partner locale si occupa di tutto in loco. ` +
+        `Mi indichi pure cimitero e comune e La seguo passo passo.`
+    );
+}
+
+export function isInstantTransferPaymentRequest(message: string): boolean {
+    const m = normalize(message);
+    if (!hasAny(m, ['bonifico', 'bonific', 'sepa', 'iban'])) return false;
+    return hasAny(m, ['pagare', 'pagamento', 'pago', 'posso', 'accettate', 'vorrei', 'voglio', 'con bonifico']);
+}
+
+export function buildInstantTransferPaymentReply(session: ChatSession): string {
+    const name = displayFirstName(session);
+    return (
+        `Gentile ${name}, accettiamo il bonifico ESCLUSIVAMENTE in Bonifico Istantaneo (SEPA Instant), ` +
+        `così possiamo garantire i tempi di consegna.\n\n` +
+        `IBAN: ${FLOREMORIA_INSTANT_TRANSFER_IBAN}\n` +
+        `Intestatario: ${FLOREMORIA_INSTANT_TRANSFER_HOLDER}\n` +
+        `Causale: nome e cognome del defunto + data consegna desiderata.\n\n` +
+        `Appena ricevuto l'accredito istantaneo, confermiamo subito l'ordine e La teniamo aggiornata su WhatsApp.`
+    );
+}
+
+export function isWebsiteFormIssue(message: string): boolean {
+    const m = normalize(message);
+    if (isFloristMiniAppIssue(message)) return false;
+    return (
+        hasAny(m, [
+            'non riesco',
+            'non posso',
+            'non mi fa',
+            'non funziona',
+            'problema',
+            'errore',
+            'bloccato',
+        ]) &&
+        hasAny(m, ['indirizzo', 'sito', 'sul sito', 'pagina', 'checkout', 'form', 'campo', 'inserire'])
+    );
+}
+
+export function buildWebsiteFormIssueReply(session: ChatSession): string {
+    const name = displayFirstName(session);
+    return (
+        `Non si preoccupi, ${name}. Può scrivermi qui in chat l'indirizzo esatto e i dettagli della consegna ` +
+        `(cimitero, tomba, data e orario): penserò io a inoltrare tutto al fiorista partner.`
+    );
 }
 
 export function buildOperatorHandoffReply(): string {
@@ -201,27 +352,63 @@ export function buildNewOrderLocationReply(message: string, session: ChatSession
     );
 }
 
+/** Taglia il testo all'ultima frase completa, eliminando code incomplete da Gemini/Meta. */
+export function trimIncompleteTail(text: string): string {
+    const trimmed = text.trim();
+    if (!trimmed) return trimmed;
+    if (/[.!?…🌹]$/.test(trimmed)) return trimmed;
+
+    for (const sep of ['. ', '.\n', '! ', '?\n', '? ', '…']) {
+        const idx = trimmed.lastIndexOf(sep);
+        if (idx >= Math.floor(trimmed.length * 0.35)) {
+            return trimmed.slice(0, idx + 1).trim();
+        }
+    }
+
+    let cleaned = trimmed.replace(
+        /\s+(e|che|se|oppure|per|con|un|una|il|la|lo|dei|del|non|resto|desider|vedo)\s+\S{0,12}$/i,
+        ''
+    ).trim();
+
+    const words = cleaned.split(/\s+/);
+    const last = words[words.length - 1] || '';
+    if (words.length > 2 && last.length <= 4 && !/[.!?]$/.test(last)) {
+        cleaned = words.slice(0, -1).join(' ');
+    }
+
+    return cleaned.trim();
+}
+
 /** Risposta incompleta (troncata da Meta/Gemini o taglio catalogo). */
 export function looksIncompleteReply(text: string): boolean {
-    const trimmed = text.trim();
+    const trimmed = trimIncompleteTail(text).trim();
     if (trimmed.length < 12) return true;
     if (/https?:\/\/\S+$/.test(trimmed)) return false;
     if (/[.!?…🌹]$/.test(trimmed)) return false;
-    if (/\b(desider|vedo che|se |oppure|per es|chrome o safari)\)?$/i.test(trimmed)) return true;
+    if (/\b(desider|vedo che|se |oppure|per es|chrome o safari|resto a)\)?$/i.test(trimmed)) return true;
     const lastWord = trimmed.split(/\s+/).pop() || '';
     if (lastWord.length <= 3 && !/[.!?]$/.test(trimmed)) return true;
     return false;
 }
 
 export function repairIncompleteReply(text: string, userType: ChatSession['userType']): string {
-    if (userType === 'FLORIST') {
-        return (
-            `${text.replace(/[,.\s]+$/, '')}. ` +
-            `Se la mini-app non risponde, può inviare le foto della posa direttamente qui in chat: le accettiamo come prova consegna. Preferisce provare così?`
-        );
+    const trimmed = trimIncompleteTail(text);
+    const base = trimmed.replace(/[,.\s]+$/, '').trim();
+    if (/[.!?…🌹]$/.test(base)) return base;
+
+    const suffix =
+        userType === 'FLORIST'
+            ? `Se la mini-app non risponde, può inviare le foto della posa direttamente qui in chat: le accettiamo come prova consegna.`
+            : `Resto a Sua completa disposizione: mi scriva pure come posso aiutarLa.`;
+
+    return `${base}. ${suffix}`;
+}
+
+/** Garantisce frasi complete prima dell'invio WhatsApp. */
+export function finalizeVeraReplyText(text: string, userType: ChatSession['userType']): string {
+    let result = trimIncompleteTail(text);
+    if (looksIncompleteReply(result)) {
+        result = repairIncompleteReply(result, userType);
     }
-    return (
-        `${text.replace(/[,.\s]+$/, '')}. ` +
-        `Resto a Sua disposizione: mi scriva pure come posso aiutarLa.`
-    );
+    return result.trim();
 }

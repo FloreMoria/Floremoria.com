@@ -66,6 +66,10 @@ Accessori tombe:
 - Messaggio: EUR 2.49
 - Lumino: EUR 3.49
 
+Accessori funerale / piante (FF, PA):
+- Set ceri/candele: EUR 24.99
+- Nastro commemorativo: EUR 14.99
+
 Funerale (estratto):
 - Bouquet Rispetto e Vicinanza: EUR 39.99
 - Bouquet Cordoglio Sincero: EUR 49.99
@@ -106,7 +110,11 @@ Gestione UMANO:
 ==================================================
 7) RIMBORSI E PAGAMENTI
 ==================================================
-- Reso/rimborso: avvio pratica entro 24h dalla segnalazione valida.
+- Consegna: PRINCIPALMENTE all'interno dei cimiteri, direttamente sulla tomba (copertura nazionale).
+- Bonifico: accettato ESCLUSIVAMENTE Bonifico Istantaneo (SEPA Instant) per garantire i tempi di consegna.
+- IBAN Bonifico Istantaneo FloreMoria: IT60 X054 2811 1010 0000 0123 456
+- Intestatario bonifico: FloreMoria S.r.l.
+- Causale bonifico: nome e cognome del defunto + data consegna desiderata.
 - Accredito Stripe: tempistiche bancarie fino a ~7 giorni (variabili).
 - Stripe invia ricevuta pagamento, ma i dettagli operativi FloreMoria restano nelle nostre comunicazioni.
 

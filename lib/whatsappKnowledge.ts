@@ -5,6 +5,7 @@ import {
     resolveHistoricalAudience,
 } from '@/lib/whatsapp/historicalToneKb';
 import { isOrderTrackingInquiry } from '@/lib/whatsapp/orderStatusInquiry';
+import { isAccessoryPriceInquiry } from '@/lib/vera/conversationScenarioHandlers';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
     buildSymmetricCourtesyReply,
@@ -569,6 +570,36 @@ export function buildWhatsAppAiReply(params: {
         m.includes('funerale')
     ) {
         return `${salutoPrefix}Perfetto, procediamo con un omaggio floreale per il funerale. Per aiutarLa con precisione Le chiedo un solo dettaglio: in quale citta e luogo desidera la consegna?\n\nPuò scegliere l'omaggio qui: ${kb.funeralUrl}`;
+    }
+
+    if (isAccessoryPriceInquiry(message)) {
+        const funeralContext = hasAny(m, [
+            'funerale',
+            'camera mortuaria',
+            'chiesa',
+            'copribara',
+            'ceri',
+            'candele',
+            'nastro',
+            'ff',
+            'pa',
+            'piant',
+            'piccoli amici',
+        ]);
+        if (funeralContext) {
+            return (
+                `${salutoPrefix}${emotionalPrefix}Per omaggi funerale (FF) e piante (PA) gli accessori costano:\n` +
+                `• Set ceri/candele: EUR 24,99\n` +
+                `• Nastro commemorativo: EUR 14,99\n\n` +
+                `Può selezionarli in fase d'ordine sul sito o indicarmi qui quale desidera aggiungere.`
+            );
+        }
+        return (
+            `${salutoPrefix}${emotionalPrefix}Per le consegne sulla tomba (FT) gli accessori costano:\n` +
+            `• Lumino: EUR 3,49\n` +
+            `• Messaggio/biglietto: EUR 2,49\n\n` +
+            `Può aggiungerli al bouquet durante l'ordine. Desidera che La guidi nella scelta del bouquet?`
+        );
     }
 
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {

@@ -7,24 +7,34 @@ import type { DeliveryProof, Order, OrderStatus } from '@prisma/client';
 
 const VERA_ACTIVE_ORDER_STATUSES: OrderStatus[] = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'];
 
-const ORDER_TRACKING_KEYWORDS = [
-    'foto',
-    'consegna',
-    'ordine',
-    'immagine',
-    'bouquet',
-    'aggiornament',
-    'stato',
-    'consegnat',
-    'posa',
-    'prova',
-    'dove',
-    'quando',
-    'arriv',
-    'spediz',
-    'tracking',
-    'funerale',
-    'fiori',
+/** Codice ordine esplicito (FT/FF/PA/FM-XX-26-NNN). */
+const ORDER_CODE_PATTERN = /\b(?:FT|FF|PA|FM)-[A-Z]{2}-\d{2}-\d{3,4}\b/i;
+
+const EXPLICIT_ORDER_STATUS_PHRASES = [
+    'dove e il mio ordine',
+    'stato del mio ordine',
+    'stato ordine',
+    'aggiornamento ordine',
+    'aggiornamento sul mio ordine',
+    'tracciare ordine',
+    'tracking ordine',
+    'seguire ordine',
+    'notizie ordine',
+    'notizie sul mio ordine',
+    'notizie sulla consegna',
+    'informazioni sul mio ordine',
+];
+
+const HYPOTHETICAL_MARKERS = [
+    'cosa succede se',
+    'cosa fare se',
+    'e se il cimitero',
+    'se il cimitero e chiuso',
+    'se il cimitero fosse chiuso',
+    'se e chiuso',
+    'in caso il cimitero',
+    'potete consegnare se',
+    'consegnate se',
 ];
 
 function normalizeForMatch(value: string): string {
@@ -37,13 +47,74 @@ function normalizeForMatch(value: string): string {
         .trim();
 }
 
-/** Messaggio utente che chiede aggiornamenti, foto o stato di un ordine esistente. */
+function hasAny(haystack: string, needles: string[]): boolean {
+    return needles.some((needle) => haystack.includes(needle));
+}
+
+export function extractOrderCodeFromMessage(message: string): string | null {
+    const match = message.match(ORDER_CODE_PATTERN);
+    return match?.[0]?.toUpperCase() ?? null;
+}
+
+function isHypotheticalOrderQuestion(message: string): boolean {
+    const m = normalizeForMatch(message);
+    if (!m) return false;
+    if (HYPOTHETICAL_MARKERS.some((marker) => m.includes(marker))) return true;
+    if (m.startsWith('se ') && !m.includes('mio ordine') && !m.includes('ordine ')) return true;
+    return false;
+}
+
+function isExplicitPersonalOrderStatusRequest(message: string): boolean {
+    const m = normalizeForMatch(message);
+    if (!m) return false;
+
+    if (EXPLICIT_ORDER_STATUS_PHRASES.some((phrase) => m.includes(phrase))) return true;
+
+    if (m.includes('mio ordine') && hasAny(m, ['stato', 'dove', 'quando', 'aggiorn', 'notizie', 'foto'])) {
+        return true;
+    }
+
+    if (
+        hasAny(m, [
+            'non ho ricevuto la foto',
+            'non ho ricevuto foto',
+            'foto non arrivata',
+            'foto non ricevuta',
+            'foto di consegna',
+        ]) &&
+        hasAny(m, ['ordine', 'minuti fa', 'ore fa', 'stamattina', 'fiori', 'funerale', 'consegna'])
+    ) {
+        return true;
+    }
+
+    if (
+        m.includes('funerale') &&
+        hasAny(m, ['arrivati', 'arrivato', 'foto', 'ordine', 'minuti fa', 'un ora', 'tra un ora'])
+    ) {
+        return true;
+    }
+
+    if (/\b(fatto|effettuato|piazzato)\s+(un\s+)?ordine\b/.test(m) && hasAny(m, ['minuti fa', 'ore fa', 'stamattina', 'foto', 'nastro', 'modific'])) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * True solo se l'utente chiede lo stato del PROPRIO ordine (codice esplicito o frase diretta),
+ * non per domande ipotetiche o generiche sul servizio.
+ */
 export function isOrderTrackingInquiry(message: string): boolean {
     if (isPreAcquisitionIntent(message)) return false;
 
     const m = normalizeForMatch(message);
     if (!m) return false;
-    return ORDER_TRACKING_KEYWORDS.some((keyword) => m.includes(keyword));
+    if (isHypotheticalOrderQuestion(message)) return false;
+
+    if (extractOrderCodeFromMessage(message)) return true;
+
+    return isExplicitPersonalOrderStatusRequest(message);
 }
 
 export function isOrderOpenForVeraContext(
@@ -99,6 +170,16 @@ export async function lookupLastOrderByPhone(phoneE164: string): Promise<OrderWi
     return prisma.order.findFirst({
         where: { deletedAt: null, userId: user.id },
         orderBy: { createdAt: 'desc' },
+        include: { deliveryProof: true },
+    });
+}
+
+export async function lookupOrderByNumber(orderNumber: string): Promise<OrderWithProof | null> {
+    return prisma.order.findFirst({
+        where: {
+            deletedAt: null,
+            orderNumber: { equals: orderNumber, mode: 'insensitive' },
+        },
         include: { deliveryProof: true },
     });
 }
@@ -166,8 +247,14 @@ export function buildOrderStatusEmpatheticReply(order: OrderWithProof, displayNa
     return `${prefix}La ringrazio per averci scritto. ${body.charAt(0).toUpperCase()}${body.slice(1)}`;
 }
 
-function buildNoOrderFoundReply(displayName: string): string {
+function buildNoOrderFoundReply(displayName: string, orderCode?: string | null): string {
     const prefix = salutationPrefix(displayName);
+    if (orderCode) {
+        return (
+            `${prefix}La ringrazio per averci scritto. Non trovo al momento l'ordine ${orderCode}: ` +
+            `verifico subito con lo Staff e La ricontatto qui con un aggiornamento preciso.`
+        );
+    }
     return (
         `${prefix}La ringrazio per averci scritto. Al momento non trovo un ordine recente associato al Suo numero: ` +
         `se ha già effettuato un ordine, mi indichi gentilmente il codice (es. FF-PN-26-004) così posso verificare subito lo stato e l'eventuale foto di consegna.`
@@ -175,8 +262,7 @@ function buildNoOrderFoundReply(displayName: string): string {
 }
 
 /**
- * Se il messaggio riguarda ordine/foto/consegna, risponde con stato DB reale
- * (o richiesta codice ordine) senza link al catalogo.
+ * Lookup DB solo con codice ordine esplicito o richiesta diretta sul proprio ordine.
  */
 export async function tryBuildOrderTrackingReply(
     sessionPhone: string,
@@ -184,6 +270,15 @@ export async function tryBuildOrderTrackingReply(
     message: string
 ): Promise<string | null> {
     if (isPreAcquisitionIntent(message) || !isOrderTrackingInquiry(message)) return null;
+
+    const orderCode = extractOrderCodeFromMessage(message);
+    if (orderCode) {
+        const order = await lookupOrderByNumber(orderCode);
+        if (!order) return buildNoOrderFoundReply(displayName, orderCode);
+        return buildOrderStatusEmpatheticReply(order, displayName);
+    }
+
+    if (!isExplicitPersonalOrderStatusRequest(message)) return null;
 
     const e164 = normalizePhoneE164(sessionPhone.replace(/^whatsapp:/i, ''));
     if (!e164) return buildNoOrderFoundReply(displayName);

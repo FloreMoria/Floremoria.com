@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { ContentFormat, MarketingChannel } from '@prisma/client';
-import { put } from '@vercel/blob';
-import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
+import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
 import { MarketingEngineConfigError } from './generation';
 
@@ -152,8 +151,7 @@ export async function generateAndStorageCampaignImage(
   const { buffer, mimeType, extension } = await generateImageBytes(imagePrompt, aspectRatio);
 
   const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;
-  const { url } = await put(blobPath, buffer, {
-    access: getBlobStoreAccess(),
+  const { url } = await putBlobWithAccessFallback(blobPath, buffer, {
     contentType: mimeType,
     token: getBlobToken(),
     addRandomSuffix: false,

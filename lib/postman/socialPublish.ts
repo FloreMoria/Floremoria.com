@@ -410,11 +410,14 @@ async function publishToLinkedIn(
     throw new Error('LINKEDIN_ACCESS_TOKEN assente');
   }
 
-  const authorUrn = linkedInUserId
-    ? `urn:li:person:${linkedInUserId}`
-    : linkedInOrganizationId
-      ? `urn:li:organization:${linkedInOrganizationId}`
-      : null;
+  let authorUrn: string | null = null;
+  if (linkedInUserId) {
+    const cleanId = linkedInUserId.trim().replace(/^urn:li:(person|member):/, '');
+    authorUrn = `urn:li:person:${cleanId}`;
+  } else if (linkedInOrganizationId) {
+    const cleanOrg = linkedInOrganizationId.trim().replace(/^urn:li:organization:/, '');
+    authorUrn = `urn:li:organization:${cleanOrg}`;
+  }
 
   if (!authorUrn) {
     throw new Error('LINKEDIN_ORGANIZATION_ID o LINKEDIN_USER_ID assente');

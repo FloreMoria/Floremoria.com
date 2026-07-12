@@ -21,9 +21,7 @@ export const DEFAULT_MARKETING_LAUNCH_PRODUCTS: MarketingLaunchProduct[] = [
 ];
 
 export function getMarketingLaunchProducts(): MarketingLaunchProduct[] {
-  const raw =
-    process.env.MARKETING_LAUNCH_PRODUCTS_JSON?.trim() ||
-    process.env.FUTURIA_LAUNCH_PRODUCTS_JSON?.trim();
+  const raw = process.env.MARKETING_LAUNCH_PRODUCTS_JSON?.trim();
   if (!raw) {
     return DEFAULT_MARKETING_LAUNCH_PRODUCTS;
   }

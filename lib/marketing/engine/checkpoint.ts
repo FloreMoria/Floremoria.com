@@ -181,7 +181,6 @@ export async function evaluateCampaignDraft(
 
   const model =
     process.env.MARKETING_CHECKPOINT_GEMINI_MODEL?.trim() ||
-    process.env.FUTURIA_CHECKPOINT_GEMINI_MODEL?.trim() ||
     'gemini-2.5-pro';
   const ai = new GoogleGenAI({ apiKey });
 

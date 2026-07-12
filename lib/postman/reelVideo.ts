@@ -15,8 +15,7 @@ export async function ensureCampaignReelVideoUrl(input: {
   blobToken?: string;
 }): Promise<string | null> {
   const fallback =
-    process.env.MARKETING_REEL_FALLBACK_VIDEO_URL?.trim() ||
-    process.env.FUTURIA_REEL_FALLBACK_VIDEO_URL?.trim();
+    process.env.MARKETING_REEL_FALLBACK_VIDEO_URL?.trim();
   if (fallback) {
     return fallback;
   }
@@ -65,8 +64,7 @@ export async function ensureCampaignReelVideoUrl(input: {
 async function buildMinimalSlideshowMp4(jpegBuffer: Buffer): Promise<Buffer | null> {
   // Per affidabilità in serverless, usiamo un template MP4 predefinito su Blob se disponibile.
   const templateUrl =
-    process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim() ||
-    process.env.FUTURIA_REEL_TEMPLATE_MP4_URL?.trim();
+    process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim();
   if (templateUrl) {
     const res = await fetch(templateUrl);
     if (res.ok) {

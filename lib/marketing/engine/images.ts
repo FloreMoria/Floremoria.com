@@ -77,7 +77,6 @@ async function generateImageBytes(
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   const model =
     process.env.MARKETING_IMAGEN_MODEL?.trim() ||
-    process.env.FUTURIA_IMAGEN_MODEL?.trim() ||
     DEFAULT_IMAGEN_MODEL;
   const outputMimeType = 'image/png';
   const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });

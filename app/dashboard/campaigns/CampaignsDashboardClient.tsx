@@ -11,12 +11,12 @@ import {
   Sparkles,
   Check,
   Image as ImageIcon,
-  Heart,
-  Briefcase,
   Layers,
   Clock,
-  Eye,
-  Trash2
+  Trash2,
+  Edit2,
+  X,
+  Save
 } from 'lucide-react';
 
 type Campaign = {
@@ -72,6 +72,12 @@ export default function CampaignsDashboardClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Stati per la modifica dei post
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCopy, setEditCopy] = useState('');
+  const [editHashtags, setEditHashtags] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
+
   // Fetch dati iniziali
   const fetchData = async () => {
     setLoading(true);
@@ -119,6 +125,7 @@ export default function CampaignsDashboardClient() {
   // Gestione cambio tab
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
+    setEditingId(null); // Reset modifica se cambia scheda
     // Aggiorna URL query param senza ricaricare
     const params = new URLSearchParams(window.location.search);
     params.set('tab', tabId);
@@ -157,6 +164,46 @@ export default function CampaignsDashboardClient() {
       setErrorMessage('Errore di connessione durante il salvataggio.');
     } finally {
       setThemeLoading(false);
+    }
+  };
+
+  // Salvataggio Modifica Testi Campagna
+  const handleSaveCampaignEdit = async (campaignId: string) => {
+    setSaveLoading(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    const tagsArray = editHashtags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    try {
+      const res = await fetch('/api/dashboard/campaigns', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaignId,
+          copy: editCopy,
+          hashtags: tagsArray,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Campagna modificata con successo!');
+        // Aggiorna lo stato in locale
+        setCampaigns(prev =>
+          prev.map(c => (c.id === campaignId ? data.campaign : c))
+        );
+        setEditingId(null);
+        setTimeout(() => setSuccessMessage(null), 4000);
+      } else {
+        setErrorMessage(data.error || 'Errore nel salvataggio delle modifiche.');
+      }
+    } catch (err) {
+      setErrorMessage('Errore di rete durante il salvataggio delle modifiche.');
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -471,7 +518,7 @@ export default function CampaignsDashboardClient() {
                   {getStatusBadge(c.status)}
                 </div>
 
-                {/* IMAGINE ANTEPRIMA (IMAGEN) */}
+                {/* IMMAGINE ANTEPRIMA (IMAGEN) */}
                 {c.imageUrl ? (
                   <div className="relative aspect-[16/9] w-full bg-slate-50 border-b border-slate-50 group overflow-hidden">
                     <img
@@ -493,25 +540,86 @@ export default function CampaignsDashboardClient() {
                   </div>
                 )}
 
-                {/* CONTENUTO DI TESTO */}
+                {/* CONTENUTO DI TESTO (FLEX MODIFICA O VISUALIZZAZIONE) */}
                 <div className="p-5 flex flex-col gap-4">
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
-                      Copy del Post
-                    </span>
-                    <p className="text-slate-700 text-sm whitespace-pre-line leading-relaxed font-medium">
-                      {c.copy}
-                    </p>
-                  </div>
-
-                  {c.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {c.hashtags.map(tag => (
-                        <span key={tag} className="text-xs font-semibold text-slate-500">
-                          #{tag}
-                        </span>
-                      ))}
+                  {editingId === c.id ? (
+                    /* SEZIONE DI MODIFICA ATTIVA */
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                          Modifica Copy
+                        </label>
+                        <textarea
+                          rows={6}
+                          value={editCopy}
+                          onChange={(e) => setEditCopy(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+                          Modifica Hashtags (separati da virgola)
+                        </label>
+                        <input
+                          type="text"
+                          value={editHashtags}
+                          onChange={(e) => setEditHashtags(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all"
+                          placeholder="es. floremoria, lutto, ricordo"
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end mt-2">
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="flex items-center gap-1 text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all"
+                        >
+                          <X size={12} /> Annulla
+                        </button>
+                        <button
+                          onClick={() => handleSaveCampaignEdit(c.id)}
+                          disabled={saveLoading}
+                          className="flex items-center gap-1 text-white bg-slate-800 hover:bg-slate-900 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-50"
+                        >
+                          <Save size={12} /> {saveLoading ? 'Salvataggio...' : 'Salva'}
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    /* SEZIONE DI VISUALIZZAZIONE STANDARD */
+                    <>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            Copy del Post
+                          </span>
+                          {c.status !== 'PUBLISHED' && (
+                            <button
+                              onClick={() => {
+                                setEditingId(c.id);
+                                setEditCopy(c.copy);
+                                setEditHashtags(c.hashtags.join(', '));
+                              }}
+                              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors px-2 py-1 rounded bg-slate-50 border border-slate-150"
+                            >
+                              <Edit2 size={11} /> Modifica
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-slate-700 text-sm whitespace-pre-line leading-relaxed font-medium">
+                          {c.copy}
+                        </p>
+                      </div>
+
+                      {c.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {c.hashtags.map(tag => (
+                            <span key={tag} className="text-xs font-semibold text-slate-500">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* BOX DI ERRORE GUARDIANI (REJECTED) */}
@@ -524,6 +632,11 @@ export default function CampaignsDashboardClient() {
                       <p className="text-red-700 text-xs leading-relaxed font-semibold">
                         {c.rejectionReason}
                       </p>
+                      {editingId !== c.id && (
+                        <span className="text-[10px] text-red-600 font-semibold italic mt-1">
+                          💡 Suggerimento: clicca su "Modifica" sopra per correggere il testo seguendo le indicazioni.
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -554,7 +667,7 @@ export default function CampaignsDashboardClient() {
                   </button>
                 )}
                 {c.status === 'PUBLISHED' && (
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-mono">
                     <CheckCircle2 size={12} /> Pubblicazione Completata
                   </span>
                 )}

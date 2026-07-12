@@ -22,10 +22,7 @@ export async function GET() {
         meet: getRandState(0.95),
         openreply: getRandState(0.9),
         github: getRandState(0.9),
-        ig: getRandState(0.85),
-        fb: getRandState(0.85),
-        tiktok: getRandState(0.8),
-        linkedin: getRandState(0.9),
+        social: getRandState(0.9),
     };
 
     return NextResponse.json(data);

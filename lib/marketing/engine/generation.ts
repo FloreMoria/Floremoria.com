@@ -262,7 +262,6 @@ export async function generateCampaignDraft(
 
   const model =
     process.env.MARKETING_GEMINI_MODEL?.trim() ||
-    process.env.FUTURIA_GEMINI_MODEL?.trim() ||
     'gemini-2.5-pro';
   const ai = new GoogleGenAI({ apiKey });
 
@@ -351,7 +350,6 @@ export async function regenerateCampaignDraftWithFeedback(
 
   const model =
     process.env.MARKETING_GEMINI_MODEL?.trim() ||
-    process.env.FUTURIA_GEMINI_MODEL?.trim() ||
     'gemini-2.5-pro';
   const ai = new GoogleGenAI({ apiKey });
 

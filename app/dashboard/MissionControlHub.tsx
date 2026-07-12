@@ -30,10 +30,7 @@ const ROW2_BASE: HubButton[] = [
 
 const ROW3 = [
     { id: 'github', label: 'GitHub', icon: '💻', url: process.env.NEXT_PUBLIC_SOCIAL_GITHUB_URL || 'https://github.com' },
-    { id: 'ig', label: 'Instagram', icon: '📸', url: '/dashboard/campaigns?tab=META_INSTAGRAM' },
-    { id: 'fb', label: 'Facebook', icon: '👥', url: '/dashboard/campaigns?tab=META_FACEBOOK' },
-    { id: 'tiktok', label: 'TikTok', icon: '🎵', url: '/dashboard/campaigns?tab=TIKTOK' },
-    { id: 'linkedin', label: 'LinkedIn', icon: '💼', url: '/dashboard/campaigns?tab=LINKEDIN' },
+    { id: 'social', label: 'Social Media', icon: '📱', url: '/dashboard/campaigns' },
 ];
 
 export default function MissionControlHub({

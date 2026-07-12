@@ -25,7 +25,7 @@ export async function GET() {
         ig: getRandState(0.85),
         fb: getRandState(0.85),
         tiktok: getRandState(0.8),
-        yt: getRandState(0.9),
+        linkedin: getRandState(0.9),
     };
 
     return NextResponse.json(data);

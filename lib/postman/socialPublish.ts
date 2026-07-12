@@ -410,10 +410,10 @@ async function publishToLinkedIn(
     throw new Error('LINKEDIN_ACCESS_TOKEN assente');
   }
 
-  const authorUrn = linkedInOrganizationId
-    ? `urn:li:organization:${linkedInOrganizationId}`
-    : linkedInUserId
-      ? `urn:li:person:${linkedInUserId}`
+  const authorUrn = linkedInUserId
+    ? `urn:li:person:${linkedInUserId}`
+    : linkedInOrganizationId
+      ? `urn:li:organization:${linkedInOrganizationId}`
       : null;
 
   if (!authorUrn) {

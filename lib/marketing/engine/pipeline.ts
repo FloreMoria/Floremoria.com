@@ -1,8 +1,12 @@
 import { evaluateCampaignDraft } from './checkpoint';
-import { MarketingEngineConfigError, generateCampaignDraft } from './generation';
+import {
+  MarketingEngineConfigError,
+  generateCampaignDraft,
+  regenerateCampaignDraftWithFeedback,
+} from './generation';
 import { generateAndStorageCampaignImage } from './images';
 import { getMarketingLaunchProducts, pickDailyLaunchProduct, type MarketingLaunchProduct } from './launchQueue';
-import { getDailyPublishSlots } from './contentCalendar';
+import { getDailyPublishSlots, getActiveTheme } from './contentCalendar';
 
 export interface PipelineCampaignResult {
   campaignId: string;
@@ -43,32 +47,50 @@ async function processCampaignPost(
 ): Promise<PipelineCampaignResult> {
   const label = `[Marketing Pipeline] ${product.category} · ${product.productName} · ${channel} · ${contentFormat}`;
 
-  try {
-    console.log(`${label} — STEP 2/3 Imagen + Vercel Blob (${index}/${total})`);
-    const imageUrl = await generateAndStorageCampaignImage(campaignId, { force: true });
-    console.log(`${label} — immagine caricata: ${imageUrl}`);
+  let attempts = 0;
+  const maxRetries = 3;
+  let approved = false;
+  let rejectionReason: string | undefined;
+  let imageUrl: string | undefined;
 
-    console.log(`${label} — STEP 3/3 Checkpoint Guardiani (${index}/${total})`);
-    const checkpoint = await evaluateCampaignDraft(campaignId);
-    console.log(
-      `${label} — checkpoint ${checkpoint.approved ? 'APPROVED' : 'REJECTED'}${
-        checkpoint.reason ? `: ${checkpoint.reason}` : ''
-      }`
-    );
+  while (attempts <= maxRetries && !approved) {
+    attempts++;
+    const attemptLabel = `${label} (Tentativo ${attempts}/${maxRetries + 1})`;
+    try {
+      if (attempts > 1 && rejectionReason) {
+        console.log(`${attemptLabel} — Rigenerazione copy e prompt basata su feedback Guardiani...`);
+        await regenerateCampaignDraftWithFeedback(campaignId, rejectionReason);
+      }
 
-    return {
-      campaignId,
-      channel,
-      contentFormat,
-      imageUrl,
-      approved: checkpoint.approved,
-      rejectionReason: checkpoint.reason,
-    };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`${label} — ERRORE: ${msg}`);
-    return { campaignId, channel, contentFormat, error: msg };
+      console.log(`${attemptLabel} — STEP 2/3 Imagen + Vercel Blob`);
+      imageUrl = await generateAndStorageCampaignImage(campaignId, { force: true });
+      console.log(`${attemptLabel} — immagine caricata: ${imageUrl}`);
+
+      console.log(`${attemptLabel} — STEP 3/3 Checkpoint Guardiani`);
+      const checkpoint = await evaluateCampaignDraft(campaignId);
+      approved = checkpoint.approved;
+      rejectionReason = checkpoint.reason;
+
+      console.log(
+        `${attemptLabel} — checkpoint ${approved ? 'APPROVED' : 'REJECTED'}${
+          rejectionReason ? `: ${rejectionReason}` : ''
+        }`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`${attemptLabel} — ERRORE: ${msg}`);
+      return { campaignId, channel, contentFormat, error: msg };
+    }
   }
+
+  return {
+    campaignId,
+    channel,
+    contentFormat,
+    imageUrl,
+    approved,
+    rejectionReason: approved ? undefined : rejectionReason,
+  };
 }
 
 async function runProductPipeline(product: MarketingLaunchProduct): Promise<PipelineProductResult> {
@@ -79,11 +101,13 @@ async function runProductPipeline(product: MarketingLaunchProduct): Promise<Pipe
   try {
     console.log(`[Marketing Pipeline] STEP 1/3 generateCampaignDraft — ${product.productName}`);
     const slots = getDailyPublishSlots();
+    const theme = await getActiveTheme();
     const draft = await generateCampaignDraft(
       product.category,
       product.productName,
       product.productPrice,
-      slots
+      slots,
+      theme
     );
 
     console.log(

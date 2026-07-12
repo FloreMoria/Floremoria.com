@@ -29,11 +29,11 @@ const ROW2_BASE: HubButton[] = [
 ];
 
 const ROW3 = [
-    { id: 'github', label: 'GitHub', icon: '💻', url: 'https://github.com' },
-    { id: 'ig', label: 'Instagram', icon: '📸', url: 'https://instagram.com' },
-    { id: 'fb', label: 'Facebook', icon: '👥', url: 'https://business.facebook.com' },
-    { id: 'tiktok', label: 'TikTok', icon: '🎵', url: 'https://tiktok.com' },
-    { id: 'yt', label: 'YouTube', icon: '▶️', url: 'https://youtube.com/studio' },
+    { id: 'github', label: 'GitHub', icon: '💻', url: process.env.NEXT_PUBLIC_SOCIAL_GITHUB_URL || 'https://github.com' },
+    { id: 'ig', label: 'Instagram', icon: '📸', url: '/dashboard/campaigns?tab=META_INSTAGRAM' },
+    { id: 'fb', label: 'Facebook', icon: '👥', url: '/dashboard/campaigns?tab=META_FACEBOOK' },
+    { id: 'tiktok', label: 'TikTok', icon: '🎵', url: '/dashboard/campaigns?tab=TIKTOK' },
+    { id: 'linkedin', label: 'LinkedIn', icon: '💼', url: '/dashboard/campaigns?tab=LINKEDIN' },
 ];
 
 export default function MissionControlHub({
@@ -101,7 +101,7 @@ export default function MissionControlHub({
             <a
                 href={btn.scrollTarget ? `#${btn.scrollTarget}` : btn.url}
                 onClick={handleClick}
-                target={btn.scrollTarget ? undefined : '_blank'}
+                target={btn.scrollTarget ? undefined : (btn.url.startsWith('/') ? undefined : '_blank')}
                 rel={btn.scrollTarget ? undefined : 'noopener noreferrer'}
                 title={
                     btn.scrollTarget

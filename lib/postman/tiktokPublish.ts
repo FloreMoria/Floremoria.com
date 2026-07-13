@@ -5,16 +5,108 @@
 import { ContentFormat } from '@prisma/client';
 import {
   formatTikTokScopeAuthorizationError,
+  formatTikTokUrlOwnershipError,
   isTikTokScopeAuthorizationError,
+  isTikTokUrlOwnershipError,
   parseTikTokOAuthError,
   parseTikTokTokenFields,
 } from '@/lib/dashboard/tiktokOAuth';
-import { ensureMetaFetchableImageUrl, ensureSocialFetchableVideoUrl } from '@/lib/postman/socialImageStaging';
+import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
 import prisma from '@/lib/prisma';
 
 const TIKTOK_API_BASE = 'https://open.tiktokapis.com';
+const TIKTOK_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
+const TIKTOK_DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024;
+const TIKTOK_MAX_CHUNK_BYTES = 64 * 1024 * 1024;
+
+function videoMimeTypeFromUrl(url: string): string {
+  const lower = url.toLowerCase();
+  if (lower.includes('.mov')) return 'video/quicktime';
+  if (lower.includes('.webm')) return 'video/webm';
+  return 'video/mp4';
+}
+
+function planTikTokVideoChunks(videoSize: number): { chunkSize: number; totalChunkCount: number } {
+  if (videoSize <= TIKTOK_MIN_CHUNK_BYTES) {
+    return { chunkSize: videoSize, totalChunkCount: 1 };
+  }
+
+  const chunkSize = Math.min(TIKTOK_DEFAULT_CHUNK_BYTES, TIKTOK_MAX_CHUNK_BYTES);
+  return {
+    chunkSize,
+    totalChunkCount: Math.ceil(videoSize / chunkSize),
+  };
+}
+
+function buildTikTokPostInfo(
+  input: TikTokPublishInput
+): Record<string, unknown> {
+  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
+  return {
+    title: caption.slice(0, 2200),
+    privacy_level: 'PUBLIC_TO_EVERYONE',
+    disable_comment: false,
+    brand_content_toggle: false,
+    brand_organic_toggle: true,
+  };
+}
+
+async function uploadTikTokVideoBytes(
+  videoBytes: Buffer,
+  accessToken: string,
+  postInfo: Record<string, unknown>,
+  contentType: string
+): Promise<string> {
+  const videoSize = videoBytes.length;
+  const { chunkSize, totalChunkCount } = planTikTokVideoChunks(videoSize);
+
+  const init = await tikTokApiPost<{
+    data?: { publish_id?: string; upload_url?: string };
+  }>('/v2/post/publish/video/init/', accessToken, {
+    post_info: postInfo,
+    source_info: {
+      source: 'FILE_UPLOAD',
+      video_size: videoSize,
+      chunk_size: chunkSize,
+      total_chunk_count: totalChunkCount,
+    },
+  });
+
+  const uploadUrl = init.data?.upload_url;
+  const publishId = init.data?.publish_id;
+  if (!uploadUrl || !publishId) {
+    throw new Error('TikTok upload_url o publish_id mancante.');
+  }
+
+  for (let chunkIndex = 0; chunkIndex < totalChunkCount; chunkIndex++) {
+    const start = chunkIndex * chunkSize;
+    const end = Math.min(start + chunkSize, videoSize) - 1;
+    const chunk = videoBytes.subarray(start, end + 1);
+
+    const res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': String(chunk.length),
+        'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+      },
+      body: new Uint8Array(chunk),
+    });
+
+    if (res.status !== 201 && res.status !== 206) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`TikTok video upload fallito (${res.status})${body ? `: ${body}` : ''}`);
+    }
+
+    if (res.status === 201) {
+      break;
+    }
+  }
+
+  return publishId;
+}
 
 export interface TikTokPublishInput {
   campaignId: string;
@@ -171,15 +263,11 @@ async function publishTikTokPhotoPost(
     blobToken
   );
 
-  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
-
   const init = await tikTokApiPost<{
     data?: { publish_id?: string };
   }>('/v2/post/publish/content/init/', accessToken, {
     post_info: {
-      title: caption.slice(0, 2200),
-      privacy_level: 'PUBLIC_TO_EVERYONE',
-      disable_comment: false,
+      ...buildTikTokPostInfo(input),
     },
     source_info: {
       source: 'PULL_FROM_URL',
@@ -199,7 +287,7 @@ async function publishTikTokPhotoPost(
   return publishId;
 }
 
-/** Post video su TikTok (reel ogni 3 giorni). */
+/** Post video su TikTok tramite FILE_UPLOAD (evita verifica URL ownership PULL_FROM_URL). */
 async function publishTikTokVideoPost(
   input: TikTokPublishInput,
   accessToken: string
@@ -210,34 +298,13 @@ async function publishTikTokVideoPost(
   }
 
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  const publicVideoUrl = await ensureSocialFetchableVideoUrl(
-    input.campaignId,
-    videoUrl,
-    blobToken
-  );
+  const videoBytes = await fetchImageBytes(videoUrl, blobToken);
+  const contentType = videoMimeTypeFromUrl(videoUrl);
+  const postInfo = buildTikTokPostInfo(input);
 
-  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
+  const publishId = await uploadTikTokVideoBytes(videoBytes, accessToken, postInfo, contentType);
 
-  const init = await tikTokApiPost<{
-    data?: { publish_id?: string };
-  }>('/v2/post/publish/video/init/', accessToken, {
-    post_info: {
-      title: caption.slice(0, 2200),
-      privacy_level: 'PUBLIC_TO_EVERYONE',
-      disable_comment: false,
-    },
-    source_info: {
-      source: 'PULL_FROM_URL',
-      video_url: publicVideoUrl,
-    },
-  });
-
-  const publishId = init.data?.publish_id;
-  if (!publishId) {
-    throw new Error('TikTok video publish_id mancante.');
-  }
-
-  console.log(`[POSTMAN] TikTok video pubblicato — publish_id ${publishId}`);
+  console.log(`[POSTMAN] TikTok video caricato via FILE_UPLOAD — publish_id ${publishId}`);
   return publishId;
 }
 
@@ -258,7 +325,7 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
   try {
     let externalId: string;
 
-    if (input.contentFormat === ContentFormat.REEL) {
+    if (input.videoUrl?.trim() || input.contentFormat === ContentFormat.REEL) {
       externalId = await publishTikTokVideoPost(input, env.accessToken);
     } else {
       externalId = await publishTikTokPhotoPost(input, env.accessToken);
@@ -269,7 +336,9 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     const msg = e instanceof Error ? e.message : String(e);
     const error = isTikTokScopeAuthorizationError(msg)
       ? formatTikTokScopeAuthorizationError()
-      : msg;
+      : isTikTokUrlOwnershipError(msg)
+        ? formatTikTokUrlOwnershipError()
+        : msg;
     console.error(`[POSTMAN] TikTok errore campagna ${input.campaignId}: ${msg}`);
     return { success: false, error };
   }

@@ -77,6 +77,17 @@ export function isTikTokScopeAuthorizationError(message: string): boolean {
   return /did not authorize the scope|scope required|insufficient.*scope/i.test(message);
 }
 
+export function isTikTokUrlOwnershipError(message: string): boolean {
+  return /url ownership|url_ownership_unverified/i.test(message);
+}
+
+export function formatTikTokUrlOwnershipError(): string {
+  return (
+    'TikTok non ha potuto scaricare il media dal nostro URL. Per i video usiamo ora upload diretto; ' +
+    'se l\'errore persiste, riprova tra qualche minuto o contatta il supporto.'
+  );
+}
+
 export function buildTikTokAuthorizeUrl(
   clientKey: string,
   redirectUri: string,

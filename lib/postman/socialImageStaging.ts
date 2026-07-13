@@ -35,12 +35,23 @@ function getStagingSecret(): string {
   return candidates[0]!;
 }
 
+import { getTikTokVerifiedSiteOrigin } from '@/lib/tiktokDomainVerification';
+
 function getSiteBaseUrl(): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.VERBALI_SYNC_PRODUCTION_URL?.trim() ||
-    'https://www.floremoria.com';
-  return base.replace(/\/$/, '');
+    getTikTokVerifiedSiteOrigin();
+  const normalized = base.replace(/\/$/, '');
+  try {
+    const url = new URL(normalized);
+    if (url.hostname === 'floremoria.com' || url.hostname === 'www.floremoria.com') {
+      return getTikTokVerifiedSiteOrigin();
+    }
+  } catch {
+    // keep normalized below
+  }
+  return normalized;
 }
 
 function sanitizeStagingKey(raw: string): string {

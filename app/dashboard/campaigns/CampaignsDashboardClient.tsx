@@ -67,6 +67,7 @@ export default function CampaignsDashboardClient() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeTheme, setActiveTheme] = useState('');
   const [manualThemeOverride, setManualThemeOverride] = useState('');
+  const [isTikTokConnected, setIsTikTokConnected] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [themeLoading, setThemeLoading] = useState(false);
@@ -103,6 +104,7 @@ export default function CampaignsDashboardClient() {
         setCampaigns(data.campaigns);
         setActiveTheme(data.activeTheme);
         setManualThemeOverride(data.manualThemeOverride);
+        setIsTikTokConnected(data.isTikTokConnected || false);
         
         // Risolvi opzione tema selezionato
         if (!data.manualThemeOverride) {
@@ -522,6 +524,53 @@ export default function CampaignsDashboardClient() {
           </button>
         ))}
       </div>
+
+      {activeTab === 'TIKTOK' && (
+        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md animate-fade-in">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl shrink-0">🎵</span>
+            <div>
+              <h4 className="font-bold text-sm uppercase tracking-wider text-slate-100">Collegamento Account TikTok</h4>
+              <p className="text-slate-400 text-xs mt-0.5 font-medium leading-relaxed">
+                {isTikTokConnected
+                  ? 'Il tuo profilo TikTok ufficiale di FloreMoria è correttamente connesso e autorizzato con rinnovo automatico (Refresh Token flow).'
+                  : 'Nessun account TikTok associato nel database. Connetti il profilo per abilitare la pubblicazione automatica e manuale.'}
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0">
+            {isTikTokConnected ? (
+              <button
+                onClick={async () => {
+                  if (confirm('Sei sicuro di voler scollegare l\'account TikTok di FloreMoria?')) {
+                    try {
+                      const res = await fetch('/api/dashboard/tiktok/disconnect', { method: 'POST' });
+                      const data = await res.json();
+                      if (data.success) {
+                        setIsTikTokConnected(false);
+                        setSuccessMessage('Account TikTok scollegato con successo.');
+                        setTimeout(() => setSuccessMessage(null), 4000);
+                      }
+                    } catch (e) {
+                      setErrorMessage('Errore durante lo scollegamento.');
+                    }
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-sm"
+              >
+                Scollega Profilo
+              </button>
+            ) : (
+              <a
+                href="/api/dashboard/tiktok/auth"
+                className="bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 inline-block text-center shadow-sm"
+              >
+                Connetti Profilo
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* FILTRI DI STATO */}
       <div className="flex flex-wrap items-center justify-between gap-4">

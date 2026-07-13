@@ -517,7 +517,7 @@ async function publishToLinkedIn(
 
   // L'ID del post creato viene spesso ritornato nell'header 'x-restli-id' o nel body
   const restliId = postsRes.headers.get('x-restli-id');
-  const externalId = restliId || (typeof postsPayload.id === 'string' ? postsPayload.id : null) || asset;
+  const externalId = restliId || (typeof postsPayload.id === 'string' ? postsPayload.id : null) || imageUrn;
   console.log(`[POSTMAN] LinkedIn pubblicato — post ${externalId} (campagna ${campaign.id})`);
   return externalId;
 }

@@ -16,11 +16,17 @@ export async function GET() {
       where: { key: 'marketing_active_theme' },
     });
 
+    const tiktokToken = await prisma.systemState.findUnique({
+      where: { key: 'tiktok_access_token' },
+    });
+    const isTikTokConnected = !!tiktokToken?.value;
+
     return NextResponse.json({
       success: true,
       campaigns,
       activeTheme,
       manualThemeOverride: manualThemeOverride?.value || '',
+      isTikTokConnected,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

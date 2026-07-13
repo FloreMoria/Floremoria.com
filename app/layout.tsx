@@ -61,6 +61,11 @@ export const metadata: Metadata = {
     ],
     apple: '/images/brand/Logo FloreMoria.png'
   },
+  verification: {
+    other: {
+      'tiktok-developers-site-verification': 's25YbsdBedcdN5ME5WVecDUCIu6P7Zys',
+    },
+  },
 };
 
 export default function RootLayout({

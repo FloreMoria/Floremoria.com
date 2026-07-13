@@ -87,6 +87,13 @@ function getHostContext(request: NextRequest): DashboardHostContext {
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    // TikTok verifica l'URL esatto con trailing slash e non segue redirect 308.
+    if (pathname === '/termini-condizioni/') {
+        const rewriteUrl = request.nextUrl.clone();
+        rewriteUrl.pathname = '/termini-condizioni';
+        return NextResponse.rewrite(rewriteUrl);
+    }
+
     if (isPartnerApiDocsPath(pathname)) {
         const expectedUser = process.env.PARTNER_DOCS_BASIC_USER?.trim();
         const expectedPass = process.env.PARTNER_DOCS_BASIC_PASSWORD?.trim();

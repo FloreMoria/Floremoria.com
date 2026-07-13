@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
+import { blobPathnameFromUrl, isPrivateVercelBlobUrl } from '@/lib/dashboard/campaignMediaUrl';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +13,8 @@ export async function GET(request: Request) {
       return new NextResponse('URL mancante.', { status: 400 });
     }
 
-    // Per motivi di sicurezza, permetti il caricamento solo dallo store di Vercel Blob
-    if (!url.includes('vercel-storage.com')) {
-      return new NextResponse('Dominio non autorizzato.', { status: 403 });
+    if (!isPrivateVercelBlobUrl(url)) {
+      return new NextResponse('Solo blob privati Vercel sono serviti da questo proxy.', { status: 403 });
     }
 
     const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -22,20 +22,23 @@ export async function GET(request: Request) {
       return new NextResponse('Token di lettura Vercel Blob non configurato sul server.', { status: 500 });
     }
 
-    // Recupera lo stream del blob privato da Vercel
-    const blobResponse = await getBlobWithAccessFallback(url, { token });
+    const pathname = blobPathnameFromUrl(url);
+    const blobResponse = await getBlobWithAccessFallback(pathname, { token, useCache: false });
 
-    if (!blobResponse || !blobResponse.stream) {
+    if (!blobResponse?.stream || blobResponse.statusCode !== 200) {
+      console.error(
+        `[Campaign Media Proxy] Blob non trovato o non leggibile (status=${blobResponse?.statusCode ?? 'n/a'}, pathname=${pathname})`
+      );
       return new NextResponse('File non trovato nello store.', { status: 404 });
     }
 
     const headers = new Headers();
     const contentType = blobResponse.blob?.contentType || 'application/octet-stream';
-    
-    headers.set('Content-Type', contentType);
-    headers.set('Cache-Control', 'public, max-age=31536000, immutable'); // Cache forte per i media immutabili
 
-    return new Response(blobResponse.stream as any, {
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'private, max-age=3600');
+
+    return new Response(blobResponse.stream as BodyInit, {
       status: 200,
       headers,
     });

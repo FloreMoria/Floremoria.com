@@ -3,6 +3,7 @@
  * @see https://developers.tiktok.com/doc/content-posting-api-get-started
  */
 import { ContentFormat } from '@prisma/client';
+import { parseTikTokOAuthError, parseTikTokTokenFields } from '@/lib/dashboard/tiktokOAuth';
 import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
@@ -71,15 +72,15 @@ export async function getOrRefreshTikTokToken(): Promise<{ accessToken: string |
       });
 
       const payload = await res.json();
-      if (!res.ok || payload.error) {
-        console.error('[POSTMAN] Errore durante il refresh del token TikTok:', payload.error);
-        throw new Error(payload.error?.message || 'TikTok token refresh failed');
+      const oauthError = parseTikTokOAuthError(payload);
+      const tokens = parseTikTokTokenFields(payload);
+      if (!res.ok || oauthError || !tokens) {
+        console.error('[POSTMAN] Errore durante il refresh del token TikTok:', payload);
+        throw new Error(oauthError || 'TikTok token refresh failed');
       }
 
-      const newAccess = payload.access_token;
-      const newRefresh = payload.refresh_token;
-      const newExpiresIn = payload.expires_in;
-      const newOpenId = payload.open_id;
+      const { access_token: newAccess, refresh_token: newRefresh, expires_in: newExpiresIn, open_id: newOpenId } =
+        tokens;
 
       // Aggiorna nel database
       await prisma.$transaction([

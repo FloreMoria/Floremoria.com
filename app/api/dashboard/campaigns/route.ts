@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withProxiedCampaignMedia } from '@/lib/dashboard/campaignMediaUrl';
 import prisma from '@/lib/prisma';
 import { getActiveTheme } from '@/lib/marketing/engine/contentCalendar';
 import { CampaignStatus } from '@prisma/client';
@@ -21,24 +22,7 @@ export async function GET() {
     });
     const isTikTokConnected = !!tiktokToken?.value;
 
-    // Riscrivi gli URL privati per convogliarli attraverso il proxy locale del server
-    const mappedCampaigns = campaigns.map((c) => {
-      let imageUrl = c.imageUrl;
-      let videoUrl = c.videoUrl;
-
-      if (imageUrl && imageUrl.includes('private.blob.vercel-storage.com')) {
-        imageUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(imageUrl)}`;
-      }
-      if (videoUrl && videoUrl.includes('private.blob.vercel-storage.com')) {
-        videoUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(videoUrl)}`;
-      }
-
-      return {
-        ...c,
-        imageUrl,
-        videoUrl,
-      };
-    });
+    const mappedCampaigns = campaigns.map(withProxiedCampaignMedia);
 
     return NextResponse.json({
       success: true,
@@ -120,7 +104,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       success: true,
-      campaign: updated,
+      campaign: withProxiedCampaignMedia(updated),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

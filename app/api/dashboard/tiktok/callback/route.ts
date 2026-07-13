@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  getTikTokRedirectUri,
+  parseTikTokOAuthError,
+  parseTikTokTokenFields,
+} from '@/lib/dashboard/tiktokOAuth';
 import prisma from '@/lib/prisma';
+
+function campaignsRedirect(request: NextRequest, query: string): NextResponse {
+  const base = new URL(request.url);
+  base.pathname = '/dashboard/campaigns';
+  base.search = query;
+  return NextResponse.redirect(base);
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,28 +21,30 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error(`[TikTok Callback] Errore da TikTok: ${error} - ${errorDescription}`);
-    return NextResponse.redirect(new URL('/dashboard/campaigns?tab=TIKTOK&error=' + encodeURIComponent(errorDescription || error), request.url));
+    return campaignsRedirect(
+      request,
+      `tab=TIKTOK&error=${encodeURIComponent(errorDescription || error)}`
+    );
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL('/dashboard/campaigns?tab=TIKTOK&error=no-code', request.url));
+    return campaignsRedirect(request, 'tab=TIKTOK&error=no-code');
   }
 
   const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET?.trim();
 
   if (!clientKey || !clientSecret) {
-    return new NextResponse('Variabili TIKTOK_CLIENT_KEY o TIKTOK_CLIENT_SECRET non configurate.', { status: 500 });
+    return new NextResponse('Variabili TIKTOK_CLIENT_KEY o TIKTOK_CLIENT_SECRET non configurate.', {
+      status: 500,
+    });
   }
 
-  // Costruisci la stessa redirect URI usata nell'auth request
-  const host = request.headers.get('host') || 'www.floremoria.com';
-  const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-  const redirectUri = `${protocol}://${host}/api/dashboard/tiktok/callback`;
+  const redirectUri = getTikTokRedirectUri(request);
 
   try {
     console.log('[TikTok Callback] Scambio codice di autorizzazione per tokens...');
-    
+
     const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
       method: 'POST',
       headers: {
@@ -46,14 +60,23 @@ export async function GET(request: NextRequest) {
     });
 
     const payload = await res.json();
-    if (!res.ok || payload.error) {
-      console.error('[TikTok Callback] Errore scambio token:', payload.error || payload);
-      return NextResponse.redirect(new URL('/dashboard/campaigns?tab=TIKTOK&error=' + encodeURIComponent(payload.error?.message || 'Token exchange failed'), request.url));
+    const oauthError = parseTikTokOAuthError(payload);
+    if (!res.ok || oauthError) {
+      console.error('[TikTok Callback] Errore scambio token:', payload);
+      return campaignsRedirect(
+        request,
+        `tab=TIKTOK&error=${encodeURIComponent(oauthError || 'Token exchange failed')}`
+      );
     }
 
-    const { access_token, refresh_token, expires_in, open_id } = payload;
+    const tokens = parseTikTokTokenFields(payload);
+    if (!tokens) {
+      console.error('[TikTok Callback] Risposta token non valida:', payload);
+      return campaignsRedirect(request, 'tab=TIKTOK&error=invalid-token-response');
+    }
 
-    // Salva o aggiorna i valori in SystemState nel database
+    const { access_token, refresh_token, expires_in, open_id } = tokens;
+
     await prisma.$transaction([
       prisma.systemState.upsert({
         where: { key: 'tiktok_access_token' },
@@ -78,9 +101,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     console.log('[TikTok Callback] Token TikTok salvati con successo in SystemState!');
-    return NextResponse.redirect(new URL('/dashboard/campaigns?tab=TIKTOK&success=tiktok-connected', request.url));
+    return campaignsRedirect(request, 'tab=TIKTOK&success=tiktok-connected');
   } catch (err) {
     console.error('[TikTok Callback] Eccezione durante scambio token:', err);
-    return NextResponse.redirect(new URL('/dashboard/campaigns?tab=TIKTOK&error=exception', request.url));
+    return campaignsRedirect(request, 'tab=TIKTOK&error=exception');
   }
 }

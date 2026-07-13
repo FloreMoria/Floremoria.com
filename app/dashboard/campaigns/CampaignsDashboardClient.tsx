@@ -654,7 +654,7 @@ export default function CampaignsDashboardClient() {
                   <div className="relative aspect-[16/9] w-full bg-slate-50 border-b border-slate-50 group overflow-hidden">
                     <img
                       src={c.imageUrl}
-                      alt={c.imagePrompt || 'Social image'}
+                      alt={`Anteprima campagna ${c.targetChannel}`}
                       className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                     />
                     {c.imagePrompt && (

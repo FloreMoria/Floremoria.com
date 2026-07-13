@@ -56,9 +56,23 @@ export async function POST(request: Request) {
       },
     });
 
+    let imageUrl = newCampaign.imageUrl;
+    let videoUrl = newCampaign.videoUrl;
+
+    if (imageUrl && imageUrl.includes('private.blob.vercel-storage.com')) {
+      imageUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(imageUrl)}`;
+    }
+    if (videoUrl && videoUrl.includes('private.blob.vercel-storage.com')) {
+      videoUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(videoUrl)}`;
+    }
+
     return NextResponse.json({
       success: true,
-      campaign: newCampaign,
+      campaign: {
+        ...newCampaign,
+        imageUrl,
+        videoUrl,
+      },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

@@ -21,9 +21,28 @@ export async function GET() {
     });
     const isTikTokConnected = !!tiktokToken?.value;
 
+    // Riscrivi gli URL privati per convogliarli attraverso il proxy locale del server
+    const mappedCampaigns = campaigns.map((c) => {
+      let imageUrl = c.imageUrl;
+      let videoUrl = c.videoUrl;
+
+      if (imageUrl && imageUrl.includes('private.blob.vercel-storage.com')) {
+        imageUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(imageUrl)}`;
+      }
+      if (videoUrl && videoUrl.includes('private.blob.vercel-storage.com')) {
+        videoUrl = `/api/dashboard/campaigns/media?url=${encodeURIComponent(videoUrl)}`;
+      }
+
+      return {
+        ...c,
+        imageUrl,
+        videoUrl,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      campaigns,
+      campaigns: mappedCampaigns,
       activeTheme,
       manualThemeOverride: manualThemeOverride?.value || '',
       isTikTokConnected,

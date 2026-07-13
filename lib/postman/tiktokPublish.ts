@@ -8,13 +8,23 @@ import {
   formatTikTokUrlOwnershipError,
   isTikTokScopeAuthorizationError,
   isTikTokUrlOwnershipError,
-  parseTikTokOAuthError,
-  parseTikTokTokenFields,
 } from '@/lib/dashboard/tiktokOAuth';
+import {
+  buildTikTokPostInfoFromUx,
+  defaultTikTokPublishUxOptions,
+  fetchTikTokCreatorInfo,
+  formatTikTokGuidelinesError,
+  isTikTokGuidelinesError,
+  type TikTokCreatorInfo,
+  type TikTokPublishUxOptions,
+  validateTikTokPublishUxOptions,
+} from '@/lib/postman/tiktokCreatorInfo';
 import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
-import prisma from '@/lib/prisma';
+import { getOrRefreshTikTokToken } from '@/lib/postman/tiktokToken';
+
+export { getOrRefreshTikTokToken } from '@/lib/postman/tiktokToken';
 
 const TIKTOK_API_BASE = 'https://open.tiktokapis.com';
 const TIKTOK_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
@@ -40,17 +50,37 @@ function planTikTokVideoChunks(videoSize: number): { chunkSize: number; totalChu
   };
 }
 
-function buildTikTokPostInfo(
-  input: TikTokPublishInput
-): Record<string, unknown> {
-  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
-  return {
-    title: caption.slice(0, 2200),
-    privacy_level: 'PUBLIC_TO_EVERYONE',
-    disable_comment: false,
-    brand_content_toggle: false,
-    brand_organic_toggle: true,
+function parseTikTokApiError(payload: { error?: { code?: string; message?: string } }): void {
+  const code = payload.error?.code;
+  if (code && code !== 'ok') {
+    throw new Error(payload.error?.message || code);
+  }
+}
+
+async function tikTokApiPost<T>(
+  path: string,
+  accessToken: string,
+  body: Record<string, unknown> = {}
+): Promise<T & { data?: Record<string, unknown>; error?: { code?: string; message?: string } }> {
+  const res = await fetch(`${TIKTOK_API_BASE}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await res.json()) as T & {
+    error?: { code?: string; message?: string };
   };
+
+  if (!res.ok) {
+    throw new Error(payload.error?.message || `TikTok API error (${res.status})`);
+  }
+
+  parseTikTokApiError(payload);
+  return payload;
 }
 
 async function uploadTikTokVideoBytes(
@@ -115,6 +145,7 @@ export interface TikTokPublishInput {
   hashtags: string[];
   imageUrl: string;
   videoUrl?: string | null;
+  tiktokUx?: TikTokPublishUxOptions;
 }
 
 export interface TikTokPublishResult {
@@ -122,139 +153,25 @@ export interface TikTokPublishResult {
   simulated?: boolean;
   externalId?: string;
   error?: string;
+  privatePost?: boolean;
 }
 
-export async function getOrRefreshTikTokToken(): Promise<{ accessToken: string | null; openId: string | null }> {
-  // 1. Cerca il token nel database (SystemState)
-  const dbAccessToken = await prisma.systemState.findUnique({ where: { key: 'tiktok_access_token' } });
-  const dbRefreshToken = await prisma.systemState.findUnique({ where: { key: 'tiktok_refresh_token' } });
-  const dbExpiresAt = await prisma.systemState.findUnique({ where: { key: 'tiktok_token_expires_at' } });
-  const dbOpenId = await prisma.systemState.findUnique({ where: { key: 'tiktok_open_id' } });
-
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET?.trim();
-
-  // Se non ci sono dati sul DB, usa le variabili d'ambiente fisse come fallback
-  if (!dbAccessToken?.value || !dbRefreshToken?.value) {
-    return {
-      accessToken: process.env.TIKTOK_ACCESS_TOKEN?.trim() || null,
-      openId: process.env.TIKTOK_OPEN_ID?.trim() || null,
-    };
-  }
-
-  const expiresAt = Number(dbExpiresAt?.value || '0');
-  const now = Date.now();
-
-  // Se l'access token scade tra meno di 5 minuti, proviamo a rinfrescarlo
-  if (expiresAt - now < 300_000) {
-    console.log('[POSTMAN] TikTok access token in scadenza o scaduto. Tentativo di refresh...');
-
-    if (!clientKey || !clientSecret) {
-      console.warn('[POSTMAN] TIKTOK_CLIENT_KEY o TIKTOK_CLIENT_SECRET mancanti nelle variabili d\'ambiente. Impossibile rinfrescare.');
-      return { accessToken: dbAccessToken.value, openId: dbOpenId?.value || null };
-    }
-
-    try {
-      const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_key: clientKey,
-          client_secret: clientSecret,
-          grant_type: 'refresh_token',
-          refresh_token: dbRefreshToken.value,
-        }).toString(),
-      });
-
-      const payload = await res.json();
-      const oauthError = parseTikTokOAuthError(payload);
-      const tokens = parseTikTokTokenFields(payload);
-      if (!res.ok || oauthError || !tokens) {
-        console.error('[POSTMAN] Errore durante il refresh del token TikTok:', payload);
-        throw new Error(oauthError || 'TikTok token refresh failed');
-      }
-
-      const { access_token: newAccess, refresh_token: newRefresh, expires_in: newExpiresIn, open_id: newOpenId, scope } =
-        tokens;
-
-      // Aggiorna nel database
-      const upserts = [
-        prisma.systemState.upsert({
-          where: { key: 'tiktok_access_token' },
-          update: { value: newAccess },
-          create: { key: 'tiktok_access_token', value: newAccess },
-        }),
-        prisma.systemState.upsert({
-          where: { key: 'tiktok_refresh_token' },
-          update: { value: newRefresh },
-          create: { key: 'tiktok_refresh_token', value: newRefresh },
-        }),
-        prisma.systemState.upsert({
-          where: { key: 'tiktok_token_expires_at' },
-          update: { value: String(Date.now() + newExpiresIn * 1000) },
-          create: { key: 'tiktok_token_expires_at', value: String(Date.now() + newExpiresIn * 1000) },
-        }),
-        prisma.systemState.upsert({
-          where: { key: 'tiktok_open_id' },
-          update: { value: newOpenId },
-          create: { key: 'tiktok_open_id', value: newOpenId },
-        }),
-      ];
-
-      if (scope) {
-        upserts.push(
-          prisma.systemState.upsert({
-            where: { key: 'tiktok_granted_scopes' },
-            update: { value: scope },
-            create: { key: 'tiktok_granted_scopes', value: scope },
-          })
-        );
-      }
-
-      await prisma.$transaction(upserts);
-
-      console.log('[POSTMAN] TikTok token rinfrescato con successo!');
-      return { accessToken: newAccess, openId: newOpenId };
-    } catch (err) {
-      console.error('[POSTMAN] Refresh del token TikTok fallito. Ritorno vecchio token come fallback:', err);
-      return { accessToken: dbAccessToken.value, openId: dbOpenId?.value || null };
-    }
-  }
-
-  return { accessToken: dbAccessToken.value, openId: dbOpenId?.value || null };
-}
-
-async function tikTokApiPost<T>(
-  path: string,
-  accessToken: string,
-  body: Record<string, unknown>
-): Promise<T> {
-  const res = await fetch(`${TIKTOK_API_BASE}${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify(body),
-  });
-
-  const payload = (await res.json()) as T & {
-    error?: { code?: string; message?: string };
-  };
-
-  if (!res.ok || payload.error) {
-    throw new Error(payload.error?.message || `TikTok API error (${res.status})`);
-  }
-
-  return payload;
+function resolveTikTokUx(
+  creatorInfo: TikTokCreatorInfo,
+  ux?: TikTokPublishUxOptions
+): TikTokPublishUxOptions {
+  if (ux) return { ...ux };
+  const defaults = defaultTikTokPublishUxOptions(creatorInfo);
+  defaults.musicUsageConsent = true;
+  return defaults;
 }
 
 /** Post foto su TikTok (feed giornaliero). */
 async function publishTikTokPhotoPost(
   input: TikTokPublishInput,
-  accessToken: string
+  accessToken: string,
+  creatorInfo: TikTokCreatorInfo,
+  ux: TikTokPublishUxOptions
 ): Promise<string> {
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   const publicImageUrl = await ensureMetaFetchableImageUrl(
@@ -263,12 +180,13 @@ async function publishTikTokPhotoPost(
     blobToken
   );
 
+  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
+  const postInfo = buildTikTokPostInfoFromUx(caption, creatorInfo, ux, false);
+
   const init = await tikTokApiPost<{
     data?: { publish_id?: string };
   }>('/v2/post/publish/content/init/', accessToken, {
-    post_info: {
-      ...buildTikTokPostInfo(input),
-    },
+    post_info: postInfo,
     source_info: {
       source: 'PULL_FROM_URL',
       photo_cover_index: 0,
@@ -287,10 +205,12 @@ async function publishTikTokPhotoPost(
   return publishId;
 }
 
-/** Post video su TikTok tramite FILE_UPLOAD (evita verifica URL ownership PULL_FROM_URL). */
+/** Post video su TikTok tramite FILE_UPLOAD. */
 async function publishTikTokVideoPost(
   input: TikTokPublishInput,
-  accessToken: string
+  accessToken: string,
+  creatorInfo: TikTokCreatorInfo,
+  ux: TikTokPublishUxOptions
 ): Promise<string> {
   const videoUrl = input.videoUrl?.trim();
   if (!videoUrl) {
@@ -300,7 +220,8 @@ async function publishTikTokVideoPost(
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   const videoBytes = await fetchImageBytes(videoUrl, blobToken);
   const contentType = videoMimeTypeFromUrl(videoUrl);
-  const postInfo = buildTikTokPostInfo(input);
+  const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
+  const postInfo = buildTikTokPostInfoFromUx(caption, creatorInfo, ux, true);
 
   const publishId = await uploadTikTokVideoBytes(videoBytes, accessToken, postInfo, contentType);
 
@@ -323,22 +244,37 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
   }
 
   try {
-    let externalId: string;
+    const creatorInfo = await fetchTikTokCreatorInfo(env.accessToken);
+    const isVideo = Boolean(input.videoUrl?.trim() || input.contentFormat === ContentFormat.REEL);
+    const ux = resolveTikTokUx(creatorInfo, input.tiktokUx);
 
-    if (input.videoUrl?.trim() || input.contentFormat === ContentFormat.REEL) {
-      externalId = await publishTikTokVideoPost(input, env.accessToken);
-    } else {
-      externalId = await publishTikTokPhotoPost(input, env.accessToken);
+    const validationError = validateTikTokPublishUxOptions(creatorInfo, ux, isVideo);
+    if (validationError) {
+      return { success: false, error: validationError };
     }
 
-    return { success: true, externalId };
+    let externalId: string;
+
+    if (isVideo) {
+      externalId = await publishTikTokVideoPost(input, env.accessToken, creatorInfo, ux);
+    } else {
+      externalId = await publishTikTokPhotoPost(input, env.accessToken, creatorInfo, ux);
+    }
+
+    return {
+      success: true,
+      externalId,
+      privatePost: ux.privacyLevel === 'SELF_ONLY',
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const error = isTikTokScopeAuthorizationError(msg)
       ? formatTikTokScopeAuthorizationError()
       : isTikTokUrlOwnershipError(msg)
         ? formatTikTokUrlOwnershipError()
-        : msg;
+        : isTikTokGuidelinesError(msg)
+          ? formatTikTokGuidelinesError(true)
+          : msg;
     console.error(`[POSTMAN] TikTok errore campagna ${input.campaignId}: ${msg}`);
     return { success: false, error };
   }

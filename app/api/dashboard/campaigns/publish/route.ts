@@ -5,7 +5,8 @@ import { CampaignStatus } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
-    const { campaignId } = await request.json();
+    const body = await request.json();
+    const { campaignId, tiktokUx } = body;
     if (!campaignId) {
       return NextResponse.json({ success: false, error: 'campaignId is required' }, { status: 400 });
     }
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
       hashtags: campaign.hashtags,
       imageUrl: campaign.imageUrl || '',
       videoUrl: campaign.videoUrl,
+      tiktokUx,
     });
 
     if (result.success) {
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
         success: true,
         simulated: result.simulated,
         externalId: result.externalId,
+        privatePost: result.privatePost,
       });
     } else {
       return NextResponse.json({

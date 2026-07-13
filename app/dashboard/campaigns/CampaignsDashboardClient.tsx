@@ -96,6 +96,29 @@ export default function CampaignsDashboardClient() {
   const [uploadProgress, setUploadProgress] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Modale pubblicazione TikTok (linee guida Direct Post API)
+  const [showTiktokPublishModal, setShowTiktokPublishModal] = useState(false);
+  const [tiktokPublishCampaignId, setTiktokPublishCampaignId] = useState<string | null>(null);
+  const [tiktokCreatorLoading, setTiktokCreatorLoading] = useState(false);
+  const [tiktokCreator, setTiktokCreator] = useState<{
+    nickname: string;
+    username: string;
+    privacyLevelOptions: { value: string; label: string }[];
+    commentDisabled: boolean;
+    duetDisabled: boolean;
+    stitchDisabled: boolean;
+    maxVideoPostDurationSec: number;
+    requiresPrivatePost: boolean;
+  } | null>(null);
+  const [tiktokPrivacyLevel, setTiktokPrivacyLevel] = useState('');
+  const [tiktokAllowComment, setTiktokAllowComment] = useState(false);
+  const [tiktokAllowDuet, setTiktokAllowDuet] = useState(false);
+  const [tiktokAllowStitch, setTiktokAllowStitch] = useState(false);
+  const [tiktokCommercialDisclosure, setTiktokCommercialDisclosure] = useState(false);
+  const [tiktokBrandOrganic, setTiktokBrandOrganic] = useState(false);
+  const [tiktokBrandContent, setTiktokBrandContent] = useState(false);
+  const [tiktokMusicConsent, setTiktokMusicConsent] = useState(false);
+
   // Fetch dati iniziali
   const fetchData = async () => {
     setLoading(true);
@@ -229,7 +252,58 @@ export default function CampaignsDashboardClient() {
   };
 
   // Pubblicazione Manuale
-  const handlePublishNow = async (campaignId: string) => {
+  const resetTiktokPublishForm = (keepCampaignId = false) => {
+    setTiktokPrivacyLevel('');
+    setTiktokAllowComment(false);
+    setTiktokAllowDuet(false);
+    setTiktokAllowStitch(false);
+    setTiktokCommercialDisclosure(false);
+    setTiktokBrandOrganic(false);
+    setTiktokBrandContent(false);
+    setTiktokMusicConsent(false);
+    setTiktokCreator(null);
+    if (!keepCampaignId) {
+      setTiktokPublishCampaignId(null);
+    }
+  };
+
+  const openTiktokPublishModal = async (campaignId: string) => {
+    setShowTiktokPublishModal(true);
+    resetTiktokPublishForm(true);
+    setTiktokPublishCampaignId(campaignId);
+    setTiktokCreatorLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/dashboard/tiktok/creator-info');
+      const data = await res.json();
+      if (!data.success) {
+        setErrorMessage(data.error || 'Impossibile recuperare le info creator TikTok.');
+        setShowTiktokPublishModal(false);
+        return;
+      }
+      setTiktokCreator(data.creator);
+    } catch {
+      setErrorMessage('Errore di rete durante il recupero profilo TikTok.');
+      setShowTiktokPublishModal(false);
+    } finally {
+      setTiktokCreatorLoading(false);
+    }
+  };
+
+  const executePublish = async (
+    campaignId: string,
+    tiktokUx?: {
+      privacyLevel: string;
+      allowComment: boolean;
+      allowDuet: boolean;
+      allowStitch: boolean;
+      commercialDisclosure: boolean;
+      brandOrganic: boolean;
+      brandContent: boolean;
+      musicUsageConsent: boolean;
+    }
+  ) => {
     setPublishingId(campaignId);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -237,31 +311,86 @@ export default function CampaignsDashboardClient() {
       const res = await fetch('/api/dashboard/campaigns/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId }),
+        body: JSON.stringify({ campaignId, tiktokUx }),
       });
       const data = await res.json();
       if (data.success) {
         setSuccessMessage(
           data.simulated
             ? 'Pubblicazione simulata con successo (credenziali reali assenti).'
-            : 'Post pubblicato con successo sui canali ufficiali!'
+            : data.privatePost
+              ? 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
+              : 'Post pubblicato con successo sui canali ufficiali!'
         );
-        // Aggiorna lo stato in locale
         setCampaigns(prev =>
           prev.map(c => (c.id === campaignId ? { ...c, status: 'PUBLISHED' as const } : c))
         );
-        setTimeout(() => setSuccessMessage(null), 4000);
+        setTimeout(() => setSuccessMessage(null), 6000);
       } else {
         setErrorMessage(data.error || 'Errore durante la pubblicazione.');
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('Errore di rete durante la chiamata di pubblicazione.');
     } finally {
       setPublishingId(null);
     }
   };
 
-  // Caricamento del Post Manuale
+  const handlePublishNow = async (campaignId: string) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign?.targetChannel === 'TIKTOK') {
+      await openTiktokPublishModal(campaignId);
+      return;
+    }
+    await executePublish(campaignId);
+  };
+
+  const handleConfirmTiktokPublish = async () => {
+    if (!tiktokPublishCampaignId) return;
+
+    if (!tiktokPrivacyLevel) {
+      setErrorMessage('Seleziona il livello di privacy prima di pubblicare su TikTok.');
+      return;
+    }
+    if (!tiktokMusicConsent) {
+      setErrorMessage('Devi accettare la Music Usage Confirmation di TikTok.');
+      return;
+    }
+    if (tiktokCommercialDisclosure && !tiktokBrandOrganic && !tiktokBrandContent) {
+      setErrorMessage('Se abiliti la disclosure commerciale, seleziona almeno una opzione.');
+      return;
+    }
+    if (tiktokCommercialDisclosure && tiktokBrandContent && tiktokPrivacyLevel === 'SELF_ONLY') {
+      setErrorMessage('I contenuti branded non possono essere pubblicati con visibilità "Solo io".');
+      return;
+    }
+
+    setShowTiktokPublishModal(false);
+    await executePublish(tiktokPublishCampaignId, {
+      privacyLevel: tiktokPrivacyLevel,
+      allowComment: tiktokAllowComment,
+      allowDuet: tiktokAllowDuet,
+      allowStitch: tiktokAllowStitch,
+      commercialDisclosure: tiktokCommercialDisclosure,
+      brandOrganic: tiktokBrandOrganic,
+      brandContent: tiktokBrandContent,
+      musicUsageConsent: tiktokMusicConsent,
+    });
+    resetTiktokPublishForm();
+  };
+
+  const tiktokPublishCampaign = tiktokPublishCampaignId
+    ? campaigns.find(c => c.id === tiktokPublishCampaignId)
+    : null;
+  const tiktokPublishIsVideo = Boolean(
+    tiktokPublishCampaign?.videoUrl ||
+      tiktokPublishCampaign?.contentFormat === 'REEL'
+  );
+  const tiktokMusicDeclaration = tiktokBrandContent
+    ? 'Pubblicando, accetti la Branded Content Policy e la Music Usage Confirmation di TikTok.'
+    : 'Pubblicando, accetti la Music Usage Confirmation di TikTok.';
+
+  // Caricamento del Post Manuale (handlePublishNow sopra)
   const handleCreateManualPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualFile || !manualCopy.trim()) {
@@ -841,6 +970,168 @@ export default function CampaignsDashboardClient() {
 
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODALE PUBBLICAZIONE TIKTOK (linee guida Direct Post API) */}
+      {showTiktokPublishModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto flex flex-col gap-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-150 pb-4">
+              <div>
+                <h3 className="font-display font-black text-slate-800 text-lg uppercase tracking-wide">
+                  Pubblica su TikTok
+                </h3>
+                {tiktokCreator && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Account: <strong className="text-slate-700">{tiktokCreator.nickname}</strong>
+                    {tiktokCreator.username ? ` (@${tiktokCreator.username})` : ''}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setShowTiktokPublishModal(false);
+                  resetTiktokPublishForm();
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {tiktokCreatorLoading ? (
+              <div className="py-8 text-center text-slate-500 text-sm">Caricamento profilo creator...</div>
+            ) : tiktokCreator ? (
+              <>
+                {tiktokCreator.requiresPrivatePost && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-3 py-2 text-xs leading-relaxed">
+                    App in Sandbox/non verificata: TikTok consente solo post con visibilità <strong>Solo io</strong> fino all&apos;audit.
+                  </div>
+                )}
+
+                {tiktokPublishCampaign && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-600">
+                    Anteprima testo: <span className="font-medium text-slate-800">{tiktokPublishCampaign.copy.slice(0, 120)}{tiktokPublishCampaign.copy.length > 120 ? '…' : ''}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Privacy *
+                  </label>
+                  <select
+                    value={tiktokPrivacyLevel}
+                    onChange={e => setTiktokPrivacyLevel(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm text-slate-800 outline-none focus:border-slate-400"
+                  >
+                    <option value="">— Seleziona visibilità —</option>
+                    {tiktokCreator.privacyLevelOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Interazioni</span>
+                  <label className={`flex items-center gap-2 text-sm ${tiktokCreator.commentDisabled ? 'opacity-50' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={tiktokAllowComment}
+                      disabled={tiktokCreator.commentDisabled}
+                      onChange={e => setTiktokAllowComment(e.target.checked)}
+                    />
+                    Consenti commenti
+                  </label>
+                  {tiktokPublishIsVideo && (
+                    <>
+                      <label className={`flex items-center gap-2 text-sm ${tiktokCreator.duetDisabled ? 'opacity-50' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={tiktokAllowDuet}
+                          disabled={tiktokCreator.duetDisabled}
+                          onChange={e => setTiktokAllowDuet(e.target.checked)}
+                        />
+                        Consenti Duet
+                      </label>
+                      <label className={`flex items-center gap-2 text-sm ${tiktokCreator.stitchDisabled ? 'opacity-50' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={tiktokAllowStitch}
+                          disabled={tiktokCreator.stitchDisabled}
+                          onChange={e => setTiktokAllowStitch(e.target.checked)}
+                        />
+                        Consenti Stitch
+                      </label>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={tiktokCommercialDisclosure}
+                      onChange={e => {
+                        setTiktokCommercialDisclosure(e.target.checked);
+                        if (!e.target.checked) {
+                          setTiktokBrandOrganic(false);
+                          setTiktokBrandContent(false);
+                        }
+                      }}
+                    />
+                    Disclosure contenuto commerciale
+                  </label>
+                  {tiktokCommercialDisclosure && (
+                    <div className="pl-6 flex flex-col gap-1.5">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={tiktokBrandOrganic}
+                          onChange={e => setTiktokBrandOrganic(e.target.checked)}
+                        />
+                        Your brand (contenuto promozionale)
+                      </label>
+                      <label className={`flex items-center gap-2 text-sm ${tiktokPrivacyLevel === 'SELF_ONLY' ? 'opacity-50' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={tiktokBrandContent}
+                          disabled={tiktokPrivacyLevel === 'SELF_ONLY'}
+                          onChange={e => setTiktokBrandContent(e.target.checked)}
+                        />
+                        Branded content (paid partnership)
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <label className="flex items-start gap-2 text-xs text-slate-600 border border-slate-200 rounded-xl p-3 bg-slate-50">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={tiktokMusicConsent}
+                    onChange={e => setTiktokMusicConsent(e.target.checked)}
+                  />
+                  <span>{tiktokMusicDeclaration}</span>
+                </label>
+
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Dopo la pubblicazione, TikTok può impiegare alcuni minuti per elaborare il contenuto.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmTiktokPublish}
+                  disabled={publishingId !== null || !tiktokPrivacyLevel || !tiktokMusicConsent}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-all disabled:opacity-50"
+                >
+                  {publishingId ? 'Invio in corso...' : 'Conferma e pubblica su TikTok'}
+                </button>
+              </>
+            ) : null}
+          </div>
         </div>
       )}
 

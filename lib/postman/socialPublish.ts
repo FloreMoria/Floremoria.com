@@ -24,6 +24,7 @@ import {
 import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { publishToTikTok } from '@/lib/postman/tiktokPublish';
+import type { TikTokPublishUxOptions } from '@/lib/postman/tiktokCreatorInfo';
 
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
@@ -37,6 +38,8 @@ export interface CampaignPublishInput {
   hashtags: string[];
   imageUrl: string;
   videoUrl?: string | null;
+  /** Opzioni UX TikTok Direct Post (privacy, consenso, disclosure). */
+  tiktokUx?: TikTokPublishUxOptions;
   /** Foto consegna: risolve socialReadyPrimaryUrl + copy da socialCopyCategory. */
   deliveryProofId?: string;
 }
@@ -49,6 +52,7 @@ export interface CampaignPublishResult {
   externalId?: string;
   videoUrl?: string;
   error?: string;
+  privatePost?: boolean;
 }
 
 interface SocialPublishEnv extends MetaEnv {
@@ -673,6 +677,7 @@ export async function publishCampaignToChannel(
           hashtags: payload.hashtags,
           imageUrl: payload.imageUrl,
           videoUrl,
+          tiktokUx: payload.tiktokUx,
         });
         if (!tiktokResult.success) {
           throw new Error(tiktokResult.error || 'TikTok publish failed');
@@ -684,6 +689,7 @@ export async function publishCampaignToChannel(
           campaignId: payload.id,
           externalId: tiktokResult.externalId,
           videoUrl,
+          privatePost: tiktokResult.privatePost,
         };
       }
       case MarketingChannel.LINKEDIN:

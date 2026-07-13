@@ -1,7 +1,7 @@
-const TIKTOK_VERIFICATION_CODE = 'hn9zw4SN50YfX9FTNwvbXtKINd8Blpzm';
+import { TIKTOK_SITE_VERIFICATION_CODE } from '../layout';
 
 export function GET() {
-    return new Response(TIKTOK_VERIFICATION_CODE, {
+    return new Response(TIKTOK_SITE_VERIFICATION_CODE, {
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'public, max-age=3600',

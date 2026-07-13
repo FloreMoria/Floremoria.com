@@ -1,18 +1,18 @@
 import type { Metadata } from 'next';
+import { TIKTOK_SITE_VERIFICATION_LINE } from './layout';
 
 export const metadata: Metadata = {
     title: 'Termini e Condizioni | FloreMoria',
     description:
         'Termini e condizioni di vendita del servizio FloreMoria per acquisto, consegna e assistenza su omaggi floreali.',
-    other: {
-        'tiktok-developers-site-verification': 'hn9zw4SN50YfX9FTNwvbXtKINd8Blpzm',
-    },
 };
 
 export default function TerminiCondizioniPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-16 md:py-24 space-y-8">
-            <span className="sr-only">tiktok-developers-site-verification=hn9zw4SN50YfX9FTNwvbXtKINd8Blpzm</span>
+            <p className="text-[0px] leading-none overflow-hidden h-0" aria-hidden="true">
+                {TIKTOK_SITE_VERIFICATION_LINE}
+            </p>
             <h1 className="text-4xl font-display font-bold text-gray-900">Termini e Condizioni</h1>
 
             <div className="prose prose-lg text-gray-700 leading-relaxed">

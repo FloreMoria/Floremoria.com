@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // TikTok (e altri crawler) non seguono redirect: servire /path e /path/ senza 308.
+  skipTrailingSlashRedirect: true,
   transpilePackages: ["swagger-ui-react"],
   experimental: {
     // Foto multi-foto da iPhone: evita 413 sul POST /api/partner/order/upload-proof

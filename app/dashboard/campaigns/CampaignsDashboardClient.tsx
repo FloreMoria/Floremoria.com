@@ -596,10 +596,12 @@ export default function CampaignsDashboardClient() {
           </div>
           {isTikTokConnected && !tiktokPublishReady && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-4 py-3 text-xs leading-relaxed">
-              <strong>Pubblicazione non ancora abilitata.</strong> Sul portale TikTok Developer abilita{' '}
-              <em>Content Posting API</em> con <em>Direct Post</em>, poi su Vercel imposta{' '}
-              <code className="font-mono bg-amber-100 px-1 rounded">TIKTOK_OAUTH_SCOPES=user.info.basic,video.publish,video.upload</code>{' '}
-              e clicca <strong>Riautorizza per pubblicare</strong> (o scollega e riconnetti).
+              <strong>Pubblicazione non ancora abilitata sul token attuale.</strong> Sul portale TikTok gli scope{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">video.publish</code> e{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">video.upload</code> sono già configurati per
+              l&apos;app, ma il profilo è stato collegato chiedendo solo{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">user.info.basic</code>. Clicca{' '}
+              <strong>Riautorizza per pubblicare</strong> e accetta tutti i permessi nella schermata TikTok.
             </div>
           )}
         </div>

@@ -32,15 +32,20 @@ export function getTikTokRedirectUri(request: Request): string {
   return TIKTOK_PRODUCTION_REDIRECT_URI;
 }
 
+/** Scope richiesti al login OAuth (devono essere abilitati anche sul portale TikTok). */
+export const TIKTOK_DEFAULT_OAUTH_SCOPES =
+  'user.info.basic,video.publish,video.upload';
+
 /**
  * Scope OAuth richiesti al login.
- * Default: solo user.info.basic (compatibile con Sandbox senza Content Posting API).
- * In produzione, dopo aver abilitato Direct Post: TIKTOK_OAUTH_SCOPES=user.info.basic,video.publish,video.upload
+ * Il portale Developer elenca gli scope disponibili per l'app, ma TikTok concede
+ * solo quelli inclusi nella richiesta authorize + accettati dall'utente al connect.
+ * Override opzionale: TIKTOK_OAUTH_SCOPES
  */
 export function getTikTokOAuthScopes(): string {
   const fromEnv = process.env.TIKTOK_OAUTH_SCOPES?.trim();
   if (fromEnv) return fromEnv;
-  return 'user.info.basic';
+  return TIKTOK_DEFAULT_OAUTH_SCOPES;
 }
 
 export function parseTikTokGrantedScopes(scopeValue: string | null | undefined): string[] {
@@ -62,9 +67,9 @@ export function getTikTokPublishScopeHint(): string {
 
 export function formatTikTokScopeAuthorizationError(): string {
   return (
-    'Permessi TikTok insufficienti per la pubblicazione. Sul portale Developer abilita Content Posting API ' +
-    '(Direct Post), imposta su Vercel TIKTOK_OAUTH_SCOPES=user.info.basic,video.publish,video.upload, ' +
-    'poi scollega e riconnetti il profilo dalla dashboard.'
+    'Il token TikTok attuale non include i permessi di pubblicazione (video.publish, video.upload). ' +
+    'Anche se sono abilitati sul portale Developer, vanno richiesti di nuovo al login: ' +
+    'clicca "Riautorizza per pubblicare" dalla dashboard e accetta tutti i permessi.'
   );
 }
 

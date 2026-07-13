@@ -54,6 +54,8 @@ env.host.docker.example
 !/docs/whatsapp/knowledge_base_whatsapp.txt
 !/docs/whatsapp/knowledge_base_whatsapp_examples.txt
 !/docs/whatsapp/knowledge_base_whatsapp_core.txt
+!app/termini-condizioni/tiktok-developers-site-verification.txt/
+!app/termini-condizioni/tiktok-developers-site-verification.txt/**
 
 # typescript
 *.tsbuildinfo

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Calendar,
@@ -16,7 +16,11 @@ import {
   Trash2,
   Edit2,
   X,
-  Save
+  Save,
+  Plus,
+  Video,
+  Upload,
+  ArrowRight
 } from 'lucide-react';
 
 type Campaign = {
@@ -27,6 +31,7 @@ type Campaign = {
   contentFormat: 'FEED_POST' | 'STORY' | 'REEL';
   copy: string;
   imageUrl: string | null;
+  videoUrl: string | null;
   imagePrompt: string | null;
   hashtags: string[];
   rejectionReason: string | null;
@@ -72,11 +77,21 @@ export default function CampaignsDashboardClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Stati per la modifica dei post
+  // Stati per la modifica dei post esistenti
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCopy, setEditCopy] = useState('');
   const [editHashtags, setEditHashtags] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
+
+  // Stati per la creazione di un post manuale
+  const [showModal, setShowModal] = useState(false);
+  const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN'>('META_INSTAGRAM');
+  const [manualFormat, setManualFormat] = useState<'FEED_POST' | 'STORY' | 'REEL'>('FEED_POST');
+  const [manualCopy, setManualCopy] = useState('');
+  const [manualHashtags, setManualHashtags] = useState('');
+  const [manualFile, setManualFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch dati iniziali
   const fetchData = async () => {
@@ -240,6 +255,53 @@ export default function CampaignsDashboardClient() {
     }
   };
 
+  // Caricamento del Post Manuale
+  const handleCreateManualPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualFile || !manualCopy.trim()) {
+      setErrorMessage('Assicurati di selezionare un file (foto o video) e scrivere il testo.');
+      return;
+    }
+
+    setUploadProgress(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    const formData = new FormData();
+    formData.append('file', manualFile);
+    formData.append('channel', manualChannel);
+    formData.append('contentFormat', manualFormat);
+    formData.append('copy', manualCopy);
+    formData.append('hashtags', manualHashtags);
+
+    try {
+      const res = await fetch('/api/dashboard/campaigns/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMessage('Nuovo post manuale creato ed approvato con successo!');
+        setCampaigns(prev => [data.campaign, ...prev]);
+        setShowModal(false);
+        // Resetta i campi del form
+        setManualCopy('');
+        setManualHashtags('');
+        setManualFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        // Forza tab sul social caricato per vederlo
+        handleTabChange(manualChannel);
+        setTimeout(() => setSuccessMessage(null), 4000);
+      } else {
+        setErrorMessage(data.error || 'Errore nel caricamento del post.');
+      }
+    } catch (err) {
+      setErrorMessage('Errore di connessione durante il caricamento del post.');
+    } finally {
+      setUploadProgress(false);
+    }
+  };
+
   // Filtra campagne per canale e stato
   const filteredCampaigns = campaigns.filter(c => {
     if (c.targetChannel !== activeTab) return false;
@@ -304,14 +366,23 @@ export default function CampaignsDashboardClient() {
             Gestisci la pianificazione, monitora i checkpoint dei Guardiani e controlla i temi editoriali.
           </p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-2xl border border-slate-200 transition-all active:scale-95 disabled:opacity-50 shrink-0 self-start md:self-auto"
-        >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          Aggiorna Coda
-        </button>
+        <div className="flex gap-3 shrink-0 self-start md:self-auto">
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-sm"
+          >
+            <Plus size={16} />
+            Nuovo Post Manuale
+          </button>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-3 rounded-2xl border border-slate-200 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Aggiorna Coda
+          </button>
+        </div>
       </div>
 
       {/* ALERT DI SUCCESSO E ERRORE */}
@@ -518,8 +589,19 @@ export default function CampaignsDashboardClient() {
                   {getStatusBadge(c.status)}
                 </div>
 
-                {/* IMMAGINE ANTEPRIMA (IMAGEN) */}
-                {c.imageUrl ? (
+                {/* VISUAL DI ANTEPRIMA (IMMAGINE O VIDEO) */}
+                {c.videoUrl ? (
+                  <div className="relative aspect-[16/9] w-full bg-slate-900 border-b border-slate-100 overflow-hidden flex items-center justify-center">
+                    <video
+                      src={c.videoUrl}
+                      controls
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
+                      <Video size={10} /> CONTENUTO VIDEO
+                    </div>
+                  </div>
+                ) : c.imageUrl ? (
                   <div className="relative aspect-[16/9] w-full bg-slate-50 border-b border-slate-50 group overflow-hidden">
                     <img
                       src={c.imageUrl}
@@ -536,7 +618,7 @@ export default function CampaignsDashboardClient() {
                 ) : (
                   <div className="aspect-[16/6] bg-slate-50 border-b border-slate-100 flex flex-col items-center justify-center gap-1 text-slate-400">
                     <ImageIcon size={20} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Nessuna immagine generata</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Nessun file multimediale</span>
                   </div>
                 )}
 
@@ -599,7 +681,7 @@ export default function CampaignsDashboardClient() {
                                 setEditCopy(c.copy);
                                 setEditHashtags(c.hashtags.join(', '));
                               }}
-                              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors px-2 py-1 rounded bg-slate-50 border border-slate-150"
+                              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 shadow-sm"
                             >
                               <Edit2 size={11} /> Modifica
                             </button>
@@ -675,6 +757,148 @@ export default function CampaignsDashboardClient() {
 
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODALE DI CARICAMENTO NUOVO POST MANUALE */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto flex flex-col justify-between animate-scale-up">
+            
+            <div className="flex items-center justify-between border-b border-slate-150 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Upload size={18} className="text-slate-700" />
+                <h3 className="font-display font-black text-slate-800 text-lg uppercase tracking-wide">
+                  Nuovo Post Manuale
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateManualPost} className="flex flex-col gap-4">
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                    Social Network *
+                  </label>
+                  <select
+                    value={manualChannel}
+                    onChange={(e) => setManualChannel(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 transition-all"
+                  >
+                    {SOCIAL_TABS.map(tab => (
+                      <option key={tab.id} value={tab.id}>
+                        {tab.icon} {tab.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                    Formato Post *
+                  </label>
+                  <select
+                    value={manualFormat}
+                    onChange={(e) => setManualFormat(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 transition-all"
+                  >
+                    <option value="FEED_POST">Feed Post (Standard)</option>
+                    <option value="STORY">Story (Verticale)</option>
+                    <option value="REEL">Reel (Video)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                  Seleziona File (Foto o Video) *
+                </label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-200 hover:border-slate-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition-all flex flex-col items-center justify-center gap-1.5"
+                >
+                  <Upload className="text-slate-400" size={24} />
+                  <span className="text-xs font-bold text-slate-700">
+                    {manualFile ? manualFile.name : 'Trascina o clicca per caricare foto/video'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Supporta PNG, JPG, WEBP, MP4, MOV (max 50MB)
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setManualFile(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                  Copy del Post *
+                </label>
+                <textarea
+                  rows={4}
+                  value={manualCopy}
+                  onChange={(e) => setManualCopy(e.target.value)}
+                  placeholder="Scrivi il corpo del post, dettagli del servizio, inviti all'azione o link..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all resize-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                  Hashtags (separati da virgola, es: floremoria, lutto)
+                </label>
+                <input
+                  type="text"
+                  value={manualHashtags}
+                  onChange={(e) => setManualHashtags(e.target.value)}
+                  placeholder="es. floremoria, fiori, ricordo"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end border-t border-slate-150 pt-4 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
+                >
+                  Chiudi
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadProgress}
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {uploadProgress ? (
+                    <>
+                      <RefreshCw size={12} className="animate-spin" /> Caricamento...
+                    </>
+                  ) : (
+                    <>
+                      Carica e Approva <ArrowRight size={12} />
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
+          </div>
         </div>
       )}
 

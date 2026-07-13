@@ -350,11 +350,11 @@ async function publishToInstagram(
   return published.id;
 }
 
-async function linkedInRegisterImageUpload(
+async function linkedInInitializeImageUpload(
   authorUrn: string,
   accessToken: string
-): Promise<{ uploadUrl: string; asset: string }> {
-  const res = await fetch(`${LINKEDIN_API_BASE}/assets?action=registerUpload`, {
+): Promise<{ uploadUrl: string; imageUrn: string }> {
+  const res = await fetch(`${LINKEDIN_API_BASE}/images?action=initializeUpload`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -362,43 +362,68 @@ async function linkedInRegisterImageUpload(
       'X-Restli-Protocol-Version': '2.0.0',
     },
     body: JSON.stringify({
-      registerUploadRequest: {
+      initializeUploadRequest: {
         owner: authorUrn,
-        recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-        serviceRelationships: [
-          {
-            relationshipType: 'OWNER',
-            identifier: 'urn:li:userGeneratedContent',
-          },
-        ],
       },
     }),
   });
 
   const payload = (await res.json()) as {
     value?: {
-      uploadMechanism?: {
-        'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'?: { uploadUrl?: string };
-      };
-      asset?: string;
+      uploadUrl?: string;
+      image?: string;
     };
     message?: string;
   };
 
   if (!res.ok) {
-    throw new Error(payload.message || `LinkedIn registerUpload error (${res.status})`);
+    throw new Error(payload.message || `LinkedIn initializeUpload error (${res.status})`);
   }
 
-  const uploadUrl =
-    payload.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']
-      ?.uploadUrl;
-  const asset = payload.value?.asset;
+  const uploadUrl = payload.value?.uploadUrl;
+  const imageUrn = payload.value?.image;
 
-  if (!uploadUrl || !asset) {
-    throw new Error('LinkedIn registerUpload: uploadUrl o asset mancanti.');
+  if (!uploadUrl || !imageUrn) {
+    throw new Error('LinkedIn initializeUpload: uploadUrl o imageUrn mancanti.');
   }
 
-  return { uploadUrl, asset };
+  return { uploadUrl, imageUrn };
+}
+
+async function pollLinkedInImageStatus(
+  imageUrn: string,
+  accessToken: string
+): Promise<boolean> {
+  const maxRetries = 8;
+  const delayMs = 1500;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await fetch(`${LINKEDIN_API_BASE}/images/${encodeURIComponent(imageUrn)}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as { status?: string };
+        console.log(`[POSTMAN] LinkedIn Image polling (${i + 1}/${maxRetries}): status = ${data.status}`);
+        if (data.status === 'AVAILABLE') {
+          return true;
+        }
+        if (data.status === 'FAILED') {
+          throw new Error('Elaborazione immagine fallita da parte di LinkedIn.');
+        }
+      } else {
+        console.warn(`[POSTMAN] Errore image polling HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.error('[POSTMAN] Errore durante polling immagine LinkedIn:', err);
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
 }
 
 async function publishToLinkedIn(
@@ -426,12 +451,12 @@ async function publishToLinkedIn(
   const caption = formatCampaignCaption(campaign.copy, campaign.hashtags);
   const imageBytes = await fetchImageBytes(campaign.imageUrl, blobToken);
 
-  const { uploadUrl, asset } = await linkedInRegisterImageUpload(authorUrn, linkedInAccessToken);
+  const { uploadUrl, imageUrn } = await linkedInInitializeImageUpload(authorUrn, linkedInAccessToken);
 
+  console.log(`[POSTMAN] Esecuzione PUT dell'immagine su LinkedIn...`);
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${linkedInAccessToken}`,
       'Content-Type': 'image/png',
     },
     body: new Uint8Array(imageBytes),
@@ -439,6 +464,12 @@ async function publishToLinkedIn(
 
   if (!uploadRes.ok) {
     throw new Error(`LinkedIn upload immagine fallito (${uploadRes.status}).`);
+  }
+
+  // Polling per attendere che l'immagine sia elaborata e disponibile su LinkedIn
+  const isAvailable = await pollLinkedInImageStatus(imageUrn, linkedInAccessToken);
+  if (!isAvailable) {
+    console.warn(`[POSTMAN] L'immagine LinkedIn ${imageUrn} non è diventata disponibile in tempo. Invio post in corso...`);
   }
 
   const postsRes = await fetch(`${LINKEDIN_API_BASE}/posts`, {
@@ -457,7 +488,7 @@ async function publishToLinkedIn(
       },
       content: {
         media: {
-          id: asset,
+          id: imageUrn,
         },
       },
       lifecycleState: 'PUBLISHED',

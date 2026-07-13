@@ -24,9 +24,11 @@ export async function POST(request: Request) {
     const result = await publishCampaignToChannel({
       id: campaign.id,
       targetChannel: campaign.targetChannel,
+      contentFormat: campaign.contentFormat,
       copy: campaign.copy,
       hashtags: campaign.hashtags,
       imageUrl: campaign.imageUrl || '',
+      videoUrl: campaign.videoUrl,
     });
 
     if (result.success) {

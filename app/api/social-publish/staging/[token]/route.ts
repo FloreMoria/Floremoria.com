@@ -1,12 +1,22 @@
 import {
+  fetchStagedImageBytes,
   verifySocialStagingToken,
-  stagingPathnameToBlobUrl,
 } from '@/lib/postman/socialImageStaging';
 
 export const runtime = 'nodejs';
 
+function contentTypeFromStagingPath(pathname: string): string {
+  const lower = pathname.toLowerCase();
+  if (lower.endsWith('.mp4')) return 'video/mp4';
+  if (lower.endsWith('.mov')) return 'video/quicktime';
+  if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  return 'image/webp';
+}
+
 /**
- * Endpoint pubblico temporaneo per Meta/Instagram: serve immagini da Blob privato
+ * Endpoint pubblico temporaneo per Meta/Instagram/TikTok: serve media da Blob privato
  * tramite token HMAC (scadenza ~20 min). Nessun dato ordine nel path.
  */
 export async function GET(
@@ -19,23 +29,17 @@ export async function GET(
     return new Response('Forbidden or expired', { status: 403 });
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!blobToken) {
     return new Response('Server misconfigured', { status: 500 });
   }
 
   try {
-    const blobUrl = stagingPathnameToBlobUrl(parsed.pathname);
-    const { fetchProofImageBuffer } = await import('@/lib/deliveryProof/blobProofStorage');
-    const bytes = await fetchProofImageBuffer(blobUrl);
-    const contentType = parsed.pathname.toLowerCase().endsWith('.jpg')
-      ? 'image/jpeg'
-      : parsed.pathname.toLowerCase().endsWith('.png')
-        ? 'image/png'
-        : 'image/webp';
+    const { bytes, contentType } = await fetchStagedImageBytes(parsed.pathname, blobToken);
     return new Response(new Uint8Array(bytes), {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': contentType || contentTypeFromStagingPath(parsed.pathname),
         'Cache-Control': 'private, max-age=300',
       },
     });

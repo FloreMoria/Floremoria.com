@@ -5,7 +5,13 @@ export interface TikTokTokenFields {
   refresh_token: string;
   expires_in: number;
   open_id: string;
+  scope?: string;
 }
+
+/** Scope minimi per Content Posting API (Direct Post). */
+export const TIKTOK_PUBLISH_SCOPES = ['video.publish', 'video.upload'] as const;
+
+export const TIKTOK_GRANTED_SCOPES_KEY = 'tiktok_granted_scopes';
 
 /** Redirect URI canonica: deve coincidere esattamente con il portale TikTok Developer. */
 export function getTikTokRedirectUri(request: Request): string {
@@ -35,6 +41,35 @@ export function getTikTokOAuthScopes(): string {
   const fromEnv = process.env.TIKTOK_OAUTH_SCOPES?.trim();
   if (fromEnv) return fromEnv;
   return 'user.info.basic';
+}
+
+export function parseTikTokGrantedScopes(scopeValue: string | null | undefined): string[] {
+  if (!scopeValue?.trim()) return [];
+  return scopeValue
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function hasTikTokPublishScopes(scopeValue: string | null | undefined): boolean {
+  const granted = new Set(parseTikTokGrantedScopes(scopeValue));
+  return TIKTOK_PUBLISH_SCOPES.every((required) => granted.has(required));
+}
+
+export function getTikTokPublishScopeHint(): string {
+  return TIKTOK_PUBLISH_SCOPES.join(',');
+}
+
+export function formatTikTokScopeAuthorizationError(): string {
+  return (
+    'Permessi TikTok insufficienti per la pubblicazione. Sul portale Developer abilita Content Posting API ' +
+    '(Direct Post), imposta su Vercel TIKTOK_OAUTH_SCOPES=user.info.basic,video.publish,video.upload, ' +
+    'poi scollega e riconnetti il profilo dalla dashboard.'
+  );
+}
+
+export function isTikTokScopeAuthorizationError(message: string): boolean {
+  return /did not authorize the scope|scope required|insufficient.*scope/i.test(message);
 }
 
 export function buildTikTokAuthorizeUrl(
@@ -80,10 +115,11 @@ export function parseTikTokTokenFields(payload: unknown): TikTokTokenFields | nu
   const open_id = typeof data.open_id === 'string' ? data.open_id : null;
   const expires_in =
     typeof data.expires_in === 'number' ? data.expires_in : Number(data.expires_in);
+  const scope = typeof data.scope === 'string' ? data.scope : undefined;
 
   if (!access_token || !refresh_token || !open_id || !Number.isFinite(expires_in)) {
     return null;
   }
 
-  return { access_token, refresh_token, expires_in, open_id };
+  return { access_token, refresh_token, expires_in, open_id, scope };
 }

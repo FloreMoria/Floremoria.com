@@ -49,10 +49,22 @@ function sanitizeStagingKey(raw: string): string {
 
 function contentTypeFromUrl(url: string): string {
   const lower = url.toLowerCase();
+  if (lower.includes('.mp4')) return 'video/mp4';
+  if (lower.includes('.mov')) return 'video/quicktime';
+  if (lower.includes('.webm')) return 'video/webm';
   if (lower.includes('.webp')) return 'image/webp';
   if (lower.includes('.png')) return 'image/png';
   if (lower.includes('.jpg') || lower.includes('.jpeg')) return 'image/jpeg';
-  return 'image/webp';
+  return 'application/octet-stream';
+}
+
+async function fetchPrivateBlobBytes(url: string, blobToken: string): Promise<Buffer> {
+  const pathname = new URL(url).pathname.replace(/^\//, '');
+  const blobResult = await getBlobWithAccessFallback(pathname, { token: blobToken, useCache: false });
+  if (!blobResult?.stream || blobResult.statusCode !== 200) {
+    throw new Error(`Blob privato non leggibile (${blobResult?.statusCode ?? 'n/a'}).`);
+  }
+  return Buffer.from(await new Response(blobResult.stream).arrayBuffer());
 }
 
 function signStagingPayload(pathname: string, expiresAt: number, secret: string): string {
@@ -167,6 +179,51 @@ export async function ensureMetaFetchableImageUrl(
 
   console.log(
     `[POSTMAN] Staging Meta (JPEG forzato) — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
+  );
+
+  return publicUrl;
+}
+
+/**
+ * Copia temporanea video su Blob privato + URL pubblico firmato per TikTok PULL_FROM_URL.
+ */
+export async function ensureSocialFetchableVideoUrl(
+  campaignId: string,
+  videoUrl: string,
+  blobToken?: string
+): Promise<string> {
+  if (videoUrl.includes('public.blob.vercel-storage.com')) {
+    return videoUrl;
+  }
+
+  const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre video a TikTok.');
+  }
+
+  const sourceBytes = await fetchPrivateBlobBytes(videoUrl, token);
+  const ext = videoUrl.toLowerCase().includes('.mov')
+    ? 'mov'
+    : videoUrl.toLowerCase().includes('.webm')
+      ? 'webm'
+      : 'mp4';
+  const contentType = contentTypeFromUrl(videoUrl);
+  const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}-video.${ext}`;
+
+  const { putBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
+  await putBlobWithAccessFallback(pathname, sourceBytes, {
+    contentType,
+    token,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+
+  const expiresAt = Date.now() + STAGING_TTL_MS;
+  const stagingToken = createStagingToken(pathname, expiresAt);
+  const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
+
+  console.log(
+    `[POSTMAN] Staging TikTok video — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
   );
 
   return publicUrl;

@@ -11,6 +11,7 @@ export async function POST() {
             'tiktok_refresh_token',
             'tiktok_token_expires_at',
             'tiktok_open_id',
+            'tiktok_granted_scopes',
           ],
         },
       },

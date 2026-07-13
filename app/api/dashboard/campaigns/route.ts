@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withProxiedCampaignMedia } from '@/lib/dashboard/campaignMediaUrl';
+import { hasTikTokPublishScopes } from '@/lib/dashboard/tiktokOAuth';
 import prisma from '@/lib/prisma';
 import { getActiveTheme } from '@/lib/marketing/engine/contentCalendar';
 import { CampaignStatus } from '@prisma/client';
@@ -20,7 +21,12 @@ export async function GET() {
     const tiktokToken = await prisma.systemState.findUnique({
       where: { key: 'tiktok_access_token' },
     });
+    const tiktokScopes = await prisma.systemState.findUnique({
+      where: { key: 'tiktok_granted_scopes' },
+    });
     const isTikTokConnected = !!tiktokToken?.value;
+    const tiktokGrantedScopes = tiktokScopes?.value || '';
+    const tiktokPublishReady = isTikTokConnected && hasTikTokPublishScopes(tiktokGrantedScopes);
 
     const mappedCampaigns = campaigns.map(withProxiedCampaignMedia);
 
@@ -30,6 +36,8 @@ export async function GET() {
       activeTheme,
       manualThemeOverride: manualThemeOverride?.value || '',
       isTikTokConnected,
+      tiktokGrantedScopes,
+      tiktokPublishReady,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

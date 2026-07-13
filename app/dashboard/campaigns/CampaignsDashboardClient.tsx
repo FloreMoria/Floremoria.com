@@ -68,6 +68,8 @@ export default function CampaignsDashboardClient() {
   const [activeTheme, setActiveTheme] = useState('');
   const [manualThemeOverride, setManualThemeOverride] = useState('');
   const [isTikTokConnected, setIsTikTokConnected] = useState(false);
+  const [tiktokPublishReady, setTiktokPublishReady] = useState(false);
+  const [tiktokGrantedScopes, setTiktokGrantedScopes] = useState('');
   
   const [loading, setLoading] = useState(true);
   const [themeLoading, setThemeLoading] = useState(false);
@@ -105,6 +107,8 @@ export default function CampaignsDashboardClient() {
         setActiveTheme(data.activeTheme);
         setManualThemeOverride(data.manualThemeOverride);
         setIsTikTokConnected(data.isTikTokConnected || false);
+        setTiktokPublishReady(data.tiktokPublishReady || false);
+        setTiktokGrantedScopes(data.tiktokGrantedScopes || '');
         
         // Risolvi opzione tema selezionato
         if (!data.manualThemeOverride) {
@@ -526,49 +530,78 @@ export default function CampaignsDashboardClient() {
       </div>
 
       {activeTab === 'TIKTOK' && (
-        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md animate-fade-in">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl shrink-0">🎵</span>
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-wider text-slate-100">Collegamento Account TikTok</h4>
-              <p className="text-slate-400 text-xs mt-0.5 font-medium leading-relaxed">
-                {isTikTokConnected
-                  ? 'Il tuo profilo TikTok ufficiale di FloreMoria è correttamente connesso e autorizzato con rinnovo automatico (Refresh Token flow).'
-                  : 'Nessun account TikTok associato nel database. Connetti il profilo per abilitare la pubblicazione automatica e manuale.'}
-              </p>
+        <div className="flex flex-col gap-3 animate-fade-in">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl shrink-0">🎵</span>
+              <div>
+                <h4 className="font-bold text-sm uppercase tracking-wider text-slate-100">Collegamento Account TikTok</h4>
+                <p className="text-slate-400 text-xs mt-0.5 font-medium leading-relaxed">
+                  {isTikTokConnected
+                    ? tiktokPublishReady
+                      ? 'Profilo connesso con permessi di pubblicazione (video.publish, video.upload).'
+                      : 'Profilo connesso solo per login (user.info.basic). Per pubblicare serve una nuova autorizzazione con i permessi Content Posting.'
+                    : 'Nessun account TikTok associato nel database. Connetti il profilo per abilitare la pubblicazione automatica e manuale.'}
+                </p>
+                {isTikTokConnected && tiktokGrantedScopes && (
+                  <p className="text-slate-500 text-[10px] mt-1 font-mono">
+                    Scope attivi: {tiktokGrantedScopes}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0 flex flex-wrap gap-2">
+              {isTikTokConnected ? (
+                <>
+                  {!tiktokPublishReady && (
+                    <a
+                      href="/api/dashboard/tiktok/auth"
+                      className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 inline-block text-center shadow-sm"
+                    >
+                      Riautorizza per pubblicare
+                    </a>
+                  )}
+                  <button
+                    onClick={async () => {
+                      if (confirm('Sei sicuro di voler scollegare l\'account TikTok di FloreMoria?')) {
+                        try {
+                          const res = await fetch('/api/dashboard/tiktok/disconnect', { method: 'POST' });
+                          const data = await res.json();
+                          if (data.success) {
+                            setIsTikTokConnected(false);
+                            setTiktokPublishReady(false);
+                            setTiktokGrantedScopes('');
+                            setSuccessMessage('Account TikTok scollegato con successo.');
+                            setTimeout(() => setSuccessMessage(null), 4000);
+                          }
+                        } catch (e) {
+                          setErrorMessage('Errore durante lo scollegamento.');
+                        }
+                      }
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-sm"
+                  >
+                    Scollega Profilo
+                  </button>
+                </>
+              ) : (
+                <a
+                  href="/api/dashboard/tiktok/auth"
+                  className="bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 inline-block text-center shadow-sm"
+                >
+                  Connetti Profilo
+                </a>
+              )}
             </div>
           </div>
-          <div className="shrink-0">
-            {isTikTokConnected ? (
-              <button
-                onClick={async () => {
-                  if (confirm('Sei sicuro di voler scollegare l\'account TikTok di FloreMoria?')) {
-                    try {
-                      const res = await fetch('/api/dashboard/tiktok/disconnect', { method: 'POST' });
-                      const data = await res.json();
-                      if (data.success) {
-                        setIsTikTokConnected(false);
-                        setSuccessMessage('Account TikTok scollegato con successo.');
-                        setTimeout(() => setSuccessMessage(null), 4000);
-                      }
-                    } catch (e) {
-                      setErrorMessage('Errore durante lo scollegamento.');
-                    }
-                  }
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-sm"
-              >
-                Scollega Profilo
-              </button>
-            ) : (
-              <a
-                href="/api/dashboard/tiktok/auth"
-                className="bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 inline-block text-center shadow-sm"
-              >
-                Connetti Profilo
-              </a>
-            )}
-          </div>
+          {isTikTokConnected && !tiktokPublishReady && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-4 py-3 text-xs leading-relaxed">
+              <strong>Pubblicazione non ancora abilitata.</strong> Sul portale TikTok Developer abilita{' '}
+              <em>Content Posting API</em> con <em>Direct Post</em>, poi su Vercel imposta{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">TIKTOK_OAUTH_SCOPES=user.info.basic,video.publish,video.upload</code>{' '}
+              e clicca <strong>Riautorizza per pubblicare</strong> (o scollega e riconnetti).
+            </div>
+          )}
         </div>
       )}
 

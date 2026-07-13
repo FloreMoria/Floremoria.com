@@ -75,9 +75,9 @@ export async function GET(request: NextRequest) {
       return campaignsRedirect(request, 'tab=TIKTOK&error=invalid-token-response');
     }
 
-    const { access_token, refresh_token, expires_in, open_id } = tokens;
+    const { access_token, refresh_token, expires_in, open_id, scope } = tokens;
 
-    await prisma.$transaction([
+    const upserts = [
       prisma.systemState.upsert({
         where: { key: 'tiktok_access_token' },
         update: { value: access_token },
@@ -98,7 +98,19 @@ export async function GET(request: NextRequest) {
         update: { value: open_id },
         create: { key: 'tiktok_open_id', value: open_id },
       }),
-    ]);
+    ];
+
+    if (scope) {
+      upserts.push(
+        prisma.systemState.upsert({
+          where: { key: 'tiktok_granted_scopes' },
+          update: { value: scope },
+          create: { key: 'tiktok_granted_scopes', value: scope },
+        })
+      );
+    }
+
+    await prisma.$transaction(upserts);
 
     console.log('[TikTok Callback] Token TikTok salvati con successo in SystemState!');
     return campaignsRedirect(request, 'tab=TIKTOK&success=tiktok-connected');

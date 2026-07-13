@@ -3,8 +3,13 @@
  * @see https://developers.tiktok.com/doc/content-posting-api-get-started
  */
 import { ContentFormat } from '@prisma/client';
-import { parseTikTokOAuthError, parseTikTokTokenFields } from '@/lib/dashboard/tiktokOAuth';
-import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
+import {
+  formatTikTokScopeAuthorizationError,
+  isTikTokScopeAuthorizationError,
+  parseTikTokOAuthError,
+  parseTikTokTokenFields,
+} from '@/lib/dashboard/tiktokOAuth';
+import { ensureMetaFetchableImageUrl, ensureSocialFetchableVideoUrl } from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
 import prisma from '@/lib/prisma';
@@ -79,11 +84,11 @@ export async function getOrRefreshTikTokToken(): Promise<{ accessToken: string |
         throw new Error(oauthError || 'TikTok token refresh failed');
       }
 
-      const { access_token: newAccess, refresh_token: newRefresh, expires_in: newExpiresIn, open_id: newOpenId } =
+      const { access_token: newAccess, refresh_token: newRefresh, expires_in: newExpiresIn, open_id: newOpenId, scope } =
         tokens;
 
       // Aggiorna nel database
-      await prisma.$transaction([
+      const upserts = [
         prisma.systemState.upsert({
           where: { key: 'tiktok_access_token' },
           update: { value: newAccess },
@@ -104,7 +109,19 @@ export async function getOrRefreshTikTokToken(): Promise<{ accessToken: string |
           update: { value: newOpenId },
           create: { key: 'tiktok_open_id', value: newOpenId },
         }),
-      ]);
+      ];
+
+      if (scope) {
+        upserts.push(
+          prisma.systemState.upsert({
+            where: { key: 'tiktok_granted_scopes' },
+            update: { value: scope },
+            create: { key: 'tiktok_granted_scopes', value: scope },
+          })
+        );
+      }
+
+      await prisma.$transaction(upserts);
 
       console.log('[POSTMAN] TikTok token rinfrescato con successo!');
       return { accessToken: newAccess, openId: newOpenId };
@@ -192,6 +209,13 @@ async function publishTikTokVideoPost(
     throw new Error('videoUrl mancante per TikTok reel.');
   }
 
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const publicVideoUrl = await ensureSocialFetchableVideoUrl(
+    input.campaignId,
+    videoUrl,
+    blobToken
+  );
+
   const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
 
   const init = await tikTokApiPost<{
@@ -204,7 +228,7 @@ async function publishTikTokVideoPost(
     },
     source_info: {
       source: 'PULL_FROM_URL',
-      video_url: videoUrl,
+      video_url: publicVideoUrl,
     },
   });
 
@@ -243,8 +267,11 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     return { success: true, externalId };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    const error = isTikTokScopeAuthorizationError(msg)
+      ? formatTikTokScopeAuthorizationError()
+      : msg;
     console.error(`[POSTMAN] TikTok errore campagna ${input.campaignId}: ${msg}`);
-    return { success: false, error: msg };
+    return { success: false, error };
   }
 }
 

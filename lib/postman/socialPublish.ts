@@ -19,6 +19,7 @@ import {
   publishToFacebookStory,
   publishToInstagramReel,
   publishToInstagramStory,
+  pollInstagramMediaContainer,
   type MetaEnv,
 } from '@/lib/postman/metaStoriesReels';
 import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
@@ -340,6 +341,8 @@ async function publishToInstagram(
     throw new Error('Meta Instagram: creation_id mancante.');
   }
 
+  await pollInstagramMediaContainer(container.id, metaAccessToken, { isVideo: false });
+
   const published = await metaGraphPost<{ id?: string }>(
     `/${igBusinessAccountId}/media_publish`,
     metaAccessToken,
@@ -655,14 +658,14 @@ export async function publishCampaignToChannel(
             { ...payload, contentFormat },
             env
           );
-        } else if (contentFormat === ContentFormat.REEL) {
-          if (!videoUrl) {
+        } else if (contentFormat === ContentFormat.REEL || videoUrl?.trim()) {
+          if (!videoUrl?.trim()) {
             throw new Error(
               'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
             );
           }
           externalId = await publishToInstagramReel(
-            { ...payload, videoUrl, contentFormat },
+            { ...payload, videoUrl, contentFormat: ContentFormat.REEL },
             env
           );
         } else {

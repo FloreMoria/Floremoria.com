@@ -2,7 +2,7 @@
  * Meta Graph API — Instagram/Facebook Stories e Reels.
  */
 import { ContentFormat } from '@prisma/client';
-import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
+import { ensureMetaFetchableImageUrl, ensureSocialFetchableVideoUrl } from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 
 const META_GRAPH_VERSION = 'v21.0';
@@ -32,6 +32,76 @@ async function metaGraphPost<T>(
     throw new Error(payload.error?.message || `Meta Graph API error (${res.status})`);
   }
   return payload;
+}
+
+/**
+ * Instagram richiede status_code=FINISHED prima di /media_publish.
+ * Senza polling → errore "Media ID is not available".
+ */
+export async function pollInstagramMediaContainer(
+  containerId: string,
+  accessToken: string,
+  options?: { maxAttempts?: number; delayMs?: number; isVideo?: boolean }
+): Promise<void> {
+  const isVideo = options?.isVideo ?? false;
+  const maxAttempts = options?.maxAttempts ?? (isVideo ? 45 : 25);
+  const delayMs = options?.delayMs ?? (isVideo ? 3000 : 2000);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(accessToken)}`
+    );
+    const payload = (await res.json()) as {
+      status_code?: string;
+      status?: string;
+      error?: { message?: string };
+    };
+
+    if (!res.ok || payload.error) {
+      throw new Error(payload.error?.message || `Instagram container status error (${res.status})`);
+    }
+
+    const status = payload.status_code;
+    console.log(
+      `[POSTMAN] Instagram container ${containerId} — tentativo ${attempt}/${maxAttempts}: ${status ?? 'unknown'}`
+    );
+
+    if (status === 'FINISHED') {
+      return;
+    }
+    if (status === 'ERROR' || status === 'EXPIRED') {
+      throw new Error(
+        `Instagram: elaborazione media fallita (${status}). ${payload.status || 'Verifica che l\'URL immagine/video sia raggiungibile da Meta.'}`
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  throw new Error(
+    'Instagram: timeout attesa elaborazione media. Riprova tra qualche minuto.'
+  );
+}
+
+async function publishInstagramContainer(
+  igBusinessAccountId: string,
+  containerId: string,
+  accessToken: string,
+  pollOptions?: { isVideo?: boolean }
+): Promise<string> {
+  await pollInstagramMediaContainer(containerId, accessToken, pollOptions);
+
+  const published = await metaGraphPost<{ id?: string }>(
+    `/${igBusinessAccountId}/media_publish`,
+    accessToken,
+    { creation_id: containerId }
+  );
+
+  if (!published.id) {
+    throw new Error('Meta Instagram: media id mancante dopo publish.');
+  }
+
+  return published.id;
 }
 
 async function getFacebookPageAccessToken(
@@ -82,18 +152,15 @@ export async function publishToInstagramStory(
     throw new Error('Meta Instagram Story: creation_id mancante.');
   }
 
-  const published = await metaGraphPost<{ id?: string }>(
-    `/${igBusinessAccountId}/media_publish`,
+  const mediaId = await publishInstagramContainer(
+    igBusinessAccountId,
+    container.id,
     metaAccessToken,
-    { creation_id: container.id }
+    { isVideo: false }
   );
 
-  if (!published.id) {
-    throw new Error('Meta Instagram Story: media id mancante.');
-  }
-
-  console.log(`[POSTMAN] Instagram Story pubblicata — ${published.id}`);
-  return published.id;
+  console.log(`[POSTMAN] Instagram Story pubblicata — ${mediaId}`);
+  return mediaId;
 }
 
 export async function publishToInstagramReel(
@@ -106,19 +173,24 @@ export async function publishToInstagramReel(
   },
   env: MetaEnv
 ): Promise<string> {
-  const { metaAccessToken, igBusinessAccountId } = env;
+  const { metaAccessToken, igBusinessAccountId, blobToken } = env;
   if (!metaAccessToken || !igBusinessAccountId) {
     throw new Error('META_ACCESS_TOKEN o IG_BUSINESS_ACCOUNT_ID assenti');
   }
 
   const caption = captionForFormat(campaign.contentFormat, campaign.copy, campaign.hashtags);
+  const publicVideoUrl = await ensureSocialFetchableVideoUrl(
+    campaign.id,
+    campaign.videoUrl,
+    blobToken
+  );
 
   const container = await metaGraphPost<{ id?: string }>(
     `/${igBusinessAccountId}/media`,
     metaAccessToken,
     {
       media_type: 'REELS',
-      video_url: campaign.videoUrl,
+      video_url: publicVideoUrl,
       caption,
       share_to_feed: 'true',
     }
@@ -128,18 +200,15 @@ export async function publishToInstagramReel(
     throw new Error('Meta Instagram Reel: creation_id mancante.');
   }
 
-  const published = await metaGraphPost<{ id?: string }>(
-    `/${igBusinessAccountId}/media_publish`,
+  const mediaId = await publishInstagramContainer(
+    igBusinessAccountId,
+    container.id,
     metaAccessToken,
-    { creation_id: container.id }
+    { isVideo: true }
   );
 
-  if (!published.id) {
-    throw new Error('Meta Instagram Reel: media id mancante.');
-  }
-
-  console.log(`[POSTMAN] Instagram Reel pubblicato — ${published.id}`);
-  return published.id;
+  console.log(`[POSTMAN] Instagram Reel pubblicato — ${mediaId}`);
+  return mediaId;
 }
 
 export async function publishToFacebookStory(

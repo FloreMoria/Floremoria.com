@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 
 async function overlayLogo(imageBuffer: Buffer): Promise<Buffer> {
   try {
-    const logoPath = resolve(process.cwd(), 'public/images/brand/Logo FloreMoria 2026 senza sfondo.png');
+    const logoPath = resolve(process.cwd(), 'public/images/brand/Logo FloreMoria ESTESO senza fondo 100x290.png');
     if (!existsSync(logoPath)) {
       console.warn(`[Marketing Images] Logo non trovato in "${logoPath}". Salto overlay.`);
       return imageBuffer;
@@ -21,13 +21,20 @@ async function overlayLogo(imageBuffer: Buffer): Promise<Buffer> {
 
     const logoTargetWidth = Math.round(bgWidth * 0.25);
 
+    // Ridimensiona il logo e applica un'opacità del ~75% (alpha = 190) per un watermark elegante e trasparente
     const resizedLogoBuffer = await sharp(logoPath)
       .resize({ width: logoTargetWidth })
+      .composite([{
+        input: Buffer.from([0, 0, 0, 190]),
+        raw: { width: 1, height: 1, channels: 4 },
+        tile: true,
+        blend: 'dest-in'
+      }])
       .toBuffer();
 
     const logoMetadata = await sharp(resizedLogoBuffer).metadata();
     const logoWidth = logoMetadata.width || logoTargetWidth;
-    const logoHeight = logoMetadata.height || 50;
+    const logoHeight = logoMetadata.height || Math.round(logoTargetWidth * (100 / 290));
 
     const paddingX = Math.round(bgWidth * 0.04);
     const paddingY = Math.round(bgHeight * 0.04);

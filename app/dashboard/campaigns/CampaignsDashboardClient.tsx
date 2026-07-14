@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { toCampaignMediaProxyUrl } from '@/lib/dashboard/campaignMediaUrl';
 import {
   Calendar,
   AlertCircle,
@@ -55,6 +56,31 @@ const PREDEFINED_THEMES = [
   { value: 'Festa del Papà - Guida silenziosa, forza del ricordo, rispetto e gratitudine per la figura paterna.', label: '👨 Festa del Papà (15 Mar - 22 Mar)' },
   { value: 'custom', label: '⚙️ Tema Personalizzato (Digita manualmente)' }
 ];
+
+function parseImageUrl(imageUrl: string | null | undefined): string[] {
+  if (!imageUrl) return [];
+  const trimmed = imageUrl.trim();
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map(url => String(url).trim()).filter(Boolean);
+      }
+    } catch (e) {
+      // Prova a splittare per virgola in caso di errore
+    }
+  }
+  if (trimmed.includes(',')) {
+    return trimmed.split(',').map(url => url.trim()).filter(Boolean);
+  }
+  return [trimmed];
+}
+
+function isVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const lower = url.split('?')[0].toLowerCase();
+  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm');
+}
 
 export default function CampaignsDashboardClient() {
   const searchParams = useSearchParams();
@@ -803,37 +829,103 @@ export default function CampaignsDashboardClient() {
                 </div>
 
                 {/* VISUAL DI ANTEPRIMA (IMMAGINE O VIDEO) */}
-                {c.videoUrl ? (
-                  <div className="relative aspect-[16/9] w-full bg-slate-900 border-b border-slate-100 overflow-hidden flex items-center justify-center">
-                    <video
-                      src={c.videoUrl}
-                      controls
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
-                      <Video size={10} /> CONTENUTO VIDEO
-                    </div>
-                  </div>
-                ) : c.imageUrl ? (
-                  <div className="relative aspect-[16/9] w-full bg-slate-50 border-b border-slate-50 group overflow-hidden">
-                    <img
-                      src={c.imageUrl}
-                      alt={`Anteprima campagna ${c.targetChannel}`}
-                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {c.imagePrompt && (
-                      <div className="absolute inset-0 bg-slate-900/80 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-y-auto flex flex-col justify-center text-xs text-slate-200 leading-relaxed font-mono">
-                        <span className="font-bold text-amber-400 mb-1 uppercase tracking-wide text-[10px]">Art Direction Prompt:</span>
-                        {c.imagePrompt}
+                {(() => {
+                  const videoSrc = toCampaignMediaProxyUrl(c.videoUrl);
+                  if (videoSrc) {
+                    return (
+                      <div className="relative aspect-[16/9] w-full bg-slate-900 border-b border-slate-100 overflow-hidden flex items-center justify-center">
+                        <video
+                          src={videoSrc}
+                          controls
+                          className="w-full h-full object-contain"
+                        />
+                        <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
+                          <Video size={10} /> CONTENUTO VIDEO
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="aspect-[16/6] bg-slate-50 border-b border-slate-100 flex flex-col items-center justify-center gap-1 text-slate-400">
-                    <ImageIcon size={20} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Nessun file multimediale</span>
-                  </div>
-                )}
+                    );
+                  }
+
+                  const urls = parseImageUrl(c.imageUrl);
+                  if (urls.length === 0) {
+                    return (
+                      <div className="aspect-[16/6] bg-slate-50 border-b border-slate-100 flex flex-col items-center justify-center gap-1 text-slate-400">
+                        <ImageIcon size={20} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Nessun file multimediale</span>
+                      </div>
+                    );
+                  }
+
+                  if (urls.length === 1) {
+                    const singleUrl = urls[0];
+                    const proxiedUrl = toCampaignMediaProxyUrl(singleUrl);
+                    if (isVideoUrl(singleUrl)) {
+                      return (
+                        <div className="relative aspect-[16/9] w-full bg-slate-900 border-b border-slate-100 overflow-hidden flex items-center justify-center">
+                          <video
+                            src={proxiedUrl || undefined}
+                            controls
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
+                            <Video size={10} /> CONTENUTO VIDEO
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="relative aspect-[16/9] w-full bg-slate-50 border-b border-slate-50 group overflow-hidden">
+                        <img
+                          src={proxiedUrl || undefined}
+                          alt={`Anteprima campagna ${c.targetChannel}`}
+                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        />
+                        {c.imagePrompt && (
+                          <div className="absolute inset-0 bg-slate-900/80 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-y-auto flex flex-col justify-center text-xs text-slate-200 leading-relaxed font-mono">
+                            <span className="font-bold text-amber-400 mb-1 uppercase tracking-wide text-[10px]">Art Direction Prompt:</span>
+                            {c.imagePrompt}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Carousel
+                  return (
+                    <div className="relative border-b border-slate-150 bg-slate-50 p-3">
+                      <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+                        {urls.map((url, index) => {
+                          const proxiedUrl = toCampaignMediaProxyUrl(url);
+                          const isVideo = isVideoUrl(url);
+                          return (
+                            <div key={index} className="relative aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                              {isVideo ? (
+                                <video
+                                  src={proxiedUrl || undefined}
+                                  controls
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <img
+                                  src={proxiedUrl || undefined}
+                                  alt={`Anteprima ${index + 1}`}
+                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                />
+                              )}
+                              <div className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase">
+                                {isVideo ? 'Video' : `Foto ${index + 1}`}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="absolute top-3 left-3 bg-slate-950 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-md uppercase tracking-wider flex items-center gap-1">
+                        <Layers size={10} className="text-fm-gold" /> Carosello ({urls.length} elementi)
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* CONTENUTO DI TESTO (FLEX MODIFICA O VISUALIZZAZIONE) */}
                 <div className="p-5 flex flex-col gap-4">

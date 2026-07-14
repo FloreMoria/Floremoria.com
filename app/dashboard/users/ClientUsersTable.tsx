@@ -591,6 +591,9 @@ export default function ClientUsersTable({
                                                         isAdmin
                                                         showGpsMap
                                                         compact
+                                                        hasPreDeliveryPhotoOpt={order.items?.some(
+                                                            (item: any) => item.productId === 'florem-foto-stato-prima'
+                                                        )}
                                                     />
                                                 </div>
                                             </div>

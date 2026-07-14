@@ -46,7 +46,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [alertsRefreshKey, setAlertsRefreshKey] = useState(0);
     const bumpVeraAlerts = () => setAlertsRefreshKey((k) => k + 1);
     const [rowOrderDraft, setRowOrderDraft] = useState<
-        Record<string, { buyerFullName: string; customerPhone: string; deceasedName: string; cemeteryName: string; cemeteryCity: string; totalPriceCents: number; status: string }>
+        Record<string, { buyerFullName: string; customerPhone: string; deceasedName: string; cemeteryName: string; cemeteryCity: string; totalPriceCents: number; status: string; deliveryDate: string }>
     >({});
 
     const showToast = (msg: string) => {
@@ -109,6 +109,15 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const beginRowOrderEdit = (order: any) => {
         setEditingOrderId(order.id);
+        
+        let dateVal = '';
+        if (order.deliveryDate) {
+            const d = new Date(order.deliveryDate);
+            if (!isNaN(d.getTime())) {
+                dateVal = d.toISOString().split('T')[0];
+            }
+        }
+
         setRowOrderDraft((prev) => ({
             ...prev,
             [order.id]: {
@@ -119,6 +128,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                 cemeteryCity: order.cemeteryCity || '',
                 totalPriceCents: Number(order.totalPriceCents || 0),
                 status: order.status || 'PENDING',
+                deliveryDate: dateVal,
             },
         }));
     };
@@ -143,15 +153,20 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     cemeteryCity: draft.cemeteryCity,
                     totalPriceCents: draft.totalPriceCents,
                     status: draft.status,
+                    deliveryDate: draft.deliveryDate || null,
                 }),
             });
             if (!res.ok) {
                 throw new Error('Salvataggio ordine non riuscito.');
             }
             const updated = await res.json();
-            const patch = draft.status === 'CANCELLED'
-                ? { ...draft, status: 'CANCELLED', deletedAt: updated.deletedAt ?? new Date().toISOString() }
-                : draft;
+            const patch = {
+                ...draft,
+                deliveryDate: updated.deliveryDate,
+                ...(draft.status === 'CANCELLED'
+                    ? { deletedAt: updated.deletedAt ?? new Date().toISOString() }
+                    : {})
+            };
             setLocalOrders((prev: any[]) =>
                 prev.map((o) => (o.id === order.id ? { ...o, ...patch } : o))
             );
@@ -293,6 +308,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     partnerId: selectedOrder.partnerId || null,
                     specialNotes: selectedOrder.specialNotes || '',
                     gravePosition: selectedOrder.gravePosition || '',
+                    deliveryDate: selectedOrder.deliveryDate || null,
                 })
             });
 
@@ -305,6 +321,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     partnerId: selectedOrder.partnerId,
                     specialNotes: selectedOrder.specialNotes,
                     gravePosition: selectedOrder.gravePosition,
+                    deliveryDate: selectedOrder.deliveryDate,
                     partner: florists.find(f => f.id === selectedOrder.partnerId) || null
                 } : o));
 
@@ -470,9 +487,24 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             <div className="font-bold text-black text-[14px]">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
                                         </td>
                                         <td className="py-3 px-3 whitespace-nowrap">
-                                            <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px]">
-                                                {formatDeliveryDate(order)}
-                                            </div>
+                                            {editingOrderId === order.id ? (
+                                                <input
+                                                    type="date"
+                                                    value={rowOrderDraft[order.id]?.deliveryDate || ''}
+                                                    onChange={(e) =>
+                                                        setRowOrderDraft((prev) => ({
+                                                            ...prev,
+                                                            [order.id]: { ...prev[order.id], deliveryDate: e.target.value },
+                                                        }))
+                                                    }
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="border border-gray-200 rounded px-2 py-1 text-xs"
+                                                />
+                                            ) : (
+                                                <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px]">
+                                                    {formatDeliveryDate(order)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="py-3 px-3 text-center align-middle">
                                             {order.photos && order.photos.length > 0 ? (
@@ -860,13 +892,38 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                 ) : null}
                                                 <div className="flex items-start gap-2">
                                                     <Clock size={15} className="text-gray-400 mt-0.5 shrink-0" />
-                                                    <div>
-                                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data e Ora Cerimonia</span>
-                                                        <span className="font-medium text-gray-800 text-sm">
-                                                            {selectedOrder.funeralDate ? new Date(selectedOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                    <div className="flex-1">
+                                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data di Consegna / Cerimonia</span>
+                                                        {canChangeStatus ? (
+                                                            <div className="flex gap-2 items-center">
+                                                                 <input
+                                                                     type="date"
+                                                                     value={
+                                                                         selectedOrder.deliveryDate
+                                                                             ? new Date(selectedOrder.deliveryDate).toISOString().split('T')[0]
+                                                                             : ''
+                                                                     }
+                                                                     onChange={(e) =>
+                                                                         setSelectedOrder({
+                                                                             ...selectedOrder,
+                                                                             deliveryDate: e.target.value ? new Date(e.target.value).toISOString() : null,
+                                                                         })
+                                                                     }
+                                                                     className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none"
+                                                                 />
+                                                                 {selectedOrder.funeralDate && (
+                                                                     <span className="text-xs text-gray-400 font-mono">
+                                                                         (Ora: {new Date(selectedOrder.funeralDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })})
+                                                                     </span>
+                                                                 )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="font-medium text-gray-800 text-sm">
+                                                                {selectedOrder.funeralDate ? new Date(selectedOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
+                                                            </span>
+                                                        )}
+                                                     </div>
+                                                 </div>
                                                 {displayInstructions && (
                                                     <div className="flex items-start gap-2 mt-2 pt-3 border-t border-gray-100">
                                                         <Info size={15} className="text-gray-400 mt-0.5 shrink-0" />

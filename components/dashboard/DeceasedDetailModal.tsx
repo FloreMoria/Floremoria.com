@@ -440,6 +440,9 @@ export default function DeceasedDetailModal({ row, partners, onClose, onRegister
                                                         isAdmin
                                                         showGpsMap
                                                         compact
+                                                        hasPreDeliveryPhotoOpt={order.items.some(
+                                                            (item) => item.productId === 'florem-foto-stato-prima'
+                                                        )}
                                                     />
                                                 </div>
                                             </div>

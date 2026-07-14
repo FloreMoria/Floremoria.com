@@ -32,9 +32,18 @@ export async function PUT(request: Request, context: any) {
 
         validKeys.forEach(k => {
             if (body[k] !== undefined) {
-                // Parse se sono date ISO native inviate via HTTP JSON come stringhe
-                if ((k === 'deceasedBirthDate' || k === 'deceasedDeathDate' || k === 'deliveryDate') && body[k]) {
-                    safeData[k] = new Date(body[k]);
+                // Parse date columns safely (handling ISO strings, IT formats, or empty strings/nulls)
+                if (k === 'deceasedBirthDate' || k === 'deceasedDeathDate' || k === 'deliveryDate') {
+                    if (body[k] === null || (typeof body[k] === 'string' && body[k].trim() === '')) {
+                        safeData[k] = null;
+                    } else if (body[k]) {
+                        const parsedDate = new Date(body[k]);
+                        if (isNaN(parsedDate.getTime())) {
+                            safeData[k] = null;
+                        } else {
+                            safeData[k] = parsedDate;
+                        }
+                    }
                 } else {
                     safeData[k] = body[k];
                 }

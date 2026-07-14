@@ -165,6 +165,9 @@ export function UserBachecaOrderCard({
                         lng={lng}
                         isAdmin={showAdminUpload}
                         showGpsMap={showGpsMap}
+                        hasPreDeliveryPhotoOpt={order.items.some(
+                            (item) => item.productId === 'florem-foto-stato-prima'
+                        )}
                     />
 
                     {showAdminUpload ? (

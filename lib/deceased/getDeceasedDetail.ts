@@ -46,7 +46,7 @@ export type DeceasedDetailPayload = {
         totalPriceCents: number;
         partner: { id: string; shopName: string; ownerName: string } | null;
         user: { id: string; name: string | null; email: string | null; phone: string | null } | null;
-        items: Array<{ id: string; quantity: number; priceCents: number; product: { name: string } }>;
+        items: Array<{ id: string; quantity: number; priceCents: number; productId: string; product: { id: string; name: string } }>;
         deliveryProof: {
             photoBeforeUrl: string | null;
             photoAfterUrl: string | null;
@@ -82,7 +82,8 @@ function serializeOrder(order: Awaited<ReturnType<typeof fetchProfileOrders>>[nu
             id: item.id,
             quantity: item.quantity,
             priceCents: item.priceCents,
-            product: { name: item.product.name },
+            productId: item.productId,
+            product: { id: item.product.id, name: item.product.name },
         })),
         deliveryProof: order.deliveryProof
             ? {

@@ -52,7 +52,17 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
     for (const order of openOrders) {
         if (order.deliveryProof?.status === 'COMPLETED') continue;
 
-        const flags = parseWorkflowFlags(order.veraWorkflowFlags);
+        // Skip sending pre-notifications if the scheduled delivery/funeral date is more than 48 hours in the future.
+        const targetDate = order.deliveryDate || order.funeralDate;
+        if (targetDate) {
+            const diffMs = targetDate.getTime() - Date.now();
+            const diffHours = diffMs / (60 * 60 * 1000);
+            if (diffHours > 48) {
+                continue;
+            }
+        }
+
+        let currentFlags = parseWorkflowFlags(order.veraWorkflowFlags);
         const referenceTime = order.updatedAt;
 
         if (hoursSince(referenceTime) < VERA_REMINDER_HOURS) continue;
@@ -60,7 +70,7 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
         const phoneE164 = normalizePhoneE164(order.customerPhone);
         if (
             phoneE164 &&
-            !isWorkflowStepDone(flags, 'puntoG_customer_wait')
+            !isWorkflowStepDone(currentFlags, 'puntoG_customer_wait')
         ) {
             const session = await getSession(`whatsapp:${phoneE164}`);
             const lastInbound = [...session.messages]
@@ -90,10 +100,11 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                             contactName: order.user?.name || order.buyerFullName || name,
                             userType: 'UTENTE',
                         });
+                        currentFlags = markWorkflowStep(currentFlags, 'puntoG_customer_wait');
                         await prisma.order.update({
                             where: { id: order.id },
                             data: {
-                                veraWorkflowFlags: markWorkflowStep(flags, 'puntoG_customer_wait'),
+                                veraWorkflowFlags: currentFlags,
                             },
                         });
                         result.customerReminders += 1;
@@ -110,7 +121,7 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
         const floristPhone = order.partner?.whatsappNumber?.trim();
         if (
             floristPhone &&
-            !isWorkflowStepDone(flags, 'puntoG_florist_reminder')
+            !isWorkflowStepDone(currentFlags, 'puntoG_florist_reminder')
         ) {
             try {
                 const floristName = extractFirstName(
@@ -123,13 +134,14 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                 });
                 const send = await sendVeraTemplate(floristPhone, 'florist_reminder', bodyParams);
                 if (send.ok) {
+                    currentFlags = markWorkflowStep(
+                        currentFlags,
+                        'puntoG_florist_reminder'
+                    );
                     await prisma.order.update({
                         where: { id: order.id },
                         data: {
-                            veraWorkflowFlags: markWorkflowStep(
-                                parseWorkflowFlags(order.veraWorkflowFlags),
-                                'puntoG_florist_reminder'
-                            ),
+                            veraWorkflowFlags: currentFlags,
                         },
                     });
                     result.floristReminders += 1;

@@ -25,6 +25,7 @@ type Props = {
     showGpsMap: boolean;
     /** Layout compatto per modale scheda utente admin. */
     compact?: boolean;
+    hasPreDeliveryPhotoOpt?: boolean;
 };
 
 async function forceDownload(url: string, filename: string) {
@@ -204,9 +205,10 @@ export default function CustodiedProofGallery({
     isAdmin,
     showGpsMap,
     compact = false,
+    hasPreDeliveryPhotoOpt = false,
 }: Props) {
     const router = useRouter();
-    const [beforeUrls, setBeforeUrls] = useState(initialBefore);
+    const [beforeUrls, setBeforeUrls] = useState(hasPreDeliveryPhotoOpt ? initialBefore : []);
     const [afterUrls, setAfterUrls] = useState(initialAfter);
 
     const hasPhotos = beforeUrls.length > 0 || afterUrls.length > 0;

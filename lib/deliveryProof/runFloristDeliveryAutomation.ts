@@ -1,6 +1,6 @@
 import type { ChatSession } from '@/lib/chatStore';
 import { ingestFloristWhatsAppPhoto } from '@/lib/deliveryProof/ingestFloristWhatsAppPhoto';
-import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 export function extractMetaMediaIdFromProxyUrl(mediaUrl?: string | null): string | null {
     if (!mediaUrl) return null;
@@ -39,16 +39,16 @@ export async function runFloristDeliveryAutomation(input: {
         return;
     }
 
-    const notifyResult = await notifyCustomerDeliveryComplete(ingest.orderId);
-    if (notifyResult.ok) {
+    try {
+        await onOrderStatusChanged(ingest.orderId, 'DELIVERING');
         console.log(
-            "[delivery-automation] Notifica automatica foto inviata all'utente per l'ordine:",
+            "[delivery-automation] Notifica automatica foto e fiorista inviata per l'ordine:",
             ingest.orderId
         );
-        return;
+    } catch (err) {
+        console.warn(
+            `[delivery-automation] Notifica utente/fiorista fallita per ordine=${ingest.orderId}:`,
+            err
+        );
     }
-
-    console.warn(
-        `[delivery-automation] Notifica utente non inviata ordine=${ingest.orderId} skipped=${notifyResult.skipped} error=${notifyResult.error ?? ''}`
-    );
 }

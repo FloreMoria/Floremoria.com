@@ -6,6 +6,7 @@ import { retryPuntoAIfBlocked } from '@/lib/vera/orderWorkflow';
 import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 export async function PUT(request: Request, context: any) {
     const auth = await requireDashboardAdmin();
@@ -93,6 +94,12 @@ export async function PUT(request: Request, context: any) {
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
         const nextPartnerId =
             body.partnerId !== undefined ? (body.partnerId || null) : previousOrder?.partnerId ?? null;
+
+        if (nextStatus && nextStatus !== previousOrder?.status) {
+            void onOrderStatusChanged(id, nextStatus).catch((err) => {
+                console.error('[orders-put] Errore chiamata onOrderStatusChanged:', err);
+            });
+        }
 
         if (
             shouldNotifyFloristDeliveryLinkOnOrderUpdate(

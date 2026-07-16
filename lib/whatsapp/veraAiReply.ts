@@ -29,6 +29,7 @@ import {
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
@@ -370,23 +371,68 @@ export async function generateVeraReply(
         return { text: replyText, source: 'deterministic', shouldEscalate: false };
     }
 
-    if (session.userType === 'FLORIST') {
-        const floristException = detectFloristException(message);
-        if (floristException && callerContext.phoneE164) {
-            const phoneDigits = callerContext.phoneE164.replace(/\D/g, '');
-            const partner = await import('@/lib/prisma').then((m) =>
-                m.default.partner.findFirst({
+    if (session.userType === 'FLORIST' && callerContext.phoneE164) {
+        const phoneDigits = callerContext.phoneE164.replace(/\D/g, '');
+        const partner = await import('@/lib/prisma').then((m) =>
+            m.default.partner.findFirst({
+                where: {
+                    deletedAt: null,
+                    OR: [
+                        { whatsappNumber: callerContext.phoneE164! },
+                        { whatsappNumber: { contains: phoneDigits.slice(-9) } },
+                    ],
+                },
+                select: { id: true, shopName: true, ownerName: true },
+            })
+        );
+
+        if (partner) {
+            // Verifica se il fiorista ha ordini in stato "Ricevuto" (ACCEPTED) in sospeso
+            const acceptedOrder = await import('@/lib/prisma').then((m) =>
+                m.default.order.findFirst({
                     where: {
+                        partnerId: partner.id,
+                        status: 'ACCEPTED',
                         deletedAt: null,
-                        OR: [
-                            { whatsappNumber: callerContext.phoneE164! },
-                            { whatsappNumber: { contains: phoneDigits.slice(-9) } },
-                        ],
                     },
-                    select: { id: true },
                 })
             );
-            if (partner) {
+
+            if (acceptedOrder) {
+                const AFFIRMATIVE_PATTERN = /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
+                if (AFFIRMATIVE_PATTERN.test(message.trim())) {
+                    // Transizione 1: PREME "In Lavorazione" (IN_PROGRESS)
+                    await import('@/lib/prisma').then((m) =>
+                        m.default.order.update({
+                            where: { id: acceptedOrder.id },
+                            data: { status: 'IN_PROGRESS' },
+                        })
+                    );
+                    await onOrderStatusChanged(acceptedOrder.id, 'IN_PROGRESS');
+
+                    // Transizione 2: PREME "In Attesa" (PENDING) e attende
+                    await import('@/lib/prisma').then((m) =>
+                        m.default.order.update({
+                            where: { id: acceptedOrder.id },
+                            data: { status: 'PENDING' },
+                        })
+                    );
+                    await onOrderStatusChanged(acceptedOrder.id, 'PENDING');
+
+                    // Risponde al fiorista con il link univoco alla mini-app
+                    const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
+                    const { extractFirstName } = await import('@/lib/whatsapp/proactiveTemplateParams');
+                    
+                    const deliveryUrl = buildFloristDeliveryUrl({ id: acceptedOrder.id, orderNumber: acceptedOrder.orderNumber });
+                    const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
+
+                    const reply = `Perfetto ${floristFirstName}, incarico confermato! Ecco il link della mini-app per effettuare le foto prima e dopo la posa: ${deliveryUrl}\n\nBuon lavoro!`;
+                    return { text: reply, source: 'deterministic', shouldEscalate: false };
+                }
+            }
+
+            const floristException = detectFloristException(message);
+            if (floristException) {
                 const handled = await handleFloristException({
                     partnerId: partner.id,
                     message,

@@ -2,8 +2,9 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
 import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
-import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
+import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 
@@ -97,6 +98,11 @@ export async function submitFloristDeliveryProof(
             latitude: gpsLatitude ?? order.latitude,
             longitude: gpsLongitude ?? order.longitude,
         });
+
+        await tx.order.update({
+            where: { id: order.id },
+            data: { status: 'DELIVERING' },
+        });
     });
 
     const linkedUser = await ensureUserForOrder(order);
@@ -113,17 +119,9 @@ export async function submitFloristDeliveryProof(
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
     }
 
-    let giardinoUrl = '';
+    const giardinoUrl = await buildProofFotoAccessUrl(order.id, order.orderNumber);
     try {
-        const notifyResult = await notifyCustomerDeliveryComplete(order.id);
-        if (notifyResult.giardinoUrl) {
-            giardinoUrl = notifyResult.giardinoUrl;
-        }
-        if (!notifyResult.ok) {
-            console.warn(
-                `[submitFloristDeliveryProof] Notifica VERA non inviata order=${order.orderNumber || order.id} skipped=${notifyResult.skipped}`
-            );
-        }
+        await onOrderStatusChanged(order.id, 'DELIVERING');
     } catch (err) {
         console.error('[submitFloristDeliveryProof] Notifica VERA post-consegna fallita:', err);
     }

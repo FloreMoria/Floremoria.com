@@ -73,7 +73,6 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         return { assigned: false, reason: 'no_primary_florist' };
     }
 
-    const previousStatus = order.status;
     const deceasedProfileId = profile.id;
     const partnerId = assignment.partner.id;
 
@@ -82,17 +81,15 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         data: {
             deceasedProfileId,
             partnerId,
-            status: 'IN_PROGRESS',
+            status: 'ACCEPTED',
         },
     });
 
     await syncDeceasedRelationsForOrder(order.id);
 
-    if (shouldNotifyFloristDeliveryLink(previousStatus, 'IN_PROGRESS')) {
-        await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
-            console.error('[auto-assign-known-tomb] Invio link fiorista fallito (non bloccante):', err);
-        });
-    }
+    await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
+        console.error('[auto-assign-known-tomb] Invio link fiorista fallito (non bloccante):', err);
+    });
 
     console.info(
         `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, IN_PROGRESS`

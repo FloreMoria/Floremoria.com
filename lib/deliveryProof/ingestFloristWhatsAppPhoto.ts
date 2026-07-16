@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { processProofImageBuffer } from '@/lib/deliveryProof/processProofImage';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
 import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
@@ -191,6 +192,10 @@ export async function ingestFloristWhatsAppPhoto(
         });
 
         await injectDeliveryPhotosOnOrder(tx, order.id, photosBeforeUrls, photosAfterUrls);
+        await tx.order.update({
+            where: { id: order.id },
+            data: { status: 'DELIVERING' },
+        });
     });
 
     const fullOrder = await prisma.order.findFirst({
@@ -214,6 +219,12 @@ export async function ingestFloristWhatsAppPhoto(
         }
         await syncDeceasedRelationsForOrder(order.id);
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
+
+        try {
+            await onOrderStatusChanged(order.id, 'DELIVERING');
+        } catch (err) {
+            console.error('[ingestFloristWhatsAppPhoto] Error calling onOrderStatusChanged:', err);
+        }
     }
 
     const shouldNotify = !wasAlreadyCompleted || previousAfterUrl !== photoAfterUrl;

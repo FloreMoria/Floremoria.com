@@ -10,6 +10,7 @@ import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristComp
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { parseWorkflowFlags } from '@/lib/vera/orderWorkflow/types';
 import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
+import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
 
 export interface BackfillOrderChatLogResult {
     ok: boolean;
@@ -22,24 +23,6 @@ export interface BackfillOrderChatLogResult {
     customerMessagesAfter?: number;
     results?: Record<string, string>;
     error?: string;
-}
-
-function orderHasLumino(items: Array<{ product: { slug?: string | null; name?: string | null } }>): boolean {
-    return items.some((i) => {
-        const label = `${i.product.slug || ''} ${i.product.name || ''}`.toLowerCase();
-        return /lumino|set-ceri|ceri|candele/.test(label);
-    });
-}
-
-function orderHasBigliettino(
-    items: Array<{ product: { slug?: string | null; name?: string | null } }>,
-    ticketMessage?: string | null
-): boolean {
-    if (ticketMessage?.trim()) return true;
-    return items.some((i) => {
-        const label = `${i.product.slug || ''} ${i.product.name || ''}`.toLowerCase();
-        return /messaggio|bigliett|nastro/.test(label);
-    });
 }
 
 /**
@@ -146,8 +129,8 @@ export async function backfillOrderChatLog(orderNumber: string): Promise<Backfil
                 };
 
                 if (order.isFirstOrderForPartner) {
-                    const lumino = orderHasLumino(order.items);
-                    const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
+                    const lumino = hasLuminoOption(order.items);
+                    const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
                     const steps: Array<{ template: VeraTemplateId; params: string[] }> = [
                         { template: 'florist_first_001', params: [floristName, orderCode, compensation.totalLabel] },
                         {

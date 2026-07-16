@@ -4,6 +4,11 @@ import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import { lookupActiveOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
+import {
+    buildOrderOptionalsList,
+    hasPhotoBeforeOption,
+    stripInternalNotes,
+} from '@/lib/orders/orderOptionals';
 
 export type VeraConversationMode = 'pre_acquisto' | 'ordine_attivo' | 'fiorista';
 
@@ -24,6 +29,12 @@ export interface VeraCallerContext {
     productsList?: string[] | null;
     hasPhotoBefore?: boolean | null;
     deliveryDate?: string | null;
+    /** Optional accessori (lumino, ceri, nastro/biglietto commemorativo). */
+    optionals?: string[] | null;
+    /** Testo del biglietto/nastro commemorativo scelto dal cliente. */
+    ticketMessage?: string | null;
+    /** Note o richieste specifiche dell'utente/fiorista (metadati B2B esclusi). */
+    customerNotes?: string | null;
 }
 
 function resolveDisplayName(session: ChatSession): string | null {
@@ -89,10 +100,10 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const proofStatus = order?.deliveryProof?.status ?? null;
 
     const productsList = order?.items.map(item => `${item.product.name} (x${item.quantity})`) ?? null;
-    const hasPhotoBefore = order?.items.some(item => 
-        item.product.id === 'florem-foto-stato-prima' || 
-        item.product.slug === 'foto-stato-prima-consegna'
-    ) ?? false;
+    const hasPhotoBefore = order ? hasPhotoBeforeOption(order.items) : false;
+    const optionals = order ? buildOrderOptionalsList(order.items) : [];
+    const ticketMessage = order?.ticketMessage?.trim() || null;
+    const customerNotes = stripInternalNotes(order?.additionalInstructions);
     const deliveryDate = order?.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('it-IT') : null;
 
     return {
@@ -112,6 +123,9 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         productsList,
         hasPhotoBefore,
         deliveryDate,
+        optionals,
+        ticketMessage,
+        customerNotes,
     };
 }
 
@@ -135,6 +149,15 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             `- Stato Attuale Ordine: ${ctx.orderStatus ?? 'Sconosciuto'}`,
             `- Prodotto acquistato: ${ctx.productsList?.join(', ') || 'Nessun prodotto'}`,
             `- Opzione "Foto prima della posa": ${ctx.hasPhotoBefore ? 'ATTIVA (Il fiorista deve inviare sia la foto prima che dopo la posa)' : 'DISATTIVA (Il fiorista deve inviare solo la foto dopo la posa)'}`,
+            ctx.optionals && ctx.optionals.length
+                ? `- Optional/accessori inclusi: ${ctx.optionals.join(', ')} (ricorda al fiorista di posizionarli e conferma al cliente che sono previsti)`
+                : '',
+            ctx.ticketMessage
+                ? `- Testo biglietto/nastro commemorativo: "${ctx.ticketMessage}" (il fiorista DEVE riportarlo esattamente così; puoi rileggerlo al cliente se lo chiede)`
+                : '',
+            ctx.customerNotes
+                ? `- Note/richieste specifiche: ${ctx.customerNotes} (tienile presenti e comunicale al fiorista se rilevanti)`
+                : '',
             `- Defunto commemorato: ${ctx.deceasedName ?? 'Non in anagrafica'}`,
             `- Luogo di consegna (Cimitero/Città): ${ctx.deliveryLocation ?? 'Non specificato'}`,
             `- Data di consegna prevista: ${ctx.deliveryDate ?? 'Non specificata'}`,

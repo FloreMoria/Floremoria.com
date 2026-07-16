@@ -8,6 +8,40 @@ import StaffPushNotifications from '@/components/dashboard/StaffPushNotification
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 
+function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
+  if (!createdAtStr) {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    return `${day}-${month}-${year} | ${fallback || ''}`;
+  }
+  try {
+    const d = new Date(createdAtStr);
+    const formatter = new Intl.DateTimeFormat('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Rome',
+    });
+    
+    const parts = formatter.formatToParts(d);
+    const day = parts.find(p => p.type === 'day')?.value || '00';
+    const month = parts.find(p => p.type === 'month')?.value || '00';
+    const year = parts.find(p => p.type === 'year')?.value || '0000';
+    const hour = parts.find(p => p.type === 'hour')?.value || '00';
+    const minute = parts.find(p => p.type === 'minute')?.value || '00';
+    
+    return `${day}-${month}-${year} | ${hour}:${minute}`;
+  } catch (err) {
+    console.error('Error formatting time:', err);
+    return fallback || '';
+  }
+}
+
 export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
   const [activeTab, setActiveTab] = useState('visione');
   const [sessions, setSessions] = useState<any[]>([]);
@@ -436,7 +470,7 @@ function VisioneTab({
                           <p className="pb-3 pr-10 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>
                         )}
                         <div className="absolute bottom-1 right-2.5 flex items-center gap-1">
-                          <span className="text-[9px] text-[#8696A0] font-medium">{m.timestampLabel || m.timestamp || 'ora'}</span>
+                          <span className="text-[9px] text-[#8696A0] font-medium">{formatMessageTimestamp(m.createdAt, m.timestampLabel || m.timestamp || 'ora')}</span>
                           {isOutbound && <CheckCheck className="w-[13px] h-[13px] text-[#53BDEB]" />}
                         </div>
                       </div>

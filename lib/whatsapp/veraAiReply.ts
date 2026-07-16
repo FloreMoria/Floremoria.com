@@ -192,17 +192,12 @@ function shouldAppendSignature(message: string): boolean {
     return isFarewellMessage(message);
 }
 
-/** Costruisce il blocco storico messaggi per il prompt Gemini (ultimi N messaggi). */
-function buildHistoryBlock(session: ChatSession, maxMessages = 12): string {
-    const recent = session.messages.slice(-maxMessages);
-    if (recent.length === 0) return '';
-    return recent
-        .map((msg) => {
-            const role = msg.direction === 'INBOUND' ? 'UTENTE' : 'VERA';
-            return `[${role}]: ${msg.body}`;
-        })
-        .join('\n');
-}
+/**
+ * Tetto di sicurezza sul numero di messaggi storici inviati a Gemini.
+ * VERA deve "conoscere" l'intera relazione con l'interlocutore; il limite serve solo
+ * a evitare payload patologici su conversazioni estremamente lunghe (contesto ~1M token).
+ */
+const VERA_HISTORY_MAX_MESSAGES = 200;
 
 /**
  * Chiama Google Gemini con il system prompt VERA completo.
@@ -245,22 +240,39 @@ Rispondi SOLO al messaggio dell'utente alla fine della conversazione, tenendo co
         historyMessages = historyMessages.slice(0, -1);
     }
 
-    // Teniamo gli ultimi 6-8 messaggi storici (quindi massimo 6/7 messaggi prima del messaggio corrente)
-    historyMessages = historyMessages.slice(-6);
-
-    for (const msg of historyMessages) {
-        const role = msg.direction === 'INBOUND' ? 'user' : 'model';
-        contents.push({
-            role,
-            parts: [{ text: msg.body!.trim() }]
-        });
+    // Storico completo della conversazione: VERA deve ricordare tutto (problemi passati,
+    // richieste, tono) e non solo una finestra breve. Cap difensivo su conversazioni enormi.
+    if (historyMessages.length > VERA_HISTORY_MAX_MESSAGES) {
+        historyMessages = historyMessages.slice(-VERA_HISTORY_MAX_MESSAGES);
     }
 
-    // Aggiungiamo sempre alla fine il messaggio corrente come turno dell'utente ('user')
-    contents.push({
-        role: 'user',
-        parts: [{ text: userMessage.trim() }]
-    });
+    // Gemini richiede turni alternati user/model: fondiamo i messaggi consecutivi
+    // dello stesso ruolo in un unico turno per non rompere l'alternanza con storici lunghi.
+    for (const msg of historyMessages) {
+        const role = msg.direction === 'INBOUND' ? 'user' : 'model';
+        // Gemini esige che il primo turno sia 'user': saltiamo i 'model' iniziali
+        // (es. template proattivo inviato come primo messaggio della conversazione).
+        if (contents.length === 0 && role === 'model') continue;
+        const text = msg.body!.trim();
+        const last = contents[contents.length - 1];
+        if (last && last.role === role) {
+            last.parts.push({ text });
+        } else {
+            contents.push({ role, parts: [{ text }] });
+        }
+    }
+
+    // Aggiungiamo sempre alla fine il messaggio corrente come turno dell'utente ('user'),
+    // fondendolo con l'eventuale turno user precedente per mantenere l'alternanza valida.
+    const lastContent = contents[contents.length - 1];
+    if (lastContent && lastContent.role === 'user') {
+        lastContent.parts.push({ text: userMessage.trim() });
+    } else {
+        contents.push({
+            role: 'user',
+            parts: [{ text: userMessage.trim() }]
+        });
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {

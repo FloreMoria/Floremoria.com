@@ -27,6 +27,7 @@ import {
     formatFloristLocationParam,
     formatFloristOrderCodeParam,
 } from '@/lib/whatsapp/floristTemplateCopy';
+import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
 
 export interface PuntoAResult {
     ok: boolean;
@@ -43,26 +44,6 @@ export interface PuntoAOptions {
 
 function yesNo(value: boolean): string {
     return value ? 'Sì' : 'No';
-}
-
-function orderHasLumino(
-    items: Array<{ product: { slug?: string | null; name?: string | null } }>
-): boolean {
-    return items.some((i) => {
-        const label = `${i.product.slug || ''} ${i.product.name || ''}`.toLowerCase();
-        return /lumino|set-ceri|ceri|candele/.test(label);
-    });
-}
-
-function orderHasBigliettino(
-    items: Array<{ product: { slug?: string | null; name?: string | null } }>,
-    ticketMessage?: string | null
-): boolean {
-    if (ticketMessage?.trim()) return true;
-    return items.some((i) => {
-        const label = `${i.product.slug || ''} ${i.product.name || ''}`.toLowerCase();
-        return /messaggio|bigliett|nastro/.test(label);
-    });
 }
 
 async function updateWorkflowFlags(orderId: string, flags: VeraWorkflowFlags): Promise<void> {
@@ -226,8 +207,8 @@ export async function runPuntoAFloristNewOrder(
             return { ok: false, blocked: true, isFirstOrder: true, error: 'grave_position_missing' };
         }
 
-        const lumino = orderHasLumino(order.items);
-        const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
+        const lumino = hasLuminoOption(order.items);
+        const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
         const ticketText = order.ticketMessage?.trim() || '—';
 
         cascadeResult = await sendFloristCascade({
@@ -244,8 +225,8 @@ export async function runPuntoAFloristNewOrder(
             ],
         });
     } else {
-        const lumino = orderHasLumino(order.items);
-        const bigliettino = orderHasBigliettino(order.items, order.ticketMessage);
+        const lumino = hasLuminoOption(order.items);
+        const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
         const repeatSteps: FloristCascadeStep[] = [
             { template: 'florist_first_001', params: [floristName, formattedOrderCode, formattedCompensation] },
             { template: 'florist_first_003', params: [formattedDeceased, formattedLocation, deliveryPosition] },

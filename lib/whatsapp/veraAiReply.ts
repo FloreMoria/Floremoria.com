@@ -221,7 +221,6 @@ async function callGeminiVera(
     }
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
-    const historyBlock = buildHistoryBlock(session);
     const knowledgeContext = buildVeraKnowledgeContext(session.userType);
 
     const systemInstruction = `${buildVeraWhatsAppSystemInstruction(
@@ -231,17 +230,42 @@ async function callGeminiVera(
         session.name
     )}
 
----
-STORICO CONVERSAZIONE (solo questa chat, non altre utenze):
-${historyBlock || '(nessun messaggio precedente)'}
----
+Rispondi SOLO al messaggio dell'utente alla fine della conversazione, tenendo conto dello storico messaggi fornito.`;
 
-Rispondi SOLO al messaggio dell'utente qui sotto.`;
+    // Costruzione della chat history strutturata come alternanza di ruoli per Gemini
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+    // Prendi gli ultimi messaggi validi (body non vuoto)
+    const prevMessages = session.messages.filter(m => m.body?.trim());
+
+    // Se l'ultimo messaggio nella sessione è già quello corrente dell'utente, lo escludiamo dall'history
+    // in modo da appenderlo esplicitamente alla fine per garantire che il turno finale sia 'user'
+    let historyMessages = prevMessages;
+    if (historyMessages.length > 0 && historyMessages[historyMessages.length - 1].body?.trim() === userMessage.trim()) {
+        historyMessages = historyMessages.slice(0, -1);
+    }
+
+    // Teniamo gli ultimi 6-8 messaggi storici (quindi massimo 6/7 messaggi prima del messaggio corrente)
+    historyMessages = historyMessages.slice(-6);
+
+    for (const msg of historyMessages) {
+        const role = msg.direction === 'INBOUND' ? 'user' : 'model';
+        contents.push({
+            role,
+            parts: [{ text: msg.body!.trim() }]
+        });
+    }
+
+    // Aggiungiamo sempre alla fine il messaggio corrente come turno dell'utente ('user')
+    contents.push({
+        role: 'user',
+        parts: [{ text: userMessage.trim() }]
+    });
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {
         system_instruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        contents,
         generationConfig: {
             temperature: 0.45,
             maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,

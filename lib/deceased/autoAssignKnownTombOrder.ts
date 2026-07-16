@@ -9,8 +9,8 @@ export type AutoAssignKnownTombResult =
     | { assigned: false; reason: string };
 
 /**
- * Tomba già censita + fiorista custode primario → collega ordine, porta a IN_PROGRESS
- * e innesca il WhatsApp al fiorista senza passaggio manuale in dashboard.
+ * Tomba già censita + fiorista custode primario → collega ordine, lo mantiene in ACCEPTED
+ * ("Ricevuto") e innesca il WhatsApp al fiorista senza passaggio manuale in dashboard.
  */
 export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAssignKnownTombResult> {
     const order = await prisma.order.findFirst({
@@ -92,7 +92,7 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
     });
 
     console.info(
-        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, IN_PROGRESS`
+        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, ACCEPTED`
     );
 
     return { assigned: true, deceasedProfileId, partnerId };

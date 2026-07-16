@@ -9,6 +9,10 @@ import {
     hasPhotoBeforeOption,
     stripInternalNotes,
 } from '@/lib/orders/orderOptionals';
+import {
+    calculateFloristCompensation,
+    formatFloristCompensationForTemplate,
+} from '@/lib/pricing/calculateFloristCompensation';
 
 export type VeraConversationMode = 'pre_acquisto' | 'ordine_attivo' | 'fiorista';
 
@@ -35,6 +39,8 @@ export interface VeraCallerContext {
     ticketMessage?: string | null;
     /** Note o richieste specifiche dell'utente/fiorista (metadati B2B esclusi). */
     customerNotes?: string | null;
+    /** Compenso spettante al fiorista per il servizio (solo interlocutore fiorista). */
+    floristCompensation?: string | null;
 }
 
 function resolveDisplayName(session: ChatSession): string | null {
@@ -105,6 +111,11 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const ticketMessage = order?.ticketMessage?.trim() || null;
     const customerNotes = stripInternalNotes(order?.additionalInstructions);
     const deliveryDate = order?.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('it-IT') : null;
+    // Compenso fiorista dal listino ufficiale: comunicato solo all'interlocutore fiorista.
+    const floristCompensation =
+        session.userType === 'FLORIST' && order
+            ? formatFloristCompensationForTemplate(calculateFloristCompensation(order.items))
+            : null;
 
     return {
         phoneE164,
@@ -126,6 +137,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         optionals,
         ticketMessage,
         customerNotes,
+        floristCompensation,
     };
 }
 
@@ -148,6 +160,9 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             `- Codice Ordine (ID): ${ctx.orderNumber ?? 'Nessuno'}`,
             `- Stato Attuale Ordine: ${ctx.orderStatus ?? 'Sconosciuto'}`,
             `- Prodotto acquistato: ${ctx.productsList?.join(', ') || 'Nessun prodotto'}`,
+            ctx.userType === 'FLORIST' && ctx.floristCompensation
+                ? `- Compenso fiorista per questo servizio: ${ctx.floristCompensation} (comunicalo al fiorista; MAI menzionare cifre di compenso al cliente)`
+                : '',
             `- Opzione "Foto prima della posa": ${ctx.hasPhotoBefore ? 'ATTIVA (Il fiorista deve inviare sia la foto prima che dopo la posa)' : 'DISATTIVA (Il fiorista deve inviare solo la foto dopo la posa)'}`,
             ctx.optionals && ctx.optionals.length
                 ? `- Optional/accessori inclusi: ${ctx.optionals.join(', ')} (ricorda al fiorista di posizionarli e conferma al cliente che sono previsti)`

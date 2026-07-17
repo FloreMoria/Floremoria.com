@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft, Paperclip, Forward, Loader2 } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
@@ -132,6 +132,11 @@ function VisioneTab({
   const [filterType, setFilterType] = useState<'ALL' | 'CLIENT' | 'FLORIST'>('ALL');
   const [sending, setSending] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [forwardSource, setForwardSource] = useState<{ mediaUrl: string; fromPhone: string } | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwarding, setForwarding] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -216,6 +221,70 @@ function VisioneTab({
     }
   };
 
+  const handleAttachPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !activeChatId || uploadingPhoto) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Seleziona un file immagine (JPG, PNG, WebP, HEIC).');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const caption = inputText;
+    try {
+      const form = new FormData();
+      form.append('phone', activeChatId);
+      form.append('caption', caption);
+      form.append('file', file);
+
+      const res = await fetch('/api/dashboard/communications/media', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success) {
+        setSessions(prev => prev.map(s => (s.phone === activeChatId ? data.session : s)));
+        setInputText('');
+      } else if (data.requiresTemplate) {
+        alert(data.error || 'Finestra 24h scaduta: avvii una nuova conversazione con template WhatsApp.');
+      } else {
+        alert(data.error || 'Invio foto non riuscito.');
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      alert('Errore di rete durante l\'invio della foto.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleForwardTo = async (targetPhone: string) => {
+    if (!forwardSource || forwarding) return;
+    setForwarding(true);
+    try {
+      const res = await fetch('/api/dashboard/communications/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPhone, mediaUrl: forwardSource.mediaUrl }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSessions(prev => prev.map(s => (s.phone === data.session?.phone ? data.session : s)));
+        setForwardSource(null);
+        setForwardSearch('');
+        setActiveChatId(data.session?.phone || targetPhone);
+      } else if (data.requiresTemplate) {
+        alert(data.error || 'La chat destinazione è fuori dalla finestra 24h: usa una nuova conversazione con template.');
+      } else {
+        alert(data.error || 'Inoltro non riuscito.');
+      }
+    } catch (err) {
+      console.error('Error forwarding photo:', err);
+      alert('Errore di rete durante l\'inoltro.');
+    } finally {
+      setForwarding(false);
+    }
+  };
+
   const renderLinkedMessage = (text: string): React.ReactNode => {
     if (!text) return null;
     const parts = text.split(/(https?:\/\/[^\s]+)/g);
@@ -272,6 +341,68 @@ function VisioneTab({
         onClose={() => setNewChatOpen(false)}
         onConversationStarted={handleConversationStarted}
       />
+
+      {forwardSource && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => !forwarding && setForwardSource(null)}>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#EAE3D9] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAE3D9] bg-[#FAF8F5]">
+              <h4 className="font-display font-bold text-[#111B21] flex items-center gap-2">
+                <Forward className="w-4.5 h-4.5 text-[#00A884]" />
+                Inoltra foto a…
+              </h4>
+              <button type="button" onClick={() => !forwarding && setForwardSource(null)} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            <div className="p-4 border-b border-[#EAE3D9]">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={forwardSearch}
+                  onChange={(e) => setForwardSearch(e.target.value)}
+                  placeholder="Cerca la chat di destinazione..."
+                  className="w-full bg-white rounded-xl pl-9 pr-4 py-2.5 text-sm border border-[#EAE3D9] focus:outline-none focus:border-[#C0A062]"
+                />
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              </div>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
+              {sessions
+                .filter(s => s.phone !== forwardSource.fromPhone)
+                .filter(s =>
+                  s.name?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
+                  s.phone?.includes(forwardSearch)
+                )
+                .map(s => (
+                  <button
+                    key={s.phone}
+                    type="button"
+                    disabled={forwarding}
+                    onClick={() => handleForwardTo(s.phone)}
+                    className="w-full flex items-center gap-3 p-3.5 hover:bg-[#FAF8F5] text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#EAE3D9] to-[#DFDFDF] flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0 border border-gray-200">
+                      {s.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-display font-semibold text-[14px] text-[#111B21] truncate">{s.name}</span>
+                        {s.userType === 'FLORIST' && (
+                          <span className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 rounded border border-emerald-100 font-bold uppercase">Fiorista</span>
+                        )}
+                      </div>
+                      <span className="block text-[11px] text-[#667781] truncate">{s.phone.replace('whatsapp:', '')}</span>
+                    </div>
+                    {forwarding ? <Loader2 className="w-4 h-4 animate-spin text-[#00A884]" /> : <Forward className="w-4 h-4 text-[#00A884]" />}
+                  </button>
+                ))}
+              {sessions.filter(s => s.phone !== forwardSource.fromPhone).length === 0 && (
+                <div className="p-6 text-center text-sm text-gray-400">Nessun'altra chat disponibile.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex border border-[#EAE3D9] rounded-2xl md:rounded-3xl overflow-hidden h-[calc(100dvh-280px)] min-h-[420px] md:h-[680px] bg-[#FAF9F6] shadow-sm">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
@@ -465,6 +596,14 @@ function VisioneTab({
                               mediaUrl={m.mediaUrl}
                               caption={m.body ? renderLinkedMessage(m.body) : null}
                             />
+                            <button
+                              type="button"
+                              onClick={() => { setForwardSource({ mediaUrl: m.mediaUrl, fromPhone: activeChat.phone }); setForwardSearch(''); }}
+                              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#00A884]/30 bg-white px-3 py-1.5 text-[11px] font-semibold text-[#00A884] hover:bg-[#E7F7F1] transition-colors"
+                            >
+                              <Forward className="w-3.5 h-3.5" />
+                              Inoltra a…
+                            </button>
                           </div>
                         ) : (
                           <p className="pb-3 pr-10 whitespace-pre-wrap">{renderLinkedMessage(m.body)}</p>
@@ -488,11 +627,30 @@ function VisioneTab({
                   </div>
                 ) : (
                   <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAttachPhoto}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      title="Allega una foto dal Mac"
+                      className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all flex-shrink-0 border
+                      ${uploadingPhoto
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                        : 'bg-white text-[#54656F] border-gray-200 hover:bg-[#F0F2F5] active:scale-95'}`}
+                    >
+                      {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+                    </button>
                     <input 
                       type="text" 
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      placeholder="Scrivi un messaggio... (Invia per inoltrare su WhatsApp)"
+                      placeholder="Scrivi un messaggio o allega una foto..."
                       className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[14px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
                     />
                     <button 

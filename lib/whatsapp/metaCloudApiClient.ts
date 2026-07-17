@@ -55,20 +55,41 @@ export interface MetaCloudCredentials {
 const INTL_COUNTRY_PREFIXES =
     '33|49|44|41|34|31|32|43|48|30|36|40|351|352|353|358|386|420|421|45|46|47|39';
 
+/** Mobile italiano senza prefisso internazionale: 10 cifre che iniziano con 3 (es. 3204910428). */
+function isItalianMobileWithoutCountryCode(digits: string): boolean {
+    return /^3\d{9}$/.test(digits);
+}
+
 /**
  * Normalizza un numero grezzo in E.164 (con prefisso +).
  * Default Italia (+39) solo se il numero non sembra già internazionale.
+ *
+ * Nota bug: un mobile italiano privo di prefisso (es. "3204910428" o addirittura
+ * "+3204910428") veniva dirottato su un paese estero perché "32"/"31"/"30"… sono
+ * prefissi internazionali validi. Il mobile italiano (10 cifre che iniziano con 3)
+ * va quindi forzato a +39 PRIMA del matching dei prefissi esteri, così le due varianti
+ * dello stesso numero collassano su un'unica sessione (+393204910428).
  */
 export function normalizePhoneE164(raw: string | null | undefined): string | null {
     if (!raw) return null;
     let p = raw.replace(/^whatsapp:/, '').replace(/[^\d+]/g, '').trim();
     if (!p) return null;
     if (p.startsWith('00')) p = `+${p.slice(2)}`;
-    if (!p.startsWith('+')) {
-        if (p.startsWith('39') && p.length >= 11) p = `+${p}`;
-        else if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) p = `+${p}`;
-        else p = `+39${p}`;
+
+    if (p.startsWith('+')) {
+        // Già in forma internazionale, ma potrebbe essere un mobile IT a cui manca il 39.
+        const digits = p.slice(1);
+        if (isItalianMobileWithoutCountryCode(digits)) p = `+39${digits}`;
+    } else if (p.startsWith('39') && p.length >= 11) {
+        p = `+${p}`;
+    } else if (isItalianMobileWithoutCountryCode(p)) {
+        p = `+39${p}`;
+    } else if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) {
+        p = `+${p}`;
+    } else {
+        p = `+39${p}`;
     }
+
     if (!/^\+\d{8,15}$/.test(p)) return null;
     return p;
 }

@@ -30,3 +30,11 @@ export function isImageMediaUrl(mediaUrl: string | null | undefined): boolean {
     if (!value) return false;
     return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(value) || value.includes('/whatsapp/media/');
 }
+
+/** Estrae il media ID Meta da un URL proxy (/api/dashboard/whatsapp/media/{id}), altrimenti null. */
+export function extractWhatsAppMediaId(mediaUrl: string | null | undefined): string | null {
+    const value = mediaUrl?.trim();
+    if (!value) return null;
+    const match = value.match(/\/api\/(?:admin|dashboard)\/whatsapp\/media\/([^/?#]+)/i);
+    return match?.[1] ?? null;
+}

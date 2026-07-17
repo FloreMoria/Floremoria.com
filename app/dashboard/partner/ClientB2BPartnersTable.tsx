@@ -68,6 +68,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        userId: null,
         orders: [],
     });
 
@@ -103,7 +104,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                 taxCode: '',
                 sdiCode: '',
                 pecAddress: '',
-        email: '',
+                email: '',
                 activeOrders: 0,
                 adminRating: 5.0,
                 internalNotes: '',
@@ -113,6 +114,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 deletedAt: null,
+                userId: null,
                 orders: [],
             });
         }

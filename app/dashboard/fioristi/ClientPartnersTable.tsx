@@ -59,6 +59,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        userId: null,
         orders: [],
     });
 
@@ -90,6 +91,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 deletedAt: null,
+                userId: null,
                 orders: [],
             });
         }

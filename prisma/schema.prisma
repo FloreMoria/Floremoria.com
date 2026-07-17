@@ -66,6 +66,13 @@ model User {
   confirmedProofs DeliveryProof[]
   /** Relazione M2M con profili defunto (più parenti → stesso defunto). */
   deceasedLinks   UserDeceasedLink[]
+
+  isActivated            Boolean          @default(false) @map("is_activated")
+  activationToken        String?          @unique @map("activation_token")
+  activationTokenExpires DateTime?        @map("activation_token_expires")
+  resetPasswordToken     String?          @unique @map("reset_password_token")
+  resetPasswordTokenExpires DateTime?     @map("reset_password_token_expires")
+  partner                Partner?
 }
 
 /**
@@ -317,6 +324,9 @@ model Partner {
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
   deceasedAssignments PartnerDeceasedAssignment[]
+
+  userId          String?                 @unique @map("user_id")
+  user            User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 /**

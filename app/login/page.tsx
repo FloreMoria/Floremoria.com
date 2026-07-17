@@ -345,10 +345,13 @@ export default function LoginPage() {
                                 {isLoading ? 'Accesso in corso...' : 'Accedi'}
                             </button>
 
-                            <div className="text-center">
+                            <div className="text-center flex flex-col items-center gap-2">
                                 <button type="button" onClick={backToStart} className="text-xs text-slate-400 hover:text-slate-600 underline font-semibold transition-colors">
                                     Usa un altro contatto
                                 </button>
+                                <a href="/auth/forgot-password" className="text-xs text-[#c5a880] hover:text-slate-600 font-semibold transition-colors">
+                                    Password dimenticata?
+                                </a>
                             </div>
                         </form>
                     )}

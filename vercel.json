@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/vera-order-reminders",
-      "schedule": "0 7 * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }

@@ -30,6 +30,8 @@
     "log:verbale:push-webhook": "tsx Script/push-verbale-production-webhook.ts",
     "verbali:verify-keys": "tsx Script/verify-verbale-sync-keys.ts",
     "verbali:setup-drive": "tsx Script/setup-google-drive-verbali-bridge.ts",
+    "whatsapp:cleanup-chats": "tsx Script/cleanup-whatsapp-dead-chats.ts",
+    "whatsapp:cleanup-chats:apply": "tsx Script/cleanup-whatsapp-dead-chats.ts --apply",
     "log:verbale:pipeline": "tsx Script/verbale-pipeline.ts",
     "log:verbale:sync-docs": "tsx Script/sync-verbale-docs-to-obsidian.ts",
     "log:verbale:mirror-drive": "tsx Script/mirror-verbali-to-drive.ts",

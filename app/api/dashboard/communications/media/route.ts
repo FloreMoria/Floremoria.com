@@ -1,29 +1,16 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
-import { addMessage, getSession, markChatSessionAsTest } from '@/lib/chatStore';
-import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
-import { sendWhatsAppImageMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { markChatSessionAsTest } from '@/lib/chatStore';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
-import { uploadChatImageBuffer } from '@/lib/media/uploadChatMedia';
 import { fetchWhatsAppMediaFromMeta } from '@/lib/whatsapp/proxyWhatsAppMedia';
 import { extractWhatsAppMediaId, resolveWhatsAppChatMediaUrl } from '@/lib/whatsapp/chatMediaUrls';
+import { sendOperatorChatPhoto } from '@/lib/whatsapp/sendOperatorChatPhoto';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_BYTES = 16 * 1024 * 1024;
-
-function windowClosedResponse() {
-    return NextResponse.json(
-        {
-            success: false,
-            requiresTemplate: true,
-            error: 'Finestra 24h scaduta: Meta non consente foto libere. Avvii una nuova conversazione con un template approvato.',
-        },
-        { status: 409 }
-    );
-}
 
 /**
  * Recupera i byte del media sorgente da inoltrare:
@@ -61,50 +48,32 @@ async function resolveSourceMediaBytes(
     return { ok: false, error: 'Media sorgente non valido o non inoltrabile.' };
 }
 
-async function deliverImageToChat(params: {
-    sessionPhone: string;
-    buffer: Buffer;
-    caption: string;
-    outboundMode: 'photo' | 'forward';
-}) {
-    const { sessionPhone, buffer, caption, outboundMode } = params;
-
-    const session = await getSession(sessionPhone);
-    if (requiresTemplateMessage(session)) {
-        return windowClosedResponse();
-    }
-
-    let publicUrl: string;
-    try {
-        publicUrl = await uploadChatImageBuffer(buffer, sessionPhone);
-    } catch (err) {
-        const message = err instanceof Error ? err.message : 'Upload immagine fallito.';
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-    }
-
-    const sendResult = await sendWhatsAppImageMessage(sessionPhone, publicUrl, caption || undefined);
-    if (!sendResult.ok) {
+async function respondWithPhotoResult(
+    result: Awaited<ReturnType<typeof sendOperatorChatPhoto>>,
+    sessionPhone: string
+) {
+    if (!result.ok) {
         return NextResponse.json(
             {
                 success: false,
-                error: sendResult.error ?? 'Invio foto WhatsApp fallito.',
-                errorCode: sendResult.errorCode,
+                error: result.error,
+                requiresTemplate: result.requiresTemplate,
+                errorCode: result.errorCode,
             },
-            { status: 502 }
+            { status: result.requiresTemplate ? 409 : 502 }
         );
     }
-
-    const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', publicUrl, {
-        source: 'operator',
-        outboundMode,
-        ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
-    });
 
     if (await getDashboardTestModeActive()) {
         await markChatSessionAsTest(sessionPhone);
     }
 
-    return NextResponse.json({ success: true, session: updatedSession, mediaUrl: publicUrl });
+    return NextResponse.json({
+        success: true,
+        session: result.session,
+        mediaUrl: result.mediaUrl,
+        mode: result.mode,
+    });
 }
 
 export async function POST(req: Request) {
@@ -135,7 +104,13 @@ export async function POST(req: Request) {
             }
 
             const buffer = Buffer.from(await file.arrayBuffer());
-            return await deliverImageToChat({ sessionPhone, buffer, caption, outboundMode: 'photo' });
+            const result = await sendOperatorChatPhoto({
+                sessionPhone,
+                buffer,
+                caption,
+                outboundMode: 'photo',
+            });
+            return respondWithPhotoResult(result, sessionPhone);
         }
 
         // 2) Inoltro foto da un'altra chat (JSON): es. foto del fiorista → chat utente.
@@ -159,12 +134,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: 'Solo le immagini possono essere inoltrate.' }, { status: 400 });
         }
 
-        return await deliverImageToChat({
+        const result = await sendOperatorChatPhoto({
             sessionPhone: targetPhone,
             buffer: source.buffer,
             caption,
             outboundMode: 'forward',
         });
+        return respondWithPhotoResult(result, targetPhone);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error('[communications/media] errore:', message);

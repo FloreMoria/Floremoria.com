@@ -202,6 +202,15 @@ function VisioneTab({
     setInputText('');
 
     try {
+      // Invio staff: se VERA era attiva, passa subito a controllo umano.
+      if (activeChat?.status === 'AI_ACTIVE') {
+        await fetch('/api/dashboard/communications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: activeChatId, action: 'updateStatus', status: 'HUMAN_INTERVENTION' }),
+        });
+      }
+
       const res = await fetch('/api/dashboard/communications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -209,9 +218,13 @@ function VisioneTab({
       });
       const data = await res.json();
       if (data.success) {
-        setSessions(prev => prev.map(s => s.phone === activeChatId ? data.session : s));
+        setSessions(prev => prev.map(s => s.phone === activeChatId ? { ...data.session, status: 'HUMAN_INTERVENTION' } : s));
       } else if (data.requiresTemplate) {
         alert(data.error || 'Finestra 24h scaduta: avvii una nuova conversazione con template WhatsApp.');
+        setInputText(textToSend);
+      } else {
+        alert(data.error || 'Invio non riuscito.');
+        setInputText(textToSend);
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -242,10 +255,10 @@ function VisioneTab({
       const res = await fetch('/api/dashboard/communications/media', { method: 'POST', body: form });
       const data = await res.json();
       if (data.success) {
-        setSessions(prev => prev.map(s => (s.phone === activeChatId ? data.session : s)));
+        setSessions(prev => prev.map(s => (s.phone === activeChatId ? { ...data.session, status: 'HUMAN_INTERVENTION' } : s)));
         setInputText('');
       } else if (data.requiresTemplate) {
-        alert(data.error || 'Finestra 24h scaduta: avvii una nuova conversazione con template WhatsApp.');
+        alert(data.error || 'Finestra 24h scaduta: non è stato possibile inviare la foto.');
       } else {
         alert(data.error || 'Invio foto non riuscito.');
       }
@@ -619,52 +632,51 @@ function VisioneTab({
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Chat Input Bar */}
-              <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-3.5 flex items-center gap-3 border-t border-[#DFDFDF] shrink-0">
-                {activeChat.status === 'AI_ACTIVE' ? (
-                  <div className="flex-1 bg-white/75 text-[#54656F] text-center py-3.5 px-6 rounded-full border border-dashed border-[#C0A062]/30 text-sm font-medium shadow-inner">
-                    🤖 <b>VERA AI sta gestendo la conversazione.</b> Disattiva VERA in alto per intervenire.
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAttachPhoto}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingPhoto}
-                      title="Allega una foto dal Mac"
-                      className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all flex-shrink-0 border
-                      ${uploadingPhoto
-                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                        : 'bg-white text-[#54656F] border-gray-200 hover:bg-[#F0F2F5] active:scale-95'}`}
-                    >
-                      {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
-                    </button>
-                    <input 
-                      type="text" 
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder="Scrivi un messaggio o allega una foto..."
-                      className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[14px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!inputText.trim() || sending}
-                      className={`w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition-all flex-shrink-0
-                      ${!inputText.trim() || sending
-                        ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                        : 'bg-[#00A884] hover:bg-[#008f6f] active:scale-95'}`}
-                    >
-                      <Send className="w-4.5 h-4.5 ml-0.5" />
-                    </button>
-                  </>
+              {/* Chat Input Bar — graffetta sempre disponibile (anche con VERA AI attiva / finestra chiusa) */}
+              <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-3.5 flex flex-col gap-2 border-t border-[#DFDFDF] shrink-0">
+                {activeChat.status === 'AI_ACTIVE' && (
+                  <p className="text-[11px] text-center text-[#667781] px-2">
+                    VERA AI è attiva: inviando un messaggio o una foto passi al controllo umano.
+                  </p>
                 )}
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAttachPhoto}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    title="Allega una foto dal Mac (funziona anche come primo messaggio)"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all flex-shrink-0 border
+                    ${uploadingPhoto
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'bg-white text-[#54656F] border-gray-200 hover:bg-[#F0F2F5] active:scale-95'}`}
+                  >
+                    {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
+                  </button>
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    placeholder="Scrivi un messaggio o allega una foto..."
+                    className="flex-1 bg-white rounded-full px-5 py-3 outline-none text-[14px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!inputText.trim() || sending}
+                    className={`w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition-all flex-shrink-0
+                    ${!inputText.trim() || sending
+                      ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                      : 'bg-[#00A884] hover:bg-[#008f6f] active:scale-95'}`}
+                  >
+                    <Send className="w-4.5 h-4.5 ml-0.5" />
+                  </button>
+                </div>
               </form>
             </>
           ) : (

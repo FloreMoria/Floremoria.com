@@ -1,6 +1,6 @@
 /**
  * GET /api/cron/vera-order-reminders
- * PUNTO G — solleciti 20h utente/fiorista (ogni ora).
+ * PUNTO G — keep-alive finestra Meta ~20h per ordini incompleti (ogni ora).
  *
  * Rinvio manuale singolo ordine (test):
  *   GET /api/cron/vera-order-reminders?orderNumber=FT-CO-26-005&force=1

@@ -125,6 +125,12 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formData.shopName?.trim() || !formData.ownerName?.trim() || !formData.uniqueCode?.trim()) {
+            alert('Per favore, compila tutti i campi obbligatori (Ragione Sociale, Referente, Codice Referral).');
+            return;
+        }
+
         setIsSubmitting(true);
 
         const isUpdate = formData.id !== '';
@@ -606,7 +612,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                 </div>
 
                 {/* Form */}
-                <form id="b2bPartnerForm" onSubmit={handleSubmit} className="flex-1 p-6 space-y-6 overflow-y-auto bg-stone-50/20 text-xs">
+                <form id="b2bPartnerForm" onSubmit={handleSubmit} noValidate className="flex-1 p-6 space-y-6 overflow-y-auto bg-stone-50/20 text-xs">
                     
                     {/* Anagrafica Base */}
                     <div className="space-y-4">

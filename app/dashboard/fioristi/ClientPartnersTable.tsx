@@ -103,6 +103,13 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formData.shopName?.trim() || !formData.ownerName?.trim() || !formData.province?.trim()) {
+            alert('Per favore, compila tutti i campi obbligatori (Nome Negozio, Titolare, Provincia).');
+            setActiveTab('ANAGRAFICA');
+            return;
+        }
+
         setIsSubmitting(true);
 
         const isUpdate = formData.id !== '';
@@ -475,7 +482,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 <div className="flex-1 overflow-y-auto p-5 custom-scrollbar text-sm pb-10 bg-[#FAFAFA]">
                     
                     {/* TAB: ANAGRAFICA (E Nuovo Fiorista se id vuoto) */}
-                    <form id="partnerForm" onSubmit={handleSubmit} className={activeTab === 'ANAGRAFICA' ? 'space-y-5 block' : 'hidden'}>
+                    <form id="partnerForm" onSubmit={handleSubmit} noValidate className={activeTab === 'ANAGRAFICA' ? 'space-y-5 block' : 'hidden'}>
 
                         {/* Sezione Pubblica / Operativa */}
                         <div className="space-y-5">

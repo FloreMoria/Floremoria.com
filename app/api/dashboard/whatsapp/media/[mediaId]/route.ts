@@ -30,16 +30,22 @@ export async function GET(
         return buildWhatsAppMediaResponse(buffer, mimeType, mediaId.trim(), download);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`[wa-media-proxy] dashboard ${mediaId}:`, message);
-        if (message.includes('metadata_fetch_failed') || message.includes('media_download_failed')) {
-            return new Response('Failed to fetch media from Meta', { status: 502 });
-        }
-        if (message.includes('media_url_missing')) {
-            return new Response('Media URL not found', { status: 404 });
-        }
-        if (message.includes('not configured')) {
-            return new Response('Server misconfigured', { status: 500 });
-        }
-        return new Response('Internal Server Error', { status: 500 });
+        console.error(`[wa-media-proxy] Fallback to placeholder for mediaId ${mediaId}:`, message);
+
+        const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="none">
+  <rect width="120" height="120" rx="16" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2"/>
+  <circle cx="60" cy="50" r="16" fill="#CBD5E1"/>
+  <path d="M60 44V56M54 50H66" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <text x="60" y="88" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="0.5">MEDIA NON</text>
+  <text x="60" y="100" fill="#64748B" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="0.5">DISPONIBILE</text>
+</svg>`;
+
+        return new Response(PLACEHOLDER_SVG, {
+            status: 404,
+            headers: {
+                'Content-Type': 'image/svg+xml',
+                'Cache-Control': 'no-store, must-revalidate',
+            },
+        });
     }
 }

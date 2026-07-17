@@ -42,6 +42,12 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formData.shopName?.trim() || !formData.ownerName?.trim() || !formData.province?.trim()) {
+            alert('Per favore, compila tutti i campi obbligatori (Nome Negozio, Titolare, Provincia).');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const res = await fetch(`/api/dashboard/partners/${formData.id}`, {
@@ -157,7 +163,7 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
                             </button>
                         </div>
 
-                        <form id="floristEditForm" onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6 text-sm custom-scrollbar">
+                        <form id="floristEditForm" onSubmit={handleSave} noValidate className="flex-1 overflow-y-auto p-6 space-y-6 text-sm custom-scrollbar">
                             <div className="space-y-4">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
                                     Dati operativi

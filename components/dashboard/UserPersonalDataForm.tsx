@@ -46,6 +46,7 @@ export default function UserPersonalDataForm({
             const res = await fetch(saveEndpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify(payload),
             });
             const data = await res.json();

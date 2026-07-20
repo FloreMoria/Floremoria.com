@@ -4,10 +4,10 @@
  */
 import { cookies } from 'next/headers';
 import { User, UserRole } from '@prisma/client';
-import prisma from '../prisma';
 import { ADMIN_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from '../superAdmin';
 import { isElevatedLoginEmail } from '../superAdminLogin';
 import { ensureElevatedUserRecord } from './ensureElevatedUser';
+import { findUserByEmail } from './identity';
 
 export interface SessionContext {
     role: string;
@@ -37,7 +37,7 @@ export async function resolveSessionUser(): Promise<SessionContext> {
         return { role, email: null, user: null };
     }
 
-    let user = await prisma.user.findUnique({ where: { email } });
+    let user = await findUserByEmail(email);
 
     if (!user && isElevatedDashboardRole(role)) {
         user = await ensureElevatedUserRecord(

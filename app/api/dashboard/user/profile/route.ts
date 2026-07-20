@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { UserRole } from '@prisma/client';
-import prisma from '@/lib/prisma';
 import { applySessionEmailCookie } from '@/lib/auth/sessionEmailCookie';
+import { findUserByEmail } from '@/lib/auth/identity';
 import { saveUserProfileFields, UserEmailUpdateError } from '@/lib/auth/userProfileSave';
 
 const BACHECA_COOKIE_ROLES: UserRole[] = [UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN];
@@ -10,13 +10,13 @@ const BACHECA_COOKIE_ROLES: UserRole[] = [UserRole.USER, UserRole.ADMIN, UserRol
 async function resolveBachecaUser() {
     const cookieStore = await cookies();
     const cookieRole = cookieStore.get('fm_user_role')?.value;
-    const userEmail = cookieStore.get('fm_user_email')?.value?.trim().toLowerCase();
+    const userEmail = cookieStore.get('fm_user_email')?.value?.trim();
 
     if (!cookieRole || !userEmail || !BACHECA_COOKIE_ROLES.includes(cookieRole as UserRole)) {
         return null;
     }
 
-    return prisma.user.findUnique({ where: { email: userEmail } });
+    return findUserByEmail(userEmail);
 }
 
 /** GET — dati personali bacheca cliente. */
@@ -72,9 +72,8 @@ export async function PUT(request: Request) {
             },
         });
 
-        if (emailChanged) {
-            applySessionEmailCookie(response, request, updated.email);
-        }
+        // Sempre: riallinea cookie alla email canonica in DB (anche se invariata / solo casing).
+        applySessionEmailCookie(response, request, updated.email);
 
         return response;
     } catch (error) {

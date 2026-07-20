@@ -28,7 +28,9 @@ export async function saveUserProfileFields(
 
     if (allowEmailChange && typeof body.email === 'string') {
         const requestedEmail = normalizeMagicLinkEmail(body.email);
-        if (requestedEmail && requestedEmail !== normalizeMagicLinkEmail(user.email)) {
+        const currentEmail = normalizeMagicLinkEmail(user.email);
+        // Stessa email (anche solo casing diverso): non trattare come cambio → no conflitto / sessione rotta.
+        if (requestedEmail && requestedEmail !== currentEmail) {
             await applyUserEmailChange({
                 userId: user.id,
                 previousEmail: user.email,

@@ -44,7 +44,13 @@ export function parseIdentifier(raw: string): ParsedIdentifier | null {
 export async function findUserByEmail(email: string): Promise<User | null> {
     const normalized = email.trim().toLowerCase();
     if (!normalized) return null;
-    return prisma.user.findUnique({ where: { email: normalized } });
+    // Exact match first (path più comune: email già normalizzata in lowercase).
+    const exact = await prisma.user.findUnique({ where: { email: normalized } });
+    if (exact) return exact;
+    // Legacy: account creati con casing misto — evita "Sessione non valida" sul profilo.
+    return prisma.user.findFirst({
+        where: { email: { equals: normalized, mode: 'insensitive' } },
+    });
 }
 
 /** Cerca l'utente provando tutte le varianti del numero, con riserva "contains" sul nucleo. */

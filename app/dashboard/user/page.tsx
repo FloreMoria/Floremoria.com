@@ -7,6 +7,7 @@ import { LogOut, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { isDashboardAdminRole } from '@/lib/superAdmin';
 import { visibleDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
+import { findUserByEmail, linkHistoricalOrders } from '@/lib/auth/identity';
 import {
     groupOrdersByDeceased,
     UserBachecaOrderCard,
@@ -35,9 +36,7 @@ export default async function UserDashboardPage({
         redirect('/login?expired=1');
     }
 
-    const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-    });
+    const user = await findUserByEmail(userEmail);
 
     if (!user) {
         redirect('/login?error=user_not_found');
@@ -49,10 +48,7 @@ export default async function UserDashboardPage({
     const showAdminUpload = isAdminView;
 
     try {
-        await prisma.order.updateMany({
-            where: { buyerEmail: userEmail, userId: null },
-            data: { userId: user.id },
-        });
+        await linkHistoricalOrders(user);
     } catch (e) {
         console.error('[dashboard-user] Errore associazione retroattiva ordini:', e);
     }
@@ -60,13 +56,23 @@ export default async function UserDashboardPage({
     const orders = await prisma.order.findMany({
         where: isAdminView
             ? visibleDashboardOrdersWhere()
-            : { userId: user.id, ...visibleDashboardOrdersWhere() },
+            : {
+                  AND: [
+                      visibleDashboardOrdersWhere(),
+                      {
+                          OR: [
+                              { userId: user.id },
+                              { buyerEmail: { equals: user.email, mode: 'insensitive' } },
+                          ],
+                      },
+                  ],
+              },
         include: {
             items: { include: { product: true } },
             deliveryProof: true,
             deceasedProfile: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
     });
 
     const deceasedGroups = groupOrdersByDeceased(orders);
@@ -157,7 +163,14 @@ export default async function UserDashboardPage({
                 ) : null}
 
                 <div className="space-y-10">
-                    <h2 className="text-lg font-bold text-slate-800 tracking-tight">I Suoi Omaggi Floreali</h2>
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+                            Il Suo Giardino della Memoria
+                        </h2>
+                        <p className="text-sm text-slate-500 mt-1">
+                            Storico delle consegne con data di posa e testimonianza fotografica, quando disponibile.
+                        </p>
+                    </div>
 
                     {orders.length === 0 ? (
                         <div className="bg-white/80 border border-slate-200/60 p-12 rounded-[24px] text-center space-y-4">

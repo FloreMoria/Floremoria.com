@@ -1,8 +1,13 @@
 import type { DeliveryProof, DeceasedProfile, Order, OrderItem, Product } from '@prisma/client';
-import { Calendar, Heart, MapPin } from 'lucide-react';
+import { Calendar, ExternalLink, MapPin } from 'lucide-react';
 import AdminManualProofUploadPanel from '@/components/dashboard/AdminManualProofUploadPanel';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
+import {
+    customerFacingDeliveryDateLabel,
+    formatCustomerFacingDeliveryDate,
+    resolveCustomerFacingDeliveryDate,
+} from '@/lib/orders/displayDeliveryDate';
 
 export type BachecaOrder = Order & {
     items: (OrderItem & { product: Product })[];
@@ -17,6 +22,10 @@ export type DeceasedOrderGroup = {
     photoUrl: string | null;
     orders: BachecaOrder[];
 };
+
+function orderSortTime(order: BachecaOrder): number {
+    return resolveCustomerFacingDeliveryDate(order)?.getTime() ?? order.createdAt.getTime();
+}
 
 export function groupOrdersByDeceased(orders: BachecaOrder[]): DeceasedOrderGroup[] {
     const map = new Map<string, DeceasedOrderGroup>();
@@ -45,9 +54,9 @@ export function groupOrdersByDeceased(orders: BachecaOrder[]): DeceasedOrderGrou
     return Array.from(map.values())
         .map((group) => ({
             ...group,
-            orders: [...group.orders].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+            orders: [...group.orders].sort((a, b) => orderSortTime(b) - orderSortTime(a)),
         }))
-        .sort((a, b) => (b.orders[0]?.createdAt.getTime() ?? 0) - (a.orders[0]?.createdAt.getTime() ?? 0));
+        .sort((a, b) => orderSortTime(b.orders[0]) - orderSortTime(a.orders[0]));
 }
 
 function getStatusLabel(status: string) {
@@ -88,6 +97,17 @@ export function UserBachecaOrderCard({
     const lng = order.longitude ?? order.deliveryProof?.gpsLongitude;
     const deceasedDisplayName = order.deceasedProfile?.fullName ?? order.deceasedName;
     const proofPhotos = getOrderProofPhotos(order);
+    const deliveryDateLabel = customerFacingDeliveryDateLabel(order);
+    const deliveryDateText = formatCustomerFacingDeliveryDate(order, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    });
+    const primaryPhotoUrl = proofPhotos.after[0] ?? proofPhotos.before[0] ?? null;
+    const isDelivered =
+        order.status === 'COMPLETED' ||
+        order.deliveryProof?.status === 'COMPLETED' ||
+        Boolean(order.deliveryProof?.timestampAfter);
 
     return (
         <div
@@ -101,21 +121,30 @@ export function UserBachecaOrderCard({
                     <span className="font-mono text-sm font-bold text-slate-900 border border-slate-200 px-2.5 py-1 rounded-lg bg-white shadow-inner">
                         #{order.orderNumber}
                     </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${status.color}`}>
+                    <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${status.color}`}
+                    >
                         {status.text}
                     </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                    <Calendar size={13} />
-                    <span>{new Date(order.createdAt).toLocaleDateString('it-IT')}</span>
-                </div>
+                {deliveryDateText ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                        <Calendar size={13} />
+                        <span>
+                            {deliveryDateLabel}{' '}
+                            <span className="text-slate-700 font-semibold">{deliveryDateText}</span>
+                        </span>
+                    </div>
+                ) : null}
             </div>
 
             <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-7 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Luogo di Consegna</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                Luogo di Consegna
+                            </div>
                             <div className="text-sm font-semibold text-slate-700 flex items-start gap-1">
                                 <MapPin size={14} className="text-[#c5a880] mt-0.5 shrink-0" />
                                 <span>
@@ -125,7 +154,9 @@ export function UserBachecaOrderCard({
                         </div>
                         {showFinancialDetails ? (
                             <div className="space-y-1">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Importo ordine</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Importo ordine
+                                </div>
                                 <div className="text-base font-bold text-slate-800 font-mono">
                                     €{(order.totalPriceCents / 100).toFixed(2)}
                                 </div>
@@ -153,6 +184,20 @@ export function UserBachecaOrderCard({
                             ))}
                         </div>
                     </div>
+
+                    {isDelivered && primaryPhotoUrl ? (
+                        <div className="border-t border-slate-100 pt-4">
+                            <a
+                                href={primaryPhotoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#c5a880]/40 bg-[#c5a880]/10 text-[#8a7048] text-xs font-bold uppercase tracking-wider hover:bg-[#c5a880]/20 transition-colors"
+                            >
+                                <ExternalLink size={14} />
+                                Vedi foto della posa
+                            </a>
+                        </div>
+                    ) : null}
                 </div>
 
                 <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8 flex flex-col justify-center">

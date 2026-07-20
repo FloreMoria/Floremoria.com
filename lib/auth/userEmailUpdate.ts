@@ -36,7 +36,9 @@ export async function applyUserEmailChange(params: {
         return { emailChanged: false };
     }
 
-    const conflict = await prisma.user.findUnique({ where: { email: newEmail } });
+    const conflict = await prisma.user.findFirst({
+        where: { email: { equals: newEmail, mode: 'insensitive' } },
+    });
     if (conflict && conflict.id !== params.userId) {
         throw new UserEmailUpdateError(
             'email_in_use',

@@ -45,7 +45,7 @@ const productsRaw: Omit<Product, 'images'>[] = [
     },
     {
         id: "f1",
-        name: "Kalonche (pianta in vaso)",
+        name: "Kalonchoe (pianta in vaso)",
         slug: "kalonche",
         price: 37.99,
         description: "Pianta fiorita per un omaggio curato dai fioristi locali.",

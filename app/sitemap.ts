@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { products } from '@/lib/products';
+import { getProductUrl } from '@/lib/productUrls';
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.floremoria.com';
@@ -70,12 +71,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // 2. Pagine Dinamiche Prodotti (Daily)
     const productsSitemap: MetadataRoute.Sitemap = products.map((product) => {
-        // Ipotizziamo che la route principale d'ingresso sia fiori-sulle-tombe/[slug] per la maggior parte
-        // Questo andrebbe ottimizzato in base all'esatta strategia di routing adottata nel layout.
-        const route = '/fiori-sulle-tombe';
-
         return {
-            url: `${baseUrl}${route}/${product.slug}`,
+            url: `${baseUrl}${getProductUrl(product)}`,
             lastModified: new Date(),
             changeFrequency: 'daily',
             priority: 0.8,

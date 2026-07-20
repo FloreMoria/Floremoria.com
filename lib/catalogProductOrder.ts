@@ -4,7 +4,9 @@ import { products, type Product } from '@/lib/products';
 export const CATALOG_SLUGS_CIMITERO = [
     'bouquet-ricordo-affettuoso',
     'bouquet-di-rose',
+    'kalonche',
     'bouquet-omaggio-speciale',
+    'margherite-gerbere',
     'bouquet-tributo-eterno',
     'lumino',
     'messaggio',

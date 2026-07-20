@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ProductHoverPreview from './ProductHoverPreview';
 import { Product } from '@/lib/products';
+import { getProductUrl } from '@/lib/productUrls';
 
 interface ProductCardProps {
     product: Product;
@@ -15,9 +16,10 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, comuneSlug, comuneName, compact = false }: ProductCardProps) {
+    const baseUrl = getProductUrl(product);
     const productUrl = comuneSlug
-        ? `/fiori-sulle-tombe/${product.slug}?loc=${comuneSlug}`
-        : `/fiori-sulle-tombe/${product.slug}`;
+        ? `${baseUrl}?loc=${comuneSlug}`
+        : baseUrl;
 
     // Read deeply directly from the filesystem populated array
     const [imgSrc, setImgSrc] = useState(product.coverImage || '');

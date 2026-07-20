@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
         'https://www.floremoria.com';
 
     return {
-        title: `${product.name} - Consegna fiori al cimitero | FloreMoria`,
-        description: `Omaggio floreale consegnato da fiorista locale con foto su WhatsApp`,
+        title: `${product.name} - Piccoli Amici | FloreMoria`,
+        description: `Pianta e omaggio per piccoli amici consegnato da fiorista locale con foto su WhatsApp`,
         alternates: {
             canonical: `${siteBase}${nativeUrl}`,
         },
@@ -41,7 +41,7 @@ export async function generateStaticParams() {
     }));
 }
 
-export default async function ProductPage({ params, searchParams }: ProductPageProps) {
+export default async function PetProductPage({ params, searchParams }: ProductPageProps) {
     const resolvedParams = await params;
     const resolvedSearchParams = await searchParams;
     const product = getProductBySlug(resolvedParams.slug);
@@ -51,13 +51,12 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     }
 
     const nativeUrl = getProductUrl(product);
-    if (!nativeUrl.startsWith('/fiori-sulle-tombe/')) {
+    if (!nativeUrl.startsWith('/fiori-per-animali-domestici/')) {
         const query = resolvedSearchParams.loc ? `?loc=${encodeURIComponent(resolvedSearchParams.loc)}` : '';
         permanentRedirect(`${nativeUrl}${query}`);
     }
 
     const relatedProducts = getPdpCrossSellProducts(product, 3);
-
     const initialComune = resolvedSearchParams.loc ? decodeURIComponent(resolvedSearchParams.loc).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
 
     const siteBase =
@@ -69,7 +68,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         "@context": "https://schema.org",
         "@type": ["Product", "Offer", "LocalBusiness"],
         "name": product.name,
-        "description": "Omaggio floreale consegnato da fiorista locale con foto su WhatsApp",
+        "description": "Pianta e omaggio per piccoli amici consegnato da fiorista locale con foto su WhatsApp",
         "price": product.price,
         "priceCurrency": "EUR",
         "url": `${siteBase}${nativeUrl}`

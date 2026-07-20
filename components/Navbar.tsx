@@ -7,31 +7,19 @@ import Image from 'next/image';
 import { buildGenericAlt } from '@/utils/altText';
 import { getProductBySlug } from '@/lib/products';
 
-/** Le PDP sono tutte sotto `/fiori-sulle-tombe/[slug]`; la categoria reale è sul prodotto. */
-function productFromFioriTombePdp(pathname: string) {
-    const m = pathname.match(/^\/fiori-sulle-tombe\/([^/]+)\/?$/);
-    if (!m) return undefined;
-    return getProductBySlug(m[1]);
-}
-
 function isNavLinkActive(pathname: string, linkHref: string): boolean {
     if (linkHref === '/') {
         return pathname === '/';
     }
 
-    const pdpProduct = productFromFioriTombePdp(pathname);
-
     if (linkHref === '/fiori-sulle-tombe') {
-        if (pathname === '/fiori-sulle-tombe') return true;
-        return pdpProduct?.category === 'cimitero';
+        return pathname === '/fiori-sulle-tombe' || pathname.startsWith('/fiori-sulle-tombe/');
     }
     if (linkHref === '/per-il-funerale') {
-        if (pathname === '/per-il-funerale') return true;
-        return pdpProduct?.category === 'funerale';
+        return pathname === '/per-il-funerale' || pathname.startsWith('/fiori-per-funerale/');
     }
     if (linkHref === '/per-animali-domestici') {
-        if (pathname === '/per-animali-domestici') return true;
-        return pdpProduct?.category === 'animali';
+        return pathname === '/per-animali-domestici' || pathname.startsWith('/fiori-per-animali-domestici/');
     }
 
     return pathname === linkHref || pathname.startsWith(`${linkHref}/`);

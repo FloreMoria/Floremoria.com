@@ -72,7 +72,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'pinterest_agent',
         displayName: 'Pinterest Agent',
         focus:
-            'Pin verticali 2:3, keyword SEO botaniche/ricorrenze, focus piante e allestimenti tombali, link di spinta al sito.',
+            'Pin verticali 2:3, keyword SEO botaniche/ricorrenze, focus piante e allestimenti tombali, link di spinta al sito. Pubblicazione via src/agents/platforms/pinterestPublisher.ts (OAuth v5 + continuous refresh).',
         skillId: 'pinterest_skills',
         skillChannel: 'pinterest',
     },

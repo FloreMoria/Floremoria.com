@@ -26,6 +26,7 @@ import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { publishToTikTok } from '@/lib/postman/tiktokPublish';
 import type { TikTokPublishUxOptions } from '@/lib/postman/tiktokCreatorInfo';
+import { publishCampaignToPinterest } from '@/src/agents/platforms/pinterestPublisher';
 
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
@@ -560,7 +561,14 @@ function channelCredentialsReady(
     case MarketingChannel.YOUTUBE_SHORTS:
       return { ready: false, reason: 'YouTube Shorts publish non ancora integrato' };
     case MarketingChannel.PINTEREST:
-      return { ready: false, reason: 'Pinterest publish non ancora integrato' };
+      // Token in SystemState (OAuth) o PINTEREST_ACCESS_TOKEN — il publisher gestisce refresh/simulate
+      if (
+        process.env.PINTEREST_APP_ID?.trim() ||
+        process.env.PINTEREST_ACCESS_TOKEN?.trim()
+      ) {
+        return { ready: true, reason: '' };
+      }
+      return { ready: false, reason: 'PINTEREST_APP_ID / PINTEREST_ACCESS_TOKEN' };
     case MarketingChannel.GOOGLE_ADS:
       return { ready: false, reason: 'Google Ads non ancora integrato' };
     default:
@@ -702,6 +710,26 @@ export async function publishCampaignToChannel(
       case MarketingChannel.LINKEDIN:
         externalId = await publishToLinkedIn(payload, env);
         break;
+      case MarketingChannel.PINTEREST: {
+        // Pinterest Agent → publisher v5 con continuous refresh token
+        const pinResult = await publishCampaignToPinterest({
+          campaignId: payload.id,
+          copy: payload.copy,
+          hashtags: payload.hashtags,
+          imageUrl: payload.imageUrl,
+          link: 'https://www.floremoria.com',
+        });
+        if (!pinResult.success) {
+          throw new Error(pinResult.error || 'Pinterest publish failed');
+        }
+        return {
+          success: true,
+          simulated: pinResult.simulated,
+          channel: payload.targetChannel,
+          campaignId: payload.id,
+          externalId: pinResult.pinId,
+        };
+      }
       default:
         logSimulatedPublish(payload.targetChannel, payload.id, reason);
         return {

@@ -189,13 +189,7 @@ export default function RootLayout({
             <span>P.IVA, C.F. e Iscrizione RI 04188260139 | Numero REA CO - 426383 | Capitale sociale sottoscritto: 11.410&euro; i.v.</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm font-body order-2 md:order-3">
-            <a
-              href="https://www.iubenda.com/privacy-policy/18115980"
-              className="iubenda-white iubenda-noiframe iubenda-embed iub-legal-only hover:text-white transition-colors"
-              title="Privacy Policy"
-            >
-              Privacy Policy
-            </a>
+            <FooterLegalLink href="/privacy">Privacy Policy</FooterLegalLink>
             <a
               href="https://www.iubenda.com/privacy-policy/18115980/cookie-policy"
               className="iubenda-white iubenda-noiframe iubenda-embed hover:text-white transition-colors"

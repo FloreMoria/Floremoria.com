@@ -181,3 +181,20 @@ export async function loadAllSocialSkillsPromptSection(): Promise<string> {
     if (blocks.length === 0) return '';
     return `## Social Media Skills (runtime)\n\n${blocks.join('\n\n')}`;
 }
+
+/** Mappa etichette MarketingChannel / SkillChannel → id skill file. */
+export function skillIdFromMarketingChannelLabel(channel: string): SocialSkillId | null {
+    const map: Record<string, SocialSkillId> = {
+        META_INSTAGRAM: 'instagram_skills',
+        META_FACEBOOK: 'facebook_skills',
+        TIKTOK: 'tiktok_skills',
+        YOUTUBE_SHORTS: 'youtube_shorts_skills',
+        PINTEREST: 'pinterest_skills',
+        instagram: 'instagram_skills',
+        facebook: 'facebook_skills',
+        tiktok: 'tiktok_skills',
+        youtube_shorts: 'youtube_shorts_skills',
+        pinterest: 'pinterest_skills',
+    };
+    return map[channel] ?? null;
+}

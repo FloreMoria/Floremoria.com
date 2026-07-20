@@ -557,6 +557,10 @@ function channelCredentialsReady(
         return { ready: false, reason: 'TIKTOK_ACCESS_TOKEN' };
       }
       return { ready: true, reason: '' };
+    case MarketingChannel.YOUTUBE_SHORTS:
+      return { ready: false, reason: 'YouTube Shorts publish non ancora integrato' };
+    case MarketingChannel.PINTEREST:
+      return { ready: false, reason: 'Pinterest publish non ancora integrato' };
     case MarketingChannel.GOOGLE_ADS:
       return { ready: false, reason: 'Google Ads non ancora integrato' };
     default:

@@ -40,10 +40,10 @@ export function isReelDay(reference = new Date()): boolean {
 }
 
 /**
- * Slot editoriali giornalieri FloreMoria aggiornati:
+ * Slot editoriali giornalieri FloreMoria:
  * - Ogni giorno: story IG, story FB
- * - Ogni 2 giorni: post IG, post FB, post LinkedIn, post TikTok
- * - Ogni 4 giorni: reel IG, reel FB, reel TikTok
+ * - Ogni 2 giorni: post IG, FB, LinkedIn, TikTok, Pinterest
+ * - Ogni 4 giorni: reel IG, FB, TikTok + YouTube Shorts
  */
 export function getDailyPublishSlots(reference = new Date()): PublishSlot[] {
   const slots: PublishSlot[] = [
@@ -56,7 +56,8 @@ export function getDailyPublishSlots(reference = new Date()): PublishSlot[] {
       { channel: MarketingChannel.META_INSTAGRAM, contentFormat: ContentFormat.FEED_POST },
       { channel: MarketingChannel.META_FACEBOOK, contentFormat: ContentFormat.FEED_POST },
       { channel: MarketingChannel.LINKEDIN, contentFormat: ContentFormat.FEED_POST },
-      { channel: MarketingChannel.TIKTOK, contentFormat: ContentFormat.FEED_POST }
+      { channel: MarketingChannel.TIKTOK, contentFormat: ContentFormat.FEED_POST },
+      { channel: MarketingChannel.PINTEREST, contentFormat: ContentFormat.FEED_POST }
     );
   }
 
@@ -64,7 +65,8 @@ export function getDailyPublishSlots(reference = new Date()): PublishSlot[] {
     slots.push(
       { channel: MarketingChannel.META_INSTAGRAM, contentFormat: ContentFormat.REEL },
       { channel: MarketingChannel.META_FACEBOOK, contentFormat: ContentFormat.REEL },
-      { channel: MarketingChannel.TIKTOK, contentFormat: ContentFormat.REEL }
+      { channel: MarketingChannel.TIKTOK, contentFormat: ContentFormat.REEL },
+      { channel: MarketingChannel.YOUTUBE_SHORTS, contentFormat: ContentFormat.REEL }
     );
   }
 
@@ -83,15 +85,23 @@ export function formatLabelForSlot(slot: PublishSlot): string {
         ? 'Facebook'
         : slot.channel === MarketingChannel.TIKTOK
           ? 'TikTok'
-          : slot.channel === MarketingChannel.LINKEDIN
-            ? 'LinkedIn'
-            : slot.channel;
+          : slot.channel === MarketingChannel.YOUTUBE_SHORTS
+            ? 'YouTube Shorts'
+            : slot.channel === MarketingChannel.PINTEREST
+              ? 'Pinterest'
+              : slot.channel === MarketingChannel.LINKEDIN
+                ? 'LinkedIn'
+                : slot.channel;
   const format =
     slot.contentFormat === ContentFormat.REEL
-      ? 'Reel'
+      ? slot.channel === MarketingChannel.YOUTUBE_SHORTS
+        ? 'Short'
+        : 'Reel'
       : slot.contentFormat === ContentFormat.STORY
         ? 'Story'
-        : 'Post';
+        : slot.channel === MarketingChannel.PINTEREST
+          ? 'Pin'
+          : 'Post';
   return `${channel} ${format}`;
 }
 

@@ -79,10 +79,16 @@ function aspectRatioForCampaign(campaign: {
   targetChannel: MarketingChannel;
   contentFormat: ContentFormat;
 }): string {
+  if (campaign.targetChannel === MarketingChannel.PINTEREST) {
+    // Pin verticali 2:3 — Imagen non ha 2:3 nativo; 9:16 è il più vicino per crop editoriale.
+    return '9:16';
+  }
+
   if (
     campaign.contentFormat === ContentFormat.STORY ||
     campaign.contentFormat === ContentFormat.REEL ||
-    campaign.targetChannel === MarketingChannel.TIKTOK
+    campaign.targetChannel === MarketingChannel.TIKTOK ||
+    campaign.targetChannel === MarketingChannel.YOUTUBE_SHORTS
   ) {
     return '9:16';
   }

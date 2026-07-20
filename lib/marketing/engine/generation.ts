@@ -2,6 +2,12 @@ import { GoogleGenAI } from '@google/genai';
 import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import {
+  buildChannelSystemPrompt,
+  describeContentFormatGuidance,
+  formatFocusHintForUserPrompt,
+  getChannelAgentSpec,
+} from '@/src/agents/contentOrchestrator';
+import {
   formatLabelForSlot,
   getDailyPublishSlots,
   getRomeCalendarDate,
@@ -45,66 +51,6 @@ interface GeminiCampaignPayload {
   posts: GeminiGeneratedPost[];
 }
 
-// Prompt di sistema macro che istruisce lo sciame creativo secondo le direttive di ZIGGY
-const CREATIVE_SWARM_SYSTEM_PROMPT = `
-Tu sei il Core Creativo di FloreMoria, un'orchestra di Agent AI specializzati che lavorano in sequenza per creare campagne di marketing d'élite.
-Agisci come ZIGGY, l'Agent AI Creative Content Director di FloreMoria, ed imposta la linea editoriale e le regole per le diverse piattaforme:
-
-1. CLEO (Content Strategist) + ZIGGY Platform Rules & Targeting:
-   - META_INSTAGRAM, META_FACEBOOK, TIKTOK:
-     * Target: Utenti privati, expat (italiani all'estero), italiani fuori sede, fioristi, follower, amanti del settore floreale/cimiteriale, persone legate alla famiglia e una linea dedicata alla memoria degli animali domestici.
-     * Tono: Caldo, empatico, rassicurante, focalizzato sulla continuità degli affetti.
-     * Formati specifici:
-       - META_INSTAGRAM: Tono intimo e sobrio, incentrato sul dolore della distanza. Taglia i testi per mobile, usa paragrafi corti e scansionabili. Inserisci una Call to Action (CTA) discreta che dia sollievo ed eviti toni commerciali.
-       - META_FACEBOOK: Tono affettuoso e orientato alla vicinanza familiare. Copy leggermente più narrativo e disteso rispetto a Instagram, focalizzato sul ricordo continuo dei propri cari e sull'affidabilità del servizio.
-       - TIKTOK: UGC-feel autentico e dinamico. Hook forte nei primi 2 secondi (es. 'Come facciamo a portare un fiore a chi amiamo se siamo lontani?'), struttura rigida Hook -> Body -> Close con linguaggio colloquiale e rispettoso.
-   - LINKEDIN:
-     * Target: Partner commerciali, onoranze funebri, portali di necrologi, giornali con rubriche di necrologi, fioristi della rete, manager, expat, esperti di Intelligenza Artificiale ed esperti del mondo StartUp.
-     * Tono: Professionale, orientato al business, incentrato sull'innovazione tecnologica e sull'efficienza operativa del modello FloreMoria, sul welfare aziendale e sul rispetto per la memoria come valore sociale. Linguaggio elevato, formale ed orientato all'efficienza.
-
-2. OBIETTIVI DI CAMPAGNA E CALL TO ACTION:
-   - **Obiettivo Feed/Reel:** I post per il feed (FEED_POST) e i Reel (REEL) devono avere come obiettivo implicito o esplicito quello di indirizzare gli utenti a visitare il sito **www.floremoria.com**. Il copy deve far affezionare il pubblico al brand FloreMoria, facendolo percepire come il punto di riferimento unico ed d'eccellenza per onorare e curare la memoria dei propri cari defunti.
-   - **Obiettivo Storie:** Le storie (STORY) su Instagram, Facebook e TikTok non promuovono direttamente il sito, ma hanno l'obiettivo primario di **spingere gli utenti a visitare il profilo per vedere il post o il reel correlato di oggi** (es. "Vedi il nostro ultimo reel nel feed per scoprire come...", "Guarda la composizione nel post di oggi sul nostro profilo"). La storia funge da traino ed invito alla curiosità per i post del feed.
-   - **Alternanza e Formati (Audio & Video):** I Reel e le Storie devono supportare un'alternanza tra foto e video. Per i formati video, suggerisci nel copy della campagna o nel tag di Axel una musica/traccia audio appropriata (musica classica, pianoforte solista o lofi rilassante come Einaudi o Yiruma) che l'operatore userà come sottofondo.
-
-3. ZIGGY & ARLO (Art Direction):
-   - Progetta prompt d'immagine in stile "Quiet Luxury". Luce naturale (ora d'oro o finestra nord), palette desaturate ed eleganti (avorio, salvia, cipria, terracotta), profondità di campo ridotta, bokeh naturale.
-   - Bandisci grafiche, scritte, loghi, persone in posa ed estetismo artificiale/stock kitsch. I fiori devono apparire reali.
-   - Per TikTok, crea prompt adatti a video verticali (9:16) dinamici o scene di composizione manuale/POV.
-
-4. AXEL (SEO/AEO Specialist):
-   - Seleziona solo hashtag pertinenti ed eleganti (max 4-5 per post, senza liste chilometriche).
-   - Includi una riga in fondo al copy dei Reel con il tag della musica suggerita (es. "[Audio consigliato: 'Nuvole Bianche' di Ludovico Einaudi]").
-
-5. NINA (Visual Impact):
-   - Assicurati che l'impaginazione sia pulita, ordinata e senza abuso di emoji (max 1-2 per post, solo se sobrie).
-
-INPUT RICHIESTO:
-Riceverai una categoria (FF = Per il Funerale, FT = Fiori sulle Tombe) e i dettagli di un prodotto floreale.
-
-OUTPUT RICHIESTO:
-Devi restituire MANDATORIAMENTE ed ESCLUSIVAMENTE un oggetto JSON valido (senza blocchi di testo esterni) con un post per OGNI slot editoriale richiesto.
-
-Struttura del JSON atteso:
-{
-  "category": "FF o FT",
-  "productName": "Nome prodotto",
-  "posts": [
-    {
-      "channel": "META_INSTAGRAM",
-      "contentFormat": "FEED_POST",
-      "copy": "Testo emotivo...",
-      "imagePrompt": "[STYLE]: Quiet Luxury... [LIGHTING]: ... [SUBJECT]: ... [AVOID]: ...",
-      "hashtags": ["#floremoria", "#..."]
-    }
-  ]
-}
-
-Canali ammessi: META_INSTAGRAM, META_FACEBOOK, TIKTOK, LINKEDIN.
-Formati ammessi: FEED_POST (post feed), STORY (story verticale che rimanda al post/reel del giorno), REEL (script reel breve e dinamico).
-Per STORY usa copy più corto (max 2 frasi + invito a vedere il feed). Per REEL copy energico adatto a video verticale 15-30s.
-`;
-
 function stripJsonFences(raw: string): string {
   return raw
     .trim()
@@ -141,23 +87,40 @@ function coerceContentFormat(value: unknown): ContentFormat | null {
   return (VALID_FORMATS as string[]).includes(v) ? (v as ContentFormat) : null;
 }
 
-function buildUserContent(
+function groupSlotsByChannel(slots: PublishSlot[]): Map<MarketingChannel, PublishSlot[]> {
+  const map = new Map<MarketingChannel, PublishSlot[]>();
+  for (const slot of slots) {
+    const list = map.get(slot.channel) ?? [];
+    list.push(slot);
+    map.set(slot.channel, list);
+  }
+  return map;
+}
+
+function buildUserContentForChannel(
   category: MarketingCategory,
   productName: string,
   productPrice: number,
+  channel: MarketingChannel,
   slots: PublishSlot[],
   theme?: string
 ): string {
   const categoryLabel =
     category === 'FF' ? 'Per il Funerale (FF)' : 'Fiori sulle Tombe (FT)';
+  const agent = getChannelAgentSpec(channel);
 
   const slotLines = slots.map(
     (slot, i) =>
-      `${i + 1}. ${formatLabelForSlot(slot)} → channel="${slot.channel}", contentFormat="${slot.contentFormat}"`
+      `${i + 1}. ${formatLabelForSlot(slot)} → channel="${slot.channel}", contentFormat="${slot.contentFormat}" — ${describeContentFormatGuidance(slot.channel, slot.contentFormat)}`
   );
 
   const lines = [
-    'Genera una campagna multicanale per il prodotto seguente.',
+    `Genera contenuti SOLO per il canale ${channel}, come ${agent.displayName}.`,
+    '',
+    `Agente: ${formatFocusHintForUserPrompt(channel)}`,
+    agent.skillId
+      ? `Skill obbligatoria già iniettata nel System Prompt: ${agent.skillId}.md — rispettala alla lettera.`
+      : 'Nessuna skill consumer: applica le regole B2B/canale nel System Prompt.',
     '',
     `Categoria: ${categoryLabel}`,
     `Nome prodotto: ${productName}`,
@@ -168,7 +131,7 @@ function buildUserContent(
   if (theme) {
     lines.push(
       `TEMA EDITORIALE DELLA CAMPAGNA: ${theme}`,
-      "Adatta rigorosamente il copy e i prompt d'immagine a questo tema specifico, in modo da integrarlo elegantemente.",
+      "Adatta rigorosamente il copy e i prompt d'immagine a questo tema, con eleganza e rispetto.",
       ''
     );
   }
@@ -177,8 +140,8 @@ function buildUserContent(
     'Slot editoriali OBBLIGATORI (un post JSON per ciascuno, stessi channel e contentFormat):',
     ...slotLines,
     '',
-    'Rispetta la categoria indicata e adatta tono e immaginario di conseguenza.',
-    'TikTok: tono autentico, empatico, adatto a un pubblico più giovane ma sempre rispettoso.',
+    'Applica la direttiva di viralità rispettosa (hook 0–3s, CTA salva/condividi, Quiet Luxury).',
+    'Rispetta la categoria e adatta tono/immaginario di conseguenza.',
   );
 
   return lines.join('\n');
@@ -196,7 +159,8 @@ function parseGeminiCampaignPayload(
   rawText: string,
   fallbackCategory: MarketingCategory,
   fallbackProductName: string,
-  requiredSlots: PublishSlot[]
+  requiredSlots: PublishSlot[],
+  forcedChannel: MarketingChannel
 ): Omit<CampaignGenerationResult, 'posts'> & { posts: ParsedCampaignPost[] } {
   let parsed: GeminiCampaignPayload;
   try {
@@ -214,26 +178,31 @@ function parseGeminiCampaignPayload(
 
   const posts: ParsedCampaignPost[] = [];
   for (const post of parsed.posts) {
-    const channel = coerceChannel(post.channel);
     const contentFormat = coerceContentFormat(post.contentFormat);
     const copy = String(post.copy || '').trim();
     const imagePrompt = String(post.imagePrompt || '').trim();
     const hashtags = normalizeHashtags(post.hashtags);
 
-    if (!channel || !contentFormat || !copy || !imagePrompt) {
+    if (!contentFormat || !copy || !imagePrompt) {
       continue;
     }
 
-    posts.push({ channel, contentFormat, copy, imagePrompt, hashtags });
+    // Forza il canale dell’agente preposto (anti-drift multi-canale).
+    posts.push({
+      channel: forcedChannel,
+      contentFormat,
+      copy,
+      imagePrompt,
+      hashtags,
+    });
   }
 
-  // Allinea agli slot richiesti (ordine editoriale)
   const aligned: ParsedCampaignPost[] = [];
   for (const slot of requiredSlots) {
     const match =
       posts.find(
         (p) => p.channel === slot.channel && p.contentFormat === slot.contentFormat
-      ) ?? posts.find((p) => p.channel === slot.channel);
+      ) ?? posts.find((p) => p.contentFormat === slot.contentFormat) ?? posts[0];
 
     if (match) {
       aligned.push({
@@ -245,10 +214,77 @@ function parseGeminiCampaignPayload(
   }
 
   if (aligned.length === 0) {
-    throw new Error('Nessun post generato rispetta gli slot editoriali richiesti.');
+    throw new Error(
+      `Nessun post generato per ${forcedChannel} rispetta gli slot editoriali richiesti.`
+    );
   }
 
   return { category, productName, posts: aligned };
+}
+
+function getGeminiClient(): { ai: GoogleGenAI; model: string } {
+  const apiKey =
+    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new MarketingEngineConfigError(
+      'GEMINI_API_KEY non configurata: impossibile generare la campagna.'
+    );
+  }
+  const model = process.env.MARKETING_GEMINI_MODEL?.trim() || 'gemini-2.5-pro';
+  return { ai: new GoogleGenAI({ apiKey }), model };
+}
+
+/**
+ * Genera gli slot di un singolo canale con Agente dedicato + skill iniettata.
+ */
+async function generatePostsForChannel(params: {
+  category: MarketingCategory;
+  productName: string;
+  productPrice: number;
+  channel: MarketingChannel;
+  slots: PublishSlot[];
+  theme?: string;
+}): Promise<{ category: MarketingCategory; productName: string; posts: ParsedCampaignPost[] }> {
+  const { category, productName, productPrice, channel, slots, theme } = params;
+  const agent = getChannelAgentSpec(channel);
+
+  console.log(
+    `[Marketing Engine] ${agent.displayName} · ${channel} · skill=${agent.skillId ?? 'none'} · ${slots.length} slot`
+  );
+
+  // Obbligatorio: caricare skill aggiornata e iniettarla nel System Prompt.
+  const systemInstruction = await buildChannelSystemPrompt(channel);
+  const { ai, model } = getGeminiClient();
+
+  let rawText: string | undefined;
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: buildUserContentForChannel(
+        category,
+        productName,
+        productPrice,
+        channel,
+        slots,
+        theme
+      ),
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        temperature: 0.5,
+      },
+    });
+    rawText = response.text;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Errore chiamata Gemini (${agent.displayName}): ${msg}`);
+  }
+
+  if (!rawText?.trim()) {
+    throw new Error(`Risposta Gemini vuota (${agent.displayName}).`);
+  }
+
+  return parseGeminiCampaignPayload(rawText, category, productName, slots, channel);
 }
 
 export async function generateCampaignDraft(
@@ -259,54 +295,41 @@ export async function generateCampaignDraft(
   theme?: string
 ): Promise<CampaignGenerationResult> {
   console.log(
-    `[Marketing Engine] Chiamata API Gemini per ${category} - ${productName} (${slots.length} slot, tema: ${theme || 'nessuno'})`
+    `[Marketing Engine] Campagna ${category} - ${productName} (${slots.length} slot, tema: ${theme || 'nessuno'}) — orchestrazione per-canale`
   );
 
   const scheduledFor = getRomeCalendarDate();
+  const byChannel = groupSlotsByChannel(slots);
 
-  const apiKey =
-    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new MarketingEngineConfigError(
-      'GEMINI_API_KEY non configurata: impossibile generare la campagna.'
-    );
-  }
+  let resolvedCategory: MarketingCategory = category;
+  let resolvedProductName = productName;
+  const allPosts: ParsedCampaignPost[] = [];
 
-  const model =
-    process.env.MARKETING_GEMINI_MODEL?.trim() ||
-    'gemini-2.5-pro';
-  const ai = new GoogleGenAI({ apiKey });
-
-  let rawText: string | undefined;
-  try {
-    const response = await ai.models.generateContent({
-      model,
-      contents: buildUserContent(category, productName, productPrice, slots, theme),
-      config: {
-        systemInstruction: CREATIVE_SWARM_SYSTEM_PROMPT,
-        responseMimeType: 'application/json',
-        temperature: 0.5,
-      },
+  for (const [channel, channelSlots] of byChannel) {
+    const partial = await generatePostsForChannel({
+      category,
+      productName,
+      productPrice,
+      channel,
+      slots: channelSlots,
+      theme,
     });
-    rawText = response.text;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`Errore chiamata Gemini: ${msg}`);
+    resolvedCategory = partial.category;
+    resolvedProductName = partial.productName;
+    allPosts.push(...partial.posts);
   }
 
-  if (!rawText?.trim()) {
-    throw new Error('Risposta Gemini vuota.');
+  if (allPosts.length === 0) {
+    throw new Error('Nessun post generato dall’orchestrazione multi-agente.');
   }
-
-  const result = parseGeminiCampaignPayload(rawText, category, productName, slots);
 
   const savedPosts: GeneratedPost[] = [];
 
-  for (const post of result.posts) {
+  for (const post of allPosts) {
     const campaign = await prisma.marketingCampaign.create({
       data: {
         status: CampaignStatus.DRAFT,
-        category: result.category,
+        category: resolvedCategory,
         targetChannel: post.channel,
         contentFormat: post.contentFormat,
         scheduledFor,
@@ -328,15 +351,15 @@ export async function generateCampaignDraft(
   }
 
   return {
-    category: result.category,
-    productName: result.productName,
+    category: resolvedCategory,
+    productName: resolvedProductName,
     posts: savedPosts,
   };
 }
 
 /**
  * Rigenera un singolo post social precedentemente bocciato dai Guardiani,
- * applicando le indicazioni correttive e riportando lo stato in DRAFT.
+ * con Agente + skill del canale target.
  */
 export async function regenerateCampaignDraftWithFeedback(
   campaignId: string,
@@ -352,35 +375,26 @@ export async function regenerateCampaignDraftWithFeedback(
     throw new Error(`Campagna ${campaignId} non trovata per rigenerazione.`);
   }
 
-  const apiKey =
-    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new MarketingEngineConfigError(
-      'GEMINI_API_KEY non configurata: impossibile rigenerare la campagna.'
-    );
-  }
+  const agent = getChannelAgentSpec(campaign.targetChannel);
+  const { ai, model } = getGeminiClient();
 
-  const model =
-    process.env.MARKETING_GEMINI_MODEL?.trim() ||
-    'gemini-2.5-pro';
-  const ai = new GoogleGenAI({ apiKey });
+  // Skill obbligatoria per il canale del post da correggere.
+  const systemInstruction = `${await buildChannelSystemPrompt(campaign.targetChannel)}
 
-  const systemInstruction = `
-Tu sei l'Agent AI ZIGGY, Creative Content Director di FloreMoria.
-Hai precedentemente generato un post social che è stato RIFIUTATO dal comitato di controllo dei Guardiani (ALMA, SOFIA, MARTINA, BARBARA, PROF).
-Il tuo compito è RIFORMULARE il copy, il prompt d'immagine e gli hashtag per risolvere TUTTI i problemi riscontrati, rispettando rigorosamente le indicazioni correttive fornite.
+Hai precedentemente generato un post che è stato RIFIUTATO dal comitato Guardiani (ALMA, SOFIA, MARTINA, BARBARA, PROF).
+Riformula copy, imagePrompt e hashtag risolvendo TUTTI i problemi, restando ${agent.displayName} su ${campaign.targetChannel}.
 
-Mantieni l'estetica "Quiet Luxury" ed i requisiti della piattaforma originaria (${campaign.targetChannel}).
-Devi restituire MANDATORIAMENTE ed ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
+Restituisci ESCLUSIVAMENTE JSON:
 {
   "copy": "Copy corretto...",
   "imagePrompt": "Prompt immagine corretto...",
-  "hashtags": ["hashtag1", "hashtag2", ...]
+  "hashtags": ["hashtag1", "hashtag2"]
 }
 `;
 
   const userContent = `
 DATI ORIGINARI DEL POST:
+Agente: ${agent.displayName}
 Canale: ${campaign.targetChannel}
 Formato: ${campaign.contentFormat}
 Copy originario: ${campaign.copy}
@@ -435,18 +449,17 @@ Genera ora la versione corretta in formato JSON.
     throw new Error('La rigenerazione ha restituito copy o prompt immagine vuoti.');
   }
 
-  // Aggiorna Prisma con i dati corretti e riporta lo stato in DRAFT
   await prisma.marketingCampaign.update({
     where: { id: campaignId },
     data: {
       copy,
       imagePrompt,
       hashtags,
-      imageUrl: '', // Reset imageUrl per innescare nuova generazione di Imagen
+      imageUrl: '',
       status: CampaignStatus.DRAFT,
       rejectionReason: null,
     },
   });
 
-  console.log(`[Marketing Engine] Campagna ${campaignId} riscritta e ripristinata in DRAFT.`);
+  console.log(`[Marketing Engine] Campagna ${campaignId} riscritta da ${agent.displayName} → DRAFT.`);
 }

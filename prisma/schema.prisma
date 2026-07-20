@@ -584,13 +584,15 @@ enum ContentFormat {
   STORY
 }
 
-/// Canale di distribuzione campagna (Meta, Google Ads, LinkedIn, TikTok).
+/// Canale di distribuzione campagna (Meta, Google Ads, LinkedIn, TikTok, Shorts, Pinterest).
 enum MarketingChannel {
   META_FACEBOOK
   META_INSTAGRAM
   GOOGLE_ADS
   LINKEDIN
   TIKTOK
+  YOUTUBE_SHORTS
+  PINTEREST
 }
 
 /// Campagna marketing FloreMoria (Blob + copy CLEO + hashtag AXEL).

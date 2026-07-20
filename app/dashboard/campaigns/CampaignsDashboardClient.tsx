@@ -28,7 +28,7 @@ type Campaign = {
   id: string;
   status: 'DRAFT' | 'APPROVED' | 'PUBLISHED' | 'REJECTED';
   category: 'FF' | 'FT';
-  targetChannel: 'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN';
+  targetChannel: 'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST';
   contentFormat: 'FEED_POST' | 'STORY' | 'REEL';
   copy: string;
   imageUrl: string | null;
@@ -45,6 +45,8 @@ const SOCIAL_TABS = [
   { id: 'META_INSTAGRAM', label: 'Instagram', icon: '📸', color: 'from-pink-500 to-purple-600' },
   { id: 'META_FACEBOOK', label: 'Facebook', icon: '👥', color: 'from-blue-600 to-indigo-700' },
   { id: 'TIKTOK', label: 'TikTok', icon: '🎵', color: 'from-slate-900 to-black' },
+  { id: 'YOUTUBE_SHORTS', label: 'YT Shorts', icon: '▶️', color: 'from-red-600 to-rose-800' },
+  { id: 'PINTEREST', label: 'Pinterest', icon: '📌', color: 'from-red-700 to-red-900' },
   { id: 'LINKEDIN', label: 'LinkedIn', icon: '💼', color: 'from-blue-700 to-cyan-800' }
 ];
 
@@ -114,7 +116,7 @@ export default function CampaignsDashboardClient() {
 
   // Stati per la creazione di un post manuale
   const [showModal, setShowModal] = useState(false);
-  const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN'>('META_INSTAGRAM');
+  const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST'>('META_INSTAGRAM');
   const [manualFormat, setManualFormat] = useState<'FEED_POST' | 'STORY' | 'REEL'>('FEED_POST');
   const [manualCopy, setManualCopy] = useState('');
   const [manualHashtags, setManualHashtags] = useState('');

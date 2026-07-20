@@ -3,7 +3,7 @@ date: 2026-03-31
 tipo: verbale_sviluppo
 tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sync_source: docs/verbali/31-03-2026.md
-synced_at: 2026-07-20T01:58:11.209Z
+synced_at: 2026-07-20T06:38:06.087Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/31-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

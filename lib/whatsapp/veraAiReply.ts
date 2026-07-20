@@ -13,6 +13,7 @@
 import {
     buildSymmetricCourtesyReply,
     isIsolatedCourtesyMessage,
+    shouldSilenceVeraReply,
 } from '@/lib/vera/courtesyDebounce';
 import {
     buildWhatsAppAiReply,
@@ -378,7 +379,7 @@ async function replyViaGeminiInActiveWindow(
 
 export interface VeraReplyResult {
     text: string;
-    source: 'deterministic' | 'gemini' | 'fallback';
+    source: 'deterministic' | 'gemini' | 'fallback' | 'silence';
     shouldEscalate: boolean;
 }
 
@@ -395,6 +396,11 @@ export async function generateVeraReply(
     mediaUrl?: string | null
 ): Promise<VeraReplyResult> {
     const { shouldEscalateToHuman, getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
+
+    // Reaction / cortesia ridondante post-congedo: nessun messaggio in uscita.
+    if (shouldSilenceVeraReply(message, session)) {
+        return { text: '', source: 'silence', shouldEscalate: false };
+    }
 
     const callerContext = await resolveVeraCallerContext(session);
 

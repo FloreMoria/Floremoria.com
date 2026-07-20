@@ -27,6 +27,7 @@ export {
     buildSymmetricCourtesyReply,
     hasOperationalServiceIntent,
     isIsolatedCourtesyMessage,
+    shouldSilenceVeraReply,
     VERA_INTENT_BEFORE_ACTION_RULE,
     VERA_SYMMETRIC_GREETING_RULE,
 } from '@/lib/vera/courtesyDebounce';

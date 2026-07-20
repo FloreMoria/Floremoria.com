@@ -11,6 +11,7 @@ import {
     buildSymmetricCourtesyReply,
     isIsolatedCourtesyMessage,
 } from '@/lib/vera/courtesyDebounce';
+import { getItalyOpeningGreeting } from '@/lib/datetime/italyGreeting';
 
 type CoreKb = {
     supportEmail: string;
@@ -420,13 +421,17 @@ export function ensureRespectfulOpening(reply: string, hasPriorOutbound: boolean
         lower.includes('momento cos') ||
         lower.includes('condoglianze') ||
         lower.startsWith('buongiorno') ||
+        lower.startsWith('buonasera') ||
+        lower.startsWith('buonanotte') ||
         lower.startsWith('gentile ')
     ) {
         return reply;
     }
+    // Saluto ancorato all'orario Italia: non forzare mai "Buongiorno" di sera.
+    const opening = getItalyOpeningGreeting();
     const safeName = sanitizeWhatsAppDisplayName(displayName);
-    const greeting = safeName ? `Buongiorno ${safeName}, ` : 'Buongiorno, ';
-    return `${greeting}${VERA_RESPECTFUL_OPENING}\n\n${reply}`;
+    const greeting = safeName ? `${opening} ${safeName}, ` : `${opening}, `;
+    return `${greeting}${reply}`;
 }
 
 export function isSimpleThanksMessage(message: string): boolean {
@@ -461,8 +466,9 @@ export function buildWhatsAppAiReply(params: {
     const recentInboundLocation = findRecentInboundLocation(history);
     const contextDependent = isContextDependentMessage(m);
     const displayName = getDisplayName(userName);
+    const italyHello = getItalyOpeningGreeting();
     const salutoPrefix = shouldUseDailyGreeting(history)
-        ? (displayName ? `Buongiorno ${displayName}, ` : 'Buongiorno, ')
+        ? (displayName ? `${italyHello} ${displayName}, ` : `${italyHello}, `)
         : '';
     const emotionalContext = hasAny(m, [
         'sconforto',

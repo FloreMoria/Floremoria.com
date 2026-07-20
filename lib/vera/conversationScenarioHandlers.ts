@@ -314,9 +314,9 @@ export function buildFloristMiniAppSupportReply(
 export function buildWarmPraiseThanksReply(session: ChatSession): string {
     const isFlorist = session.userType === 'FLORIST';
     if (isFlorist) {
-        return 'Grazie a te! Siamo qui se serve altro. Buon lavoro 🌹';
+        return 'Grazie a te. Se serve altro, scrivimi pure.';
     }
-    return 'Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹';
+    return 'Grazie a Lei. Se serve altro, scriva pure qui. 🌹';
 }
 
 export function buildStandalonePhotoTextReply(session: ChatSession): string {

@@ -1,3 +1,9 @@
+/**
+ * Orchestratore post-pagamento / post-creazione ordine manuale.
+ * - Punto A (fiorista) se assegnato.
+ * - Punto B (conferma presa in carico al cliente) NON parte qui:
+ *   solo al passaggio di stato IN_PROGRESS via orderStatusFilter.
+ */
 import prisma from '@/lib/prisma';
 import { runPuntoAFloristNewOrder } from '@/lib/vera/orderWorkflow/puntoAFloristNewOrder';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
@@ -16,27 +22,23 @@ export {
 export * from '@/lib/vera/orderWorkflow/exceptionScenarios';
 export * from '@/lib/vera/orderWorkflow/types';
 
-/**
- * Orchestratore post-pagamento: B (utente) poi A (fiorista se assegnato).
- */
 export async function runVeraPostPaymentWorkflow(orderId: string): Promise<void> {
     await runVeraPostPaymentWorkflowWithResults(orderId);
 }
 
 export type VeraPostPaymentResult = {
-    customer: Awaited<ReturnType<typeof runPuntoBCustomerOrderConfirm>>;
+    /** Sempre skipped qui: Punto B è solo su IN_PROGRESS. */
+    customer: { ok: boolean; skipped?: string };
     florist?: Awaited<ReturnType<typeof runPuntoAFloristNewOrder>>;
 };
 
-/** Come runVeraPostPaymentWorkflow ma restituisce esito per debug dashboard/test. */
+/** Post-pagamento: solo notifica fiorista (Punto A). Il cliente aspetta IN_PROGRESS. */
 export async function runVeraPostPaymentWorkflowWithResults(
     orderId: string
 ): Promise<VeraPostPaymentResult> {
-    const customer = await runPuntoBCustomerOrderConfirm(orderId);
-
     const order = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { partnerId: true },
+        select: { partnerId: true, status: true },
     });
 
     let florist: VeraPostPaymentResult['florist'];
@@ -44,7 +46,13 @@ export async function runVeraPostPaymentWorkflowWithResults(
         florist = await runPuntoAFloristNewOrder(orderId);
     }
 
-    return { customer, florist };
+    return {
+        customer: {
+            ok: true,
+            skipped: 'puntoB_deferred_until_IN_PROGRESS',
+        },
+        florist,
+    };
 }
 
 /**

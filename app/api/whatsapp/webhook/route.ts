@@ -43,6 +43,7 @@ interface MetaWebhookMessage {
         list_reply?: { title?: string };
     };
     button?: { text?: string; payload?: string };
+    reaction?: { message_id?: string; emoji?: string };
 }
 
 interface MetaWebhookPayload {
@@ -140,6 +141,9 @@ function extractMetaMessageContent(msg: MetaWebhookMessage): { text: string; med
         }
         case 'button':
             return { text: msg.button?.text?.trim() ?? msg.button?.payload?.trim() ?? '' };
+        case 'reaction':
+            // Meta invia le reaction come evento dedicato: non generare risposta VERA.
+            return { text: '[reaction]' };
         default:
             return { text: msg.type ? `[${msg.type}]` : '' };
     }
@@ -275,6 +279,12 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
         userType: updatedSession.userType,
         escalated: veraResult.shouldEscalate,
     }).catch((err) => console.warn('[staff-push] notify failed:', err));
+
+    // Reaction / cortesia post-congedo: registra inbound ma non risponde (niente loop).
+    if (veraResult.source === 'silence' || !veraResult.text.trim()) {
+        console.info(`[wa-webhook] VERA silenzio per ${phoneE164} (source: ${veraResult.source})`);
+        return { ok: true, source: veraResult.source, escalated: false, sent: false, skipped: 'silence' };
+    }
 
     const sendResult = await sendWhatsAppTextMessage(phoneE164, veraResult.text);
 

@@ -15,7 +15,7 @@ export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = 92;
  * Allinea anteprima dashboard al messaggio reale WhatsApp.
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
-La ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}. {{3}} Ci stringiamo al Suo pensiero e seguiremo ogni passo con la massima cura.
+La ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}. {{3}} Seguiremo ogni passo con cura.
 Restiamo a sua disposizione. FloreMoria Staff 🌹`;
 
 function stripWarmLead(raw: string): string {
@@ -23,6 +23,7 @@ function stripWarmLead(raw: string): string {
         .replace(/[\r\n\t]+/g, ' ')
         .replace(/\s{2,}/g, ' ')
         .replace(/^(gentile|egregi[oa]|caro|carissim[oa]|buongiorno|buonasera)\s+[^,.!?]+[,!]?\s*/i, '')
+        .replace(/\bci\s+invieremo\b/gi, 'Le invieremo')
         .replace(/scriva\s+ok.*$/i, '')
         .replace(/rispond(a|ere)\s+ok.*$/i, '')
         .trim();
@@ -37,7 +38,7 @@ export function composeCustomerConfirmSlot3(warmLead?: string | null): string {
 
     let lead =
         stripWarmLead(warmLead || '') ||
-        'Ci invieremo la foto della posa appena completata';
+        'Le invieremo la foto della posa appena completata';
 
     if (lead.length > maxLeadLen) {
         let cut = lead.slice(0, maxLeadLen);

@@ -26,7 +26,7 @@ export async function generateWarmOrderThought(input: {
 Contesto: conferma ordine floreale funebre per il ricordo di ${deceased}.
 Tono: garbo, lutto, rassicurazione sulla cura e sulla foto prova a consegna avvenuta.
 Niente prezzi, link o codici ordine. Non iniziare con "Caro/Gentile".
-Esempio: "Ci invieremo la foto della posa appena completata."`;
+Esempio: "Le invieremo la foto della posa appena completata."`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 

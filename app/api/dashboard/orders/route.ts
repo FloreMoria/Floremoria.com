@@ -4,6 +4,7 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
 import { runVeraAfterDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 export const maxDuration = 120;
 
@@ -68,6 +69,14 @@ export async function POST(request: Request) {
         } catch (veraError) {
             console.error('[dashboard/orders POST] VERA workflow:', veraError);
             vera = { skipped: 'workflow_error' };
+        }
+
+        // Punto B cliente: solo se l'ordine nasce già "In Lavorazione".
+        // Su ACCEPTED/Ricevuto non parte nulla verso il cliente.
+        if (order.status === 'IN_PROGRESS') {
+            void onOrderStatusChanged(order.id, 'IN_PROGRESS').catch((err) => {
+                console.error('[dashboard/orders POST] onOrderStatusChanged IN_PROGRESS:', err);
+            });
         }
 
         return NextResponse.json({ ok: true, order, vera });

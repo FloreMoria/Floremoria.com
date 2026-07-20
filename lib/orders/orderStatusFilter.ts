@@ -9,6 +9,9 @@ import { GOOGLE_REVIEW_URL } from '@/lib/whatsapp/veraTemplateRegistry';
 /**
  * Filtro di Sicurezza WhatsApp per la gestione dei flussi e delle notifiche degli ordini.
  * Intercetta le transizioni di stato (manuali da dashboard o automatiche).
+ *
+ * Regola Punto B: il template customer_order_confirm parte SOLO su IN_PROGRESS
+ * ("In Lavorazione"), mai su ACCEPTED/creazione ordine/pagamento.
  */
 export async function onOrderStatusChanged(orderId: string, nextStatus: string): Promise<void> {
     console.info(`[order-status-filter] Stato dell'ordine ${orderId} cambiato in: ${nextStatus}`);
@@ -38,8 +41,8 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
                 if (phoneE164) {
                     const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
                     
-                    // Messaggio di ringraziamento
-                    const thanksText = `Gentile ${name || 'Cliente'},\nTi ringraziamo di cuore per aver scelto FloreMoria. È stato un onore prenderci cura del ricordo dei Tuoi cari. Restiamo sempre a Tua disposizione. 🌹`;
+                    // Messaggio di ringraziamento (tono asciutto)
+                    const thanksText = `Gentile ${name || 'Cliente'},\nLa ringraziamo per aver scelto FloreMoria. Se serve altro, siamo qui. 🌹`;
                     await sendWhatsAppTextMessage(phoneE164, thanksText).catch((err) => {
                         console.error('[order-status-filter] Errore invio ringraziamento:', err);
                     });

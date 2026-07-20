@@ -1,8 +1,9 @@
 /**
- * Notifica WhatsApp post-ordine — template Meta `floremoria_conferma_ordine_utente` (Punto B).
- * Invocata alla prima transizione a pagato (webhook Stripe). Set-and-Forget.
+ * Notifica WhatsApp post-ordine.
+ * La conferma presa in carico (Punto B / customer_order_confirm) NON parte al pagamento
+ * né alla creazione manuale: solo quando lo stato passa a IN_PROGRESS
+ * (vedi orderStatusFilter.onOrderStatusChanged).
  */
-import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { isMetaCloudConfigured } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface OrderWelcomeInput {
@@ -27,16 +28,16 @@ export function renderOrderWelcomeText(name: string, deceased: string): string {
     return `Gentile ${safeName}, la ringraziamo per aver scelto di affidare a FloreMoria il ricordo di ${safeDeceased}. Da questo momento, ci prendiamo cura noi di ogni dettaglio con la massima dedizione.\nRiceverà la testimonianza fotografica non appena i fiori saranno posati.\nRestiamo a sua completa disposizione,\nLo Staff di FloreMoria 🌹`;
 }
 
+/**
+ * @deprecated Il welcome cliente (Punto B) è spostato su IN_PROGRESS.
+ * Mantenuto come no-op per compatibilità chiamanti legacy.
+ */
 export async function sendOrderWelcomeWhatsApp(order: OrderWelcomeInput): Promise<OrderWelcomeResult> {
     if (!isMetaCloudConfigured()) {
-        console.warn('[order-welcome] Meta Cloud API non configurata: Punto B saltato.');
         return { ok: false, skipped: 'meta_not_configured', channel: 'skipped' };
     }
-
-    const result = await runPuntoBCustomerOrderConfirm(order.id);
-    if (!result.ok) {
-        return { ok: false, skipped: result.error ?? result.skipped, channel: 'skipped' };
-    }
-
-    return { ok: true, channel: 'meta_template' };
+    console.info(
+        `[order-welcome] Punto B non inviato al pagamento (ordine ${order.orderNumber || order.id}): deferred fino a IN_PROGRESS`
+    );
+    return { ok: true, skipped: 'puntoB_deferred_until_IN_PROGRESS', channel: 'skipped' };
 }

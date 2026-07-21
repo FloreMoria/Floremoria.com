@@ -17,7 +17,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
-import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 import { runFloristDeliveryAutomation } from '@/lib/deliveryProof/runFloristDeliveryAutomation';
@@ -286,7 +287,11 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
         return { ok: true, source: veraResult.source, escalated: false, sent: false, skipped: 'silence' };
     }
 
-    const sendResult = await sendWhatsAppTextMessage(phoneE164, veraResult.text);
+    const sendResult = await sendWhatsAppMessage(phoneE164, veraResult.text, {
+        recipientName: senderName,
+        sessionPhone: phoneKey,
+        source: veraResult.source,
+    });
 
     if (!sendResult.ok) {
         console.error(

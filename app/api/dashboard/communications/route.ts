@@ -6,7 +6,7 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates } from '@/lib/whatsapp/approvedTemplates';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
-import { sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 
@@ -181,7 +181,12 @@ export async function POST(req: Request) {
                 );
             }
 
-            const sendResult = await sendWhatsAppTextMessage(phone, messageText.trim());
+            const sendResult = await sendWhatsAppMessage(phone, messageText.trim(), {
+                recipientName: session.name,
+                sessionPhone: phone,
+                source: 'operator',
+            });
+
             if (!sendResult.ok) {
                 return NextResponse.json(
                     {
@@ -193,17 +198,13 @@ export async function POST(req: Request) {
                 );
             }
 
-            const updatedSession = await addMessage(phone, 'OUTBOUND', messageText.trim(), undefined, {
-                source: 'operator',
-                outboundMode: 'freetext',
-                ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
-            });
+            const updatedSession = await getSession(phone);
 
             if (testModeActive) {
                 await markChatSessionAsTest(phone);
             }
 
-            return NextResponse.json({ success: true, session: updatedSession });
+            return NextResponse.json({ success: true, session: updatedSession, fallbackExecuted: sendResult.fallbackExecuted });
         }
 
         return NextResponse.json({ success: false, error: 'Azione non riconosciuta.' }, { status: 400 });

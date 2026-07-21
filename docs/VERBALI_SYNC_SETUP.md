@@ -95,10 +95,10 @@ Aggiungi a `.env.local`:
 GOOGLE_DRIVE_VERBALI_DIR="/Users/floremoria/Google Drive/Il mio Drive/FloreMoria - Verbali"
 ```
 
-### Convenzione file in Ingresso-Barbara
+### Convenzione file in Ingresso-Barbara (Standard Barbara)
 
-- `YYYY-MM-DD-Verbale-Giornaliero.md` (preferito)
-- oppure `YYYY-MM-DD.md`
+- **`DD-MM-YYYY.md`** (es. `20-07-2026.md` — **Standard principale uffizioso per Barbara**)
+- Supportati in fallback: `YYYY-MM-DD.md` o `YYYY-MM-DD-Verbale-Giornaliero.md`
 
 I Google Doc nativi (`.gdoc`) **non** sono markdown: esporta da Docs → **File → Scarica → Markdown** nella cartella sincronizzata, oppure usa Antigravity/Second Brain che già produce `.md`.
 

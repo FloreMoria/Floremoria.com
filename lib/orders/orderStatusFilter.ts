@@ -19,14 +19,24 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
 
     try {
         if (nextStatus === 'IN_PROGRESS') {
-            // Cascata 4 template al fiorista (differita se fuori fascia oraria).
-            await notifyFloristDeliveryLinkForOrder(orderId).catch((err) => {
+            // Cascata fiorista (claim atomico + dedup per template).
+            const floristResult = await notifyFloristDeliveryLinkForOrder(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in notifyFloristDeliveryLinkForOrder (Punto A):', err);
+                return null;
+            });
+            console.info('[order-status-filter] Punto A risultato', {
+                orderId,
+                result: floristResult,
             });
 
-            // Conferma presa in carico al cliente (mai force: evita doppio benvenuto).
-            await runPuntoBCustomerOrderConfirm(orderId).catch((err) => {
+            // Conferma cliente: MAI force. Claim atomico + dedup chat bloccano ogni reinvio.
+            const customerResult = await runPuntoBCustomerOrderConfirm(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in runPuntoBCustomerOrderConfirm:', err);
+                return null;
+            });
+            console.info('[order-status-filter] Punto B risultato', {
+                orderId,
+                result: customerResult,
             });
         } else if (nextStatus === 'DELIVERING') {
             // "In Consegna": Inviare messaggio con le foto ed il MagikLink per la consegna effettuata (Template di Meta).

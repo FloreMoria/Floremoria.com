@@ -12,6 +12,10 @@ import {
 } from '@/lib/vera/orderWorkflow/firstOrderDetection';
 import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 import {
+    releaseWorkflowStep,
+    tryClaimWorkflowStep,
+} from '@/lib/vera/orderWorkflow/claimWorkflowStep';
+import {
     isWorkflowStepDone,
     markWorkflowStep,
     parseWorkflowFlags,
@@ -194,12 +198,37 @@ export async function runPuntoAFloristNewOrder(
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
     if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
-        return { ok: true, skipped: 'already_sent' };
+        // Claim orfano: flag presente ma nessun template in chat → sblocca e riprova.
+        const anyFloristTpl = await wasOrderTemplateSent(
+            order.id,
+            'florist_first_001',
+            order.orderNumber
+        );
+        if (anyFloristTpl) {
+            return { ok: true, skipped: 'already_sent' };
+        }
+        console.warn(
+            `[vera-workflow] Punto A claim orfano senza template in chat — rilascio ordine ${order.orderNumber || order.id}`
+        );
+        await releaseWorkflowStep(order.id, 'puntoA_florist');
+    }
+
+    // Claim atomico: evita due cascate parallele sullo stesso ordine.
+    let claimed = true;
+    if (!options.force) {
+        claimed = await tryClaimWorkflowStep(order.id, 'puntoA_florist');
+        if (!claimed) {
+            console.info(
+                `[vera-workflow] Punto A BLOCCATO claim (già preso) ordine ${order.orderNumber || order.id}`
+            );
+            return { ok: true, skipped: 'already_sent' };
+        }
     }
 
     const floristPhoneRaw = order.partner.whatsappNumber.trim();
     const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
     if (!floristPhoneE164) {
+        if (!options.force && claimed) await releaseWorkflowStep(order.id, 'puntoA_florist');
         console.warn('[vera-workflow] Punto A saltato: telefono fiorista non valido', {
             orderId: order.id,
             orderNumber: order.orderNumber,
@@ -295,6 +324,9 @@ export async function runPuntoAFloristNewOrder(
     });
 
     if (!cascadeResult.ok) {
+        if (!options.force && claimed) {
+            await releaseWorkflowStep(order.id, 'puntoA_florist');
+        }
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'punto_a_send_failed',
@@ -305,9 +337,24 @@ export async function runPuntoAFloristNewOrder(
         return cascadeResult;
     }
 
-    const nextFlags = markWorkflowStep(flags, 'puntoA_florist');
-    delete nextFlags.puntoA_florist_deferred;
-    await updateWorkflowFlags(order.id, nextFlags);
+    // Claim già scritto; con force marca comunque.
+    if (options.force) {
+        const nextFlags = markWorkflowStep(flags, 'puntoA_florist');
+        delete nextFlags.puntoA_florist_deferred;
+        await updateWorkflowFlags(order.id, nextFlags);
+    } else {
+        const current = parseWorkflowFlags(
+            (
+                await prisma.order.findUnique({
+                    where: { id: order.id },
+                    select: { veraWorkflowFlags: true },
+                })
+            )?.veraWorkflowFlags
+        );
+        const nextFlags = { ...current };
+        delete nextFlags.puntoA_florist_deferred;
+        await updateWorkflowFlags(order.id, nextFlags);
+    }
     console.info(
         `[vera-workflow] Punto A OK ordine ${orderCode} first=${isFirst} sent=${cascadeResult.sentCount ?? 0} dup=${cascadeResult.skippedDuplicates ?? 0}`
     );

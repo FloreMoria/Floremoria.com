@@ -443,30 +443,39 @@ export async function generateVeraReply(
             if (acceptedOrder) {
                 const AFFIRMATIVE_PATTERN = /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
                 if (AFFIRMATIVE_PATTERN.test(message.trim())) {
-                    // Transizione 1: PREME "In Lavorazione" (IN_PROGRESS)
+                    // Fiorista conferma → In Lavorazione. Solo Punto A (claim/dedup proteggono il cliente).
                     await import('@/lib/prisma').then((m) =>
                         m.default.order.update({
                             where: { id: acceptedOrder.id },
                             data: { status: 'IN_PROGRESS' },
                         })
                     );
-                    await onOrderStatusChanged(acceptedOrder.id, 'IN_PROGRESS');
 
-                    // Transizione 2: PREME "In Attesa" (PENDING) e attende
-                    await import('@/lib/prisma').then((m) =>
-                        m.default.order.update({
-                            where: { id: acceptedOrder.id },
-                            data: { status: 'PENDING' },
-                        })
+                    const { notifyFloristDeliveryLinkForOrder } = await import(
+                        '@/lib/orders/notifyFloristDeliveryLink'
                     );
-                    await onOrderStatusChanged(acceptedOrder.id, 'PENDING');
+                    const floristNotify = await notifyFloristDeliveryLinkForOrder(acceptedOrder.id).catch(
+                        (err) => {
+                            console.error('[vera-ai] Punto A dopo conferma fiorista fallito:', err);
+                            return { ok: false as const, error: String(err) };
+                        }
+                    );
 
-                    // Risponde al fiorista con il link univoco alla mini-app
                     const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
                     const { extractFirstName } = await import('@/lib/whatsapp/proactiveTemplateParams');
-                    
-                    const deliveryUrl = buildFloristDeliveryUrl({ id: acceptedOrder.id, orderNumber: acceptedOrder.orderNumber });
+                    const deliveryUrl = buildFloristDeliveryUrl({
+                        id: acceptedOrder.id,
+                        orderNumber: acceptedOrder.orderNumber,
+                    });
                     const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
+
+                    if (floristNotify.ok && !('skipped' in floristNotify && floristNotify.skipped)) {
+                        return {
+                            text: `Perfetto ${floristFirstName}, incarico confermato. Ti ho inviato i dettagli operativi su WhatsApp.`,
+                            source: 'deterministic',
+                            shouldEscalate: false,
+                        };
+                    }
 
                     const reply = `Perfetto ${floristFirstName}, incarico confermato! Ecco il link della mini-app per effettuare le foto prima e dopo la posa: ${deliveryUrl}\n\nBuon lavoro!`;
                     return { text: reply, source: 'deterministic', shouldEscalate: false };

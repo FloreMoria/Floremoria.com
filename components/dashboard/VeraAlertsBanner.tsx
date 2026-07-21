@@ -39,12 +39,12 @@ function orderLabel(alert: VeraOperationalAlert): string {
 }
 
 const CRITICAL_TYPES = new Set<VeraAlertType>([
-    'grave_position_missing',
     'workflow_blocked',
     'florist_whatsapp_missing',
     'punto_a_send_failed',
 ]);
 const OPERATIONAL_TYPES = new Set<VeraAlertType>([
+    'grave_position_missing',
     'tomb_not_found',
     'cemetery_closed',
     'user_modification_request',
@@ -162,9 +162,14 @@ export default function VeraAlertsBanner({
                                     <div>
                                         <p className="font-semibold text-red-950 text-sm">
                                             ⚠️ ATTENZIONE: Ordine{' '}
-                                            <span className="font-mono">{orderLabel(alert)}</span> bloccato —
-                                            Mancano le indicazioni di consegna
+                                            <span className="font-mono">{orderLabel(alert)}</span>
+                                            {alert.veraAlertType === 'grave_position_missing'
+                                                ? ' — Mancano le indicazioni di consegna'
+                                                : ' — Workflow VERA da verificare'}
                                         </p>
+                                        {alert.veraAlertMessage ? (
+                                            <p className="text-red-800/90 text-xs mt-1">{alert.veraAlertMessage}</p>
+                                        ) : null}
                                         <p className="text-red-800/90 text-xs mt-1">
                                             {alert.deceasedName}
                                             {alert.partner?.shopName

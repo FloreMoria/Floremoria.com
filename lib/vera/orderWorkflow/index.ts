@@ -52,11 +52,35 @@ export async function runVeraPostPaymentWorkflowWithResults(
 }
 
 /**
- * Re-trigger Punto A quando operatore completa gravePosition in dashboard
- * (rispetta fascia oraria 8:30–19:30 salvo force).
+ * Re-trigger Punto A dopo inserimento posizione tomba / sblocco alert.
+ * Force + bypass fascia: l'operatore ha appena agito in dashboard.
  */
 export async function retryPuntoAIfBlocked(orderId: string): Promise<void> {
-    await notifyFloristDeliveryLinkForOrder(orderId).catch((e) => {
+    const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+    const { releaseWorkflowStep } = await import('@/lib/vera/orderWorkflow/claimWorkflowStep');
+    const { wasOrderTemplateSent } = await import('@/lib/vera/orderWorkflow/orderOutboundDedup');
+    const prisma = (await import('@/lib/prisma')).default;
+
+    const order = await prisma.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        select: { id: true, orderNumber: true, veraWorkflowFlags: true, veraAlertType: true },
+    });
+    if (!order) return;
+
+    // Se il claim c'è ma nessun template in chat → orfano: rilascia.
+    const anySent = await wasOrderTemplateSent(order.id, 'florist_first_001', order.orderNumber);
+    if (!anySent) {
+        await releaseWorkflowStep(order.id, 'puntoA_florist').catch(() => undefined);
+    }
+
+    if (order.veraAlertType === 'grave_position_missing' || order.veraAlertType === 'punto_a_send_failed') {
+        await clearVeraOperationalAlert(order.id).catch(() => undefined);
+    }
+
+    await notifyFloristDeliveryLinkForOrder(orderId, {
+        force: !anySent,
+        bypassWindow: true,
+    }).catch((e) => {
         console.error('[vera-workflow] Retry Punto A fallito:', e);
     });
 }

@@ -32,6 +32,7 @@ async function markPuntoADeferred(orderId: string, flags: VeraWorkflowFlags): Pr
 /**
  * Notifica fiorista — cascata Punto A (4 template sul primo ordine).
  * Parte solo se chiamato dal passaggio a IN_PROGRESS; fuori fascia 8:30–19:30 viene differito.
+ * Il controllo already_sent/orfano è in runPuntoAFloristNewOrder (non qui).
  */
 export async function notifyFloristDeliveryLinkForOrder(
     orderId: string,
@@ -54,19 +55,19 @@ export async function notifyFloristDeliveryLinkForOrder(
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-    if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
-        return { ok: true, skipped: 'already_sent' };
-    }
 
     // Fuori fascia: non inviare ora; il cron flusha quando rientra 8:30–19:30.
     if (!options.force && !options.bypassWindow && !isWithinFloristNotifyWindow()) {
-        await markPuntoADeferred(order.id, flags).catch((err) => {
-            console.error('[vera-workflow] Impossibile marcare Punto A differito:', err);
-        });
-        console.info(
-            `[vera-workflow] Punto A differito (fuori fascia 8:30–19:30 Europe/Rome) ordine ${order.id}`
-        );
-        return { ok: true, deferred: true, skipped: 'outside_notify_window' };
+        // Solo se non già completato con template reali — altrimenti non differire.
+        if (!isWorkflowStepDone(flags, 'puntoA_florist')) {
+            await markPuntoADeferred(order.id, flags).catch((err) => {
+                console.error('[vera-workflow] Impossibile marcare Punto A differito:', err);
+            });
+            console.info(
+                `[vera-workflow] Punto A differito (fuori fascia 8:30–19:30 Europe/Rome) ordine ${order.id}`
+            );
+            return { ok: true, deferred: true, skipped: 'outside_notify_window' };
+        }
     }
 
     const result = await runPuntoAFloristNewOrder(orderId, { force: options.force });
@@ -82,5 +83,10 @@ export async function notifyFloristDeliveryLinkForOrder(
         return { ok: false, error: result.error, skipped: result.skipped };
     }
 
-    return { ok: true, isFirstOrder: result.isFirstOrder, channel: 'vera_meta_template' };
+    return {
+        ok: true,
+        isFirstOrder: result.isFirstOrder,
+        channel: 'vera_meta_template',
+        skipped: result.skipped,
+    };
 }

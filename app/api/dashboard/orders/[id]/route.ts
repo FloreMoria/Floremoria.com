@@ -98,15 +98,21 @@ export async function PUT(request: Request, context: any) {
             });
         }
 
-        const graveFilled =
+        const nextGrave =
+            body.gravePosition !== undefined
+                ? String(body.gravePosition || '').trim()
+                : String(previousOrder?.gravePosition || '').trim();
+        const graveJustFilled =
             body.gravePosition !== undefined &&
-            String(body.gravePosition || '').trim() &&
+            Boolean(nextGrave) &&
             !String(previousOrder?.gravePosition || '').trim();
+        const gravePresentWithStaleAlert =
+            Boolean(nextGrave) &&
+            (previousOrder?.veraAlertType === 'grave_position_missing' ||
+                previousOrder?.veraAlertType === 'punto_a_send_failed');
 
-        if (
-            graveFilled &&
-            previousOrder?.veraAlertType === 'grave_position_missing'
-        ) {
+        // Sblocca e reinizia Punto A se la posizione c'è (anche se era già compilata).
+        if (graveJustFilled || gravePresentWithStaleAlert) {
             void clearVeraOperationalAlert(id)
                 .then(() => retryPuntoAIfBlocked(id))
                 .catch((err) => {

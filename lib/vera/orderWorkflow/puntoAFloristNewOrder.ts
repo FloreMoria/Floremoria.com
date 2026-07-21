@@ -275,16 +275,26 @@ export async function runPuntoAFloristNewOrder(
         (await detectIsFirstOrderForPartner(order.id, order.partnerId));
     await persistFirstOrderFlag(order.id, isFirst);
 
-    // Tomba mancante: alert staff ma NON bloccare la cascata (usa "Indicazioni in app").
+    // Tomba mancante: solo avviso soft (non blocca). Si cancella se poi arriva la posizione.
     if (isFirst && !gravePosition && !/casa funeraria|chiesa/i.test(cemeteryLabel)) {
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'grave_position_missing',
             message:
                 'Indicazioni tomba mancanti sull’ordine: cascata fiorista inviata con “Indicazioni in app”. Completare la posizione in dashboard.',
-            priority: 'urgent',
+            priority: 'high',
             freezeOrder: false,
         }).catch(() => undefined);
+    } else if (gravePosition) {
+        // Posizione presente: non lasciare alert stale "tomba mancante".
+        const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+        const fresh = await prisma.order.findUnique({
+            where: { id: order.id },
+            select: { veraAlertType: true },
+        });
+        if (fresh?.veraAlertType === 'grave_position_missing') {
+            await clearVeraOperationalAlert(order.id).catch(() => undefined);
+        }
     }
 
     const lumino = hasLuminoOption(order.items);
@@ -322,6 +332,63 @@ export async function runPuntoAFloristNewOrder(
         force: options.force,
         steps,
     });
+
+    // Meta #132001: template ft_* assenti sul WABA → fallback template unico florist_repeat.
+    if (
+        !cascadeResult.ok &&
+        /132001|does not exist in the translation|template name does not exist/i.test(
+            cascadeResult.error || ''
+        )
+    ) {
+        console.warn(
+            `[vera-workflow] Cascata ft_* non disponibile su Meta (${cascadeResult.error}). Fallback florist_repeat ordine ${orderCode}`
+        );
+        const fallback = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', [
+            floristName,
+            formattedDeceased,
+            formattedLocation,
+            formattedDeliveryUrl,
+            formattedOrderCode,
+            formattedCompensation,
+        ]);
+        if (fallback.ok) {
+            await logFloristTemplateToDashboard({
+                phoneE164: floristPhoneE164,
+                templateId: 'florist_repeat',
+                bodyParams: [
+                    floristName,
+                    formattedDeceased,
+                    formattedLocation,
+                    formattedDeliveryUrl,
+                    formattedOrderCode,
+                    formattedCompensation,
+                ],
+                orderId: order.id,
+                orderNumber: orderCode,
+                floristName,
+                messageId: fallback.messageId,
+            });
+            // Successo fallback: allinea flags e pulisci alert template.
+            const nextFlags = markWorkflowStep(
+                parseWorkflowFlags(
+                    (
+                        await prisma.order.findUnique({
+                            where: { id: order.id },
+                            select: { veraWorkflowFlags: true },
+                        })
+                    )?.veraWorkflowFlags
+                ),
+                'puntoA_florist'
+            );
+            delete nextFlags.puntoA_florist_deferred;
+            await updateWorkflowFlags(order.id, nextFlags);
+            const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+            await clearVeraOperationalAlert(order.id).catch(() => undefined);
+            console.info(`[vera-workflow] Punto A OK via florist_repeat ordine ${orderCode}`);
+            return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
+        }
+        cascadeResult.error = `Template Meta ft_001–004 e florist_repeat non disponibili (#132001). Creare/approvare i template su Meta Business Manager. Dettaglio: ${fallback.error || cascadeResult.error}`;
+    }
 
     if (!cascadeResult.ok) {
         if (!options.force && claimed) {

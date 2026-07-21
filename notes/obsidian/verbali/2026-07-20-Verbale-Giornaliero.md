@@ -1,13 +1,12 @@
 ---
 date: 2026-07-20
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
-sync_sources: ["git:24h", "prisma:operativita"]
-synced_at: 2026-07-21T01:30:03.846Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+tipo: verbale_sviluppo
+tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sync_source: docs/verbali/20-07-2026.md
+synced_at: 2026-07-21T06:22:00.128Z
 ---
 
-> Pipeline automatica — fonti: git:24h · prisma:operativita.
+> Copia sincronizzata automaticamente da `docs/verbali/20-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Verbale Operativo FloreMoria — 20 Luglio 2026
 

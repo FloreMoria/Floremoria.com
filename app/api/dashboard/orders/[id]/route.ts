@@ -91,9 +91,13 @@ export async function PUT(request: Request, context: any) {
 
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
 
-        // Punto A (fiorista, fascia 8:30–19:30) + Punto B (cliente) su IN_PROGRESS.
-        if (nextStatus && nextStatus !== previousOrder?.status) {
-            void onOrderStatusChanged(id, nextStatus).catch((err) => {
+        const partnerAssignedOrChanged =
+            body.partnerId !== undefined && body.partnerId !== previousOrder?.partnerId;
+        const statusChanged = nextStatus && nextStatus !== previousOrder?.status;
+
+        // Scatena notifiche fiorista (Punto A) e cliente (Punto B) al cambio stato o assegnazione fiorista
+        if (statusChanged || partnerAssignedOrChanged || updatedOrder.partnerId) {
+            void onOrderStatusChanged(id, nextStatus || 'IN_PROGRESS').catch((err) => {
                 console.error('[orders-put] Errore chiamata onOrderStatusChanged:', err);
             });
         }

@@ -44,6 +44,7 @@ export async function notifyFloristDeliveryLinkForOrder(
             id: true,
             status: true,
             partnerId: true,
+            isTest: true,
             veraWorkflowFlags: true,
             partner: { select: { deletedAt: true } },
         },
@@ -57,7 +58,9 @@ export async function notifyFloristDeliveryLinkForOrder(
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
 
     // Fuori fascia: non inviare ora; il cron flusha quando rientra 8:30–19:30.
-    if (!options.force && !options.bypassWindow && !isWithinFloristNotifyWindow()) {
+    // Gli ordini Sandbox / Test Mode (isTest = true) ignorano il blocco d'orario per consentire i test in qualunque momento.
+    const shouldBypassWindow = options.bypassWindow || order.isTest;
+    if (!options.force && !shouldBypassWindow && !isWithinFloristNotifyWindow()) {
         // Solo se non già completato con template reali — altrimenti non differire.
         if (!isWorkflowStepDone(flags, 'puntoA_florist')) {
             await markPuntoADeferred(order.id, flags).catch((err) => {

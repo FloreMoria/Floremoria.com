@@ -15,8 +15,9 @@ export type DashboardManualOrderVeraResult =
 export async function runVeraAfterDashboardManualOrder(input: {
     orderId: string;
     partnerPaymentStatus: string;
+    isTest?: boolean;
 }): Promise<DashboardManualOrderVeraResult> {
-    if (input.partnerPaymentStatus !== PaymentStatus.PAID) {
+    if (input.partnerPaymentStatus !== PaymentStatus.PAID && !input.isTest) {
         return { skipped: 'not_paid' };
     }
 

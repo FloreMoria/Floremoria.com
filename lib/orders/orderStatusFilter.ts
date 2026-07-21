@@ -18,7 +18,7 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
     console.info(`[order-status-filter] Stato dell'ordine ${orderId} cambiato in: ${nextStatus}`);
 
     try {
-        if (nextStatus === 'IN_PROGRESS') {
+        if (nextStatus === 'IN_PROGRESS' || nextStatus === 'ACCEPTED' || nextStatus === 'PENDING') {
             // Cascata fiorista (claim atomico + dedup per template).
             const floristResult = await notifyFloristDeliveryLinkForOrder(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in notifyFloristDeliveryLinkForOrder (Punto A):', err);

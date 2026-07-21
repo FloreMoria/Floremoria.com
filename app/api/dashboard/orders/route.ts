@@ -65,17 +65,17 @@ export async function POST(request: Request) {
             vera = await runVeraAfterDashboardManualOrder({
                 orderId: order.id,
                 partnerPaymentStatus: order.partnerPaymentStatus,
+                isTest: order.isTest,
             });
         } catch (veraError) {
             console.error('[dashboard/orders POST] VERA workflow:', veraError);
             vera = { skipped: 'workflow_error' };
         }
 
-        // Punto B cliente: solo se l'ordine nasce già "In Lavorazione".
-        // Su ACCEPTED/Ricevuto non parte nulla verso il cliente.
-        if (order.status === 'IN_PROGRESS') {
-            void onOrderStatusChanged(order.id, 'IN_PROGRESS').catch((err) => {
-                console.error('[dashboard/orders POST] onOrderStatusChanged IN_PROGRESS:', err);
+        // Notifica automatica fiorista (Punto A) e cliente (Punto B) se l'ordine ha fiorista o è in lavorazione
+        if (order.partnerId || order.status === 'IN_PROGRESS' || order.status === 'ACCEPTED') {
+            void onOrderStatusChanged(order.id, order.status || 'IN_PROGRESS').catch((err) => {
+                console.error('[dashboard/orders POST] onOrderStatusChanged:', err);
             });
         }
 

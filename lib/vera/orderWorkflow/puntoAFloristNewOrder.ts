@@ -1,9 +1,13 @@
 import prisma from '@/lib/prisma';
 import { calculateFloristCompensation, formatFloristCompensationForTemplate } from '@/lib/pricing/calculateFloristCompensation';
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
+import { buildFloristNewOrderWhatsAppText } from '@/lib/orders/floristDeliveryLinkMessage';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
+import { addMessage, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
+import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import {
@@ -297,9 +301,84 @@ export async function runPuntoAFloristNewOrder(
         }
     }
 
+    const messageText = buildFloristNewOrderWhatsAppText({
+        floristFirstName: floristName,
+        orderCode,
+        city: order.cemeteryCity,
+        deceasedName: order.deceasedName,
+        cemeteryName: order.cemeteryName,
+        cemeteryCity: order.cemeteryCity,
+        gravePosition: order.gravePosition,
+        ticketMessage: order.ticketMessage,
+        additionalInstructions: order.additionalInstructions,
+        items: order.items,
+        deliveryUrl,
+        orderId: order.id,
+    });
+
+    // Percorso primario: messaggio strutturato (prodotto dinamico + link mini-app).
+    // Se la finestra 24h è chiusa, sendWhatsAppMessage usa il template proattivo come fallback.
+    const freeTextSend = await sendWhatsAppMessage(floristPhoneE164, messageText, {
+        recipientName: floristName,
+        orderCode,
+        userType: 'FLORIST',
+        source: 'puntoA_florist_new_order',
+    });
+
+    if (freeTextSend.ok) {
+        const sessionPhone = `whatsapp:${floristPhoneE164}`;
+        try {
+            await updateSessionProfile(sessionPhone, {
+                name: floristName,
+                initials: buildContactInitials(floristName),
+                userType: 'FLORIST',
+                status: 'AI_ACTIVE',
+                welcomeSent: true,
+            });
+            if (!freeTextSend.fallbackExecuted) {
+                await addMessage(sessionPhone, 'OUTBOUND', messageText, undefined, {
+                    eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+                    outboundMode: 'free_text',
+                    orderId: order.id,
+                    orderNumber: orderCode,
+                    ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
+                });
+            }
+            if (order.isTest) {
+                await markChatSessionAsTest(sessionPhone);
+            }
+        } catch (logErr) {
+            console.error('[vera-workflow] Punto A inviato ma sessione dashboard non registrata:', logErr);
+        }
+
+        const nextFlags = markWorkflowStep(
+            parseWorkflowFlags(
+                (
+                    await prisma.order.findUnique({
+                        where: { id: order.id },
+                        select: { veraWorkflowFlags: true },
+                    })
+                )?.veraWorkflowFlags
+            ),
+            'puntoA_florist'
+        );
+        delete nextFlags.puntoA_florist_deferred;
+        await updateWorkflowFlags(order.id, nextFlags);
+        const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+        await clearVeraOperationalAlert(order.id).catch(() => undefined);
+        console.info(
+            `[vera-workflow] Punto A OK (messaggio strutturato${freeTextSend.fallbackExecuted ? '+fallback24h' : ''}) ordine ${orderCode}`
+        );
+        return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
+    }
+
+    console.warn(
+        `[vera-workflow] Messaggio strutturato fallito (${freeTextSend.error}). Fallback cascata Meta ordine ${orderCode}`
+    );
+
     const lumino = hasLuminoOption(order.items);
     const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
-    const ticketText = order.ticketMessage?.trim() || '—';
+    const ticketText = order.ticketMessage?.trim() || 'Nessuno';
 
     const steps: FloristCascadeStep[] = isFirst
         ? [
@@ -368,7 +447,6 @@ export async function runPuntoAFloristNewOrder(
                 floristName,
                 messageId: fallback.messageId,
             });
-            // Successo fallback: allinea flags e pulisci alert template.
             const nextFlags = markWorkflowStep(
                 parseWorkflowFlags(
                     (
@@ -387,7 +465,7 @@ export async function runPuntoAFloristNewOrder(
             console.info(`[vera-workflow] Punto A OK via florist_repeat ordine ${orderCode}`);
             return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
         }
-        cascadeResult.error = `Template Meta ft_001–004 e florist_repeat non disponibili (#132001). Creare/approvare i template su Meta Business Manager. Dettaglio: ${fallback.error || cascadeResult.error}`;
+        cascadeResult.error = `Messaggio strutturato e template Meta non disponibili. Dettaglio free-text: ${freeTextSend.error}; Meta: ${fallback.error || cascadeResult.error}`;
     }
 
     if (!cascadeResult.ok) {
@@ -397,14 +475,13 @@ export async function runPuntoAFloristNewOrder(
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'punto_a_send_failed',
-            message: `Punto A fallito per ordine ${orderCode}: ${cascadeResult.error || 'errore Meta'}.`,
+            message: `Punto A fallito per ordine ${orderCode}: ${cascadeResult.error || freeTextSend.error || 'errore Meta'}.`,
             priority: 'urgent',
             freezeOrder: false,
         }).catch(() => undefined);
         return cascadeResult;
     }
 
-    // Claim già scritto; con force marca comunque.
     if (options.force) {
         const nextFlags = markWorkflowStep(flags, 'puntoA_florist');
         delete nextFlags.puntoA_florist_deferred;

@@ -8,7 +8,8 @@ export type VeraAlertType =
     | 'workflow_blocked'
     | 'listino_missing'
     | 'florist_whatsapp_missing'
-    | 'punto_a_send_failed';
+    | 'punto_a_send_failed'
+    | 'economic_discrepancy';
 
 export type VeraAlertPriority = 'normal' | 'high' | 'urgent';
 

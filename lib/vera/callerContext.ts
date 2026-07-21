@@ -27,6 +27,8 @@ export interface VeraCallerContext {
     orderStatus: string | null;
     deceasedName: string | null;
     deliveryLocation: string | null;
+    /** Posizione tomba / indicazioni consegna sull'ordine. */
+    gravePosition?: string | null;
     proofStatus: string | null;
     buyerName?: string | null;
     partnerName?: string | null;
@@ -128,6 +130,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         orderStatus: order?.status ?? null,
         deceasedName: order?.deceasedName ?? null,
         deliveryLocation: order ? formatLocation(order.cemeteryCity, order.cemeteryName) : null,
+        gravePosition: order?.gravePosition?.trim() || null,
         proofStatus,
         buyerName: order?.buyerFullName ?? null,
         partnerName,
@@ -175,8 +178,12 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
                 : '',
             `- Defunto commemorato: ${ctx.deceasedName ?? 'Non in anagrafica'}`,
             `- Luogo di consegna (Cimitero/Città): ${ctx.deliveryLocation ?? 'Non specificato'}`,
+            ctx.gravePosition
+                ? `- Indicazioni tomba/consegna: ${ctx.gravePosition}`
+                : `- Indicazioni tomba/consegna: MANCANTI (se richieste: una sola presa in carico + escalation prioritaria Staff, senza loop)`,
             `- Data di consegna prevista: ${ctx.deliveryDate ?? 'Non specificata'}`,
-            ctx.proofStatus ? `- Stato prove di consegna: ${ctx.proofStatus}` : ''
+            ctx.proofStatus ? `- Stato prove di consegna: ${ctx.proofStatus}` : '',
+            'REGOLA DATI: rispondi solo con questi campi. Se un dato operativo manca, non inventarlo e non ripetere richieste di attesa: scala allo Staff con i pezzi già noti.'
         );
     } else {
         lines.push(

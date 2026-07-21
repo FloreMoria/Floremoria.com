@@ -412,3 +412,56 @@ export function finalizeVeraReplyText(text: string, userType: ChatSession['userT
     }
     return result.trim();
 }
+
+/**
+ * Contestazione prezzo/compenso/cifra (Regola Aurea).
+ * Perché: VERA non deve difendere il dato a sistema né litigare con la parola data.
+ */
+export function isEconomicDiscrepancyDispute(message: string): boolean {
+    const m = normalize(message);
+    const moneyTopic = hasAny(m, [
+        'compenso',
+        'prezzo',
+        'pagamento',
+        'pagarmi',
+        'mi pagate',
+        'cifra',
+        'importo',
+        'tariffa',
+        'euro',
+        '€',
+        'accordo economico',
+        'listino',
+    ]);
+    if (!moneyTopic) return false;
+    return hasAny(m, [
+        'sbagliat',
+        'non torna',
+        'non e',
+        'non è',
+        'doveva',
+        'avete detto',
+        'mi avevate',
+        'mi avevano',
+        'divers',
+        'errat',
+        'contest',
+        'non corretto',
+        'non corretto',
+        'non corrisponde',
+        'non coincide',
+        'troppo bass',
+        'troppo bass',
+        'meno di',
+        'di piu',
+        'di più',
+        'non mi torna',
+    ]);
+}
+
+export function buildEconomicDiscrepancyReply(userType: ChatSession['userType']): string {
+    if (userType === 'FLORIST') {
+        return 'Verifico subito l’accordo economico per questo servizio/ordine e ti do conferma istantanea.';
+    }
+    return 'Verifico subito l’accordo economico per questo servizio/ordine e Le do conferma istantanea.';
+}

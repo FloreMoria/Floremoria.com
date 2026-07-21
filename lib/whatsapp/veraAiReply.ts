@@ -7,7 +7,7 @@
  *  - Fuori finestra: regole deterministiche di fallback + Gemini se generico.
  *
  * Eccezioni operative prima di Gemini: escalation umana, eccezioni fiorista (tomba/chiusura),
- * modifica ordine, recensione Punto H, pre-acquisto Luciano.
+ * modifica ordine, discrepanze economiche (Regola Aurea), recensione Punto H, pre-acquisto Luciano.
  */
 
 import {
@@ -44,6 +44,7 @@ import type { ChatSession } from '@/lib/chatStore';
 import {
     buildAccessoryPriceReply,
     buildCemeteryCoverageReply,
+    buildEconomicDiscrepancyReply,
     buildFloristMiniAppSupportReply,
     buildInstantTransferPaymentReply,
     buildNewOrderLocationReply,
@@ -55,6 +56,7 @@ import {
     GEMINI_MAX_OUTPUT_TOKENS,
     isCemeteryCoverageQuestion,
     isConfusionMessage,
+    isEconomicDiscrepancyDispute,
     isInstantTransferPaymentRequest,
     isStandalonePhotoText,
     isWarmPraiseThanks,
@@ -527,6 +529,48 @@ export async function generateVeraReply(
                 };
             }
         }
+    }
+
+    // ── Regola Aurea: contestazione prezzo/compenso → staff, nessuna cifra definitiva ──
+    if (isEconomicDiscrepancyDispute(message)) {
+        const orderIdForAlert =
+            callerContext.mode === 'ordine_attivo' || callerContext.mode === 'fiorista'
+                ? (
+                      await import('@/lib/prisma').then(async (m) => {
+                          if (!callerContext.orderNumber) return null;
+                          const row = await m.default.order.findFirst({
+                              where: { orderNumber: callerContext.orderNumber, deletedAt: null },
+                              select: { id: true },
+                          });
+                          return row?.id ?? null;
+                      })
+                  )
+                : null;
+
+        if (orderIdForAlert) {
+            const { setVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+            await setVeraOperationalAlert({
+                orderId: orderIdForAlert,
+                type: 'economic_discrepancy',
+                message: `Contestazione economica WhatsApp (${session.userType}): "${message.slice(0, 240)}". Validare accordo prima di confermare cifre.`,
+                priority: 'urgent',
+                freezeOrder: false,
+            }).catch((err) => {
+                console.error('[vera-ai] Alert economic_discrepancy fallito:', err);
+            });
+        } else {
+            console.warn('[vera-ai] Contestazione economica senza ordine collegato — notifica solo log', {
+                userType: session.userType,
+                phone: callerContext.phoneE164,
+                preview: message.slice(0, 120),
+            });
+        }
+
+        return {
+            text: buildEconomicDiscrepancyReply(session.userType),
+            source: 'deterministic',
+            shouldEscalate: true,
+        };
     }
 
     // ── Prezzi accessori (lumino, biglietto, ceri, nastro) ────────────────────

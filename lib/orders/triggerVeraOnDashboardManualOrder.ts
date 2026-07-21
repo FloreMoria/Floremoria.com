@@ -1,4 +1,3 @@
-import { PaymentStatus } from '@prisma/client';
 import {
     runVeraPostPaymentWorkflowWithResults,
     type VeraPostPaymentResult,
@@ -10,17 +9,14 @@ export type DashboardManualOrderVeraResult =
 
 /**
  * Esegue VERA subito dopo creazione ordine manuale (await — affidabile su Vercel).
- * `isTest` non blocca l'invio: serve solo a separare i dati in dashboard.
+ * Nessun vincolo su partnerPaymentStatus: in Dashboard il pagamento cliente è già confermato.
+ * `isTest` non blocca l'invio: in sandbox la fascia oraria fioristi è bypassata a valle.
  */
 export async function runVeraAfterDashboardManualOrder(input: {
     orderId: string;
-    partnerPaymentStatus: string;
+    partnerPaymentStatus?: string;
     isTest?: boolean;
 }): Promise<DashboardManualOrderVeraResult> {
-    if (input.partnerPaymentStatus !== PaymentStatus.PAID && !input.isTest) {
-        return { skipped: 'not_paid' };
-    }
-
     try {
         return await runVeraPostPaymentWorkflowWithResults(input.orderId);
     } catch (error) {

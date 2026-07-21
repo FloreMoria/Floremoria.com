@@ -66,9 +66,6 @@ function formatVeraCreateFeedback(
     }
 ): string | null {
     if (!vera) return null;
-    if (vera.skipped === 'not_paid') {
-        return 'Ordine creato. VERA non inviata: imposta «Pagato» per attivare i messaggi automatici.';
-    }
     if (vera.skipped === 'workflow_error') {
         return 'Ordine creato, ma il workflow VERA ha restituito un errore. Controlla telefoni e log Vercel.';
     }
@@ -694,9 +691,10 @@ function CreateOrderFormPanel({
                     </section>
 
                     <p className="text-xs text-gray-500">
-                        I template WhatsApp (cliente + fiorista) partono quando lo stato diventa «In Lavorazione»,
-                        nella fascia 8:30–19:30 (Europe/Rome).
-                        In Modalità Test i messaggi partono comunque; in dashboard vedi solo i record di test.
+                        I template WhatsApp partono subito alla creazione (e all&apos;assegnazione del fiorista).
+                        In Produzione i messaggi ai fioristi restano nella fascia 08:00–20:00 (Europe/Rome);
+                        fuori fascia vengono messi in coda per la mattina successiva.
+                        In Modalità Test (sandbox) la fascia è bypassata: i messaggi partono a qualsiasi ora.
                     </p>
                 </form>
 

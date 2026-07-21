@@ -9,10 +9,11 @@ import { GOOGLE_REVIEW_URL } from '@/lib/whatsapp/veraTemplateRegistry';
 
 /**
  * Filtro di Sicurezza WhatsApp per la gestione dei flussi e delle notifiche degli ordini.
- * Intercetta le transizioni di stato (manuali da dashboard o automatiche).
+ * Intercetta le transizioni di stato (manuali da dashboard o automatiche) e le assegnazioni.
  *
- * Regola Punto A: cascata fiorista (ft_001…004) SOLO su IN_PROGRESS, fascia 8:30–19:30 Europe/Rome.
- * Regola Punto B: customer_order_confirm SOLO su IN_PROGRESS, mai su ACCEPTED/pagamento.
+ * Regola Punto A: cascata fiorista su creazione/assegnazione/stato operativo;
+ *   fascia 08:00–20:00 Europe/Rome in Produzione; bypass totale se isTest (sandbox).
+ * Regola Punto B: conferma cliente subito — nessun vincolo su partnerPaymentStatus.
  */
 export async function onOrderStatusChanged(orderId: string, nextStatus: string): Promise<void> {
     console.info(`[order-status-filter] Stato dell'ordine ${orderId} cambiato in: ${nextStatus}`);

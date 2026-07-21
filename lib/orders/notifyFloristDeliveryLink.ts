@@ -31,7 +31,8 @@ async function markPuntoADeferred(orderId: string, flags: VeraWorkflowFlags): Pr
 
 /**
  * Notifica fiorista — cascata Punto A (4 template sul primo ordine).
- * Parte solo se chiamato dal passaggio a IN_PROGRESS; fuori fascia 8:30–19:30 viene differito.
+ * Parte su creazione/assegnazione (chiamante); fuori fascia 08:00–20:00 Europe/Rome viene differito.
+ * Sandbox (`isTest: true`) bypassa completamente la finestra: invio immediato a qualsiasi ora.
  * Il controllo already_sent/orfano è in runPuntoAFloristNewOrder (non qui).
  */
 export async function notifyFloristDeliveryLinkForOrder(
@@ -57,17 +58,16 @@ export async function notifyFloristDeliveryLinkForOrder(
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
 
-    // Fuori fascia: non inviare ora; il cron flusha quando rientra 8:30–19:30.
-    // Gli ordini Sandbox / Test Mode (isTest = true) ignorano il blocco d'orario per consentire i test in qualunque momento.
-    const shouldBypassWindow = options.bypassWindow || order.isTest;
+    // Fuori fascia (solo Produzione): non inviare ora; il cron flusha al rientro 08:00–20:00.
+    // Sandbox / Test Mode (isTest = true) ignora il blocco d'orario.
+    const shouldBypassWindow = options.bypassWindow || order.isTest === true;
     if (!options.force && !shouldBypassWindow && !isWithinFloristNotifyWindow()) {
-        // Solo se non già completato con template reali — altrimenti non differire.
         if (!isWorkflowStepDone(flags, 'puntoA_florist')) {
             await markPuntoADeferred(order.id, flags).catch((err) => {
                 console.error('[vera-workflow] Impossibile marcare Punto A differito:', err);
             });
             console.info(
-                `[vera-workflow] Punto A differito (fuori fascia 8:30–19:30 Europe/Rome) ordine ${order.id}`
+                `[vera-workflow] Punto A differito (fuori fascia 08:00–20:00 Europe/Rome) ordine ${order.id}`
             );
             return { ok: true, deferred: true, skipped: 'outside_notify_window' };
         }

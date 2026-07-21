@@ -95,8 +95,8 @@ export async function PUT(request: Request, context: any) {
             body.partnerId !== undefined && body.partnerId !== previousOrder?.partnerId;
         const statusChanged = nextStatus && nextStatus !== previousOrder?.status;
 
-        // Scatena notifiche fiorista (Punto A) e cliente (Punto B) al cambio stato o assegnazione fiorista
-        if (statusChanged || partnerAssignedOrChanged || updatedOrder.partnerId) {
+        // Scatena notifiche fiorista (Punto A) e cliente (Punto B) solo su cambio stato o nuova assegnazione
+        if (statusChanged || partnerAssignedOrChanged) {
             void onOrderStatusChanged(id, nextStatus || 'IN_PROGRESS').catch((err) => {
                 console.error('[orders-put] Errore chiamata onOrderStatusChanged:', err);
             });

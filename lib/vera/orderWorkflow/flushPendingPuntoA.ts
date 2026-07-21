@@ -12,8 +12,9 @@ export interface FlushPendingPuntoAResult {
 }
 
 /**
- * Spedisce Punto A in sospeso: ordini IN_PROGRESS con fiorista, senza puntoA_florist.
- * Perché: se "In Lavorazione" è scattato fuori fascia, i 4 template partono al rientro 8:30–19:30.
+ * Spedisce Punto A in sospeso: ordini con fiorista, senza puntoA_florist.
+ * Perché: se creazione/assegnazione è scattata fuori fascia, i template partono al rientro 08:00–20:00.
+ * Sandbox (isTest) non passa da qui: bypassa già la finestra all'invio.
  */
 export async function flushPendingPuntoAFloristNotifications(): Promise<FlushPendingPuntoAResult> {
     const result: FlushPendingPuntoAResult = {
@@ -31,8 +32,9 @@ export async function flushPendingPuntoAFloristNotifications(): Promise<FlushPen
     const candidates = await prisma.order.findMany({
         where: {
             deletedAt: null,
-            status: 'IN_PROGRESS',
+            isTest: false,
             partnerId: { not: null },
+            status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
         },
         select: {
             id: true,

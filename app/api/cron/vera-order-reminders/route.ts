@@ -1,6 +1,6 @@
 /**
  * GET /api/cron/vera-order-reminders
- * - Flush Punto A differiti (IN_PROGRESS fuori fascia → invio in 8:30–19:30 Europe/Rome)
+ * - Flush Punto A differiti (creazione/assegnazione fuori fascia → invio in 08:00–20:00 Europe/Rome)
  * - PUNTO G — keep-alive finestra Meta ~20h
  *
  * Rinvio manuale singolo ordine (test):

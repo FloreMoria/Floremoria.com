@@ -4,7 +4,6 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
 import { runVeraAfterDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
-import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 export const maxDuration = 120;
 
@@ -60,23 +59,16 @@ export async function POST(request: Request) {
             isTest: testModeActive,
         });
 
+        // Creazione Dashboard = pagamento già confermato → notifiche subito (dedup in workflow).
         let vera: Awaited<ReturnType<typeof runVeraAfterDashboardManualOrder>> | undefined;
         try {
             vera = await runVeraAfterDashboardManualOrder({
                 orderId: order.id,
-                partnerPaymentStatus: order.partnerPaymentStatus,
                 isTest: order.isTest,
             });
         } catch (veraError) {
             console.error('[dashboard/orders POST] VERA workflow:', veraError);
             vera = { skipped: 'workflow_error' };
-        }
-
-        // Notifica automatica fiorista (Punto A) e cliente (Punto B) se l'ordine ha fiorista o è in lavorazione
-        if (order.partnerId || order.status === 'IN_PROGRESS' || order.status === 'ACCEPTED') {
-            void onOrderStatusChanged(order.id, order.status || 'IN_PROGRESS').catch((err) => {
-                console.error('[dashboard/orders POST] onOrderStatusChanged:', err);
-            });
         }
 
         return NextResponse.json({ ok: true, order, vera });

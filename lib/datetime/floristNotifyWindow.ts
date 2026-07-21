@@ -1,12 +1,12 @@
 import { ITALY_TIMEZONE } from '@/lib/datetime/italyTimezone';
 
-/** Fascia operativa invio cascata WhatsApp fiorista (Punto A). */
-export const FLORIST_NOTIFY_WINDOW_START_MINUTES = 8 * 60 + 30; // 08:30
-export const FLORIST_NOTIFY_WINDOW_END_MINUTES = 19 * 60 + 30; // 19:30
+/** Fascia operativa invio cascata WhatsApp fiorista (Punto A) — solo Produzione. */
+export const FLORIST_NOTIFY_WINDOW_START_MINUTES = 8 * 60; // 08:00
+export const FLORIST_NOTIFY_WINDOW_END_MINUTES = 20 * 60; // 20:00
 
 /**
  * Minuti da mezzanotte in Europe/Rome.
- * Perché: la fascia 8:30–19:30 è operativa Italia, indipendente da UTC del runtime Vercel.
+ * Perché: la fascia 08:00–20:00 è operativa Italia, indipendente da UTC del runtime Vercel.
  */
 export function getItalyMinutesSinceMidnight(at: Date = new Date()): number {
     const parts = new Intl.DateTimeFormat('en-GB', {
@@ -21,7 +21,10 @@ export function getItalyMinutesSinceMidnight(at: Date = new Date()): number {
     return hour * 60 + minute;
 }
 
-/** True se `at` cade nella fascia inclusiva 08:30–19:30 Europe/Rome. */
+/**
+ * True se `at` cade nella fascia inclusiva 08:00–20:00 Europe/Rome.
+ * Fuori fascia (20:01–07:59) → differire alla mattina successiva (solo Produzione).
+ */
 export function isWithinFloristNotifyWindow(at: Date = new Date()): boolean {
     const minutes = getItalyMinutesSinceMidnight(at);
     return (

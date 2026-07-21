@@ -12,6 +12,7 @@ import { runPuntoEFDeliveryComplete } from '@/lib/vera/orderWorkflow/puntoEFDeli
 import { runPuntoGOrderReminders } from '@/lib/vera/orderWorkflow/puntoGReminders';
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
 import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow/flushPendingPuntoA';
+import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
 
 export {
     runPuntoAFloristNewOrder,
@@ -20,6 +21,7 @@ export {
     runPuntoGOrderReminders,
     tryRunPuntoHReviewRequest,
     flushPendingPuntoAFloristNotifications,
+    flushPendingPuntoBCustomerConfirm,
 };
 
 export * from '@/lib/vera/orderWorkflow/exceptionScenarios';
@@ -30,7 +32,13 @@ export async function runVeraPostPaymentWorkflow(orderId: string): Promise<void>
 }
 
 export type VeraPostPaymentResult = {
-    customer: { ok: boolean; skipped?: string; error?: string };
+    customer: {
+        ok: boolean;
+        skipped?: string;
+        error?: string;
+        deferred?: boolean;
+        scheduledFor?: string;
+    };
     florist: {
         ok: boolean;
         skipped?: string;
@@ -91,6 +99,8 @@ export async function runVeraPostPaymentWorkflowWithResults(
             ok: customerResult.ok,
             skipped: 'skipped' in customerResult ? customerResult.skipped : undefined,
             error: 'error' in customerResult ? customerResult.error : undefined,
+            deferred: 'deferred' in customerResult ? customerResult.deferred : undefined,
+            scheduledFor: 'scheduledFor' in customerResult ? customerResult.scheduledFor : undefined,
         },
         florist,
     };

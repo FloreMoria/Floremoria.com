@@ -1,10 +1,15 @@
 import prisma from '@/lib/prisma';
+import {
+    computeCustomerConfirmSendAt,
+    isCustomerConfirmSendDue,
+} from '@/lib/datetime/customerConfirmSchedule';
 import { generateWarmOrderThought } from '@/lib/vera/generateWarmOrderThought';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import {
     isWorkflowStepDone,
     markWorkflowStep,
     parseWorkflowFlags,
+    type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
 import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 import {
@@ -20,17 +25,37 @@ export interface PuntoBResult {
     ok: boolean;
     skipped?: string;
     error?: string;
+    deferred?: boolean;
+    scheduledFor?: string;
 }
 
 export interface PuntoBOptions {
     /** Solo reinvio manuale staff esplicito. Mai usare da onOrderStatusChanged. */
     force?: boolean;
+    /** Ignora scheduling (es. flush cron quando l'orario è già dovuto). */
+    bypassSchedule?: boolean;
+}
+
+async function markPuntoBScheduled(
+    orderId: string,
+    flags: VeraWorkflowFlags,
+    scheduledFor: Date
+): Promise<void> {
+    await prisma.order.update({
+        where: { id: orderId },
+        data: {
+            veraWorkflowFlags: {
+                ...flags,
+                puntoB_customer_scheduled: scheduledFor.toISOString(),
+            },
+        },
+    });
 }
 
 /**
  * PUNTO B — Conferma ordine utente.
- * Claim atomico + dedup chat: impossibile reiniare lo stesso template per lo stesso ordine
- * tranne force manuale.
+ * Produzione: +30 min se creato 08:00–18:59; altrimenti 08:30 mattina successiva.
+ * Sandbox (`isTest`): invio immediato. Claim atomico + dedup chat anti-duplicato.
  */
 export async function runPuntoBCustomerOrderConfirm(
     orderId: string,
@@ -51,14 +76,37 @@ export async function runPuntoBCustomerOrderConfirm(
         }
 
         if (await wasOrderTemplateSent(order.id, 'customer_order_confirm', order.orderNumber)) {
-            // Allinea flag se manca (messaggio già in chat).
             await tryClaimWorkflowStep(order.id, 'puntoB_customer');
             console.info(
                 `[vera-workflow] Punto B BLOCCATO duplicato chat ordine ${order.orderNumber || order.id}`
             );
             return { ok: true, skipped: 'duplicate_order_template' };
         }
+    }
 
+    // Scheduling Produzione (sandbox bypassa).
+    if (!options.force && !options.bypassSchedule) {
+        const sendAt = computeCustomerConfirmSendAt({
+            createdAt: order.createdAt,
+            isTest: order.isTest,
+        });
+        if (!isCustomerConfirmSendDue(sendAt)) {
+            await markPuntoBScheduled(order.id, flags, sendAt).catch((err) => {
+                console.error('[vera-workflow] Impossibile marcare Punto B schedulato:', err);
+            });
+            console.info(
+                `[vera-workflow] Punto B schedulato per ${sendAt.toISOString()} ordine ${order.orderNumber || order.id}`
+            );
+            return {
+                ok: true,
+                deferred: true,
+                skipped: 'scheduled_for_later',
+                scheduledFor: sendAt.toISOString(),
+            };
+        }
+    }
+
+    if (!options.force) {
         const claimed = await tryClaimWorkflowStep(order.id, 'puntoB_customer');
         if (!claimed) {
             console.info(
@@ -114,7 +162,6 @@ export async function runPuntoBCustomerOrderConfirm(
         console.error('[vera-workflow] Punto B inviato ma sessione dashboard non registrata:', logErr);
     }
 
-    // Con force, marca comunque lo step (claim poteva già esserci).
     if (options.force) {
         await prisma.order.update({
             where: { id: order.id },

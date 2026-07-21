@@ -2,21 +2,22 @@ import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 
 /**
  * Invito a rispondere per aprire la finestra conversazione Meta (24h).
- * Deve restare intero: non va mai troncato.
+ * Nessuna rosa nel corpo: la 🌹 resta solo in chiusura dopo "Staff FloreMoria".
  */
 export const CUSTOMER_CONFIRM_CTA =
-    'Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹';
+    'Risponda OK o scriva qui un messaggio per qualsiasi richiesta.';
 
 /** Slot {{3}} nel template Meta approvato — limite conservativo (Meta tronca prima di 115). */
 export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = 92;
 
 /**
- * Testo fisso approvato su Meta per floremoria_conferma_ordine_utente.
- * Allinea anteprima dashboard al messaggio reale WhatsApp.
+ * Testo fisso per floremoria_conferma_ordine_utente.
+ * Unica rosa 🌹 dopo "Staff FloreMoria".
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
 La ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}. {{3}} Seguiremo ogni passo con cura.
-Restiamo a sua disposizione. FloreMoria Staff 🌹`;
+Restiamo a Sua disposizione.
+Staff FloreMoria 🌹`;
 
 function stripWarmLead(raw: string): string {
     return raw
@@ -26,13 +27,14 @@ function stripWarmLead(raw: string): string {
         .replace(/\bci\s+invieremo\b/gi, 'Le invieremo')
         .replace(/scriva\s+ok.*$/i, '')
         .replace(/rispond(a|ere)\s+ok.*$/i, '')
+        .replace(/🌹/g, '')
         .trim();
 }
 
 /** Compone {{3}}: frase breve + CTA completa, senza mai tagliare la CTA. */
 export function composeCustomerConfirmSlot3(warmLead?: string | null): string {
     const cta = CUSTOMER_CONFIRM_CTA;
-    const suffix = `. ${cta}`;
+    const suffix = ` ${cta}`;
     const max = MAX_CUSTOMER_CONFIRM_SLOT3_CHARS;
     const maxLeadLen = Math.max(12, max - suffix.length);
 

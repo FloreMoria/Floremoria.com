@@ -9,6 +9,7 @@ import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
+import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -27,6 +28,10 @@ function emptySessionsResponse(reason: string) {
 export async function GET() {
     after(() => {
         void triggerPostmanBackgroundSync();
+        // Piggyback: scarica Punto B dovuti (+30 min) mentre la dashboard è aperta.
+        void flushPendingPuntoBCustomerConfirm().catch((err) => {
+            console.error('[communications] flush Punto B fallito:', err);
+        });
     });
 
     const auth = await requireDashboardAdmin();

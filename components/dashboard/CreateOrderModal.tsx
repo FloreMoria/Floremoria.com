@@ -72,7 +72,13 @@ function formatVeraCreateFeedback(
 
     const issues: string[] = [];
     const c = vera.customer;
-    if (c && !c.ok && c.skipped !== 'already_sent') {
+    if (
+        c &&
+        !c.ok &&
+        c.skipped !== 'already_sent' &&
+        c.skipped !== 'scheduled_for_later' &&
+        c.skipped !== 'duplicate_order_template'
+    ) {
         issues.push(
             c.skipped === 'invalid_phone'
                 ? 'cliente: telefono non valido'
@@ -83,7 +89,12 @@ function formatVeraCreateFeedback(
     if (f) {
         if (f.blocked && f.error === 'grave_position_missing') {
             issues.push('fiorista: manca posizione tomba (primo ordine)');
-        } else if (!f.ok && f.skipped !== 'already_sent') {
+        } else if (
+            !f.ok &&
+            f.skipped !== 'already_sent' &&
+            f.skipped !== 'outside_notify_window' &&
+            f.skipped !== 'no_partner_assigned'
+        ) {
             issues.push(
                 f.skipped === 'no_partner_whatsapp' || f.skipped === 'invalid_florist_phone'
                     ? 'fiorista: WhatsApp non configurato o non valido'
@@ -691,10 +702,10 @@ function CreateOrderFormPanel({
                     </section>
 
                     <p className="text-xs text-gray-500">
-                        I template WhatsApp partono subito alla creazione (e all&apos;assegnazione del fiorista).
-                        In Produzione i messaggi ai fioristi restano nella fascia 08:00–20:00 (Europe/Rome);
-                        fuori fascia vengono messi in coda per la mattina successiva.
-                        In Modalità Test (sandbox) la fascia è bypassata: i messaggi partono a qualsiasi ora.
+                        I template WhatsApp partono alla creazione (e all&apos;assegnazione del fiorista).
+                        In Produzione: fioristi 08:00–20:00; conferma cliente a +30 minuti se l&apos;ordine
+                        nasce tra le 08:00 e le 19:00, altrimenti alle 08:30 della mattina successiva.
+                        In Modalità Test (sandbox) i ritardi sono bypassati: i messaggi partono subito.
                     </p>
                 </form>
 

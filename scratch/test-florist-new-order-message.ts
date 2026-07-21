@@ -3,7 +3,11 @@
  * Esegui: npx tsx scratch/test-florist-new-order-message.ts
  */
 import { formatFloristProductLabel } from '../lib/orders/formatFloristProductLabel';
-import { buildFloristNewOrderWhatsAppText } from '../lib/orders/floristDeliveryLinkMessage';
+import {
+    buildFloristNewOrderWhatsAppText,
+    sanitizeFloristDeliveryNotes,
+    stripGramatoArtifact,
+} from '../lib/orders/floristDeliveryLinkMessage';
 
 function assert(condition: boolean, message: string): void {
     if (!condition) throw new Error(`FAIL: ${message}`);
@@ -36,6 +40,25 @@ function main(): void {
         'Margherite pianta'
     );
 
+    assert(stripGramatoArtifact('Ciao Gramato Simone') === 'Ciao Simone', 'rimozione Gramato');
+    assert(
+        sanitizeFloristDeliveryNotes('IMPORT_MANUALE: dashboard admin', 'Campo C, Tomba 83') ===
+            'Campo C, Tomba 83',
+        'import → coordinate'
+    );
+    assert(
+        sanitizeFloristDeliveryNotes('IMPORT_MANUALE: dashboard admin', null) ===
+            'Nessuna nota aggiuntiva',
+        'import senza coordinate → default'
+    );
+    assert(
+        sanitizeFloristDeliveryNotes(
+            'IMPORT_MANUALE: dashboard admin | Suonare al cancello laterale',
+            'Campo 1'
+        ) === 'Suonare al cancello laterale',
+        'import + nota reale → solo nota'
+    );
+
     const text = buildFloristNewOrderWhatsAppText({
         floristFirstName: 'Simone',
         orderCode: 'FT-MB-26-001',
@@ -45,7 +68,7 @@ function main(): void {
         cemeteryCity: 'Milano',
         gravePosition: 'Campo C, Tomba 83',
         ticketMessage: null,
-        additionalInstructions: null,
+        additionalInstructions: 'IMPORT_MANUALE: dashboard admin',
         items: [
             {
                 quantity: 1,
@@ -59,13 +82,26 @@ function main(): void {
     assert(text.includes('Ciao Simone! 🌸'), 'saluto');
     assert(text.includes('ordine FT-MB-26-001 a Milano'), 'codice e città');
     assert(text.includes('💐 Prodotto: Bouquet'), 'prodotto formattato');
-    assert(text.includes('📝 Testo Biglietto: Nessuno'), 'biglietto default');
+    assert(text.includes('📝 Testo: Nessuno'), 'etichetta Testo (non Biglietto)');
+    assert(!text.includes('Testo Biglietto'), 'niente etichetta Biglietto');
     assert(text.includes('➕ Optional / Accessori: Lumino'), 'accessori');
-    assert(text.includes('📌 Note di Consegna: Nessuna nota aggiuntiva'), 'note default');
+    assert(text.includes('📌 Note di Consegna: Campo C, Tomba 83'), 'note = coordinate');
+    assert(
+        text.indexOf('➕ Optional / Accessori:') < text.indexOf('📌 Note di Consegna:'),
+        'optional sopra note'
+    );
+    assert(
+        text.includes(
+            'Per caricare le foto mentre effettui la consegna puoi usare il link alla mini-app dedicata a questo ordine:'
+        ),
+        'dicitura foto al plurale'
+    );
     assert(text.includes('🔗 https://www.floremoria.com/fiorista/consegna/FT-MB-26-001'), 'link mini-app');
     assert(text.endsWith('Vera | Staff FloreMoria 🌹'), 'chiusura con rosa unica');
     assert((text.match(/🌹/g) || []).length === 1, 'una sola rosa');
     assert(!text.includes('Bouquet Memoria Eterna'), 'niente nome commerciale bouquet');
+    assert(!text.includes('Gramato'), 'niente Gramato');
+    assert(!text.includes('IMPORT_MANUALE'), 'niente tag import');
 
     console.log('\nTutti i test messaggio fiorista OK.');
 }

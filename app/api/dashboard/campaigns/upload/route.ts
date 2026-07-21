@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { withProxiedCampaignMedia } from '@/lib/dashboard/campaignMediaUrl';
+import { overlayFloreMoriaWatermark } from '@/lib/marketing/engine/watermark';
 import prisma from '@/lib/prisma';
 import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 
@@ -14,15 +15,24 @@ export async function POST(request: Request) {
     const hashtagsStr = formData.get('hashtags') as string | null;
 
     if (!file || !channel || !contentFormat || !copy) {
-      return NextResponse.json({ success: false, error: 'Tutti i campi obbligatori (file, social, formato e copy) devono essere compilati.' }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Tutti i campi obbligatori (file, social, formato e copy) devono essere compilati.',
+        },
+        { status: 400 }
+      );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
     const mimeType = file.type;
     const filename = file.name;
     const ext = filename.split('.').pop() || 'png';
+    const isVideo = mimeType.startsWith('video/');
 
-    // Genera un ID campagna temporaneo per il percorso del file
+    // Immagini: watermark su ogni canale. Video raw: nessuna overlay frame-by-frame qui.
+    const buffer = isVideo ? rawBuffer : await overlayFloreMoriaWatermark(rawBuffer);
+
     const tempId = `manual-${Date.now()}`;
     const blobPrefix = 'marketing/campagne/manual';
     const blobPath = `${blobPrefix}/${tempId}.${ext}`;
@@ -35,8 +45,6 @@ export async function POST(request: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN?.trim(),
     });
 
-    const isVideo = mimeType.startsWith('video/');
-
     const hashtags = hashtagsStr
       ? hashtagsStr
           .split(',')
@@ -46,8 +54,8 @@ export async function POST(request: Request) {
 
     const newCampaign = await prisma.marketingCampaign.create({
       data: {
-        status: CampaignStatus.APPROVED, // Le campagne manuali saltano i Guardiani e sono subito APPROVATE
-        category: 'FT', // Categoria standard
+        status: CampaignStatus.APPROVED,
+        category: 'FT',
         targetChannel: channel as MarketingChannel,
         contentFormat: contentFormat as ContentFormat,
         copy: copy.trim(),

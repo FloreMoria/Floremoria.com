@@ -30,7 +30,6 @@ import {
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
-import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {

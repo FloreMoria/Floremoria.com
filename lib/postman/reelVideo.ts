@@ -1,5 +1,4 @@
 import { put } from '@vercel/blob';
-import { getBlobStoreAccess } from '@/lib/blob/storeAccess';
 import sharp from 'sharp';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
 
@@ -22,6 +21,7 @@ export async function ensureCampaignReelVideoUrl(input: {
 
   try {
     const imageBytes = await fetchImageBytes(input.imageUrl, input.blobToken);
+    // L'immagine campagna è già watermarkata in generazione/upload.
     const verticalJpeg = await sharp(imageBytes)
       .resize(1080, 1920, { fit: 'cover', position: 'centre' })
       .jpeg({ quality: 88 })

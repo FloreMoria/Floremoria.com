@@ -3,53 +3,7 @@ import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
 import { MarketingEngineConfigError } from './generation';
-import sharp from 'sharp';
-import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
-
-async function overlayLogo(imageBuffer: Buffer): Promise<Buffer> {
-  try {
-    const logoPath = resolve(process.cwd(), 'public/images/brand/Logo FloreMoria ESTESO senza fondo 100x290.png');
-    if (!existsSync(logoPath)) {
-      console.warn(`[Marketing Images] Logo non trovato in "${logoPath}". Salto overlay.`);
-      return imageBuffer;
-    }
-
-    const metadata = await sharp(imageBuffer).metadata();
-    const bgWidth = metadata.width || 1024;
-    const bgHeight = metadata.height || 1024;
-
-    const logoTargetWidth = Math.round(bgWidth * 0.25);
-
-    // Ridimensiona il logo e applica un'opacità del ~75% (alpha = 190) per un watermark elegante e trasparente
-    const resizedLogoBuffer = await sharp(logoPath)
-      .resize({ width: logoTargetWidth })
-      .composite([{
-        input: Buffer.from([0, 0, 0, 190]),
-        raw: { width: 1, height: 1, channels: 4 },
-        tile: true,
-        blend: 'dest-in'
-      }])
-      .toBuffer();
-
-    const logoMetadata = await sharp(resizedLogoBuffer).metadata();
-    const logoWidth = logoMetadata.width || logoTargetWidth;
-    const logoHeight = logoMetadata.height || Math.round(logoTargetWidth * (100 / 290));
-
-    const paddingX = Math.round(bgWidth * 0.04);
-    const paddingY = Math.round(bgHeight * 0.04);
-
-    const left = bgWidth - logoWidth - paddingX;
-    const top = bgHeight - logoHeight - paddingY;
-
-    return await sharp(imageBuffer)
-      .composite([{ input: resizedLogoBuffer, top, left }])
-      .toBuffer();
-  } catch (err) {
-    console.error('[Marketing Images] Errore overlay logo:', err);
-    return imageBuffer;
-  }
-}
+import { overlayFloreMoriaWatermark } from './watermark';
 
 const BLOB_PREFIX = 'marketing/campagne';
 const DEFAULT_IMAGEN_MODEL = 'imagen-4.0-generate-001';
@@ -203,8 +157,8 @@ export async function generateAndStorageCampaignImage(
   });
   const { buffer: originalBuffer, mimeType, extension } = await generateImageBytes(imagePrompt, aspectRatio);
 
-  console.log(`[Marketing Images] Applicazione logo FloreMoria su immagine per campagna ${campaignId}`);
-  const buffer = await overlayLogo(originalBuffer);
+  console.log(`[Marketing Images] Applicazione watermark FloreMoria su campagna ${campaignId}`);
+  const buffer = await overlayFloreMoriaWatermark(originalBuffer);
 
   const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;
   const { url } = await putBlobWithAccessFallback(blobPath, buffer, {

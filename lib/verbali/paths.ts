@@ -1,12 +1,14 @@
 import { resolve } from 'node:path';
 
-/** Nome canonico Obsidian: YYYY-MM-DD-Verbale-Giornaliero.md */
+/** Nome canonico Obsidian: DD-MM-YYYY-Verbale-giornaliero.md */
 export function obsidianGiornalieroFileName(iso: string): string {
-    return `${iso}-Verbale-Giornaliero.md`;
+    const [y, m, d] = iso.split('-');
+    return `${d}-${m}-${y}-Verbale-giornaliero.md`;
 }
 
 export function obsidianConsolidatoFileName(iso: string): string {
-    return `${iso}-Verbale-Consolidato.md`;
+    const [y, m, d] = iso.split('-');
+    return `${d}-${m}-${y}-Verbale-Consolidato.md`;
 }
 
 /** Nome canonico docs: DD-MM-YYYY.md */
@@ -22,8 +24,11 @@ export function isoFromDocsFileName(fileName: string): string | null {
 }
 
 export function isoFromObsidianGiornaliero(fileName: string): string | null {
-    const m = /^(\d{4}-\d{2}-\d{2})-Verbale-Giornaliero\.md$/.exec(fileName);
-    return m ? m[1] : null;
+    const dmy = /^(\d{2})-(\d{2})-(\d{4})-Verbale-giornaliero\.md$/i.exec(fileName);
+    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+    const ymd = /^(\d{4}-\d{2}-\d{2})-Verbale-(?:Giornaliero|giornaliero)\.md$/i.exec(fileName);
+    if (ymd) return ymd[1];
+    return null;
 }
 
 export function docsVerbalePath(cwd: string, iso: string): string {

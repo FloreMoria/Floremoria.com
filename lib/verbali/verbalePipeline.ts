@@ -25,12 +25,14 @@ import {
     hasBarbaraSubstance,
 } from './barbaraSource';
 import { applyVerbaleContentPolicy } from './contentPolicy';
-import { docsVerbalePath } from './paths';
+import {
+    docsVerbalePath,
+    obsidianGiornalieroPath,
+    obsidianConsolidatoPath,
+} from './paths';
 import {
     syncAllDocsVerbali,
     parseDocsVerbaleFilename,
-    obsidianGiornalieroPath,
-    obsidianConsolidatoPath,
     isEmptyScaffold,
     normalizeDocsBody,
     type VerbaleSyncResult,
@@ -75,8 +77,10 @@ function buildPipelineObsidian(
 ): string {
     const syncedAt = new Date().toISOString();
     const sourceYaml = sources.map((s) => `"${s}"`).join(', ');
+    const [y, m, d] = iso.split('-');
+    const dateFormatted = `${d}-${m}-${y}`;
     return `---
-date: ${iso}
+date: ${dateFormatted}
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sync_sources: [${sourceYaml}]

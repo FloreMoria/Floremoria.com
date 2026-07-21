@@ -33,19 +33,11 @@ export function parseDocsVerbaleFilename(filename: string): string | null {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-/** YYYY-MM-DD → docs/verbali/DD-MM-YYYY.md */
-export function docsVerbalePath(cwd: string, iso: string): string {
-    const [y, m, d] = iso.split('-');
-    return resolve(cwd, DOCS_DIR, `${d}-${m}-${y}.md`);
-}
-
-export function obsidianGiornalieroPath(cwd: string, iso: string): string {
-    return resolve(cwd, OBSIDIAN_DIR, `${iso}-Verbale-Giornaliero.md`);
-}
-
-export function obsidianConsolidatoPath(cwd: string, iso: string): string {
-    return resolve(cwd, OBSIDIAN_DIR, `${iso}-Verbale-Consolidato.md`);
-}
+import {
+    obsidianGiornalieroPath,
+    obsidianConsolidatoPath,
+    docsVerbalePath,
+} from './paths';
 
 /** Rimuove metadati di sync manuale obsoleti dal corpo docs. */
 export function normalizeDocsBody(raw: string): string {

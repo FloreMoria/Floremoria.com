@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { shouldNotifyFloristDeliveryLinkOnOrderUpdate } from '@/lib/orders/floristDeliveryLinkRules';
-import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { retryPuntoAIfBlocked } from '@/lib/vera/orderWorkflow';
 import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
@@ -92,23 +90,11 @@ export async function PUT(request: Request, context: any) {
         });
 
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
-        const nextPartnerId =
-            body.partnerId !== undefined ? (body.partnerId || null) : previousOrder?.partnerId ?? null;
 
+        // Punto A (fiorista, fascia 8:30–19:30) + Punto B (cliente) su IN_PROGRESS.
         if (nextStatus && nextStatus !== previousOrder?.status) {
             void onOrderStatusChanged(id, nextStatus).catch((err) => {
                 console.error('[orders-put] Errore chiamata onOrderStatusChanged:', err);
-            });
-        }
-
-        if (
-            shouldNotifyFloristDeliveryLinkOnOrderUpdate(
-                { status: previousOrder?.status, partnerId: previousOrder?.partnerId },
-                { status: nextStatus, partnerId: nextPartnerId }
-            )
-        ) {
-            void notifyFloristDeliveryLinkForOrder(id).catch((err) => {
-                console.error('[orders-put] Invio link consegna fiorista fallito (non bloccante):', err);
             });
         }
 

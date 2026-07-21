@@ -250,7 +250,9 @@ export async function runPuntoAFloristNewOrder(
 
     if (!cascadeResult.ok) return cascadeResult;
 
-    await updateWorkflowFlags(order.id, markWorkflowStep(flags, 'puntoA_florist'));
+    const nextFlags = markWorkflowStep(flags, 'puntoA_florist');
+    delete nextFlags.puntoA_florist_deferred;
+    await updateWorkflowFlags(order.id, nextFlags);
     console.info(`[vera-workflow] Punto A OK ordine ${orderCode} first=${isFirst}`);
     return { ok: true, isFirstOrder: isFirst };
 }

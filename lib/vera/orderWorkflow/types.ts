@@ -1,5 +1,6 @@
 export type VeraWorkflowStep =
     | 'puntoA_florist'
+    | 'puntoA_florist_deferred'
     | 'puntoB_customer'
     | 'puntoEF_delivery'
     | 'puntoG_customer_wait'

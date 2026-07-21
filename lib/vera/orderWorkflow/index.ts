@@ -1,15 +1,15 @@
 /**
  * Orchestratore post-pagamento / post-creazione ordine manuale.
- * - Punto A (fiorista) se assegnato.
- * - Punto B (conferma presa in carico al cliente) NON parte qui:
- *   solo al passaggio di stato IN_PROGRESS via orderStatusFilter.
+ * - Punto A (fiorista) e Punto B (cliente) NON partono al pagamento:
+ *   solo al passaggio a IN_PROGRESS via orderStatusFilter (fascia 8:30–19:30 per A).
  */
-import prisma from '@/lib/prisma';
+import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { runPuntoAFloristNewOrder } from '@/lib/vera/orderWorkflow/puntoAFloristNewOrder';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { runPuntoEFDeliveryComplete } from '@/lib/vera/orderWorkflow/puntoEFDeliveryComplete';
 import { runPuntoGOrderReminders } from '@/lib/vera/orderWorkflow/puntoGReminders';
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
+import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow/flushPendingPuntoA';
 
 export {
     runPuntoAFloristNewOrder,
@@ -17,6 +17,7 @@ export {
     runPuntoEFDeliveryComplete,
     runPuntoGOrderReminders,
     tryRunPuntoHReviewRequest,
+    flushPendingPuntoAFloristNotifications,
 };
 
 export * from '@/lib/vera/orderWorkflow/exceptionScenarios';
@@ -27,39 +28,35 @@ export async function runVeraPostPaymentWorkflow(orderId: string): Promise<void>
 }
 
 export type VeraPostPaymentResult = {
-    /** Sempre skipped qui: Punto B è solo su IN_PROGRESS. */
     customer: { ok: boolean; skipped?: string };
-    florist?: Awaited<ReturnType<typeof runPuntoAFloristNewOrder>>;
+    florist: { ok: boolean; skipped?: string };
 };
 
-/** Post-pagamento: solo notifica fiorista (Punto A). Il cliente aspetta IN_PROGRESS. */
+/**
+ * Post-pagamento: nessun WhatsApp immediato.
+ * Cascata fiorista + conferma cliente partono su IN_PROGRESS.
+ */
 export async function runVeraPostPaymentWorkflowWithResults(
-    orderId: string
+    _orderId: string
 ): Promise<VeraPostPaymentResult> {
-    const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        select: { partnerId: true, status: true },
-    });
-
-    let florist: VeraPostPaymentResult['florist'];
-    if (order?.partnerId) {
-        florist = await runPuntoAFloristNewOrder(orderId);
-    }
-
     return {
         customer: {
             ok: true,
             skipped: 'puntoB_deferred_until_IN_PROGRESS',
         },
-        florist,
+        florist: {
+            ok: true,
+            skipped: 'puntoA_deferred_until_IN_PROGRESS',
+        },
     };
 }
 
 /**
- * Re-trigger Punto A quando operatore completa gravePosition in dashboard.
+ * Re-trigger Punto A quando operatore completa gravePosition in dashboard
+ * (rispetta fascia oraria 8:30–19:30 salvo force).
  */
 export async function retryPuntoAIfBlocked(orderId: string): Promise<void> {
-    await runPuntoAFloristNewOrder(orderId).catch((e) => {
+    await notifyFloristDeliveryLinkForOrder(orderId).catch((e) => {
         console.error('[vera-workflow] Retry Punto A fallito:', e);
     });
 }

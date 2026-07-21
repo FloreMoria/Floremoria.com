@@ -694,7 +694,8 @@ function CreateOrderFormPanel({
                     </section>
 
                     <p className="text-xs text-gray-500">
-                        Con stato «Pagato» VERA invia conferma al cliente e notifica al fiorista (se assegnato).
+                        I template WhatsApp (cliente + fiorista) partono quando lo stato diventa «In Lavorazione»,
+                        nella fascia 8:30–19:30 (Europe/Rome).
                         In Modalità Test i messaggi partono comunque; in dashboard vedi solo i record di test.
                     </p>
                 </form>

@@ -1,16 +1,14 @@
 import prisma from '@/lib/prisma';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
-import { shouldNotifyFloristDeliveryLink } from '@/lib/orders/floristDeliveryLinkRules';
-import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
 export type AutoAssignKnownTombResult =
     | { assigned: true; deceasedProfileId: string; partnerId: string }
     | { assigned: false; reason: string };
 
 /**
- * Tomba già censita + fiorista custode primario → collega ordine, lo mantiene in ACCEPTED
- * ("Ricevuto") e innesca il WhatsApp al fiorista senza passaggio manuale in dashboard.
+ * Tomba già censita + fiorista custode primario → collega ordine e lo lascia in ACCEPTED
+ * ("Ricevuto"). La cascata WhatsApp fiorista parte solo su IN_PROGRESS (fascia 8:30–19:30).
  */
 export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAssignKnownTombResult> {
     const order = await prisma.order.findFirst({
@@ -87,12 +85,8 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
 
     await syncDeceasedRelationsForOrder(order.id);
 
-    await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
-        console.error('[auto-assign-known-tomb] Invio link fiorista fallito (non bloccante):', err);
-    });
-
     console.info(
-        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, ACCEPTED`
+        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, ACCEPTED (Punto A differito a IN_PROGRESS)`
     );
 
     return { assigned: true, deceasedProfileId, partnerId };

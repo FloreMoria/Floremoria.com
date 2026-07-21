@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { runPuntoEFDeliveryComplete } from '@/lib/vera/orderWorkflow/puntoEFDeliveryComplete';
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
@@ -10,16 +11,20 @@ import { GOOGLE_REVIEW_URL } from '@/lib/whatsapp/veraTemplateRegistry';
  * Filtro di Sicurezza WhatsApp per la gestione dei flussi e delle notifiche degli ordini.
  * Intercetta le transizioni di stato (manuali da dashboard o automatiche).
  *
- * Regola Punto B: il template customer_order_confirm parte SOLO su IN_PROGRESS
- * ("In Lavorazione"), mai su ACCEPTED/creazione ordine/pagamento.
+ * Regola Punto A: cascata fiorista (ft_001…004) SOLO su IN_PROGRESS, fascia 8:30–19:30 Europe/Rome.
+ * Regola Punto B: customer_order_confirm SOLO su IN_PROGRESS, mai su ACCEPTED/pagamento.
  */
 export async function onOrderStatusChanged(orderId: string, nextStatus: string): Promise<void> {
     console.info(`[order-status-filter] Stato dell'ordine ${orderId} cambiato in: ${nextStatus}`);
 
     try {
         if (nextStatus === 'IN_PROGRESS') {
-            // "In Lavorazione": Invia il primo messaggio di ringraziamento per la fiducia in FloreMoria 
-            // e conferma con dettagli dell'ordine e della presa in carico da parte del fiorista partner di zona (Template di Meta).
+            // Cascata 4 template al fiorista (differita se fuori fascia oraria).
+            await notifyFloristDeliveryLinkForOrder(orderId).catch((err) => {
+                console.error('[order-status-filter] Errore in notifyFloristDeliveryLinkForOrder (Punto A):', err);
+            });
+
+            // Conferma presa in carico al cliente.
             await runPuntoBCustomerOrderConfirm(orderId, { force: true }).catch((err) => {
                 console.error('[order-status-filter] Errore in runPuntoBCustomerOrderConfirm:', err);
             });

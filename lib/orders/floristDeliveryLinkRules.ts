@@ -1,8 +1,12 @@
-/** Stati ordine che innescano l'invio del link consegna al fiorista (ASSEGNATO / IN CONSEGNA). */
-export const FLORIST_DELIVERY_LINK_ORDER_STATUSES = ['IN_PROGRESS', 'DELIVERING'] as const;
+/** Stati ordine che innescano la cascata WhatsApp fiorista (Punto A). */
+export const FLORIST_DELIVERY_LINK_ORDER_STATUSES = ['IN_PROGRESS'] as const;
 
 export type FloristDeliveryLinkOrderStatus = (typeof FLORIST_DELIVERY_LINK_ORDER_STATUSES)[number];
 
+/**
+ * True solo al passaggio *verso* IN_PROGRESS ("In Lavorazione").
+ * Perché: i 4 template partono a presa in carico operativa, non all'assegnazione né al pagamento.
+ */
 export function shouldNotifyFloristDeliveryLink(
     previousStatus: string | null | undefined,
     nextStatus: string
@@ -11,27 +15,20 @@ export function shouldNotifyFloristDeliveryLink(
     return (FLORIST_DELIVERY_LINK_ORDER_STATUSES as readonly string[]).includes(nextStatus);
 }
 
-/** Nuovo fiorista assegnato (o sostituito) — invia link mini-app con codice ordine. */
+/** @deprecated Assegnazione fiorista non invia più WhatsApp: resta solo IN_PROGRESS. */
 export function shouldNotifyFloristOnPartnerAssignment(
-    previousPartnerId: string | null | undefined,
-    nextPartnerId: string | null | undefined
+    _previousPartnerId: string | null | undefined,
+    _nextPartnerId: string | null | undefined
 ): boolean {
-    const next = nextPartnerId?.trim();
-    if (!next) return false;
-    return previousPartnerId?.trim() !== next;
+    return false;
 }
 
-/** Assegnazione fiorista o passaggio a IN_PROGRESS / DELIVERING. */
+/** Aggiornamento ordine: notifica fiorista solo se lo stato diventa IN_PROGRESS. */
 export function shouldNotifyFloristDeliveryLinkOnOrderUpdate(
     previous: { status?: string | null; partnerId?: string | null },
     next: { status?: string | null; partnerId?: string | null }
 ): boolean {
     const nextStatus = next.status ?? previous.status;
-    if (nextStatus && shouldNotifyFloristDeliveryLink(previous.status, nextStatus)) {
-        return true;
-    }
-    if (next.partnerId !== undefined) {
-        return shouldNotifyFloristOnPartnerAssignment(previous.partnerId, next.partnerId);
-    }
-    return false;
+    if (!nextStatus) return false;
+    return shouldNotifyFloristDeliveryLink(previous.status, nextStatus);
 }

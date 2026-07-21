@@ -1,12 +1,14 @@
 /**
  * GET /api/cron/vera-order-reminders
- * PUNTO G — keep-alive finestra Meta ~20h per ordini incompleti (ogni ora).
+ * - Flush Punto A differiti (IN_PROGRESS fuori fascia → invio in 8:30–19:30 Europe/Rome)
+ * - PUNTO G — keep-alive finestra Meta ~20h
  *
  * Rinvio manuale singolo ordine (test):
  *   GET /api/cron/vera-order-reminders?orderNumber=FT-CO-26-005&force=1
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { runPuntoGOrderReminders } from '@/lib/vera/orderWorkflow/puntoGReminders';
+import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow/flushPendingPuntoA';
 import { resendCustomerWaitingUpdateForOrder, backfillCustomerWaitingUpdateChatLog } from '@/lib/vera/orderWorkflow/resendCustomerWaitingUpdate';
 
 export const runtime = 'nodejs';
@@ -42,6 +44,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: result.ok, mode: 'single_order', ...result });
     }
 
+    const puntoAFlush = await flushPendingPuntoAFloristNotifications();
     const result = await runPuntoGOrderReminders();
-    return NextResponse.json({ success: true, mode: 'batch', ...result });
+    return NextResponse.json({
+        success: true,
+        mode: 'batch',
+        puntoAFlush,
+        ...result,
+    });
 }

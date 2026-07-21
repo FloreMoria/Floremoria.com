@@ -6,6 +6,7 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
@@ -18,7 +19,7 @@ export interface PuntoBResult {
 }
 
 export interface PuntoBOptions {
-    /** Reinvio manuale anche se puntoB_customer già marcato. */
+    /** Reinvio manuale esplicito (API staff) — ignora dedup solo se force=true. */
     force?: boolean;
 }
 
@@ -39,6 +40,23 @@ export async function runPuntoBCustomerOrderConfirm(
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
     if (!options.force && isWorkflowStepDone(flags, 'puntoB_customer')) {
         return { ok: true, skipped: 'already_sent' };
+    }
+
+    // Dedup cronologia chat: stesso ordine + stesso template già inviato (anche ieri).
+    if (
+        !options.force &&
+        (await wasOrderTemplateSent(order.id, 'customer_order_confirm', order.orderNumber))
+    ) {
+        if (!isWorkflowStepDone(flags, 'puntoB_customer')) {
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { veraWorkflowFlags: markWorkflowStep(flags, 'puntoB_customer') },
+            });
+        }
+        console.info(
+            `[vera-workflow] Punto B saltato (duplicato ordine) ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: 'duplicate_order_template' };
     }
 
     const phoneE164 = normalizePhoneE164(order.customerPhone);

@@ -6,7 +6,9 @@ export type VeraAlertType =
     | 'cemetery_closed'
     | 'user_modification_request'
     | 'workflow_blocked'
-    | 'listino_missing';
+    | 'listino_missing'
+    | 'florist_whatsapp_missing'
+    | 'punto_a_send_failed';
 
 export type VeraAlertPriority = 'normal' | 'high' | 'urgent';
 

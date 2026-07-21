@@ -24,8 +24,8 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
                 console.error('[order-status-filter] Errore in notifyFloristDeliveryLinkForOrder (Punto A):', err);
             });
 
-            // Conferma presa in carico al cliente.
-            await runPuntoBCustomerOrderConfirm(orderId, { force: true }).catch((err) => {
+            // Conferma presa in carico al cliente (mai force: evita doppio benvenuto).
+            await runPuntoBCustomerOrderConfirm(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in runPuntoBCustomerOrderConfirm:', err);
             });
         } else if (nextStatus === 'DELIVERING') {

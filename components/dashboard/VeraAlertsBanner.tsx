@@ -8,7 +8,10 @@ export type VeraAlertType =
     | 'tomb_not_found'
     | 'cemetery_closed'
     | 'user_modification_request'
-    | 'workflow_blocked';
+    | 'workflow_blocked'
+    | 'listino_missing'
+    | 'florist_whatsapp_missing'
+    | 'punto_a_send_failed';
 
 export interface VeraOperationalAlert {
     id: string;
@@ -35,11 +38,17 @@ function orderLabel(alert: VeraOperationalAlert): string {
     return alert.orderNumber || alert.id.slice(-6).toUpperCase();
 }
 
-const CRITICAL_TYPES = new Set<VeraAlertType>(['grave_position_missing', 'workflow_blocked']);
+const CRITICAL_TYPES = new Set<VeraAlertType>([
+    'grave_position_missing',
+    'workflow_blocked',
+    'florist_whatsapp_missing',
+    'punto_a_send_failed',
+]);
 const OPERATIONAL_TYPES = new Set<VeraAlertType>([
     'tomb_not_found',
     'cemetery_closed',
     'user_modification_request',
+    'listino_missing',
 ]);
 
 export default function VeraAlertsBanner({

@@ -48,9 +48,16 @@ export function parseBarbaraFileName(fileName: string): {
     iso: string;
     kind: BarbaraVerbaleFile['kind'];
 } | null {
-    const m = BARBARA_FILE.exec(fileName);
-    if (!m) return null;
-    const iso = m[1];
+    if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) return null;
+    let iso: string | null = null;
+    const ymd = /(\d{4}-\d{2}-\d{2})/.exec(fileName);
+    if (ymd) {
+        iso = ymd[1];
+    } else {
+        const dmy = /(\d{2})-(\d{2})-(\d{4})/.exec(fileName);
+        if (dmy) iso = `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+    }
+    if (!iso) return null;
     if (/PROT_/i.test(fileName)) return { iso, kind: 'prot' };
     if (/Consolidato/i.test(fileName)) return { iso, kind: 'consolidato' };
     return { iso, kind: 'giornaliero' };

@@ -158,10 +158,12 @@ export function listGoogleDriveIngressMarkdown(root?: string | null): Array<{
     }> = [];
 
     for (const fileName of readdirSync(ingress)) {
-        if (!fileName.endsWith('.md')) continue;
+        if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) continue;
         const isoFromObs = isoFromObsidianGiornaliero(fileName);
-        const isoFromPlain = /^(\d{4}-\d{2}-\d{2})\.md$/.exec(fileName)?.[1] ?? null;
-        const iso = isoFromObs ?? isoFromPlain;
+        const isoFromYMD = /(\d{4}-\d{2}-\d{2})/.exec(fileName)?.[1] ?? null;
+        const dmyMatch = /(\d{2})-(\d{2})-(\d{4})/.exec(fileName);
+        const isoFromDMY = dmyMatch ? `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}` : null;
+        const iso = isoFromObs ?? isoFromYMD ?? isoFromDMY;
         if (!iso) continue;
 
         const absPath = resolve(ingress, fileName);

@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
-import { checkAdminAuth } from '../../auth';
+import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
+import { isDashboardAdminRole } from '@/lib/superAdmin';
+import { hasValidAdminApiKeyHeader } from '@/lib/auth/verbaleSyncAuth';
+
+async function requireOffersApiAuth(request: Request): Promise<NextResponse | null> {
+    if (hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
+        return null;
+    }
+    const cookieStore = await cookies();
+    const role = cookieStore.get('fm_user_role')?.value;
+    if (isDashboardAdminRole(role)) {
+        return null;
+    }
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
-    if (!checkAdminAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const denied = await requireOffersApiAuth(request);
+    if (denied) return denied;
 
     const resolvedParams = await context.params;
     try {
         const offer = await prisma.offer.findUnique({
-            where: { id: resolvedParams.id }
+            where: { id: resolvedParams.id },
         });
         if (!offer) return NextResponse.json({ error: 'Not Found' }, { status: 404 });
         return NextResponse.json(offer);
@@ -18,15 +33,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-    if (!checkAdminAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const denied = await requireOffersApiAuth(request);
+    if (denied) return denied;
 
     const resolvedParams = await context.params;
     try {
         const data = await request.json();
-
-        // TODO: In futuro, per i dati sensibili, implementare qui il salvataggio
-        // di un AuditLog prima di eseguire l'update per mantenere lo snapshot.
-
         const offer = await prisma.offer.update({
             where: { id: resolvedParams.id },
             data: {
@@ -38,8 +50,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
                 startsAt: data.startsAt ? new Date(data.startsAt) : null,
                 endsAt: data.endsAt ? new Date(data.endsAt) : null,
                 isActive: data.isActive,
-                rulesJson: data.rulesJson
-            }
+                rulesJson: data.rulesJson,
+            },
         });
         return NextResponse.json(offer);
     } catch (e: any) {
@@ -48,7 +60,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-    if (!checkAdminAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const denied = await requireOffersApiAuth(request);
+    if (denied) return denied;
 
     const resolvedParams = await context.params;
     try {
@@ -66,13 +79,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 }
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
-    if (!checkAdminAuth(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const denied = await requireOffersApiAuth(request);
+    if (denied) return denied;
 
     const resolvedParams = await context.params;
     try {
         await prisma.offer.update({
             where: { id: resolvedParams.id },
-            data: { deletedAt: new Date() }
+            data: { deletedAt: new Date() },
         });
         return new NextResponse(null, { status: 204 });
     } catch (e: any) {

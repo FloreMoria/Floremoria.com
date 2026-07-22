@@ -68,6 +68,10 @@ function isSuperAdminOnlyPath(pathname: string): boolean {
     if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
         return false;
     }
+    // Buoni sconto: usati dalla dashboard staff (ADMIN/SUPER_ADMIN), non solo Super Admin panel.
+    if (pathname.startsWith('/api/admin/offers')) {
+        return false;
+    }
     return (
         pathname.startsWith('/admin-panel') ||
         pathname.startsWith('/dashboard/settings/roles') ||
@@ -190,6 +194,20 @@ export function proxy(request: NextRequest) {
                 request,
                 NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
             );
+        }
+        return applyDashboardSecurityHeaders(request, NextResponse.next());
+    }
+
+    // Buoni sconto: API sotto /api/admin/offers ma accessibile allo staff dashboard.
+    if (pathname.startsWith('/api/admin/offers')) {
+        if (hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
+            return NextResponse.next();
+        }
+        if (!userRole) {
+            return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+        }
+        if (!isDashboardAdminRole(userRole)) {
+            return NextResponse.json({ error: 'Accesso riservato allo staff.' }, { status: 403 });
         }
         return applyDashboardSecurityHeaders(request, NextResponse.next());
     }

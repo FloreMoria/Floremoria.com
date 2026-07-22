@@ -8,6 +8,10 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import {
+    isWhatsAppAutoNotifyDisabled,
+    shouldSkipTestOrderMetaSend,
+} from '@/lib/whatsapp/outboundGuards';
 
 export interface PuntoEFResult {
     ok: boolean;
@@ -20,6 +24,18 @@ export interface PuntoEFResult {
  * PUNTO E/F — Foto utente (inline o template) + ringraziamento fiorista.
  */
 export async function runPuntoEFDeliveryComplete(orderId: string): Promise<PuntoEFResult> {
+    const orderEarly = await prisma.order.findFirst({
+        where: { id: orderId, deletedAt: null },
+        select: { id: true, orderNumber: true, isTest: true },
+    });
+    if (!orderEarly) return { ok: false, skipped: 'order_not_found' };
+    if (isWhatsAppAutoNotifyDisabled()) {
+        return { ok: true, skipped: 'auto_notify_disabled' };
+    }
+    if (shouldSkipTestOrderMetaSend(orderEarly.isTest)) {
+        return { ok: true, skipped: 'test_order_meta_blocked' };
+    }
+
     const customerResult = await notifyCustomerDeliveryComplete(orderId);
     if (!customerResult.ok) {
         return {

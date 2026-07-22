@@ -9,6 +9,7 @@ import {
     buildFloristReminderParams,
 } from '@/lib/whatsapp/veraTemplateParams';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { isWhatsAppAutoNotifyDisabled } from '@/lib/whatsapp/outboundGuards';
 import { getLastInboundAt } from '@/lib/whatsapp/messagingWindow';
 import {
     markWorkflowStep,
@@ -77,9 +78,15 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
         errors: [],
     };
 
+    if (isWhatsAppAutoNotifyDisabled()) {
+        console.warn('[vera-workflow] Punto G saltato (AUTO_NOTIFY disabled)');
+        return result;
+    }
+
     const openOrders = await prisma.order.findMany({
         where: {
             deletedAt: null,
+            isTest: false,
             partnerPaymentStatus: 'PAID',
             status: { in: ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING'] },
             partnerId: { not: null },
@@ -98,14 +105,16 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
             continue;
         }
 
-        // Non sollecitare troppo in anticipo rispetto a consegna/funerale programmati.
+        // Senza data consegna/funerale non sollecitare (evita messaggi a chi non ha urgenza operativa).
         const targetDate = order.deliveryDate || order.funeralDate;
-        if (targetDate) {
-            const diffHours = (targetDate.getTime() - Date.now()) / MS_PER_HOUR;
-            if (diffHours > 48) {
-                result.skipped += 1;
-                continue;
-            }
+        if (!targetDate) {
+            result.skipped += 1;
+            continue;
+        }
+        const diffHours = (targetDate.getTime() - Date.now()) / MS_PER_HOUR;
+        if (diffHours > 48) {
+            result.skipped += 1;
+            continue;
         }
 
         let currentFlags = parseWorkflowFlags(order.veraWorkflowFlags);

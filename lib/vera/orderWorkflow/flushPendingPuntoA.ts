@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { isWithinFloristNotifyWindow } from '@/lib/datetime/floristNotifyWindow';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { isWorkflowStepDone, parseWorkflowFlags } from '@/lib/vera/orderWorkflow/types';
+import { isWhatsAppAutoNotifyDisabled } from '@/lib/whatsapp/outboundGuards';
 
 export interface FlushPendingPuntoAResult {
     scanned: number;
@@ -24,6 +25,11 @@ export async function flushPendingPuntoAFloristNotifications(): Promise<FlushPen
         skipped: 0,
         errors: [],
     };
+
+    if (isWhatsAppAutoNotifyDisabled()) {
+        console.warn('[vera-workflow] Flush Punto A saltato (AUTO_NOTIFY disabled)');
+        return result;
+    }
 
     if (!isWithinFloristNotifyWindow()) {
         return result;

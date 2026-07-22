@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { isCustomerConfirmSendDue } from '@/lib/datetime/customerConfirmSchedule';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { isWorkflowStepDone, parseWorkflowFlags } from '@/lib/vera/orderWorkflow/types';
+import { isWhatsAppAutoNotifyDisabled } from '@/lib/whatsapp/outboundGuards';
 
 export interface FlushPendingPuntoBResult {
     scanned: number;
@@ -23,6 +24,11 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
         skipped: 0,
         errors: [],
     };
+
+    if (isWhatsAppAutoNotifyDisabled()) {
+        console.warn('[vera-workflow] Flush Punto B saltato (AUTO_NOTIFY disabled)');
+        return result;
+    }
 
     const now = new Date();
     const candidates = await prisma.order.findMany({

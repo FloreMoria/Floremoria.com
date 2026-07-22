@@ -29,7 +29,16 @@ export interface ChatSession {
 }
 
 const dbPath = path.join(process.cwd(), 'chats_database.json');
-const useDatabasePersistence = process.env.NODE_ENV === 'production';
+// Perché: valutato a runtime (non a import) così dotenv/script possono impostare DATABASE_URL
+// prima di addMessage. Script locali senza NODE_ENV=production altrimenti scrivevano solo JSON
+// mentre WhatsApp reale partiva e la dashboard (Neon) restava vuota.
+// Override: FLOREM_CHAT_USE_JSON=1 forza il file locale anche con DATABASE_URL.
+function useDatabasePersistence(): boolean {
+    if (process.env.FLOREM_CHAT_USE_JSON === '1') return false;
+    if (process.env.FLOREM_CHAT_USE_DB === '1') return true;
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') return true;
+    return Boolean(process.env.DATABASE_URL?.trim());
+}
 type PersistenceMode = 'disk' | 'memory';
 let persistenceMode: PersistenceMode = 'disk';
 let memoryStore: Record<string, ChatSession> | null = null;
@@ -181,7 +190,7 @@ export type GetChatStoreOptions = {
 };
 
 export async function markChatSessionAsTest(phone: string): Promise<void> {
-    if (!useDatabasePersistence) return;
+    if (!useDatabasePersistence()) return;
     await ensureDbSession(phone);
     await prisma.whatsAppChatSession.update({
         where: { phone },
@@ -190,7 +199,7 @@ export async function markChatSessionAsTest(phone: string): Promise<void> {
 }
 
 export async function getChatStore(options?: GetChatStoreOptions): Promise<Record<string, ChatSession>> {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         const sessions = await prisma.whatsAppChatSession.findMany({
             where: options?.isTest !== undefined ? { isTest: options.isTest } : undefined,
             orderBy: { updatedAt: 'desc' },
@@ -227,7 +236,7 @@ export async function getChatStore(options?: GetChatStoreOptions): Promise<Recor
 }
 
 export async function saveChatStore(store: Record<string, ChatSession>) {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         return;
     }
     if (persistenceMode === 'memory') {
@@ -243,7 +252,7 @@ export async function saveChatStore(store: Record<string, ChatSession>) {
 }
 
 export async function getSession(phone: string): Promise<ChatSession> {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         return ensureDbSession(phone);
     }
 
@@ -275,7 +284,7 @@ export async function addMessage(
     mediaUrl?: string,
     metadata?: Record<string, string>
 ): Promise<ChatSession> {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         const session = await ensureDbSession(phone);
         const timeStr = nowTimeLabel();
         const updated = await prisma.whatsAppChatSession.update({
@@ -328,7 +337,7 @@ export async function addMessage(
 }
 
 export async function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED'): Promise<ChatSession> {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         await ensureDbSession(phone);
         const updated = await prisma.whatsAppChatSession.update({
             where: { phone },
@@ -351,7 +360,7 @@ export async function updateSessionProfile(
     phone: string,
     updates: Partial<Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>>
 ): Promise<ChatSession> {
-    if (useDatabasePersistence) {
+    if (useDatabasePersistence()) {
         await ensureDbSession(phone);
         const updated = await prisma.whatsAppChatSession.update({
             where: { phone },

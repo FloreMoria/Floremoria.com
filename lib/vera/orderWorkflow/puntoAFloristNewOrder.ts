@@ -37,6 +37,10 @@ import {
     formatFloristOrderCodeParam,
 } from '@/lib/whatsapp/floristTemplateCopy';
 import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
+import {
+    isWhatsAppAutoNotifyDisabled,
+    shouldSkipTestOrderMetaSend,
+} from '@/lib/whatsapp/outboundGuards';
 
 export interface PuntoAResult {
     ok: boolean;
@@ -200,21 +204,21 @@ export async function runPuntoAFloristNewOrder(
         return { ok: false, skipped: 'no_partner_whatsapp' };
     }
 
+    if (isWhatsAppAutoNotifyDisabled()) {
+        console.warn(`[vera-workflow] Punto A saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);
+        return { ok: true, skipped: 'auto_notify_disabled' };
+    }
+    if (shouldSkipTestOrderMetaSend(order.isTest) && !options.force) {
+        console.warn(`[vera-workflow] Punto A saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`);
+        return { ok: true, skipped: 'test_order_meta_blocked' };
+    }
+
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
+    // Perché: il "rilascio orfano" re-inviava in loop: free-text / fallback 24h non loggavano
+    // templateId florist_first_001 → dedup falliva → release → nuovo send (Martina/Simone spam).
+    // Se il claim c'è, consideriamo inviato. Reinvio solo con force esplicito da staff.
     if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
-        // Claim orfano: flag presente ma nessun template in chat → sblocca e riprova.
-        const anyFloristTpl = await wasOrderTemplateSent(
-            order.id,
-            'florist_first_001',
-            order.orderNumber
-        );
-        if (anyFloristTpl) {
-            return { ok: true, skipped: 'already_sent' };
-        }
-        console.warn(
-            `[vera-workflow] Punto A claim orfano senza template in chat — rilascio ordine ${order.orderNumber || order.id}`
-        );
-        await releaseWorkflowStep(order.id, 'puntoA_florist');
+        return { ok: true, skipped: 'already_sent' };
     }
 
     // Claim atomico: evita due cascate parallele sullo stesso ordine.
@@ -338,11 +342,28 @@ export async function runPuntoAFloristNewOrder(
             if (!freeTextSend.fallbackExecuted) {
                 await addMessage(sessionPhone, 'OUTBOUND', messageText, undefined, {
                     eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+                    templateId: 'florist_first_001',
                     outboundMode: 'free_text',
                     orderId: order.id,
                     orderNumber: orderCode,
                     ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
                 });
+            } else {
+                // Il testo è già in chat dal fallback 24h; marker solo per dedup (niente secondo blocco lungo).
+                await addMessage(
+                    sessionPhone,
+                    'OUTBOUND',
+                    `[Punto A] Ordine ${orderCode}: dettagli già inviati via template 24h.`,
+                    undefined,
+                    {
+                        eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+                        templateId: 'florist_first_001',
+                        outboundMode: 'template_fallback_24h_marker',
+                        orderId: order.id,
+                        orderNumber: orderCode,
+                        ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
+                    }
+                );
             }
             if (order.isTest) {
                 await markChatSessionAsTest(sessionPhone);

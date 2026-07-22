@@ -151,6 +151,12 @@ function parseMetaGraphError(body: string): {
 }
 
 async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
+    // Kill-switch emergenza: nessun messaggio Meta (né automatico né operator).
+    if (process.env.WHATSAPP_OUTBOUND_DISABLED === '1') {
+        console.warn('[meta-cloud-api] WHATSAPP_OUTBOUND_DISABLED=1: invio bloccato.');
+        return { ok: false, error: 'outbound_disabled' };
+    }
+
     const config = resolveMetaCloudCredentials();
     if (!config.apiKey || !config.phoneNumberId) {
         console.warn('[meta-cloud-api] WHATSAPP_CLOUD_API_KEY o WHATSAPP_PHONE_NUMBER_ID assenti: invio saltato.');

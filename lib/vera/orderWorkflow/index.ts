@@ -107,13 +107,13 @@ export async function runVeraPostPaymentWorkflowWithResults(
 }
 
 /**
- * Re-trigger Punto A dopo inserimento posizione tomba / sblocco alert.
- * Force + bypass fascia: l'operatore ha appena agito in dashboard.
+ * Re-trigger Punto A solo se non risulta ancora inviato.
+ * Perché: force:!anySent + release orfano re-sparava messaggi a ogni edit tomba/alert.
  */
 export async function retryPuntoAIfBlocked(orderId: string): Promise<void> {
     const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
-    const { releaseWorkflowStep } = await import('@/lib/vera/orderWorkflow/claimWorkflowStep');
     const { wasOrderTemplateSent } = await import('@/lib/vera/orderWorkflow/orderOutboundDedup');
+    const { isWorkflowStepDone, parseWorkflowFlags } = await import('@/lib/vera/orderWorkflow/types');
     const prismaClient = (await import('@/lib/prisma')).default;
 
     const order = await prismaClient.order.findFirst({
@@ -122,18 +122,22 @@ export async function retryPuntoAIfBlocked(orderId: string): Promise<void> {
     });
     if (!order) return;
 
-    // Se il claim c'è ma nessun template in chat → orfano: rilascia.
-    const anySent = await wasOrderTemplateSent(order.id, 'florist_first_001', order.orderNumber);
-    if (!anySent) {
-        await releaseWorkflowStep(order.id, 'puntoA_florist').catch(() => undefined);
-    }
-
     if (order.veraAlertType === 'grave_position_missing' || order.veraAlertType === 'punto_a_send_failed') {
         await clearVeraOperationalAlert(order.id).catch(() => undefined);
     }
 
+    const flags = parseWorkflowFlags(order.veraWorkflowFlags);
+    const claimed = isWorkflowStepDone(flags, 'puntoA_florist');
+    const anySent = await wasOrderTemplateSent(order.id, 'florist_first_001', order.orderNumber);
+    if (claimed || anySent) {
+        console.info(
+            `[vera-workflow] Retry Punto A non necessario (già inviato/claim) ordine ${order.orderNumber || order.id}`
+        );
+        return;
+    }
+
     await notifyFloristDeliveryLinkForOrder(orderId, {
-        force: !anySent,
+        force: false,
         bypassWindow: true,
     }).catch((e) => {
         console.error('[vera-workflow] Retry Punto A fallito:', e);

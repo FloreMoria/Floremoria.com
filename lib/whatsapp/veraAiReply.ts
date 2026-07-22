@@ -444,22 +444,12 @@ export async function generateVeraReply(
             if (acceptedOrder) {
                 const AFFIRMATIVE_PATTERN = /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
                 if (AFFIRMATIVE_PATTERN.test(message.trim())) {
-                    // Fiorista conferma → In Lavorazione. Solo Punto A (claim/dedup proteggono il cliente).
+                    // Fiorista conferma → In Lavorazione. NON re-inviare Punto A (già mandato a creazione).
                     await import('@/lib/prisma').then((m) =>
                         m.default.order.update({
                             where: { id: acceptedOrder.id },
                             data: { status: 'IN_PROGRESS' },
                         })
-                    );
-
-                    const { notifyFloristDeliveryLinkForOrder } = await import(
-                        '@/lib/orders/notifyFloristDeliveryLink'
-                    );
-                    const floristNotify = await notifyFloristDeliveryLinkForOrder(acceptedOrder.id).catch(
-                        (err) => {
-                            console.error('[vera-ai] Punto A dopo conferma fiorista fallito:', err);
-                            return { ok: false as const, error: String(err) };
-                        }
                     );
 
                     const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
@@ -470,15 +460,7 @@ export async function generateVeraReply(
                     });
                     const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
 
-                    if (floristNotify.ok && !('skipped' in floristNotify && floristNotify.skipped)) {
-                        return {
-                            text: `Perfetto ${floristFirstName}, incarico confermato. Ti ho inviato i dettagli operativi su WhatsApp.`,
-                            source: 'deterministic',
-                            shouldEscalate: false,
-                        };
-                    }
-
-                    const reply = `Perfetto ${floristFirstName}, incarico confermato! Ecco il link della mini-app per effettuare le foto prima e dopo la posa: ${deliveryUrl}\n\nBuon lavoro!`;
+                    const reply = `Perfetto ${floristFirstName}, incarico confermato. Ecco il link della mini-app per le foto di posa: ${deliveryUrl}\n\nBuon lavoro!`;
                     return { text: reply, source: 'deterministic', shouldEscalate: false };
                 }
             }

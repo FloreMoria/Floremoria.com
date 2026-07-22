@@ -20,6 +20,10 @@ import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplatePara
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import {
+    isWhatsAppAutoNotifyDisabled,
+    shouldSkipTestOrderMetaSend,
+} from '@/lib/whatsapp/outboundGuards';
 
 export interface PuntoBResult {
     ok: boolean;
@@ -67,6 +71,15 @@ export async function runPuntoBCustomerOrderConfirm(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+
+    if (isWhatsAppAutoNotifyDisabled()) {
+        console.warn(`[vera-workflow] Punto B saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);
+        return { ok: true, skipped: 'auto_notify_disabled' };
+    }
+    if (shouldSkipTestOrderMetaSend(order.isTest) && !options.force) {
+        console.warn(`[vera-workflow] Punto B saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`);
+        return { ok: true, skipped: 'test_order_meta_blocked' };
+    }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
 

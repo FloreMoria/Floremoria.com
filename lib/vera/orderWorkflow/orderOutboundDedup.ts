@@ -32,11 +32,17 @@ export async function wasOrderTemplateSent(
           )
           AND (
             metadata->>'templateId' = ${templateId}
-            OR (${eventType}::text IS NOT NULL AND metadata->>'eventType' = ${eventType}
-                AND (
-                  ${templateId} = 'customer_order_confirm'
-                  OR metadata->>'templateId' = ${templateId}
-                ))
+            OR (
+              ${templateId} = 'customer_order_confirm'
+              AND ${eventType}::text IS NOT NULL
+              AND metadata->>'eventType' = ${eventType}
+            )
+            OR (
+              -- Free-text / marker Punto A: eventType senza templateId → conta come florist_first_001 inviato
+              ${templateId} = 'florist_first_001'
+              AND ${eventType}::text IS NOT NULL
+              AND metadata->>'eventType' = ${eventType}
+            )
           )
         LIMIT 1
     `;

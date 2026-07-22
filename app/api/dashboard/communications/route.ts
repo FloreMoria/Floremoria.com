@@ -9,7 +9,6 @@ import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
-import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -26,12 +25,10 @@ function emptySessionsResponse(reason: string) {
 }
 
 export async function GET() {
+    // Solo sync email Postman. NON flush Punto B qui:
+    // Communications fa poll ogni 4s → flush piggyback = raffiche WhatsApp clienti.
     after(() => {
         void triggerPostmanBackgroundSync();
-        // Piggyback: scarica Punto B dovuti (+30 min) mentre la dashboard è aperta.
-        void flushPendingPuntoBCustomerConfirm().catch((err) => {
-            console.error('[communications] flush Punto B fallito:', err);
-        });
     });
 
     const auth = await requireDashboardAdmin();
@@ -186,7 +183,8 @@ export async function POST(req: Request) {
                 );
             }
 
-            const sendResult = await sendWhatsAppMessage(phone, messageText.trim(), {
+            const text = messageText.trim();
+            const sendResult = await sendWhatsAppMessage(phone, text, {
                 recipientName: session.name,
                 sessionPhone: phone,
                 source: 'operator',
@@ -201,6 +199,16 @@ export async function POST(req: Request) {
                     },
                     { status: 502 }
                 );
+            }
+
+            // Perché: sendWhatsAppMessage in free-text non scrive in chat; solo il fallback template 24h lo fa.
+            // Senza questo i messaggi operatori partono su Meta ma spariscono dalla dashboard.
+            if (!sendResult.fallbackExecuted) {
+                await addMessage(phone, 'OUTBOUND', text, undefined, {
+                    source: 'operator',
+                    outboundMode: 'freetext',
+                    ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+                });
             }
 
             const updatedSession = await getSession(phone);

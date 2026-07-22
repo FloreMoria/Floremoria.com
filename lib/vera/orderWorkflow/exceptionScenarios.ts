@@ -37,7 +37,11 @@ export async function resolveActiveFloristOrder(partnerId: string) {
             deletedAt: null,
             partnerPaymentStatus: 'PAID',
             status: { in: ['ACCEPTED', 'IN_PROGRESS', 'PENDING'] },
-            deliveryProof: { is: { status: { not: 'COMPLETED' } } },
+            // Include ordini senza DeliveryProof ancora creato (is: escludeva i null).
+            OR: [
+                { deliveryProof: { is: null } },
+                { deliveryProof: { is: { status: { not: 'COMPLETED' } } } },
+            ],
         },
         orderBy: { updatedAt: 'desc' },
         include: { partner: true, user: { select: { name: true } } },

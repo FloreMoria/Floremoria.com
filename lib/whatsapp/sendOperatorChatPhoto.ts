@@ -7,6 +7,7 @@
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { uploadChatImageBuffer } from '@/lib/media/uploadChatMedia';
+import { ensureWhatsAppImageUrlFromBuffer } from '@/lib/whatsapp/deliveryImageStaging';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import {
     normalizePhoneE164,
@@ -60,8 +61,14 @@ export async function sendOperatorChatPhoto(input: {
     const caption = (input.caption || '').trim();
 
     let publicUrl: string;
+    let dashboardMediaUrl: string;
     try {
-        publicUrl = await uploadChatImageBuffer(input.buffer, sessionPhone);
+        // JPEG su Blob (archivio dashboard) + URL staging pubblico per Meta.
+        dashboardMediaUrl = await uploadChatImageBuffer(input.buffer, sessionPhone);
+        publicUrl = await ensureWhatsAppImageUrlFromBuffer(
+            phoneE164.replace(/\D/g, '') || 'chat',
+            input.buffer
+        );
     } catch (err) {
         const message = err instanceof Error ? err.message : 'Upload immagine fallito.';
         return { ok: false, error: message };
@@ -83,13 +90,13 @@ export async function sendOperatorChatPhoto(input: {
             await setSessionStatus(sessionPhone, 'HUMAN_INTERVENTION');
         }
 
-        const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', publicUrl, {
+        const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', dashboardMediaUrl, {
             source: 'operator',
             outboundMode: input.outboundMode,
             ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
         });
 
-        return { ok: true, session: updatedSession, mediaUrl: publicUrl, mode: 'freetext' };
+        return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'freetext' };
     }
 
     // Fuori finestra 24h: solo template con header immagine (customer_delivery_photo).
@@ -156,7 +163,7 @@ export async function sendOperatorChatPhoto(input: {
         caption ||
         `Foto inviata (template post-consegna) — ordine ${ctx.order.orderNumber || ctx.order.id}`;
 
-    const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', bodyForLog, publicUrl, {
+    const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', bodyForLog, dashboardMediaUrl, {
         source: 'operator',
         outboundMode: input.outboundMode,
         sendMode: 'template',
@@ -164,5 +171,5 @@ export async function sendOperatorChatPhoto(input: {
         ...(templateSend.messageId ? { whatsAppMessageId: templateSend.messageId } : {}),
     });
 
-    return { ok: true, session: updatedSession, mediaUrl: publicUrl, mode: 'template' };
+    return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'template' };
 }

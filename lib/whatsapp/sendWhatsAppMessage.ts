@@ -19,9 +19,13 @@ import {
 export interface SendWhatsAppMessageOptions {
     recipientName?: string;
     orderCode?: string;
+    /** HEADER Meta in fallback template (es. "Nuovo Ordine FloreMoria"). Default: orderCode. */
+    headerTitle?: string;
     sessionPhone?: string;
     source?: string;
     userType?: 'UTENTE' | 'FLORIST' | 'UNKNOWN';
+    /** Se true, non tenta il free-text: solo template (finestra 24h chiusa / primo contatto). */
+    forceTemplate?: boolean;
 }
 
 export interface SendWhatsAppMessageResult extends WhatsAppSendResult {
@@ -85,25 +89,32 @@ export async function sendWhatsAppMessage(
         return { ok: false, error: 'Messaggio vuoto.' };
     }
 
-    // 1. Tenta invio messaggio libero (session message)
-    const initialSend = await sendWhatsAppTextMessage(phone, text);
+    // 1. Tenta invio messaggio libero (session message), salvo forceTemplate
+    if (!options?.forceTemplate) {
+        const initialSend = await sendWhatsAppTextMessage(phone, text);
 
-    if (initialSend.ok) {
-        return { ...initialSend, fallbackExecuted: false };
+        if (initialSend.ok) {
+            return { ...initialSend, fallbackExecuted: false };
+        }
+
+        // Se l'errore non riguarda la finestra 24h chiusa, restituisci il risultato direttamente
+        if (!is24HourWindowError(initialSend)) {
+            return { ...initialSend, fallbackExecuted: false };
+        }
+
+        // 2. Intercetta errore finestra 24h chiusa e registra nei log di sistema
+        console.warn('WhatsApp 24h Window Closed: Fallback to Template Executed', {
+            phone,
+            initialError: initialSend.error,
+            errorCode: initialSend.errorCode,
+            errorSubcode: initialSend.errorSubcode,
+        });
+    } else {
+        console.info('[whatsapp] forceTemplate: salto free-text, invio diretto template', {
+            phone,
+            source: options.source,
+        });
     }
-
-    // Se l'errore non riguarda la finestra 24h chiusa, restituisci il risultato direttamente
-    if (!is24HourWindowError(initialSend)) {
-        return { ...initialSend, fallbackExecuted: false };
-    }
-
-    // 2. Intercetta errore finestra 24h chiusa e registra nei log di sistema
-    console.warn('WhatsApp 24h Window Closed: Fallback to Template Executed', {
-        phone,
-        initialError: initialSend.error,
-        errorCode: initialSend.errorCode,
-        errorSubcode: initialSend.errorSubcode,
-    });
 
     // Mappatura parametri per il template di notifica logistica / messaggio personalizzato
     const templateSpec = getProactiveWhatsAppTemplate();
@@ -119,6 +130,11 @@ export async function sendWhatsAppMessage(
         'Cliente';
     const recipientFirstName = extractFirstName(rawFirstName) || 'Cliente';
 
+    const headerTitle = sanitizeMetaTemplateParam(
+        options?.headerTitle?.trim() || orderCode,
+        60
+    );
+
     const staffNotes = sanitizeMetaTemplateParam(text, 900) || 'Aggiornamento sul Suo servizio.';
 
     const components = [
@@ -127,7 +143,7 @@ export async function sendWhatsAppMessage(
             parameters: [
                 {
                     type: 'text' as const,
-                    text: sanitizeMetaTemplateParam(orderCode, 60),
+                    text: headerTitle,
                 },
             ],
         },
@@ -146,7 +162,7 @@ export async function sendWhatsAppMessage(
         },
     ];
 
-    // 3. Fallback automatico via WhatsApp Template
+    // 3. Fallback / invio diretto via WhatsApp Template
     const templateResult = await sendWhatsAppTemplateMessage(
         phone,
         templateSpec.metaName,
@@ -163,7 +179,7 @@ export async function sendWhatsAppMessage(
         return {
             ok: false,
             error: `Invio fallito (finestra 24h chiusa & fallback template: ${templateResult.error})`,
-            errorCode: templateResult.errorCode ?? initialSend.errorCode,
+            errorCode: templateResult.errorCode,
             fallbackExecuted: true,
         };
     }
@@ -181,9 +197,10 @@ export async function sendWhatsAppMessage(
         }
         await addMessage(sessionPhone, 'OUTBOUND', text, undefined, {
             source: options?.source || 'vera',
-            outboundMode: 'template_fallback_24h',
+            outboundMode: options?.forceTemplate ? 'template_forced' : 'template_fallback_24h',
             templateName: templateSpec.metaName,
             orderCode,
+            headerTitle,
             recipientFirstName,
             ...(templateResult.messageId ? { whatsAppMessageId: templateResult.messageId } : {}),
         });

@@ -25,7 +25,9 @@ export function calculateFloristCompensation(
     const unmappedProducts: string[] = [];
 
     for (const item of orderItems) {
-        const entry = resolveListinoEntry(item.product.slug, item.product.name);
+        const entry = resolveListinoEntry(item.product.slug, item.product.name, {
+            isBouquet: item.product.isBouquet,
+        });
         const qty = Math.max(1, item.quantity);
         const name = item.product.name || item.product.slug || 'Prodotto';
 

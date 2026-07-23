@@ -10,6 +10,10 @@ import {
     formatFloristCompensationForTemplate,
 } from '@/lib/pricing/calculateFloristCompensation';
 import type { OrderLineForListino } from '@/lib/pricing/listini';
+import {
+    FIRST_OUTBOUND_TITLES,
+    withBoldWhatsAppTitle,
+} from '@/lib/whatsapp/firstOutboundTitle';
 
 /**
  * Testo WhatsApp Punto A — nuovo incarico fiorista.
@@ -38,8 +42,11 @@ export interface FloristNewOrderMessageInput {
 export function stripGramatoArtifact(value: string): string {
     return value
         .replace(/\bGramato\b/gi, '')
-        .replace(/\s{2,}/g, ' ')
-        .replace(/\s+([,.;:!?])/g, '$1')
+        // Solo spazi/tab sulla stessa riga — non distruggere i a capo del messaggio WhatsApp
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/[ \t]+([,.;:!?])/g, '$1')
         .trim();
 }
 
@@ -150,7 +157,10 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         `Per qualsiasi dubbio o necessità fammi sapere qui in chat. Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;
 
-    return stripGramatoArtifact(body).replace(/\n{3,}/g, '\n\n');
+    return withBoldWhatsAppTitle(
+        FIRST_OUTBOUND_TITLES.floristNewOrder,
+        stripGramatoArtifact(body).replace(/\n{3,}/g, '\n\n')
+    );
 }
 
 /** @deprecated Usare buildFloristNewOrderWhatsAppText — mantenuto per compatibilità import legacy. */

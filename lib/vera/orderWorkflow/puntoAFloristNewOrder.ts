@@ -6,9 +6,11 @@ import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { addMessage, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
+import { addMessage, getSession, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
+import { FIRST_OUTBOUND_TITLES } from '@/lib/whatsapp/firstOutboundTitle';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import {
     detectIsFirstOrderForPartner,
@@ -329,16 +331,28 @@ export async function runPuntoAFloristNewOrder(
     });
 
     // Percorso primario: messaggio strutturato (prodotto dinamico + link mini-app).
-    // Se la finestra 24h è chiusa, sendWhatsAppMessage usa il template proattivo come fallback.
+    // Stesso numero del cliente / senza inbound recente → finestra 24h chiusa: Meta rifiuta il free-text.
+    // In quel caso forziamo subito il template con HEADER "Nuovo Ordine FloreMoria".
+    const sessionPhone = `whatsapp:${floristPhoneE164}`;
+    let forceTemplate = false;
+    try {
+        const session = await getSession(sessionPhone);
+        forceTemplate = requiresTemplateMessage(session);
+    } catch {
+        forceTemplate = true;
+    }
+
     const freeTextSend = await sendWhatsAppMessage(floristPhoneE164, messageText, {
         recipientName: floristName,
         orderCode,
+        headerTitle: FIRST_OUTBOUND_TITLES.floristNewOrder,
         userType: 'FLORIST',
         source: 'puntoA_florist_new_order',
+        sessionPhone,
+        forceTemplate,
     });
 
     if (freeTextSend.ok) {
-        const sessionPhone = `whatsapp:${floristPhoneE164}`;
         try {
             await updateSessionProfile(sessionPhone, {
                 name: floristName,
@@ -357,16 +371,18 @@ export async function runPuntoAFloristNewOrder(
                     ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
                 });
             } else {
-                // Il testo è già in chat dal fallback 24h; marker solo per dedup (niente secondo blocco lungo).
+                // Il testo è già in chat dal fallback/template forzato; marker solo per dedup.
                 await addMessage(
                     sessionPhone,
                     'OUTBOUND',
-                    `[Punto A] Ordine ${orderCode}: dettagli già inviati via template 24h.`,
+                    `[Punto A] Ordine ${orderCode}: dettagli inviati via template (${FIRST_OUTBOUND_TITLES.floristNewOrder}).`,
                     undefined,
                     {
                         eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
                         templateId: 'florist_first_001',
-                        outboundMode: 'template_fallback_24h_marker',
+                        outboundMode: forceTemplate
+                            ? 'template_forced_closed_window'
+                            : 'template_fallback_24h_marker',
                         orderId: order.id,
                         orderNumber: orderCode,
                         ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
@@ -396,7 +412,7 @@ export async function runPuntoAFloristNewOrder(
         const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
         await clearVeraOperationalAlert(order.id).catch(() => undefined);
         console.info(
-            `[vera-workflow] Punto A OK (messaggio strutturato${freeTextSend.fallbackExecuted ? '+fallback24h' : ''}) ordine ${orderCode}`
+            `[vera-workflow] Punto A OK (${forceTemplate || freeTextSend.fallbackExecuted ? 'template+header' : 'free_text'}) ordine ${orderCode}`
         );
         return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
     }

@@ -51,6 +51,18 @@ export const LISTINO_CIMITERO: readonly ListinoEntry[] = [
     { key: 'ricordo-affettuoso', label: 'Ricordo Affettuoso', category: 'cimitero', floristCents: 2000 },
     { key: 'lumino', label: 'Lumino', category: 'cimitero', floristCents: 200 },
     { key: 'messaggio', label: 'Messaggio', category: 'cimitero', floristCents: 0 },
+    // Piccoli Amici / piante (catalogo animali) — allineati a listino tombe/funebre affine
+    { key: 'abbraccio-verde', label: 'Abbraccio Verde', category: 'cimitero', floristCents: 2200 },
+    { key: 'legame-eterno', label: 'Legame Eterno', category: 'cimitero', floristCents: 2500 },
+    { key: 'battito-di-foglia', label: 'Battito di Foglia', category: 'cimitero', floristCents: 3000 },
+    { key: 'anima-pura', label: 'Anima Pura', category: 'cimitero', floristCents: 3000 },
+    { key: 'il-giardino-del-ponte', label: 'Il Giardino del Ponte', category: 'cimitero', floristCents: 3000 },
+    { key: 'sole-di-memoria', label: 'Sole di Memoria', category: 'cimitero', floristCents: 2000 },
+    { key: 'lumino-piccoli-amici', label: 'Lumino', category: 'cimitero', floristCents: 200 },
+    { key: 'biglietto-piccoli-amici', label: 'Messaggio', category: 'cimitero', floristCents: 0 },
+    { key: 'messaggio-piccoli-amici', label: 'Messaggio', category: 'cimitero', floristCents: 0 },
+    { key: 'ceri-piccoli-amici', label: 'Ceri / Candele', category: 'cimitero', floristCents: 1000 },
+    { key: 'nastro-commemorativo-piccoli-amici', label: 'Nastro commemorativo', category: 'cimitero', floristCents: 0 },
 ] as const;
 
 export const ALL_LISTINO_ENTRIES: readonly ListinoEntry[] = [...LISTINO_FUNERALE, ...LISTINO_CIMITERO];
@@ -72,19 +84,18 @@ function normalizeProductKey(slug?: string | null, name?: string | null): string
 /** Risolve una voce listino da slug o nome prodotto (best-effort). */
 export function resolveListinoEntry(
     slug?: string | null,
-    name?: string | null
+    name?: string | null,
+    opts?: { isBouquet?: boolean | null }
 ): ListinoEntry | null {
     const key = normalizeProductKey(slug, name);
-    if (!key) return null;
+    const label = (name || '').toLowerCase();
 
-    const direct = listinoByKey.get(key);
-    if (direct) return direct;
-
-    for (const entry of ALL_LISTINO_ENTRIES) {
-        if (key.includes(entry.key) || entry.key.includes(key)) return entry;
+    if (key) {
+        const direct = listinoByKey.get(key);
+        if (direct) return direct;
     }
 
-    const label = (name || '').toLowerCase();
+    // Match esplicito su etichette (prima del fuzzy generico "bouquet*" → evita Memoria Eterna sbagliata)
     if (/cuore|corona/.test(label)) return listinoByKey.get('cuore-corona') ?? null;
     if (/copribara/.test(label)) return listinoByKey.get('copribara') ?? null;
     if (/piramide/.test(label)) return listinoByKey.get('piramide') ?? null;
@@ -99,10 +110,29 @@ export function resolveListinoEntry(
     if (/omaggio\s*speciale/.test(label)) return listinoByKey.get('bouquet-omaggio-speciale') ?? null;
     if (/5\s*rose|bouquet\s*di\s*rose/.test(label)) return listinoByKey.get('bouquet-di-rose') ?? null;
     if (/ricordo\s*affettuoso/.test(label)) return listinoByKey.get('bouquet-ricordo-affettuoso') ?? null;
-    if (/lumino/.test(label)) return listinoByKey.get('lumino') ?? null;
+    if (/abbraccio\s*verde/.test(label) || key === 'abbraccio-verde') {
+        return listinoByKey.get('abbraccio-verde') ?? null;
+    }
+    if (/lumino/.test(label) || /lumino/.test(key)) return listinoByKey.get('lumino') ?? null;
     if (/margherite|gerbere/.test(label)) return listinoByKey.get('margherite-gerbere') ?? null;
     if (/kalonche|kalanchoe/.test(label)) return listinoByKey.get('kalonche') ?? null;
-    if (/bigliett/.test(label)) return listinoByKey.get('biglietto-messaggio') ?? null;
+    if (/bigliett|messaggio/.test(label) || /bigliett|messaggio/.test(key)) {
+        return listinoByKey.get('messaggio') ?? listinoByKey.get('biglietto-messaggio') ?? null;
+    }
+
+    // Fuzzy: solo se la chiave prodotto contiene l'intera key listino (non il contrario su "bouquet")
+    if (key) {
+        for (const entry of ALL_LISTINO_ENTRIES) {
+            if (key === entry.key || key.startsWith(`${entry.key}-`) || key.includes(`-${entry.key}`)) {
+                return entry;
+            }
+        }
+    }
+
+    // Omaggio principale catalogo senza voce dedicata → listino tombe bouquet standard
+    if (opts?.isBouquet) {
+        return listinoByKey.get('bouquet-di-rose') ?? null;
+    }
 
     return null;
 }
@@ -114,7 +144,11 @@ export function formatFloristCompensationEur(cents: number): string {
 
 export interface OrderLineForListino {
     quantity: number;
-    product: { slug?: string | null; name?: string | null; isBouquet?: boolean | null };
+    product: {
+        slug?: string | null;
+        name?: string | null;
+        isBouquet?: boolean | null;
+    };
 }
 
 /**
@@ -124,7 +158,9 @@ export interface OrderLineForListino {
 export function sumFloristCompensationCents(lines: OrderLineForListino[]): number {
     let total = 0;
     for (const line of lines) {
-        const entry = resolveListinoEntry(line.product.slug, line.product.name);
+        const entry = resolveListinoEntry(line.product.slug, line.product.name, {
+            isBouquet: line.product.isBouquet,
+        });
         if (!entry) continue;
         total += entry.floristCents * Math.max(1, line.quantity);
     }

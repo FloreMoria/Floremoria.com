@@ -177,6 +177,7 @@ model Order {
   veraAlertPriority      String?           @default("normal") @map("vera_alert_priority") @db.VarChar(16)
   orderFrozenAt          DateTime?         @map("order_frozen_at")
   orderFrozenReason      String?           @map("order_frozen_reason") @db.Text
+  externalAnnouncementId String?           @map("external_announcement_id") @db.VarChar(255)
   deceasedProfileId      String?
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
   partner                Partner?          @relation(fields: [partnerId], references: [id])

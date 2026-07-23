@@ -51,6 +51,22 @@ export async function GET(request: Request) {
                 deceasedName: true,
                 totalPriceCents: true,
                 currency: true,
+                externalAnnouncementId: true,
+                buyerFullName: true,
+                buyerEmail: true,
+                customerPhone: true,
+                items: {
+                    select: {
+                        productId: true,
+                        quantity: true,
+                        priceCents: true,
+                        product: {
+                            select: {
+                                slug: true,
+                            },
+                        },
+                    },
+                },
             },
         }),
     ]);
@@ -68,6 +84,19 @@ export async function GET(request: Request) {
                 deceasedName: o.deceasedName,
                 totalPriceCents: o.totalPriceCents,
                 currency: o.currency,
+                annuncioId: o.externalAnnouncementId || null,
+                productId: o.items[0]?.productId || null,
+                items: o.items.map((i) => ({
+                    productId: i.productId,
+                    productCode: i.product?.slug || null,
+                    quantity: i.quantity,
+                    priceCents: i.priceCents,
+                })),
+                customer: {
+                    name: o.buyerFullName || null,
+                    email: o.buyerEmail || null,
+                    phone: o.customerPhone || null,
+                },
             })),
             meta: { total, limit, offset },
         },

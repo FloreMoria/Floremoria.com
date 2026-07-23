@@ -112,6 +112,12 @@ export async function POST(request: Request) {
                 ? b.partnerNotifyEmail.trim().toLowerCase().slice(0, 255)
                 : undefined;
         const lineItems = Array.isArray(b.lineItems) ? (b.lineItems as LineItem[]) : [];
+        const externalAnnouncementId =
+            typeof b.annuncioId === 'string'
+                ? b.annuncioId.trim()
+                : typeof b.external_announcement_id === 'string'
+                  ? b.external_announcement_id.trim()
+                  : undefined;
 
         const additionalInstructionsRaw =
             typeof b.additionalInstructions === 'string'
@@ -252,6 +258,7 @@ export async function POST(request: Request) {
                     agencyName: agencyName || null,
                     funeralDate: funeralDate || null,
                     partnerNotifyEmail: partnerNotifyEmail || null,
+                    externalAnnouncementId: externalAnnouncementId || null,
                     items: {
                         create: resolved.map((r) => ({
                             productId: r.productId,

@@ -46,6 +46,7 @@ export async function notifyFloristDeliveryLinkForOrder(
             status: true,
             partnerId: true,
             isTest: true,
+            orderNumber: true,
             veraWorkflowFlags: true,
             partner: { select: { deletedAt: true } },
         },
@@ -57,6 +58,26 @@ export async function notifyFloristDeliveryLinkForOrder(
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
+
+    // P1: se staff e fiorista hanno già un accordo recente in chat, non re-sparare "nuova consegna".
+    if (!options.force) {
+        const { hasRecentStaffFloristAgreement } = await import('@/lib/vera/staffFloristAgreement');
+        const partnerPhone = await prisma.partner.findFirst({
+            where: { id: order.partnerId, deletedAt: null },
+            select: { whatsappNumber: true },
+        });
+        const agreed = await hasRecentStaffFloristAgreement({
+            partnerWhatsApp: partnerPhone?.whatsappNumber,
+            orderNumber: order.orderNumber,
+            withinHours: 72,
+        });
+        if (agreed) {
+            console.info(
+                `[vera-workflow] Punto A saltato (accordo staff-fiorista recente in chat) ordine ${order.orderNumber || order.id}`
+            );
+            return { ok: true, skipped: 'recent_staff_florist_agreement' };
+        }
+    }
 
     // Fuori fascia (solo Produzione): non inviare ora; il cron flusha al rientro 08:00–20:00.
     // Sandbox / Test Mode (isTest = true) ignora il blocco d'orario.

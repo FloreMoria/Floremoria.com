@@ -11,10 +11,22 @@
  */
 
 import {
-    buildSymmetricCourtesyReply,
     isIsolatedCourtesyMessage,
+    isShortAckWithoutOperationalIntent,
     shouldSilenceVeraReply,
 } from '@/lib/vera/courtesyDebounce';
+import {
+    buildDeliveryAlreadyDoneReply,
+    isAskingAboutPhotosOrDelivery,
+    isOrderDeliveryCompleted,
+    replyViolatesDeliveryContextGate,
+} from '@/lib/vera/deliveryContextGate';
+import {
+    buildFloristCertainDataReply,
+    buildFloristUncertainEscalateReply,
+    detectFloristOperationalDataRequest,
+    isFloristOperationalDataCertain,
+} from '@/lib/vera/floristOperationalHardRules';
 import {
     buildWhatsAppAiReply,
     buildSimpleThanksReply,
@@ -65,6 +77,9 @@ import {
     repairIncompleteReply,
     totalConfusionIncludingCurrent,
 } from '@/lib/vera/conversationScenarioHandlers';
+
+const FLORIST_AFFIRMATIVE_PATTERN =
+    /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
 
 export const VERA_CLOSING_SIGNATURE =
     'Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹';
@@ -174,7 +189,7 @@ function polishVeraReply(
             getDisplayNameFromSession(session, callerContext)
         );
     }
-    if (!closing && !skipCatalogLinks) {
+    if (!closing && !skipCatalogLinks && session.userType !== 'FLORIST') {
         text = ensureCatalogLinksInReply(
             text,
             message,
@@ -396,14 +411,80 @@ export async function generateVeraReply(
     session: ChatSession,
     mediaUrl?: string | null
 ): Promise<VeraReplyResult> {
-    const { shouldEscalateToHuman, getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
+    const { getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
 
-    // Reaction / cortesia ridondante post-congedo: nessun messaggio in uscita.
+    const callerContext = await resolveVeraCallerContext(session);
+
+    // Fiorista "ok" su ordine ACCEPTED: prima del silence (OK sarebbe silenziato come ack).
+    if (session.userType === 'FLORIST' && callerContext.phoneE164 && FLORIST_AFFIRMATIVE_PATTERN.test(message.trim())) {
+        const phoneDigits = callerContext.phoneE164.replace(/\D/g, '');
+        const partner = await import('@/lib/prisma').then((m) =>
+            m.default.partner.findFirst({
+                where: {
+                    deletedAt: null,
+                    OR: [
+                        { whatsappNumber: callerContext.phoneE164! },
+                        { whatsappNumber: { contains: phoneDigits.slice(-9) } },
+                    ],
+                },
+                select: { id: true, shopName: true, ownerName: true },
+            })
+        );
+
+        if (partner) {
+            const acceptedOrder = await import('@/lib/prisma').then((m) =>
+                m.default.order.findFirst({
+                    where: {
+                        partnerId: partner.id,
+                        status: 'ACCEPTED',
+                        deletedAt: null,
+                    },
+                })
+            );
+
+            if (acceptedOrder) {
+                await import('@/lib/prisma').then((m) =>
+                    m.default.order.update({
+                        where: { id: acceptedOrder.id },
+                        data: { status: 'IN_PROGRESS' },
+                    })
+                );
+
+                const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
+                const { extractFirstName } = await import('@/lib/whatsapp/proactiveTemplateParams');
+                const deliveryUrl = buildFloristDeliveryUrl({
+                    id: acceptedOrder.id,
+                    orderNumber: acceptedOrder.orderNumber,
+                });
+                const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
+
+                const reply = `Perfetto ${floristFirstName}, incarico confermato. Ecco il link della mini-app per le foto di posa: ${deliveryUrl}\n\nBuon lavoro!`;
+                return { text: reply, source: 'deterministic', shouldEscalate: false };
+            }
+        }
+    }
+
+    // Reaction / cortesia / ack isolati: nessun messaggio in uscita.
     if (shouldSilenceVeraReply(message, session)) {
         return { text: '', source: 'silence', shouldEscalate: false };
     }
 
-    const callerContext = await resolveVeraCallerContext(session);
+    // P0 context gate foto/consegna (Carolina/Maria).
+    if (
+        session.userType !== 'FLORIST' &&
+        isAskingAboutPhotosOrDelivery(message) &&
+        isOrderDeliveryCompleted(callerContext)
+    ) {
+        return {
+            text: buildDeliveryAlreadyDoneReply({
+                firstName: callerContext.firstName,
+                deceasedName: callerContext.deceasedName,
+                userType: session.userType,
+            }),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
 
     if (
         session.userType !== 'FLORIST' &&
@@ -430,39 +511,38 @@ export async function generateVeraReply(
         );
 
         if (partner) {
-            // Verifica se il fiorista ha ordini in stato "Ricevuto" (ACCEPTED) in sospeso
-            const acceptedOrder = await import('@/lib/prisma').then((m) =>
-                m.default.order.findFirst({
-                    where: {
-                        partnerId: partner.id,
-                        status: 'ACCEPTED',
-                        deletedAt: null,
-                    },
-                })
-            );
-
-            if (acceptedOrder) {
-                const AFFIRMATIVE_PATTERN = /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
-                if (AFFIRMATIVE_PATTERN.test(message.trim())) {
-                    // Fiorista conferma → In Lavorazione. NON re-inviare Punto A (già mandato a creazione).
-                    await import('@/lib/prisma').then((m) =>
-                        m.default.order.update({
-                            where: { id: acceptedOrder.id },
-                            data: { status: 'IN_PROGRESS' },
-                        })
-                    );
-
-                    const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
-                    const { extractFirstName } = await import('@/lib/whatsapp/proactiveTemplateParams');
-                    const deliveryUrl = buildFloristDeliveryUrl({
-                        id: acceptedOrder.id,
-                        orderNumber: acceptedOrder.orderNumber,
-                    });
-                    const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
-
-                    const reply = `Perfetto ${floristFirstName}, incarico confermato. Ecco il link della mini-app per le foto di posa: ${deliveryUrl}\n\nBuon lavoro!`;
-                    return { text: reply, source: 'deterministic', shouldEscalate: false };
+            // Hard rules: compenso / indirizzo / biglietto senza certezza → escalate (Martina).
+            const dataKind = detectFloristOperationalDataRequest(message);
+            if (dataKind) {
+                if (isFloristOperationalDataCertain(dataKind, callerContext)) {
+                    return {
+                        text: buildFloristCertainDataReply(dataKind, callerContext),
+                        source: 'deterministic',
+                        shouldEscalate: false,
+                    };
                 }
+
+                if (callerContext.orderId) {
+                    const { setVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+                    await setVeraOperationalAlert({
+                        orderId: callerContext.orderId,
+                        type:
+                            dataKind === 'compensation'
+                                ? 'economic_discrepancy'
+                                : 'workflow_blocked',
+                        message: `Fiorista chiede ${dataKind} senza dato certo al 100%: "${message.slice(0, 240)}"`,
+                        priority: 'urgent',
+                        freezeOrder: dataKind === 'address' || dataKind === 'ticket',
+                    }).catch((err) => {
+                        console.error('[vera-ai] Alert florist data mismatch fallito:', err);
+                    });
+                }
+
+                return {
+                    text: buildFloristUncertainEscalateReply(dataKind),
+                    source: 'deterministic',
+                    shouldEscalate: true,
+                };
             }
 
             const floristException = detectFloristException(message);
@@ -485,11 +565,12 @@ export async function generateVeraReply(
 
     if (session.userType !== 'FLORIST' && callerContext.phoneE164) {
         const activeOrder = await lookupActiveOrderByPhone(callerContext.phoneE164);
-        if (activeOrder && isUserModificationRequest(message)) {
-            await handleUserModificationRequest({ orderId: activeOrder.id, message });
+        const orderForMod = activeOrder || (await lookupLastOrderByPhone(callerContext.phoneE164));
+        if (orderForMod && isUserModificationRequest(message) && orderForMod.status !== 'COMPLETED' && orderForMod.status !== 'CANCELLED') {
+            await handleUserModificationRequest({ orderId: orderForMod.id, message });
             return {
                 text:
-                    'La ringrazio per la Sua segnalazione. Ho trasmesso la richiesta al nostro Staff, che La ricontatterà al più presto con un aggiornamento.',
+                    'La ringrazio per la Sua segnalazione. Ho preso in carico la richiesta di modifica e l\'ho trasmessa subito al nostro Staff, che La ricontatterà qui con un aggiornamento preciso — senza anticipare conferme finché non è verificata.',
                 source: 'deterministic',
                 shouldEscalate: true,
             };
@@ -660,7 +741,23 @@ export async function generateVeraReply(
             callerContext,
             mediaUrl
         );
-        if (geminiResult) return geminiResult;
+        if (geminiResult) {
+            if (
+                isOrderDeliveryCompleted(callerContext) &&
+                replyViolatesDeliveryContextGate(geminiResult.text)
+            ) {
+                return {
+                    text: buildDeliveryAlreadyDoneReply({
+                        firstName: callerContext.firstName,
+                        deceasedName: callerContext.deceasedName,
+                        userType: session.userType,
+                    }),
+                    source: 'deterministic',
+                    shouldEscalate: false,
+                };
+            }
+            return geminiResult;
+        }
 
         const fallbackText =
             session.userType === 'FLORIST'
@@ -669,17 +766,9 @@ export async function generateVeraReply(
         return { text: fallbackText, source: 'fallback', shouldEscalate: false };
     }
 
-    // ── Fuori finestra 24h: cortesia isolata ─────────────────────────────────
-    if (isIsolatedCourtesyMessage(message)) {
-        return {
-            text: buildSymmetricCourtesyReply({
-                message,
-                userType: session.userType,
-                displayName: getDisplayNameFromSession(session, callerContext),
-            }),
-            source: 'deterministic',
-            shouldEscalate: false,
-        };
+    // ── Fuori finestra 24h: cortesia isolata (di norma già silenziata sopra) ─
+    if (isIsolatedCourtesyMessage(message) || isShortAckWithoutOperationalIntent(message)) {
+        return { text: '', source: 'silence', shouldEscalate: false };
     }
 
     // ── Fuori finestra: regole deterministiche + Gemini se generico ───────────

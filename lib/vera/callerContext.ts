@@ -13,6 +13,8 @@ import {
     calculateFloristCompensation,
     formatFloristCompensationForTemplate,
 } from '@/lib/pricing/calculateFloristCompensation';
+import { sessionHasRecentOutboundPhotos } from '@/lib/vera/deliveryContextGate';
+import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 
 export type VeraConversationMode = 'pre_acquisto' | 'ordine_attivo' | 'fiorista';
 
@@ -43,6 +45,12 @@ export interface VeraCallerContext {
     customerNotes?: string | null;
     /** Compenso spettante al fiorista per il servizio (solo interlocutore fiorista). */
     floristCompensation?: string | null;
+    /** Indirizzo strutturato (cimitero/chiesa + città + tomba) per prompt e hard rules. */
+    structuredDeliveryAddress?: string | null;
+    /** True se in chat ci sono già foto outbound recenti. */
+    photosAlreadySentInChat?: boolean;
+    /** ID ordine collegato (per alert). */
+    orderId?: string | null;
 }
 
 function resolveDisplayName(session: ChatSession): string | null {
@@ -93,45 +101,64 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         }
     } else if (phoneE164) {
         const activeOrderBasic = await lookupActiveOrderByPhone(phoneE164);
-        if (activeOrderBasic) {
+        const orderBasic = activeOrderBasic || (await lookupLastOrderByPhone(phoneE164));
+        if (orderBasic) {
             order = await prisma.order.findUnique({
-                where: { id: activeOrderBasic.id },
+                where: { id: orderBasic.id },
                 include: {
                     items: { include: { product: true } },
                     deliveryProof: true,
-                }
+                },
             });
         }
     }
 
-    const hasActiveOrder = Boolean(order);
+    const openStatuses = new Set(['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING']);
+    const hasActiveOrder = Boolean(order && openStatuses.has(order.status));
+    const hasOrderContext = Boolean(order && order.status !== 'CANCELLED');
     const proofStatus = order?.deliveryProof?.status ?? null;
 
-    const productsList = order?.items.map(item => `${item.product.name} (x${item.quantity})`) ?? null;
+    const productsList = order?.items.map((item) => `${item.product.name} (x${item.quantity})`) ?? null;
     const hasPhotoBefore = order ? hasPhotoBeforeOption(order.items) : false;
     const optionals = order ? buildOrderOptionalsList(order.items) : [];
     const ticketMessage = order?.ticketMessage?.trim() || null;
     const customerNotes = stripInternalNotes(order?.additionalInstructions);
-    const deliveryDate = order?.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('it-IT') : null;
-    // Compenso fiorista dal listino ufficiale: comunicato solo all'interlocutore fiorista.
+    const deliveryDate = order?.deliveryDate
+        ? new Date(order.deliveryDate).toLocaleDateString('it-IT')
+        : null;
     const floristCompensation =
         session.userType === 'FLORIST' && order
             ? formatFloristCompensationForTemplate(calculateFloristCompensation(order.items))
             : null;
+
+    const location = order ? formatLocation(order.cemeteryCity, order.cemeteryName) : null;
+    const grave = order?.gravePosition?.trim() || null;
+    const structuredDeliveryAddress = [grave, location].filter(Boolean).join(' — ') || null;
+    const photosAlreadySentInChat = sessionHasRecentOutboundPhotos(session);
+
+    const mode: VeraConversationMode =
+        session.userType === 'FLORIST'
+            ? 'fiorista'
+            : hasActiveOrder || proofStatus === 'COMPLETED' || order?.status === 'COMPLETED'
+              ? 'ordine_attivo'
+              : 'pre_acquisto';
 
     return {
         phoneE164,
         displayNameFromWhatsApp: displayName,
         firstName,
         userType: session.userType,
-        mode: session.userType === 'FLORIST' ? 'fiorista' : (hasActiveOrder ? 'ordine_attivo' : 'pre_acquisto'),
-        hasActiveOrder,
+        mode,
+        hasActiveOrder: hasActiveOrder || hasOrderContext,
+        orderId: order?.id ?? null,
         orderNumber: order?.orderNumber ?? null,
         orderStatus: order?.status ?? null,
         deceasedName: order?.deceasedName ?? null,
-        deliveryLocation: order ? formatLocation(order.cemeteryCity, order.cemeteryName) : null,
-        gravePosition: order?.gravePosition?.trim() || null,
+        deliveryLocation: location,
+        gravePosition: grave,
+        structuredDeliveryAddress,
         proofStatus,
+        photosAlreadySentInChat,
         buyerName: order?.buyerFullName ?? null,
         partnerName,
         productsList,
@@ -164,26 +191,33 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             `- Stato Attuale Ordine: ${ctx.orderStatus ?? 'Sconosciuto'}`,
             `- Prodotto acquistato: ${ctx.productsList?.join(', ') || 'Nessun prodotto'}`,
             ctx.userType === 'FLORIST' && ctx.floristCompensation
-                ? `- Compenso fiorista per questo servizio: ${ctx.floristCompensation} (comunicalo al fiorista; MAI menzionare cifre di compenso al cliente)`
+                ? `- Compenso fiorista (listino sistema, NON certezza assoluta se contestato): ${ctx.floristCompensation} — se il fiorista chiede/contesta il compenso: NON confermare cifre, escalate allo Staff`
                 : '',
             `- Opzione "Foto prima della posa": ${ctx.hasPhotoBefore ? 'ATTIVA (Il fiorista deve inviare sia la foto prima che dopo la posa)' : 'DISATTIVA (Il fiorista deve inviare solo la foto dopo la posa)'}`,
             ctx.optionals && ctx.optionals.length
                 ? `- Optional/accessori inclusi: ${ctx.optionals.join(', ')} (ricorda al fiorista di posizionarli e conferma al cliente che sono previsti)`
                 : '',
             ctx.ticketMessage
-                ? `- Testo biglietto/nastro commemorativo: "${ctx.ticketMessage}" (il fiorista DEVE riportarlo esattamente così; puoi rileggerlo al cliente se lo chiede)`
-                : '',
+                ? `- Testo biglietto/nastro commemorativo (ESATTO): "${ctx.ticketMessage}"`
+                : `- Testo biglietto/nastro: MANCANTE — se richiesto: presa in carico + escalation Staff, non inventare`,
             ctx.customerNotes
                 ? `- Note/richieste specifiche: ${ctx.customerNotes} (tienile presenti e comunicale al fiorista se rilevanti)`
                 : '',
             `- Defunto commemorato: ${ctx.deceasedName ?? 'Non in anagrafica'}`,
             `- Luogo di consegna (Cimitero/Città): ${ctx.deliveryLocation ?? 'Non specificato'}`,
+            ctx.structuredDeliveryAddress
+                ? `- Indirizzo/indicazioni strutturate: ${ctx.structuredDeliveryAddress}`
+                : '',
             ctx.gravePosition
                 ? `- Indicazioni tomba/consegna: ${ctx.gravePosition}`
                 : `- Indicazioni tomba/consegna: MANCANTI (se richieste: una sola presa in carico + escalation prioritaria Staff, senza loop)`,
             `- Data di consegna prevista: ${ctx.deliveryDate ?? 'Non specificata'}`,
             ctx.proofStatus ? `- Stato prove di consegna: ${ctx.proofStatus}` : '',
-            'REGOLA DATI: rispondi solo con questi campi. Se un dato operativo manca, non inventarlo e non ripetere richieste di attesa: scala allo Staff con i pezzi già noti.'
+            ctx.photosAlreadySentInChat
+                ? `- Foto già inviate in questa chat: SÌ — VIETATO dire "in preparazione" / "non appena sarà posizionato"; conferma che le foto sono già state inviate`
+                : `- Foto già inviate in questa chat: no o non rilevate`,
+            'REGOLA DATI: rispondi solo con questi campi. Se un dato operativo manca, non inventarlo e non ripetere richieste di attesa: scala allo Staff con i pezzi già noti.',
+            'REGOLA MODIFICA CLIENTE: se chiede cambio data/orario/varietà fiori, presa in carico + staff — nessuna conferma arbitraria di fattibilità.'
         );
     } else {
         lines.push(

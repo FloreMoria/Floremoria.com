@@ -212,16 +212,12 @@ function describeOrderStatus(
     const ref = orderNumber ? ` (riferimento ${orderNumber})` : '';
     const dear = deceasedName.trim() || 'chi ama';
 
-    if (hasDeliveryPhoto(proof)) {
-        return `per l'omaggio dedicato a ${dear}${ref}, il nostro partner ha già effettuato la posa con cura. Le abbiamo inviato — o Le invieremo a breve — la testimonianza fotografica su WhatsApp, perché possa sentirsi vicina a questo gesto di ricordo.`;
-    }
-
-    if (status === 'COMPLETED' || proof?.status === 'COMPLETED') {
-        return `per l'omaggio a ${dear}${ref}, la consegna risulta completata. Se non ha ancora ricevuto la foto, me ne occupo subito personalmente e La aggiorno qui in chat.`;
+    if (hasDeliveryPhoto(proof) || status === 'COMPLETED' || proof?.status === 'COMPLETED') {
+        return `per l'omaggio dedicato a ${dear}${ref}, il nostro partner ha già effettuato la posa con cura. Le confermo che le foto della consegna Le sono già state inviate (o sono in questa chat): se non Le vede, lo Staff può reinviare subito la testimonianza.`;
     }
 
     if (status === 'DELIVERING' || status === 'IN_PROGRESS') {
-        return `per l'omaggio a ${dear}${ref}, stiamo preparando i fiori con la massima cura: il nostro partner locale è già al lavoro e La terrò aggiornata passo dopo passo.`;
+        return `per l'omaggio a ${dear}${ref}, stiamo seguendo la posa con la massima cura: il nostro partner locale è al lavoro e La terrò aggiornata passo dopo passo.`;
     }
 
     if (status === 'ACCEPTED') {

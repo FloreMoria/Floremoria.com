@@ -20,9 +20,11 @@ import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
+import { groupIncomingByPhone } from '@/lib/whatsapp/replyCoalesce';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 import { runFloristDeliveryAutomation } from '@/lib/deliveryProof/runFloristDeliveryAutomation';
 import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
+import { shouldSilenceVeraReply } from '@/lib/vera/courtesyDebounce';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -192,12 +194,16 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
     return results;
 }
 
-async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): Promise<{
+async function processIncomingWhatsAppMessage(
+    incoming: ParsedIncomingMessage,
+    options?: { deferReply?: boolean }
+): Promise<{
     ok: boolean;
     skipped?: string;
     source?: string;
     escalated?: boolean;
     sent?: boolean;
+    coalesced?: boolean;
 }> {
     const { phoneE164, phoneKey, messageText, mediaUrl, senderName } = incoming;
     const inboundBody = messageText || (mediaUrl ? '[media]' : '');
@@ -266,8 +272,46 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
         });
     }
 
+    if (options?.deferReply) {
+        return { ok: true, skipped: 'defer_reply' };
+    }
+
+    return finalizeVeraOutboundReply({
+        phoneKey,
+        phoneE164,
+        senderName,
+        inboundBody,
+        mediaUrl,
+    });
+}
+
+async function finalizeVeraOutboundReply(params: {
+    phoneKey: string;
+    phoneE164: string;
+    senderName: string;
+    inboundBody: string;
+    mediaUrl?: string | null;
+}): Promise<{
+    ok: boolean;
+    skipped?: string;
+    source?: string;
+    escalated?: boolean;
+    sent?: boolean;
+    coalesced?: boolean;
+}> {
+    const { phoneKey, phoneE164, senderName, inboundBody, mediaUrl } = params;
+
     const updatedSession = await getSession(phoneKey);
-    const veraResult = await generateVeraReply(inboundBody, updatedSession, mediaUrl);
+    const lastInbound = [...updatedSession.messages].reverse().find((m) => m.direction === 'INBOUND');
+    const replySeed = lastInbound?.body || inboundBody;
+    const seedMedia = lastInbound?.mediaUrl || mediaUrl;
+
+    if (shouldSilenceVeraReply(replySeed, updatedSession) && !seedMedia) {
+        console.info(`[wa-webhook] VERA silenzio (post-burst) per ${phoneE164}`);
+        return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence' };
+    }
+
+    const veraResult = await generateVeraReply(replySeed, updatedSession, seedMedia);
 
     if (veraResult.shouldEscalate) {
         await setSessionStatus(phoneKey, 'HUMAN_INTERVENTION');
@@ -276,12 +320,11 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
     void notifyStaffOfWhatsAppInbound({
         senderName,
         phoneE164,
-        messagePreview: inboundBody,
+        messagePreview: replySeed,
         userType: updatedSession.userType,
         escalated: veraResult.shouldEscalate,
     }).catch((err) => console.warn('[staff-push] notify failed:', err));
 
-    // Reaction / cortesia post-congedo: registra inbound ma non risponde (niente loop).
     if (veraResult.source === 'silence' || !veraResult.text.trim()) {
         console.info(`[wa-webhook] VERA silenzio per ${phoneE164} (source: ${veraResult.source})`);
         return { ok: true, source: veraResult.source, escalated: false, sent: false, skipped: 'silence' };
@@ -300,11 +343,13 @@ async function processIncomingWhatsAppMessage(incoming: ParsedIncomingMessage): 
         );
     }
 
-    await addMessage(phoneKey, 'OUTBOUND', veraResult.text, undefined, {
-        source: veraResult.source,
-        escalated: veraResult.shouldEscalate ? 'true' : 'false',
-        ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
-    });
+    if (!sendResult.fallbackExecuted) {
+        await addMessage(phoneKey, 'OUTBOUND', veraResult.text, undefined, {
+            source: veraResult.source,
+            escalated: veraResult.shouldEscalate ? 'true' : 'false',
+            ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+        });
+    }
 
     console.info(
         `[wa-webhook] VERA → ${phoneE164} (source: ${veraResult.source}, escalated: ${veraResult.shouldEscalate}, sent: ${sendResult.ok})`
@@ -367,9 +412,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     void triggerPostmanBackgroundSync();
 
+    // Una sola reply VERA per telefono nel batch Meta (foto+caption+ok → 1 risposta).
     const results = [];
-    for (const incoming of incomingMessages) {
-        results.push(await processIncomingWhatsAppMessage(incoming));
+    for (const [, group] of groupIncomingByPhone(incomingMessages)) {
+        for (let i = 0; i < group.length; i++) {
+            const isLast = i === group.length - 1;
+            results.push(
+                await processIncomingWhatsAppMessage(group[i], {
+                    deferReply: !isLast,
+                })
+            );
+        }
     }
 
     return NextResponse.json({ ok: true, provider: 'meta', processed: results.length, results });

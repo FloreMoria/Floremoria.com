@@ -18,7 +18,7 @@ const CEMETERY_CLOSED_PATTERN =
     /cimitero\s+chiuso|chiuso\s+il\s+cimitero|non\s+aperto|porta\s+chiusa/i;
 
 const USER_MODIFICATION_PATTERN =
-    /modific|cambiar|spostar|orario|nastro|bigliett|messaggio|ritard|anticip/i;
+    /modific|cambiar|spostar|orario|nastro|bigliett|messaggio|ritard|anticip|variet[aà]|fiori|colore|anthurium|gigli|rosa|consegna\s+(domani|il|per)|onomastic|data\s+di\s+consegna|preferisc/i;
 
 export function detectFloristException(message: string): FloristExceptionType | null {
     if (TOMB_NOT_FOUND_PATTERN.test(message)) return 'tomb_not_found';

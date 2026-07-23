@@ -58,14 +58,18 @@ const OPERATIONAL_INTENT_KEYWORDS = [
 ];
 
 const ISOLATED_COURTESY_PATTERN =
-    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie)$/;
+    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie|prego|di nulla)$/;
+
+/** Ack corti senza richiesta operativa (OK, sì, d'accordo, emoji già coperte altrove). */
+const SHORT_ACK_PATTERN =
+    /^(ok|okay|okey|va bene|va benissimo|daccordo|d'accordo|perfetto|ricevuto|certo|si|sì|ok grazie|okok|👍|🙏|✅|🤝|❤️|🌹)$/;
 
 /** Cortesia di chiusura reciproca: non riaprire loop di saluti. */
 const POST_FAREWELL_COURTESY_PATTERN =
     /^(anche a (lei|te|voi|loro)|altrettanto|ugualmente|di nulla|prego|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie|ok grazie|va bene grazie)$/;
 
 const EMOJI_ONLY_PATTERN =
-    /^(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\s🌹❤️🙏👍👏✨])+$/u;
+    /^(?:[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\s🌹❤️🙏👍👏✨✅🤝])+$/u;
 
 export function hasOperationalServiceIntent(message: string): boolean {
     const m = normalizeForCourtesy(message);
@@ -83,6 +87,15 @@ export function isIsolatedCourtesyMessage(message: string): boolean {
     if (!m) return false;
     if (hasOperationalServiceIntent(message)) return false;
     return ISOLATED_COURTESY_PATTERN.test(m);
+}
+
+/** OK / sì / d'accordo isolati senza intento operativo. */
+export function isShortAckWithoutOperationalIntent(message: string): boolean {
+    const raw = (message || '').trim();
+    if (!raw) return false;
+    if (hasOperationalServiceIntent(message)) return false;
+    const m = normalizeForCourtesy(raw);
+    return SHORT_ACK_PATTERN.test(m) || SHORT_ACK_PATTERN.test(raw.toLowerCase());
 }
 
 /** Reaction Meta, placeholder [reaction], sticker o sola emoji. */
@@ -121,9 +134,14 @@ export function isRedundantPostFarewellCourtesy(
     return recentOutbound.some((msg) => farewellHints.test((msg.body || '').toLowerCase()));
 }
 
-/** Vera non deve rispondere: reaction o cortesia ridondante a chat già chiusa. */
+/**
+ * Vera non risponde: reaction, cortesia/ack isolati, o ringraziamento dopo congedo.
+ * Perché: P0 anti-ridondanza (Simone/Carolina) — niente ping-pong su "Grazie"/"OK"/emoji.
+ */
 export function shouldSilenceVeraReply(message: string, session: ChatSession): boolean {
     if (isWhatsAppReactionOrEmojiOnly(message)) return true;
+    if (isIsolatedCourtesyMessage(message)) return true;
+    if (isShortAckWithoutOperationalIntent(message)) return true;
     if (isRedundantPostFarewellCourtesy(message, session)) return true;
     return false;
 }

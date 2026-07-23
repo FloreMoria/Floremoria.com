@@ -59,6 +59,7 @@ async function markPuntoBScheduled(
 
 /**
  * PUNTO B — Conferma ordine utente.
+ * Solo stato IN_PROGRESS (In Lavorazione).
  * Produzione: +30 min se creato 08:00–18:59; altrimenti 08:30 mattina successiva.
  * Sandbox (`isTest`): invio immediato. Claim atomico + dedup chat anti-duplicato.
  */
@@ -72,6 +73,13 @@ export async function runPuntoBCustomerOrderConfirm(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+
+    if (order.status !== 'IN_PROGRESS' && !options.force) {
+        console.info(
+            `[vera-workflow] Punto B in attesa: stato=${order.status} (serve IN_PROGRESS) ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: 'not_in_progress' };
+    }
 
     if (isWhatsAppAutoNotifyDisabledForOrder(order.isTest)) {
         console.warn(`[vera-workflow] Punto B saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);

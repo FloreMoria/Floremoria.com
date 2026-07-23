@@ -1,9 +1,9 @@
 import {
     formatFloristCompensationEur,
     resolveListinoEntry,
-    sumFloristCompensationCents,
     type OrderLineForListino,
 } from '@/lib/pricing/listini';
+import { resolveFloristCompensationCentsFromRetail } from '@/lib/pricing/floristRetailShare';
 
 export interface FloristCompensationResult {
     totalCents: number;
@@ -18,35 +18,64 @@ export interface FloristCompensationResult {
     unmappedProducts: string[];
 }
 
+export type OrderLineForCompensation = OrderLineForListino & {
+    product: OrderLineForListino['product'] & { basePriceCents?: number | null };
+};
+
+/**
+ * Compenso fiorista: Tabella prezzi e margini (65% retail / accessori a 0),
+ * poi listino fisso tombe/funebre come fallback.
+ */
 export function calculateFloristCompensation(
-    orderItems: OrderLineForListino[]
+    orderItems: OrderLineForCompensation[]
 ): FloristCompensationResult {
     const lines: FloristCompensationResult['lines'] = [];
     const unmappedProducts: string[] = [];
+    let totalCents = 0;
 
     for (const item of orderItems) {
-        const entry = resolveListinoEntry(item.product.slug, item.product.name, {
-            isBouquet: item.product.isBouquet,
-        });
         const qty = Math.max(1, item.quantity);
         const name = item.product.name || item.product.slug || 'Prodotto';
 
+        const fromRetail = resolveFloristCompensationCentsFromRetail({
+            slug: item.product.slug,
+            name: item.product.name,
+            basePriceCents: item.product.basePriceCents,
+        });
+
+        if (fromRetail !== null) {
+            const lineCents = fromRetail * qty;
+            totalCents += lineCents;
+            lines.push({
+                productName: name,
+                quantity: qty,
+                unitCents: fromRetail,
+                lineCents,
+                listinoLabel: 'Tabella prezzi e margini',
+            });
+            continue;
+        }
+
+        const entry = resolveListinoEntry(item.product.slug, item.product.name, {
+            isBouquet: item.product.isBouquet,
+        });
         if (!entry) {
             unmappedProducts.push(name);
             continue;
         }
 
+        const lineCents = entry.floristCents * qty;
+        totalCents += lineCents;
         lines.push({
             productName: name,
             quantity: qty,
             unitCents: entry.floristCents,
-            lineCents: entry.floristCents * qty,
+            lineCents,
             listinoLabel: entry.label,
         });
     }
 
-    const totalCents = sumFloristCompensationCents(orderItems);
-  if (unmappedProducts.length) {
+    if (unmappedProducts.length) {
         console.warn(
             '[listino] Prodotti senza voce listino fiorista:',
             unmappedProducts.join(', ')

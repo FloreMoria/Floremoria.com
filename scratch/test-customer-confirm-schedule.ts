@@ -33,8 +33,8 @@ function rome(hour: number, minute: number, day = 17): Date {
 function main(): void {
     assert(!CUSTOMER_CONFIRM_CTA.includes('🌹'), 'CTA senza rosa');
     assert(
-        CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL.endsWith('Staff FloreMoria 🌹'),
-        'unica rosa dopo Staff FloreMoria'
+        CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL.includes('FloreMoria Staff 🌹'),
+        'chiusura FloreMoria Staff'
     );
     assert(
         (CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL.match(/🌹/g) || []).length === 1,

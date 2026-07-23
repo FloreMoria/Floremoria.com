@@ -1,16 +1,16 @@
 import prisma from '@/lib/prisma';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 
 export type AutoAssignKnownTombResult =
-    | { assigned: true; deceasedProfileId: string; partnerId: string }
+    | { assigned: true; deceasedProfileId: string; partnerId: string; becameInProgress: boolean }
     | { assigned: false; reason: string };
 
 /**
- * Tomba già censita + fiorista custode primario → collega ordine e lascia ACCEPTED.
- * Nessun vincolo su partnerPaymentStatus: in Dashboard/post-Stripe il pagamento è confermato.
- * L'assegnazione scatena subito Punto A (fascia 08:00–20:00 in prod; sandbox sempre attivo).
+ * Tomba già censita + fiorista custode primario → collega ordine e passa a IN_PROGRESS.
+ * Perché: Punto A/B partono solo in In Lavorazione; se il defunto ha già il fiorista, avanziamo in automatico.
  */
 export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAssignKnownTombResult> {
     const order = await prisma.order.findFirst({
@@ -62,35 +62,39 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         return { assigned: false, reason: 'no_censited_tomb_with_florist' };
     }
 
-    const profile = profileWithFlorist;
-
-    const assignment = profile.partnerLinks[0];
+    const assignment = profileWithFlorist.partnerLinks[0];
     if (!assignment) {
         return { assigned: false, reason: 'no_primary_florist' };
     }
 
-    const deceasedProfileId = profile.id;
+    const deceasedProfileId = profileWithFlorist.id;
     const partnerId = assignment.partner.id;
+    const becameInProgress = order.status !== 'IN_PROGRESS';
 
     await prisma.order.update({
         where: { id: order.id },
         data: {
             deceasedProfileId,
             partnerId,
-            status: order.status === 'PENDING' ? 'ACCEPTED' : order.status,
+            status: 'IN_PROGRESS',
         },
     });
 
     await syncDeceasedRelationsForOrder(order.id);
 
-    // Assegnazione → notifica fiorista subito (finestra rispettata in prod; bypass in sandbox).
-    await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
-        console.error('[auto-assign-known-tomb] Notifica Punto A fallita (non bloccante):', err);
-    });
+    if (becameInProgress) {
+        await onOrderStatusChanged(order.id, 'IN_PROGRESS').catch((err) => {
+            console.error('[auto-assign-known-tomb] onOrderStatusChanged fallita (non bloccante):', err);
+        });
+    } else {
+        await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
+            console.error('[auto-assign-known-tomb] Notifica Punto A fallita (non bloccante):', err);
+        });
+    }
 
     console.info(
-        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, Punto A triggerato`
+        `[auto-assign-known-tomb] Ordine ${orderId} → profilo ${deceasedProfileId}, fiorista ${partnerId}, IN_PROGRESS (became=${becameInProgress})`
     );
 
-    return { assigned: true, deceasedProfileId, partnerId };
+    return { assigned: true, deceasedProfileId, partnerId, becameInProgress };
 }

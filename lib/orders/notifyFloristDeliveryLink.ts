@@ -30,10 +30,8 @@ async function markPuntoADeferred(orderId: string, flags: VeraWorkflowFlags): Pr
 }
 
 /**
- * Notifica fiorista — cascata Punto A (4 template sul primo ordine).
- * Parte su creazione/assegnazione (chiamante); fuori fascia 08:00–20:00 Europe/Rome viene differito.
- * Sandbox (`isTest: true`) bypassa completamente la finestra: invio immediato a qualsiasi ora.
- * Il controllo already_sent/orfano è in runPuntoAFloristNewOrder (non qui).
+ * Notifica fiorista — Punto A.
+ * Solo stato IN_PROGRESS. Fuori fascia 08:00–20:00 Europe/Rome → differito (sandbox bypass).
  */
 export async function notifyFloristDeliveryLinkForOrder(
     orderId: string,
@@ -53,6 +51,9 @@ export async function notifyFloristDeliveryLinkForOrder(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+    if (order.status !== 'IN_PROGRESS' && !options.force) {
+        return { ok: true, skipped: 'not_in_progress' };
+    }
     if (!order.partnerId || order.partner?.deletedAt) {
         return { ok: false, skipped: 'no_partner_assigned' };
     }

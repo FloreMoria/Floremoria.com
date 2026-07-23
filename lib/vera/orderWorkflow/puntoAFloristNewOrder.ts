@@ -6,10 +6,9 @@ import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { addMessage, getSession, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
+import { addMessage, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
-import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { FIRST_OUTBOUND_TITLES } from '@/lib/whatsapp/firstOutboundTitle';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import {
@@ -330,18 +329,10 @@ export async function runPuntoAFloristNewOrder(
         orderId: order.id,
     });
 
-    // Percorso primario: messaggio strutturato (prodotto dinamico + link mini-app).
-    // Stesso numero del cliente / senza inbound recente → finestra 24h chiusa: Meta rifiuta il free-text.
-    // In quel caso forziamo subito il template con HEADER "Nuovo Ordine FloreMoria".
+    // Percorso primario: free-text strutturato (titolo + dettagli + link).
+    // Mai usare il template proattivo come fallback (body Meta aggiunge testo spurio).
+    // Se free-text fallisce (es. finestra 24h chiusa sullo stesso numero del cliente) → cascata florist_first_*.
     const sessionPhone = `whatsapp:${floristPhoneE164}`;
-    let forceTemplate = false;
-    try {
-        const session = await getSession(sessionPhone);
-        forceTemplate = requiresTemplateMessage(session);
-    } catch {
-        forceTemplate = true;
-    }
-
     const freeTextSend = await sendWhatsAppMessage(floristPhoneE164, messageText, {
         recipientName: floristName,
         orderCode,
@@ -349,7 +340,8 @@ export async function runPuntoAFloristNewOrder(
         userType: 'FLORIST',
         source: 'puntoA_florist_new_order',
         sessionPhone,
-        forceTemplate,
+        forceTemplate: false,
+        disableTemplateFallback: true,
     });
 
     if (freeTextSend.ok) {
@@ -361,34 +353,14 @@ export async function runPuntoAFloristNewOrder(
                 status: 'AI_ACTIVE',
                 welcomeSent: true,
             });
-            if (!freeTextSend.fallbackExecuted) {
-                await addMessage(sessionPhone, 'OUTBOUND', messageText, undefined, {
-                    eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
-                    templateId: 'florist_first_001',
-                    outboundMode: 'free_text',
-                    orderId: order.id,
-                    orderNumber: orderCode,
-                    ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
-                });
-            } else {
-                // Il testo è già in chat dal fallback/template forzato; marker solo per dedup.
-                await addMessage(
-                    sessionPhone,
-                    'OUTBOUND',
-                    `[Punto A] Ordine ${orderCode}: dettagli inviati via template (${FIRST_OUTBOUND_TITLES.floristNewOrder}).`,
-                    undefined,
-                    {
-                        eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
-                        templateId: 'florist_first_001',
-                        outboundMode: forceTemplate
-                            ? 'template_forced_closed_window'
-                            : 'template_fallback_24h_marker',
-                        orderId: order.id,
-                        orderNumber: orderCode,
-                        ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
-                    }
-                );
-            }
+            await addMessage(sessionPhone, 'OUTBOUND', messageText, undefined, {
+                eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+                templateId: 'florist_first_001',
+                outboundMode: 'free_text',
+                orderId: order.id,
+                orderNumber: orderCode,
+                ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
+            });
             if (order.isTest) {
                 await markChatSessionAsTest(sessionPhone);
             }
@@ -411,14 +383,12 @@ export async function runPuntoAFloristNewOrder(
         await updateWorkflowFlags(order.id, nextFlags);
         const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
         await clearVeraOperationalAlert(order.id).catch(() => undefined);
-        console.info(
-            `[vera-workflow] Punto A OK (${forceTemplate || freeTextSend.fallbackExecuted ? 'template+header' : 'free_text'}) ordine ${orderCode}`
-        );
+        console.info(`[vera-workflow] Punto A OK (free_text) ordine ${orderCode}`);
         return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
     }
 
     console.warn(
-        `[vera-workflow] Messaggio strutturato fallito (${freeTextSend.error}). Fallback cascata Meta ordine ${orderCode}`
+        `[vera-workflow] Free-text fiorista fallito (${freeTextSend.error || 'unknown'}). Cascata Meta ordine ${orderCode}`
     );
 
     const lumino = hasLuminoOption(order.items);

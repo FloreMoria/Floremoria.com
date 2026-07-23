@@ -35,7 +35,7 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
         where: {
             deletedAt: null,
             isTest: false,
-            status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
+            status: { in: ['IN_PROGRESS'] },
             customerPhone: { not: null },
         },
         select: {

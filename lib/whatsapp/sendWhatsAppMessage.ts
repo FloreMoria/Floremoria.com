@@ -26,6 +26,8 @@ export interface SendWhatsAppMessageOptions {
     userType?: 'UTENTE' | 'FLORIST' | 'UNKNOWN';
     /** Se true, non tenta il free-text: solo template (finestra 24h chiusa / primo contatto). */
     forceTemplate?: boolean;
+    /** Se true, in caso di errore 24h non invia il template proattivo (Punto A preferisce cascata dedicata). */
+    disableTemplateFallback?: boolean;
 }
 
 export interface SendWhatsAppMessageResult extends WhatsAppSendResult {
@@ -99,6 +101,10 @@ export async function sendWhatsAppMessage(
 
         // Se l'errore non riguarda la finestra 24h chiusa, restituisci il risultato direttamente
         if (!is24HourWindowError(initialSend)) {
+            return { ...initialSend, fallbackExecuted: false };
+        }
+
+        if (options?.disableTemplateFallback) {
             return { ...initialSend, fallbackExecuted: false };
         }
 

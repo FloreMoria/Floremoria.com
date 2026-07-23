@@ -49,20 +49,27 @@ export type VeraPostPaymentResult = {
 };
 
 /**
- * Post-creazione / post-pagamento: invia subito Punto B e, se c'è fiorista, Punto A.
+ * Post-creazione / post-pagamento: Punto A/B solo se stato IN_PROGRESS.
  */
 export async function runVeraPostPaymentWorkflowWithResults(
     orderId: string
 ): Promise<VeraPostPaymentResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
-        select: { id: true, partnerId: true },
+        select: { id: true, partnerId: true, status: true },
     });
 
     if (!order) {
         return {
             customer: { ok: false, skipped: 'order_not_found' },
             florist: { ok: false, skipped: 'order_not_found' },
+        };
+    }
+
+    if (order.status !== 'IN_PROGRESS') {
+        return {
+            customer: { ok: true, skipped: 'not_in_progress' },
+            florist: { ok: true, skipped: 'not_in_progress' },
         };
     }
 

@@ -33,7 +33,14 @@ export interface FloristNewOrderMessageInput {
     gravePosition?: string | null;
     ticketMessage?: string | null;
     additionalInstructions?: string | null;
-    items: Array<OrderItemLike & { product: OrderLineForListino['product'] & { name?: string | null } }>;
+    items: Array<
+        OrderItemLike & {
+            product: OrderLineForListino['product'] & {
+                name?: string | null;
+                basePriceCents?: number | null;
+            };
+        }
+    >;
     deliveryUrl?: string;
     orderId?: string;
 }
@@ -42,7 +49,6 @@ export interface FloristNewOrderMessageInput {
 export function stripGramatoArtifact(value: string): string {
     return value
         .replace(/\bGramato\b/gi, '')
-        // Solo spazi/tab sulla stessa riga — non distruggere i a capo del messaggio WhatsApp
         .replace(/[ \t]{2,}/g, ' ')
         .replace(/[ \t]+\n/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
@@ -60,31 +66,23 @@ function sanitizeLine(value: string | null | undefined, fallback: string): strin
     return cleaned || fallback;
 }
 
+/** Luogo = cimitero + comune (senza coordinate tomba: restano in app / note solo se reali). */
 function buildLuogoConsegna(input: FloristNewOrderMessageInput): string {
-    const parts = [
-        input.cemeteryName?.trim(),
-        input.cemeteryCity?.trim(),
-        input.gravePosition?.trim(),
-    ]
+    const parts = [input.cemeteryName?.trim(), input.cemeteryCity?.trim()]
         .filter(Boolean)
         .map((p) => stripGramatoArtifact(p!));
     return parts.length ? parts.join(', ') : 'Da confermare in app';
 }
 
 /**
- * Note di consegna per il fiorista: niente tag di import dashboard.
- * Se restano solo refusi di sistema → coordinate tomba, altrimenti "Nessuna nota aggiuntiva".
+ * Note di consegna: solo istruzioni vere. Niente coordinate tomba come fallback.
  */
 export function sanitizeFloristDeliveryNotes(
     additionalInstructions: string | null | undefined,
-    gravePosition?: string | null
+    _gravePosition?: string | null
 ): string {
     const raw = stripGramatoArtifact(stripInternalNotes(additionalInstructions) || '');
-    if (!raw) {
-        return gravePosition?.trim()
-            ? stripGramatoArtifact(gravePosition)
-            : 'Nessuna nota aggiuntiva';
-    }
+    if (!raw) return 'Nessuna nota aggiuntiva';
 
     const withoutSystemTags = stripGramatoArtifact(
         raw
@@ -93,17 +91,15 @@ export function sanitizeFloristDeliveryNotes(
             .replace(/Duplicato da [A-Z]{2}-[A-Z]{2}-\d{2}-\d{3}\s*/gi, '')
             .replace(/^\s*\|\s*|\s*\|\s*$/g, '')
             .replace(/\s*\|\s*/g, ' ')
-            .replace(/\s{2,}/g, ' ')
+            .replace(/[ \t]{2,}/g, ' ')
             .trim()
     );
 
-    const stillSystemJunk =
+    if (
         !withoutSystemTags ||
-        /IMPORT_MANUALE|dashboard\s+admin/i.test(withoutSystemTags);
-
-    if (stillSystemJunk) {
-        const coords = gravePosition?.trim();
-        return coords ? stripGramatoArtifact(coords) : 'Nessuna nota aggiuntiva';
+        /IMPORT_MANUALE|dashboard\s+admin/i.test(withoutSystemTags)
+    ) {
+        return 'Nessuna nota aggiuntiva';
     }
 
     return withoutSystemTags;
@@ -132,7 +128,9 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         input.gravePosition
     );
 
-    const compensation = calculateFloristCompensation(input.items as OrderLineForListino[]);
+    const compensation = calculateFloristCompensation(
+        input.items as Parameters<typeof calculateFloristCompensation>[0]
+    );
     const compenso = formatFloristCompensationForTemplate(compensation);
 
     const deliveryUrl =
@@ -144,17 +142,19 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
 
     const body =
         `Ciao ${floristName}! 🌸\n` +
-        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${city}.\n\n` +
+        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${city}.\n` +
         `🕊️ In memoria di: ${deceased}\n` +
         `📍 Luogo: ${luogo}\n` +
         `💐 Prodotto: ${prodotto}\n` +
-        `📝 Testo: ${ticket}\n` +
         `➕ Optional / Accessori: ${accessori}\n` +
+        `📝 Testo: ${ticket}\n` +
         `📌 Note di Consegna: ${note}\n` +
-        `💶 Compenso per il servizio: ${compenso}\n\n` +
-        `Per caricare le foto mentre effettui la consegna puoi usare il link alla mini-app dedicata a questo ordine:\n` +
+        `💶 Compenso per il servizio: ${compenso}\n` +
+        `Inviaci fattura che effettuiamo subito il bonifico istantaneo.\n` +
+        `Per caricare le foto mentre effettui la consegna dovresti usare il link alla mini-app dedicata a questo ordine:\n` +
         `🔗 ${deliveryUrl}\n\n` +
-        `Per qualsiasi dubbio o necessità fammi sapere qui in chat. Grazie mille per il tuo supporto!\n` +
+        `Per qualsiasi dubbio o necessità fammi sapere qui in chat.\n` +
+        `Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;
 
     return withBoldWhatsAppTitle(

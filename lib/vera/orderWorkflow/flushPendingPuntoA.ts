@@ -40,7 +40,7 @@ export async function flushPendingPuntoAFloristNotifications(): Promise<FlushPen
             deletedAt: null,
             isTest: false,
             partnerId: { not: null },
-            status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
+            status: { in: ['IN_PROGRESS'] },
         },
         select: {
             id: true,

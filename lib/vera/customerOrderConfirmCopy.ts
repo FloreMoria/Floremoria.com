@@ -4,19 +4,23 @@ import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
  * Invito a rispondere per aprire la finestra conversazione Meta (24h).
  * Mantenerlo corto: con warm lead deve stare nello slot {{3}} (~92 caratteri Meta).
  */
-export const CUSTOMER_CONFIRM_CTA = 'Risponda OK per qualsiasi richiesta.';
+export const CUSTOMER_CONFIRM_CTA = 'Scriva qui per qualsiasi richiesta.';
 
 /** Slot {{3}} nel template Meta approvato — limite conservativo (Meta tronca prima di 115). */
 export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = META_TEMPLATE_LIMITS.warmThought;
 
 /**
- * Testo fisso per floremoria_conferma_ordine_utente.
- * Unica rosa 🌹 dopo "Staff FloreMoria".
+ * Testo di riferimento conferma ordine (allineare a Meta BM se si ri-approva il template).
+ * Su Meta lo slot {{3}} porta warm + CTA; il resto è fisso sul template approvato.
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
-La ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}. {{3}} Seguiremo ogni passo con cura.
-Restiamo a Sua disposizione.
-Staff FloreMoria 🌹`;
+La ringraziamo per aver scelto FloreMoria.
+Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}.
+
+{{3}}
+Seguiremo ogni passo con la massima cura e restiamo a sua disposizione.
+
+FloreMoria Staff 🌹`;
 
 const DEFAULT_WARM_LEAD = 'Le invieremo la foto della posa appena completata.';
 
@@ -30,8 +34,8 @@ function stripWarmLead(raw: string): string {
         .replace(/\s{2,}/g, ' ')
         .replace(/^(gentile|egregi[oa]|caro|carissim[oa]|buongiorno|buonasera)\s+[^,.!?]+[,!]?\s*/i, '')
         .replace(/\bci\s+invieremo\b/gi, 'Le invieremo')
-        .replace(/scriva\s+ok.*$/i, '')
-        .replace(/rispond(a|ere)\s+ok.*$/i, '')
+        .replace(/scriva\s+(qui|ok).*$/i, '')
+        .replace(/rispond(a|ere)\s+(ok|qui).*$/i, '')
         .replace(/🌹/g, '')
         .trim();
 }
@@ -41,7 +45,6 @@ function looksCompleteWarmLead(lead: string): boolean {
     if (t.length < 18) return false;
     if (!/[.!?…]$/.test(t)) return false;
     if (INCOMPLETE_TAIL.test(t.replace(/[.!?…]+$/, ''))) return false;
-    // Evita tronconi tipo "Le invieremo la foto della."
     if (/\bdella\.$/i.test(t) || /\bdel\.$/i.test(t) || /\bdi\.$/i.test(t)) return false;
     return true;
 }
@@ -58,7 +61,6 @@ export function composeCustomerConfirmSlot3(warmLead?: string | null): string {
 
     let lead = stripWarmLead(warmLead || '');
     if (!looksCompleteWarmLead(lead) || lead.length > maxLeadLen) {
-        // Preferisci default intero se ci sta; altrimenti solo CTA (mai una frase spezzata).
         if (DEFAULT_WARM_LEAD.length <= maxLeadLen) {
             lead = DEFAULT_WARM_LEAD;
         } else if (looksCompleteWarmLead(lead) && lead.length <= maxLeadLen) {
@@ -73,7 +75,6 @@ export function composeCustomerConfirmSlot3(warmLead?: string | null): string {
     const composed = `${lead}${suffix}`;
     if (composed.length <= max && looksCompleteWarmLead(lead)) return composed;
 
-    // Se il default + CTA non entrano (improbabile con CTA corta), solo CTA.
     const withDefault = `${DEFAULT_WARM_LEAD}${suffix}`;
     if (withDefault.length <= max) return withDefault;
     return cta.length <= max ? cta : cta.slice(0, max);
@@ -102,7 +103,6 @@ export function resolveSafeBuyerFirstName(raw?: string | null): string {
         ?.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'’-]/g, '') || '';
 
     if (!cleaned) return 'Utente';
-    // Nomi corti (iniziali / nickname di 1–2 lettere): lascia com'è digitato
     if (cleaned.length <= 2) return cleaned;
     return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }

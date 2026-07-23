@@ -322,7 +322,10 @@ function VisioneTab({
   // Filter and Search logic
   const filteredSessions = sessions.filter(chat => {
     const matchesSearch = 
-      chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.shopName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       chat.phone?.includes(searchQuery);
 
     if (!matchesSearch) return false;
@@ -384,6 +387,8 @@ function VisioneTab({
                 .filter(s => s.phone !== forwardSource.fromPhone)
                 .filter(s =>
                   s.name?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
+                  s.displayName?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
+                  s.subtitle?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
                   s.phone?.includes(forwardSearch)
                 )
                 .map(s => (
@@ -399,12 +404,14 @@ function VisioneTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-display font-semibold text-[14px] text-[#111B21] truncate">{s.name}</span>
+                        <span className="font-display font-semibold text-[14px] text-[#111B21] truncate">{s.displayName || s.name}</span>
                         {s.userType === 'FLORIST' && (
                           <span className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 rounded border border-emerald-100 font-bold uppercase">Fiorista</span>
                         )}
                       </div>
-                      <span className="block text-[11px] text-[#667781] truncate">{s.phone.replace('whatsapp:', '')}</span>
+                      <span className="block text-[11px] text-[#667781] truncate">
+                        {s.subtitle || s.phone.replace('whatsapp:', '')}
+                      </span>
                     </div>
                     {forwarding ? <Loader2 className="w-4 h-4 animate-spin text-[#00A884]" /> : <Forward className="w-4 h-4 text-[#00A884]" />}
                   </button>
@@ -504,7 +511,7 @@ function VisioneTab({
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-0.5">
                         <h4 className="font-display font-semibold text-[14px] text-[#111B21] truncate flex items-center gap-1.5">
-                          {chat.name}
+                          {chat.displayName || chat.name}
                           {chat.userType === 'FLORIST' && (
                             <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded border border-emerald-100 font-bold uppercase tracking-wider">Fiorista</span>
                           )}
@@ -513,6 +520,9 @@ function VisioneTab({
                           {chat.time || chat.timeLabel}
                         </span>
                       </div>
+                      {chat.subtitle ? (
+                        <p className="text-[11px] text-[#8A7A5C] truncate mb-0.5 font-medium">{chat.subtitle}</p>
+                      ) : null}
                       <div className="flex items-center gap-1 text-[13px] text-[#667781]">
                         {latestMsg && renderStatus(chat.status, latestMsg.direction)}
                         <span className="truncate flex items-center gap-1.5 flex-1">
@@ -556,8 +566,12 @@ function VisioneTab({
                     {activeChat.initials}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-semibold text-[15px] leading-tight truncate">{activeChat.name}</h4>
-                    <p className="text-white/80 text-[11px] font-medium truncate">WhatsApp: {activeChat.phone.replace('whatsapp:', '')}</p>
+                    <h4 className="font-semibold text-[15px] leading-tight truncate">{activeChat.displayName || activeChat.name}</h4>
+                    <p className="text-white/80 text-[11px] font-medium truncate">
+                      {activeChat.subtitle
+                        ? `${activeChat.subtitle} · ${activeChat.phone.replace('whatsapp:', '')}`
+                        : `WhatsApp: ${activeChat.phone.replace('whatsapp:', '')}`}
+                    </p>
                   </div>
                 </div>
 

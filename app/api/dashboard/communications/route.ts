@@ -9,6 +9,7 @@ import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
+import { enrichChatSessionsForDashboard } from '@/lib/whatsapp/enrichChatSessionDisplay';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -42,9 +43,10 @@ export async function GET() {
     try {
         const testModeActive = await getDashboardTestModeActive();
         const store = await getChatStore({ isTest: testModeActive });
-        const sessions = Object.values(store).sort((a, b) => {
+        const rawSessions = Object.values(store).sort((a, b) => {
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         });
+        const sessions = await enrichChatSessionsForDashboard(rawSessions);
         return NextResponse.json({ success: true, sessions });
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

@@ -29,17 +29,19 @@ import {
     docsVerbalePath,
     obsidianGiornalieroPath,
     obsidianConsolidatoPath,
+    extractSommario,
+    isEmptyScaffold,
 } from './paths';
 import {
     syncAllDocsVerbali,
     parseDocsVerbaleFilename,
-    isEmptyScaffold,
     normalizeDocsBody,
     type VerbaleSyncResult,
 } from './docsToObsidian';
 import {
     purgeEmptyVerbaleScaffolds,
     mirrorCanonicalIfMissing,
+    mirrorToLocalObsidianVault,
 } from './mirrorPaths';
 import { mirrorVerbaleToGoogleDrive } from './googleDriveBridge';
 
@@ -79,10 +81,12 @@ function buildPipelineObsidian(
     const sourceYaml = sources.map((s) => `"${s}"`).join(', ');
     const [y, m, d] = iso.split('-');
     const dateFormatted = `${d}-${m}-${y}`;
+    const sommario = extractSommario(mergedBody, iso);
     return `---
 date: ${dateFormatted}
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "${sommario.replace(/"/g, '\\"')}"
 sync_sources: [${sourceYaml}]
 synced_at: ${syncedAt}
 redazione: BARBARA (Antigravity) + DEVIN (Cursor)
@@ -192,6 +196,7 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
 
         if (!existsSync(obsidianPath)) {
             writeFileSync(obsidianPath, next, 'utf8');
+            mirrorToLocalObsidianVault(iso, next);
             writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
             try {
                 mirrorVerbaleToGoogleDrive(iso, merged, next);
@@ -222,6 +227,7 @@ export function runVerbalePipeline(cwd: string = process.cwd()): PipelineResult[
         }
 
         writeFileSync(obsidianPath, next, 'utf8');
+        mirrorToLocalObsidianVault(iso, next);
         writeFileSync(docsVerbalePath(cwd, iso), merged.trim() + '\n', 'utf8');
         try {
             mirrorVerbaleToGoogleDrive(iso, merged, next);

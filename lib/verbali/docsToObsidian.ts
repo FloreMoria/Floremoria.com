@@ -37,7 +37,10 @@ import {
     obsidianGiornalieroPath,
     obsidianConsolidatoPath,
     docsVerbalePath,
+    extractSommario,
+    isEmptyScaffold,
 } from './paths';
+import { mirrorToLocalObsidianVault } from './mirrorPaths';
 
 /** Rimuove metadati di sync manuale obsoleti dal corpo docs. */
 export function normalizeDocsBody(raw: string): string {
@@ -53,10 +56,15 @@ export function normalizeDocsBody(raw: string): string {
 export function buildObsidianMarkdown(iso: string, docsRel: string, body: string): string {
     const normalized = applyVerbaleContentPolicy(normalizeDocsBody(body));
     const syncedAt = new Date().toISOString();
+    const [y, m, d] = iso.split('-');
+    const dateFormatted = `${d}-${m}-${y}`;
+    const sommario = extractSommario(normalized, iso);
+
     return `---
-date: ${iso}
+date: ${dateFormatted}
 tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "${sommario.replace(/"/g, '\\"')}"
 sync_source: ${docsRel}
 synced_at: ${syncedAt}
 ---
@@ -66,12 +74,6 @@ synced_at: ${syncedAt}
 ${normalized}`;
 }
 
-/** True se il file Obsidian è solo lo scaffold automatico vuoto. */
-export function isEmptyScaffold(content: string): boolean {
-    if (!content.includes('tipo: verbale_giornaliero_auto')) return false;
-    const daCompilare = (content.match(/\(Da compilare\)/g) ?? []).length;
-    return daCompilare >= 4;
-}
 
 function shouldOverwriteObsidian(
     docsPath: string,
@@ -119,6 +121,7 @@ export function syncDocsVerbaleToObsidian(cwd: string, iso: string): VerbaleSync
 
     if (!existsSync(obsidianPath)) {
         writeFileSync(obsidianPath, nextContent, 'utf8');
+        mirrorToLocalObsidianVault(iso, nextContent);
         try {
             mirrorVerbaleToGoogleDrive(iso, normalizeDocsBody(docsBody), nextContent);
         } catch {
@@ -139,6 +142,7 @@ export function syncDocsVerbaleToObsidian(cwd: string, iso: string): VerbaleSync
     }
 
     writeFileSync(obsidianPath, nextContent, 'utf8');
+    mirrorToLocalObsidianVault(iso, nextContent);
     try {
         mirrorVerbaleToGoogleDrive(iso, normalizeDocsBody(docsBody), nextContent);
     } catch {

@@ -14,11 +14,11 @@ import {
     mirrorCanonicalIfMissing,
     writeCanonicalVerbaleFiles,
 } from '../lib/verbali/mirrorPaths';
-import { isEmptyScaffold } from '../lib/verbali/docsToObsidian';
 import {
     obsidianConsolidatoPath,
     obsidianGiornalieroPath,
     docsVerbalePath,
+    isEmptyScaffold,
 } from '../lib/verbali/paths';
 import { syncVerbaleToFloremoriaLog } from '../lib/verbali/syncVerbaleToFloremoriaLog';
 

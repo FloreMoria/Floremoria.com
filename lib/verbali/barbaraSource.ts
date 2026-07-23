@@ -4,7 +4,7 @@
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { isEmptyScaffold } from './docsToObsidian';
+import { isEmptyScaffold } from './paths';
 import {
     googleDriveIngressDir,
     listGoogleDriveIngressMarkdown,

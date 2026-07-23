@@ -50,3 +50,23 @@ export function docsVerbaleRel(iso: string): string {
 export function obsidianGiornalieroRel(iso: string): string {
     return `notes/obsidian/verbali/${obsidianGiornalieroFileName(iso)}`;
 }
+
+export function extractSommario(bodyMarkdown: string, iso: string): string {
+    const stripped = bodyMarkdown.replace(/^---[\s\S]*?---\n/m, '').trim();
+    const match = stripped.match(/\*\*Riassunto(?:\s*\(.*?\))?:\*\*\s*(.*)/i);
+    if (match && match[1].trim()) {
+        return match[1].trim().split('\n')[0].replace(/"/g, '\\"');
+    }
+    const titleMatch = stripped.match(/^#\s+(.+)$/m);
+    if (titleMatch && titleMatch[1].trim()) {
+        return titleMatch[1].trim().replace(/"/g, '\\"');
+    }
+    const [y, m, d] = iso.split('-');
+    return `Verbale operativo del ${d}-${m}-${y}`;
+}
+
+export function isEmptyScaffold(content: string): boolean {
+    if (!content.includes('tipo: verbale_giornaliero_auto')) return false;
+    const daCompilare = (content.match(/\(Da compilare\)/g) ?? []).length;
+    return daCompilare >= 4;
+}

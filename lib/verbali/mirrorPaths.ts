@@ -1,14 +1,37 @@
 import { writeFileSync, existsSync, mkdirSync, unlinkSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { isEmptyScaffold } from './docsToObsidian';
 import {
     docsVerbalePath,
     obsidianGiornalieroPath,
     obsidianConsolidatoPath,
     docsVerbaleRel,
     obsidianGiornalieroRel,
+    obsidianGiornalieroFileName,
+    extractSommario,
+    isEmptyScaffold,
 } from './paths';
 import { mirrorVerbaleToGoogleDrive } from './googleDriveBridge';
+
+/** Copia i file generati nel vault locale Obsidian se presente sul sistema. */
+export function mirrorToLocalObsidianVault(iso: string, content: string): void {
+    const vaultDirs = [
+        '/Users/floremoria/Documents/Second Brain/10_FLOREMORIA/10_VERBALI',
+        '/Users/floremoria/Documents/Second Brain/10_FLOREMORIA/20_ARCHIVIO_LOG/Verbali_Barbara'
+    ];
+
+    for (const dir of vaultDirs) {
+        try {
+            if (existsSync(dir)) {
+                const fileName = obsidianGiornalieroFileName(iso);
+                const destPath = resolve(dir, fileName);
+                writeFileSync(destPath, content, 'utf8');
+                console.log(`[Obsidian Vault Sync] Allineato ${fileName} in ${dir}`);
+            }
+        } catch (e) {
+            console.error(`[Obsidian Vault Sync] Errore di scrittura in ${dir}:`, e);
+        }
+    }
+}
 
 /** Scrive lo stesso contenuto in docs/verbali/ e notes/obsidian/verbali/ (naming canonico). */
 export function writeCanonicalVerbaleFiles(
@@ -20,11 +43,15 @@ export function writeCanonicalVerbaleFiles(
     const syncedAt = new Date().toISOString();
     const sources = meta?.syncSources ?? ['generateFromOperations'];
     const sourceYaml = sources.map((s) => `"${s}"`).join(', ');
+    const [y, m, d] = iso.split('-');
+    const dateFormatted = `${d}-${m}-${y}`;
+    const sommario = extractSommario(bodyMarkdown, iso);
 
     const obsidianContent = `---
-date: ${iso}
+date: ${dateFormatted}
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "${sommario.replace(/"/g, '\\"')}"
 sync_sources: [${sourceYaml}]
 synced_at: ${syncedAt}
 redazione: BARBARA (Antigravity) + DEVIN (Cursor)
@@ -45,6 +72,9 @@ ${bodyMarkdown.trim()}
 
     writeFileSync(docsPath, bodyMarkdown.trim() + '\n', 'utf8');
     writeFileSync(obsidianPath, obsidianContent, 'utf8');
+
+    // Sincronizza nel vault locale di Obsidian del proprietario
+    mirrorToLocalObsidianVault(iso, obsidianContent);
 
     try {
         mirrorVerbaleToGoogleDrive(iso, bodyMarkdown, obsidianContent);
@@ -93,6 +123,7 @@ export function mirrorCanonicalIfMissing(cwd: string, iso: string): boolean {
         const body = raw.replace(/^---[\s\S]*?---\n/m, '').replace(/^> Pipeline automatica[^\n]*\n\n/m, '').trim();
         mkdirSync(dirname(docsPath), { recursive: true });
         writeFileSync(docsPath, body + '\n', 'utf8');
+        mirrorToLocalObsidianVault(iso, raw);
         return true;
     }
 

@@ -210,7 +210,15 @@ export async function runPuntoAFloristNewOrder(
     }
     if (shouldSkipTestOrderMetaSend(order.isTest) && !options.force) {
         console.warn(`[vera-workflow] Punto A saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`);
-        return { ok: true, skipped: 'test_order_meta_blocked' };
+        await setVeraOperationalAlert({
+            orderId: order.id,
+            type: 'punto_a_send_failed',
+            message:
+                'Punto A non inviato: ordine isTest ma WHATSAPP_ALLOW_TEST_SENDS≠1 sul runtime Vercel. Aggiungere la env e RIDISTRIBUIRE, poi ritentare.',
+            priority: 'urgent',
+            freezeOrder: false,
+        }).catch(() => undefined);
+        return { ok: false, skipped: 'test_order_meta_blocked' };
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);

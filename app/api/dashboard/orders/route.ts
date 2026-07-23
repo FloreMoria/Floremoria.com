@@ -71,7 +71,26 @@ export async function POST(request: Request) {
             vera = { skipped: 'workflow_error' };
         }
 
-        return NextResponse.json({ ok: true, order, vera });
+        const veraBlocked =
+            vera &&
+            'customer' in vera &&
+            (vera.customer.skipped === 'test_order_meta_blocked' ||
+                vera.florist.skipped === 'test_order_meta_blocked' ||
+                vera.customer.skipped === 'auto_notify_disabled' ||
+                vera.florist.skipped === 'auto_notify_disabled');
+
+        if (veraBlocked) {
+            console.error('[dashboard/orders POST] VERA notifiche bloccate da env runtime:', vera);
+        }
+
+        return NextResponse.json({
+            ok: true,
+            order,
+            vera,
+            warning: veraBlocked
+                ? 'Notifiche WhatsApp non inviate: verificare WHATSAPP_ALLOW_TEST_SENDS=1 sul deploy attivo (serve ridistribuire dopo aver aggiunto la env).'
+                : undefined,
+        });
     } catch (error) {
         console.error('[dashboard/orders POST]', error);
         const message = error instanceof Error ? error.message : 'Creazione ordine non riuscita.';

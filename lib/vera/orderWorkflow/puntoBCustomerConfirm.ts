@@ -78,7 +78,16 @@ export async function runPuntoBCustomerOrderConfirm(
     }
     if (shouldSkipTestOrderMetaSend(order.isTest) && !options.force) {
         console.warn(`[vera-workflow] Punto B saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`);
-        return { ok: true, skipped: 'test_order_meta_blocked' };
+        const { setVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+        await setVeraOperationalAlert({
+            orderId: order.id,
+            type: 'workflow_blocked',
+            message:
+                'Punto B non inviato: ordine isTest ma WHATSAPP_ALLOW_TEST_SENDS≠1 sul runtime Vercel. Aggiungere la env, RIDISTRIBUIRE il deploy, poi ritentare il workflow.',
+            priority: 'urgent',
+            freezeOrder: false,
+        }).catch(() => undefined);
+        return { ok: false, skipped: 'test_order_meta_blocked' };
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);

@@ -16,6 +16,7 @@ import {
     releaseWorkflowStep,
     tryClaimWorkflowStep,
 } from '@/lib/vera/orderWorkflow/claimWorkflowStep';
+import { enqueuePuntoBWake } from '@/lib/vera/orderWorkflow/schedulePuntoBWake';
 import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
@@ -119,6 +120,8 @@ export async function runPuntoBCustomerOrderConfirm(
             console.info(
                 `[vera-workflow] Punto B schedulato per ${sendAt.toISOString()} ordine ${order.orderNumber || order.id}`
             );
+            // Hobby: cron solo 1×/giorno → catena wake per rispettare i +30 minuti.
+            enqueuePuntoBWake({ orderId: order.id, sendAt });
             return {
                 ok: true,
                 deferred: true,

@@ -9,7 +9,7 @@ import {
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
 import {
-    isWhatsAppAutoNotifyDisabled,
+    isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
 
@@ -29,7 +29,7 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
         select: { id: true, orderNumber: true, isTest: true },
     });
     if (!orderEarly) return { ok: false, skipped: 'order_not_found' };
-    if (isWhatsAppAutoNotifyDisabled()) {
+    if (isWhatsAppAutoNotifyDisabledForOrder(orderEarly.isTest)) {
         return { ok: true, skipped: 'auto_notify_disabled' };
     }
     if (shouldSkipTestOrderMetaSend(orderEarly.isTest)) {

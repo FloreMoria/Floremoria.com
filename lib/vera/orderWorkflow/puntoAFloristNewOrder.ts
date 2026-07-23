@@ -38,7 +38,7 @@ import {
 } from '@/lib/whatsapp/floristTemplateCopy';
 import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
 import {
-    isWhatsAppAutoNotifyDisabled,
+    isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
 
@@ -204,7 +204,7 @@ export async function runPuntoAFloristNewOrder(
         return { ok: false, skipped: 'no_partner_whatsapp' };
     }
 
-    if (isWhatsAppAutoNotifyDisabled()) {
+    if (isWhatsAppAutoNotifyDisabledForOrder(order.isTest)) {
         console.warn(`[vera-workflow] Punto A saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);
         return { ok: true, skipped: 'auto_notify_disabled' };
     }

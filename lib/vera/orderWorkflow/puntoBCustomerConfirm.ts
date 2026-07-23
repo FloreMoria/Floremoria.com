@@ -21,7 +21,7 @@ import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import {
-    isWhatsAppAutoNotifyDisabled,
+    isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
 
@@ -72,7 +72,7 @@ export async function runPuntoBCustomerOrderConfirm(
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
 
-    if (isWhatsAppAutoNotifyDisabled()) {
+    if (isWhatsAppAutoNotifyDisabledForOrder(order.isTest)) {
         console.warn(`[vera-workflow] Punto B saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);
         return { ok: true, skipped: 'auto_notify_disabled' };
     }

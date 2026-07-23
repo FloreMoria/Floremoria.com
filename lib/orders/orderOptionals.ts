@@ -55,7 +55,9 @@ export function buildOrderOptionalsList(items: OrderItemLike[]): string[] {
     for (const item of items) {
         if (isPhotoBeforeItem(item)) continue;
         if (!isLuminoItem(item) && !isMessageItem(item)) continue;
-        const name = item.product.name?.trim() || item.product.slug?.trim() || 'Accessorio';
+        const rawName = item.product.name?.trim() || item.product.slug?.trim() || 'Accessorio';
+        // Al fiorista: "Bigliettino", non "Messaggio" (allineato al linguaggio operativo).
+        const name = rawName.replace(/\bMessaggio\b/gi, 'Bigliettino');
         const qty = item.quantity && item.quantity > 1 ? ` (x${item.quantity})` : '';
         out.push(`${name}${qty}`);
     }

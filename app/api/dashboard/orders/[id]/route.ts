@@ -6,6 +6,8 @@ import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
+export const maxDuration = 120;
+
 export async function PUT(request: Request, context: any) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
@@ -95,11 +97,13 @@ export async function PUT(request: Request, context: any) {
             body.partnerId !== undefined && body.partnerId !== previousOrder?.partnerId;
         const statusChanged = nextStatus && nextStatus !== previousOrder?.status;
 
-        // Scatena notifiche fiorista (Punto A) e cliente (Punto B) solo su cambio stato o nuova assegnazione
+        // Scatena Punto A/B: await obbligatorio su Vercel (void veniva killato a fine response).
         if (statusChanged || partnerAssignedOrChanged) {
-            void onOrderStatusChanged(id, nextStatus || 'IN_PROGRESS').catch((err) => {
+            try {
+                await onOrderStatusChanged(id, nextStatus || 'IN_PROGRESS');
+            } catch (err) {
                 console.error('[orders-put] Errore chiamata onOrderStatusChanged:', err);
-            });
+            }
         }
 
         const nextGrave =

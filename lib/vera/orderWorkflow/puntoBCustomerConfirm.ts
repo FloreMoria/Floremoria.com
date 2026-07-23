@@ -4,7 +4,7 @@ import {
     isCustomerConfirmSendDue,
 } from '@/lib/datetime/customerConfirmSchedule';
 import { generateWarmOrderThought } from '@/lib/vera/generateWarmOrderThought';
-import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import { resolveSafeBuyerFirstName } from '@/lib/vera/customerOrderConfirmCopy';
 import {
     isWorkflowStepDone,
     markWorkflowStep,
@@ -149,7 +149,7 @@ export async function runPuntoBCustomerOrderConfirm(
         return { ok: false, skipped: 'invalid_phone' };
     }
 
-    const buyerName = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
+    const buyerName = resolveSafeBuyerFirstName(order.user?.name || order.buyerFullName);
     const warmThought = await generateWarmOrderThought({
         buyerName,
         deceasedName: order.deceasedName,

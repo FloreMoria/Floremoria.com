@@ -1,5 +1,8 @@
-import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
-import { finalizeCustomerConfirmWarmSlot, CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL } from '@/lib/vera/customerOrderConfirmCopy';
+import {
+    finalizeCustomerConfirmWarmSlot,
+    CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
+    resolveSafeBuyerFirstName,
+} from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
@@ -97,7 +100,7 @@ export function buildCustomerOrderConfirmParams(input: {
     warmThought: string;
 }): string[] {
     const params = buildVeraTemplateBodyParams('customer_order_confirm', {
-        buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         deceasedName: requireText(
             input.deceasedName || 'chi ama',
             'deceasedName',
@@ -106,7 +109,7 @@ export function buildCustomerOrderConfirmParams(input: {
         warmThought: requireText(
             finalizeCustomerConfirmWarmSlot(input.warmThought),
             'warmThought',
-            92
+            META_TEMPLATE_LIMITS.warmThought
         ),
     });
     logBuiltTemplateParams('customer_order_confirm', params);
@@ -118,7 +121,7 @@ export function buildCustomerWaitingUpdateParams(input: {
     deceasedName?: string | null;
 }): string[] {
     const params = buildVeraTemplateBodyParams('customer_waiting_update', {
-        buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         deceasedName: requireText(
             input.deceasedName || 'chi ama',
             'deceasedName',
@@ -135,7 +138,7 @@ export function buildCustomerDeliveryPhotoParams(input: {
     deceasedName?: string | null;
 }): string[] {
     const params = buildVeraTemplateBodyParams('customer_delivery_photo', {
-        buyerFirstName: extractFirstNameFromProfile(input.buyerFirstName) || 'Utente',
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         partnerCity: requireText(input.partnerCity || 'zona', 'partnerCity', 80),
         deceasedName: requireText(
             input.deceasedName || 'chi ama',

@@ -42,6 +42,18 @@ function main(): void {
     );
     assert(!composeCustomerConfirmSlot3('Le invieremo la foto').includes('🌹'), 'slot3 senza rosa');
 
+    const slotDefault = composeCustomerConfirmSlot3(null);
+    assert(slotDefault.includes(CUSTOMER_CONFIRM_CTA), 'slot3 include CTA');
+    assert(slotDefault.includes('posa appena completata'), 'slot3 frase completa default');
+    assert(!/foto della\.\s/i.test(slotDefault), 'mai troncone foto della.');
+    assert(slotDefault.length <= 92, 'slot3 entro limite Meta 92');
+
+    const slotLong = composeCustomerConfirmSlot3(
+        'Le invieremo la foto della posa appena completata con una dedica molto lunga che non entra.'
+    );
+    assert(slotLong.includes('posa appena completata'), 'lead troppo lungo → fallback completo');
+    assert(!/foto della\.\s/i.test(slotLong), 'fallback senza troncone');
+
     const noon = rome(12, 0);
     const sendNoon = computeCustomerConfirmSendAt({ createdAt: noon, isTest: false });
     assert(

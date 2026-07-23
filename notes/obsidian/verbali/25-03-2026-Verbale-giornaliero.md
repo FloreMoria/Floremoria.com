@@ -1,9 +1,10 @@
 ---
-date: 2026-03-25
+date: 25-03-2026
 tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Subentro de Il Prof come Master Agent e setup infrastrutturale."
 sync_source: docs/verbali/25-03-2026.md
-synced_at: 2026-07-23T06:23:51.781Z
+synced_at: 2026-07-23T07:48:36.351Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/25-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

@@ -1,9 +1,10 @@
 ---
-date: 2026-04-01
+date: 01-04-2026
 tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile."
 sync_source: docs/verbali/01-04-2026.md
-synced_at: 2026-07-23T06:23:51.775Z
+synced_at: 2026-07-23T07:48:36.346Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/01-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

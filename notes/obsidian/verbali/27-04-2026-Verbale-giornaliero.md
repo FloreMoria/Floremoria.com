@@ -1,9 +1,10 @@
 ---
-date: 2026-04-27
+date: 27-04-2026
 tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Revisione Terminologica \\"Piccoli Amici\\"."
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-07-23T06:23:51.782Z
+synced_at: 2026-07-23T07:48:36.352Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

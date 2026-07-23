@@ -26,6 +26,7 @@ export interface ChatSession {
     initials: string;
     messages: ChatMessage[];
     updatedAt: string;
+    isTest?: boolean;
 }
 
 const dbPath = path.join(process.cwd(), 'chats_database.json');
@@ -124,6 +125,7 @@ function mapDbSessionToChatSession(session: {
     timeLabel: string;
     initials: string;
     updatedAt: Date;
+    isTest: boolean;
     messages: Array<{
         id: string;
         direction: string;
@@ -155,6 +157,7 @@ function mapDbSessionToChatSession(session: {
             createdAt: msg.createdAt.toISOString(),
         })),
         updatedAt: session.updatedAt.toISOString(),
+        isTest: session.isTest,
     };
 }
 
@@ -190,12 +193,19 @@ export type GetChatStoreOptions = {
 };
 
 export async function markChatSessionAsTest(phone: string): Promise<void> {
-    if (!useDatabasePersistence()) return;
-    await ensureDbSession(phone);
-    await prisma.whatsAppChatSession.update({
-        where: { phone },
-        data: { isTest: true },
-    });
+    if (useDatabasePersistence()) {
+        await ensureDbSession(phone);
+        await prisma.whatsAppChatSession.update({
+            where: { phone },
+            data: { isTest: true },
+        });
+        return;
+    }
+    const store = await getChatStore();
+    if (store[phone]) {
+        store[phone].isTest = true;
+        await saveChatStore(store);
+    }
 }
 
 export async function getChatStore(options?: GetChatStoreOptions): Promise<Record<string, ChatSession>> {
@@ -213,7 +223,16 @@ export async function getChatStore(options?: GetChatStoreOptions): Promise<Recor
     }
 
     if (persistenceMode === 'memory') {
-        return getMemoryStore();
+        const store = getMemoryStore();
+        if (options?.isTest !== undefined) {
+            return Object.keys(store).reduce<Record<string, ChatSession>>((acc, phone) => {
+                if (!!store[phone].isTest === options.isTest) {
+                    acc[phone] = store[phone];
+                }
+                return acc;
+            }, {});
+        }
+        return store;
     }
 
     try {
@@ -228,7 +247,16 @@ export async function getChatStore(options?: GetChatStoreOptions): Promise<Recor
             }
         }
         const data = fs.readFileSync(dbPath, 'utf-8');
-        return JSON.parse(data);
+        const store = JSON.parse(data) as Record<string, ChatSession>;
+        if (options?.isTest !== undefined) {
+            return Object.keys(store).reduce<Record<string, ChatSession>>((acc, phone) => {
+                if (!!store[phone].isTest === options.isTest) {
+                    acc[phone] = store[phone];
+                }
+                return acc;
+            }, {});
+        }
+        return store;
     } catch (e) {
         console.error('Error loading chat store, using in-memory fallback', e);
         return switchToMemoryStore();

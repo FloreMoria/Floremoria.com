@@ -49,6 +49,33 @@ export async function POST() {
             };
         });
 
+        // Pulisce anche il file locale chats_database.json per ambiente di sviluppo / locale
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const localDbPath = path.join(process.cwd(), 'chats_database.json');
+            if (fs.existsSync(localDbPath)) {
+                const data = fs.readFileSync(localDbPath, 'utf-8');
+                const store = JSON.parse(data);
+                let changed = false;
+                for (const phone of Object.keys(store)) {
+                    if (
+                        store[phone].isTest ||
+                        phone === 'whatsapp:+393287521463' ||
+                        phone === 'whatsapp:+393204105305'
+                    ) {
+                        delete store[phone];
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    fs.writeFileSync(localDbPath, JSON.stringify(store, null, 2), 'utf-8');
+                }
+            }
+        } catch (jsonErr) {
+            console.error('[dashboard/test/cleanup] local json cleanup failed (non-blocking):', jsonErr);
+        }
+
         return NextResponse.json({ ok: true, deleted });
     } catch (error) {
         console.error('[dashboard/test/cleanup]', error);

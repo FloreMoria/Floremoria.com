@@ -27,7 +27,7 @@ import {
 type Campaign = {
   id: string;
   status: 'DRAFT' | 'APPROVED' | 'PUBLISHED' | 'REJECTED';
-  category: 'FF' | 'FT';
+  category: 'FF' | 'FT' | 'FA' | 'FP';
   targetChannel: 'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST';
   contentFormat: 'FEED_POST' | 'STORY' | 'REEL';
   copy: string;
@@ -120,9 +120,13 @@ export default function CampaignsDashboardClient() {
   const [manualFormat, setManualFormat] = useState<'FEED_POST' | 'STORY' | 'REEL'>('FEED_POST');
   const [manualCopy, setManualCopy] = useState('');
   const [manualHashtags, setManualHashtags] = useState('');
+  const [manualCategory, setManualCategory] = useState<'FF' | 'FT' | 'FA' | 'FP'>('FT');
   const [manualFile, setManualFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(false);
+  const [suggestCopyLoading, setSuggestCopyLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const suggestRequestRef = useRef(0);
 
   // Modale pubblicazione TikTok (linee guida Direct Post API)
   const [showTiktokPublishModal, setShowTiktokPublishModal] = useState(false);
@@ -418,11 +422,168 @@ export default function CampaignsDashboardClient() {
     ? 'Pubblicando, accetti la Branded Content Policy e la Music Usage Confirmation di TikTok.'
     : 'Pubblicando, accetti la Music Usage Confirmation di TikTok.';
 
+  /** Estrae un fotogramma JPEG da un video per l’analisi AI. */
+  const extractVideoFrameAsJpeg = (file: File): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = url;
+
+      const cleanup = () => URL.revokeObjectURL(url);
+
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('Impossibile leggere il video.'));
+      };
+
+      video.onloadeddata = () => {
+        const seekTo = Math.min(0.4, Math.max(0.1, (video.duration || 1) * 0.1));
+        const capture = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const w = video.videoWidth || 720;
+            const h = video.videoHeight || 1280;
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas non disponibile.');
+            ctx.drawImage(video, 0, 0, w, h);
+            canvas.toBlob(
+              (blob) => {
+                cleanup();
+                if (!blob) {
+                  reject(new Error('Fotogramma non generato.'));
+                  return;
+                }
+                resolve(
+                  new File([blob], `${file.name.replace(/\.[^.]+$/, '')}-frame.jpg`, {
+                    type: 'image/jpeg',
+                  })
+                );
+              },
+              'image/jpeg',
+              0.85
+            );
+          } catch (err) {
+            cleanup();
+            reject(err);
+          }
+        };
+
+        const onSeeked = () => {
+          video.removeEventListener('seeked', onSeeked);
+          capture();
+        };
+        video.addEventListener('seeked', onSeeked);
+        try {
+          video.currentTime = seekTo;
+        } catch {
+          capture();
+        }
+      };
+    });
+
+  const runSuggestCopyFromMedia = async (
+    file: File,
+    channel: typeof manualChannel,
+    contentFormat: typeof manualFormat
+  ) => {
+    const requestId = ++suggestRequestRef.current;
+    setSuggestCopyLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const isVideo = file.type.startsWith('video/');
+      const analysisFile = isVideo ? await extractVideoFrameAsJpeg(file) : file;
+      const formData = new FormData();
+      formData.append('file', analysisFile);
+      formData.append('channel', channel);
+      formData.append('contentFormat', contentFormat);
+      if (isVideo) formData.append('isVideoFrame', '1');
+
+      const res = await fetch('/api/dashboard/campaigns/suggest-copy', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (requestId !== suggestRequestRef.current) return;
+
+      if (!data.success) {
+        setErrorMessage(data.error || 'Impossibile generare il testo dal media.');
+        return;
+      }
+
+      setManualCopy(String(data.copy || '').trim());
+      setManualHashtags(
+        Array.isArray(data.hashtags) ? data.hashtags.map((t: string) => String(t)).join(', ') : ''
+      );
+      if (data.category === 'FF' || data.category === 'FT' || data.category === 'FA' || data.category === 'FP') {
+        setManualCategory(data.category);
+      }
+      setSuccessMessage(
+        data.source === 'gemini'
+          ? 'Testo e hashtag generati automaticamente dal media.'
+          : 'Testo di riserva applicato (AI non disponibile).'
+      );
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch {
+      if (requestId !== suggestRequestRef.current) return;
+      setErrorMessage('Errore durante l’analisi AI del media.');
+    } finally {
+      if (requestId === suggestRequestRef.current) {
+        setSuggestCopyLoading(false);
+      }
+    }
+  };
+
+  const handleManualFileSelected = async (file: File | null) => {
+    setManualFile(file);
+    if (!file) return;
+    await runSuggestCopyFromMedia(file, manualChannel, manualFormat);
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (
+      !window.confirm(
+        'Cancellare definitivamente questo contenuto dal Command Center? L’azione non si può annullare.'
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(campaignId);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/dashboard/campaigns', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCampaigns((prev) => prev.filter((c) => c.id !== campaignId));
+        if (editingId === campaignId) setEditingId(null);
+        setSuccessMessage('Contenuto cancellato.');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setErrorMessage(data.error || 'Errore durante la cancellazione.');
+      }
+    } catch {
+      setErrorMessage('Errore di rete durante la cancellazione.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // Caricamento del Post Manuale (handlePublishNow sopra)
   const handleCreateManualPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualFile || !manualCopy.trim()) {
-      setErrorMessage('Assicurati di selezionare un file (foto o video) e scrivere il testo.');
+      setErrorMessage('Assicurati di selezionare un file (foto o video) e di avere un testo (anche generato in automatico).');
       return;
     }
 
@@ -436,6 +597,7 @@ export default function CampaignsDashboardClient() {
     formData.append('contentFormat', manualFormat);
     formData.append('copy', manualCopy);
     formData.append('hashtags', manualHashtags);
+    formData.append('category', manualCategory);
 
     try {
       const res = await fetch('/api/dashboard/campaigns/upload', {
@@ -450,6 +612,7 @@ export default function CampaignsDashboardClient() {
         // Resetta i campi del form
         setManualCopy('');
         setManualHashtags('');
+        setManualCategory('FT');
         setManualFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         // Forza tab sul social caricato per vederlo
@@ -502,11 +665,28 @@ export default function CampaignsDashboardClient() {
   };
 
   const getCategoryBadge = (category: Campaign['category']) => {
-    return category === 'FF' ? (
-      <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase">
-        Funerale (FF)
-      </span>
-    ) : (
+    if (category === 'FF') {
+      return (
+        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase">
+          Funerale (FF)
+        </span>
+      );
+    }
+    if (category === 'FA') {
+      return (
+        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase">
+          Animali (FA)
+        </span>
+      );
+    }
+    if (category === 'FP') {
+      return (
+        <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 uppercase">
+          Accessori (FP)
+        </span>
+      );
+    }
+    return (
       <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 uppercase">
         Tombale (FT)
       </span>
@@ -531,7 +711,14 @@ export default function CampaignsDashboardClient() {
         </div>
         <div className="flex gap-3 shrink-0 self-start md:self-auto">
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setManualChannel(
+                (SOCIAL_TABS.some((t) => t.id === activeTab)
+                  ? activeTab
+                  : 'META_INSTAGRAM') as typeof manualChannel
+              );
+              setShowModal(true);
+            }}
             className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all active:scale-95 shadow-sm"
           >
             <Plus size={16} />
@@ -1037,29 +1224,49 @@ export default function CampaignsDashboardClient() {
                 <span className="text-[10px] font-mono text-slate-400">
                   ID: {c.id.slice(0, 8)}...
                 </span>
-                
-                {c.status === 'APPROVED' && (
+
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handlePublishNow(c.id)}
-                    disabled={publishingId !== null}
-                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                    type="button"
+                    onClick={() => handleDeleteCampaign(c.id)}
+                    disabled={deletingId !== null || publishingId !== null}
+                    className="flex items-center gap-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold text-xs uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                    title="Cancella contenuto"
                   >
-                    {publishingId === c.id ? (
+                    {deletingId === c.id ? (
                       <>
-                        <RefreshCw size={12} className="animate-spin" /> Invio...
+                        <RefreshCw size={12} className="animate-spin" /> ...
                       </>
                     ) : (
                       <>
-                        <Play size={12} /> Pubblica Ora
+                        <Trash2 size={12} /> Cancella
                       </>
                     )}
                   </button>
-                )}
-                {c.status === 'PUBLISHED' && (
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-mono">
-                    <CheckCircle2 size={12} /> Pubblicazione Completata
-                  </span>
-                )}
+
+                  {c.status === 'APPROVED' && (
+                    <button
+                      onClick={() => handlePublishNow(c.id)}
+                      disabled={publishingId !== null || deletingId !== null}
+                      className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {publishingId === c.id ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" /> Invio...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={12} /> Pubblica Ora
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {c.status === 'PUBLISHED' && (
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-mono">
+                      <CheckCircle2 size={12} /> Pubblicazione Completata
+                    </span>
+                  )}
+                </div>
               </div>
 
             </div>
@@ -1258,7 +1465,13 @@ export default function CampaignsDashboardClient() {
                   </label>
                   <select
                     value={manualChannel}
-                    onChange={(e) => setManualChannel(e.target.value as any)}
+                    onChange={(e) => {
+                      const next = e.target.value as typeof manualChannel;
+                      setManualChannel(next);
+                      if (manualFile) {
+                        void runSuggestCopyFromMedia(manualFile, next, manualFormat);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 transition-all"
                   >
                     {SOCIAL_TABS.map(tab => (
@@ -1275,7 +1488,13 @@ export default function CampaignsDashboardClient() {
                   </label>
                   <select
                     value={manualFormat}
-                    onChange={(e) => setManualFormat(e.target.value as any)}
+                    onChange={(e) => {
+                      const next = e.target.value as typeof manualFormat;
+                      setManualFormat(next);
+                      if (manualFile) {
+                        void runSuggestCopyFromMedia(manualFile, manualChannel, next);
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 transition-all"
                   >
                     <option value="FEED_POST">Feed Post (Standard)</option>
@@ -1298,16 +1517,20 @@ export default function CampaignsDashboardClient() {
                     {manualFile ? manualFile.name : 'Trascina o clicca per caricare foto/video'}
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    Supporta PNG, JPG, WEBP, MP4, MOV (max 50MB)
+                    Supporta PNG, JPG, WEBP, MP4, MOV (max 50MB). All’upload generiamo testo e # per il social.
                   </span>
+                  {suggestCopyLoading && (
+                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1 mt-1">
+                      <Sparkles size={11} className="animate-pulse" /> Analisi AI in corso…
+                    </span>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*,video/*"
                     onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setManualFile(e.target.files[0]);
-                      }
+                      const file = e.target.files?.[0] || null;
+                      void handleManualFileSelected(file);
                     }}
                     className="hidden"
                   />
@@ -1316,28 +1539,35 @@ export default function CampaignsDashboardClient() {
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
-                  Copy del Post *
+                  Copy del Post *{' '}
+                  {suggestCopyLoading ? (
+                    <span className="text-amber-600 normal-case tracking-normal font-semibold">
+                      (generazione…)
+                    </span>
+                  ) : null}
                 </label>
                 <textarea
                   rows={4}
                   value={manualCopy}
                   onChange={(e) => setManualCopy(e.target.value)}
-                  placeholder="Scrivi il corpo del post, dettagli del servizio, inviti all'azione o link..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all resize-none"
+                  placeholder="Si compila in automatico dopo il caricamento del media (puoi modificare)."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all resize-none disabled:opacity-60"
                   required
+                  disabled={suggestCopyLoading}
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
-                  Hashtags (separati da virgola, es: floremoria, lutto)
+                  Hashtags (separati da virgola)
                 </label>
                 <input
                   type="text"
                   value={manualHashtags}
                   onChange={(e) => setManualHashtags(e.target.value)}
-                  placeholder="es. floremoria, fiori, ricordo"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all"
+                  placeholder="Generati in automatico per il social scelto"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60"
+                  disabled={suggestCopyLoading}
                 />
               </div>
 
@@ -1351,7 +1581,7 @@ export default function CampaignsDashboardClient() {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploadProgress}
+                  disabled={uploadProgress || suggestCopyLoading}
                   className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {uploadProgress ? (

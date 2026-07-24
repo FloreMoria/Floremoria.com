@@ -119,3 +119,33 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json().catch(() => null);
+    const campaignId =
+      (body && typeof body.campaignId === 'string' && body.campaignId.trim()) ||
+      new URL(request.url).searchParams.get('campaignId')?.trim() ||
+      '';
+
+    if (!campaignId) {
+      return NextResponse.json({ success: false, error: 'campaignId is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.marketingCampaign.findUnique({
+      where: { id: campaignId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 });
+    }
+
+    await prisma.marketingCampaign.delete({ where: { id: campaignId } });
+
+    return NextResponse.json({ success: true, deletedId: campaignId });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}

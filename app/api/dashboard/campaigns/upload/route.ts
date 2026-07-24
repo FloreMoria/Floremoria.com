@@ -13,6 +13,11 @@ export async function POST(request: Request) {
     const contentFormat = formData.get('contentFormat') as string | null;
     const copy = formData.get('copy') as string | null;
     const hashtagsStr = formData.get('hashtags') as string | null;
+    const categoryRaw = String(formData.get('category') || 'FT').toUpperCase().trim();
+    const category =
+      categoryRaw === 'FF' || categoryRaw === 'FT' || categoryRaw === 'FA' || categoryRaw === 'FP'
+        ? categoryRaw
+        : 'FT';
 
     if (!file || !channel || !contentFormat || !copy) {
       return NextResponse.json(
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
     const newCampaign = await prisma.marketingCampaign.create({
       data: {
         status: CampaignStatus.APPROVED,
-        category: 'FT',
+        category,
         targetChannel: channel as MarketingChannel,
         contentFormat: contentFormat as ContentFormat,
         copy: copy.trim(),

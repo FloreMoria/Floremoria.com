@@ -5,7 +5,7 @@ import IubendaPrivacyEmbed from '@/components/legal/IubendaPrivacyEmbed';
 export const privacyPolicyMetadata: Metadata = {
     title: 'Privacy Policy | FloreMoria',
     description:
-        'Informativa sul trattamento dei dati personali di FloreMoria S.r.l. (GDPR). Documento legale ufficiale Iubenda sul dominio floremoria.com.',
+        'Informativa privacy FloreMoria (GDPR), incluso uso delle Pinterest API, disclaimer di non affiliazione, cancellazione dati alla disconnessione e divieto di rivendita/redistribuzione.',
     alternates: {
         canonical: 'https://www.floremoria.com/privacy',
     },
@@ -71,6 +71,78 @@ export default function PrivacyPolicyContent() {
                         Eliminazione dati
                     </Link>
                     .
+                </p>
+
+                <h2 className="text-xl font-display font-semibold text-gray-900">
+                    Pinterest API / dati derivanti da Pinterest
+                </h2>
+                <p>
+                    FloreMoria utilizza le <strong>Pinterest API</strong> (app ID 1592792) per pubblicare e gestire
+                    contenuti promozionali del brand (pin, board e metriche di base) collegati all&apos;account
+                    business FloreMoria. L&apos;integrazione serve esclusivamente alle attività di marketing e
+                    comunicazione di FloreMoria S.r.l.
+                </p>
+                <p>
+                    <strong>Disclaimer di affiliazione:</strong> FloreMoria S.r.l., il sito{' '}
+                    <a href="https://www.floremoria.com" className="text-fm-gold hover:underline">
+                        www.floremoria.com
+                    </a>{' '}
+                    e le relative applicazioni <strong>non sono approvati, sponsorizzati, né affiliati a Pinterest,
+                    Inc.</strong> Pinterest® è un marchio di Pinterest, Inc.
+                </p>
+                <p>
+                    <strong>Dati trattati tramite Pinterest API:</strong> token di accesso/refresh dell&apos;account
+                    business collegato, identificativi board/pin, metadati di pubblicazione e metriche aggregate
+                    rese disponibili dall&apos;API. Non acquisiamo né conserviamo contenuti Pinterest di utenti
+                    finali dei servizi commemorativi oltre a quanto necessario all&apos;operatività dell&apos;account
+                    business FloreMoria.
+                </p>
+                <p>
+                    <strong>Disconnessione e cancellazione:</strong> quando l&apos;account Pinterest viene
+                    disconnesso da FloreMoria (revoca dell&apos;autorizzazione OAuth, rimozione dell&apos;app
+                    dall&apos;account Pinterest, o richiesta allo staff), FloreMoria <strong>elimina</strong> i
+                    token di accesso/refresh e i dati tecnici di sessione Pinterest memorizzati sui propri sistemi.
+                    Eventuali copie di backup residuali sono rimosse secondo i cicli di retention tecnici, senza
+                    ulteriore uso operativo. I pin già pubblicati su Pinterest restano sotto il controllo
+                    dell&apos;account Pinterest del titolare e possono essere gestiti/eliminati direttamente su
+                    Pinterest.
+                </p>
+                <p>
+                    <strong>Nessuna rivendita o redistribuzione:</strong> FloreMoria <strong>non rivende</strong> e{' '}
+                    <strong>non redistribuisce</strong> a terzi contenuti Pinterest né dati derivati dalle Pinterest
+                    API. Tali dati non vengono ceduti a broker, marketplace di dati o partner non necessari
+                    all&apos;esecuzione del servizio tecnico (hosting/infrastruttura), se non ove richiesto dalla
+                    legge.
+                </p>
+
+                <h2 className="text-xl font-display font-semibold text-gray-900">
+                    Pinterest API (English — for platform review)
+                </h2>
+                <p>
+                    FloreMoria uses the <strong>Pinterest API</strong> (app ID 1592792) to publish and manage brand
+                    marketing content (pins, boards, and basic metrics) for the FloreMoria business account only.
+                </p>
+                <p>
+                    <strong>Affiliation disclaimer:</strong> FloreMoria S.r.l.,{' '}
+                    <a href="https://www.floremoria.com" className="text-fm-gold hover:underline">
+                        www.floremoria.com
+                    </a>
+                    , and related apps are <strong>not endorsed by, sponsored by, or affiliated with Pinterest,
+                    Inc.</strong>
+                </p>
+                <p>
+                    <strong>On disconnect:</strong> when a Pinterest account is disconnected from FloreMoria (OAuth
+                    revocation, app removal from the Pinterest account, or a request to our staff), FloreMoria{' '}
+                    <strong>deletes</strong> stored Pinterest access/refresh tokens and related technical session
+                    data from our systems. Residual backups, if any, are purged under our technical retention
+                    cycles and are not used operationally thereafter. Pins already published on Pinterest remain
+                    under the Pinterest account holder&apos;s control.
+                </p>
+                <p>
+                    <strong>No resale or redistribution:</strong> FloreMoria does <strong>not</strong> sell, resell,
+                    or redistribute Pinterest content or Pinterest-derived data to third parties (including data
+                    brokers), except where required by law or strictly necessary for infrastructure providers that
+                    host our systems under confidentiality obligations.
                 </p>
             </section>
 

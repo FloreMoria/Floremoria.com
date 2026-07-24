@@ -1,21 +1,19 @@
 ---
 date: 22-06-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "📌 Verbale Stato Avanzamento Lavori: Integrazione WhatsApp (Evolution API)"
-sync_sources: ["consolidate-backfill"]
-synced_at: 2026-07-24T08:24:52.390Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+sync_source: docs/verbali/22-06-2026.md
+synced_at: 2026-07-24T08:25:58.029Z
 ---
 
-> Pipeline automatica — fonti: consolidate-backfill.
+> Copia sincronizzata automaticamente da `docs/verbali/22-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # 📌 Verbale Stato Avanzamento Lavori: Integrazione WhatsApp (Evolution API)
 
 **Data:** 22 Giugno 2026  
 **Stato:** Infrastruttura Pronta / Interfaccia in Cache (Sospeso per allineamento)  
 **Riferimento Progetto:** FloreMoria (Integrazione VERA su iPhone 12 Proprietario)
-
 
 ## 🟨 2. PROBLEMA CORRENTE (Blocco Generazione QR Code)
 

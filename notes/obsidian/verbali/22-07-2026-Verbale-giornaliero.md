@@ -1,14 +1,13 @@
 ---
 date: 22-07-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 22 Luglio 2026"
-sync_sources: ["consolidate-backfill"]
-synced_at: 2026-07-24T08:24:52.398Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+sync_source: docs/verbali/22-07-2026.md
+synced_at: 2026-07-24T08:25:58.029Z
 ---
 
-> Pipeline automatica — fonti: consolidate-backfill.
+> Copia sincronizzata automaticamente da `docs/verbali/22-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Verbale Operativo FloreMoria — 22 Luglio 2026
 
@@ -19,7 +18,6 @@ redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 - **Posizionamento e Relazioni Fioristi:** Confermata la linea "Quiet Luxury & Caring" per la comunicazione verso i fioristi partner. Il tono dei messaggi WhatsApp è stato trasformato da stringhe tecniche/log a una struttura calda, collaborativa e trasparente.
 - **Integrazioni e Canali Esterni:** Monitoraggio e gestione in sospeso per l'Accesso al Trial su Pinterest.
 - **E-commerce & Trasparenza Ordini:** Stabilita la regola operativa per cui la presenza di un ordine in Dashboard equivale a pagamento già confermato dal cliente, eliminando verifiche ridondanti prima delle notifiche ai partner.
-
 
 ## Sezione 4 — Logistica
 - **Finestra Oraria Notifiche Fioristi:** Definita la finestra operativa di produzione tra le 08:00 e le 20:00 (i messaggi fuori orario vengono messi in coda per le 08:00 successive).

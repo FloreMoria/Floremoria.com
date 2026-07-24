@@ -1,14 +1,13 @@
 ---
 date: 25-03-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Subentro de Il Prof come Master Agent e setup infrastrutturale."
-sync_sources: ["consolidate-backfill"]
-synced_at: 2026-07-24T08:24:52.385Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+sync_source: docs/verbali/25-03-2026.md
+synced_at: 2026-07-24T08:25:58.030Z
 ---
 
-> Pipeline automatica — fonti: consolidate-backfill.
+> Copia sincronizzata automaticamente da `docs/verbali/25-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Nascita de Il Prof e Protocollo Master
 

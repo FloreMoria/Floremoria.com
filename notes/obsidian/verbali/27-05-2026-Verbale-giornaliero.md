@@ -1,14 +1,13 @@
 ---
 date: 27-05-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Risoluzione del blocco del webhook WhatsApp/Twilio in produzione (consegna messaggi VERA)."
-sync_sources: ["consolidate-backfill"]
-synced_at: 2026-07-24T08:24:52.388Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+sync_source: docs/verbali/27-05-2026.md
+synced_at: 2026-07-24T08:25:58.032Z
 ---
 
-> Pipeline automatica — fonti: consolidate-backfill.
+> Copia sincronizzata automaticamente da `docs/verbali/27-05-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Sblocco Webhook WhatsApp/Twilio
 

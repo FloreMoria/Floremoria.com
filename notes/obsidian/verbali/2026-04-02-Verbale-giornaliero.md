@@ -1,3 +1,14 @@
+---
+date: 02-04-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Consolidamento Workflow Antigravity."
+sync_source: docs/verbali/02-04-2026.md
+synced_at: 2026-07-24T10:07:24.518Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/02-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
 # PROTOCOLLO 100 - Consolidamento Workflow Antigravity
 
 **Riassunto (BARBARA):** Consolidamento Workflow Antigravity.

@@ -1,0 +1,21 @@
+---
+date: 13-06-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Attivazione WhatsApp Nativo Futuria (13 Giugno 2026)"
+sync_source: docs/verbali/13-06-2026.md
+synced_at: 2026-07-24T10:07:24.521Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/13-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# Attivazione WhatsApp Nativo Futuria (13 Giugno 2026)
+**Argomento:** Connessione Canale WhatsApp in Produzione su Futuria CRM  
+**Stato Attuale:** 🟢 Attivo, Verificato e Funzionante
+
+## 2. Test delle API di Integrazione
+Ho predisposto lo script scratch `futuria-send-test.js` nel nostro repository per effettuare la validazione dell'invio messaggi:
+* **Obiettivo:** Creare/aggiornare un contatto nel CRM tramite l'endpoint `/contacts/upsert` e inviargli un messaggio WhatsApp tramite `/conversations/messages`.
+* **Esito del Test:** Successo completo! Lo script `futuria-send-test.js` è stato eseguito sul numero `+393287521463`.
+  * Il contatto è stato creato/trovato con ID `yvHZxy5mMbPF22YQkIkA`.
+  * Il messaggio WhatsApp è stato inviato correttamente tramite l'API di Futuria con ID Messaggio `W41KDSR0kBOCGB9P4Yg2` e ID Conversazione `uQQcbYDifIJWdo8DzmbN`.

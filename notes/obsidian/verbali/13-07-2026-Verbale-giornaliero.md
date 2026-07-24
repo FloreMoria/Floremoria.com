@@ -1,14 +1,13 @@
 ---
 date: 13-07-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 13 Luglio 2026"
-sync_sources: ["consolidate-clean-move"]
-synced_at: 2026-07-24T08:41:46.359Z
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+sync_source: docs/verbali/13-07-2026.md
+synced_at: 2026-07-24T08:42:56.605Z
 ---
 
-> Pipeline automatica — fonti: consolidate-clean-move.
+> Copia sincronizzata automaticamente da `docs/verbali/13-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Verbale Operativo FloreMoria — 13 Luglio 2026
 

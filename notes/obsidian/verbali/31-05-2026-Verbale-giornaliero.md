@@ -1,0 +1,31 @@
+---
+date: 31-05-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale operativo del 31-05-2026"
+sync_source: docs/verbali/31-05-2026.md
+synced_at: 2026-07-24T08:42:56.617Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/31-05-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+VERBALE 5: 31 MAGGIO 2026
+Data ISO: 2026-05-31
+
+Categoria: PARTNERS
+
+Oggetto/Topic: Strategia Partner Leader, Modello di Delega e Kit Vetrina Fioreria Battistella
+
+Breve Riassunto (Short Summary): Introduzione dell'affiliazione a due livelli (Leader con diritto di sub-delega) e approvazione tecnica dell'adesivo bifacciale tondo da 15cm.
+
+1) PREMESSA
+Necessità di strutturare il reclutamento dei fioristi sul territorio partendo dalla provincia di Como e configurando la prima proposta ufficiale per il partner "Fioreria Battistella".
+
+2) ANALISI
+Il network è stato diviso in due livelli:
+- Partner di Zona: Copertura legata al singolo comune o cimitero specifico.
+- Fiorista Leader (Provinciale/Regionale): Esclusiva d'area dietro l'impegno di coprire tutti i cimiteri. Al Leader viene concesso il potere di sub-delegare l'esecuzione fisica del servizio a colleghi di sua fiducia in zone distanti, trattenendo una royalty di coordinamento garantita sulla consegna.
+Per la rete fisica è stata approvata l'adozione di un adesivo tondo bifacciale di 15 cm di diametro, perfettamente simmetrico su entrambi i lati per azzerare gli errori di installazione in vetrina. Lo slogan unifica i servizi: "Invia fiori sulle tombe e addobbi per funerali in tutti i cimiteri italiani. Inquadra il QR Code ed ordina direttamente da qui".
+
+3) CONCLUSIONE E DECISIONE
+Approvata la misura di 15 cm di diametro totale (con spazio bianco centrale di 5x5 cm per l'applicazione del QR code univoco). Configurato il primo pezzo dedicato personalizzato con la base del logo di FloreMoria e la dicitura "Partner Ufficiale: Fioreria Battistella" stampata direttamente sul fondo, da utilizzare come leva di affiliazione commerciale ad alto impatto.

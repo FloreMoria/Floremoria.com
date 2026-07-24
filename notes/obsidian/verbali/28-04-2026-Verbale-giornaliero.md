@@ -1,13 +1,14 @@
 ---
 date: 28-04-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sommario: "Definizione Modello Commerciale PA."
-sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-07-24T06:18:19.265Z
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.388Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # PROTOCOLLO 108 - Definizione Modello Commerciale PA
 
@@ -24,26 +25,6 @@ DISPOSIZIONI: Ratifica listino a 4 fasce (Silver €749, Gold €1499, Platinum 
 - **Task in Sospeso:** N/A
 - **Risultati Raggiunti:** N/A
 
----
-
-## Sviluppo tecnico (repo DEVIN)
-
-# PROTOCOLLO 107 - Trust Identity "Made in Italy"
-
-**Riassunto (BARBARA):** Trust Identity "Made in Italy".
-
-STATO: Trust Identity "Made in Italy".
-DISPOSIZIONI: Approvazione del logo "Made in Italy" come sigillo di garanzia per residenti all'estero. Posizionamento: Footer, Checkout e sezione Identità.
-
-## Dettagli operativi
-
-- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 107
-- **Punti Discussi:** N/A
-- **Allarmi Critici:** N/A
-- **Task in Sospeso:** N/A
-- **Risultati Raggiunti:** N/A
-
----
 
 ## Sviluppo tecnico (repo DEVIN)
 

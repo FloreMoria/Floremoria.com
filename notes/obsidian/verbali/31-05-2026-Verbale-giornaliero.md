@@ -1,12 +1,14 @@
 ---
-date: 2026-05-31
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/31-05-2026.md
-synced_at: 2026-07-21T07:26:04.650Z
+date: 31-05-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "Definizione della strategia di partnership con il gruppo Battistella (rete onoranze/settore funerario)."
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.389Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/31-05-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # Strategia Partner — Gruppo Battistella
 

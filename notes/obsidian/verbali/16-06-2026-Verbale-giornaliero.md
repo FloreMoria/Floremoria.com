@@ -1,12 +1,14 @@
 ---
-date: 2026-06-16
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/16-06-2026.md
-synced_at: 2026-07-21T07:26:04.643Z
+date: 16-06-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "Verbale di Sviluppo FloreMoria — Stato e Roadmap (16 Giugno 2026)"
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.378Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/16-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # Verbale di Sviluppo FloreMoria — Stato e Roadmap (16 Giugno 2026)
 
@@ -21,20 +23,6 @@ synced_at: 2026-07-21T07:26:04.643Z
 
 **Commit di riferimento (main):** `aeeb045` → `070be69` (PoD, bacheca admin, prove visive custodite).
 
----
-
-## 2. Raffinamenti e bug-fix immediati (stato al 16/06)
-
-| Voce | Stato | Note |
-|------|-------|------|
-| Mappa admin raddoppiata | ✅ Completato | `CustodiedProofGallery` — `h-80` + bbox ampliato per ADMIN |
-| Download diretto foto admin | ✅ Completato | `forceDownload()` nativo, nome file elegante |
-| Unificazione flusso fiorista → scheda ordine | ✅ Completato | `getOrderProofPhotos()` + sezione **Prove Visive Custodite** |
-| Pulsanti admin Scarica / Sostituisci / Cancella | ✅ Completato | API `POST /api/dashboard/delivery-proof/photo` |
-| Rotazione forzata 90° (Paolo Cantoni) | ✅ Completato | Sharp server-side + rewrite su Vercel Blob |
-| Strip EXIF orientamento su nuovi upload | ✅ Completato | `lib/deliveryProof/imagePipeline.ts` |
-
----
 
 ## 3. Nuovo sviluppo: pagina «Defunti» nella dashboard (priorità mattina)
 

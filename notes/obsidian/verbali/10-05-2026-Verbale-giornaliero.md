@@ -1,12 +1,14 @@
 ---
-date: 2026-05-10
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/10-05-2026.md
-synced_at: 2026-07-21T07:26:04.641Z
+date: 10-05-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "Partecipazione a TANEXPO (fiera internazionale del settore funerario) per scouting partner e fornitori."
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.369Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/10-05-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # TANEXPO Bologna — Scouting Partner e Fornitori
 

@@ -1,12 +1,14 @@
 ---
-date: 2026-07-09
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/09-07-2026.md
-synced_at: 2026-07-21T07:26:04.641Z
+date: 09-07-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "Chiusura sessione operativa dashboard staff, automazione consegne e UX fioristi/GdM. Da domani pivot prioritario sul marketing."
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.367Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/09-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # Verbale giornaliero — 09/07/2026
 
@@ -23,48 +25,6 @@ DISPOSIZIONI: Da **10/07/2026** si avvia il lavoro strutturato sul **marketing**
 - **Task in Sospeso:** Avvio piano marketing (MARK / AXEL / ZIGGY) dal 10/07
 - **Risultati Raggiunti:** Vedi sezione tecnica sotto
 
----
-
-## Sviluppo tecnico (repo DEVIN)
-
-### 1. VERA AI — conversazione WhatsApp
-- Eliminati risposte robotiche su saluti isolati (`ciao`, `buongiorno`, `grazie`)
-- Saluto simmetrico + richiesta intento prima di azioni automatiche
-- Commit: `43fb5ad`
-
-### 2. PWA staff — notifiche e messaggistica
-- Suoni/avvisi default ON per messaggi, ordini e foto fioristi
-- Web Push su dashboard Communications
-- Lightbox foto chat con chiusura e swipe indietro su PWA
-- Menu hamburger mobile e layout chat responsive
-- Commit principali: `1c0900c`, `4a8dee3`, `0761bb4`, `de71705`, `ce50bec`
-
-### 3. Automazione consegna — foto fiorista → cliente
-- Dopo upload foto WhatsApp del fiorista: ingest automatico, salvataggio proof, notifica cliente con magic link e template `customer_delivery_photo`
-- Commit: `8ae16b7`
-
-### 4. Deploy Vercel — stabilità
-- Rimosso `prisma migrate deploy` dal build Vercel (lock P1002 su deploy paralleli)
-- Migrazioni DB delegate a GitHub Actions (`db-migrate-deploy.yml`)
-- Commit: `431151e`
-
-### 5. Dashboard Utenti (Giardino della Memoria)
-- Click su riga/nome → profilo a **pagina intera** (overlay full-screen, non drawer)
-- Commit: `b211228`
-
-### 6. Dashboard Fioristi — dossier e anagrafica
-- Click su fiorista → pagina dossier dedicata `/dashboard/fioristi/[id]`
-- Layout sotto la navbar principale (logo + menu sempre visibili)
-- Header con nome, codice, comune, provincia; pulsanti **Elenco fioristi · Modifica · Scarica Scheda**
-- Modifica anagrafica funzionante via API `PUT /api/dashboard/partners/[id]`
-- Tabella elenco ripristinata con nome nella stessa riga
-- Commit: `8961b8b`, `3bb049b`, `07d697f`
-
-### 7. Verbali e knowledge base
-- Pipeline BARBARA + DEVIN → Obsidian + dashboard logs operativa
-- Mirror su Google Drive dove disponibile
-
----
 
 ## Nota di passaggio consegne (CEO)
 

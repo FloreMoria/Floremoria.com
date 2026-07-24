@@ -1,12 +1,14 @@
 ---
-date: 2026-06-22
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/22-06-2026.md
-synced_at: 2026-07-21T07:26:04.646Z
+date: 22-06-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "📌 Verbale Stato Avanzamento Lavori: Integrazione WhatsApp (Evolution API)"
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.390Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/22-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # 📌 Verbale Stato Avanzamento Lavori: Integrazione WhatsApp (Evolution API)
 
@@ -14,16 +16,6 @@ synced_at: 2026-07-21T07:26:04.646Z
 **Stato:** Infrastruttura Pronta / Interfaccia in Cache (Sospeso per allineamento)  
 **Riferimento Progetto:** FloreMoria (Integrazione VERA su iPhone 12 Proprietario)
 
----
-
-## 🟩 1. ATTIVITÀ COMPLETATE E FUNZIONANTI (100%)
-
-* **Database Neon (Produzione):** Applicata con successo dal Mac la migrazione `20260622150000_phone_blacklist`. La tabella `PhoneBlacklist` è attiva e pronta in produzione.
-* **Sincronizzazione Git & Codice:** Eseguito il pull con rebase per integrare i commit remoti (Devin) e completato il `git push origin main` del commit `ab24fa5`. Tutto il codice delle rotte WhatsApp (`/admin-panel/whatsapp-setup` e `/api/whatsapp/*`) è ufficialmente su GitHub ed è stato compilato da Vercel.
-* **VPS (Evolution API):** Il server su `94.177.198.140:8080` è sano e configurato.
-* **Creazione Istanza:** L'istanza `floremoria-iphone12` è stata creata con successo lato server con integrazione `WHATSAPP-BAILEYS` (Stato attuale: *Connecting* / In attesa di handshake).
-
----
 
 ## 🟨 2. PROBLEMA CORRENTE (Blocco Generazione QR Code)
 

@@ -1,12 +1,14 @@
 ---
-date: 2026-06-17
-tipo: verbale_sviluppo
-tags: [verbale, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sync_source: docs/verbali/17-06-2026.md
-synced_at: 2026-07-21T07:26:04.644Z
+date: 17-06-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
+sommario: "Verbale di Sviluppo FloreMoria — Stato e Roadmap (17 Giugno 2026)"
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.379Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/17-06-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # Verbale di Sviluppo FloreMoria — Stato e Roadmap (17 Giugno 2026)
 
@@ -25,18 +27,6 @@ Backend → upsert contatto + custom field → tag trigger
 Futuria → workflow published → WhatsApp (template Meta Utility)
 ```
 
----
-
-## 2. Lavoro locale non ancora committato
-
-Modifiche in working tree (fallback invio WhatsApp via API se workflow Futuria bloccato):
-
-- `lib/futuria/sendFloristDeliveryLinkWhatsApp.ts` — invio diretto API Futuria
-- `lib/futuria/floristDeliveryLinkWebhook.ts` — handler webhook legacy
-- `lib/futuria/floristDeliveryLinkNotify.ts` — modalità `workflow` (default) vs `api`
-- `lib/futuria/config.ts` — `FUTURIA_FLORIST_DELIVERY_SEND_MODE`, template ID
-
----
 
 ## 3. Futuria — configurazione operativa (in corso)
 

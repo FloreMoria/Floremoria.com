@@ -1,13 +1,14 @@
 ---
 date: 31-03-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sommario: "Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First)."
-sync_source: docs/verbali/31-03-2026.md
-synced_at: 2026-07-24T06:18:19.266Z
+sync_sources: ["consolidate-backfill"]
+synced_at: 2026-07-24T08:24:52.386Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/31-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-backfill.
 
 # Protocollo FLOREM_AUTO_PROT_058 - Verbale di Sintesi e Architettura
 

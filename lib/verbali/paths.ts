@@ -1,14 +1,12 @@
 import { resolve } from 'node:path';
 
-/** Nome canonico Obsidian: DD-MM-YYYY-Verbale-giornaliero.md */
+/** Nome canonico Obsidian: YYYY-MM-DD-Verbale-giornaliero.md */
 export function obsidianGiornalieroFileName(iso: string): string {
-    const [y, m, d] = iso.split('-');
-    return `${d}-${m}-${y}-Verbale-giornaliero.md`;
+    return `${iso}-Verbale-giornaliero.md`;
 }
 
 export function obsidianConsolidatoFileName(iso: string): string {
-    const [y, m, d] = iso.split('-');
-    return `${d}-${m}-${y}-Verbale-Consolidato.md`;
+    return `${iso}-Verbale-Consolidato.md`;
 }
 
 /** Nome canonico docs: DD-MM-YYYY.md */

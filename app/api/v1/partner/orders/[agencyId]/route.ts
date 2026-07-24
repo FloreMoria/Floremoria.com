@@ -72,6 +72,15 @@ export async function GET(request: Request, ctx: { params: Promise<{ agencyId: s
                         },
                     },
                 },
+                deliveryProof: {
+                    select: {
+                        photoAfterUrl: true,
+                        photosAfterUrls: true,
+                        socialReadyPrimaryUrl: true,
+                        socialReadyAfterUrls: true,
+                        status: true,
+                    },
+                },
             },
         }),
     ]);
@@ -102,6 +111,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ agencyId: s
                     email: o.buyerEmail || null,
                     phone: o.customerPhone || null,
                 },
+                deliveryPhotoUrl: o.deliveryProof?.socialReadyPrimaryUrl || o.deliveryProof?.photoAfterUrl || null,
+                deliveryPhotos: o.deliveryProof?.socialReadyAfterUrls || o.deliveryProof?.photosAfterUrls || [],
+                deliveryProofStatus: o.deliveryProof?.status || null,
             })),
             meta: { total, limit, offset },
         },

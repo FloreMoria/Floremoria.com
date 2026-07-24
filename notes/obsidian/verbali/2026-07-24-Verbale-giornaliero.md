@@ -1,10 +1,13 @@
 ---
 date: 24-07-2026
-tipo: verbale_giornaliero
-tags: [verbale, BARBARA, FLOREM_NET, sync_pipeline]
-sommario: "Setup Pinterest OAuth & richiesta Standard, Command Center updates, normalizzazione 54 verbali storici ISO YYYY-MM-DD e aggiornamento API B2B con PoD."
-redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale Operativo FloreMoria — 24 Luglio 2026"
+sync_source: docs/verbali/24-07-2026.md
+synced_at: 2026-07-24T17:05:25.319Z
 ---
+
+> Copia sincronizzata automaticamente da `docs/verbali/24-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
 
 # Verbale Operativo FloreMoria — 24 Luglio 2026
 

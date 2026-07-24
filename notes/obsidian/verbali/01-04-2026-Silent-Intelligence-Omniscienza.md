@@ -1,18 +1,20 @@
 ---
 date: 01-04-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, REVISIONE 060]
 sommario: "Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile."
-sync_source: docs/verbali/01-04-2026.md
-synced_at: 2026-07-24T08:36:56.220Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.350Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/01-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Protocollo Omniscienza Florem (Silent Intelligence)
 
-**Riassunto (BARBARA):** Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile.
+**Riassunto:** Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile.
 
+## Testo Integrale
 VERBALE DEL LEGAL & COMPLIANCE DEPT. - FLOREMORIA S.R.L.
 
 A cura di Barbara (Resp. Legale e Strategia Asset Proprietari)
@@ -34,8 +36,7 @@ L'operazione segna un salto strategico: il passaggio di FloreMoria da mero inter
 
 Documento siglato e archiviato.
 
-## Dettagli operativi
-
+## Dettagli Tecnici
 - **Prompt Chiave:** Generazione Verbale Legal & Compliance
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A

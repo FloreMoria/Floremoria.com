@@ -1,0 +1,31 @@
+---
+date: 03-05-2026
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
+sommario: "Verbale operativo del 03-05-2026"
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.352Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
+---
+
+> Pipeline automatica — fonti: consolidate-clean-move.
+
+VERBALE 1: 3 MAGGIO 2026
+Data ISO: 2026-05-03
+
+Categoria: STRATEGIA
+
+Oggetto/Topic: Consolidamento Dati di Vetrina, Listino Prezzi e Regole di Non-Interferenza
+
+Breve Riassunto (Short Summary): Fissati i listini ufficiali delle gallerie Fiori sulle Tombe e Funerale con le relative regole di ordinamento gerarchico e conservazione storica dei dati.
+
+1) PREMESSA
+Fissazione dei punti fermi e dei requisiti di sistema per la visualizzazione e l'ordinamento dei prodotti all'interno delle gallerie della piattaforma FloreMoria (sia nella Home Page sia nelle pagine verticali di categoria), stabilendo una rigida politica di conservazione dei dati storici in caso di modifiche future.
+
+2) ANALISI
+È stata definita la struttura dei prezzi e l'ordine di apparizione delle card dei prodotti, differenziando nettamente le due anime commerciali della piattaforma per evitare sovrapposizioni:
+- Galleria "Fiori sulle Tombe" e Home Page: L'ordine deve procedere rigorosamente dal bouquet più economico al più costoso, posizionando gli accessori per ultimi. Listino ufficiale: Lumino a 3,49€, Messaggio a 2,49€, Bouquet Ricordo affettuoso a 29,99€, Bouquet di Rose a 34,99€, Bouquet Omaggio Speciale a 39,99€, Bouquet Tributo Eterno a 49,99€.
+- Galleria "Per il Funerale": Prevede un catalogo dedicato di 12 prodotti specifici ad alto valore emozionale e di scontrino. Listino ufficiale: Cuore/Corona a 199,99€, Copribara a 189,99€, Piramide a 139,99€, Cuscino a 129,99€, Bouquet Memoria Eterna a 89,99€, Bouquet Omaggio Solenne a 69,99€, Set ceri/Candele a 24,99€, Nastro commemorativo a 14,99€, Bouquet Cordoglio Sincero a 49,99€, Bouquet Rispetto e Vicinanza a 39,99€, Margherite/Gerbere pianta in vaso a 39,99€, Kalonche pianta in vaso a 37,99€.
+
+3) CONCLUSIONE E DECISIONE
+Le due gallerie devono essere programmate per essere completamente indipendenti e non devono interferire l'una con l'altra a livello di codice o query sul database. Viene stabilita la regola d'oro: in caso di modifiche future, i dati vecchi non dovranno mai essere cancellati, ma registrati, mantenuti e storicizzati come punti di riavvio.

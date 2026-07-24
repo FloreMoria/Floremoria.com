@@ -1,18 +1,20 @@
 ---
 date: 31-03-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, VERBALE ESECUTIVO]
 sommario: "Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First)."
-sync_source: docs/verbali/31-03-2026.md
-synced_at: 2026-07-24T08:36:56.229Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.377Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/31-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Protocollo FLOREM_AUTO_PROT_058 - Verbale di Sintesi e Architettura
 
-**Riassunto (BARBARA):** Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First).
+**Riassunto:** Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First).
 
+## Testo Integrale
 SINTESI DELLE DECISIONI ARCHITETTURALI:
 - Identità Digitale (I 4 Codici): Per preservare l'integrità del sistema e tutelare l'anonimato dell'utente, l'architettura tecnica è stata ripensata attorno a codici "parlanti" (UT-, FST-, DEF-, OR-). Nel workflow logistico della consegna, il fiorista ha necessità di interfacciarsi esclusivamente con l'ID Ordine (OR- / FF- / FT-). Grazie al legame relazionale nel database, questo codice univoco si ancora dinamicamente alle risorse territoriali (Regione-Provincia-Comune) senza mai esporre i dati anagrafici né del committente né del defunto durante la filiera esecutiva.
 - Protocollo "Ghost ID": Per minimizzare la frizione sull'ultimo miglio logistico, i sistemi genereranno Token URL sicuri. Il fiorista riceve un link dedicato (o ID whatsapp), bypassando la necessità di digitazione manuale dei codifici utente/defunto. Questo elimina radicalmente l'incidenza di errore umano in fase di upload sul campo.
@@ -29,8 +31,7 @@ LOGICA OPERATIVA "OFFLINE-FIRST":
 
 [Punto di Consolidamento Florem-Eco 1.0]
 
-## Dettagli operativi
-
+## Dettagli Tecnici
 - **Prompt Chiave:** Protocollo Esecutivo #058 - Redazione Barbara
 - **Punti Discussi:** Ottimizzazione dei workflow fioristi, eliminazione codifiche ridondanti, performance UX/Lighthouse, saturazione Google Images e neutralizzazione di possibili penalizzazioni algoritmiche.
 - **Allarmi Critici:** N/A

@@ -1,18 +1,20 @@
 ---
 date: 25-03-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA, R&D]
 sommario: "Subentro de Il Prof come Master Agent e setup infrastrutturale."
-sync_source: docs/verbali/25-03-2026.md
-synced_at: 2026-07-24T08:36:56.227Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.369Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/25-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Nascita de Il Prof e Protocollo Master
 
-**Riassunto (BARBARA):** Subentro de Il Prof come Master Agent e setup infrastrutturale.
+**Riassunto:** Subentro de Il Prof come Master Agent e setup infrastrutturale.
 
+## Testo Integrale
 PREMESSA:
 Il presente verbale attesta l'introduzione ufficiale della figura "Il Prof" all'interno dell'ecosistema di FloreMoria. Questa mossa risponde a un'impellente necessità di controllo architetturale di alto livello, volta a centralizzare e omogeneizzare le logiche di codice in forte scalata. Le precedenti sessioni operative, delegate in un contesto puramente orizzontale privo di Master Guard, avevano causato piccole deviazioni di UI e divergenze latenti sul database (troncamento stringhe su MySQL e inconsistenza CSS "dark mode"), minando la "stabilità visiva e dei metadati" del progetto E-commerce. Il brand "FloreMoria" non può tollerare difetti qualitativi. Diventa mandatoria la stesura del "Protocollo Master", la cui adozione sarà vincolante per qualsiasi modulo futuro, frontend o backend.
 
@@ -31,8 +33,7 @@ DECISIONE FINALE:
 È stata deliberata all'unanimità l'implementazione del Protocollo Master e l'adozione dell'architettura "Zero-Scroll Dashboard", consolidando in un singolo viewport vitale tutto lo stream operativo, isolando invece nella stiva della rotta /logs l'infrastruttura di stoccaggio "Full Knowledge" di lettura zen. Ogni futuro agente (Claude, Devin o Gemini) deve ora documentare le modifiche macroscopiche strutturando il verbale nei tre paragrafi obbligatori (PREMESSA, ANALISI, DECISIONE). In aggiunta, si conferma l'istituzione della validazione soft-delete permanente su tutte le tabelle E-commerce critiche, come decretato precedentemente da "Nina" e la sicurezza backend.
 Il Prof assume operatività totale e definitiva sul controllo qualità del progetto FloreMoria.
 
-## Dettagli operativi
-
+## Dettagli Tecnici
 - **Prompt Chiave:** Prompt d'innesco iniziale per Il Prof: stabilizzare le regole generative e l'interazione multi-agente.
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A

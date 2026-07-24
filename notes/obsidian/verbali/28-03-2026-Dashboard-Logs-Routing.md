@@ -1,18 +1,20 @@
 ---
 date: 28-03-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, BUGFIX, LAYOUT, ROUTING]
 sommario: "Applicazione metodo Verifica Codice, eliminazione dark mode bloccanti e nuovo layout editoriale bianco per la Memoria Storica aziendale."
-sync_source: docs/verbali/28-03-2026.md
-synced_at: 2026-07-24T08:36:56.228Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.371Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/28-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Re-Design Editoriale e Consolidamento Routing
 
-**Riassunto (BARBARA):** Applicazione metodo Verifica Codice, eliminazione dark mode bloccanti e nuovo layout editoriale bianco per la Memoria Storica aziendale.
+**Riassunto:** Applicazione metodo Verifica Codice, eliminazione dark mode bloccanti e nuovo layout editoriale bianco per la Memoria Storica aziendale.
 
+## Testo Integrale
 PREMESSA:
 Risoluzione bug Dashboard e allineamento archivio verbali. Oggi ci siamo concentrati sulla stabilizzazione definitiva dell'infrastruttura di tracciamento e della navigazione interna, per permettere una consultazione fluida della Memoria Storica aziendale.
 
@@ -23,8 +25,7 @@ DECISIONE:
 Implementazione del metodo "Verifica Codice", navigazione via Tag funzionante e nuovo layout editoriale.
 Il routing è stato aggiustato per mappare l'ID con 'await Promise.resolve(params)', prevenendo incompatibilità Next.js 15. Le Query Prisma sono state iniettate con operatore 'contains' insensibile alle maiuscole. Il layout è stato ripulito radicalmente, azzerando le card grigie pesanti e impostando uno sfondo standard 'bg-white relative' senza absolute. Centratura 'mx-auto' e 'max-w-[800px]' con py-20 per bypass headers. Inserito in priorità DOM il bottone 'Torna alla Dashboard'. Il caching di Next.js è stato abbattuto tramite export const dynamic = 'force-dynamic' garantendo l'iniezione live dei dati del verbale ad ogni apertura.
 
-## Dettagli operativi
-
+## Dettagli Tecnici
 - **Prompt Chiave:** Genera uno script Prisma unificato che purifichi e re-inietti completamente il verbale di oggi.
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A

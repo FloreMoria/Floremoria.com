@@ -1,13 +1,14 @@
 ---
 date: 09-07-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sommario: "Chiusura sessione operativa dashboard staff, automazione consegne e UX fioristi/GdM. Da domani pivot prioritario sul marketing."
-sync_source: docs/verbali/09-07-2026.md
-synced_at: 2026-07-24T08:25:58.021Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.355Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/09-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Verbale giornaliero — 09/07/2026
 
@@ -23,6 +24,7 @@ DISPOSIZIONI: Da **10/07/2026** si avvia il lavoro strutturato sul **marketing**
 - **Allarmi Critici:** Nessuno bloccante a fine giornata
 - **Task in Sospeso:** Avvio piano marketing (MARK / AXEL / ZIGGY) dal 10/07
 - **Risultati Raggiunti:** Vedi sezione tecnica sotto
+
 
 ## Nota di passaggio consegne (CEO)
 

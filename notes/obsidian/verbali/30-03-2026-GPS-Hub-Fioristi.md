@@ -1,22 +1,23 @@
 ---
 date: 30-03-2026
-tipo: verbale_sviluppo
-tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+tipo: verbale_giornaliero
+tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, BACKEND_UX]
 sommario: "Ristrutturazione logica in Florem Hub e Upload Fotografico per inserire tracking GPS nativo nei device dei fioristi. Modifica al modulo checkout (Rimozione vincoli Posizione Tomba) per aumentare il Tasso di Conversione."
-sync_source: docs/verbali/30-03-2026.md
-synced_at: 2026-07-24T08:36:56.229Z
+sync_sources: ["consolidate-clean-move"]
+synced_at: 2026-07-24T08:41:46.376Z
+redazione: BARBARA (Antigravity) + DEVIN (Cursor)
 ---
 
-> Copia sincronizzata automaticamente da `docs/verbali/30-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+> Pipeline automatica — fonti: consolidate-clean-move.
 
 # Protocollo Fluid Memory 049 - GPS & Hub Fioristi
 
-**Riassunto (BARBARA):** Ristrutturazione logica in Florem Hub e Upload Fotografico per inserire tracking GPS nativo nei device dei fioristi. Modifica al modulo checkout (Rimozione vincoli Posizione Tomba) per aumentare il Tasso di Conversione.
+**Riassunto:** Ristrutturazione logica in Florem Hub e Upload Fotografico per inserire tracking GPS nativo nei device dei fioristi. Modifica al modulo checkout (Rimozione vincoli Posizione Tomba) per aumentare il Tasso di Conversione.
 
+## Testo Integrale
 FLOREM_AUTO_PROT_049: Implementazione di un sistema di geolocalizzazione opportunistica unito a un interfaccia utente minimalista.
 
-## Dettagli operativi
-
+## Dettagli Tecnici
 - **Prompt Chiave:** Implementazione geolocalizzazione fioristi e snellimento modulo di checkout utente
 - **Punti Discussi:** - Algoritmo compensi Fioristi implementato al centesimo tramite tabella csv. 
 - Modifica Tab Ordini

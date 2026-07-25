@@ -28,7 +28,7 @@ type Campaign = {
   id: string;
   status: 'DRAFT' | 'APPROVED' | 'PUBLISHED' | 'REJECTED';
   category: 'FF' | 'FT' | 'FA' | 'FP';
-  targetChannel: 'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST';
+  targetChannel: 'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST' | 'GOOGLE_ADS';
   contentFormat: 'FEED_POST' | 'STORY' | 'REEL';
   copy: string;
   imageUrl: string | null;
@@ -47,7 +47,8 @@ const SOCIAL_TABS = [
   { id: 'TIKTOK', label: 'TikTok', icon: '🎵', color: 'from-slate-900 to-black' },
   { id: 'YOUTUBE_SHORTS', label: 'YT Shorts', icon: '▶️', color: 'from-red-600 to-rose-800' },
   { id: 'PINTEREST', label: 'Pinterest', icon: '📌', color: 'from-red-700 to-red-900' },
-  { id: 'LINKEDIN', label: 'LinkedIn', icon: '💼', color: 'from-blue-700 to-cyan-800' }
+  { id: 'LINKEDIN', label: 'LinkedIn', icon: '💼', color: 'from-blue-700 to-cyan-800' },
+  { id: 'GOOGLE_ADS', label: 'Google Ads', icon: '📢', color: 'from-amber-500 to-yellow-600' }
 ];
 
 const PREDEFINED_THEMES = [
@@ -116,7 +117,7 @@ export default function CampaignsDashboardClient() {
 
   // Stati per la creazione di un post manuale
   const [showModal, setShowModal] = useState(false);
-  const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST'>('META_INSTAGRAM');
+  const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST' | 'GOOGLE_ADS'>('META_INSTAGRAM');
   const [manualFormat, setManualFormat] = useState<'FEED_POST' | 'STORY' | 'REEL'>('FEED_POST');
   const [manualCopy, setManualCopy] = useState('');
   const [manualHashtags, setManualHashtags] = useState('');
@@ -1263,7 +1264,7 @@ export default function CampaignsDashboardClient() {
                   )}
                   {c.status === 'PUBLISHED' && (
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-mono">
-                      <CheckCircle2 size={12} /> Pubblicazione Completata
+                      <CheckCircle2 size={12} /> Pubblicazione Completata {c.updatedAt && `il ${new Date(c.updatedAt).toLocaleDateString('it-IT')}`}
                     </span>
                   )}
                 </div>

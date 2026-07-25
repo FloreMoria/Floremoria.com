@@ -11,23 +11,34 @@ export function resolvePartnerCity(order: {
     return order.deliveryProvince?.trim() || 'Italia';
 }
 
-function extractBuyerFirstName(fullName?: string | null): string {
+export function extractBuyerLastName(fullName?: string | null): string {
     const trimmed = (fullName || '').trim();
     if (!trimmed) return '';
     const parts = trimmed.split(/\s+/).filter(Boolean);
-    return parts.length ? parts[parts.length - 1]! : trimmed;
+    if (parts.length === 1) return parts[0]!;
+    
+    // Rimuovi parole di test comuni alla fine
+    let lastIdx = parts.length - 1;
+    while (lastIdx > 0) {
+        const word = parts[lastIdx]!.toLowerCase();
+        if (word === 'prova' || word === 'test' || word === 'sandbox' || word === 'dev') {
+            lastIdx--;
+        } else {
+            break;
+        }
+    }
+    return parts[lastIdx] || parts[parts.length - 1]!;
 }
 
-/** Saluto storico: "Buongiorno Sig./sig. [Nome]" o "Gentile [Nome]". */
+/** Saluto storico: "Buongiorno Sig. [Cognome]" o "Buongiorno". */
 export function formatDeliverySalutation(buyerFullName?: string | null): string {
-    const firstName = extractBuyerFirstName(buyerFullName);
-    if (!firstName) return 'Buongiorno';
-    return `Buongiorno Sig. ${firstName}`;
+    const lastName = extractBuyerLastName(buyerFullName);
+    if (!lastName) return 'Buongiorno';
+    return `Buongiorno Sig. ${lastName}`;
 }
 
 /**
  * Testo caldo post-consegna (CAPITOLO 1 chat storiche).
- * Il link al Giardino della Memoria va inviato in un secondo messaggio testuale.
  */
 export function renderDeliveryProofCaption(params: {
     buyerFullName?: string | null;
@@ -38,7 +49,7 @@ export function renderDeliveryProofCaption(params: {
     const defunto = (params.deceasedName || 'chi ama').trim();
     const city = params.partnerCity.trim() || 'zona';
 
-    return `${saluto}, con immensa gioia Le confermiamo che i fiori nel ricordo di ${defunto} sono stati posati dal nostro partner di ${city}. In allegato la foto della consegna 🌹`;
+    return `${saluto}, con immensa gioia Le confermiamo che i fiori nel ricordo di ${defunto} sono stati posati con cura al cimitero di ${city}. In allegato la foto della consegna 🌹`;
 }
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {

@@ -12,6 +12,9 @@ import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
+import { getSession } from '@/lib/chatStore';
+import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
+import { sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface PuntoEFResult {
     ok: boolean;
@@ -58,18 +61,36 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
             const floristName = extractFirstName(
                 order.partner.ownerName || order.partner.shopName
             );
-            const staffNote =
-                'La ringraziamo per la consegna e per le foto inviate. Restiamo a disposizione per eventuali aggiornamenti.';
+            const orderCode = order.orderNumber || order.id;
 
-            const { bodyParams, headerTextParams } = buildProactiveStaffParams({
-                floristFirstName: floristName,
-                orderCode: order.orderNumber || order.id,
-                staffNotes: staffNote,
-            });
+            const sessionPhone = `whatsapp:${order.partner.whatsappNumber}`;
+            const session = await getSession(sessionPhone);
+            const withinWindow = isWithinCustomerServiceWindow(session);
 
-            await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', bodyParams, {
-                headerTextParams,
-            });
+            if (withinWindow) {
+                // Finestra aperta: invio testo libero formattato
+                const text = `Aggiornamento Ordine ${orderCode}
+Gentile ${floristName}, Ti ringraziamo per la consegna e per le foto inviate. 
+Restiamo a disposizione per eventuali aggiornamenti.
+
+Tutto lo Staff di FloreMoria ti ringrazia per la preziosa collaborazione e ti augura un buon lavoro.🌹`;
+                await sendWhatsAppTextMessage(order.partner.whatsappNumber, text);
+            } else {
+                // Finestra chiusa: usiamo il template Meta proactive_staff
+                const staffNote = `Ti ringraziamo per la consegna e per le foto inviate. Restiamo a disposizione per eventuali aggiornamenti.
+
+Tutto lo Staff di FloreMoria ti ringrazia per la preziosa collaborazione e ti augura un buon lavoro.🌹`;
+
+                const { bodyParams, headerTextParams } = buildProactiveStaffParams({
+                    floristFirstName: floristName,
+                    orderCode,
+                    staffNotes: staffNote,
+                });
+
+                await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', bodyParams, {
+                    headerTextParams,
+                });
+            }
         }
 
         await prisma.order.update({

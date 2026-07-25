@@ -28,7 +28,11 @@ export function whatsAppChatMediaDownloadUrl(mediaUrl: string | null | undefined
 export function isImageMediaUrl(mediaUrl: string | null | undefined): boolean {
     const value = mediaUrl?.trim();
     if (!value) return false;
-    return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(value) || value.includes('/whatsapp/media/');
+    return (
+        /\.(jpe?g|png|gif|webp)(\?|$)/i.test(value) ||
+        value.includes('/whatsapp/media/') ||
+        value.includes('/whatsapp/delivery-staging/')
+    );
 }
 
 /** Estrae il media ID Meta da un URL proxy (/api/dashboard/whatsapp/media/{id}), altrimenti null. */

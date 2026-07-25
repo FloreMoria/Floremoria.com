@@ -5,6 +5,7 @@ import {
     renderDeliveryProofCaption,
     renderGiardinoDellaMemoriaLinkMessage,
     resolvePartnerCity,
+    extractBuyerLastName,
 } from '@/lib/whatsapp/deliveryProofCopy';
 import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
@@ -110,7 +111,9 @@ export async function sendDeliveryProofWhatsApp(
         let linkMessageId: string | undefined;
 
         if (withinWindow) {
-            const imageSend = await sendWhatsAppImageMessage(phoneE164, publicImageUrl, caption);
+            // Uniamo la didascalia con la foto e il link al Giardino in un unico messaggio
+            const combinedCaption = `${caption}\n\n${linkMessage}`;
+            const imageSend = await sendWhatsAppImageMessage(phoneE164, publicImageUrl, combinedCaption);
             if (!imageSend.ok) {
                 console.error('[delivery-proof-whatsapp] Invio immagine in finestra aperta fallito:', {
                     orderId: input.orderId,
@@ -125,22 +128,12 @@ export async function sendDeliveryProofWhatsApp(
                 };
             }
             imageMessageId = imageSend.messageId;
-
-            const linkSend = await sendWhatsAppTextMessage(phoneE164, linkMessage);
-            if (!linkSend.ok) {
-                return {
-                    ok: false,
-                    skipped: 'link_send_failed',
-                    giardinoUrl,
-                    imageMessageId,
-                    error: linkSend.error,
-                };
-            }
-            linkMessageId = linkSend.messageId;
+            linkMessageId = imageSend.messageId; // impostiamo lo stesso ID poiché il messaggio è unico
         } else {
-            const buyerFirstName = extractFirstNameFromProfile(buyerName);
+            // Fuori finestra: usiamo il cognome dell'acquirente per il saluto formale
+            const buyerLastName = extractBuyerLastName(buyerName) || 'Cliente';
             const bodyParams = buildCustomerDeliveryPhotoParams({
-                buyerFirstName,
+                buyerFirstName: buyerLastName,
                 partnerCity,
                 deceasedName,
             });
@@ -189,8 +182,8 @@ export async function sendDeliveryProofWhatsApp(
         }
 
         const logBody = withinWindow
-            ? `${caption}\n\n[Immagine consegna]\n\n${linkMessage}`
-            : `${caption}\n\n${linkMessage}`;
+            ? `${caption}\n\n${linkMessage}`
+            : `[Template Meta customer_delivery_photo inviato]\n\n${linkMessage}`;
 
         await logProofToDashboard(phoneE164, buyerName, logBody, {
             orderId: input.orderId,

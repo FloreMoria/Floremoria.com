@@ -141,7 +141,7 @@ function VisioneTab({
   const [forwardSearch, setForwardSearch] = useState('');
   const [forwarding, setForwarding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   // Find the currently active chat
@@ -163,10 +163,10 @@ function VisioneTab({
     setActiveChatId(null);
   }, []);
 
-  // Scroll to bottom of chat when active chat or messages change
+  // Scroll to bottom of chat when active chat or messages change without shifting the outer page
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [activeChat?.messages?.length]);
 
@@ -608,6 +608,7 @@ function VisioneTab({
               </div>
 
               <div 
+                ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-repeat" 
                 style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")' }}
               >
@@ -647,7 +648,6 @@ function VisioneTab({
                     </div>
                   );
                 })}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input Bar — graffetta sempre disponibile (anche con VERA AI attiva / finestra chiusa) */}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, MapPin, Loader2, ChevronRight, X } from 'lucide-react';
+import { AlertTriangle, MapPin, Loader2, ChevronRight, X, Check } from 'lucide-react';
 
 export type VeraAlertType =
     | 'grave_position_missing'
@@ -64,6 +64,8 @@ export default function VeraAlertsBanner({
     const [dismissed, setDismissed] = useState(false);
     const [draftPositions, setDraftPositions] = useState<Record<string, string>>({});
     const [savingId, setSavingId] = useState<string | null>(null);
+    const [resolvingId, setResolvingId] = useState<string | null>(null);
+    const [resolvedFlashIds, setResolvedFlashIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string | null>(null);
 
     const fetchAlerts = useCallback(async () => {
@@ -118,6 +120,46 @@ export default function VeraAlertsBanner({
             window.alert(e instanceof Error ? e.message : 'Errore durante lo sblocco.');
         } finally {
             setSavingId(null);
+        }
+    };
+
+    const markAlertResolved = async (alert: VeraOperationalAlert) => {
+        if (resolvingId || resolvedFlashIds.has(alert.id)) return;
+
+        setResolvingId(alert.id);
+        setError(null);
+        try {
+            const res = await fetch('/api/dashboard/vera-alerts', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: alert.id }),
+            });
+            const body = (await res.json().catch(() => ({}))) as {
+                success?: boolean;
+                error?: string;
+            };
+            if (!res.ok || !body.success) {
+                throw new Error(body.error || 'Chiusura segnalazione non riuscita.');
+            }
+
+            // Feedback verde breve, poi rimozione dall’elenco (persistito in DB).
+            setResolvedFlashIds((prev) => new Set(prev).add(alert.id));
+            window.setTimeout(() => {
+                setAlerts((prev) => {
+                    const next = prev.filter((a) => a.id !== alert.id);
+                    onAlertsChange?.(next.length);
+                    return next;
+                });
+                setResolvedFlashIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(alert.id);
+                    return next;
+                });
+            }, 700);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Errore durante la chiusura.');
+        } finally {
+            setResolvingId(null);
         }
     };
 
@@ -179,16 +221,26 @@ export default function VeraAlertsBanner({
                                                 : ''}
                                         </p>
                                     </div>
-                                    {onOpenOrder ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => onOpenOrder(alert.id)}
-                                            className="text-xs font-semibold text-red-700 hover:text-red-900 flex items-center gap-1 shrink-0"
-                                        >
-                                            Apri ordine <ChevronRight size={14} />
-                                        </button>
-                                    ) : null}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <ResolveAlertButton
+                                            alertId={alert.id}
+                                            resolvingId={resolvingId}
+                                            resolvedFlashIds={resolvedFlashIds}
+                                            onResolve={() => void markAlertResolved(alert)}
+                                            tone="critical"
+                                        />
+                                        {onOpenOrder ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => onOpenOrder(alert.id)}
+                                                className="text-xs font-semibold text-red-700 hover:text-red-900 flex items-center gap-1"
+                                            >
+                                                Apri ordine <ChevronRight size={14} />
+                                            </button>
+                                        ) : null}
+                                    </div>
                                 </div>
+                                {alert.veraAlertType === 'grave_position_missing' ? (
                                 <div className="flex flex-col sm:flex-row gap-2">
                                     <div className="relative flex-1">
                                         <MapPin
@@ -224,6 +276,7 @@ export default function VeraAlertsBanner({
                                         )}
                                     </button>
                                 </div>
+                                ) : null}
                             </li>
                         ))}
                     </ul>
@@ -251,11 +304,14 @@ export default function VeraAlertsBanner({
                         {operational.map((alert) => {
                             const isTomb = alert.veraAlertType === 'tomb_not_found';
                             const isCemetery = alert.veraAlertType === 'cemetery_closed';
+                            const isEconomic = alert.veraAlertType === 'economic_discrepancy';
                             const title = isTomb
                                 ? `Tomba non trovata — ordine ${orderLabel(alert)}`
                                 : isCemetery
                                   ? `Cimitero chiuso — ordine ${orderLabel(alert)}`
-                                  : `Richiesta modifica utente — ordine ${orderLabel(alert)}`;
+                                  : isEconomic
+                                    ? `Contestazione economica — ordine ${orderLabel(alert)}`
+                                    : `Richiesta modifica utente — ordine ${orderLabel(alert)}`;
 
                             return (
                                 <li
@@ -268,15 +324,24 @@ export default function VeraAlertsBanner({
                                             {alert.veraAlertMessage || alert.deceasedName}
                                         </p>
                                     </div>
-                                    {onOpenOrder ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => onOpenOrder(alert.id)}
-                                            className="shrink-0 px-3 py-2 rounded-lg bg-orange-600 text-white text-xs font-bold hover:bg-orange-700 transition-colors"
-                                        >
-                                            Gestisci ordine
-                                        </button>
-                                    ) : null}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <ResolveAlertButton
+                                            alertId={alert.id}
+                                            resolvingId={resolvingId}
+                                            resolvedFlashIds={resolvedFlashIds}
+                                            onResolve={() => void markAlertResolved(alert)}
+                                            tone="operational"
+                                        />
+                                        {onOpenOrder ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => onOpenOrder(alert.id)}
+                                                className="px-3 py-2 rounded-lg bg-orange-600 text-white text-xs font-bold hover:bg-orange-700 transition-colors"
+                                            >
+                                                Gestisci ordine
+                                            </button>
+                                        ) : null}
+                                    </div>
                                 </li>
                             );
                         })}
@@ -284,5 +349,54 @@ export default function VeraAlertsBanner({
                 </div>
             ) : null}
         </div>
+    );
+}
+
+function ResolveAlertButton({
+    alertId,
+    resolvingId,
+    resolvedFlashIds,
+    onResolve,
+    tone,
+}: {
+    alertId: string;
+    resolvingId: string | null;
+    resolvedFlashIds: Set<string>;
+    onResolve: () => void;
+    tone: 'operational' | 'critical';
+}) {
+    const isFlash = resolvedFlashIds.has(alertId);
+    const isBusy = resolvingId === alertId;
+    const base =
+        tone === 'critical'
+            ? 'border border-slate-300 bg-slate-200 text-slate-700 hover:bg-slate-300'
+            : 'border border-slate-300 bg-slate-200 text-slate-700 hover:bg-slate-300';
+
+    return (
+        <button
+            type="button"
+            disabled={isBusy || isFlash || resolvingId !== null}
+            onClick={onResolve}
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-70 ${
+                isFlash
+                    ? 'border border-emerald-500 bg-emerald-500 text-white'
+                    : base
+            }`}
+            title="Segna come risolta e chiudi l’avviso"
+        >
+            {isBusy ? (
+                <>
+                    <Loader2 size={12} className="animate-spin" />
+                    ...
+                </>
+            ) : isFlash ? (
+                <>
+                    <Check size={12} />
+                    Risolto
+                </>
+            ) : (
+                'Risolto'
+            )}
+        </button>
     );
 }

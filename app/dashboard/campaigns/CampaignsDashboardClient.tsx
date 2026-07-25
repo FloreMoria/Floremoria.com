@@ -1264,7 +1264,7 @@ export default function CampaignsDashboardClient() {
                   )}
                   {c.status === 'PUBLISHED' && (
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-mono">
-                      <CheckCircle2 size={12} /> Pubblicazione Completata {c.updatedAt && `il ${new Date(c.updatedAt).toLocaleDateString('it-IT')}`}
+                      <CheckCircle2 size={12} /> Pubblicazione Completata {c.updatedAt && `il ${new Date(c.updatedAt).toLocaleDateString('it-IT')} alle ${new Date(c.updatedAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
                     </span>
                   )}
                 </div>

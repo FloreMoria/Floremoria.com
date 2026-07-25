@@ -2,12 +2,31 @@
 date: 27-04-2026
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sommario: "Revisione Terminologica \\"Piccoli Amici\\"."
+sommario: "Business Continuity & Hosting."
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-07-24T20:55:14.422Z
+synced_at: 2026-07-25T01:44:40.181Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# PROTOCOLLO 105 - Business Continuity & Hosting
+
+**Riassunto (BARBARA):** Business Continuity & Hosting.
+
+STATO: Business Continuity & Hosting.
+DISPOSIZIONI: Autorizzato rinnovo tecnico Hosting Linux Aruba per evitare blackout. Mantenimento partnership "Annunci Funebri" attiva durante la migrazione al nuovo VPS.
+
+## Dettagli operativi
+
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 105
+- **Punti Discussi:** N/A
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** N/A
+- **Risultati Raggiunti:** N/A
+
+---
+
+## Sviluppo tecnico (repo DEVIN)
 
 # PROTOCOLLO 103 - Revisione Terminologica "Piccoli Amici"
 

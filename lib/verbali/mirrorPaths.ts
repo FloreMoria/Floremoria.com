@@ -48,7 +48,7 @@ export function writeCanonicalVerbaleFiles(
     const sommario = extractSommario(bodyMarkdown, iso);
 
     const obsidianContent = `---
-date: ${dateFormatted}
+date: ${iso}
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sommario: "${sommario.replace(/"/g, '\\"')}"

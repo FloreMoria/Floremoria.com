@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft, Paperclip, Forward, Loader2 } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft, Paperclip, Forward, Loader2, Smartphone, Wifi, RefreshCw, Cloud, AlertTriangle } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
@@ -42,7 +42,7 @@ function formatMessageTimestamp(createdAtStr?: string, fallback?: string): strin
   }
 }
 
-export default function CommunicationsHubClient({ initialProofs }: { initialProofs?: any[] }) {
+export default function CommunicationsHubClient({ initialProofs, isDashboardAdmin }: { initialProofs?: any[]; isDashboardAdmin?: boolean }) {
   const [activeTab, setActiveTab] = useState('visione');
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,41 +75,45 @@ export default function CommunicationsHubClient({ initialProofs }: { initialProo
   ];
 
   return (
-    <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] overflow-hidden font-body">
-      <div className="px-4 pt-4 md:px-8 md:pt-8">
-        <StaffPushNotifications />
-      </div>
-      {/* TABS HEADER */}
-      <div className="flex border-b border-[#EAE3D9] overflow-x-auto scrollbar-hide">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-[140px] md:min-w-[200px] py-4 md:py-6 px-3 md:px-6 font-display font-semibold transition-all flex items-center justify-center gap-2 md:gap-3 border-b-[3px] text-sm md:text-base
-              ${isActive ? 'border-[#C0A062] text-[#B89F78] bg-[#FDFCF9]' : 'border-transparent text-[#6F6F6F] hover:text-[#4A4A4A] hover:bg-[#FAF8F5]'}`}
-            >
-              <Icon className="w-5 h-5" />
-              {tab.label}
-            </button>
-          );
-        })}
+    <div className="space-y-8 md:space-y-12">
+      <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] overflow-hidden font-body">
+        <div className="px-4 pt-4 md:px-8 md:pt-8">
+          <StaffPushNotifications />
+        </div>
+        {/* TABS HEADER */}
+        <div className="flex border-b border-[#EAE3D9] overflow-x-auto scrollbar-hide">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-w-[140px] md:min-w-[200px] py-4 md:py-6 px-3 md:px-6 font-display font-semibold transition-all flex items-center justify-center gap-2 md:gap-3 border-b-[3px] text-sm md:text-base
+                ${isActive ? 'border-[#C0A062] text-[#B89F78] bg-[#FDFCF9]' : 'border-transparent text-[#6F6F6F] hover:text-[#4A4A4A] hover:bg-[#FAF8F5]'}`}
+              >
+                <Icon className="w-5 h-5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* CONTENT AREA */}
+        <div className="p-4 md:p-8 lg:p-12 min-h-[500px] md:min-h-[650px] bg-white">
+          {activeTab === 'visione' && (
+            <VisioneTab 
+              sessions={sessions} 
+              setSessions={setSessions}
+              loading={loading}
+            />
+          )}
+          {activeTab === 'controllo' && <ControlloTab />}
+          {activeTab === 'manutenzione' && <ManutenzioneTab />}
+        </div>
       </div>
 
-      {/* CONTENT AREA */}
-      <div className="p-4 md:p-8 lg:p-12 min-h-[500px] md:min-h-[650px] bg-white">
-        {activeTab === 'visione' && (
-          <VisioneTab 
-            sessions={sessions} 
-            setSessions={setSessions}
-            loading={loading}
-          />
-        )}
-        {activeTab === 'controllo' && <ControlloTab />}
-        {activeTab === 'manutenzione' && <ManutenzioneTab />}
-      </div>
+      {isDashboardAdmin && <WhatsAppSetupSection />}
     </div>
   );
 }
@@ -999,4 +1003,170 @@ function EmailBlacklistPanel() {
       </div>
     </div>
   );
+}
+
+type ConnectionState = 'open' | 'not_configured' | 'error' | null;
+
+interface StatusResponse {
+    ok: boolean;
+    provider?: string;
+    state?: ConnectionState;
+    displayPhoneNumber?: string;
+    error?: string;
+    missingEnv?: string[];
+}
+
+function WhatsAppSetupSection() {
+    const [state, setState] = useState<ConnectionState>(null);
+    const [displayPhone, setDisplayPhone] = useState<string | null>(null);
+    const [missingEnv, setMissingEnv] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    const fetchStatus = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/admin/whatsapp/status');
+            const data: StatusResponse = await res.json();
+            if (data.ok && data.state) {
+                setState(data.state);
+                setDisplayPhone(data.displayPhoneNumber ?? null);
+                setMissingEnv([]);
+            } else {
+                setState(data.state ?? 'error');
+                setError(data.error ?? 'Errore nel recupero stato Meta Cloud API');
+                setMissingEnv(data.missingEnv ?? []);
+            }
+            setLastUpdated(new Date());
+        } catch {
+            setError('Impossibile contattare Meta WhatsApp Cloud API');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchStatus();
+        const interval = setInterval(() => fetchStatus(true), 60_000);
+        return () => clearInterval(interval);
+    }, [fetchStatus]);
+
+    const isConnected = state === 'open';
+
+    return (
+        <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8 font-body">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center border border-green-100">
+                    <Cloud className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-display font-bold text-[#2B2B2B]">WhatsApp — Meta Cloud API</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Canale VERA assistenza clienti via API ufficiale Meta
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-gray-700">Stato connessione</h4>
+                        <button
+                            type="button"
+                            onClick={() => fetchStatus()}
+                            disabled={loading}
+                            className="flex items-center gap-1.5 text-xs text-[#B89F78] hover:text-[#9A7F56] transition-colors disabled:opacity-40 font-bold uppercase tracking-wider"
+                            aria-label="Aggiorna stato"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            Aggiorna
+                        </button>
+                    </div>
+
+                    {loading && !state ? (
+                        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-gray-150 bg-gray-50/50">
+                            <div className="w-2 h-2 rounded-full bg-gray-400 animate-pulse" />
+                            <span className="text-sm text-gray-500">Verifica credenziali Meta…</span>
+                        </div>
+                    ) : isConnected ? (
+                        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-emerald-200 bg-emerald-50/50">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                            <div>
+                                <span className="font-semibold text-emerald-700 text-sm">Connesso — Meta Cloud API attiva</span>
+                                {displayPhone && (
+                                    <p className="text-xs text-gray-500 mt-0.5 font-mono">{displayPhone}</p>
+                                )}
+                            </div>
+                            {lastUpdated && (
+                                <span className="ml-auto text-[10px] text-gray-400 font-medium">
+                                    Aggiornato alle {lastUpdated.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-red-200 bg-red-50/50">
+                            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                            <span className="font-semibold text-red-700 text-sm">
+                                {state === 'not_configured' ? 'Non configurato' : 'Errore connessione'}
+                            </span>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 border border-red-200 bg-red-50/60">
+                            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-700 font-semibold">{error}</p>
+                        </div>
+                    )}
+
+                    {missingEnv.length > 0 && (
+                        <p className="text-xs text-amber-600 font-semibold">
+                            ⚠️ Variabili mancanti su Vercel: {missingEnv.join(', ')}
+                        </p>
+                    )}
+
+                    {isConnected && (
+                        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/30 border border-emerald-100/50 px-3.5 py-2.5 rounded-xl">
+                            <Wifi className="w-4 h-4 text-emerald-600" />
+                            <span className="font-medium">VERA risponde automaticamente ai messaggi WhatsApp in entrata.</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-[#B89F78]" />
+                        Configurazione Meta Developer Console
+                    </h4>
+                    <ol className="space-y-2.5 text-xs text-gray-600 list-decimal list-inside leading-relaxed bg-[#FAF9F6] border border-[#EAE3D9] p-4 rounded-2xl">
+                        <li>Crea un'app Meta Business con prodotto WhatsApp attivo</li>
+                        <li>Configura il Webhook all'indirizzo: <code className="text-emerald-700 font-mono bg-white px-1 py-0.5 rounded border border-gray-200">https://www.floremoria.com/api/whatsapp/webhook</code></li>
+                        <li>Verify Token = <code className="text-emerald-700 font-mono bg-white px-1 py-0.5 rounded border border-gray-200">WHATSAPP_WEBHOOK_SECRET</code></li>
+                        <li>Sottoscrivi il campo <strong className="text-gray-800">messages</strong> nella dashboard Meta</li>
+                        <li>Imposta le variabili di ambiente Vercel elencate di seguito</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div className="border-t border-[#EAE3D9] pt-6 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700">Variabili Vercel (produzione)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {[
+                        ['WHATSAPP_CLOUD_API_KEY', 'Token permanente Graph API'],
+                        ['WHATSAPP_PHONE_NUMBER_ID', 'ID numero WhatsApp Business'],
+                        ['WHATSAPP_APP_SECRET', 'App Secret Meta — firma webhook POST'],
+                        ['WHATSAPP_WEBHOOK_SECRET', 'Verify token webhook GET (es. FloreMoriaVera2026!)'],
+                        ['GEMINI_API_KEY', 'Google Gemini — risposte AI VERA'],
+                    ].map(([key, desc]) => (
+                        <div key={key} className="flex flex-col gap-0.5 bg-gray-50 border border-gray-150 p-2.5 rounded-xl">
+                            <span className="text-emerald-700 font-mono font-bold">{key}</span>
+                            <span className="text-gray-500 font-medium text-[11px]">{desc}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 }

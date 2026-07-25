@@ -1,6 +1,8 @@
 import CommunicationsHubClient from './CommunicationsHubClient';
 import prisma from '@/lib/prisma';
 import { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { isDashboardAdminRole } from '@/lib/superAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 export const metadata: Metadata = {
@@ -10,7 +12,11 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function CommunicationsPage() {
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get('fm_user_role')?.value || '';
+  const isDashboardAdmin = isDashboardAdminRole(userRole);
   const testModeActive = await getDashboardTestModeActive();
+
   // Recupera gli ultimi Delivery Proofs (con Fallback Protettivo per Server in cache)
   let proofs: any[] = [];
   const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
@@ -40,7 +46,7 @@ export default async function CommunicationsPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F5] p-6 lg:p-8">
       <div className="max-w-[1400px] mx-auto">
-        <CommunicationsHubClient initialProofs={proofs} />
+        <CommunicationsHubClient initialProofs={proofs} isDashboardAdmin={isDashboardAdmin} />
       </div>
     </div>
   );

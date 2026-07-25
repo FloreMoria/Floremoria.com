@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Pivot Progetto Istituzionale."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-07-25T06:09:26.674Z
+synced_at: 2026-07-25T08:18:06.157Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

@@ -1,5 +1,5 @@
 ---
-date: 28-05-2026
+date: 2026-05-28
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 sommario: "Verbale operativo del 28-05-2026"

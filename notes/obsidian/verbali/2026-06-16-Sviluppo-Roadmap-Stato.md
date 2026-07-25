@@ -1,5 +1,5 @@
 ---
-date: 16-06-2026
+date: 2026-06-16
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, PETRA, CEO, PoD, Defunti, collaudo]
 sommario: "Verbale di Sviluppo FloreMoria — Stato e Roadmap (16 Giugno 2026)"

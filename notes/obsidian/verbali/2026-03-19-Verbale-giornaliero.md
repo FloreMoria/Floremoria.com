@@ -1,5 +1,5 @@
 ---
-date: 19-03-2026
+date: 2026-03-19
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Testo del verbale del 19/03 fornito da Barbara"

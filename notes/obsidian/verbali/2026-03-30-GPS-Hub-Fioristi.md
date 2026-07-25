@@ -1,5 +1,5 @@
 ---
-date: 30-03-2026
+date: 2026-03-30
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, BACKEND_UX]
 sommario: "Ristrutturazione logica in Florem Hub e Upload Fotografico per inserire tracking GPS nativo nei device dei fioristi. Modifica al modulo checkout (Rimozione vincoli Posizione Tomba) per aumentare il Tasso di Conversione."

@@ -1,5 +1,5 @@
 ---
-date: 11-04-2026
+date: 2026-04-11
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Strategia Multi-Agent."

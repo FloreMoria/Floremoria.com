@@ -1,5 +1,5 @@
 ---
-date: 27-05-2026
+date: 2026-05-27
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale operativo del 27-05-2026"

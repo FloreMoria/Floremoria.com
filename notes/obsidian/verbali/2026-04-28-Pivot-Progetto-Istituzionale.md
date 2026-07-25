@@ -1,5 +1,5 @@
 ---
-date: 28-04-2026
+date: 2026-04-28
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA_2026-04-28, PROT_106]
 sommario: "Pivot Progetto Istituzionale."

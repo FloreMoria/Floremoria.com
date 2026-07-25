@@ -1,5 +1,5 @@
 ---
-date: 12-06-2026
+date: 2026-06-12
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 sommario: "Diario di Lavoro — 12 Giugno 2026"

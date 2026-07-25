@@ -1,5 +1,5 @@
 ---
-date: 11-03-2026
+date: 2026-03-11
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Definito logo outline grigio/bianco, opacità 25%, integrazione nativa e standard cromatico per Categoria FT."

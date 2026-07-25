@@ -1,5 +1,5 @@
 ---
-date: 01-04-2026
+date: 2026-04-01
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, REVISIONE 060]
 sommario: "Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile."

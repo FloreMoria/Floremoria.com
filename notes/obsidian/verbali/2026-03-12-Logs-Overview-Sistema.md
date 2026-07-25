@@ -1,5 +1,5 @@
 ---
-date: 12-03-2026
+date: 2026-03-12
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, SISTEMA, UI]
 sommario: "Implementazione di una dashboard analitica profonda con log tracker dinamico in PostgreSQL, Tag Cloud esplorabile e navigazione incrociata senza refresh di pagina."

@@ -1,5 +1,5 @@
 ---
-date: 17-06-2026
+date: 2026-06-17
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale di Sviluppo FloreMoria — Stato e Roadmap (17 Giugno 2026)"

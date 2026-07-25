@@ -1,5 +1,5 @@
 ---
-date: 28-03-2026
+date: 2026-03-28
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Applicazione metodo Verifica Codice, eliminazione dark mode bloccanti e nuovo layout editoriale bianco per la Memoria Storica aziendale."

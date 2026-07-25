@@ -1,5 +1,5 @@
 ---
-date: 14-03-2026
+date: 2026-03-14
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Successfully created the webhook endpoint to receive updates."

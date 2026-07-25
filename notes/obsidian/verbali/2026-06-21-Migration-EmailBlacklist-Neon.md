@@ -1,5 +1,5 @@
 ---
-date: 21-06-2026
+date: 2026-06-21
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 sommario: "Migration Neon — tabella EmailBlacklist (21–22 Giugno 2026)"

@@ -1,5 +1,5 @@
 ---
-date: 09-07-2026
+date: 2026-07-09
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Chiusura sessione operativa dashboard staff, automazione consegne e UX fioristi/GdM. Da domani pivot prioritario sul marketing."

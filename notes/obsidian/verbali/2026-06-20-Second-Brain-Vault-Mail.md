@@ -1,5 +1,5 @@
 ---
-date: 20-06-2026
+date: 2026-06-20
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, Second_Brain, automazione, mail]
 sommario: "Verbale operativo FloreMoria — 20/06/2026"

@@ -1,5 +1,5 @@
 ---
-date: 12-03-2026
+date: 2026-03-12
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Implementazione di una dashboard analitica profonda con log tracker dinamico in PostgreSQL, Tag Cloud esplorabile e navigazione incrociata senza refresh di pagina."

@@ -1,5 +1,5 @@
 ---
-date: 25-03-2026
+date: 2026-03-25
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA, R&D]
 sommario: "Subentro de Il Prof come Master Agent e setup infrastrutturale."

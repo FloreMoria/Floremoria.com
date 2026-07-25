@@ -1,5 +1,5 @@
 ---
-date: 22-06-2026
+date: 2026-06-22
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 sommario: "Integrazione WhatsApp Evolution API (22 Giugno 2026)"

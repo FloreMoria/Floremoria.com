@@ -1,5 +1,5 @@
 ---
-date: 13-06-2026
+date: 2026-06-13
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea]
 sommario: "Addestramento AI Futuria con Competenze FLOREM_NET (13 Giugno 2026)"

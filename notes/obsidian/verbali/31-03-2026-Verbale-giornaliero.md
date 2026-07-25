@@ -1,5 +1,5 @@
 ---
-date: 31-03-2026
+date: 2026-03-31
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First)."

@@ -1,5 +1,5 @@
 ---
-date: 27-04-2026
+date: 2026-04-27
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA_2026-04-27, PROT_103]
 sommario: "Revisione Terminologica \\"Piccoli Amici\\"."

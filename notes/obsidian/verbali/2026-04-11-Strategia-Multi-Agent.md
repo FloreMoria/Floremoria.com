@@ -1,5 +1,5 @@
 ---
-date: 11-04-2026
+date: 2026-04-11
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA_2026-04-11, PROT_101]
 sommario: "Strategia Multi-Agent."

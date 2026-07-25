@@ -1,5 +1,5 @@
 ---
-date: 02-04-2026
+date: 2026-04-02
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA_2026-04-02, PROT_100]
 sommario: "Consolidamento Workflow Antigravity."

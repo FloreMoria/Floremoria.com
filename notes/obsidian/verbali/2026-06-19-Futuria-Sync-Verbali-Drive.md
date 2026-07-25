@@ -1,5 +1,5 @@
 ---
-date: 19-06-2026
+date: 2026-06-19
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, sync_pipeline]
 sommario: "Verbale di Sviluppo FloreMoria — 19 Giugno 2026"

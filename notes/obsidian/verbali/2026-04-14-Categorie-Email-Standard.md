@@ -1,5 +1,5 @@
 ---
-date: 14-04-2026
+date: 2026-04-14
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, STRATEGIA_2026-04-14, PROT_102]
 sommario: "Standardizzazione Categorie Email."

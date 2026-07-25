@@ -1,5 +1,5 @@
 ---
-date: 27-04-2026
+date: 2026-04-27
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Revisione Terminologica \\"Piccoli Amici\\"."

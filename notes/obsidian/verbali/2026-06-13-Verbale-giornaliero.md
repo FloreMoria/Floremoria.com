@@ -1,5 +1,5 @@
 ---
-date: 13-06-2026
+date: 2026-06-13
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Attivazione WhatsApp Nativo Futuria (13 Giugno 2026)"

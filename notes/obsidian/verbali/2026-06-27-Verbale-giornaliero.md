@@ -1,5 +1,5 @@
 ---
-date: 27-06-2026
+date: 2026-06-27
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 27 Giugno 2026"

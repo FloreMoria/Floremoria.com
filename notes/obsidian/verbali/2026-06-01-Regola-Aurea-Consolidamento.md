@@ -1,5 +1,5 @@
 ---
-date: 01-06-2026
+date: 2026-06-01
 tipo: verbale_giornaliero
 tags: [verbale, BARBARA, DEVIN, FLOREM_NET, Regola_Aurea, BARBARA_VERBALE_GIORNO_2026-06-01]
 sommario: "Verbale consolidato archiviato (2026-06-01)."

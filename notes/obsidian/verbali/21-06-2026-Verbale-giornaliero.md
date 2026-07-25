@@ -1,5 +1,5 @@
 ---
-date: 21-06-2026
+date: 2026-06-21
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Migration Neon — tabella EmailBlacklist (21–22 Giugno 2026)"

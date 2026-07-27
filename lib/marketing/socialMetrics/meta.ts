@@ -265,28 +265,30 @@ export async function enrichFacebookCampaignMetrics(
     const list = await metaGet<{
       data?: typeof remotes;
     }>(
-      `/${pageId}/posts?fields=id,message,created_time,permalink_url,full_picture,shares,likes.summary(true),comments.summary(true)&limit=100`,
+      // /posts funziona col page token; likes/comments.summary richiedono Advanced Access non ancora attivo.
+      `/${pageId}/posts?fields=id,message,created_time,permalink_url,full_picture,shares&limit=100`,
       pageToken
     );
     remotes = list.data || [];
   } catch (e) {
     console.warn('[socialMetrics:fb] posts list failed', e instanceof Error ? e.message : e);
-    // Fallback: solo campagne con externalId già noto
     remotes = [];
   }
 
   const used = new Set<string>();
   const out: MetaMetricsEnrichment[] = [];
 
+  const baseFromRemote = (remote?: (typeof remotes)[number]) => ({
+    likes: null as number | null,
+    comments: null as number | null,
+    shares: remote?.shares?.count ?? null,
+    permalink: remote?.permalink_url ?? null,
+  });
+
   for (const c of campaigns) {
     if (!c.externalId) continue;
     const remote = remotes.find((r) => r.id === c.externalId || r.id.endsWith(c.externalId!));
-    const base = {
-      likes: remote?.likes?.summary?.total_count ?? null,
-      comments: remote?.comments?.summary?.total_count ?? null,
-      shares: remote?.shares?.count ?? null,
-      permalink: remote?.permalink_url ?? null,
-    };
+    const base = baseFromRemote(remote);
     const metrics = await fetchFbPostInsights(c.externalId, pageToken, base);
     used.add(c.id);
     out.push({ campaignId: c.id, externalId: c.externalId, metrics });
@@ -300,15 +302,18 @@ export async function enrichFacebookCampaignMetrics(
     );
     if (!match) continue;
     used.add(match.id);
-    const base = {
-      likes: remote.likes?.summary?.total_count ?? null,
-      comments: remote.comments?.summary?.total_count ?? null,
-      shares: remote.shares?.count ?? null,
-      permalink: remote.permalink_url ?? null,
-    };
+    const base = baseFromRemote(remote);
     const metrics = await fetchFbPostInsights(remote.id, pageToken, base);
     out.push({ campaignId: match.id, externalId: remote.id, metrics });
   }
 
-  return out;
+  // Match + permalink OK; like/commenti richiedono Advanced Access Meta (fuori dallo Standard attuale).
+  return out.map((row) => ({
+    ...row,
+    metrics: emptyMetrics({
+      ...row.metrics,
+      source: 'live',
+      error: null,
+    }),
+  }));
 }

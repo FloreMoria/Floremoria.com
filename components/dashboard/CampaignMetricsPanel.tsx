@@ -103,6 +103,11 @@ export default function CampaignMetricsPanel({
         </div>
       ) : null}
 
+      <div className="px-4 py-2 text-[11px] text-slate-500 border-b border-slate-100 bg-white">
+        Instagram: like/commenti live. Views/reach richiedono permesso Meta <code className="font-mono">instagram_manage_insights</code>.
+        Facebook: match post + link; like/commenti richiedono Advanced Access sulla Page.
+      </div>
+
       {error ? (
         <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-100">{error}</div>
       ) : null}

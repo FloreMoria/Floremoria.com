@@ -26,7 +26,8 @@ import {
   Plus,
   Video,
   Upload,
-  ArrowRight
+  ArrowRight,
+  BarChart3,
 } from 'lucide-react';
 
 type Campaign = {
@@ -118,6 +119,7 @@ export default function CampaignsDashboardClient() {
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsRefreshing, setMetricsRefreshing] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [metricsOpen, setMetricsOpen] = useState(false);
 
   // Stati per la modifica dei post esistenti
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -228,8 +230,10 @@ export default function CampaignsDashboardClient() {
   };
 
   useEffect(() => {
+    // Carica metriche solo quando il pannello è aperto (non ad ogni tab change in automatico).
+    if (!metricsOpen) return;
     void fetchMetrics(activeTab, true);
-  }, [activeTab]);
+  }, [activeTab, metricsOpen]);
 
   // Sincronizza tab se cambia URL search param
   useEffect(() => {
@@ -992,22 +996,38 @@ export default function CampaignsDashboardClient() {
         </div>
       )}
 
-      {/* FILTRI DI STATO */}
+      {/* FILTRI DI STATO + TOGGLE METRICHE */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 p-1 rounded-2xl">
-          {['ALL', 'APPROVED', 'PUBLISHED', 'REJECTED', 'DRAFT'].map(status => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all ${
-                statusFilter === status
-                  ? 'bg-white text-slate-800 shadow-sm border border-slate-200/50'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {status === 'ALL' ? 'Tutti' : status === 'DRAFT' ? 'Bozza' : status.toLowerCase()}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 p-1 rounded-2xl">
+            {['ALL', 'APPROVED', 'PUBLISHED', 'REJECTED', 'DRAFT'].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all ${
+                  statusFilter === status
+                    ? 'bg-white text-slate-800 shadow-sm border border-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {status === 'ALL' ? 'Tutti' : status === 'DRAFT' ? 'Bozza' : status.toLowerCase()}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setMetricsOpen((open) => !open)}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
+              metricsOpen
+                ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+            aria-expanded={metricsOpen}
+            aria-controls="campaign-metrics-panel"
+          >
+            <BarChart3 size={14} />
+            Metriche
+          </button>
         </div>
 
         <div className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3.5 py-2.5 rounded-full shadow-sm">
@@ -1015,15 +1035,19 @@ export default function CampaignsDashboardClient() {
         </div>
       </div>
 
-      {/* METRICHE REALI PER SOCIAL ATTIVO */}
-      <CampaignMetricsPanel
-        loading={metricsLoading}
-        refreshing={metricsRefreshing}
-        error={metricsError}
-        summary={metricsSummary}
-        rows={metricsRows}
-        onRefresh={() => void fetchMetrics(activeTab, true)}
-      />
+      {/* METRICHE: visibili solo dopo click su Metriche */}
+      {metricsOpen ? (
+        <div id="campaign-metrics-panel">
+          <CampaignMetricsPanel
+            loading={metricsLoading}
+            refreshing={metricsRefreshing}
+            error={metricsError}
+            summary={metricsSummary}
+            rows={metricsRows}
+            onRefresh={() => void fetchMetrics(activeTab, true)}
+          />
+        </div>
+      ) : null}
 
       {/* LISTA CAMPAGNE GRID */}
       {loading ? (

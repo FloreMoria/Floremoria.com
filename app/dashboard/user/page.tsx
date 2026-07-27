@@ -82,7 +82,7 @@ export default async function UserDashboardPage({
 
     return (
         <div className="min-h-screen bg-[#FAF9F6] text-[#1e293b]">
-            <header className="bg-[#0f172a] text-white border-b-3 border-[#c5a880] py-6 px-4 sm:px-6 lg:px-8 sticky top-0 z-40 shadow-sm">
+            <header className="bg-[#0f172a] text-white border-b-3 border-[#c5a880] py-6 px-4 sm:px-6 lg:px-8 relative z-10 shadow-sm">
                 <div className="max-w-5xl mx-auto flex justify-between items-center">
                     <div>
                         <div className="text-xl font-display font-medium text-white tracking-widest uppercase">
@@ -154,12 +154,24 @@ export default async function UserDashboardPage({
                 </div>
 
                 {!showFinancialDetails ? (
-                    <UserPersonalDataForm
-                        initialName={user.name ?? ''}
-                        initialEmail={user.email}
-                        saveEndpoint="/api/dashboard/user/profile"
-                        sectionTitle="I Suoi Dati Personali"
-                    />
+                    (() => {
+                        const latestOrder = orders[0] || null;
+                        const initialBirthDate = latestOrder?.deceasedBirthDate ? latestOrder.deceasedBirthDate.toISOString().slice(0, 10) : '';
+                        const initialDeathDate = latestOrder?.deceasedDeathDate ? latestOrder.deceasedDeathDate.toISOString().slice(0, 10) : '';
+                        const initialDeliveryDate = latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '';
+
+                        return (
+                            <UserPersonalDataForm
+                                initialName={user.name ?? ''}
+                                initialEmail={user.email}
+                                initialBirthDate={initialBirthDate}
+                                initialDeathDate={initialDeathDate}
+                                initialDeliveryDate={initialDeliveryDate}
+                                saveEndpoint="/api/dashboard/user/profile"
+                                sectionTitle="I Suoi Dati Personali"
+                            />
+                        );
+                    })()
                 ) : null}
 
                 <div className="space-y-10">

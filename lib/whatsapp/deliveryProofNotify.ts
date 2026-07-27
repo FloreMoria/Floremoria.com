@@ -11,6 +11,7 @@ import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import {
@@ -177,7 +178,13 @@ export async function sendDeliveryProofWhatsApp(
                 console.error('[delivery-proof-whatsapp] Log dashboard template foto fallito:', logErr);
             }
 
-            const linkSend = await sendWhatsAppTextMessage(phoneE164, linkMessage);
+            const linkSend = await sendWhatsAppMessage(phoneE164, linkMessage, {
+                recipientName: buyerName,
+                orderCode: input.orderNumber || undefined,
+                userType: 'UTENTE',
+                source: 'delivery_proof',
+                sessionPhone,
+            });
             if (linkSend.ok) linkMessageId = linkSend.messageId;
         }
 

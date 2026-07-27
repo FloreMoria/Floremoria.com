@@ -6,6 +6,9 @@ import { User, Mail, Check, AlertCircle } from 'lucide-react';
 export interface UserPersonalDataFormProps {
     initialName: string;
     initialEmail: string;
+    initialBirthDate?: string;
+    initialDeathDate?: string;
+    initialDeliveryDate?: string;
     emailEditable?: boolean;
     saveEndpoint: string;
     /** Etichetta sezione (default: "I Suoi Dati Personali") */
@@ -17,6 +20,9 @@ export interface UserPersonalDataFormProps {
 export default function UserPersonalDataForm({
     initialName,
     initialEmail,
+    initialBirthDate = '',
+    initialDeathDate = '',
+    initialDeliveryDate = '',
     emailEditable = true,
     saveEndpoint,
     sectionTitle = 'I Suoi Dati Personali',
@@ -24,12 +30,18 @@ export default function UserPersonalDataForm({
 }: UserPersonalDataFormProps) {
     const [name, setName] = useState(initialName);
     const [email, setEmail] = useState(initialEmail);
+    const [deceasedBirthDate, setDeceasedBirthDate] = useState(initialBirthDate);
+    const [deceasedDeathDate, setDeceasedDeathDate] = useState(initialDeathDate);
+    const [deliveryDate, setDeliveryDate] = useState(initialDeliveryDate);
     const [isLoading, setIsLoading] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
     const inputClass =
         'w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:ring-2 focus:ring-[#c5a880] focus:border-[#c5a880] outline-none';
+
+    const dateInputClass =
+        'w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-2 focus:ring-[#c5a880] focus:border-[#c5a880] outline-none';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +50,12 @@ export default function UserPersonalDataForm({
         setErrorMsg('');
 
         try {
-            const payload: Record<string, string> = { name: name.trim() };
+            const payload: Record<string, any> = { 
+                name: name.trim(),
+                deceasedBirthDate: deceasedBirthDate || null,
+                deceasedDeathDate: deceasedDeathDate || null,
+                deliveryDate: deliveryDate || null,
+            };
             if (emailEditable) {
                 payload.email = email.trim();
             }
@@ -59,6 +76,9 @@ export default function UserPersonalDataForm({
             if (data.profile) {
                 setName(data.profile.name ?? '');
                 setEmail(data.profile.email ?? email);
+                setDeceasedBirthDate(data.profile.deceasedBirthDate ?? '');
+                setDeceasedDeathDate(data.profile.deceasedDeathDate ?? '');
+                setDeliveryDate(data.profile.deliveryDate ?? '');
             }
 
             setSuccessMsg(data.message || 'Dati aggiornati con successo.');
@@ -128,6 +148,56 @@ export default function UserPersonalDataForm({
                                 placeholder="nome@email.it"
                             />
                         </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+                    <div className="space-y-1.5">
+                        <label
+                            className="text-xs font-semibold uppercase tracking-wider text-slate-400"
+                            htmlFor="garden-profile-birthdate"
+                        >
+                            Data di nascita defunto
+                        </label>
+                        <input
+                            id="garden-profile-birthdate"
+                            type="date"
+                            value={deceasedBirthDate}
+                            onChange={(e) => setDeceasedBirthDate(e.target.value)}
+                            className={dateInputClass}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            className="text-xs font-semibold uppercase tracking-wider text-slate-400"
+                            htmlFor="garden-profile-deathdate"
+                        >
+                            Data di morte/commemorazione
+                        </label>
+                        <input
+                            id="garden-profile-deathdate"
+                            type="date"
+                            value={deceasedDeathDate}
+                            onChange={(e) => setDeceasedDeathDate(e.target.value)}
+                            className={dateInputClass}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            className="text-xs font-semibold uppercase tracking-wider text-slate-400"
+                            htmlFor="garden-profile-deliverydate"
+                        >
+                            Date delle future consegne
+                        </label>
+                        <input
+                            id="garden-profile-deliverydate"
+                            type="date"
+                            value={deliveryDate}
+                            onChange={(e) => setDeliveryDate(e.target.value)}
+                            className={dateInputClass}
+                        />
                     </div>
                 </div>
 

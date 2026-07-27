@@ -113,20 +113,14 @@ export async function DELETE(
 
     try {
         const { id: deceasedProfileId } = await context.params;
-        const linkedOrders = await prisma.order.count({
-            where: { deceasedProfileId, deletedAt: null },
+
+        // Scollega tutti gli ordini associati impostando deceasedProfileId a null
+        await prisma.order.updateMany({
+            where: { deceasedProfileId },
+            data: { deceasedProfileId: null },
         });
 
-        if (linkedOrders > 0) {
-            return NextResponse.json(
-                {
-                    ok: false,
-                    error: 'Impossibile cancellare un defunto con ordini associati.',
-                },
-                { status: 400 }
-            );
-        }
-
+        // Cancella i record pivot e il profilo stesso
         await prisma.userDeceasedLink.deleteMany({ where: { deceasedProfileId } });
         await prisma.partnerDeceasedAssignment.deleteMany({ where: { deceasedProfileId } });
         await prisma.deceasedProfile.delete({ where: { id: deceasedProfileId } });

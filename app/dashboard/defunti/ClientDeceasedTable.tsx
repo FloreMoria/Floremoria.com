@@ -264,17 +264,17 @@ export default function ClientDeceasedTable({
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[960px]">
+                    <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                                 <th className="px-5 py-4">Defunto</th>
-                                <th className="px-5 py-4">Nascita</th>
-                                <th className="px-5 py-4">Morte</th>
+                                <th className="px-5 py-4 hidden md:table-cell">Nascita</th>
+                                <th className="px-5 py-4 hidden md:table-cell">Morte</th>
                                 <th className="px-5 py-4">Comune</th>
-                                <th className="px-5 py-4">Cimitero</th>
-                                <th className="px-5 py-4">Posizione tomba</th>
+                                <th className="px-5 py-4 hidden lg:table-cell">Cimitero</th>
+                                <th className="px-5 py-4 hidden lg:table-cell">Posizione tomba</th>
                                 <th className="px-5 py-4">Ordini</th>
-                                <th className="px-5 py-4">Fiorista</th>
+                                <th className="px-5 py-4 hidden md:table-cell">Fiorista</th>
                                 <th className="px-5 py-4">Stato</th>
                                 <th className="px-5 py-4 text-right"> </th>
                             </tr>
@@ -333,8 +333,8 @@ export default function ClientDeceasedTable({
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{formatDisplayDate(row.birthDate)}</td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{formatDisplayDate(row.deathDate)}</td>
+                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{formatDisplayDate(row.birthDate)}</td>
+                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{formatDisplayDate(row.deathDate)}</td>
                                         <td className="px-5 py-4 text-sm text-gray-600">
                                             {editingRowKey === row.rowKey ? (
                                                 <input
@@ -359,7 +359,7 @@ export default function ClientDeceasedTable({
                                                 row.cemeteryCity
                                             )}
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">
+                                        <td className="px-5 py-4 text-sm text-gray-600 hidden lg:table-cell">
                                             {editingRowKey === row.rowKey ? (
                                                 <input
                                                     value={rowDrafts[row.rowKey]?.cemeteryName || ''}
@@ -375,7 +375,7 @@ export default function ClientDeceasedTable({
                                                                 cemeteryName: e.target.value,
                                                             },
                                                         }))
-                                                    }
+                                                     }
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
                                                 />
@@ -383,7 +383,7 @@ export default function ClientDeceasedTable({
                                                 row.cemeteryName || '—'
                                             )}
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 max-w-[180px] truncate">
+                                        <td className="px-5 py-4 text-sm text-gray-600 max-w-[180px] truncate hidden lg:table-cell">
                                             {row.gravePosition || '—'}
                                         </td>
                                         <td className="px-5 py-4">
@@ -391,7 +391,7 @@ export default function ClientDeceasedTable({
                                                 {row.orderCount}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{row.floristName || '—'}</td>
+                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{row.floristName || '—'}</td>
                                         <td className="px-5 py-4">
                                             {row.isOrphan ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wide">

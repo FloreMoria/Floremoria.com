@@ -34,11 +34,16 @@ export async function POST(request: Request) {
     });
 
     if (result.success) {
-      // Aggiorna lo stato nel DB
+      // Aggiorna lo stato nel DB + ID post social per metriche successive
       await prisma.marketingCampaign.update({
         where: { id: campaignId },
         data: {
           status: CampaignStatus.PUBLISHED,
+          publishedAt: new Date(),
+          ...(result.externalId && !result.simulated
+            ? { externalId: String(result.externalId) }
+            : {}),
+          ...(result.videoUrl ? { videoUrl: result.videoUrl } : {}),
         },
       });
 

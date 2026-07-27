@@ -106,13 +106,17 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
         where: { id: campaign.id },
         data: {
           status: CampaignStatus.PUBLISHED,
+          publishedAt: new Date(),
           videoUrl: result.videoUrl ?? campaign.videoUrl,
+          ...(result.externalId && !result.simulated
+            ? { externalId: String(result.externalId) }
+            : {}),
         },
       });
       console.log(
         `[Marketing Publish] ✔ ${formatLabelForSlot(slot)} → PUBLISHED${
           result.simulated ? ' (simulata)' : ''
-        }`
+        }${result.externalId ? ` · ext=${result.externalId}` : ''}`
       );
     } else {
       console.warn(

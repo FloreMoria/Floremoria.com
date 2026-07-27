@@ -3,6 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toCampaignMediaProxyUrl } from '@/lib/dashboard/campaignMediaUrl';
+import CampaignMetricsPanel from '@/components/dashboard/CampaignMetricsPanel';
+import type {
+  CampaignMetricsRow,
+  ChannelMetricsSummary,
+} from '@/lib/marketing/socialMetrics/types';
 import {
   Calendar,
   AlertCircle,
@@ -108,6 +113,11 @@ export default function CampaignsDashboardClient() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [metricsRows, setMetricsRows] = useState<CampaignMetricsRow[]>([]);
+  const [metricsSummary, setMetricsSummary] = useState<ChannelMetricsSummary | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsRefreshing, setMetricsRefreshing] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   // Stati per la modifica dei post esistenti
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -190,6 +200,36 @@ export default function CampaignsDashboardClient() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchMetrics = async (channel: string, refresh = true) => {
+    if (refresh) setMetricsRefreshing(true);
+    else setMetricsLoading(true);
+    setMetricsError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/campaigns/metrics?channel=${encodeURIComponent(channel)}&refresh=${refresh ? '1' : '0'}`,
+        { cache: 'no-store' }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        setMetricsError(data.error || 'Impossibile caricare le metriche.');
+        setMetricsRows([]);
+        setMetricsSummary(null);
+        return;
+      }
+      setMetricsRows(Array.isArray(data.rows) ? data.rows : []);
+      setMetricsSummary(data.summary || null);
+    } catch {
+      setMetricsError('Errore di rete durante il caricamento metriche.');
+    } finally {
+      setMetricsLoading(false);
+      setMetricsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchMetrics(activeTab, true);
+  }, [activeTab]);
 
   // Sincronizza tab se cambia URL search param
   useEffect(() => {
@@ -974,6 +1014,16 @@ export default function CampaignsDashboardClient() {
           Trovati <span className="text-slate-800 font-extrabold">{filteredCampaigns.length}</span> post
         </div>
       </div>
+
+      {/* METRICHE REALI PER SOCIAL ATTIVO */}
+      <CampaignMetricsPanel
+        loading={metricsLoading}
+        refreshing={metricsRefreshing}
+        error={metricsError}
+        summary={metricsSummary}
+        rows={metricsRows}
+        onRefresh={() => void fetchMetrics(activeTab, true)}
+      />
 
       {/* LISTA CAMPAGNE GRID */}
       {loading ? (

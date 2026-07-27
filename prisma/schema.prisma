@@ -598,21 +598,29 @@ enum MarketingChannel {
 
 /// Campagna marketing FloreMoria (Blob + copy CLEO + hashtag AXEL).
 model MarketingCampaign {
-  id              String           @id @default(cuid())
-  status          CampaignStatus   @default(DRAFT)
-  imageUrl        String           // URL dell'immagine su Vercel Blob
-  videoUrl        String?          // URL video (reel TikTok/Meta) su Blob, se generato
-  imagePrompt     String           @default("") @db.Text // Prompt ZIGGY/ARLO per Imagen
-  copy            String           @db.Text // Testo generato da CLEO
-  hashtags        String[]         // Hashtag ed elementi semantici generati da AXEL
-  targetChannel   MarketingChannel // Canale di destinazione
-  contentFormat   ContentFormat    @default(FEED_POST) // Post feed, reel o story
-  scheduledFor    DateTime?        @db.Date // Giorno editoriale (Europe/Rome)
-  category        String           // Categoria FF (Funerale) o FT (Fiori sulle Tombe)
-  rejectionReason String?          // Nota di rifiuto dei Guardiani per la correzione
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  status           CampaignStatus   @default(DRAFT)
+  imageUrl         String           // URL dell'immagine su Vercel Blob
+  videoUrl         String?          // URL video (reel TikTok/Meta) su Blob, se generato
+  imagePrompt      String           @default("") @db.Text // Prompt ZIGGY/ARLO per Imagen
+  copy             String           @db.Text // Testo generato da CLEO
+  hashtags         String[]         // Hashtag ed elementi semantici generati da AXEL
+  targetChannel    MarketingChannel // Canale di destinazione
+  contentFormat    ContentFormat    @default(FEED_POST) // Post feed, reel o story
+  scheduledFor     DateTime?        @db.Date // Giorno editoriale (Europe/Rome)
+  category         String           // Categoria FF (Funerale) o FT (Fiori sulle Tombe)
+  rejectionReason  String?          // Nota di rifiuto dei Guardiani per la correzione
+  /// ID post sul social (IG media id, FB post id, pin id, video id, …)
+  externalId       String?          @map("external_id") @db.VarChar(191)
+  publishedAt      DateTime?        @map("published_at")
+  /// Snapshot metriche canale (views, reach, likes, comments, …)
+  metricsJson      Json?            @map("metrics_json")
+  metricsSyncedAt  DateTime?        @map("metrics_synced_at")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([status, targetChannel, contentFormat, scheduledFor])
+  @@index([targetChannel, status, publishedAt])
+  @@index([externalId])
   @@map("marketing_campaigns")
 }

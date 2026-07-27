@@ -27,7 +27,10 @@ function fmtDate(iso: string | null): string {
 }
 
 function thumbUrl(row: CampaignMetricsRow): string | null {
-  if (row.videoUrl) return toCampaignMediaProxyUrl(row.videoUrl) || row.videoUrl;
+  // Preferisci frame/immagine: l’URL video non funziona come <img> (Reel → N/A).
+  if (row.metrics.thumbnailUrl) {
+    return toCampaignMediaProxyUrl(row.metrics.thumbnailUrl) || row.metrics.thumbnailUrl;
+  }
   if (row.imageUrl) {
     const first = row.imageUrl.trim().startsWith('[')
       ? (() => {
@@ -104,8 +107,8 @@ export default function CampaignMetricsPanel({
       ) : null}
 
       <div className="px-4 py-2 text-[11px] text-slate-500 border-b border-slate-100 bg-white">
-        Instagram: like/commenti live. Views/reach richiedono permesso Meta <code className="font-mono">instagram_manage_insights</code>.
-        Facebook: match post + link; like/commenti richiedono Advanced Access sulla Page.
+        Instagram: views/reach/like live su Feed e Reel. Le Story solo se ancora attive (~24h) o con ID salvato.
+        Facebook: like/commenti e link post quando il match trova la pubblicazione.
       </div>
 
       {error ? (

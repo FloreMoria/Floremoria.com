@@ -73,6 +73,7 @@ export async function syncAndListChannelMetrics(
     const stubs = campaigns.map((c) => ({
       id: c.id,
       copy: c.copy,
+      contentFormat: c.contentFormat,
       externalId: c.externalId,
       updatedAt: c.updatedAt,
       publishedAt: c.publishedAt,
@@ -131,18 +132,20 @@ export async function syncAndListChannelMetrics(
       targetChannel: channel,
       status: CampaignStatus.PUBLISHED,
     },
-    orderBy: [{ metricsSyncedAt: 'desc' }, { updatedAt: 'desc' }],
+    orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
     take: limit,
   });
 
   const rows: CampaignMetricsRow[] = fresh.map((c) => {
     const stored = parseStoredMetrics(c.metricsJson);
+    const missingIdHint =
+      c.contentFormat === 'STORY'
+        ? 'Story scaduta o senza ID: le Story IG restano recuperabili solo entro ~24h. Le prossime salvano l’ID in automatico.'
+        : 'ID post social non salvato — ripubblica o attendi sync Meta per match automatico';
     const metrics =
       stored ||
       emptyMetrics({
-        error: c.externalId
-          ? 'Metriche non ancora sincronizzate'
-          : 'ID post social non salvato — ripubblica o attendi sync Meta per match automatico',
+        error: c.externalId ? 'Metriche non ancora sincronizzate' : missingIdHint,
       });
 
     return {

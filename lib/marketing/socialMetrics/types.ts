@@ -12,6 +12,8 @@ export type CampaignSocialMetrics = {
   clicks: number | null;
   engagement: number | null;
   permalink: string | null;
+  /** Anteprima da Graph (utile per Reel quando l’URL video non è un’immagine). */
+  thumbnailUrl: string | null;
   source: 'live' | 'cached' | 'unavailable';
   error: string | null;
 };
@@ -54,6 +56,7 @@ export function emptyMetrics(partial?: Partial<CampaignSocialMetrics>): Campaign
     clicks: null,
     engagement: null,
     permalink: null,
+    thumbnailUrl: null,
     source: 'unavailable',
     error: null,
     ...partial,
@@ -76,6 +79,7 @@ export function parseStoredMetrics(raw: unknown): CampaignSocialMetrics | null {
     clicks: num(m.clicks),
     engagement: num(m.engagement),
     permalink: typeof m.permalink === 'string' ? m.permalink : null,
+    thumbnailUrl: typeof m.thumbnailUrl === 'string' ? m.thumbnailUrl : null,
     source: m.source === 'live' || m.source === 'cached' ? m.source : 'cached',
     error: typeof m.error === 'string' ? m.error : null,
   });

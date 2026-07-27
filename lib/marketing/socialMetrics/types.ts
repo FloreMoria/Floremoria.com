@@ -81,12 +81,17 @@ export function parseStoredMetrics(raw: unknown): CampaignSocialMetrics | null {
   });
 }
 
+function hasAnyMetricNumber(m: CampaignSocialMetrics): boolean {
+  return [m.views, m.reach, m.impressions, m.likes, m.comments, m.shares, m.saves, m.clicks, m.engagement]
+    .some((v) => typeof v === 'number' && Number.isFinite(v));
+}
+
 export function summarizeMetrics(rows: CampaignMetricsRow[]): ChannelMetricsSummary {
   return rows.reduce<ChannelMetricsSummary>(
     (acc, row) => {
       acc.posts += 1;
-      if (row.metrics.source === 'live' || row.metrics.source === 'cached') {
-        if (row.metrics.error == null) acc.withLiveMetrics += 1;
+      if ((row.metrics.source === 'live' || row.metrics.source === 'cached') && hasAnyMetricNumber(row.metrics)) {
+        acc.withLiveMetrics += 1;
       }
       acc.views += row.metrics.views ?? 0;
       acc.reach += row.metrics.reach ?? 0;

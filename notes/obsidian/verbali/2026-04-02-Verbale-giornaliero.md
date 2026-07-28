@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Consolidamento Workflow Antigravity."
 sync_source: docs/verbali/02-04-2026.md
-synced_at: 2026-07-28T08:46:52.469Z
+synced_at: 2026-07-28T10:23:44.507Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/02-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

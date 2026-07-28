@@ -49,7 +49,7 @@ if [[ "$DRY_RUN" == "1" ]]; then
 fi
 
 echo "==> Build e restart remoto"
-ssh "${DEPLOY_SSH_USER}@${DEPLOY_HOST}" bash -s <<EOF
+ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 "${DEPLOY_SSH_USER}@${DEPLOY_HOST}" bash -s <<EOF
 set -euo pipefail
 cd "${DEPLOY_PATH}"
 

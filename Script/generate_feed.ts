@@ -189,8 +189,11 @@ async function run() {
         csvLines.push(row.join(','));
     }
 
-    // Write file to project root
-    fs.writeFileSync('/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/GOOGLE_MERCHANT_FEED.csv', csvLines.join('\n'));
+    // Write file to project root and public folder for web accessibility
+    const rootPath = '/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/GOOGLE_MERCHANT_FEED.csv';
+    const publicPath = '/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/public/GOOGLE_MERCHANT_FEED.csv';
+    fs.writeFileSync(rootPath, csvLines.join('\n'));
+    fs.writeFileSync(publicPath, csvLines.join('\n'));
     console.log('FEED_GENERATED_SUCCESSFULLY');
 }
 

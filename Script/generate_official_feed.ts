@@ -128,9 +128,11 @@ function run() {
         csvLines.push(alignedRow.join(','));
     }
 
-    // Write the output file
+    // Write the output files (root and public folder)
+    const publicTargetPath = path.join(projectRoot, 'public', 'GOOGLE_MERCHANT_OFFICIAL_FEED.csv');
     fs.writeFileSync(targetPath, csvLines.join('\n'), 'utf-8');
-    console.log('✅ FEED GENERATO CON SUCCESSO! File scritto in:', targetPath);
+    fs.writeFileSync(publicTargetPath, csvLines.join('\n'), 'utf-8');
+    console.log('✅ FEED GENERATO CON SUCCESSO! Files scritti in:', targetPath, 'e', publicTargetPath);
 }
 
 run();

@@ -138,8 +138,9 @@ export default function ClientProductsTable({ initialProducts, initialCategories
     };
 
     const handleFileUpload = async (file: File) => {
-        const catPrefix = formData.categoryId ? 'fiori-sulle-tombe' : 'nuova-cartella';
-        const sluggedName = formData.name ? formData.name.toLowerCase().replace(/ /g, '-') : 'prodotto';
+        const selectedCat = categories.find(c => c.id === formData.categoryId);
+        const catPrefix = selectedCat?.slug || 'nuova-cartella';
+        const sluggedName = formData.name ? formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'prodotto';
         
         const uploadData = new FormData();
         uploadData.append('file', file);

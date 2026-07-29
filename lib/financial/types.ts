@@ -38,3 +38,9 @@ export interface BankProvider {
     parseWebhookPayload(body: string, headers: Record<string, string>): BankTransaction | null;
     verifyWebhookSignature(body: string, headers: Record<string, string>): boolean;
 }
+
+export interface FinancialLedger {
+    transactions: BankTransaction[];
+    accountingEntries: AccountingEntry[];
+}
+

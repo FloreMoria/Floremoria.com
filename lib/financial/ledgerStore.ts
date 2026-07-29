@@ -1,13 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { BankTransaction, AccountingEntry } from './types';
+import { BankTransaction, AccountingEntry, FinancialLedger } from './types';
 
 const LEDGER_PATH = path.join(process.cwd(), 'financial_ledger.json');
-
-export interface FinancialLedger {
-    transactions: BankTransaction[];
-    accountingEntries: AccountingEntry[];
-}
 
 const DEFAULT_LEDGER: FinancialLedger = {
     transactions: [

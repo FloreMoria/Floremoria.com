@@ -17,8 +17,7 @@ import {
     Settings, 
     ShieldAlert 
 } from 'lucide-react';
-import type { FinancialLedger } from '@/lib/financial/ledgerStore';
-import type { BankTransaction, AccountingEntry } from '@/lib/financial/types';
+import type { FinancialLedger, BankTransaction, AccountingEntry } from '@/lib/financial/types';
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
@@ -495,7 +494,7 @@ export default function FinanceDashboardPage() {
                                         return (
                                             <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">{tx.id}</td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-500">
+                                                <td className="px-5 py-3.5 text-xs text-slate-500" suppressHydrationWarning>
                                                     {new Date(tx.emittedAt).toLocaleDateString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
                                                 </td>
                                                 <td className="px-5 py-3.5 font-semibold text-slate-800">{tx.counterpartyName}</td>

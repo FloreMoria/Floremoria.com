@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
 import TopNavLink from '@/components/dashboard/TopNavLink';
+import TopNavDropdown from '@/components/dashboard/TopNavDropdown';
 import DashboardMobileNav from '@/components/dashboard/DashboardMobileNav';
 import StaffAlertPoller from '@/components/dashboard/StaffAlertPoller';
 import DashboardSwipeBack from '@/components/dashboard/DashboardSwipeBack';
@@ -61,10 +62,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         <TopNavLink href="/dashboard/defunti" label="Defunti" />
                         <TopNavLink href="/dashboard/products" label="Prodotti" />
                         <TopNavLink href="/dashboard/fioristi" label="Fioristi" />
-                        <TopNavLink href="/dashboard/partner" label="Partner B2B" />
-                        <TopNavLink href="/dashboard/logs" label="Log di Sistema" />
                         <TopNavLink href="/dashboard/communications" label="Messaggi" />
-                        <TopNavLink href="/dashboard/offers" label="Buoni" />
+                        <TopNavDropdown 
+                            label="Sistema" 
+                            items={[
+                                { href: '/dashboard/partner', label: 'Partner B2B' },
+                                { href: '/dashboard/logs', label: 'Log di Sistema' },
+                                { href: '/dashboard/offers', label: 'Buoni' }
+                            ]} 
+                        />
                         {isSuperAdmin ? (
                             <TopNavLink href="/dashboard/settings/roles" label="Ruoli" />
                         ) : null}

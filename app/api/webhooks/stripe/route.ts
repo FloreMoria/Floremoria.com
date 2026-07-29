@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     const markPaid = await prisma.order.updateMany({
         where: { id: orderId, partnerPaymentStatus: { not: 'PAID' } },
-        data: { partnerPaymentStatus: 'PAID', status: 'ACCEPTED' },
+        data: { partnerPaymentStatus: 'PAID', status: 'ACCEPTED', deletedAt: null },
     });
 
     const isFirstPaidTransition = markPaid.count > 0;

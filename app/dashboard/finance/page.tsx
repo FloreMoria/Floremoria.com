@@ -27,10 +27,14 @@ import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements'>('transactions');
+    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements' | 'gateways'>('transactions');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     
+    // Gateways live status
+    const [gatewayData, setGatewayData] = useState<any>(null);
+    const [loadingGateways, setLoadingGateways] = useState(true);
+
     // Compliance state
     const [complianceFilter, setComplianceFilter] = useState<'ALL' | 'FISC' | 'ESTER' | 'CORP'>('ALL');
 
@@ -60,8 +64,24 @@ export default function FinanceDashboardPage() {
         }
     };
 
+    const loadGateways = async () => {
+        setLoadingGateways(true);
+        try {
+            const res = await fetch('/api/dashboard/finance/gateways');
+            const data = await res.json();
+            if (data.ok) {
+                setGatewayData(data);
+            }
+        } catch (error) {
+            console.error('Errore di caricamento dati gateway:', error);
+        } finally {
+            setLoadingGateways(false);
+        }
+    };
+
     useEffect(() => {
         void loadLedger();
+        void loadGateways();
     }, []);
 
     // Aggiornamento parametri simulatore in base al tipo selezionato
@@ -692,9 +712,15 @@ export default function FinanceDashboardPage() {
                     >
                         Simulazione Bilancio &amp; Imposte
                     </button>
+                    <button
+                        onClick={() => setActiveTab('gateways')}
+                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'gateways' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Stato Stripe &amp; PayPal
+                    </button>
                 </div>
 
-                {activeTab !== 'statements' && (
+                {activeTab !== 'statements' && activeTab !== 'gateways' && (
                     <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
                         <input
                             type="text"
@@ -984,6 +1010,161 @@ export default function FinanceDashboardPage() {
                                             </h5>
                                             <p className="text-[10px] text-[#c5a880]/70 leading-normal">Fondi netti stimati destinabili a riserva o reinvestimento.</p>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'gateways' && (
+                    <div className="p-6 space-y-8 bg-white">
+                        {loadingGateways || !gatewayData ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
+                                <RefreshCw className="animate-spin mb-3 text-[#c5a880]" size={36} />
+                                <p className="text-sm font-medium">Connessione ai gateway di pagamento in corso...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                {/* Saldi in tempo reale */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Stripe Card */}
+                                    <div className="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Stripe Real-time Balance
+                                            </h4>
+                                            <span className="text-[10px] font-bold uppercase bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-lg">Attivo</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-slate-50 p-4 rounded-xl">
+                                                <span className="text-xs text-slate-400 font-semibold block">Disponibile per payout</span>
+                                                <span className="text-xl font-bold font-mono text-slate-900 block mt-1">
+                                                    €{(gatewayData.stripe.balance.availableCents / 100).toFixed(2)}
+                                                </span>
+                                            </div>
+                                            <div className="bg-slate-50 p-4 rounded-xl">
+                                                <span className="text-xs text-slate-400 font-semibold block">In elaborazione</span>
+                                                <span className="text-xl font-bold font-mono text-slate-500 block mt-1">
+                                                    €{(gatewayData.stripe.balance.pendingCents / 100).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* PayPal Card */}
+                                    <div className="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${gatewayData.paypal.configured ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                                PayPal Real-time Balance
+                                            </h4>
+                                            {gatewayData.paypal.configured ? (
+                                                <span className="text-[10px] font-bold uppercase bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-lg">Configurato</span>
+                                            ) : (
+                                                <span className="text-[10px] font-bold uppercase bg-slate-50 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-lg">Da Configurare</span>
+                                            )}
+                                        </div>
+                                        {gatewayData.paypal.configured ? (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-slate-50 p-4 rounded-xl">
+                                                    <span className="text-xs text-slate-400 font-semibold block">Disponibile</span>
+                                                    <span className="text-xl font-bold font-mono text-slate-900 block mt-1">
+                                                        €{(gatewayData.paypal.balance.availableCents / 100).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="bg-slate-50 p-4 rounded-xl">
+                                                    <span className="text-xs text-slate-400 font-semibold block">In sospeso</span>
+                                                    <span className="text-xl font-bold font-mono text-slate-500 block mt-1">
+                                                        €{(gatewayData.paypal.balance.pendingCents / 100).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-slate-50 p-4 rounded-xl flex items-center justify-center text-center h-[92px]">
+                                                <p className="text-xs text-slate-500 max-w-sm">
+                                                    Configura le variabili <strong>PAYPAL_CLIENT_ID</strong> e <strong>PAYPAL_CLIENT_SECRET</strong> per mostrare i saldi in tempo reale.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Ultimi tentativi e transazioni su Stripe */}
+                                <div className="border border-slate-100 rounded-2xl shadow-sm overflow-hidden space-y-4 p-5">
+                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                        <h4 className="text-lg font-bold text-slate-900">
+                                            Log Recenti Tentativi di Pagamento (Stripe)
+                                        </h4>
+                                        <button 
+                                            onClick={loadGateways}
+                                            className="text-xs text-[#c5a880] hover:text-[#b0936b] font-bold flex items-center gap-1"
+                                        >
+                                            <RefreshCw size={12} />
+                                            Aggiorna logs
+                                        </button>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse min-w-[800px]">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <th className="px-5 py-3">Orario</th>
+                                                    <th className="px-5 py-3">Rif Ordine</th>
+                                                    <th className="px-5 py-3">Cliente</th>
+                                                    <th className="px-5 py-3 text-right">Importo</th>
+                                                    <th className="px-5 py-3">Esito Pagamento</th>
+                                                    <th className="px-5 py-3">Stato Sessione</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 text-sm">
+                                                {gatewayData.stripe.transactions.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic">Nessuna sessione Stripe recente trovata.</td>
+                                                    </tr>
+                                                ) : (
+                                                    gatewayData.stripe.transactions.map((tx: any) => {
+                                                        const isSuccess = tx.paymentStatus === 'paid';
+                                                        return (
+                                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-5 py-3.5 text-xs text-slate-500">
+                                                                    {formatDateTime(tx.createdAt)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">
+                                                                    {tx.orderNumber}
+                                                                </td>
+                                                                <td className="px-5 py-3.5">
+                                                                    <div className="font-semibold text-slate-800">{tx.customerName}</div>
+                                                                    <div className="text-[10px] text-slate-400">{tx.customerEmail}</div>
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-right font-mono font-semibold">
+                                                                    €{(tx.amountCents / 100).toFixed(2)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5">
+                                                                    {isSuccess ? (
+                                                                        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 uppercase">
+                                                                            Successo
+                                                                        </span>
+                                                                    ) : (
+                                                                        <div className="space-y-1">
+                                                                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 border border-rose-200 text-rose-700 uppercase">
+                                                                                Fallito / Rifiutato
+                                                                            </span>
+                                                                            {tx.errorMessage && (
+                                                                                <p className="text-[10px] text-rose-500 max-w-[200px] leading-tight">{tx.errorMessage}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-xs font-medium text-slate-500 uppercase">
+                                                                    {tx.status}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>

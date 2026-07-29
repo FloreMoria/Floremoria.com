@@ -29,6 +29,7 @@ import {
     extractMetaInboundContent,
     type MetaInboundMediaMessage,
 } from '@/lib/whatsapp/extractMetaInboundContent';
+import { persistInboundChatMediaToBlob } from '@/lib/whatsapp/persistInboundChatMedia';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -182,6 +183,12 @@ async function processIncomingWhatsAppMessage(
     if (session.status === 'HUMAN_INTERVENTION') {
         await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
         if (mediaUrl) {
+            void persistInboundChatMediaToBlob({
+                sessionPhone: phoneKey,
+                mediaUrl,
+            }).catch((err) => {
+                console.warn('[chat-media] persist async failed:', err);
+            });
             void runFloristDeliveryAutomation({
                 floristPhoneE164: phoneE164,
                 mediaUrl,
@@ -205,6 +212,12 @@ async function processIncomingWhatsAppMessage(
     await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
 
     if (mediaUrl) {
+        void persistInboundChatMediaToBlob({
+            sessionPhone: phoneKey,
+            mediaUrl,
+        }).catch((err) => {
+            console.warn('[chat-media] persist async failed:', err);
+        });
         void runFloristDeliveryAutomation({
             floristPhoneE164: phoneE164,
             mediaUrl,

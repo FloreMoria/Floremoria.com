@@ -60,7 +60,8 @@ export function createStagingToken(pathname: string, expiresAt: number): string 
 const ALLOWED_STAGING_PREFIXES = [SOCIAL_STAGING_PREFIX, DELIVERY_STAGING_PREFIX];
 
 export function verifyMediaStagingToken(
-    token: string
+    token: string,
+    options?: { allowExpired?: boolean }
 ): { pathname: string; expiresAt: number } | null {
     const parts = token.split('.');
     if (parts.length !== 2) return null;
@@ -81,7 +82,7 @@ export function verifyMediaStagingToken(
     const pathname = payload.slice(0, sep);
     const expiresAt = Number.parseInt(payload.slice(sep + 1), 10);
     if (!pathname || !Number.isFinite(expiresAt)) return null;
-    if (Date.now() > expiresAt) return null;
+    if (!options?.allowExpired && Date.now() > expiresAt) return null;
     if (!ALLOWED_STAGING_PREFIXES.some((prefix) => pathname.includes(prefix))) return null;
 
     if (process.env.SOCIAL_STAGING_VERIFY_BYPASS === 'true') {
@@ -95,6 +96,14 @@ export function verifyMediaStagingToken(
     }
 
     return null;
+}
+
+/** Estrae il token da URL /api/whatsapp/delivery-staging/{token}. */
+export function extractDeliveryStagingToken(mediaUrl: string | null | undefined): string | null {
+    const value = mediaUrl?.trim();
+    if (!value) return null;
+    const match = value.match(/\/api\/whatsapp\/delivery-staging\/([^/?#]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 /** Ricostruisce URL Blob privato dal pathname staging. */

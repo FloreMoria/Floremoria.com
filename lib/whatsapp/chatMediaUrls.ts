@@ -1,11 +1,21 @@
-/** Normalizza URL media chat (legacy /api/admin → /api/dashboard). */
+/** Normalizza URL media chat (legacy /api/admin → /api/dashboard; staging → proxy staff; blob privato → proxy). */
 export function resolveWhatsAppChatMediaUrl(mediaUrl: string | null | undefined): string | null {
     const value = mediaUrl?.trim();
     if (!value) return null;
 
+    const stagingMatch = value.match(/\/api\/whatsapp\/delivery-staging\/([^/?#]+)/i);
+    if (stagingMatch?.[1]) {
+        return `/api/dashboard/whatsapp/delivery-staging/${stagingMatch[1]}`;
+    }
+
     const match = value.match(/\/api\/(?:admin|dashboard)\/whatsapp\/media\/([^/?#]+)/i);
     if (match?.[1]) {
         return `/api/dashboard/whatsapp/media/${match[1]}`;
+    }
+
+    // Blob privato: non caricabile in <img> diretto → proxy dashboard autenticato.
+    if (value.includes('private.blob.vercel-storage.com')) {
+        return `/api/dashboard/campaigns/media?url=${encodeURIComponent(value)}`;
     }
 
     if (value.startsWith('http://') || value.startsWith('https://')) {
@@ -31,7 +41,8 @@ export function isImageMediaUrl(mediaUrl: string | null | undefined): boolean {
     return (
         /\.(jpe?g|png|gif|webp)(\?|$)/i.test(value) ||
         value.includes('/whatsapp/media/') ||
-        value.includes('/whatsapp/delivery-staging/')
+        value.includes('/whatsapp/delivery-staging/') ||
+        value.includes('blob.vercel-storage.com')
     );
 }
 

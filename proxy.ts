@@ -53,7 +53,8 @@ function isWhatsAppAdminApiPath(pathname: string): boolean {
 function isWhatsAppMediaApiPath(pathname: string): boolean {
     return (
         pathname.startsWith('/api/admin/whatsapp/media/') ||
-        pathname.startsWith('/api/dashboard/whatsapp/media/')
+        pathname.startsWith('/api/dashboard/whatsapp/media/') ||
+        pathname.startsWith('/api/dashboard/whatsapp/delivery-staging/')
     );
 }
 

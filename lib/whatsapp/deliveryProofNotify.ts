@@ -196,6 +196,7 @@ export async function sendDeliveryProofWhatsApp(
             orderId: input.orderId,
             orderNumber: input.orderNumber,
             buyerFullName: input.buyerFullName,
+            // Staging Meta: in dashboard viene riscritto su proxy staff (anche se il token è scaduto).
             mediaUrl: publicImageUrl,
         });
 

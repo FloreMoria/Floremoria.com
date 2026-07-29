@@ -98,13 +98,18 @@ export function isShortAckWithoutOperationalIntent(message: string): boolean {
     return SHORT_ACK_PATTERN.test(m) || SHORT_ACK_PATTERN.test(raw.toLowerCase());
 }
 
-/** Reaction Meta, placeholder [reaction], sticker o sola emoji. */
+/** Reaction Meta, sticker, sola emoji, o placeholder legacy. */
 export function isWhatsAppReactionOrEmojiOnly(message: string): boolean {
     const raw = (message || '').trim();
     if (!raw) return false;
     if (/^\[reaction\]$/i.test(raw)) return true;
     if (/^\[sticker\]$/i.test(raw)) return true;
+    if (/^sticker$/i.test(raw)) return true;
     if (/^reaction$/i.test(raw)) return true;
+    if (/^reazione:\s*.+/i.test(raw)) return true;
+    if (/^reazione rimossa$/i.test(raw)) return true;
+    if (/^reazione whatsapp/i.test(raw)) return true;
+    if (/messaggio non supportato da meta/i.test(raw)) return true;
     return EMOJI_ONLY_PATTERN.test(raw);
 }
 

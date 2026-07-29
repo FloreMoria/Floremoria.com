@@ -25,28 +25,19 @@ import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSyn
 import { runFloristDeliveryAutomation } from '@/lib/deliveryProof/runFloristDeliveryAutomation';
 import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
 import { shouldSilenceVeraReply } from '@/lib/vera/courtesyDebounce';
+import {
+    extractMetaInboundContent,
+    type MetaInboundMediaMessage,
+} from '@/lib/whatsapp/extractMetaInboundContent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-interface MetaWebhookMessage {
+interface MetaWebhookMessage extends MetaInboundMediaMessage {
     from?: string;
     id?: string;
     timestamp?: string;
-    type?: string;
-    text?: { body?: string };
-    image?: { caption?: string; id?: string };
-    audio?: { id?: string };
-    document?: { caption?: string; id?: string };
-    video?: { caption?: string; id?: string };
-    sticker?: { id?: string };
-    interactive?: {
-        button_reply?: { title?: string };
-        list_reply?: { title?: string };
-    };
-    button?: { text?: string; payload?: string };
-    reaction?: { message_id?: string; emoji?: string };
 }
 
 interface MetaWebhookPayload {
@@ -68,6 +59,7 @@ interface ParsedIncomingMessage {
     messageText: string;
     mediaUrl?: string;
     senderName: string;
+    silenceVera?: boolean;
 }
 
 function verifyMetaSignature(rawBody: string, signatureHeader: string, appSecret: string): boolean {
@@ -102,56 +94,6 @@ function verifyMetaWebhookSignature(request: NextRequest, rawBody: string): bool
     return verifyMetaSignature(rawBody, signature, appSecret);
 }
 
-function metaMediaProxyUrl(mediaId: string): string {
-    return `/api/dashboard/whatsapp/media/${mediaId}`;
-}
-
-function extractMetaMessageContent(msg: MetaWebhookMessage): { text: string; mediaUrl?: string } {
-    switch (msg.type) {
-        case 'text':
-            return { text: msg.text?.body?.trim() ?? '' };
-        case 'image':
-            return {
-                text: msg.image?.caption?.trim() ?? '',
-                mediaUrl: msg.image?.id ? metaMediaProxyUrl(msg.image.id) : undefined,
-            };
-        case 'audio':
-            return {
-                text: '',
-                mediaUrl: msg.audio?.id ? metaMediaProxyUrl(msg.audio.id) : undefined,
-            };
-        case 'document':
-            return {
-                text: msg.document?.caption?.trim() ?? '',
-                mediaUrl: msg.document?.id ? metaMediaProxyUrl(msg.document.id) : undefined,
-            };
-        case 'video':
-            return {
-                text: msg.video?.caption?.trim() ?? '',
-                mediaUrl: msg.video?.id ? metaMediaProxyUrl(msg.video.id) : undefined,
-            };
-        case 'sticker':
-            return {
-                text: '[sticker]',
-                mediaUrl: msg.sticker?.id ? metaMediaProxyUrl(msg.sticker.id) : undefined,
-            };
-        case 'interactive': {
-            const reply =
-                msg.interactive?.button_reply?.title?.trim() ??
-                msg.interactive?.list_reply?.title?.trim() ??
-                '';
-            return { text: reply };
-        }
-        case 'button':
-            return { text: msg.button?.text?.trim() ?? msg.button?.payload?.trim() ?? '' };
-        case 'reaction':
-            // Meta invia le reaction come evento dedicato: non generare risposta VERA.
-            return { text: '[reaction]' };
-        default:
-            return { text: msg.type ? `[${msg.type}]` : '' };
-    }
-}
-
 function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingMessage[] {
     if (payload.object !== 'whatsapp_business_account') return [];
 
@@ -177,7 +119,7 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                     continue;
                 }
 
-                const { text, mediaUrl } = extractMetaMessageContent(msg);
+                const { text, mediaUrl, silenceVera } = extractMetaInboundContent(msg);
                 if (!text && !mediaUrl) continue;
 
                 results.push({
@@ -186,6 +128,7 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                     messageText: text,
                     mediaUrl,
                     senderName: contactName || phoneE164,
+                    silenceVera,
                 });
             }
         }
@@ -205,7 +148,7 @@ async function processIncomingWhatsAppMessage(
     sent?: boolean;
     coalesced?: boolean;
 }> {
-    const { phoneE164, phoneKey, messageText, mediaUrl, senderName } = incoming;
+    const { phoneE164, phoneKey, messageText, mediaUrl, senderName, silenceVera } = incoming;
     const inboundBody = messageText || (mediaUrl ? '[media]' : '');
 
     console.info(`[wa-webhook] Messaggio da ${phoneE164} (${senderName}): "${inboundBody.slice(0, 80)}"`);
@@ -274,6 +217,19 @@ async function processIncomingWhatsAppMessage(
 
     if (options?.deferReply) {
         return { ok: true, skipped: 'defer_reply' };
+    }
+
+    // Reaction / unsupported / system: registra in chat, niente risposta VERA.
+    if (silenceVera) {
+        console.info(`[wa-webhook] VERA silenzio (tipo non conversazionale) per ${phoneE164}`);
+        void notifyStaffOfWhatsAppInbound({
+            senderName,
+            phoneE164,
+            messagePreview: inboundBody,
+            userType: session.userType,
+            escalated: false,
+        }).catch((err) => console.warn('[staff-push] notify failed:', err));
+        return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence_non_conversational' };
     }
 
     return finalizeVeraOutboundReply({

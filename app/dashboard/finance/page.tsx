@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
     DollarSign, 
     TrendingUp, 
@@ -281,6 +282,12 @@ export default function FinanceDashboardPage() {
                         <FileJson size={16} />
                         Esporta JSON
                     </button>
+                    <Link
+                        href="/dashboard/fornitori"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors text-sm font-semibold"
+                    >
+                        Gestione Fornitori
+                    </Link>
                 </div>
             </div>
 

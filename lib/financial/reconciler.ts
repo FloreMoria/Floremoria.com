@@ -152,6 +152,42 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
             };
         }
 
+        // 4. ABBINAMENTO DIRETTO CON ANAGRAFICA FORNITORI (tramite Nome Controparte)
+        const matchedSupplier = await prisma.supplier.findFirst({
+            where: {
+                companyName: {
+                    contains: transaction.counterpartyName,
+                    mode: 'insensitive'
+                }
+            }
+        });
+
+        if (matchedSupplier) {
+            const entryId = `entry_supplier_direct_${transaction.id}`;
+            const entry: AccountingEntry = {
+                id: entryId,
+                date: emittedDate.toISOString().split('T')[0],
+                description: `Pagamento diretto a fornitore registrato: ${matchedSupplier.companyName}`,
+                dareAccount: '70100 - Costi di Produzione (Fioristi Partner)',
+                avereAccount: '50100 - Banca Qonto',
+                amountCents: absAmountCents,
+                vatAmountCents: calculateVatCents(absAmountCents, 0.22),
+                isForeignService: false,
+                invoiceReference: `REG-${transaction.id.slice(-6).toUpperCase()}`,
+                status: 'CONFIRMED'
+            };
+
+            addAccountingEntries([entry]);
+            updateTransactionCategory(transaction.id, 'EXPENSE_PARTNER');
+
+            return {
+                isReconciled: true,
+                matchingScore: 85,
+                type: 'B2B_PARTNER',
+                notes: `Transazione abbinata direttamente all'anagrafica del fornitore "${matchedSupplier.companyName}" tramite nome controparte.`
+            };
+        }
+
         // Uscita non identificata
         return {
             isReconciled: false,

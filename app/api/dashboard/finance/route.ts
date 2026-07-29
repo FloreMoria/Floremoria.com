@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
-import { getLedger, addTransaction } from '@/lib/financial/ledgerStore';
+import { getLedger, addTransaction, saveLedger } from '@/lib/financial/ledgerStore';
 import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
 
 export async function GET() {
@@ -68,6 +68,28 @@ export async function POST(request: Request) {
                 processedCount: count,
                 ledger: getLedger() 
             });
+        }
+
+        if (action === 'toggle_deadline') {
+            const deadlineId = String(body.deadlineId || '').trim();
+            if (!deadlineId) {
+                return NextResponse.json({ ok: false, error: 'ID scadenza mancante' }, { status: 400 });
+            }
+
+            const currentLedger = getLedger();
+            if (!currentLedger.completedDeadlineIds) {
+                currentLedger.completedDeadlineIds = [];
+            }
+
+            const index = currentLedger.completedDeadlineIds.indexOf(deadlineId);
+            if (index > -1) {
+                currentLedger.completedDeadlineIds.splice(index, 1);
+            } else {
+                currentLedger.completedDeadlineIds.push(deadlineId);
+            }
+
+            saveLedger(currentLedger);
+            return NextResponse.json({ ok: true, ledger: currentLedger });
         }
 
         return NextResponse.json({ ok: false, error: 'Azione non supportata' }, { status: 400 });

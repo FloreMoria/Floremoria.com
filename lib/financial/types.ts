@@ -42,5 +42,6 @@ export interface BankProvider {
 export interface FinancialLedger {
     transactions: BankTransaction[];
     accountingEntries: AccountingEntry[];
+    completedDeadlineIds?: string[];
 }
 

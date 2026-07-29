@@ -15,9 +15,14 @@ import {
     RefreshCw, 
     FileJson, 
     Settings, 
-    ShieldAlert 
+    ShieldAlert,
+    Calendar,
+    CheckSquare,
+    Square,
+    AlertOctagon
 } from 'lucide-react';
 import type { FinancialLedger, BankTransaction, AccountingEntry } from '@/lib/financial/types';
+import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
@@ -25,6 +30,9 @@ export default function FinanceDashboardPage() {
     const [activeTab, setActiveTab] = useState<'transactions' | 'accounting'>('transactions');
     const [searchTerm, setSearchTerm] = useState('');
     
+    // Compliance state
+    const [complianceFilter, setComplianceFilter] = useState<'ALL' | 'FISC' | 'ESTER' | 'CORP'>('ALL');
+
     // Simulator states
     const [simType, setSimType] = useState<'income_b2b' | 'income_stripe' | 'expense_saas' | 'expense_partner'>('income_stripe');
     const [simAmount, setSimAmount] = useState('100.00');
@@ -115,6 +123,45 @@ export default function FinanceDashboardPage() {
             setSimulating(false);
         }
     };
+
+    // Gestione aggiornamento stato scadenze
+    const handleToggleDeadline = async (deadlineId: string) => {
+        try {
+            const res = await fetch('/api/dashboard/finance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'toggle_deadline',
+                    deadlineId
+                })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                setLedger(data.ledger);
+            }
+        } catch (error) {
+            console.error('Errore aggiornamento scadenza:', error);
+        }
+    };
+
+    // Calcolo scadenze e scadenze urgenti
+    const allDeadlines = React.useMemo(() => {
+        return getUpcomingDeadlines(ledger.completedDeadlineIds || []);
+    }, [ledger.completedDeadlineIds]);
+
+    const urgentDeadlines = React.useMemo(() => {
+        return allDeadlines.filter(item => item.status === 'URGENT');
+    }, [allDeadlines]);
+
+    const filteredDeadlines = React.useMemo(() => {
+        return allDeadlines.filter(item => {
+            if (complianceFilter === 'ALL') return true;
+            if (complianceFilter === 'FISC') return item.category === 'IVA' || item.category === 'F24';
+            if (complianceFilter === 'ESTER') return item.category === 'ESTEROMETRO';
+            if (complianceFilter === 'CORP') return item.category === 'BILANCIO' || item.category === 'STARTUP_INNOVATIVA' || item.category === 'DICHIARATIVI';
+            return true;
+        });
+    }, [allDeadlines, complianceFilter]);
 
     // Elaborazione ordini manuali
     const handleProcessManualOrders = async () => {
@@ -336,6 +383,156 @@ export default function FinanceDashboardPage() {
                     <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
                         <CheckCircle2 size={24} />
                     </div>
+                </div>
+            </div>
+
+            {/* Scadenziario & Adempimenti S.r.l. Widget */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+                    <div>
+                        <h3 className="text-xl font-display font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <Calendar className="text-[#c5a880]" size={22} />
+                            Scadenziario &amp; Adempimenti S.r.l. (Startup Innovativa)
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Tracciamento automatico e allerta prioritaria 10 giorni prima di ogni adempimento fiscale e societario.
+                        </p>
+                    </div>
+
+                    {/* Category filter */}
+                    <div className="flex flex-wrap gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start lg:self-center">
+                        <button
+                            onClick={() => setComplianceFilter('ALL')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            Tutti ({allDeadlines.length})
+                        </button>
+                        <button
+                            onClick={() => setComplianceFilter('FISC')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'FISC' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            Fiscale
+                        </button>
+                        <button
+                            onClick={() => setComplianceFilter('ESTER')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'ESTER' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            Esterometro
+                        </button>
+                        <button
+                            onClick={() => setComplianceFilter('CORP')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${complianceFilter === 'CORP' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            Bilancio &amp; Startup
+                        </button>
+                    </div>
+                </div>
+
+                {/* High urgency alert banner if any urgent deadline exists */}
+                {urgentDeadlines.length > 0 && (
+                    <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div className="flex items-start gap-3">
+                            <AlertOctagon className="text-rose-600 shrink-0 mt-0.5 animate-pulse" size={20} />
+                            <div>
+                                <span className="font-bold text-rose-800 text-sm">
+                                    Attenzione: {urgentDeadlines.length} {urgentDeadlines.length === 1 ? 'scadenza urgente' : 'scadenze urgenti'}!
+                                </span>
+                                <p className="text-xs text-rose-700 leading-normal mt-0.5" suppressHydrationWarning>
+                                    Prossima scadenza: <strong>{urgentDeadlines[0].title}</strong> {urgentDeadlines[0].daysRemaining < 0 ? 'scaduta il' : 'in scadenza il'} {new Date(urgentDeadlines[0].dueDate).toLocaleDateString('it-IT', { dateStyle: 'medium' })} ({urgentDeadlines[0].daysRemaining < 0 ? 'scaduta da' : 'mancano'} {Math.abs(urgentDeadlines[0].daysRemaining)} giorni).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Deadlines Table/List */}
+                <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th className="px-5 py-3">Adempimento</th>
+                                <th className="px-5 py-3">Categoria</th>
+                                <th className="px-5 py-3">Frequenza</th>
+                                <th className="px-5 py-3">Descrizione</th>
+                                <th className="px-5 py-3">Data Scadenza</th>
+                                <th className="px-5 py-3">Tempo Rimanente</th>
+                                <th className="px-5 py-3 text-right">Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm">
+                            {filteredDeadlines.map((item) => {
+                                const isCompleted = item.status === 'COMPLETED';
+                                const isUrgent = item.status === 'URGENT';
+                                
+                                return (
+                                    <tr 
+                                        key={item.id} 
+                                        className={`hover:bg-slate-50/50 transition-colors ${isUrgent ? 'bg-rose-50/10 hover:bg-rose-50/20' : ''} ${isCompleted ? 'opacity-65' : ''}`}
+                                    >
+                                        <td className="px-5 py-3.5 font-bold text-slate-900 max-w-[200px] truncate" title={item.title}>
+                                            {item.title}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                                                item.category === 'IVA' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                                item.category === 'F24' ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                                                item.category === 'ESTEROMETRO' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                                item.category === 'BILANCIO' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                                item.category === 'STARTUP_INNOVATIVA' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                                'bg-purple-50 border-purple-200 text-purple-700'
+                                            }`}>
+                                                {item.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-xs text-slate-500 font-bold uppercase">{item.frequency}</td>
+                                        <td className="px-5 py-3.5 text-xs text-slate-600 max-w-[280px] truncate" title={item.description}>
+                                            {item.description}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-xs font-mono font-semibold text-slate-700" suppressHydrationWarning>
+                                            {new Date(item.dueDate).toLocaleDateString('it-IT', { dateStyle: 'medium' })}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-xs font-semibold">
+                                            {isCompleted ? (
+                                                <span className="text-slate-400 font-normal">—</span>
+                                            ) : item.daysRemaining < 0 ? (
+                                                <span className="text-rose-600 font-bold uppercase">Scaduto ({Math.abs(item.daysRemaining)} g fa)</span>
+                                            ) : item.daysRemaining === 0 ? (
+                                                <span className="text-rose-600 font-bold uppercase">Oggi!</span>
+                                            ) : (
+                                                <span className={item.daysRemaining <= 10 ? 'text-rose-600 font-bold' : 'text-slate-700'}>
+                                                    {item.daysRemaining} {item.daysRemaining === 1 ? 'giorno' : 'giorni'}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <button
+                                                onClick={() => handleToggleDeadline(item.id)}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider ${
+                                                    isCompleted 
+                                                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
+                                                        : isUrgent 
+                                                        ? 'bg-rose-600 text-white hover:bg-rose-500 shadow-sm' 
+                                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {isCompleted ? (
+                                                    <>
+                                                        <CheckSquare size={13} />
+                                                        Inviato
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Square size={13} />
+                                                        Da Inviare
+                                                    </>
+                                                )}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

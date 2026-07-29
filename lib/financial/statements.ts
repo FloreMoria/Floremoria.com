@@ -48,18 +48,18 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
 
     for (const entry of entries) {
         // Ricavi: Avere su conto ricavi
-        if (entry.avereAccount.includes('Ricavi da Vendite')) {
+        if (entry.avereAccount && entry.avereAccount.includes('Ricavi da Vendite')) {
             ricaviVenditeCents += entry.amountCents;
         }
 
         // Costi: Dare su conto costi
-        if (entry.dareAccount.includes('Costi di Produzione')) {
+        if (entry.dareAccount && entry.dareAccount.includes('Costi di Produzione')) {
             costiFioristiCents += entry.amountCents;
-        } else if (entry.dareAccount.includes('Commissioni Stripe')) {
+        } else if (entry.dareAccount && entry.dareAccount.includes('Commissioni Stripe')) {
             costiStripeCents += entry.amountCents;
-        } else if (entry.dareAccount.includes('Software SaaS')) {
+        } else if (entry.dareAccount && entry.dareAccount.includes('Software SaaS')) {
             costiSaasCents += entry.amountCents;
-        } else if (entry.dareAccount.includes('Servizi Pubblicitari')) {
+        } else if (entry.dareAccount && entry.dareAccount.includes('Servizi Pubblicitari')) {
             costiMarketingCents += entry.amountCents;
         }
     }
@@ -103,16 +103,16 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
     // Debiti Tributari: IVA a debito (IVA sulle vendite - IVA acquisti) + Imposte stimate (IRES/IRAP) + Ritenute accumulate non ancora versate
     let ivaDebitoCents = 0;
     for (const entry of entries) {
-        if (entry.avereAccount.includes('Ricavi')) {
+        if (entry.avereAccount && entry.avereAccount.includes('Ricavi')) {
             ivaDebitoCents += entry.vatAmountCents;
-        } else if (entry.dareAccount.includes('Costi') || entry.dareAccount.includes('Software')) {
+        } else if (entry.dareAccount && (entry.dareAccount.includes('Costi') || entry.dareAccount.includes('Software'))) {
             ivaDebitoCents -= entry.vatAmountCents;
         }
     }
     const debitiTributariCents = Math.max(0, ivaDebitoCents) + iresCents + irapCents;
 
-    // Capitale Sociale di base FloreMoria S.r.l. (Startup Innovativa): es. €10,000.00
-    const capitaleSocialeCents = 1000000;
+    // Capitale Sociale di base FloreMoria S.r.l. (Startup Innovativa): €11.410,00 i.v.
+    const capitaleSocialeCents = 1141000;
     const patrimonioNettoCents = capitaleSocialeCents + utileNettoCents;
 
     return {

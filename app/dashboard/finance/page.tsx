@@ -148,10 +148,33 @@ export default function FinanceDashboardPage() {
         }
     };
 
+    // Helper sicuri per formattazione date (evitano crash RangeError)
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return '—';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('it-IT', { dateStyle: 'medium' });
+        } catch {
+            return '—';
+        }
+    };
+
+    const formatDateTime = (dateStr?: string) => {
+        if (!dateStr) return '—';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+        } catch {
+            return '—';
+        }
+    };
+
     // Calcolo scadenze e scadenze urgenti
     const allDeadlines = React.useMemo(() => {
-        return getUpcomingDeadlines(ledger.completedDeadlineIds || []);
-    }, [ledger.completedDeadlineIds]);
+        return getUpcomingDeadlines(ledger?.completedDeadlineIds || []);
+    }, [ledger?.completedDeadlineIds]);
 
     const urgentDeadlines = React.useMemo(() => {
         return allDeadlines.filter(item => item.status === 'URGENT');
@@ -196,9 +219,9 @@ export default function FinanceDashboardPage() {
         const headers = ['Data', 'Descrizione', 'Conto Dare', 'Conto Avere', 'Importo Lordo (EUR)', 'IVA Scorporata (EUR)', 'Reverse Charge Estero', 'Fattura/Rif Ordine'];
         const rows = entries.map(e => [
             e.date,
-            `"${e.description.replace(/"/g, '""')}"`,
-            e.dareAccount,
-            e.avereAccount,
+            `"${(e.description || '').replace(/"/g, '""')}"`,
+            e.dareAccount || '',
+            e.avereAccount || '',
             (e.amountCents / 100).toFixed(2),
             (e.vatAmountCents / 100).toFixed(2),
             e.isForeignService ? 'SI' : 'NO',
@@ -255,7 +278,7 @@ export default function FinanceDashboardPage() {
         }
 
         for (const entry of accountingEntries) {
-            if (entry.isForeignService && entry.dareAccount.includes('Software')) {
+            if (entry.isForeignService && (entry.dareAccount || '').includes('Software')) {
                 foreignSaasCents += entry.amountCents;
             }
         }
@@ -448,7 +471,7 @@ export default function FinanceDashboardPage() {
                                     Attenzione: {urgentDeadlines.length} {urgentDeadlines.length === 1 ? 'scadenza urgente' : 'scadenze urgenti'}!
                                 </span>
                                 <p className="text-xs text-rose-700 leading-normal mt-0.5" suppressHydrationWarning>
-                                    Prossima scadenza: <strong>{urgentDeadlines[0].title}</strong> {urgentDeadlines[0].daysRemaining < 0 ? 'scaduta il' : 'in scadenza il'} {new Date(urgentDeadlines[0].dueDate).toLocaleDateString('it-IT', { dateStyle: 'medium' })} ({urgentDeadlines[0].daysRemaining < 0 ? 'scaduta da' : 'mancano'} {Math.abs(urgentDeadlines[0].daysRemaining)} giorni).
+                                    Prossima scadenza: <strong>{urgentDeadlines[0].title}</strong> {urgentDeadlines[0].daysRemaining < 0 ? 'scaduta il' : 'in scadenza il'} {formatDate(urgentDeadlines[0].dueDate)} ({urgentDeadlines[0].daysRemaining < 0 ? 'scaduta da' : 'mancano'} {Math.abs(urgentDeadlines[0].daysRemaining)} giorni).
                                 </p>
                             </div>
                         </div>
@@ -499,7 +522,7 @@ export default function FinanceDashboardPage() {
                                             {item.description}
                                         </td>
                                         <td className="px-5 py-3.5 text-xs font-mono font-semibold text-slate-700" suppressHydrationWarning>
-                                            {new Date(item.dueDate).toLocaleDateString('it-IT', { dateStyle: 'medium' })}
+                                            {formatDate(item.dueDate)}
                                         </td>
                                         <td className="px-5 py-3.5 text-xs font-semibold">
                                             {isCompleted ? (
@@ -710,7 +733,7 @@ export default function FinanceDashboardPage() {
                                             <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">{tx.id}</td>
                                                 <td className="px-5 py-3.5 text-xs text-slate-500" suppressHydrationWarning>
-                                                    {new Date(tx.emittedAt).toLocaleDateString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
+                                                    {formatDateTime(tx.emittedAt)}
                                                 </td>
                                                 <td className="px-5 py-3.5 font-semibold text-slate-800">{tx.counterpartyName}</td>
                                                 <td className="px-5 py-3.5">
@@ -828,42 +851,42 @@ export default function FinanceDashboardPage() {
                                     <div className="space-y-3.5 text-sm">
                                         <div className="flex justify-between items-center py-1">
                                             <span className="text-slate-600 font-medium">Ricavi da Vendite (e-commerce / B2B)</span>
-                                            <span className="font-bold font-mono text-emerald-600">€{(statements.contoEconomico.ricaviVenditeCents / 100).toFixed(2)}</span>
+                                            <span className="font-bold font-mono text-emerald-600">€{((statements?.contoEconomico?.ricaviVenditeCents || 0) / 100).toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between items-center py-1 border-b border-slate-100/60 pb-2">
                                             <span className="text-slate-500 text-xs">di cui Ordini Manuali &amp; B2B</span>
-                                            <span className="font-mono text-slate-600 text-xs">€{((statements.contoEconomico.ricaviVenditeCents - Number(stats.income) * 100) / 100).toFixed(2)}</span>
+                                            <span className="font-mono text-slate-600 text-xs">€{(((statements?.contoEconomico?.ricaviVenditeCents || 0) - Number(stats.income) * 100) / 100).toFixed(2)}</span>
                                         </div>
 
                                         <div className="space-y-2 pt-2">
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Dettaglio Costi di Produzione</span>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Costi Fioristi Partner</span>
-                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiFioristiCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">-€{((statements?.contoEconomico?.costiFioristiCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Commissioni Stripe</span>
-                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiStripeCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">-€{((statements?.contoEconomico?.costiStripeCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Software SaaS (Cursor, Antigravity, Claude, ecc.)</span>
-                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiSaasCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">-€{((statements?.contoEconomico?.costiSaasCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
                                                 <span className="text-slate-600">Servizi Pubblicitari (Meta, Google Ads, ecc.)</span>
-                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiMarketingCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">-€{((statements?.contoEconomico?.costiMarketingCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                         </div>
 
                                         <div className="flex justify-between items-center pt-3 font-bold text-slate-900 border-t border-slate-200">
                                             <span>Totale Costi della Produzione</span>
-                                            <span className="font-mono">€{(statements.contoEconomico.totaleCostiCents / 100).toFixed(2)}</span>
+                                            <span className="font-mono">€{((statements?.contoEconomico?.totaleCostiCents || 0) / 100).toFixed(2)}</span>
                                         </div>
 
                                         <div className="flex justify-between items-center p-4 rounded-xl bg-slate-50 border border-slate-100 mt-4 font-display font-bold text-lg text-slate-900">
                                             <span>Margine Operativo Lordo (EBITDA)</span>
-                                            <span className={`font-mono ${statements.contoEconomico.ebitdaCents >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                €{(statements.contoEconomico.ebitdaCents / 100).toFixed(2)}
+                                            <span className={`font-mono ${(statements?.contoEconomico?.ebitdaCents || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                €{((statements?.contoEconomico?.ebitdaCents || 0) / 100).toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
@@ -880,11 +903,11 @@ export default function FinanceDashboardPage() {
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">ATTIVITÀ (Impieghi)</span>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Disponibilità Liquide (Banca Qonto)</span>
-                                                <span className="font-mono font-semibold text-slate-800">€{(statements.statoPatrimoniale.cassaBancaCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono font-semibold text-slate-800">€{((statements?.statoPatrimoniale?.cassaBancaCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
                                                 <span className="text-slate-600">Crediti v/Clienti (Ordini Manuali/B2B in attesa)</span>
-                                                <span className="font-mono font-semibold text-slate-800">€{(statements.statoPatrimoniale.creditiClientiCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono font-semibold text-slate-800">€{((statements?.statoPatrimoniale?.creditiClientiCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                         </div>
 
@@ -892,21 +915,21 @@ export default function FinanceDashboardPage() {
                                             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">PASSIVITÀ &amp; PATRIMONIO NETTO (Fonti)</span>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Debiti v/Fornitori (Fatture passive inevase nel DB)</span>
-                                                <span className="font-mono text-rose-600">€{(statements.statoPatrimoniale.debitiFornitoriCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">€{((statements?.statoPatrimoniale?.debitiFornitoriCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1">
                                                 <span className="text-slate-600">Debiti Tributari (IVA Netta a Debito + Ritenute + Imposte Stimate)</span>
-                                                <span className="font-mono text-rose-600">€{(statements.statoPatrimoniale.debitiTributariCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono text-rose-600">€{((statements?.statoPatrimoniale?.debitiTributariCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
                                                 <span className="text-slate-600">Patrimonio Netto (Capitale Sociale + Utile Stimato)</span>
-                                                <span className="font-mono font-semibold text-emerald-600">€{(statements.statoPatrimoniale.patrimonioNettoCents / 100).toFixed(2)}</span>
+                                                <span className="font-mono font-semibold text-emerald-600">€{((statements?.statoPatrimoniale?.patrimonioNettoCents || 0) / 100).toFixed(2)}</span>
                                             </div>
                                         </div>
 
                                         <div className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 text-sm">
-                                            <span>Capitale Sociale Semplificato</span>
-                                            <span className="font-mono">€10.000,00</span>
+                                            <span>Capitale Sociale Deliberato e Versato</span>
+                                            <span className="font-mono">€11.410,00 i.v.</span>
                                         </div>
                                     </div>
                                 </div>
@@ -944,20 +967,20 @@ export default function FinanceDashboardPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="bg-slate-800/50 border border-slate-800 p-5 rounded-xl space-y-2">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stima Imposta IRES (24%)</span>
-                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{(statements.stimaImposte.iresCents / 100).toFixed(2)}</h5>
+                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{((statements?.stimaImposte?.iresCents || 0) / 100).toFixed(2)}</h5>
                                             <p className="text-[10px] text-slate-500 leading-normal">Calcolata sull&apos;utile prima delle imposte gestionale.</p>
                                         </div>
 
                                         <div className="bg-slate-800/50 border border-slate-800 p-5 rounded-xl space-y-2">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stima Imposta IRAP (3.9%)</span>
-                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{(statements.stimaImposte.irapCents / 100).toFixed(2)}</h5>
+                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{((statements?.stimaImposte?.irapCents || 0) / 100).toFixed(2)}</h5>
                                             <p className="text-[10px] text-slate-500 leading-normal">Calcolata sul valore netto della produzione (ricavi escluse commissioni e servizi SaaS).</p>
                                         </div>
 
                                         <div className="bg-[#c5a880]/10 border border-[#c5a880]/30 p-5 rounded-xl space-y-2">
                                             <span className="text-[10px] font-bold text-[#c5a880] uppercase tracking-widest">Utile Netto Stimato (Post-Imposte)</span>
-                                            <h5 className={`text-2xl font-bold font-mono ${statements.stimaImposte.utileNettoCents >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                €{(statements.stimaImposte.utileNettoCents / 100).toFixed(2)}
+                                            <h5 className={`text-2xl font-bold font-mono ${(statements?.stimaImposte?.utileNettoCents || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                €{((statements?.stimaImposte?.utileNettoCents || 0) / 100).toFixed(2)}
                                             </h5>
                                             <p className="text-[10px] text-[#c5a880]/70 leading-normal">Fondi netti stimati destinabili a riserva o reinvestimento.</p>
                                         </div>

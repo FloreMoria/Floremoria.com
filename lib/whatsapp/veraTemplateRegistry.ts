@@ -144,8 +144,9 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         language: 'it',
         bodyParamCount: 2,
         bodySlots: ['buyerFirstName', 'deceasedName'],
+        // Timing generico (ALMA/SOFIA): mai “poche ore” / “prossime ore” — crea attesa troppo precisa.
         bodyCanonical:
-            'Gentile {{1}},\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹',
+            'Gentile {{1}},\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}. Il nostro fiorista partner ci confermerà la posa non appena sarà completata.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹',
         description: '{{1}} nome di battesimo, {{2}} nome defunto — NON usare testi liberi nel campo nome',
     },
     florist_reminder: {

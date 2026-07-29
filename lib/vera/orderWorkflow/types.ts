@@ -26,6 +26,7 @@ export function markWorkflowStep(flags: VeraWorkflowFlags, step: VeraWorkflowSte
     return { ...flags, [step]: new Date().toISOString() };
 }
 
+/** @deprecated Punto G è one-shot per ordine; non più usato per reinvii ricorrenti. */
 export const VERA_REMINDER_HOURS = 20;
 
 export const TEMPLATE_CASCADE_DELAY_MS = 1000;

@@ -2,7 +2,7 @@
  * GET /api/cron/vera-order-reminders
  * - Flush Punto A differiti (creazione/assegnazione fuori fascia → invio in 08:00–20:00 Europe/Rome)
  * - Flush Punto B schedulati (+30 min diurno / 08:30 notturno)
- * - PUNTO G — keep-alive finestra Meta ~20h
+ * - PUNTO G — un solo sollecito cliente/fiorista per ordine (finestra 48h consegna)
  *
  * Rinvio manuale singolo ordine (test):
  *   GET /api/cron/vera-order-reminders?orderNumber=FT-CO-26-005&force=1

@@ -2,7 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { BankTransaction, AccountingEntry, FinancialLedger } from './types';
 
-const LEDGER_PATH = path.join(process.cwd(), 'financial_ledger.json');
+const IS_VERCEL = process.env.VERCEL === '1';
+const LEDGER_PATH = IS_VERCEL 
+    ? path.join('/tmp', 'financial_ledger.json') 
+    : path.join(process.cwd(), 'financial_ledger.json');
 
 const DEFAULT_LEDGER: FinancialLedger = {
     transactions: [

@@ -186,9 +186,10 @@ export default function FinanceDashboardPage() {
 
     // Esportazione CSV per il commercialista
     const handleExportCSV = () => {
-        if (!ledger.accountingEntries.length) return;
+        const entries = ledger?.accountingEntries || [];
+        if (!entries.length) return;
         const headers = ['Data', 'Descrizione', 'Conto Dare', 'Conto Avere', 'Importo Lordo (EUR)', 'IVA Scorporata (EUR)', 'Reverse Charge Estero', 'Fattura/Rif Ordine'];
-        const rows = ledger.accountingEntries.map(e => [
+        const rows = entries.map(e => [
             e.date,
             `"${e.description.replace(/"/g, '""')}"`,
             e.dareAccount,
@@ -211,8 +212,9 @@ export default function FinanceDashboardPage() {
 
     // Esportazione JSON strutturato
     const handleExportJSON = () => {
-        if (!ledger.accountingEntries.length) return;
-        const jsonContent = JSON.stringify(ledger.accountingEntries, null, 2);
+        const entries = ledger?.accountingEntries || [];
+        if (!entries.length) return;
+        const jsonContent = JSON.stringify(entries, null, 2);
         const blob = new Blob([jsonContent], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -231,7 +233,10 @@ export default function FinanceDashboardPage() {
         let foreignSaasCents = 0;
         let reconciledCount = 0;
 
-        for (const tx of ledger.transactions) {
+        const transactions = ledger?.transactions || [];
+        const accountingEntries = ledger?.accountingEntries || [];
+
+        for (const tx of transactions) {
             balanceCents += tx.amountCents;
             if (tx.amountCents > 0) {
                 incomeCents += tx.amountCents;
@@ -244,14 +249,14 @@ export default function FinanceDashboardPage() {
             }
         }
 
-        for (const entry of ledger.accountingEntries) {
+        for (const entry of accountingEntries) {
             if (entry.isForeignService && entry.dareAccount.includes('Software')) {
                 foreignSaasCents += entry.amountCents;
             }
         }
 
-        const recRate = ledger.transactions.length 
-            ? Math.round((reconciledCount / ledger.transactions.length) * 100) 
+        const recRate = transactions.length 
+            ? Math.round((reconciledCount / transactions.length) * 100) 
             : 100;
 
         return {
@@ -264,7 +269,7 @@ export default function FinanceDashboardPage() {
     }, [ledger]);
 
     // Filtraggio transazioni/scritture
-    const filteredTransactions = ledger.transactions.filter(t => {
+    const filteredTransactions = (ledger?.transactions || []).filter(t => {
         const q = searchTerm.toLowerCase();
         return (
             t.counterpartyName.toLowerCase().includes(q) ||
@@ -273,7 +278,7 @@ export default function FinanceDashboardPage() {
         );
     });
 
-    const filteredEntries = ledger.accountingEntries.filter(e => {
+    const filteredEntries = (ledger?.accountingEntries || []).filter(e => {
         const q = searchTerm.toLowerCase();
         return (
             e.description.toLowerCase().includes(q) ||

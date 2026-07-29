@@ -55,7 +55,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                     </Link>
 
                     {/* Primary Navigation (desktop) */}
-                    <nav className="hidden md:flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full scroll-smooth">
+                    <nav className="hidden md:flex items-center gap-1.5 w-full scroll-smooth">
                         <TopNavLink href="/dashboard" label="Overview" />
                         <TopNavLink href="/dashboard/orders" label="Ordini" />
                         <TopNavLink href="/dashboard/users" label="Utenti" />

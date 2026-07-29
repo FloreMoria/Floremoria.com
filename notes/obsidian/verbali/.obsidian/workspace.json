@@ -11,10 +11,14 @@
             "id": "8eac65989192660f",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "2026-07-22-Verbale-giornaliero.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Nuova scheda"
+              "title": "2026-07-22-Verbale-giornaliero"
             }
           }
         ]
@@ -36,7 +40,7 @@
             "state": {
               "type": "file-explorer",
               "state": {
-                "sortOrder": "alphabetical",
+                "sortOrder": "alphabeticalReverse",
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
@@ -178,6 +182,13 @@
   },
   "active": "8eac65989192660f",
   "lastOpenFiles": [
+    "2026-07-28-Verbale-giornaliero.md",
+    "2026-07-27-Verbale-giornaliero.md",
+    "2026-07-26-Verbale-giornaliero.md",
+    "2026-07-25-Verbale-giornaliero.md",
+    "2026-07-23-Verbale-giornaliero.md",
+    "2026-07-24-Verbale-giornaliero.md",
+    "2026-04-27-Business-Continuity-Hosting.md",
     "31-05-2026-Partner-Battistella-Onboarding.md",
     "31-03-2026-Sintesi-Architettura-Ghost.md",
     "30-03-2026-GPS-Hub-Fioristi.md",
@@ -196,13 +207,6 @@
     "21-06-2026-Migration-EmailBlacklist-Neon.md",
     "20-06-2026-Second-Brain-Vault-Mail.md",
     "19-06-2026-Futuria-Sync-Verbali-Drive.md",
-    "16-06-2026-Sviluppo-Roadmap-Stato.md",
-    "14-04-2026-Categorie-Email-Standard.md",
-    "13-06-2026-Attivazione-WhatsApp-Futuria.md",
-    "13-06-2026-Addestramento-AI-Futuria.md",
-    "12-06-2026-Status-Setup-WhatsApp-Twilio.md",
-    "12-06-2026-Diario-Lavoro.md",
-    "12-03-2026-Logs-Overview-Sistema.md",
-    "11-04-2026-Strategia-Multi-Agent.md"
+    "16-06-2026-Sviluppo-Roadmap-Stato.md"
   ]
 }

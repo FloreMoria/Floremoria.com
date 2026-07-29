@@ -1,0 +1,3270 @@
+{
+  "generatedAt": "2026-07-23T06:38:59.796Z",
+  "windowDays": 21,
+  "since": "2026-07-02T06:38:59.063Z",
+  "sessionsAnalyzed": 22,
+  "classCounts": {
+    "operator": 86,
+    "vera_auto": 134,
+    "workflow": 30,
+    "unknown": 7,
+    "inbound": 208
+  },
+  "rawCounts": [
+    {
+      "bucket": "inbound",
+      "n": 208
+    },
+    {
+      "bucket": "vera_source",
+      "n": 134
+    },
+    {
+      "bucket": "operator",
+      "n": 86
+    },
+    {
+      "bucket": "workflow_event",
+      "n": 36
+    },
+    {
+      "bucket": "outbound_other",
+      "n": 1
+    }
+  ],
+  "sourceCounts": [
+    [
+      "gemini",
+      94
+    ],
+    [
+      "operator",
+      86
+    ],
+    [
+      "deterministic",
+      40
+    ],
+    [
+      "ORDER_CONFIRM_TEMPLATE",
+      13
+    ],
+    [
+      "FLORIST_NEW_ORDER_TEMPLATE",
+      9
+    ],
+    [
+      "WAITING_UPDATE_TEMPLATE",
+      5
+    ],
+    [
+      "PROOF_OF_DELIVERY",
+      3
+    ],
+    [
+      "ORDER_WELCOME",
+      3
+    ],
+    [
+      "DELIVERY_PHOTO_TEMPLATE",
+      2
+    ],
+    [
+      "fallback",
+      1
+    ],
+    [
+      "FLORIST_REMINDER_TEMPLATE",
+      1
+    ]
+  ],
+  "humanInterventionSessions": [
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 22,
+      "vera_auto": 13,
+      "workflow": 6,
+      "inbound": 30
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 12,
+      "vera_auto": 15,
+      "workflow": 1,
+      "inbound": 41
+    },
+    {
+      "name": "Daniele",
+      "phone": "whatsapp:+393294921787",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 10,
+      "vera_auto": 4,
+      "workflow": 0,
+      "inbound": 12
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 8,
+      "vera_auto": 13,
+      "workflow": 1,
+      "inbound": 16
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 8,
+      "vera_auto": 0,
+      "workflow": 0,
+      "inbound": 3
+    },
+    {
+      "name": "test",
+      "phone": "whatsapp:+393287521463",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": true,
+      "operator": 7,
+      "vera_auto": 53,
+      "workflow": 6,
+      "inbound": 61
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 6,
+      "vera_auto": 7,
+      "workflow": 3,
+      "inbound": 13
+    },
+    {
+      "name": "annabruno365",
+      "phone": "whatsapp:+393386587559",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 5,
+      "vera_auto": 10,
+      "workflow": 0,
+      "inbound": 10
+    },
+    {
+      "name": "Carlo",
+      "phone": "whatsapp:+393385677927",
+      "userType": "FLORIST",
+      "status": "HUMAN_INTERVENTION",
+      "isTest": false,
+      "operator": 3,
+      "vera_auto": 2,
+      "workflow": 2,
+      "inbound": 4
+    },
+    {
+      "name": "Antonella",
+      "phone": "whatsapp:+393275763449",
+      "userType": "FLORIST",
+      "status": "HUMAN_INTERVENTION",
+      "isTest": false,
+      "operator": 1,
+      "vera_auto": 1,
+      "workflow": 1,
+      "inbound": 2
+    },
+    {
+      "name": "+3914152126297",
+      "phone": "whatsapp:+3914152126297",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 1,
+      "vera_auto": 2,
+      "workflow": 0,
+      "inbound": 2
+    },
+    {
+      "name": "Max Esse",
+      "phone": "whatsapp:+393280582684",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 1,
+      "vera_auto": 3,
+      "workflow": 0,
+      "inbound": 3
+    },
+    {
+      "name": "Giulio Rosace",
+      "phone": "whatsapp:+393921041814",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 1,
+      "vera_auto": 1,
+      "workflow": 2,
+      "inbound": 1
+    },
+    {
+      "name": "LUCIANO MAMMI'",
+      "phone": "whatsapp:+393714218889",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "operator": 1,
+      "vera_auto": 1,
+      "workflow": 0,
+      "inbound": 1
+    }
+  ],
+  "escalatedCount": 2,
+  "escalatedNames": [
+    {
+      "name": "Antonella",
+      "userType": "FLORIST",
+      "isTest": false
+    },
+    {
+      "name": "Carlo",
+      "userType": "FLORIST",
+      "isTest": false
+    }
+  ],
+  "operatorThemes": {
+    "foto_consegna": 12,
+    "link_miniapp_giardino": 7,
+    "scusa_disguido": 7,
+    "conferma_orari_data": 5,
+    "tomba_indicazioni": 6,
+    "pagamento_compenso": 12,
+    "template_o_nuova_conversazione": 0,
+    "cortesia_chiusura": 12,
+    "correzione_dato": 1,
+    "altro": 45
+  },
+  "operatorMoments": [
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T16:14:45.396Z",
+      "operatorBody": "Gentile Carolina,\nper il disguido sulle foto della consegna in ricordo di Elio, Le offriamo un buono omaggio di 10€.\n\nCodice: CAROLINA10\nPuò applicarlo qui: https://www.floremoria.com/checkout?discountCode=CAROLINA10\n\nIl codice è personale e valido per 3 mesi (un solo utilizzo).\nRestiamo a Sua disposizione.\nStaff FloreMoria 🌹",
+      "prevInbound": "Grazie",
+      "prevAuto": "Il nostro fiorista partner si sta occupando della preparazione e della posa della pianta. Non appena sarà posizionata sulla tomba del signor Elio, Le invieremo subito la foto qui su WhatsApp.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 2.4
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:22:01.790Z",
+      "operatorBody": "",
+      "prevInbound": "No",
+      "prevAuto": "Il nostro fiorista partner si sta occupando della preparazione e della posa della pianta. Non appena sarà posizionata sulla tomba del signor Elio, Le invieremo subito la foto qui su WhatsApp.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:21:40.016Z",
+      "operatorBody": "",
+      "prevInbound": "No",
+      "prevAuto": "Il nostro fiorista partner si sta occupando della preparazione e della posa della pianta. Non appena sarà posizionata sulla tomba del signor Elio, Le invieremo subito la foto qui su WhatsApp.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:20:59.162Z",
+      "operatorBody": "",
+      "prevInbound": "No",
+      "prevAuto": "Il nostro fiorista partner si sta occupando della preparazione e della posa della pianta. Non appena sarà posizionata sulla tomba del signor Elio, Le invieremo subito la foto qui su WhatsApp.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:14:47.204Z",
+      "operatorBody": "",
+      "prevInbound": "[reaction]",
+      "prevAuto": "Gentile Carolina,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Elio Bertelli. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+      "prevAutoClass": "workflow",
+      "hoursAfterPrevInbound": 4.5
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:14:32.374Z",
+      "operatorBody": "",
+      "prevInbound": "[reaction]",
+      "prevAuto": "Gentile Carolina,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Elio Bertelli. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+      "prevAutoClass": "workflow",
+      "hoursAfterPrevInbound": 4.5
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:14:16.912Z",
+      "operatorBody": "",
+      "prevInbound": "[reaction]",
+      "prevAuto": "Gentile Carolina,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Elio Bertelli. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+      "prevAutoClass": "workflow",
+      "hoursAfterPrevInbound": 4.5
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-22T12:13:57.412Z",
+      "operatorBody": "",
+      "prevInbound": "[reaction]",
+      "prevAuto": "Gentile Carolina,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Elio Bertelli. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+      "prevAutoClass": "workflow",
+      "hoursAfterPrevInbound": 4.5
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T16:25:08.157Z",
+      "operatorBody": "",
+      "prevInbound": "Grazie",
+      "prevAuto": "Ricevuto, Martina! Ho aggiornato l'IBAN a sistema. Procedo subito con il bonifico di 30,00€ e ti invio la ricevuta appena è pronto. Buon lavoro e buona serata! 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.2
+    },
+    {
+      "name": "Antonella",
+      "phone": "whatsapp:+393275763449",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:22:43.416Z",
+      "operatorBody": "Ordine FT-MC-26-005\n\nGentile Antonella, in merito al Suo ordine.\n\nLa prossima consegna per Anna Maria Rumori al cimitero di Civitanova Alta è prevista per sabato 1 agosto, può andar bene?\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria"
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:19:33.658Z",
+      "operatorBody": "Se mi confermi iban: IT45Y0569651840000035136X21 Procedo con il bonifico e ti mando ricevuta",
+      "prevInbound": "Manca anche il testo del biglietto",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:18:22.383Z",
+      "operatorBody": "Dovresti avere già i nostri dati, ma te li scrivo per sicurezza: FLOREMORIA S.R.L. P.IVA: IT 04188260139   C.F.: 04188260139     VIA BELLINZONA 82/B COMO TEL: +39 3204105305 EMAIL: contabile@floremoria.com PEC: floremoria@pec.it CODICE UNIVOCO: K0ROACV",
+      "prevInbound": "Manca anche il testo del biglietto",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:16:38.695Z",
+      "operatorBody": "Per fare la foto, dovresti usare questo link, è molto più facile e ci aiuta nel lavoro : https://www.floremoria.com/fiorista/consegna/FF-CO-26-001",
+      "prevInbound": "Manca anche il testo del biglietto",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:15:28.022Z",
+      "operatorBody": "TEsto: Salvatore e Daniela sono vicini a tutta la famiglia",
+      "prevInbound": "Manca anche il testo del biglietto",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:14:50.969Z",
+      "operatorBody": "Chiesa in via Vittorio Emanuele, 5 Olgiate Comasco",
+      "prevInbound": "Manca anche il testo del biglietto",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:14:23.123Z",
+      "operatorBody": "Ti riepilogo:",
+      "prevInbound": "Perfetto grazie\nAttendo indirizzo chiesa",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T15:13:54.200Z",
+      "operatorBody": "Martina scusa il sistema ha sbagliato, sono 30€",
+      "prevInbound": "Giusto per essere sicuri",
+      "prevAuto": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T08:00:46.755Z",
+      "operatorBody": "scusa",
+      "prevInbound": "Grazie mille 😇👋👍",
+      "prevAuto": "La ringrazio per essersi rivolto a FloreMoria in un momento così delicato. Sono qui per aiutarLa a organizzare l'omaggio con rispetto e serenità.\n\nMi indichi se desidera un bouquet sulla tomba o un omaggio floreale per il funerale?\n\nCatalogo tombe: https://www.floremoria.com/fiori-sulle-tombe\nFunerale: https://www.floremoria.com/per-il-funerale",
+      "prevAutoClass": "unknown",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:58:32.777Z",
+      "operatorBody": "Bonifico fatto. 🙏",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:58:07.410Z",
+      "operatorBody": "",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:51:19.965Z",
+      "operatorBody": "Perfetto, grazie",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:50:44.251Z",
+      "operatorBody": "Grazie e buon lavoro",
+      "prevInbound": "D'accordo 👍",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:49:44.867Z",
+      "operatorBody": "Non metta confezioni in plastica gentilmente. La consegna è prevista per domani.",
+      "prevInbound": "Grazie",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:48:36.960Z",
+      "operatorBody": "https://www.floremoria.com/fiorista/consegna/FT-MB-26-001",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:48:13.324Z",
+      "operatorBody": "Ieri non le ho detto che alla posa della pianta, dovrebbe fare almeno 1 foto con la nostra mini-app che sarà valida solo per quest'ordine. Basta premere questo link:",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:46:27.200Z",
+      "operatorBody": "Dati per la fattura: FLOREMORIA S.R.L. P.IVA: IT 04188260139   C.F.: 04188260139     VIA BELLINZONA 82/B COMO TEL: +39 3204105305 EMAIL: contabile@floremoria.com PEC: floremoria@pec.it CODICE UNIVOCO: K0ROACV",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:46:01.318Z",
+      "operatorBody": "Perfetto, le facciamo il bonifico in mattinata dell'importo di 20€",
+      "prevInbound": "Grazie",
+      "prevAuto": "Grazie a Lei. Se serve altro, scriva pure qui. 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:44:49.089Z",
+      "operatorBody": "Le diamo il benvenuto tra i fioristi partner di FloreMoria. LE confermo l'ordine FT-MB-26-001 per la posa di un vaso di Kalonche con fiori rosa, viola o azzurri sulla tomba di Elio Bertelli che può trovare al cimitero monumentale di Desio, Campo 7, tomba 83",
+      "prevInbound": "Nel frattempo le mando i dati IBAN x effettuare il pagamento",
+      "prevAuto": "Grazie a Lei. Se serve altro, scriva pure qui. 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-21T07:41:21.288Z",
+      "operatorBody": "Buongiorno Simone, le nostre chat automatiche fanno le bizze..",
+      "prevInbound": "Grazie del tuo messaggio. Al momento non siamo disponibili ma risponderemo appena possibile.\n\nGrazie per aver contattato La Baita Del Fiore Snc - Desio! Facci sapere come possiamo aiutarti.\n\nNel frattempo, puoi visitare i nostri canali Deliveroo, Glovo o Just Eat \n\nhttps://deliveroo.it/menu/milano/desio-nova-milanese/la-baita-del-fiore-snc-via-fratelli-cervi-4?utm_campaign=organic&utm_medium=referrer&utm_source=menu_share\n\nhttps://glovo.go.link/open?adjust_deeplink=glovoapp%3A%2F%2Fopen%3Flink_type%3Dstore%",
+      "prevAuto": "Grazie a Lei. Se serve altro, scriva pure qui. 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-21T06:33:35.129Z",
+      "operatorBody": "Scusi, non ne tenga conto, non doveva partire.",
+      "prevInbound": "Ok grazie",
+      "prevAuto": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Le invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Seguiremo ogni passo con cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+      "prevAutoClass": "workflow",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-20T17:08:04.277Z",
+      "operatorBody": "L’aggiorneremo al momento della posa. Buona serata da tutto lo Staff di FloreMoria 🌹",
+      "prevInbound": "Grazie",
+      "prevAuto": "Prego! Restiamo a Sua completa disposizione per qualsiasi necessità.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-20T17:07:04.553Z",
+      "operatorBody": "D’accordo, segnaliamo la sua scelta.",
+      "prevInbound": "Rosa, viola o azzurro. Eviterei giallo o arancio",
+      "prevAuto": "Prego! Restiamo a Sua completa disposizione per qualsiasi necessità.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-20T16:35:43.053Z",
+      "operatorBody": "Buona sera Carolina, il nostro partner di zona ci chiede se ha preferenze con i colori, perché proprio mercoledì 22 gli arriveranno le piante fresche e ci da la possibilità di scelta. Grazie",
+      "prevInbound": "Ok grazie",
+      "prevAuto": "Prego! Restiamo a Sua completa disposizione per qualsiasi necessità.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 7
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:21:49.513Z",
+      "operatorBody": "Inviato ad Andrea Varesi.",
+      "prevInbound": "Mandi il link PayPal a mio marito",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:20:35.240Z",
+      "operatorBody": "Ok, subito",
+      "prevInbound": "Mandi il link PayPal a mio marito",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:19:39.558Z",
+      "operatorBody": "https://www.floremoria.com/fiori-sulle-tombe/kalonche",
+      "prevInbound": "Oppure posso pagare con carta, Satispay o Apple Pay",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:19:15.443Z",
+      "operatorBody": "Come preferisce, sul sito accettiamo ogni pagamento, invece i link solo PayPal o Stripe",
+      "prevInbound": "Oppure posso pagare con carta, Satispay o Apple Pay",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:12:08.741Z",
+      "operatorBody": "Le abbiamo inviato richiesta tramite PayPal.",
+      "prevInbound": "Va bene",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:07:15.123Z",
+      "operatorBody": "Le invio il link per completare l’ordine e al resto ci pensiamo noi, va bene?",
+      "prevInbound": "Bene grazie mille",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:06:34.715Z",
+      "operatorBody": "Se",
+      "prevInbound": "Poi manderete foto, giusto?",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:06:28.960Z",
+      "operatorBody": "Si, certamente.",
+      "prevInbound": "Poi manderete foto, giusto?",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:01:05.776Z",
+      "operatorBody": "Se vuole può aggiungere un messaggio o un lumino",
+      "prevInbound": "Perfetto",
+      "prevAuto": "Benissimo. Per iniziare, mi potrebbe indicare il nome e cognome del defunto e la data desiderata per la consegna?",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-19T17:00:19.053Z",
+      "operatorBody": "Qui intanto il link alla pianta in vaso: https://www.floremoria.com/fiori-sulle-tombe/kalonche",
+      "prevInbound": "Perfetto",
+      "prevAuto": "Benissimo. Per iniziare, mi potrebbe indicare il nome e cognome del defunto e la data desiderata per la consegna?",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "annabruno365",
+      "phone": "whatsapp:+393386587559",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-17T19:37:38.183Z",
+      "operatorBody": "Buona sera Anna, possiamo farlo senza problemi. Come sa, il costo è in base a cosa scelgono gli utenti, nel suo caso mi dica cosa le serve e le faremo il prezzo migliore possibile.",
+      "prevInbound": "Buonasera se possibile mi servirebbe una consegna a Roma per il 22 luglio un cestino di fiori colorati x una centenaria via Rodriguez Pereira n190  Roma 00136 signora Maria cerulli n.06/35498018  mi faccia sapere il costo grazie",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 2.4
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-17T08:28:06.883Z",
+      "operatorBody": "",
+      "prevInbound": "Grazie una buona giornata a voi 🤗",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-17T08:25:54.310Z",
+      "operatorBody": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nAbbiamo effettuato bonifico e attendiamo fattura.\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+      "prevInbound": "Ok grazie a voi",
+      "hoursAfterPrevInbound": 45.7
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-17T07:26:57.312Z",
+      "operatorBody": "Complimenti per l'iniziativa e grazie del feedback. Buona giornata da tutto lo Staff di FloreMoria 🌹",
+      "prevInbound": "Non con la foto, quello non è arrivato  ma ho visto il link delle memorie",
+      "prevAuto": "La ringraziamo di cuore. Se desidera, il link per la recensione è già stato inviato in questo messaggio.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-17T07:22:19.928Z",
+      "operatorBody": "Perfetto, quindi le era arrivato il messaggio delle : 16-07-2026 | 19:18 con la foto? Il sistema ha creato erroneamente 2 chat con lei e ci sembrava fallita quella.",
+      "prevInbound": "Va bene ieri ho cliccato il link, grazie",
+      "prevAuto": "La ringraziamo di cuore. Se desidera, il link per la recensione è già stato inviato in questo messaggio.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-17T07:14:30.709Z",
+      "operatorBody": "Buongiorno Maria, ieri sera abbiamo avuto un bug nel sistema, il suo bouquet è stato posato ieri pomeriggio. A questo link potrà accedere al suo Giardino della Memoria dove trova ogni suo omaggio floreale. https://www.floremoria.com/auth/magic-photo?token=eyJwIjoie1wib3JkZXJJZFwiOlwiY21ybHhocDkwMDAwMmpuMDRwd2g5Zmx2dlwiLFwiZXhwXCI6MTc4NDM1ODY5NDA5MX0iLCJzIjoiY2YwZTVhYzk2OGYzMmM5NDQ3ZWU1M2JmNTI5YTA4MTM2ZmY4MjY3YWEzYWEyYzc0NjgwMThlNGM5NjQ4M2I0MCJ9.",
+      "prevInbound": "Va bene attendo grazie",
+      "prevAuto": "La ringraziamo di cuore. Se desidera, il link per la recensione è già stato inviato in questo messaggio.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 13.9
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-16T15:58:22.981Z",
+      "operatorBody": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nÈ riuscita a posare i fiori sulla tomba di Carmelo Puliafico? Grazie\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+      "prevInbound": "Ok grazie a voi",
+      "hoursAfterPrevInbound": 29.2
+    },
+    {
+      "name": "+3914152126297",
+      "phone": "whatsapp:+3914152126297",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-16T15:30:58.894Z",
+      "operatorBody": "Buona sera, posso aiutarla?",
+      "prevInbound": "[unsupported]",
+      "prevAuto": "La sto passando a un operatore umano del nostro Staff, che la contatterà il prima possibile.",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-15T10:45:27.514Z",
+      "operatorBody": "Appena saranno posati, Le invieremo un link per accedere al suo Giardino della Memoria, dove sono raccolti i suoi omaggi floreali",
+      "prevInbound": "Perfetto grazie ❤️",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-15T10:44:04.373Z",
+      "operatorBody": "La nostra partner di zona ha confermato la consegna per domani.",
+      "prevInbound": "Grazie",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0.3
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-15T10:43:28.053Z",
+      "operatorBody": "Grazie molte e a domani",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-15T10:43:14.812Z",
+      "operatorBody": "È molto semplice e intuitivo, basta premere il link quando ti trovi davanti alla tomba.",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-15T10:42:38.471Z",
+      "operatorBody": "Per le foto, ti chiediamo la cortesia di usare questo link: https://www.floremoria.com/fiorista/consegna/FT-ME-26-001",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0.1
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-15T10:40:59.311Z",
+      "operatorBody": "Ok, confermato, Grazie",
+      "prevInbound": "[reaction]",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "isTest": false,
+      "at": "2026-07-15T10:34:28.683Z",
+      "operatorBody": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nBuongiorno Domenica, abbiamo un ordine da 30€ per la solita tomba di Carmelo Puliafico. L'utente ci chiede se fosse possibile consegnare domani perché è l'onomastico. Vorrebbe insieme dei fiori Anthurium rossi/versi e gigli bianchi. Puoi confermare?\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria"
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "isTest": false,
+      "at": "2026-07-15T10:24:04.961Z",
+      "operatorBody": "Buongiorno Maria, faremo il possibile, diamo subito l'incarico alla nostra partner di zona.",
+      "prevInbound": "Ok, volevo sapere se è possibile avere la consegna domani 16 per l'onomastico di mio padre, e tra i fiori gli anthurium rossi/verdi e i gigli bianchi, grazie",
+      "prevAuto": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+      "prevAutoClass": "vera_auto",
+      "hoursAfterPrevInbound": 0
+    },
+    {
+      "name": "Daniele",
+      "phone": "whatsapp:+393294921787",
+      "userType": "UTENTE",
+      "isTest": false,
+      "at": "2026-07-14T15:01:08.487Z",
+      "operatorBody": "Ciao Daniele, a presto speriamo 🤞",
+      "prevInbound": "Ciao Salvatore grazie",
+      "hoursAfterPrevInbound": 0
+    }
+  ],
+  "emblematicThreads": [
+    {
+      "name": "Carolina Negrini Bertelli",
+      "phone": "whatsapp:+393312134719",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-19T16:56:45.009Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ciao FloreMoria, avrei bisogno di assistenza. Vorrei chiedervi di portare una Kalonche su una tomba per anniversario della morte. È possibile?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:56:52.177Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Buongiorno. Certamente, è assolutamente possibile consegnare una pianta di Kalanchoe direttamente sulla tomba per questa importante ricorrenza. \n\nIn quale cimitero o comune desidera effettuare la consegna? Può trovare tutte le nostre proposte qui: https://www.floremoria.com/fiori-sulle-tombe 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:57:42.926Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Cimitero monumentale di Desio",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:57:48.930Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Confermo che copriamo il Cimitero Monumentale di Desio per questa ricorrenza così importante. \n\nPuò scegliere e ordinare la Sua Kalanchoe direttamente da questo link: https://www.floremoria.com/fiori-sulle-tombe. Se riscontra difficoltà, mi scriva pure qui e La guiderò io passo dopo passo. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:58:43.563Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Vedo solo bouquet o mazzi ma preferirei una Kalonche",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:58:49.978Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Capisco benissimo, la pianta di Kalanchoe è una scelta molto delicata e duratura. Possiamo occuparcene noi direttamente: se desidera, posso raccogliere i dettagli qui in chat e inviarLe un link di pagamento.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:59:03.023Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Perfetto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T16:59:08.137Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Benissimo. Per iniziare, mi potrebbe indicare il nome e cognome del defunto e la data desiderata per la consegna?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:00:19.053Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Qui intanto il link alla pianta in vaso: https://www.floremoria.com/fiori-sulle-tombe/kalonche",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:01:05.776Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Se vuole può aggiungere un messaggio o un lumino",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:02:51.478Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Bertelli Elio, data di consegna il 22",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:02:58.149Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Perfetto, ho segnato i dettagli per il signor Bertelli Elio per il giorno 22. \n\nDesidera aggiungere un biglietto con dedica o un lumino votivo (al costo di 3,49€)? Saprebbe indicarmi anche la posizione della tomba all'interno del cimitero?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:05:44.352Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Come posizione è campo n.7 è insieme ad altri parenti defunti. No biglietto no lumino, grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:05:46.490Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:06:10.313Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Poi manderete foto, giusto?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:06:28.960Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Si, certamente.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:06:34.715Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Se",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:06:43.232Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Bene grazie mille",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:07:15.123Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Le invio il link per completare l’ordine e al resto ci pensiamo noi, va bene?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:07:34.547Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Va bene",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:12:08.741Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Le abbiamo inviato richiesta tramite PayPal.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:16:38.211Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Può mandare a mio marito varreis@gmail.com io non uso PayPal",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:17:13.499Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Oppure posso pagare con carta, Satispay o Apple Pay",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:19:15.443Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Come preferisce, sul sito accettiamo ogni pagamento, invece i link solo PayPal o Stripe",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:19:39.558Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "https://www.floremoria.com/fiori-sulle-tombe/kalonche",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:20:19.837Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mandi il link PayPal a mio marito",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:20:35.240Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ok, subito",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:21:49.513Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Inviato ad Andrea Varesi.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:22:20.577Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok, dovrebbe aver fatto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:22:26.395Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "La ringrazio moltissimo. Verifichiamo subito la ricezione del pagamento e Le daremo conferma della presa in carico. \n\nIl giorno 22 provvederemo alla consegna della pianta per il signor Elio e Le invieremo la foto della posa. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:22:41.169Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie mille",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:22:47.804Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie a Lei per la fiducia. È un onore per noi prenderci cura del ricordo del signor Elio. Restiamo a Sua completa disposizione. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:23:02.212Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:23:07.852Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Restiamo a Sua completa disposizione. Le auguro una serena giornata.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:23:20.384Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Anche a lei",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-19T17:23:25.829Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie di cuore. Buona giornata a Lei e a Suo marito.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T09:37:07.356Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Ci invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Ci stringiamo al Suo pensiero e seguiremo ogni passo con la massima cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T09:38:09.434Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T09:38:16.931Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Prego! Restiamo a Sua completa disposizione per qualsiasi necessità.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T16:35:43.053Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buona sera Carolina, il nostro partner di zona ci chiede se ha preferenze con i colori, perché proprio mercoledì 22 gli arriveranno le piante fresche e ci da la possibilità di scelta. Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:06:14.731Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Rosa, viola o azzurro. Eviterei giallo o arancio",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:07:04.553Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "D’accordo, segnaliamo la sua scelta.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:07:40.024Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:07:44.467Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:08:04.277Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "L’aggiorneremo al momento della posa. Buona serata da tutto lo Staff di FloreMoria 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-20T17:08:22.509Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok, buona serata",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:03:19.512Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Le invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Seguiremo ogni passo con cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:30:33.726Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:33:00.670Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Le invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Seguiremo ogni passo con cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:33:35.129Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Scusi, non ne tenga conto, non doveva partire.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:34:55.991Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Le invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Seguiremo ogni passo con cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T06:38:30.135Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Carolina,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Elio Bertelli. Le invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Seguiremo ogni passo con cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T06:56:48.355Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "WAITING_UPDATE_TEMPLATE",
+          "body": "Gentile Carolina,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Elio Bertelli. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:45:19.044Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:13:57.412Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:14:16.912Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:14:32.374Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:14:47.204Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:16:56.396Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:17:01.734Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Posso vedere la foto?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:17:04.081Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie a Lei. Le auguro una buona giornata. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:17:09.761Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Il nostro fiorista partner si sta occupando della preparazione e della posa della pianta. Non appena sarà posizionata sulla tomba del signor Elio, Le invieremo subito la foto qui su WhatsApp.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:17:23.111Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:17:40.274Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "No",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:20:59.162Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:21:40.016Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:22:01.790Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:34:34.104Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Non ho ricevuto nulla",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T13:50:40.606Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T16:14:45.396Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Gentile Carolina,\nper il disguido sulle foto della consegna in ricordo di Elio, Le offriamo un buono omaggio di 10€.\n\nCodice: CAROLINA10\nPuò applicarlo qui: https://www.floremoria.com/checkout?discountCode=CAROLINA10\n\nIl codice è personale e valido per 3 mesi (un solo utilizzo).\nRestiamo a Sua disposizione.\nStaff FloreMoria 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T17:30:36.806Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "Simone",
+      "phone": "whatsapp:+393294962856",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-21T07:39:14.334Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie per aver contattato La Baita Del Fiore Snc - Desio! Facci sapere come possiamo aiutarti.\n\nNel frattempo, puoi visitare i nostri canali Deliveroo, Glovo o Just Eat \n\nhttps://deliveroo.it/menu/milano/desio-nova-milanese/la-baita-del-fiore-snc-via-fratelli-cervi-4?utm_campaign=organic&utm_medium=referrer&utm_source=menu_share\n\nhttps://glovo.go.link/open?adjust_deeplink=glovoapp%3A%2F%2Fopen%3Flink_type%3Dstore%26store_id%3D441358&adjust_t=s321jkn\n\nhttps://www.justeat.it/restaurants-la-baita-del-fiore-de",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:39:14.700Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie del tuo messaggio. Al momento non siamo disponibili ma risponderemo appena possibile.\n\nGrazie per aver contattato La Baita Del Fiore Snc - Desio! Facci sapere come possiamo aiutarti.\n\nNel frattempo, puoi visitare i nostri canali Deliveroo, Glovo o Just Eat \n\nhttps://deliveroo.it/menu/milano/desio-nova-milanese/la-baita-del-fiore-snc-via-fratelli-cervi-4?utm_campaign=organic&utm_medium=referrer&utm_source=menu_share\n\nhttps://glovo.go.link/open?adjust_deeplink=glovoapp%3A%2F%2Fopen%3Flink_type%3Dstore%",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:39:16.724Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie a Lei. Se serve altro, scriva pure qui. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:39:17.150Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie a Lei. Se serve altro, scriva pure qui. 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:41:21.288Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buongiorno Simone, le nostre chat automatiche fanno le bizze..",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:41:38.334Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "🤣ho visto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:41:39.661Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buongiorno",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:41:41.198Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "👋",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:43:01.751Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Attendo vs riscontro x il colore e la posizione della tomba",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:43:56.876Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mi confermi anche per domani.... mercoledì....",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:44:40.996Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Nel frattempo le mando i dati IBAN x effettuare il pagamento",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:44:49.089Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Le diamo il benvenuto tra i fioristi partner di FloreMoria. LE confermo l'ordine FT-MB-26-001 per la posa di un vaso di Kalonche con fiori rosa, viola o azzurri sulla tomba di Elio Bertelli che può trovare al cimitero monumentale di Desio, Campo 7, tomba 83",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:45:04.751Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:45:20.448Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "La Baita del Fiore SNC \n\nBanca BPM Desio \n\nIT87P0503433101000000000867",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:45:22.374Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:46:01.318Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Perfetto, le facciamo il bonifico in mattinata dell'importo di 20€",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:46:08.834Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:46:27.200Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Dati per la fattura: FLOREMORIA S.R.L. P.IVA: IT 04188260139   C.F.: 04188260139     VIA BELLINZONA 82/B COMO TEL: +39 3204105305 EMAIL: contabile@floremoria.com PEC: floremoria@pec.it CODICE UNIVOCO: K0ROACV",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:46:44.202Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:48:13.324Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ieri non le ho detto che alla posa della pianta, dovrebbe fare almeno 1 foto con la nostra mini-app che sarà valida solo per quest'ordine. Basta premere questo link:",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:48:36.960Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "https://www.floremoria.com/fiorista/consegna/FT-MB-26-001",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:48:44.796Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok.. d'accordo 👍....ho visto....",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:48:51.343Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:49:44.867Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Non metta confezioni in plastica gentilmente. La consegna è prevista per domani.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:50:14.506Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "D'accordo 👍",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:50:44.251Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Grazie e buon lavoro",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:50:58.151Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ovviamente la lascio libera con un sottovaso.... per farla respirare... visto il caldo 👍",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:51:01.431Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie mille",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:51:02.553Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "👋",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:51:12.606Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:51:19.965Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Perfetto, grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:53:26.073Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T07:58:07.410Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-21T07:58:32.777Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Bonifico fatto. 🙏",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T08:00:19.292Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie mille 😇👋👍",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T08:00:25.942Z",
+          "dir": "OUTBOUND",
+          "class": "unknown",
+          "source": "fallback",
+          "body": "La ringrazio per essersi rivolto a FloreMoria in un momento così delicato. Sono qui per aiutarLa a organizzare l'omaggio con rispetto e serenità.\n\nMi indichi se desidera un bouquet sulla tomba o un omaggio floreale per il funerale?\n\nCatalogo tombe: https://www.floremoria.com/fiori-sulle-tombe\nFunerale: https://www.floremoria.com/per-il-funerale",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T08:00:46.755Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "scusa",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T08:03:37.433Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T06:56:50.464Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "FLORIST_REMINDER_TEMPLATE",
+          "body": "Gentile Simone, Le ricordiamo di completare l'ordine FT-MB-26-001 per il ricordo di Elio Bertelli.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:00:54.402Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Come d'accordo, nel primo pomeriggio.... andremo a consegnare (stamattina arrivano piante fresche).... quando abbiamo consegnato farò la foto e userò il link, come da istruzioni 🙏",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:00:59.393Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie mille e buona giornata 👋",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:01.256Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Perfetto Simone, grazie mille per l'aggiornamento! Attendiamo allora la foto tramite il link dopo la posa nel pomeriggio. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:02.398Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie a te. Se serve altro, scrivimi pure.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:20.634Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "D'accordo 🤝 grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:28.252Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie a te, a più tardi! Buon lavoro 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:39.334Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T07:01:49.744Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Altrettanto 😇",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:00.347Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ordine effettuato",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:08.867Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grande Simone, grazie mille per la consegna! Sei riuscito a caricare la foto tramite il link della mini-app o preferisci inviarmela direttamente qui in chat? Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:27.974Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:03:34.424Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie mille per la foto, Simone! Ordine aggiornato e posa registrata con successo. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:38.396Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Faccio subito",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:42.035Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:03:45.653Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Perfetto Simone, grazie mille per la collaborazione! Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:08.791Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Invio foto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:14.828Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Perfetto Simone, mandale pure qui in chat! Le carico subito a sistema. Grazie mille per il supporto! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:19.782Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Stranamente non riesco a caricare",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:26.147Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Nessun problema Simone! Se la mini-app si è bloccata, prova a ricaricare la pagina o ad aprirla su Chrome o Safari fuori da WhatsApp. \n\nIn alternativa, mandami pure tutte le foto direttamente qui in chat e ci penso io a caricarle a sistema. Come preferisci procedere? 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:30.637Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[unsupported]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:31.676Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:06:32.031Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:06:32.308Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:06:32.474Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T12:06:37.315Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Non sono riuscita a visualizzare l'ultimo file, Simone. Prova a inviarmi la foto direttamente qui in chat come normale immagine, così la carico io a sistema. Grazie! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:37.814Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Foto ricevuta, grazie mille Simone! La carico subito a sistema per aggiornare l'ordine. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:38.609Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Foto ricevute, grazie mille Simone! Ho registrato la consegna e aggiornato l'ordine a sistema con le immagini della posa. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:38.900Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Foto ricevute, grazie mille Simone! Registro subito la consegna a sistema e aggiorno l'ordine. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:39.622Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Foto ricevute, grazie mille Simone! Sono perfette, le carico subito io a sistema per aggiornare l'ordine. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:06:56.758Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "👋",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T12:13:47.823Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Nessun problema 👍",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "Daniele",
+      "phone": "whatsapp:+393294921787",
+      "userType": "UTENTE",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-10T14:08:55.522Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ciao Salvatore, scusa ma soltanto ora il fioraio mi ha detto che si è proprio dimenticato di mandarti la fattura 🤦🏻‍♂️",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:09:01.822Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Buongiorno Daniele, La ringrazio per essersi rivolto a FloreMoria in un momento così delicato. Sono qui per aiutarLa a organizzare l'omaggio con rispetto e serenità.\n\nCiao Daniele! Sono Vera, l'assistente di FloreMoria. Non preoccuparti, non c",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:09:40.044Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mi chiedeva se poteva fartela ora",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:09:45.600Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Daniele, non c'è alcun problema. \n\nPuò dire al\n\nRicordo piccoli amici: https://www.floremoria.com/per-animali-domestici",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:10:11.742Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ciao Daniele",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:10:40.034Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Sai quanti sono preciso?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:10:55.778Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Avevi detto 38",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:11:32.677Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ok",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:11:50.619Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Appena la fa te la mando",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:11:51.156Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Fammi fare la fattura che gliela pago subito",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:11:58.638Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:12:26.897Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mi potresti inviare i dati per favore",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:12:28.413Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Per favore Inviami anche i dati per fare il bonifico",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:12:39.014Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Certo",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:14:34.741Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "FLOREMORIA S.R.L. P.IVA: IT 04188260139   C.F.: 04188260139     VIA BELLINZONA 82/B COMO TEL: +39 3204105305 EMAIL: contabile@floremoria.com PEC: floremoria@pec.it CODICE UNIVOCO: K0ROACV",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:17:08.253Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Li ha trovati grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:17:48.755Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Questa chat sarà sempre più automatizzata, però se serve l’intervento umano, basta che scrivi UMANO e interviene un operatore",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:18:33.088Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ciao Daniele, a presto 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T14:18:58.581Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok grazie 🙋🏻‍♂️",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T14:36:30.512Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ordine 00000000\n\nGentile Daniele, in merito al Suo ordine.\n\nTi informiamo che abbiamo effettuato ieri il bonifico di 38,01€.\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T14:59:28.388Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ciao Salvatore grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T15:01:08.487Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ciao Daniele, a presto speriamo 🤞",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T15:01:39.320Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Certo 👍🏻😉",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T15:01:46.463Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie mille a Lei, Daniele! Rimango a Sua completa disposizione per qualsiasi necessità. Le auguro una serena giornata 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T15:02:41.284Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "❤️",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-14T15:02:47.027Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Un caro saluto anche a Lei, Daniele. \n\nSe in futuro dovesse avere bisogno di qualsiasi informazione o desiderasse inviare un pensiero fiorito, io sono sempre qui a Sua completa disposizione. \n\nLe auguro una splendida giornata 🌹",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "Martina",
+      "phone": "whatsapp:+393397266566",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-21T15:11:53.151Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "FLORIST_NEW_ORDER_TEMPLATE",
+          "body": "Martina | Per Virgilio Persechino | Presso Cremazione, Olgiate Comasco | https://www.floremoria.com/fiorista/consegna/FF-CO-26-001 | FF-CO-26-001 | Compenso 20,00€",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:04.246Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buongiorno, ha l’indirizzo della chiesa ?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:12.614Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Ciao Martina! Verifico subito l'indirizzo esatto della chiesa a Olgiate Comasco e te lo giro tra pochissimo.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:26.277Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mi aveva indicato €30 il bouquet, è cambiato budget ?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:31.966Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Ciao Martina, per questo servizio il compenso registrato a sistema è di 20,00€. Verifico subito con lo staff se c'è stato un errore sul budget e ti do conferma.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:33.944Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Giusto per essere sicuri",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:39.195Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Fai benissimo a verificare, meglio essere sicuri. Sto controllando con lo staff e ti aggiorno subito sul compenso corretto.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:13:54.200Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Martina scusa il sistema ha sbagliato, sono 30€",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:14:22.768Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Perfetto grazie\nAttendo indirizzo chiesa",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:14:23.123Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ti riepilogo:",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:14:48.660Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Manca anche il testo del biglietto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:14:50.969Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Chiesa in via Vittorio Emanuele, 5 Olgiate Comasco",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:15:28.022Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "TEsto: Salvatore e Daniela sono vicini a tutta la famiglia",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:16:38.695Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Per fare la foto, dovresti usare questo link, è molto più facile e ci aiuta nel lavoro : https://www.floremoria.com/fiorista/consegna/FF-CO-26-001",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:18:22.383Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Dovresti avere già i nostri dati, ma te li scrivo per sicurezza: FLOREMORIA S.R.L. P.IVA: IT 04188260139   C.F.: 04188260139     VIA BELLINZONA 82/B COMO TEL: +39 3204105305 EMAIL: contabile@floremoria.com PEC: floremoria@pec.it CODICE UNIVOCO: K0ROACV",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:19:33.658Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Se mi confermi iban: IT45Y0569651840000035136X21 Procedo con il bonifico e ti mando ricevuta",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:23:40.313Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Vi do il nuovo Iban, in quanto abbiamo cambiato banca",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T15:23:46.851Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Perfetto Martina, inviami pure il nuovo IBAN qui in chat. Lo aggiorno subito a sistema per procedere con il bonifico.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:12:56.829Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "IT63L0301503200000006137312",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:01.328Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Banco BPER",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:04.155Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Nuovo IBAN registrato, grazie Martina! Procedo con il bonifico da 30,00€ e ti invio la ricevuta appena è pronto. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:07.325Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Nuovo IBAN registrato, grazie Martina! Procedo subito con il bonifico su Banco BPER e ti invio la ricevuta. Buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:25.568Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "No scusi iban sbagliato",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:29.367Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Rimando quello corretto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:31.067Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Nessun problema Martina, tranquilla! Mandami pure l'IBAN corretto appena puoi, così lo aggiorno subito e procedo con il bonifico.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:13:35.058Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Nessun problema, Martina! Mandami pure quello corretto appena puoi, così lo aggiorno subito.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:14:18.438Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "IT22X0538751840000049298540",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:14:24.560Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Ricevuto, Martina! Ho aggiornato l'IBAN a sistema. Procedo subito con il bonifico di 30,00€ e ti invio la ricevuta appena è pronto. Buon lavoro e buona serata! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:14:46.771Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-21T16:25:08.157Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T09:15:04.823Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[unsupported]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T09:15:07.593Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T09:15:07.612Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-22T09:15:14.062Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "2-3 sentences, very brief).",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T09:15:14.330Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie mille per la foto, Martina! Posa registrata e ordine aggiornato. Buona giornata e buon lavoro! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T09:15:15.619Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Grazie mille per le foto, Martina! Ordine aggiornato e posa registrata. Ti invio la ricevuta del bonifico a breve, buona giornata! 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T09:15:20.314Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buongiorno scusi ho una bambina piccola e mi era sfuggito mi perdoni …",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T09:15:27.590Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Buongiorno Martina, ma figurati, non ti preoccupare assolutamente! Con i bimbi piccoli è normalissimo, ti capiamo benissimo. Grazie ancora per il tuo splendido lavoro e buona giornata! 🌹",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "Torre",
+      "phone": "whatsapp:+393203786024",
+      "userType": "FLORIST",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-15T10:34:28.683Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nBuongiorno Domenica, abbiamo un ordine da 30€ per la solita tomba di Carmelo Puliafico. L'utente ci chiede se fosse possibile consegnare domani perché è l'onomastico. Vorrebbe insieme dei fiori Anthurium rossi/versi e gigli bianchi. Puoi confermare?\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:39:01.689Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:40:59.311Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ok, confermato, Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:42:38.471Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Per le foto, ti chiediamo la cortesia di usare questo link: https://www.floremoria.com/fiorista/consegna/FT-ME-26-001",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:43:14.812Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "È molto semplice e intuitivo, basta premere il link quando ti trovi davanti alla tomba.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:43:28.053Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Grazie molte e a domani",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:44:03.577Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok grazie a voi",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T15:58:22.981Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nÈ riuscita a posare i fiori sulla tomba di Carmelo Puliafico? Grazie\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T08:25:54.310Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Ordine FT-ME-26-001\n\nGentile Domenica, in merito al Suo ordine.\n\nAbbiamo effettuato bonifico e attendiamo fattura.\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T08:27:37.923Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie una buona giornata a voi 🤗",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T08:28:06.883Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "",
+          "hasMedia": true
+        }
+      ]
+    },
+    {
+      "name": "Maria Puliafico",
+      "phone": "whatsapp:+393204910428",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-15T10:21:01.097Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "ORDER_CONFIRM_TEMPLATE",
+          "body": "Gentile Maria,\nLa ringraziamo per aver scelto FloreMoria. Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di Carmelo Puliafico. Ci invieremo la foto... Risponda OK o scriva qui un messaggio per qualsiasi richiesta 🌹 Ci stringiamo al Suo pensiero e seguiremo ogni passo con la massima cura.\nRestiamo a sua disposizione. FloreMoria Staff 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:23:14.288Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok, volevo sapere se è possibile avere la consegna domani 16 per l'onomastico di mio padre, e tra i fiori gli anthurium rossi/verdi e i gigli bianchi, grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:23:17.310Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:24:04.961Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buongiorno Maria, faremo il possibile, diamo subito l'incarico alla nostra partner di zona.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:24:20.893Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:44:04.373Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "La nostra partner di zona ha confermato la consegna per domani.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:44:21.184Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Perfetto grazie ❤️",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:45:27.514Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Appena saranno posati, Le invieremo un link per accedere al suo Giardino della Memoria, dove sono raccolti i suoi omaggi floreali",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-15T10:45:54.432Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[reaction]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T07:03:21.942Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "WAITING_UPDATE_TEMPLATE",
+          "body": "Gentile Maria,\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di Carmelo Puliafico. Il nostro fiorista partner ci confermerà la posa nelle prossime ore.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T07:04:09.023Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ok grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T07:04:17.151Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Prego, gentile Maria. È un vero piacere poterLa assistere in questo momento così importante per il ricordo di Suo padre. Rimango a Sua completa disposizione per qualsiasi altra necessità 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T15:55:10.353Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Il fiorista non è ancora arrivato?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T15:55:19.576Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Maria, capisco perfettamente la Sua premura per questo giorno così importante dedicato al ricordo di Suo padre. Il nostro fiorista partner ha preso in carico i fiori ed è attualmente in fase di consegna. Non appena i fiori saranno posati con cura sulla tomba, Le invierò immediatamente la foto della posa.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T15:55:42.089Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Va bene grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T15:55:50.120Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Prego, gentile Maria. Sarà mia premura scriverLe non appena il fiorista partner avrà completato la posa e mi invierà la foto del Suo omaggio per il Suo papà.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:18:06.851Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "DELIVERY_PHOTO_TEMPLATE",
+          "body": "Buongiorno Sig. Maria, il nostro partner di Mazzarrà Sant'Andrea (ME) ha consegnato i fiori nel ricordo di Carmelo Puliafico. Le alleghiamo la testimonianza fotografica della consegna.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:18:09.846Z",
+          "dir": "OUTBOUND",
+          "class": "unknown",
+          "source": "PROOF_OF_DELIVERY",
+          "body": "Buongiorno Sig. Puliafico, con immensa gioia Le confermiamo che i fiori nel ricordo di Carmelo Puliafico sono stati posati dal nostro partner di Mazzarrà Sant'Andrea (ME). In allegato la foto della consegna 🌹\n\nPuò rivedere tutte le foto nel Suo Giardino della Memoria:\nhttps://floremoria.com/f/VzZ9kqvK\n\nHa ricevuto bene la foto della posa? Scriva OK o ci risponda qui per qualsiasi richiesta 🌹\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-16T17:18:57.301Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Non ho ricevuto le foto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:19:07.041Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Maria, Le chiedo sinceramente scusa per l'attesa.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:19:27.812Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Ma la consegna è stata effettuata?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:19:36.009Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Maria, sto contattando immediatamente il nostro fiorista di zona per verificare lo stato preciso della consegna. Le darò un riscontro sicuro tra pochissimi minuti.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:19:59.934Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Va bene attendo grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-16T17:20:04.270Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "La ringraziamo di cuore. Se desidera, il link per la recensione è già stato inviato in questo messaggio.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:14:30.709Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buongiorno Maria, ieri sera abbiamo avuto un bug nel sistema, il suo bouquet è stato posato ieri pomeriggio. A questo link potrà accedere al suo Giardino della Memoria dove trova ogni suo omaggio floreale. https://www.floremoria.com/auth/magic-photo?token=eyJwIjoie1wib3JkZXJJZFwiOlwiY21ybHhocDkwMDAwMmpuMDRwd2g5Zmx2dlwiLFwiZXhwXCI6MTc4NDM1ODY5NDA5MX0iLCJzIjoiY2YwZTVhYzk2OGYzMmM5NDQ3ZWU1M2JmNTI5YTA4MTM2ZmY4MjY3YWEzYWEyYzc0NjgwMThlNGM5NjQ4M2I0MCJ9.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:16:19.131Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Va bene ieri ho cliccato il link, grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:22:19.928Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Perfetto, quindi le era arrivato il messaggio delle : 16-07-2026 | 19:18 con la foto? Il sistema ha creato erroneamente 2 chat con lei e ci sembrava fallita quella.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:24:17.730Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Non con la foto, quello non è arrivato  ma ho visto il link delle memorie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:26:57.312Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Complimenti per l'iniziativa e grazie del feedback. Buona giornata da tutto lo Staff di FloreMoria 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T07:27:30.867Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buona giornata ❤️",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "annabruno365",
+      "phone": "whatsapp:+393386587559",
+      "userType": "UNKNOWN",
+      "status": "AI_ACTIVE",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-04T15:21:36.345Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Mi scusi ...oggi nn posso",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-04T15:21:41.280Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Buongiorno annabruno365, La ringrazio per essersi rivolto a FloreMoria in un momento così delicato. Sono qui per aiutarLa a organizzare l'omaggio con rispetto e serenità.\n\nNon si preoccupi assolutamente. La ringrazio per avermi avvisata. \n\nPotrà sc",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-04T15:24:43.491Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Va bene anche nei prossimi giorni",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T17:59:06.907Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[unsupported]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T17:59:08.109Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buonasera sono dovuta salire al cimitero e ho fatto la consegna anche senza il bonifico credo di poter stare tranquilla",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-05T17:59:10.392Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-05T17:59:10.482Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Gentile annabruno365, La ringrazio per averci scritto. Al momento non trovo un ordine recente associato al Suo numero: se ha già effettuato un ordine, mi indichi gentilmente il codice (es. FF-PN-26-004) così posso verificare subito lo stato e l'eventuale foto di consegna.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T17:59:12.202Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Anna, mi scusi, purtroppo non sono riuscita a ricevere correttamente il suo ultimo messaggio. \n\nNon si preoccupi assolutamente\n\nRicordo piccoli amici: https://www.floremoria.com/per-animali-domestici",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T17:59:16.566Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Anna, La ringrazio molto per l'invio della foto. \n\nSe\n\nCatalogo fiori sulle tombe: https://www.floremoria.com/fiori-sulle-tombe",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T20:06:48.082Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buona sera Anna, procediamo subito al bonifico, stia tranquilla. In questi giorni di test su Whatsapp le sono arrivati messaggi automatici, non ne tenga conto per favore.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T20:07:50.584Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "purtroppo le immagini non sono arrivate, può gentilmente inviarle a 3287521463? Grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-05T20:18:47.912Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Bonifico istantaneo fatto, può verificare, in questo momento non riesco a inviare foto. Buona serata",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:36:43.399Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[unsupported]",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:36:44.590Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-07T07:36:44.747Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "[media]",
+          "hasMedia": true
+        },
+        {
+          "at": "2026-07-07T07:36:49.819Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile, purtroppo non sono riuscita a visualizzare l'ultimo file che mi ha inv",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:36:50.724Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Anna, La ringrazio molto per l'invio di queste immagini. \n\nLe confer",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:36:50.836Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "La ringrazio infinitamente per l'invio dell'immagine e per la",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:37:00.719Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Grazie x il bonifico provvedo x la fattura",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-07T07:37:05.897Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Anna, La ringrazio molto per la Sua disponibilità e per la conferma",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T17:12:51.921Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buonasera se possibile mi servirebbe una consegna a Roma per il 22 luglio un cestino di fiori colorati x una centenaria via Rodriguez Pereira n190  Roma 00136 signora Maria cerulli n.06/35498018  mi faccia sapere il costo grazie",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T17:12:54.653Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "deterministic",
+          "body": "Grazie di cuore per le Sue parole: per noi è un onore accompagnarLa. Restiamo a Sua disposizione per qualsiasi esigenza 🌹",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T19:37:38.183Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Buona sera Anna, possiamo farlo senza problemi. Come sa, il costo è in base a cosa scelgono gli utenti, nel suo caso mi dica cosa le serve e le faremo il prezzo migliore possibile.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T22:49:34.588Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Vi ringrazio ma ho risolto alla prossima",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-17T22:49:41.127Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Gentile Anna, La ringrazio per averci aggiornato. \n\nSiamo felici che abbia risolto e restiamo a Sua completa disposizione per il futuro. \n\nUna cara e serena serata.",
+          "hasMedia": false
+        }
+      ]
+    },
+    {
+      "name": "Carlo",
+      "phone": "whatsapp:+393385677927",
+      "userType": "FLORIST",
+      "status": "HUMAN_INTERVENTION",
+      "isTest": false,
+      "transcript": [
+        {
+          "at": "2026-07-10T07:37:49.028Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "FLORIST_NEW_ORDER_TEMPLATE",
+          "body": "Carlo | Guido Tomasi | Casa funeraria PFA San Marco, Pordenone | https://www.floremoria.com/fiorista/consegna/FF-PD-26-004 | FF-PD-26-004 | 0,00€",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T07:42:21.756Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Buongiorno ho provato a chiamarvi",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T07:42:27.024Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Ciao Carlo, buongiorno! Scusami se non siamo riusciti a rispondere subito al telefono. \n\nDimmi pure, come posso aiutarti? Riguarda la consegna per Guido Tomasi alla casa funeraria (FF-PD-26-004)?",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T07:59:55.950Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Fatto tutto",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:00:01.000Z",
+          "dir": "OUTBOUND",
+          "class": "vera_auto",
+          "source": "gemini",
+          "body": "Ciao Carlo, grazie mille per l'aggiornamento! \n\nRiusc\n\nCatalogo fiori sulle tombe: https://www.floremoria.com/fiori-sulle-tombe",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:00:33.075Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Grazie Carlo, magnifico come sempre!",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:01:01.166Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "🙏",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:01:27.589Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "Scusa per i messaggi sbagliati, stiamo settando il risponditore AI, ma monitoriamo tutto.",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:04:08.968Z",
+          "dir": "INBOUND",
+          "class": "inbound",
+          "source": "",
+          "body": "Nessun problema. All inizio è sempre normale",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-10T08:05:24.281Z",
+          "dir": "OUTBOUND",
+          "class": "operator",
+          "source": "operator",
+          "body": "🙏🍀 alla prossima!",
+          "hasMedia": false
+        },
+        {
+          "at": "2026-07-22T10:33:49.930Z",
+          "dir": "OUTBOUND",
+          "class": "workflow",
+          "source": "FLORIST_NEW_ORDER_TEMPLATE",
+          "body": "Ciao Carlo! 🌸\nAbbiamo una nuova consegna da affidarti per l'ordine PT-UD-26-004 a Tarcento. 🕊️ In memoria di: Maria Pavani\n📍 Luogo: Flaminio, Tarcento\n💐 Prodotto: Messaggio\n📝 Testo: Prova\n➕ Optional / Accessori: Messaggio\n📌 Note di Consegna: Nessuna nota aggiuntiva\n💶 Compenso per il servizio: 0,00€ Per caricare le foto mentre effettui la consegna puoi usare il link alla mini-app dedicata a questo ordine:\n🔗 https://www.floremoria.com/fiorista/consegna/PT-UD-26-004 Per qualsiasi dubbio o necessità fammi sapere qui in chat. Grazie mille per il tuo supporto!\nVera | Staff FloreMoria 🌹",
+          "hasMedia": false
+        }
+      ]
+    }
+  ]
+}

@@ -25,7 +25,7 @@ const ROW2_BASE: HubButton[] = [
     { id: 'gemini', label: 'Gemini', icon: '✨', url: 'https://gemini.google.com' },
     { id: 'meet', label: 'Meet', icon: '📹', url: 'https://meet.google.com' },
     { id: 'openreply', label: 'OpenReplay', icon: '🤖', url: '#' },
-    { id: 'youdox', label: 'Fatture', icon: '📄', url: '#' },
+    { id: 'youdox', label: 'Contabilità', icon: '💼', url: '/dashboard/finance' },
 ];
 
 const ROW3 = [
@@ -49,7 +49,7 @@ export default function MissionControlHub({
     const youdoxUrl = process.env.NEXT_PUBLIC_YOUDOX_URL || '#';
     const ROW2: HubButton[] = ROW2_BASE.map((btn) =>
         btn.id === 'youdox'
-            ? { ...btn, url: youdoxUrl }
+            ? { ...btn, url: '/dashboard/finance' }
             : btn.id === 'openreply'
               ? { ...btn, url: openReplayUrl }
               : btn,

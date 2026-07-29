@@ -1,0 +1,78 @@
+import { NextResponse } from 'next/server';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { getLedger, addTransaction } from '@/lib/financial/ledgerStore';
+import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
+
+export async function GET() {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const ledger = getLedger();
+        return NextResponse.json({ ok: true, ledger });
+    } catch (error) {
+        console.error('[Finance API GET] Errore:', error);
+        return NextResponse.json({ ok: false, error: 'Errore interno' }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const body = await request.json();
+        const action = String(body.action || '').trim();
+
+        if (action === 'simulate_transaction') {
+            const amountCents = Number(body.amountCents);
+            const side = (body.side === 'card' ? 'card' : body.side === 'sepa' ? 'sepa' : 'iban') as 'iban' | 'card' | 'sepa';
+            const reference = body.reference ? String(body.reference).trim() : null;
+            const counterpartyName = body.counterpartyName ? String(body.counterpartyName).trim() : 'Test Partner';
+
+            if (Number.isNaN(amountCents)) {
+                return NextResponse.json({ ok: false, error: 'Importo non valido' }, { status: 400 });
+            }
+
+            const transaction = {
+                id: `tx_sim_${Date.now()}`,
+                amountCents,
+                currency: 'EUR',
+                side,
+                status: 'completed' as const,
+                reference,
+                counterpartyName,
+                counterpartyIban: body.counterpartyIban || null,
+                emittedAt: new Date().toISOString(),
+                category: null
+            };
+
+            // Ingesta transazione
+            addTransaction(transaction);
+
+            // Riconcilia
+            const recResult = await reconcileTransaction(transaction);
+
+            return NextResponse.json({ 
+                ok: true, 
+                transaction, 
+                reconciliation: recResult,
+                ledger: getLedger()
+            });
+        }
+
+        if (action === 'process_manual_orders') {
+            const count = await processManualOrders();
+            return NextResponse.json({ 
+                ok: true, 
+                processedCount: count,
+                ledger: getLedger() 
+            });
+        }
+
+        return NextResponse.json({ ok: false, error: 'Azione non supportata' }, { status: 400 });
+    } catch (error) {
+        console.error('[Finance API POST] Errore:', error);
+        return NextResponse.json({ ok: false, error: 'Errore interno' }, { status: 500 });
+    }
+}

@@ -90,7 +90,12 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
                 where: {
                     partnerId: partner.id,
                     deletedAt: null,
-                    status: { in: ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING'] }
+                    status: { in: ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING'] },
+                    NOT: {
+                        status: 'PENDING',
+                        partnerPaymentStatus: 'UNPAID',
+                        isTest: false,
+                    },
                 },
                 orderBy: { updatedAt: 'desc' },
                 include: {

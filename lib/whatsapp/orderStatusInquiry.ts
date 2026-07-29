@@ -118,10 +118,13 @@ export function isOrderTrackingInquiry(message: string): boolean {
 }
 
 export function isOrderOpenForVeraContext(
-    order: Pick<Order, 'status'> & { deliveryProof?: Pick<DeliveryProof, 'status'> | null }
+    order: Pick<Order, 'status' | 'partnerPaymentStatus' | 'isTest'> & { deliveryProof?: Pick<DeliveryProof, 'status'> | null }
 ): boolean {
     if (order.status === 'CANCELLED' || order.status === 'COMPLETED') return false;
     if (order.deliveryProof?.status === 'COMPLETED') return false;
+    if (order.status === 'PENDING' && order.partnerPaymentStatus === 'UNPAID' && !order.isTest) {
+        return false;
+    }
     return VERA_ACTIVE_ORDER_STATUSES.includes(order.status);
 }
 
@@ -152,6 +155,11 @@ export async function lookupLastOrderByPhone(phoneE164: string): Promise<OrderWi
         where: {
             deletedAt: null,
             customerPhone: { in: variants },
+            NOT: {
+                status: 'PENDING',
+                partnerPaymentStatus: 'UNPAID',
+                isTest: false,
+            },
         },
         orderBy: { createdAt: 'desc' },
         include: { deliveryProof: true },
@@ -168,7 +176,15 @@ export async function lookupLastOrderByPhone(phoneE164: string): Promise<OrderWi
     if (!user) return null;
 
     return prisma.order.findFirst({
-        where: { deletedAt: null, userId: user.id },
+        where: {
+            deletedAt: null,
+            userId: user.id,
+            NOT: {
+                status: 'PENDING',
+                partnerPaymentStatus: 'UNPAID',
+                isTest: false,
+            },
+        },
         orderBy: { createdAt: 'desc' },
         include: { deliveryProof: true },
     });
@@ -179,6 +195,11 @@ export async function lookupOrderByNumber(orderNumber: string): Promise<OrderWit
         where: {
             deletedAt: null,
             orderNumber: { equals: orderNumber, mode: 'insensitive' },
+            NOT: {
+                status: 'PENDING',
+                partnerPaymentStatus: 'UNPAID',
+                isTest: false,
+            },
         },
         include: { deliveryProof: true },
     });

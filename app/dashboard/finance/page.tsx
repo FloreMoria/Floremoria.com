@@ -27,7 +27,8 @@ import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting'>('transactions');
+    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements'>('transactions');
+    const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     
     // Compliance state
@@ -48,8 +49,9 @@ export default function FinanceDashboardPage() {
         try {
             const res = await fetch('/api/dashboard/finance');
             const data = await res.json();
-            if (data.ok && data.ledger) {
-                setLedger(data.ledger);
+            if (data.ok) {
+                if (data.ledger) setLedger(data.ledger);
+                if (data.statements) setStatements(data.statements);
             }
         } catch (error) {
             console.error('Errore di caricamento ledger:', error);
@@ -114,6 +116,7 @@ export default function FinanceDashboardPage() {
             if (data.ok) {
                 setLastSimResult(data.reconciliation);
                 setLedger(data.ledger);
+                if (data.statements) setStatements(data.statements);
             } else {
                 alert('Errore simulazione: ' + data.error);
             }
@@ -138,6 +141,7 @@ export default function FinanceDashboardPage() {
             const data = await res.json();
             if (data.ok) {
                 setLedger(data.ledger);
+                if (data.statements) setStatements(data.statements);
             }
         } catch (error) {
             console.error('Errore aggiornamento scadenza:', error);
@@ -176,6 +180,7 @@ export default function FinanceDashboardPage() {
             if (data.ok) {
                 alert(`Riconciliati con successo ${data.processedCount} ordini manuali!`);
                 setLedger(data.ledger);
+                if (data.statements) setStatements(data.statements);
             }
         } catch (error) {
             alert('Errore elaborazione ordini manuali');
@@ -650,27 +655,35 @@ export default function FinanceDashboardPage() {
                         onClick={() => setActiveTab('transactions')}
                         className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'transactions' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Movimenti Bancari Estratto Conto ({filteredTransactions.length})
+                        Movimenti Bancari Estratto Conto ({(ledger?.transactions || []).length})
                     </button>
                     <button
                         onClick={() => setActiveTab('accounting')}
                         className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'accounting' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Scritture di Prima Nota ({filteredEntries.length})
+                        Scritture di Prima Nota ({(ledger?.accountingEntries || []).length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('statements')}
+                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'statements' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Simulazione Bilancio &amp; Imposte
                     </button>
                 </div>
 
-                <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
-                    <input
-                        type="text"
-                        placeholder="Cerca per emittente, causale, conto o riferimenti..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
-                    />
-                </div>
+                {activeTab !== 'statements' && (
+                    <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
+                        <input
+                            type="text"
+                            placeholder="Cerca per emittente, causale, conto o riferimenti..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
+                        />
+                    </div>
+                )}
 
-                {activeTab === 'transactions' ? (
+                {activeTab === 'transactions' && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
@@ -731,7 +744,9 @@ export default function FinanceDashboardPage() {
                             </tbody>
                         </table>
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'accounting' && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[900px]">
                             <thead>
@@ -792,6 +807,164 @@ export default function FinanceDashboardPage() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {activeTab === 'statements' && (
+                    <div className="p-6 space-y-8 bg-white">
+                        {!statements ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
+                                <RefreshCw className="animate-spin mb-3 text-[#c5a880]" size={36} />
+                                <p className="text-sm font-medium">Elaborazione bilancio gestionale in corso...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                {/* CONTO ECONOMICO */}
+                                <div className="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                    <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                                        <TrendingUp className="text-emerald-600" size={20} />
+                                        Conto Economico Gestionale (EBITDA)
+                                    </h4>
+                                    <div className="space-y-3.5 text-sm">
+                                        <div className="flex justify-between items-center py-1">
+                                            <span className="text-slate-600 font-medium">Ricavi da Vendite (e-commerce / B2B)</span>
+                                            <span className="font-bold font-mono text-emerald-600">€{(statements.contoEconomico.ricaviVenditeCents / 100).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center py-1 border-b border-slate-100/60 pb-2">
+                                            <span className="text-slate-500 text-xs">di cui Ordini Manuali &amp; B2B</span>
+                                            <span className="font-mono text-slate-600 text-xs">€{((statements.contoEconomico.ricaviVenditeCents - Number(stats.income) * 100) / 100).toFixed(2)}</span>
+                                        </div>
+
+                                        <div className="space-y-2 pt-2">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Dettaglio Costi di Produzione</span>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Costi Fioristi Partner</span>
+                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiFioristiCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Commissioni Stripe</span>
+                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiStripeCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Software SaaS (Cursor, Antigravity, Claude, ecc.)</span>
+                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiSaasCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
+                                                <span className="text-slate-600">Servizi Pubblicitari (Meta, Google Ads, ecc.)</span>
+                                                <span className="font-mono text-rose-600">-€{(statements.contoEconomico.costiMarketingCents / 100).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center pt-3 font-bold text-slate-900 border-t border-slate-200">
+                                            <span>Totale Costi della Produzione</span>
+                                            <span className="font-mono">€{(statements.contoEconomico.totaleCostiCents / 100).toFixed(2)}</span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center p-4 rounded-xl bg-slate-50 border border-slate-100 mt-4 font-display font-bold text-lg text-slate-900">
+                                            <span>Margine Operativo Lordo (EBITDA)</span>
+                                            <span className={`font-mono ${statements.contoEconomico.ebitdaCents >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                €{(statements.contoEconomico.ebitdaCents / 100).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* STATO PATRIMONIALE */}
+                                <div className="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                    <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
+                                        <DollarSign className="text-[#c5a880]" size={20} />
+                                        Stato Patrimoniale Gestionale
+                                    </h4>
+                                    <div className="space-y-4 text-sm">
+                                        <div className="space-y-2">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">ATTIVITÀ (Impieghi)</span>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Disponibilità Liquide (Banca Qonto)</span>
+                                                <span className="font-mono font-semibold text-slate-800">€{(statements.statoPatrimoniale.cassaBancaCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
+                                                <span className="text-slate-600">Crediti v/Clienti (Ordini Manuali/B2B in attesa)</span>
+                                                <span className="font-mono font-semibold text-slate-800">€{(statements.statoPatrimoniale.creditiClientiCents / 100).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">PASSIVITÀ &amp; PATRIMONIO NETTO (Fonti)</span>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Debiti v/Fornitori (Fatture passive inevase nel DB)</span>
+                                                <span className="font-mono text-rose-600">€{(statements.statoPatrimoniale.debitiFornitoriCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1">
+                                                <span className="text-slate-600">Debiti Tributari (IVA Netta a Debito + Ritenute + Imposte Stimate)</span>
+                                                <span className="font-mono text-rose-600">€{(statements.statoPatrimoniale.debitiTributariCents / 100).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
+                                                <span className="text-slate-600">Patrimonio Netto (Capitale Sociale + Utile Stimato)</span>
+                                                <span className="font-mono font-semibold text-emerald-600">€{(statements.statoPatrimoniale.patrimonioNettoCents / 100).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 text-sm">
+                                            <span>Capitale Sociale Semplificato</span>
+                                            <span className="font-mono">€10.000,00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* STIMA IMPOSTE (FULL WIDTH CARD) */}
+                                <div className="xl:col-span-2 bg-slate-900 rounded-2xl p-6 text-white space-y-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
+                                        <div>
+                                            <h4 className="text-lg font-bold flex items-center gap-2">
+                                                <Cpu className="text-[#c5a880]" size={20} />
+                                                Stima Accantonamenti Fiscali (IRES &amp; IRAP)
+                                            </h4>
+                                            <p className="text-xs text-slate-400 mt-1">
+                                                Stima preventiva automatica in base al fatturato reale e ai costi registrati per l&apos;esercizio in corso.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+                                                    JSON.stringify(statements, null, 2)
+                                                )}`;
+                                                const downloadAnchor = document.createElement('a');
+                                                downloadAnchor.setAttribute('href', jsonString);
+                                                downloadAnchor.setAttribute('download', `Bilancio_FidoCommercialista_${new Date().toISOString().split('T')[0]}.json`);
+                                                document.body.appendChild(downloadAnchor);
+                                                downloadAnchor.click();
+                                                downloadAnchor.remove();
+                                            }}
+                                            className="px-4 py-2 bg-[#c5a880] hover:bg-[#b0936b] text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors animate-pulse"
+                                        >
+                                            Esporta per FidoCommercialista
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-slate-800/50 border border-slate-800 p-5 rounded-xl space-y-2">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stima Imposta IRES (24%)</span>
+                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{(statements.stimaImposte.iresCents / 100).toFixed(2)}</h5>
+                                            <p className="text-[10px] text-slate-500 leading-normal">Calcolata sull&apos;utile prima delle imposte gestionale.</p>
+                                        </div>
+
+                                        <div className="bg-slate-800/50 border border-slate-800 p-5 rounded-xl space-y-2">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stima Imposta IRAP (3.9%)</span>
+                                            <h5 className="text-2xl font-bold font-mono text-rose-400">€{(statements.stimaImposte.irapCents / 100).toFixed(2)}</h5>
+                                            <p className="text-[10px] text-slate-500 leading-normal">Calcolata sul valore netto della produzione (ricavi escluse commissioni e servizi SaaS).</p>
+                                        </div>
+
+                                        <div className="bg-[#c5a880]/10 border border-[#c5a880]/30 p-5 rounded-xl space-y-2">
+                                            <span className="text-[10px] font-bold text-[#c5a880] uppercase tracking-widest">Utile Netto Stimato (Post-Imposte)</span>
+                                            <h5 className={`text-2xl font-bold font-mono ${statements.stimaImposte.utileNettoCents >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                €{(statements.stimaImposte.utileNettoCents / 100).toFixed(2)}
+                                            </h5>
+                                            <p className="text-[10px] text-[#c5a880]/70 leading-normal">Fondi netti stimati destinabili a riserva o reinvestimento.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

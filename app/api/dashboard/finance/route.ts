@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getLedger, addTransaction, saveLedger } from '@/lib/financial/ledgerStore';
 import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
+import { calculateFinancialStatements } from '@/lib/financial/statements';
 
 export async function GET() {
     const auth = await requireDashboardAdmin();
@@ -9,7 +10,8 @@ export async function GET() {
 
     try {
         const ledger = getLedger();
-        return NextResponse.json({ ok: true, ledger });
+        const statements = await calculateFinancialStatements();
+        return NextResponse.json({ ok: true, ledger, statements });
     } catch (error) {
         console.error('[Finance API GET] Errore:', error);
         return NextResponse.json({ ok: false, error: 'Errore interno' }, { status: 500 });
@@ -57,7 +59,8 @@ export async function POST(request: Request) {
                 ok: true, 
                 transaction, 
                 reconciliation: recResult,
-                ledger: getLedger()
+                ledger: getLedger(),
+                statements: await calculateFinancialStatements()
             });
         }
 
@@ -66,7 +69,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ 
                 ok: true, 
                 processedCount: count,
-                ledger: getLedger() 
+                ledger: getLedger(),
+                statements: await calculateFinancialStatements()
             });
         }
 
@@ -89,7 +93,11 @@ export async function POST(request: Request) {
             }
 
             saveLedger(currentLedger);
-            return NextResponse.json({ ok: true, ledger: currentLedger });
+            return NextResponse.json({ 
+                ok: true, 
+                ledger: currentLedger,
+                statements: await calculateFinancialStatements()
+            });
         }
 
         return NextResponse.json({ ok: false, error: 'Azione non supportata' }, { status: 400 });

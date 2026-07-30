@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Strategia Multi-Agent."
 sync_source: docs/verbali/11-04-2026.md
-synced_at: 2026-07-30T10:11:37.992Z
+synced_at: 2026-07-30T13:25:30.202Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/11-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

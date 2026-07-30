@@ -53,3 +53,6 @@ CTO-Operatore ibrido. Non completare solo il codice richiesto: sfida le assunzio
 ## Orchestrazione AI (interno repo)
 - Ruoli Cursor (codice) vs Antigravity (strategia / agenti) vs Claude (secondo parere): `docs/FLOREM_AI_ORCHESTRAZIONE.md`
 - Non è una route Next.js: resta documentazione nel repo; non richiede un “go-live” dedicato. Con deploy solo artefatti (es. archivio `.next`) non finisce sul server; con rsync dell’intero progetto può finire come file sul disco senza essere servita al pubblico.
+
+## Regole Assistente Antigravity (Comportamenti Custom)
+- **Regola Log Verbali (Append Mode)**: Per ogni modifica, refactoring o task completato, aggiungi in coda (append) una riga con data, ora e sintesi dell'intervento nel file `docs/verbali/.today_log.txt`. È tassativamente vietato sovrascrivere il file esistente.

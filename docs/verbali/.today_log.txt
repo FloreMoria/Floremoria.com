@@ -1,0 +1,1 @@
+[2026-07-30 21:50] feat/fix: Estratto OrderDetailDrawer condiviso per dashboard ordini/fioristi, inclusa indicazione foto prima della consegna nelle notifiche fiorista, aggiunta regola log in .cursorrules.

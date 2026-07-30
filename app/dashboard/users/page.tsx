@@ -85,7 +85,7 @@ export default async function UsersPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Il Giardino della Memoria</h1>
                 <p className="text-gray-500 font-medium">
-                    Gestione degli Utenti e dello storico ordini fotografici (Scatola della Memoria Infinita).
+                    Gestione degli Utenti e dello storico ordini fotografici (Giardino della Memoria Infinita).
                 </p>
             </div>
 

@@ -419,9 +419,13 @@ export default function ClientUsersTable({
 
             {/* Profilo utente — pagina intera */}
             {selectedUser && (
-                <div className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
-                    <div className="shrink-0 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 shadow-sm">
-                        <div className="flex items-center gap-4 min-w-0">
+                // Sotto il chrome dashboard (navbar h-14 ± banner test) — evita overlap stacking context main/z-10.
+                <div
+                    className="fixed inset-x-0 bottom-0 z-[60] bg-[#FAF9F6] flex flex-col"
+                    style={{ top: 'var(--dashboard-chrome-h, 3.5rem)' }}
+                >
+                    <div className="shrink-0 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-4 sm:py-5 flex items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                             <button
                                 type="button"
                                 onClick={() => setSelectedUser(null)}
@@ -443,7 +447,7 @@ export default function ClientUsersTable({
                                     Il Giardino di {selectedUser.name}
                                 </h2>
                                 <p className="text-sm text-gray-500 font-medium">
-                                    Scatola della Memoria Infinita · {selectedUser.orders.length} consegnati
+                                    Giardino della Memoria Infinita · {selectedUser.orders.length} consegnati
                                 </p>
                             </div>
                         </div>

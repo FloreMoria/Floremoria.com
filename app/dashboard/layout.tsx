@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, type CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
@@ -36,8 +36,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     const isDashboardAdmin = isDashboardAdminRole(userRole);
     const testModeActive = await getDashboardTestModeActive();
 
+    const chromeStyle = {
+        // Altezza chrome superiore (banner test opzionale + navbar h-14) per overlay full-page sotto il menù.
+        ['--dashboard-chrome-h' as string]: testModeActive ? '5.75rem' : '3.5rem',
+    } as CSSProperties;
+
     return (
-        <div className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}>
+        <div
+            className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}
+            style={chromeStyle}
+        >
 
             {testModeActive ? <TestModeBanner /> : null}
             {/* Top Navbar */}

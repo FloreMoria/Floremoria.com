@@ -15,7 +15,7 @@ export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = META_TEMPLATE_LIMITS.warmThought
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
 La ringraziamo per aver scelto FloreMoria.
-Le confermiamo che il nostro partner di fiducia di zona ha preso in carico il Suo omaggio nel ricordo di {{2}}.
+Le confermiamo che abbiamo preso in carico il Suo omaggio nel ricordo di {{2}}.
 
 {{3}}
 Seguiremo ogni passo con la massima cura e restiamo a sua disposizione.
@@ -91,18 +91,25 @@ export function finalizeCustomerConfirmWarmSlot(raw: string): string {
 
 export const MAX_CUSTOMER_CONFIRM_WARM_CHARS = META_TEMPLATE_LIMITS.warmThought;
 
-/**
- * Nome per template: usa il primo token inserito dall'utente (anche corto, es. "ss").
- * Fallback "Utente" solo se assente — il saluto "Gentile [nome]" resta personale.
- */
 export function resolveSafeBuyerFirstName(raw?: string | null): string {
-    const cleaned = (raw || '')
-        .trim()
-        .replace(/^gentile\s+/i, '')
-        .split(/\s+/)[0]
-        ?.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'’-]/g, '') || '';
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return 'Cliente';
 
-    if (!cleaned) return 'Utente';
-    if (cleaned.length <= 2) return cleaned;
-    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    // Rimuoviamo Sig., Sig.ra, Signora, Signor, dr., dott., dott.ssa, gentile, ecc.
+    const clean = trimmed
+        .replace(/^(sig\.|sig\.ra|signora|signor|egregio|egregia|gentile|dott\.|dott\.ssa|dr\.|dr\.ssa)\s+/i, '')
+        .trim();
+
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'Cliente';
+
+    const firstName = parts[0]!;
+    // Sanitizzazione del nome: prendiamo solo caratteri alfabetici
+    const cleanFirstName = firstName.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'’-]/g, '');
+    const lower = cleanFirstName.toLowerCase();
+    if (!cleanFirstName || lower === 'prova' || lower === 'test' || lower === 'sandbox' || lower === 'dev') {
+        return 'Cliente';
+    }
+
+    return cleanFirstName.charAt(0).toUpperCase() + cleanFirstName.slice(1);
 }

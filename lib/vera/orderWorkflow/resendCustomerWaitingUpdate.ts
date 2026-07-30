@@ -162,7 +162,10 @@ export async function resendCustomerWaitingUpdateForOrder(
         deceasedName,
     });
 
-    const send = await sendVeraTemplate(phoneE164, 'customer_waiting_update', bodyParams);
+    const send = await sendVeraTemplate(phoneE164, 'customer_waiting_update', bodyParams, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+    });
     if (!send.ok) {
         return {
             ok: false,

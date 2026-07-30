@@ -6,6 +6,7 @@ import {
     renderGiardinoDellaMemoriaLinkMessage,
     resolvePartnerCity,
     extractBuyerLastName,
+    extractBuyerFirstName,
 } from '@/lib/whatsapp/deliveryProofCopy';
 import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
@@ -131,10 +132,10 @@ export async function sendDeliveryProofWhatsApp(
             imageMessageId = imageSend.messageId;
             linkMessageId = imageSend.messageId; // impostiamo lo stesso ID poiché il messaggio è unico
         } else {
-            // Fuori finestra: usiamo il cognome dell'acquirente per il saluto formale
-            const buyerLastName = extractBuyerLastName(buyerName) || 'Cliente';
+            // Fuori finestra: usiamo il primo nome dell'acquirente per il saluto
+            const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
             const bodyParams = buildCustomerDeliveryPhotoParams({
-                buyerFirstName: buyerLastName,
+                buyerFirstName,
                 partnerCity,
                 deceasedName,
             });
@@ -142,7 +143,11 @@ export async function sendDeliveryProofWhatsApp(
                 phoneE164,
                 'customer_delivery_photo',
                 bodyParams,
-                { headerImageUrl: publicImageUrl }
+                { 
+                    headerImageUrl: publicImageUrl,
+                    orderId: input.orderId,
+                    orderNumber: input.orderNumber
+                }
             );
 
             if (!templateSend.ok) {

@@ -172,7 +172,10 @@ export async function runPuntoBCustomerOrderConfirm(
         warmThought,
     });
 
-    const send = await sendVeraTemplate(phoneE164, 'customer_order_confirm', bodyParams);
+    const send = await sendVeraTemplate(phoneE164, 'customer_order_confirm', bodyParams, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+    });
 
     if (!send.ok) {
         if (!options.force) await releaseWorkflowStep(order.id, 'puntoB_customer');

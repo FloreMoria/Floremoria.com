@@ -128,6 +128,8 @@ export async function sendOperatorChatPhoto(input: {
 
     const templateSend = await sendVeraTemplate(phoneE164, 'customer_delivery_photo', bodyParams, {
         headerImageUrl: publicUrl,
+        orderId: ctx.order.id,
+        orderNumber: ctx.order.orderNumber,
     });
 
     if (!templateSend.ok) {

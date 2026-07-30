@@ -90,7 +90,10 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                     buyerFirstName: name,
                     deceasedName: order.deceasedName,
                 });
-                const send = await sendVeraTemplate(customerPhoneE164, 'customer_waiting_update', bodyParams);
+                const send = await sendVeraTemplate(customerPhoneE164, 'customer_waiting_update', bodyParams, {
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                });
                 if (send.ok) {
                     await logVeraTemplateOutbound({
                         phoneE164: customerPhoneE164,
@@ -130,7 +133,10 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                     orderCode: order.orderNumber || order.id,
                     deceasedName: order.deceasedName,
                 });
-                const send = await sendVeraTemplate(floristPhoneE164, 'florist_reminder', bodyParams);
+                const send = await sendVeraTemplate(floristPhoneE164, 'florist_reminder', bodyParams, {
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                });
                 if (send.ok) {
                     await logVeraTemplateOutbound({
                         phoneE164: floristPhoneE164,

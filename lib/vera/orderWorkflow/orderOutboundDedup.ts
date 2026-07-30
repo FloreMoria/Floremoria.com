@@ -87,3 +87,47 @@ export async function filterUnsentOrderTemplates(
     }
     return { pending, alreadySent };
 }
+
+/**
+ * Verifica se lo stesso template per lo stesso ordine è già stato inviato al cliente nelle ultime 24 ore.
+ */
+export async function wasOrderTemplateSentRecent(
+    orderId: string,
+    templateId: VeraTemplateId,
+    hours: number = 24,
+    orderNumber?: string | null
+): Promise<boolean> {
+    const code = orderNumber?.trim() || null;
+    const sinceDate = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM whatsapp_chat_messages
+        WHERE direction = 'OUTBOUND'
+          AND created_at >= ${sinceDate}
+          AND metadata IS NOT NULL
+          AND (
+            metadata->>'orderId' = ${orderId}
+            OR (${code}::text IS NOT NULL AND metadata->>'orderNumber' = ${code})
+          )
+          AND (
+            metadata->>'templateId' = ${templateId}
+            OR (
+              metadata->>'templateId' IS NULL 
+              AND metadata->>'eventType' IS NOT NULL 
+              AND metadata->>'eventType' = (
+                CASE 
+                  WHEN ${templateId} = 'customer_order_confirm' THEN 'ORDER_CONFIRM_TEMPLATE'
+                  WHEN ${templateId} = 'customer_delivery_photo' THEN 'DELIVERY_PHOTO_TEMPLATE'
+                  WHEN ${templateId} = 'customer_waiting_update' THEN 'WAITING_UPDATE_TEMPLATE'
+                  WHEN ${templateId} = 'florist_reminder' THEN 'FLORIST_REMINDER_TEMPLATE'
+                  WHEN ${templateId} = 'florist_first_001' THEN 'FLORIST_NEW_ORDER_TEMPLATE'
+                  ELSE 'NONE'
+                END
+              )
+            )
+          )
+        LIMIT 1
+    `;
+    return rows.length > 0;
+}

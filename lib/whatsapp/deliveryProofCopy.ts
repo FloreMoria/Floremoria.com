@@ -11,13 +11,35 @@ export function resolvePartnerCity(order: {
     return order.deliveryProvince?.trim() || 'Italia';
 }
 
+export function extractBuyerFirstName(fullName?: string | null): string {
+    const trimmed = (fullName || '').trim();
+    if (!trimmed) return 'Cliente';
+
+    // Rimuoviamo Sig., Sig.ra, Signora, Signor, dr., dott., dott.ssa, gentile, ecc.
+    const clean = trimmed
+        .replace(/^(sig\.|sig\.ra|signora|signor|egregio|egregia|gentile|dott\.|dott\.ssa|dr\.|dr\.ssa)\s+/i, '')
+        .trim();
+
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'Cliente';
+
+    const firstName = parts[0]!;
+    // Sanitizzazione del nome: prendiamo solo caratteri alfabetici
+    const cleanFirstName = firstName.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'’-]/g, '');
+    const lower = cleanFirstName.toLowerCase();
+    if (!cleanFirstName || lower === 'prova' || lower === 'test' || lower === 'sandbox' || lower === 'dev') {
+        return 'Cliente';
+    }
+
+    return cleanFirstName.charAt(0).toUpperCase() + cleanFirstName.slice(1);
+}
+
 export function extractBuyerLastName(fullName?: string | null): string {
     const trimmed = (fullName || '').trim();
     if (!trimmed) return '';
     const parts = trimmed.split(/\s+/).filter(Boolean);
     if (parts.length === 1) return parts[0]!;
     
-    // Rimuovi parole di test comuni alla fine
     let lastIdx = parts.length - 1;
     while (lastIdx > 0) {
         const word = parts[lastIdx]!.toLowerCase();
@@ -30,11 +52,10 @@ export function extractBuyerLastName(fullName?: string | null): string {
     return parts[lastIdx] || parts[parts.length - 1]!;
 }
 
-/** Saluto storico: "Buongiorno Sig. [Cognome]" o "Buongiorno". */
+/** Saluto storico: "Gentile [Nome]" o "Gentile Cliente". */
 export function formatDeliverySalutation(buyerFullName?: string | null): string {
-    const lastName = extractBuyerLastName(buyerFullName);
-    if (!lastName) return 'Buongiorno';
-    return `Buongiorno Sig. ${lastName}`;
+    const firstName = extractBuyerFirstName(buyerFullName);
+    return `Gentile ${firstName}`;
 }
 
 /**
@@ -45,11 +66,12 @@ export function renderDeliveryProofCaption(params: {
     partnerCity: string;
     deceasedName: string;
 }): string {
-    const saluto = formatDeliverySalutation(params.buyerFullName);
+    const firstName = extractBuyerFirstName(params.buyerFullName);
+    const saluto = `Gentile ${firstName},`;
     const defunto = (params.deceasedName || 'chi ama').trim();
     const city = params.partnerCity.trim() || 'zona';
 
-    return `${saluto}, con immensa gioia Le confermiamo che i fiori nel ricordo di ${defunto} sono stati posati con cura al cimitero di ${city}. In allegato la foto della consegna 🌹`;
+    return `${saluto} con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}. In allegato la foto della consegna 🌹`;
 }
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {

@@ -130,7 +130,10 @@ async function sendFloristCascade(input: {
             continue;
         }
 
-        const result = await sendVeraTemplate(input.phoneE164, step.template, step.params);
+        const result = await sendVeraTemplate(input.phoneE164, step.template, step.params, {
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+        });
         if (!result.ok) {
             return {
                 ok: false,
@@ -444,7 +447,10 @@ export async function runPuntoAFloristNewOrder(
             formattedDeliveryUrl,
             formattedOrderCode,
             formattedCompensation,
-        ]);
+        ], {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+        });
         if (fallback.ok) {
             await logFloristTemplateToDashboard({
                 phoneE164: floristPhoneE164,

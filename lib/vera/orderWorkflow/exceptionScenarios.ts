@@ -68,7 +68,7 @@ export async function handleFloristException(input: {
             await sendVeraTemplate(order.partner.whatsappNumber, 'florist_tomb_not_found', [
                 orderCode,
                 order.deceasedName,
-            ]);
+            ], { orderId: order.id, orderNumber: orderCode });
         }
 
         const customerPhone = normalizePhoneE164(order.customerPhone);
@@ -76,7 +76,7 @@ export async function handleFloristException(input: {
             const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
             await sendWhatsAppTextMessage(
                 customerPhone,
-                `Gentile ${name || 'Utente'}, il fiorista non ha individuato la tomba per l'ordine ${orderCode}. ` +
+                `Gentile ${name || 'Utente'}, non abbiamo individuato la tomba per l'ordine ${orderCode}. ` +
                     'Potrebbe indicarci con precisione settore, fila e numero? La ringraziamo.'
             );
         }
@@ -115,7 +115,7 @@ export async function handleFloristException(input: {
                 name || 'Utente',
                 order.deceasedName,
                 order.cemeteryName,
-            ]);
+            ], { orderId: order.id, orderNumber: orderCode });
         }
 
         await setVeraOperationalAlert({

@@ -5,6 +5,7 @@ import {
 import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { describeTemplateParamMapping } from '@/lib/whatsapp/veraTemplateParams';
+import { wasOrderTemplateSentRecent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 
 export interface SendVeraTemplateResult {
     ok: boolean;
@@ -47,9 +48,28 @@ export async function sendVeraTemplate(
     phone: string,
     templateId: VeraTemplateId,
     bodyParams: string[],
-    options?: { headerImageUrl?: string; headerTextParams?: string[] }
+    options?: { headerImageUrl?: string; headerTextParams?: string[]; orderId?: string; orderNumber?: string | null }
 ): Promise<SendVeraTemplateResult> {
     const spec = getVeraTemplate(templateId);
+
+    // Controllo Deduplicazione/Idempotenza basato su orderId nelle ultime 24 ore
+    if (options?.orderId) {
+        try {
+            const alreadySent = await wasOrderTemplateSentRecent(
+                options.orderId,
+                templateId,
+                24,
+                options.orderNumber
+            );
+            if (alreadySent) {
+                const msg = `Invio bloccato per prevenzione duplicati: template ${templateId} già inviato per l'ordine ${options.orderId} nelle ultime 24 ore.`;
+                console.warn(`[vera-template] ${msg}`);
+                return { ok: false, error: `duplicate_prevented: ${msg}`, errorCode: 409 };
+            }
+        } catch (err) {
+            console.error('[vera-template] Errore durante il controllo deduplicazione:', err);
+        }
+    }
 
     if (bodyParams.length !== spec.bodyParamCount) {
         const msg = `Template ${spec.metaName}: attesi ${spec.bodyParamCount} parametri body, ricevuti ${bodyParams.length}.`;

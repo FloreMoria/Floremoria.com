@@ -132,7 +132,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName'],
         hasImageHeader: true,
         bodyCanonical:
-            'Buongiorno Sig. {{1}}, il nostro partner di {{2}} ha consegnato i fiori nel ricordo di {{3}}. Le alleghiamo la testimonianza fotografica della consegna.',
+            'Gentile {{1}}, con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}. Le alleghiamo la testimonianza fotografica della consegna.',
         description: 'Header immagine + {{1}} nome, {{2}} città partner, {{3}} defunto',
     },
     customer_waiting_update: {
@@ -146,7 +146,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'deceasedName'],
         // Timing generico (ALMA/SOFIA): mai “poche ore” / “prossime ore” — crea attesa troppo precisa.
         bodyCanonical:
-            'Gentile {{1}},\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}. Il nostro fiorista partner ci confermerà la posa non appena sarà completata.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹',
+            'Gentile {{1}},\ndesideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}. Le confermeremo la posa non appena sarà completata.\nRestiamo a Sua completa disposizione per qualsiasi necessità.\nA presto dallo Staff di FloreMoria🌹',
         description: '{{1}} nome di battesimo, {{2}} nome defunto — NON usare testi liberi nel campo nome',
     },
     florist_reminder: {

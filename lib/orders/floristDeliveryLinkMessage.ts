@@ -44,6 +44,7 @@ export interface FloristNewOrderMessageInput {
     deliveryUrl?: string;
     orderId?: string;
     partnerNotes?: string | null;
+    province?: string | null;
 }
 
 /** Rimuove il refuso "Gramato" da qualsiasi pezzo di testo outbound. */
@@ -117,17 +118,30 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     if (!rawCity || /non specificato/i.test(rawCity)) {
         rawCity = '';
     }
+    let rawProvince = (input.province || '').trim();
+    if (rawProvince && !/non specificato/i.test(rawProvince)) {
+        rawProvince = rawProvince.replace(/[()]/g, '');
+    } else {
+        rawProvince = '';
+    }
+
+    let cityLabel = stripGramatoArtifact(rawCity);
+    if (cityLabel && rawProvince) {
+        cityLabel = `${cityLabel} (${rawProvince.toUpperCase()})`;
+    } else if (!cityLabel) {
+        cityLabel = 'zona da confermare';
+    }
+
     let rawCemetery = (input.cemeteryName?.trim() || '').trim();
     if (!rawCemetery || /non specificato/i.test(rawCemetery)) {
         rawCemetery = '';
     }
 
-    const city = stripGramatoArtifact(rawCity) || 'zona da confermare';
     let cemetery = stripGramatoArtifact(rawCemetery);
-    if (!cemetery && city && city !== 'zona da confermare') {
-        cemetery = `Cimitero di ${city}`;
+    if (!cemetery) {
+        const pureCity = stripGramatoArtifact(rawCity) || '';
+        cemetery = pureCity ? `Cimitero Comunale di ${pureCity}` : 'Cimitero Comunale';
     }
-    cemetery = cemetery || 'Cimitero';
 
     let rawDeceased = (input.deceasedName || '').trim();
     if (!rawDeceased || /non specificato/i.test(rawDeceased)) {
@@ -135,7 +149,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     }
     const deceased = sanitizeLine(rawDeceased, 'il caro defunto');
 
-    const luogo = `${cemetery}, ${city}`;
+    const luogo = `${cityLabel}, ${cemetery}`;
     const prodotto = stripGramatoArtifact(formatFloristOrderProductsLabel(input.items));
 
     let rawTicket = (input.ticketMessage || '').trim();
@@ -170,7 +184,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
 
     const body =
         `Ciao ${floristName}! 🌸\n` +
-        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${city} - ${cemetery}.\n` +
+        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${cityLabel} - ${cemetery}.\n` +
         `🕊️ In memoria di: ${deceased}\n` +
         `📍 Luogo: ${luogo}\n` +
         `💐 Prodotto: ${prodotto}\n` +

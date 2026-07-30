@@ -65,7 +65,6 @@ function formatLocation(city: string | null | undefined, cemetery: string | null
 export async function resolveVeraCallerContext(session: ChatSession): Promise<VeraCallerContext> {
     const phoneE164 = normalizePhoneE164(session.phone.replace(/^whatsapp:/i, ''));
     const displayName = resolveDisplayName(session);
-    const firstName = displayName ? extractFirstName(displayName) : null;
 
     let order = null;
     let partnerName: string | null = null;
@@ -141,6 +140,11 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const structuredDeliveryAddress = [grave, location].filter(Boolean).join(' — ') || null;
     const photosAlreadySentInChat = sessionHasRecentOutboundPhotos(session);
 
+    const rawNameForFirst = session.userType === 'FLORIST' 
+        ? (partnerName || displayName) 
+        : (order?.buyerFullName || displayName);
+    const firstName = rawNameForFirst ? extractVeraFirstName(rawNameForFirst) : null;
+
     const mode: VeraConversationMode =
         session.userType === 'FLORIST'
             ? 'fiorista'
@@ -184,6 +188,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
     const lines = [
         '=== CONTESTO DETTAGLIATO E DINAMICO DELL\'ORDINE (DATABASE) ===',
         `Chi sta parlando: ${whoIsTalking}`,
+        `Nome di battesimo da usare per il saluto (Usa questo per "Gentile [Nome]" o "Buongiorno [Nome]"): ${ctx.firstName || 'Non specificato'}`,
         `Telefono: ${ctx.phoneE164 ?? 'Non disponibile'}`,
         `Ruolo interlocutore: ${ctx.userType}`,
         `Stato conversazione: ${ctx.mode === 'pre_acquisto' ? 'PRE-ACQUISTO (Nessun ordine attivo)' : ctx.mode === 'ordine_attivo' ? 'ORDINE ATTIVO' : 'FIORISTA PARTNER'}`,
@@ -231,4 +236,27 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
     }
 
     return lines.filter(Boolean).join('\n');
+}
+
+export function extractVeraFirstName(fullName?: string | null): string {
+    const trimmed = (fullName || '').trim();
+    if (!trimmed) return '';
+
+    // Rimuoviamo Sig., Sig.ra, Signora, Signor, dr., dott., dott.ssa, gentile, ecc.
+    const clean = trimmed
+        .replace(/^(sig\.|sig\.ra|signora|signor|egregio|egregia|gentile|dott\.|dott\.ssa|dr\.|dr\.ssa)\s+/i, '')
+        .trim();
+
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '';
+
+    const firstName = parts[0]!;
+    // Sanitizzazione del nome: prendiamo solo caratteri alfabetici
+    const cleanFirstName = firstName.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'’-]/g, '');
+    const lower = cleanFirstName.toLowerCase();
+    if (!cleanFirstName || lower === 'prova' || lower === 'test' || lower === 'sandbox' || lower === 'dev') {
+        return '';
+    }
+
+    return cleanFirstName.charAt(0).toUpperCase() + cleanFirstName.slice(1);
 }

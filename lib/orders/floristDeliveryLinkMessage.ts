@@ -43,6 +43,7 @@ export interface FloristNewOrderMessageInput {
     >;
     deliveryUrl?: string;
     orderId?: string;
+    partnerNotes?: string | null;
 }
 
 /** Rimuove il refuso "Gramato" da qualsiasi pezzo di testo outbound. */
@@ -111,25 +112,52 @@ export function sanitizeFloristDeliveryNotes(
 export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageInput): string {
     const floristName = sanitizeLine(input.floristFirstName, 'Partner');
     const orderCode = input.orderCode.trim() || '—';
-    const city = sanitizeLine(
-        input.city?.trim() || input.cemeteryCity?.trim() || '',
-        'zona da confermare'
-    );
-    const deceased = sanitizeLine(input.deceasedName, 'il caro defunto');
-    const luogo = buildLuogoConsegna(input);
+
+    let rawCity = (input.city?.trim() || input.cemeteryCity?.trim() || '').trim();
+    if (!rawCity || /non specificato/i.test(rawCity)) {
+        rawCity = '';
+    }
+    let rawCemetery = (input.cemeteryName?.trim() || '').trim();
+    if (!rawCemetery || /non specificato/i.test(rawCemetery)) {
+        rawCemetery = '';
+    }
+
+    const city = stripGramatoArtifact(rawCity) || 'zona da confermare';
+    let cemetery = stripGramatoArtifact(rawCemetery);
+    if (!cemetery && city && city !== 'zona da confermare') {
+        cemetery = `Cimitero di ${city}`;
+    }
+    cemetery = cemetery || 'Cimitero';
+
+    let rawDeceased = (input.deceasedName || '').trim();
+    if (!rawDeceased || /non specificato/i.test(rawDeceased)) {
+        rawDeceased = '';
+    }
+    const deceased = sanitizeLine(rawDeceased, 'il caro defunto');
+
+    const luogo = `${cemetery}, ${city}`;
     const prodotto = stripGramatoArtifact(formatFloristOrderProductsLabel(input.items));
-    const ticket = sanitizeLine(input.ticketMessage, 'Nessuno');
+
+    let rawTicket = (input.ticketMessage || '').trim();
+    if (!rawTicket || /non specificato/i.test(rawTicket)) {
+        rawTicket = '';
+    }
+    const ticket = sanitizeLine(rawTicket, 'Nessuno');
+
     const optionals = buildOrderOptionalsList(input.items).map(stripGramatoArtifact);
     const accessori = optionals.length
         ? optionals.join(', ')
         : 'Nessun accessorio extra';
-    const note = sanitizeFloristDeliveryNotes(
-        input.additionalInstructions,
-        input.gravePosition
-    );
+
+    let rawNote = (input.additionalInstructions || '').trim();
+    if (!rawNote || /non specificato/i.test(rawNote)) {
+        rawNote = '';
+    }
+    const note = sanitizeFloristDeliveryNotes(rawNote, input.gravePosition);
 
     const compensation = calculateFloristCompensation(
-        input.items as Parameters<typeof calculateFloristCompensation>[0]
+        input.items as Parameters<typeof calculateFloristCompensation>[0],
+        input.partnerNotes
     );
     const compenso = formatFloristCompensationForTemplate(compensation);
 
@@ -142,7 +170,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
 
     const body =
         `Ciao ${floristName}! 🌸\n` +
-        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${city}.\n` +
+        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${city} - ${cemetery}.\n` +
         `🕊️ In memoria di: ${deceased}\n` +
         `📍 Luogo: ${luogo}\n` +
         `💐 Prodotto: ${prodotto}\n` +
@@ -153,7 +181,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         `Inviaci fattura che effettuiamo subito il bonifico istantaneo.\n` +
         `Per caricare le foto mentre effettui la consegna dovresti usare il link alla mini-app dedicata a questo ordine:\n` +
         `🔗 ${deliveryUrl}\n\n` +
-        `Per qualsiasi dubbio o necessità fammi sapere qui in chat.\n` +
+        `Per qualsiasi dubbio o necessità fammi sapere qui in chat. Mi confermi?\n` +
         `Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;
 

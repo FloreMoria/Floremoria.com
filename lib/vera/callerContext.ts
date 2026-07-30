@@ -68,6 +68,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
 
     let order = null;
     let partnerName: string | null = null;
+    let partnerNotes: string | null = null;
 
     if (session.userType === 'FLORIST' && phoneE164) {
         const phoneDigits = phoneE164.replace(/\D/g, '');
@@ -79,11 +80,12 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
                     { whatsappNumber: { contains: phoneDigits.slice(-9) } },
                 ],
             },
-            select: { id: true, shopName: true, ownerName: true },
+            select: { id: true, shopName: true, ownerName: true, internalNotes: true },
         });
 
         if (partner) {
             partnerName = partner.ownerName || partner.shopName || null;
+            partnerNotes = partner.internalNotes || null;
             // Trova l'ultimo ordine attivo per questo fiorista
             order = await prisma.order.findFirst({
                 where: {
@@ -132,7 +134,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         : null;
     const floristCompensation =
         session.userType === 'FLORIST' && order
-            ? formatFloristCompensationForTemplate(calculateFloristCompensation(order.items))
+            ? formatFloristCompensationForTemplate(calculateFloristCompensation(order.items, partnerNotes))
             : null;
 
     const location = order ? formatLocation(order.cemeteryCity, order.cemeteryName) : null;

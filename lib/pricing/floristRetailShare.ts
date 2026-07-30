@@ -69,7 +69,9 @@ export function resolveFloristCompensationCentsFromRetail(input: {
 
     const retail = input.basePriceCents;
     if (retail != null && retail > 0) {
-        return Math.round(retail * FLORIST_RETAIL_SHARE);
+        const calculatedCents = retail * FLORIST_RETAIL_SHARE;
+        const roundedEuros = Math.round(calculatedCents / 100);
+        return roundedEuros * 100;
     }
 
     return null;

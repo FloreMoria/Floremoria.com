@@ -266,7 +266,7 @@ export async function runPuntoAFloristNewOrder(
 
     const floristName = extractFirstName(order.partner.ownerName || order.partner.shopName);
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
-    const compensation = calculateFloristCompensation(order.items);
+    const compensation = calculateFloristCompensation(order.items, order.partner?.internalNotes);
     const compensationLabel = formatFloristCompensationForTemplate(compensation);
     const orderCode = order.orderNumber || order.id;
     const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
@@ -330,6 +330,7 @@ export async function runPuntoAFloristNewOrder(
         items: order.items,
         deliveryUrl,
         orderId: order.id,
+        partnerNotes: order.partner?.internalNotes,
     });
 
     // Percorso primario: free-text strutturato (titolo + dettagli + link).

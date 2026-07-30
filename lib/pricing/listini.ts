@@ -139,7 +139,7 @@ export function resolveListinoEntry(
 
 export function formatFloristCompensationEur(cents: number): string {
     const euros = cents / 100;
-    return `${euros.toFixed(2).replace('.', ',')}€`;
+    return `${Math.round(euros)}€`;
 }
 
 export interface OrderLineForListino {

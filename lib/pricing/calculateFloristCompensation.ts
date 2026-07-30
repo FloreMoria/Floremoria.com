@@ -27,8 +27,32 @@ export type OrderLineForCompensation = OrderLineForListino & {
  * poi listino fisso tombe/funebre come fallback.
  */
 export function calculateFloristCompensation(
-    orderItems: OrderLineForCompensation[]
+    orderItems: OrderLineForCompensation[],
+    partnerNotes?: string | null
 ): FloristCompensationResult {
+    // Se c'è un compenso specifico concordato presente nelle note interne del fiorista (es. "Compenso concordato: 18€" o "Compenso: 18")
+    if (partnerNotes) {
+        const match = partnerNotes.match(/compenso\s*(?:concordato|fiorista)?\s*(?::|=)?\s*(\d+)\s*(?:€|eur)?/i);
+        if (match && match[1]) {
+            const euros = parseInt(match[1], 10);
+            if (!isNaN(euros) && euros > 0) {
+                const partnerCents = euros * 100;
+                return {
+                    totalCents: partnerCents,
+                    totalLabel: `${euros}€`,
+                    lines: [{
+                        productName: 'Compenso specifico partner concordato',
+                        quantity: 1,
+                        unitCents: partnerCents,
+                        lineCents: partnerCents,
+                        listinoLabel: 'Note profilo fiorista',
+                    }],
+                    unmappedProducts: [],
+                };
+            }
+        }
+    }
+
     const lines: FloristCompensationResult['lines'] = [];
     const unmappedProducts: string[] = [];
     let totalCents = 0;

@@ -32,6 +32,11 @@ export default async function FloristDossierPage({ params }: { params: { id: str
 
     const activeOrders = partner.orders.filter((o) => o.status !== 'CANCELLED' && !o.deletedAt).length;
 
+    const florists = await prisma.partner.findMany({
+        where: { deletedAt: null, isActive: true },
+        select: { id: true, shopName: true, ownerName: true },
+    });
+
     return (
         <div className="fixed top-14 left-0 right-0 bottom-0 z-40 bg-[#FAF9F6] flex flex-col print:static print:inset-auto print:z-auto">
             <ClientFloristDossierHeader partner={partner} />
@@ -145,6 +150,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                     <ClientFloristDossier
                         partner={partner}
                         orders={partner.orders.map(enrichOrderWithShareableLinks)}
+                        florists={florists}
                     />
                 </div>
             </div>

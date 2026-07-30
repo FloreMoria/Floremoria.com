@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "📋 Verbale Strategico Integrale — 30 Luglio 2026"
 sync_source: docs/verbali/30-07-2026.md
-synced_at: 2026-07-30T19:37:40.339Z
+synced_at: 2026-07-30T20:11:45.831Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/30-07-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -60,3 +60,14 @@ Attivati e testati con successo i 4 server MCP locali (`~/.cursor/mcp.json`):
 ## 📌 Sezione 5 — Nuova Regola Operativa
 - **Flusso Verbali:** Il verbale di fine giornata viene redatto unicamente dalla Regia Centrale (questa chat) per consolidare le attività svolte sia su Antigravity sia su Cursor, evitando dispersioni.
 - **Sincronizzazione:** Il salvataggio su `docs/verbali/` e il sync con Obsidian/GitHub avviene con un unico comando esecutivo senza copia-incolla manuale di file.
+
+---
+
+## Registro operativo automatico (.today_log)
+
+Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
+
+- [2026-07-30 21:50] feat/fix: Estratto OrderDetailDrawer condiviso per dashboard ordini/fioristi, inclusa indicazione foto prima della consegna nelle notifiche fiorista, aggiunta regola log in .cursorrules.
+- [2026-07-30 21:53] chore(rules): registrata Regola Log Verbali Append Mode in .cursor/rules/log-verbali-append.mdc e allineato .cursorrules.
+- [2026-07-30 22:01] chore(ops): creato scripts/daily-verbale-cron.sh (23:50: log→verbale→sync→commit/push→reset) e preparata installazione crontab.
+- [2026-07-30 22:09] chore(ops): sostituito crontab con LaunchAgent com.floremoria.daily-verbale (23:50) — cron non presente in Privacy macOS.

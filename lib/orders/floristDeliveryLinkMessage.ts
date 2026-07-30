@@ -3,6 +3,7 @@ import { formatFloristOrderProductsLabel } from '@/lib/orders/formatFloristProdu
 import {
     buildOrderOptionalsList,
     stripInternalNotes,
+    hasPhotoBeforeOption,
     type OrderItemLike,
 } from '@/lib/orders/orderOptionals';
 import {
@@ -159,6 +160,9 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     const ticket = sanitizeLine(rawTicket, 'Nessuno');
 
     const optionals = buildOrderOptionalsList(input.items).map(stripGramatoArtifact);
+    if (hasPhotoBeforeOption(input.items)) {
+        optionals.unshift('📸 FOTO STATO DI FATTO PRIMA DELLA CONSEGNA');
+    }
     const accessori = optionals.length
         ? optionals.join(', ')
         : 'Nessun accessorio extra';

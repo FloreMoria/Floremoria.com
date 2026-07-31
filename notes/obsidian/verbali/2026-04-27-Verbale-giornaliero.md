@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Business Continuity & Hosting."
 sync_source: docs/verbali/27-04-2026.md
-synced_at: 2026-07-30T20:55:08.275Z
+synced_at: 2026-07-31T01:48:51.799Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/27-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

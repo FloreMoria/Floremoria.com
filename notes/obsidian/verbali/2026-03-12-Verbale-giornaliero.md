@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Implementazione di una dashboard analitica profonda con log tracker dinamico in PostgreSQL, Tag Cloud esplorabile e navigazione incrociata senza refresh di pagina."
 sync_source: docs/verbali/12-03-2026.md
-synced_at: 2026-07-31T13:30:34.371Z
+synced_at: 2026-07-31T17:18:40.068Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/12-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

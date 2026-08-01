@@ -24,8 +24,10 @@ export { buildVeraWhatsAppSystemInstruction } from '@/lib/vera/systemPrompt';
 export { buildGenderMorphologyBlock, detectGenderFromName, extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 export { sanitizeWhatsAppDisplayName, isUsableWhatsAppPersonName } from '@/lib/vera/displayName';
 export {
+    buildCourtesyScheduleConfirmReply,
     buildSymmetricCourtesyReply,
     hasOperationalServiceIntent,
+    isCourtesyScheduleConfirmation,
     isIsolatedCourtesyMessage,
     shouldSilenceVeraReply,
     VERA_INTENT_BEFORE_ACTION_RULE,

@@ -11,10 +11,16 @@
  */
 
 import {
+    buildCourtesyScheduleConfirmReply,
+    isCourtesyScheduleConfirmation,
     isIsolatedCourtesyMessage,
     isShortAckWithoutOperationalIntent,
     shouldSilenceVeraReply,
 } from '@/lib/vera/courtesyDebounce';
+import {
+    buildCourtesyConfirmIntentFingerprint,
+    tryClaimConversationIntent,
+} from '@/lib/whatsapp/veraWebhookDedup';
 import {
     buildDeliveryAlreadyDoneReply,
     isAskingAboutPhotosOrDelivery,
@@ -79,7 +85,7 @@ import {
 } from '@/lib/vera/conversationScenarioHandlers';
 
 const FLORIST_AFFIRMATIVE_PATTERN =
-    /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|ricevut[oa]|disponibile|preso\s+in\s+carico)/i;
+    /^(ok|si|sì|accett[oa]|conferm[oa]|va\s+bene|va\s+benissimo|ricevut[oa]|disponibile|preso\s+in\s+carico)|(?:luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica).{0,40}(va\s+benissimo|va\s+bene|perfetto|confermo)/i;
 
 export const VERA_CLOSING_SIGNATURE =
     'Tutto lo Staff di FloreMoria le augura il meglio e la saluta cordialmente 🌹';
@@ -415,7 +421,21 @@ export async function generateVeraReply(
 
     const callerContext = await resolveVeraCallerContext(session);
 
-    // Fiorista "ok" su ordine ACCEPTED: prima del silence (OK sarebbe silenziato come ack).
+    const scheduleConfirm = isCourtesyScheduleConfirmation(message);
+
+    // Conferma cortesia/data: claim immediato in DB → stesso intento non riapre Gemini.
+    if (scheduleConfirm && callerContext.phoneE164) {
+        const fingerprint = buildCourtesyConfirmIntentFingerprint(message);
+        const claimed = await tryClaimConversationIntent({
+            phoneE164: callerContext.phoneE164,
+            intentFingerprint: `schedule_confirm:${fingerprint}`,
+        });
+        if (!claimed) {
+            return { text: '', source: 'silence', shouldEscalate: false };
+        }
+    }
+
+    // Fiorista "ok" / "Lunedì va benissimo" su ordine ACCEPTED → IN_PROGRESS immediato.
     if (session.userType === 'FLORIST' && callerContext.phoneE164 && FLORIST_AFFIRMATIVE_PATTERN.test(message.trim())) {
         const phoneDigits = callerContext.phoneE164.replace(/\D/g, '');
         const partner = await import('@/lib/prisma').then((m) =>
@@ -462,6 +482,17 @@ export async function generateVeraReply(
                 return { text: reply, source: 'deterministic', shouldEscalate: false };
             }
         }
+    }
+
+    if (scheduleConfirm) {
+        return {
+            text: buildCourtesyScheduleConfirmReply({
+                userType: session.userType,
+                displayName: getDisplayNameFromSession(session, callerContext),
+            }),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
     }
 
     // Reaction / cortesia / ack isolati: nessun messaggio in uscita.

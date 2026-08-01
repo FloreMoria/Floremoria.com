@@ -30,6 +30,12 @@ import {
     type MetaInboundMediaMessage,
 } from '@/lib/whatsapp/extractMetaInboundContent';
 import { persistInboundChatMediaToBlob } from '@/lib/whatsapp/persistInboundChatMedia';
+import {
+    hasOutboundReplyForInboundMessageId,
+    releaseVeraOutboundReplyLock,
+    tryClaimInboundWhatsAppMessageId,
+    tryClaimVeraOutboundReplyLock,
+} from '@/lib/whatsapp/veraWebhookDedup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,6 +67,8 @@ interface ParsedIncomingMessage {
     mediaUrl?: string;
     senderName: string;
     silenceVera?: boolean;
+    /** Meta WhatsApp message id (wamid.*) — usato per dedup retry webhook. */
+    inboundMessageId?: string;
 }
 
 function verifyMetaSignature(rawBody: string, signatureHeader: string, appSecret: string): boolean {
@@ -130,6 +138,7 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                     mediaUrl,
                     senderName: contactName || phoneE164,
                     silenceVera,
+                    inboundMessageId: msg.id?.trim() || undefined,
                 });
             }
         }
@@ -149,10 +158,19 @@ async function processIncomingWhatsAppMessage(
     sent?: boolean;
     coalesced?: boolean;
 }> {
-    const { phoneE164, phoneKey, messageText, mediaUrl, senderName, silenceVera } = incoming;
+    const { phoneE164, phoneKey, messageText, mediaUrl, senderName, silenceVera, inboundMessageId } =
+        incoming;
     const inboundBody = messageText || (mediaUrl ? '[media]' : '');
 
     console.info(`[wa-webhook] Messaggio da ${phoneE164} (${senderName}): "${inboundBody.slice(0, 80)}"`);
+
+    // Retry Meta/Twilio: stesso wamid → non ri-processare (né reply, né doppio log inbound).
+    if (inboundMessageId) {
+        const claimed = await tryClaimInboundWhatsAppMessageId(inboundMessageId, phoneE164);
+        if (!claimed) {
+            return { ok: true, skipped: 'duplicate_inbound_message_id' };
+        }
+    }
 
     const blacklisted = await prisma.phoneBlacklist.findUnique({ where: { phone: phoneE164 } });
     if (blacklisted) {
@@ -180,8 +198,12 @@ async function processIncomingWhatsAppMessage(
         });
     }
 
+    const inboundMeta = inboundMessageId
+        ? { whatsAppMessageId: inboundMessageId }
+        : undefined;
+
     if (session.status === 'HUMAN_INTERVENTION') {
-        await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
+        await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl, inboundMeta);
         if (mediaUrl) {
             void persistInboundChatMediaToBlob({
                 sessionPhone: phoneKey,
@@ -209,7 +231,7 @@ async function processIncomingWhatsAppMessage(
         return { ok: true, skipped: 'human_intervention' };
     }
 
-    await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl);
+    await addMessage(phoneKey, 'INBOUND', inboundBody, mediaUrl, inboundMeta);
 
     if (mediaUrl) {
         void persistInboundChatMediaToBlob({
@@ -251,6 +273,7 @@ async function processIncomingWhatsAppMessage(
         senderName,
         inboundBody,
         mediaUrl,
+        inboundMessageId,
     });
 }
 
@@ -260,6 +283,7 @@ async function finalizeVeraOutboundReply(params: {
     senderName: string;
     inboundBody: string;
     mediaUrl?: string | null;
+    inboundMessageId?: string;
 }): Promise<{
     ok: boolean;
     skipped?: string;
@@ -268,7 +292,23 @@ async function finalizeVeraOutboundReply(params: {
     sent?: boolean;
     coalesced?: boolean;
 }> {
-    const { phoneKey, phoneE164, senderName, inboundBody, mediaUrl } = params;
+    const { phoneKey, phoneE164, senderName, inboundBody, mediaUrl, inboundMessageId } = params;
+
+    if (inboundMessageId) {
+        const alreadyReplied = await hasOutboundReplyForInboundMessageId(phoneKey, inboundMessageId);
+        if (alreadyReplied) {
+            console.info(`[wa-webhook] Reply già presente per inbound ${inboundMessageId.slice(0, 24)}…`);
+            return { ok: true, skipped: 'already_replied_to_inbound', sent: false };
+        }
+    }
+
+    const outboundLock = await tryClaimVeraOutboundReplyLock({
+        phoneE164,
+        inboundMessageId,
+    });
+    if (!outboundLock.ok) {
+        return { ok: true, skipped: `outbound_lock_${outboundLock.reason}`, sent: false };
+    }
 
     const updatedSession = await getSession(phoneKey);
     const lastInbound = [...updatedSession.messages].reverse().find((m) => m.direction === 'INBOUND');
@@ -310,6 +350,7 @@ async function finalizeVeraOutboundReply(params: {
             `[wa-webhook] Invio risposta fallito per ${phoneE164} (source: ${veraResult.source}):`,
             sendResult.error
         );
+        await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
     }
 
     if (!sendResult.fallbackExecuted) {
@@ -317,6 +358,8 @@ async function finalizeVeraOutboundReply(params: {
             source: veraResult.source,
             escalated: veraResult.shouldEscalate ? 'true' : 'false',
             ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+            ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
+            eventType: 'VERA_AUTO_REPLY',
         });
     }
 

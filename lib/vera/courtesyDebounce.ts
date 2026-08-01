@@ -64,6 +64,13 @@ const ISOLATED_COURTESY_PATTERN =
 const SHORT_ACK_PATTERN =
     /^(ok|okay|okey|va bene|va benissimo|daccordo|d'accordo|perfetto|ricevuto|certo|si|sì|ok grazie|okok|👍|🙏|✅|🤝|❤️|🌹)$/;
 
+/** Conferma cortese di data/giorno ("Lunedì va benissimo", "Per sabato ok"). */
+const WEEKDAY_OR_DATE_HINT =
+    /\b(luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica)\b|\b\d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?\b/;
+
+const SCHEDULE_CONFIRM_HINT =
+    /\b(va benissimo|va bene|va ottimo|perfetto|daccordo|d'accordo|confermo|ok per|va bene cos[iì]|va benone)\b/;
+
 /** Cortesia di chiusura reciproca: non riaprire loop di saluti. */
 const POST_FAREWELL_COURTESY_PATTERN =
     /^(anche a (lei|te|voi|loro)|altrettanto|ugualmente|di nulla|prego|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie|ok grazie|va bene grazie)$/;
@@ -96,6 +103,43 @@ export function isShortAckWithoutOperationalIntent(message: string): boolean {
     if (hasOperationalServiceIntent(message)) return false;
     const m = normalizeForCourtesy(raw);
     return SHORT_ACK_PATTERN.test(m) || SHORT_ACK_PATTERN.test(raw.toLowerCase());
+}
+
+/**
+ * Conferma di disponibilità/data senza nuova richiesta operativa.
+ * Perché: "Lunedì va benissimo" non deve aprire un secondo prompt di completamento.
+ */
+export function isCourtesyScheduleConfirmation(message: string): boolean {
+    const raw = (message || '').trim();
+    if (!raw || raw.length > 160) return false;
+    if (hasOperationalServiceIntent(message)) {
+        // "consegna" / "ordine" nel testo → lascia al flusso operativo.
+        // Eccezione: se è solo conferma giorno+ok senza verbo di richiesta, resta cortesia.
+        const m = normalizeForCourtesy(raw);
+        const hasRequestVerb = /\b(vorrei|voglio|dev[o]|serve|mandami|inviami|cambi|modific|quanto|dove|quando\s+arriva)\b/.test(
+            m
+        );
+        if (hasRequestVerb) return false;
+    }
+    const m = normalizeForCourtesy(raw);
+    if (!m) return false;
+    return WEEKDAY_OR_DATE_HINT.test(m) && SCHEDULE_CONFIRM_HINT.test(m);
+}
+
+/** Reply deterministica breve dopo conferma data/giorno. */
+export function buildCourtesyScheduleConfirmReply(params: {
+    userType: ChatSession['userType'];
+    displayName?: string;
+}): string {
+    const name = params.displayName?.trim();
+    if (params.userType === 'FLORIST') {
+        return name
+            ? `Perfetto ${name}, annotato. Grazie della conferma!`
+            : 'Perfetto, annotato. Grazie della conferma!';
+    }
+    return name
+        ? `Perfetto, ${name}: ho annotato la conferma. Restiamo a sua disposizione.`
+        : 'Perfetto: ho annotato la conferma. Restiamo a sua disposizione.';
 }
 
 /** Reaction Meta, sticker, sola emoji, o placeholder legacy. */

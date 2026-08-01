@@ -208,7 +208,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             `- Stato Attuale Ordine: ${ctx.orderStatus ?? 'Sconosciuto'}`,
             `- Prodotto acquistato: ${ctx.productsList?.join(', ') || 'Nessun prodotto'}`,
             ctx.userType === 'FLORIST' && ctx.floristCompensation
-                ? `- Compenso fiorista (listino sistema, NON certezza assoluta se contestato): ${ctx.floristCompensation} — se il fiorista chiede/contesta il compenso: NON confermare cifre, escalate allo Staff`
+                ? `- Compenso fiorista (tabella rigida FLOREM_NET, somma articoli — MAI %): ${ctx.floristCompensation} — se contestato: NON inventare, escalate allo Staff (Regola Aurea)`
                 : '',
             `- Opzione "Foto prima della posa": ${ctx.hasPhotoBefore ? 'ATTIVA (Il fiorista deve inviare sia la foto prima che dopo la posa)' : 'DISATTIVA (Il fiorista deve inviare solo la foto dopo la posa)'}`,
             ctx.optionals && ctx.optionals.length

@@ -4,6 +4,7 @@ import {
 } from '@/lib/vera/orderWorkflow';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import prisma from '@/lib/prisma';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 export type DashboardManualOrderVeraResult =
     | { skipped: string }
@@ -12,8 +13,8 @@ export type DashboardManualOrderVeraResult =
 /**
  * Dopo creazione ordine manuale:
  * 1) prova auto-assegnazione tomba nota → IN_PROGRESS + notifiche;
- * 2) se già IN_PROGRESS (scelto in dashboard), invia Punto A/B;
- * 3) altrimenti resta in attesa (niente WhatsApp finché non è In Lavorazione).
+ * 2) se PAID ma ancora ACCEPTED/PENDING, promuove a IN_PROGRESS (presa in carico cliente);
+ * 3) se IN_PROGRESS, invia Punto B (cliente) + Punto A (fiorista se assegnato).
  */
 export async function runVeraAfterDashboardManualOrder(input: {
     orderId: string;
@@ -26,20 +27,60 @@ export async function runVeraAfterDashboardManualOrder(input: {
             return { assigned: false as const, reason: 'auto_assign_error' };
         });
 
-        const order = await prisma.order.findFirst({
+        let order = await prisma.order.findFirst({
             where: { id: input.orderId, deletedAt: null },
-            select: { id: true, status: true, partnerId: true },
+            select: {
+                id: true,
+                status: true,
+                partnerId: true,
+                partnerPaymentStatus: true,
+                customerPhone: true,
+                orderNumber: true,
+            },
         });
 
         if (!order) {
             return { skipped: 'order_not_found' };
         }
 
-        if (order.status !== 'IN_PROGRESS') {
+        const paymentConfirmed =
+            order.partnerPaymentStatus === PaymentStatus.PAID ||
+            input.partnerPaymentStatus === PaymentStatus.PAID ||
+            input.partnerPaymentStatus === 'PAID';
+
+        // Promozione a IN_PROGRESS: pagamento dashboard confermato ma stato ancora "ricevuto".
+        if (
+            paymentConfirmed &&
+            (order.status === OrderStatus.ACCEPTED || order.status === OrderStatus.PENDING)
+        ) {
+            order = await prisma.order.update({
+                where: { id: order.id },
+                data: { status: OrderStatus.IN_PROGRESS },
+                select: {
+                    id: true,
+                    status: true,
+                    partnerId: true,
+                    partnerPaymentStatus: true,
+                    customerPhone: true,
+                    orderNumber: true,
+                },
+            });
+            console.info(
+                `[vera-workflow] Ordine manuale ${order.orderNumber || order.id}: ACCEPTED/PENDING+PAID → IN_PROGRESS (sblocca Punto B/A)`
+            );
+        }
+
+        if (order.status !== OrderStatus.IN_PROGRESS) {
             console.info(
                 `[vera-workflow] Ordine ${input.orderId} non in IN_PROGRESS (stato=${order.status}): Punto A/B in attesa`
             );
             return { skipped: 'waiting_in_progress' };
+        }
+
+        if (!order.customerPhone?.trim()) {
+            console.warn(
+                `[vera-workflow] Ordine ${order.orderNumber || order.id}: telefono cliente assente — Punto B non inviabile`
+            );
         }
 
         // Se auto-assign ha già sparato onOrderStatusChanged, i dedup rendono idempotente il re-run.

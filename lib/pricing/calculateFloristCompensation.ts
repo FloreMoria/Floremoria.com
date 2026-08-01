@@ -1,9 +1,12 @@
+/**
+ * Compenso fiorista = somma rigida voci listino (mai percentuale sul retail).
+ * Override solo se nelle note partner c'è un "Compenso concordato: N€".
+ */
 import {
     formatFloristCompensationEur,
     resolveListinoEntry,
     type OrderLineForListino,
 } from '@/lib/pricing/listini';
-import { resolveFloristCompensationCentsFromRetail } from '@/lib/pricing/floristRetailShare';
 
 export interface FloristCompensationResult {
     totalCents: number;
@@ -22,31 +25,31 @@ export type OrderLineForCompensation = OrderLineForListino & {
     product: OrderLineForListino['product'] & { basePriceCents?: number | null };
 };
 
-/**
- * Compenso fiorista: Tabella prezzi e margini (65% retail / accessori a 0),
- * poi listino fisso tombe/funebre come fallback.
- */
 export function calculateFloristCompensation(
     orderItems: OrderLineForCompensation[],
     partnerNotes?: string | null
 ): FloristCompensationResult {
-    // Se c'è un compenso specifico concordato presente nelle note interne del fiorista (es. "Compenso concordato: 18€" o "Compenso: 18")
+    // Override esplicito da note interne fiorista (accordo one-off).
     if (partnerNotes) {
-        const match = partnerNotes.match(/compenso\s*(?:concordato|fiorista)?\s*(?::|=)?\s*(\d+)\s*(?:€|eur)?/i);
-        if (match && match[1]) {
+        const match = partnerNotes.match(
+            /compenso\s*(?:concordato|fiorista)?\s*(?::|=)?\s*(\d+)\s*(?:€|eur)?/i
+        );
+        if (match?.[1]) {
             const euros = parseInt(match[1], 10);
-            if (!isNaN(euros) && euros > 0) {
+            if (!Number.isNaN(euros) && euros > 0) {
                 const partnerCents = euros * 100;
                 return {
                     totalCents: partnerCents,
                     totalLabel: `${euros}€`,
-                    lines: [{
-                        productName: 'Compenso specifico partner concordato',
-                        quantity: 1,
-                        unitCents: partnerCents,
-                        lineCents: partnerCents,
-                        listinoLabel: 'Note profilo fiorista',
-                    }],
+                    lines: [
+                        {
+                            productName: 'Compenso specifico partner concordato',
+                            quantity: 1,
+                            unitCents: partnerCents,
+                            lineCents: partnerCents,
+                            listinoLabel: 'Note profilo fiorista',
+                        },
+                    ],
                     unmappedProducts: [],
                 };
             }
@@ -61,28 +64,10 @@ export function calculateFloristCompensation(
         const qty = Math.max(1, item.quantity);
         const name = item.product.name || item.product.slug || 'Prodotto';
 
-        const fromRetail = resolveFloristCompensationCentsFromRetail({
-            slug: item.product.slug,
-            name: item.product.name,
-            basePriceCents: item.product.basePriceCents,
-        });
-
-        if (fromRetail !== null) {
-            const lineCents = fromRetail * qty;
-            totalCents += lineCents;
-            lines.push({
-                productName: name,
-                quantity: qty,
-                unitCents: fromRetail,
-                lineCents,
-                listinoLabel: 'Tabella prezzi e margini',
-            });
-            continue;
-        }
-
         const entry = resolveListinoEntry(item.product.slug, item.product.name, {
             isBouquet: item.product.isBouquet,
         });
+
         if (!entry) {
             unmappedProducts.push(name);
             continue;
@@ -101,7 +86,7 @@ export function calculateFloristCompensation(
 
     if (unmappedProducts.length) {
         console.warn(
-            '[listino] Prodotti senza voce listino fiorista:',
+            '[listino] Prodotti senza voce listino fiorista (compenso 0 finché non mappati):',
             unmappedProducts.join(', ')
         );
     }
@@ -114,7 +99,7 @@ export function calculateFloristCompensation(
     };
 }
 
-/** Etichetta compenso per template WhatsApp: evita "0,00€" fuorviante se listino non mappato. */
+/** Etichetta compenso per template WhatsApp. */
 export function formatFloristCompensationForTemplate(result: FloristCompensationResult): string {
     if (result.totalCents > 0) return result.totalLabel;
     if (result.unmappedProducts.length > 0) return 'da confermare in app';

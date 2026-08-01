@@ -12,6 +12,7 @@ import {
 } from '@/lib/vera/courtesyDebounce';
 import { buildMetodoFloremoriaBlock } from '@/lib/vera/metodoFloremoria';
 import { buildItalyGreetingPromptRule } from '@/lib/datetime/italyGreeting';
+import { buildFloristCompensationTablePromptBlock } from '@/lib/pricing/listini';
 import type { ChatSession } from '@/lib/chatStore';
 
 const VERA_CORE_IDENTITY = `
@@ -153,6 +154,16 @@ export function buildVeraWhatsAppSystemInstruction(
     knowledgeContext: string,
     profileName?: string | null
 ): string {
+    const compensationRules =
+        userType === 'FLORIST'
+            ? [
+                  '',
+                  buildFloristCompensationTablePromptBlock(),
+                  '',
+                  'REGOLA COMPENSO: usa SOLO la somma delle voci di tabella (o il valore già calcolato nel contesto ordine). Vietato stimare con percentuali sul prezzo di vendita.',
+              ]
+            : [];
+
     return [
         VERA_CORE_IDENTITY,
         '',
@@ -165,6 +176,7 @@ export function buildVeraWhatsAppSystemInstruction(
         buildGenderMorphologyBlock(profileName ?? callerContext.displayNameFromWhatsApp),
         '',
         buildCallerContextPromptBlock(callerContext),
+        ...compensationRules,
         '',
         buildMetodoFloremoriaBlock(),
         '',

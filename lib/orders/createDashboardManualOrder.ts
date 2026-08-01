@@ -180,7 +180,13 @@ export async function createDashboardManualOrder(
     const orderCategory = normalizeOrderCategory(input.orderCategory);
     const deliveryProvince = normalizeDeliveryProvince(input.deliveryProvince);
     const partnerPaymentStatus = input.partnerPaymentStatus ?? PaymentStatus.PAID;
-    const status = input.status ?? OrderStatus.ACCEPTED;
+    // Perché: con PAID la dashboard ha già il pagamento confermato → IN_PROGRESS sblocca
+    // subito Punto B (cliente) e Punto A (fiorista). ACCEPTED lasciava le notifiche in attesa.
+    const status =
+        input.status ??
+        (partnerPaymentStatus === PaymentStatus.PAID
+            ? OrderStatus.IN_PROGRESS
+            : OrderStatus.ACCEPTED);
 
     if (input.deceasedProfileId?.trim()) {
         const profile = await prisma.deceasedProfile.findUnique({

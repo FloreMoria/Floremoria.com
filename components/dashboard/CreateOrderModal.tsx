@@ -51,8 +51,8 @@ const CATEGORY_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
+    { value: 'IN_PROGRESS', label: 'In lavorazione (notifiche VERA)' },
     { value: 'ACCEPTED', label: 'Ricevuto (ACCEPTED)' },
-    { value: 'IN_PROGRESS', label: 'In lavorazione' },
     { value: 'DELIVERING', label: 'In consegna' },
     { value: 'COMPLETED', label: 'Completato' },
     { value: 'PENDING', label: 'In attesa' },
@@ -301,6 +301,13 @@ function CreateOrderFormPanel({
                 throw new Error('Inserisci il testo per Messaggio o Nastro commemorativo.');
             }
 
+            // Pagato + Ricevuto → In Lavorazione: altrimenti Punto B (cliente) resta in attesa.
+            const effectiveStatus =
+                partnerPaymentStatus === 'PAID' &&
+                (status === 'ACCEPTED' || status === 'PENDING')
+                    ? 'IN_PROGRESS'
+                    : status;
+
             const res = await fetch('/api/dashboard/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -323,7 +330,7 @@ function CreateOrderFormPanel({
                     quantity,
                     priceCents: priceCents === '' ? null : Number(priceCents),
                     partnerId: partnerId || null,
-                    status,
+                    status: effectiveStatus,
                     partnerPaymentStatus,
                     isRecurring,
                     additionalInstructions: additionalInstructions || null,

@@ -10,14 +10,13 @@ export const CUSTOMER_CONFIRM_CTA = 'Scriva qui per qualsiasi richiesta.';
 export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = META_TEMPLATE_LIMITS.warmThought;
 
 /**
- * Testo di riferimento conferma ordine (allineare a Meta BM se si ri-approva il template).
- * Su Meta lo slot {{3}} porta warm + CTA; il resto è fisso sul template approvato.
+ * Testo di riferimento conferma ordine — allineato al template Meta live a 2 variabili.
+ * Warm thought + CTA partono subito dopo in free-text (finestra 24h aperta dal template).
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
 La ringraziamo per aver scelto FloreMoria.
 Le confermiamo che abbiamo preso in carico il Suo omaggio nel ricordo di {{2}}.
 
-{{3}}
 Seguiremo ogni passo con la massima cura e restiamo a sua disposizione.
 
 FloreMoria Staff 🌹`;

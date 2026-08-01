@@ -1,7 +1,8 @@
 import {
-    runVeraPostPaymentWorkflowWithResults,
+    runPuntoBCustomerOrderConfirm,
     type VeraPostPaymentResult,
 } from '@/lib/vera/orderWorkflow';
+import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import prisma from '@/lib/prisma';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
@@ -12,9 +13,10 @@ export type DashboardManualOrderVeraResult =
 
 /**
  * Dopo creazione ordine manuale:
- * 1) prova auto-assegnazione tomba nota → IN_PROGRESS + notifiche;
- * 2) se PAID ma ancora ACCEPTED/PENDING, promuove a IN_PROGRESS (presa in carico cliente);
- * 3) se IN_PROGRESS, invia Punto B (cliente) + Punto A (fiorista se assegnato).
+ * 1) auto-assegnazione tomba nota se possibile;
+ * 2) PAID + ACCEPTED/PENDING → IN_PROGRESS;
+ * 3) Punto B cliente **immediato** (bypass +30 min: la presa in carico dashboard non può dipendere dal wake Hobby);
+ * 4) Punto A fiorista se assegnato.
  */
 export async function runVeraAfterDashboardManualOrder(input: {
     orderId: string;
@@ -22,7 +24,7 @@ export async function runVeraAfterDashboardManualOrder(input: {
     isTest?: boolean;
 }): Promise<DashboardManualOrderVeraResult> {
     try {
-        const assign = await autoAssignKnownTombOrder(input.orderId).catch((err) => {
+        await autoAssignKnownTombOrder(input.orderId).catch((err) => {
             console.error('[vera-workflow] autoAssignKnownTombOrder fallita:', err);
             return { assigned: false as const, reason: 'auto_assign_error' };
         });
@@ -48,7 +50,6 @@ export async function runVeraAfterDashboardManualOrder(input: {
             input.partnerPaymentStatus === PaymentStatus.PAID ||
             input.partnerPaymentStatus === 'PAID';
 
-        // Promozione a IN_PROGRESS: pagamento dashboard confermato ma stato ancora "ricevuto".
         if (
             paymentConfirmed &&
             (order.status === OrderStatus.ACCEPTED || order.status === OrderStatus.PENDING)
@@ -66,7 +67,7 @@ export async function runVeraAfterDashboardManualOrder(input: {
                 },
             });
             console.info(
-                `[vera-workflow] Ordine manuale ${order.orderNumber || order.id}: ACCEPTED/PENDING+PAID → IN_PROGRESS (sblocca Punto B/A)`
+                `[vera-workflow] Ordine manuale ${order.orderNumber || order.id}: ACCEPTED/PENDING+PAID → IN_PROGRESS`
             );
         }
 
@@ -83,12 +84,48 @@ export async function runVeraAfterDashboardManualOrder(input: {
             );
         }
 
-        // Se auto-assign ha già sparato onOrderStatusChanged, i dedup rendono idempotente il re-run.
-        if (assign.assigned && 'becameInProgress' in assign && assign.becameInProgress) {
-            return runVeraPostPaymentWorkflowWithResults(input.orderId);
+        // Dashboard manuale = presa in carico già confermata dallo staff → niente delay +30 min.
+        const customerResult = await runPuntoBCustomerOrderConfirm(order.id, {
+            bypassSchedule: true,
+        }).catch((err) => {
+            console.error('[vera-workflow] Punto B (manuale) fallito:', err);
+            return {
+                ok: false as const,
+                error: err instanceof Error ? err.message : String(err),
+            };
+        });
+
+        let florist: VeraPostPaymentResult['florist'];
+        if (!order.partnerId) {
+            florist = { ok: true, skipped: 'no_partner_assigned' };
+        } else {
+            const notify = await notifyFloristDeliveryLinkForOrder(order.id).catch((err) => {
+                console.error('[vera-workflow] Punto A (manuale) fallito:', err);
+                return {
+                    ok: false as const,
+                    error: err instanceof Error ? err.message : String(err),
+                };
+            });
+            florist = {
+                ok: notify.ok,
+                skipped: 'skipped' in notify ? notify.skipped : undefined,
+                blocked: 'blocked' in notify ? notify.blocked : undefined,
+                error: 'error' in notify ? notify.error : undefined,
+                deferred: 'deferred' in notify ? notify.deferred : undefined,
+            };
         }
 
-        return await runVeraPostPaymentWorkflowWithResults(input.orderId);
+        return {
+            customer: {
+                ok: customerResult.ok,
+                skipped: 'skipped' in customerResult ? customerResult.skipped : undefined,
+                error: 'error' in customerResult ? customerResult.error : undefined,
+                deferred: 'deferred' in customerResult ? customerResult.deferred : undefined,
+                scheduledFor:
+                    'scheduledFor' in customerResult ? customerResult.scheduledFor : undefined,
+            },
+            florist,
+        };
     } catch (error) {
         console.error('[vera-workflow] Workflow post-creazione ordine manuale fallito:', {
             orderId: input.orderId,

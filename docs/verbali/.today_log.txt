@@ -2,3 +2,5 @@
 [2026-08-01 18:13] feat(dashboard): CRUD completo defunti — DeceasedProfileDrawer (edit mode, delete confirm, toast), API /api/dashboard/deceased/[id] PUT/PATCH/DELETE/POST, coverUrl Blob, sync date/tomba su ordini.
 [2026-08-01 18:26] feat(vera): messaggio incarico fiorista con riga "📅 CONSEGNA ENTRO" (deliveryDate formattata IT, fallback createdAt+48h) subito sopra il luogo di consegna.
 [2026-08-01 19:19] feat(vera/pricing): tabella compensi fiorista rigida (no %); fix Punto B su ordine manuale PAID→IN_PROGRESS (presa in carico cliente).
+
+[2026-08-01 19:32] fix(vera): Punto B template floremoria_conferma_ordine_utente a 2 params (Meta #132000); warm/CTA come follow-up free-text; dashboard manuale bypassSchedule; reinviato FT-RC-26-002 a Valentina Cecchini.

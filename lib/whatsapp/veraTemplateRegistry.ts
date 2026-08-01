@@ -115,11 +115,11 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floremoria_conferma_ordine_utente'
         ),
         language: 'it',
-        bodyParamCount: 3,
-        bodySlots: ['buyerFirstName', 'deceasedName', 'warmThought'],
+        // Meta live (ago 2026): template a 2 variabili. Warm/CTA vanno in free-text post-template.
+        bodyParamCount: 2,
+        bodySlots: ['buyerFirstName', 'deceasedName'],
         bodyCanonical: CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
-        description:
-            '{{1}} nome, {{2}} defunto, {{3}} aggiornamento + invito a rispondere (CTA intera, max ~92 caratteri)',
+        description: '{{1}} nome acquirente, {{2}} defunto (warm thought in messaggio libero successivo)',
     },
     customer_delivery_photo: {
         id: 'customer_delivery_photo',

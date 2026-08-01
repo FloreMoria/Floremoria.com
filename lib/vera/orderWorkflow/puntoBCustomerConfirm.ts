@@ -20,11 +20,13 @@ import { enqueuePuntoBWake } from '@/lib/vera/orderWorkflow/schedulePuntoBWake';
 import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
 import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
+import { finalizeCustomerConfirmWarmSlot } from '@/lib/vera/customerOrderConfirmCopy';
+import { addMessage } from '@/lib/chatStore';
 
 export interface PuntoBResult {
     ok: boolean;
@@ -198,17 +200,40 @@ export async function runPuntoBCustomerOrderConfirm(
         console.error('[vera-workflow] Punto B inviato ma sessione dashboard non registrata:', logErr);
     }
 
-    if (options.force) {
-        await prisma.order.update({
-            where: { id: order.id },
-            data: {
-                veraWorkflowFlags: markWorkflowStep(
-                    parseWorkflowFlags(order.veraWorkflowFlags),
-                    'puntoB_customer'
-                ),
-            },
+    // Warm + CTA fuori dal template (Meta live ha solo {{1}}/{{2}}).
+    const warmFollowUp = finalizeCustomerConfirmWarmSlot(warmThought);
+    if (warmFollowUp) {
+        const follow = await sendWhatsAppTextMessage(phoneE164, warmFollowUp).catch((err) => {
+            console.error('[vera-workflow] Punto B follow-up warm fallito:', err);
+            return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
         });
+        if (follow.ok) {
+            try {
+                await addMessage(phoneE164, 'OUTBOUND', warmFollowUp, undefined, {
+                    eventType: 'ORDER_CONFIRM_WARM_FOLLOWUP',
+                    orderId: order.id,
+                    orderNumber: order.orderNumber || '',
+                });
+            } catch (logErr) {
+                console.error('[vera-workflow] Follow-up warm non loggato in chat:', logErr);
+            }
+        }
     }
+
+    // Assicura flag puntoB_customer anche con force (che salta tryClaim).
+    const freshFlags = await prisma.order.findUnique({
+        where: { id: order.id },
+        select: { veraWorkflowFlags: true },
+    });
+    await prisma.order.update({
+        where: { id: order.id },
+        data: {
+            veraWorkflowFlags: markWorkflowStep(
+                parseWorkflowFlags(freshFlags?.veraWorkflowFlags),
+                'puntoB_customer'
+            ),
+        },
+    });
 
     console.info(`[vera-workflow] Punto B OK ordine ${order.orderNumber || order.id}`);
     return { ok: true };

@@ -1,8 +1,4 @@
-import {
-    finalizeCustomerConfirmWarmSlot,
-    CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
-    resolveSafeBuyerFirstName,
-} from '@/lib/vera/customerOrderConfirmCopy';
+import { resolveSafeBuyerFirstName } from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
@@ -97,19 +93,16 @@ function logBuiltTemplateParams(templateId: VeraTemplateId, params: string[]): v
 export function buildCustomerOrderConfirmParams(input: {
     buyerFirstName?: string | null;
     deceasedName?: string | null;
-    warmThought: string;
+    /** Ignorato nel template Meta a 2 params; usato dal free-text post-conferma. */
+    warmThought?: string;
 }): string[] {
+    void input.warmThought;
     const params = buildVeraTemplateBodyParams('customer_order_confirm', {
         buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         deceasedName: requireText(
             input.deceasedName || 'chi ama',
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
-        ),
-        warmThought: requireText(
-            finalizeCustomerConfirmWarmSlot(input.warmThought),
-            'warmThought',
-            META_TEMPLATE_LIMITS.warmThought
         ),
     });
     logBuiltTemplateParams('customer_order_confirm', params);

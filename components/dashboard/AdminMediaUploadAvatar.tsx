@@ -11,7 +11,9 @@ type Props = {
     entity: 'user' | 'deceased';
     entityId?: string;
     orderId?: string;
-    onUploaded: (url: string, meta?: { userId?: string; deceasedProfileId?: string }) => void;
+    /** portrait = foto profilo; cover = immagine di copertina (solo defunto). */
+    variant?: 'portrait' | 'cover';
+    onUploaded: (url: string, meta?: { userId?: string; deceasedProfileId?: string; variant?: string }) => void;
     disabled?: boolean;
 };
 
@@ -22,6 +24,7 @@ export default function AdminMediaUploadAvatar({
     entity,
     entityId,
     orderId,
+    variant = 'portrait',
     onUploaded,
     disabled = false,
 }: Props) {
@@ -54,6 +57,7 @@ export default function AdminMediaUploadAvatar({
             form.append('entity', entity);
             if (entityId) form.append('entityId', entityId);
             if (orderId) form.append('orderId', orderId);
+            form.append('variant', variant);
             form.append('file', file);
 
             const res = await fetch('/api/dashboard/media/upload', {
@@ -66,6 +70,7 @@ export default function AdminMediaUploadAvatar({
                 url?: string;
                 userId?: string;
                 deceasedProfileId?: string;
+                variant?: string;
             };
 
             if (!res.ok || !data.ok || !data.url) {
@@ -76,6 +81,7 @@ export default function AdminMediaUploadAvatar({
             onUploaded(data.url, {
                 userId: data.userId,
                 deceasedProfileId: data.deceasedProfileId,
+                variant: data.variant || variant,
             });
         } catch (err) {
             setPreviewUrl(null);

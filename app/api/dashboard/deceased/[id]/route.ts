@@ -6,7 +6,6 @@ import {
     deceasedPutById,
 } from '@/lib/deceased/deceasedApiRouteHandlers';
 
-/** Alias IT storico — stessa API di `/api/dashboard/deceased/[id]`. */
 export const GET = deceasedGetById;
 export const PUT = deceasedPutById;
 export const PATCH = deceasedPatchById;

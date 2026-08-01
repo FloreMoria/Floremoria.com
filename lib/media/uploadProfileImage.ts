@@ -19,11 +19,13 @@ function getBlobToken(): string {
 }
 
 export type MediaEntityKind = 'user' | 'deceased';
+export type MediaImageVariant = 'portrait' | 'cover';
 
 export async function uploadProfileImage(
     file: File,
     kind: MediaEntityKind,
-    entityId: string
+    entityId: string,
+    variant: MediaImageVariant = 'portrait'
 ): Promise<string> {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -37,7 +39,8 @@ export async function uploadProfileImage(
     }
 
     const folder = kind === 'user' ? 'users' : 'deceased';
-    const blobPath = `${MEDIA_PREFIX}/${folder}/${entityId}/portrait.webp`;
+    const fileStem = variant === 'cover' ? 'cover' : 'portrait';
+    const blobPath = `${MEDIA_PREFIX}/${folder}/${entityId}/${fileStem}.webp`;
 
     const { url } = await put(blobPath, optimized, {
         access: getBlobStoreAccess(),

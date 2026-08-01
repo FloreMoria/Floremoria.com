@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Search, ChevronRight, Plus, Heart, AlertTriangle } from 'lucide-react';
-import DeceasedDetailModal from '@/components/dashboard/DeceasedDetailModal';
+import DeceasedProfileDrawer from '@/components/dashboard/DeceasedProfileDrawer';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
 import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
 
@@ -37,9 +37,15 @@ export default function ClientDeceasedTable({
     const [createError, setCreateError] = useState<string | null>(null);
     const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
     const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
+    const [toast, setToast] = useState<string | null>(null);
     const [rowDrafts, setRowDrafts] = useState<
         Record<string, { fullName: string; cemeteryCity: string; cemeteryName: string }>
     >({});
+
+    const showToast = (message: string) => {
+        setToast(message);
+        window.setTimeout(() => setToast(null), 3200);
+    };
 
     useEffect(() => {
         setRows(initialRows);
@@ -75,7 +81,7 @@ export default function ClientDeceasedTable({
         const cemeteryName = (form.elements.namedItem('cemeteryName') as HTMLInputElement).value;
 
         try {
-            const res = await fetch('/api/dashboard/defunti', {
+            const res = await fetch('/api/dashboard/deceased', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -85,12 +91,18 @@ export default function ClientDeceasedTable({
                     cemeteryName: cemeteryName || null,
                 }),
             });
-            const data = (await res.json()) as { ok?: boolean; error?: string; deceasedProfileId?: string };
+            const data = (await res.json()) as {
+                ok?: boolean;
+                error?: string;
+                deceasedProfileId?: string;
+                message?: string;
+            };
             if (!res.ok || !data.ok || !data.deceasedProfileId) {
                 throw new Error(data.error || 'Creazione non riuscita.');
             }
             setShowCreateForm(false);
             form.reset();
+            showToast(data.message || 'Profilo creato con successo');
             router.refresh();
         } catch (err) {
             setCreateError(err instanceof Error ? err.message : 'Errore creazione.');
@@ -123,8 +135,8 @@ export default function ClientDeceasedTable({
 
         setSavingRowKey(row.rowKey);
         try {
-            const res = await fetch(`/api/dashboard/defunti/${row.deceasedProfileId}`, {
-                method: 'PUT',
+            const res = await fetch(`/api/dashboard/deceased/${row.deceasedProfileId}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'update_profile',
@@ -133,10 +145,11 @@ export default function ClientDeceasedTable({
                     cemeteryName: draft.cemeteryName || null,
                 }),
             });
-            const data = (await res.json()) as { ok?: boolean; error?: string };
+            const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'Salvataggio non riuscito.');
             }
+            showToast(data.message || 'Profilo aggiornato con successo');
 
             setRows((prev) =>
                 prev.map((r) =>
@@ -181,15 +194,16 @@ export default function ClientDeceasedTable({
         if (!ok) return;
 
         try {
-            const res = await fetch(`/api/dashboard/defunti/${row.deceasedProfileId}`, {
+            const res = await fetch(`/api/dashboard/deceased/${row.deceasedProfileId}`, {
                 method: 'DELETE',
             });
-            const data = (await res.json()) as { ok?: boolean; error?: string };
+            const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'Cancellazione non riuscita.');
             }
             setRows((prev) => prev.filter((r) => r.rowKey !== row.rowKey));
             if (selectedRow?.rowKey === row.rowKey) setSelectedRow(null);
+            showToast(data.message || 'Profilo eliminato');
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Errore cancellazione defunto.');
         }
@@ -476,14 +490,59 @@ export default function ClientDeceasedTable({
                 </div>
             </div>
 
+            {toast ? (
+                <div className="fixed top-6 right-6 z-[60] rounded-xl bg-[#0f172a] text-white px-4 py-3 text-sm font-medium shadow-lg">
+                    {toast}
+                </div>
+            ) : null}
+
             {selectedRow ? (
-                <DeceasedDetailModal
+                <DeceasedProfileDrawer
                     row={selectedRow}
                     partners={partners}
                     onClose={() => setSelectedRow(null)}
                     onRegistered={() => {
                         setSelectedRow(null);
                         router.refresh();
+                    }}
+                    onDeleted={(profileId) => {
+                        setRows((prev) =>
+                            prev.filter((r) => r.deceasedProfileId !== profileId)
+                        );
+                        setSelectedRow(null);
+                        showToast('Profilo eliminato');
+                    }}
+                    onUpdated={(detail) => {
+                        setRows((prev) =>
+                            prev.map((r) =>
+                                r.deceasedProfileId === detail.deceasedProfileId
+                                    ? {
+                                          ...r,
+                                          fullName: detail.fullName,
+                                          cemeteryCity: detail.cemeteryCity,
+                                          cemeteryName: detail.cemeteryName,
+                                          gravePosition: detail.gravePosition,
+                                          photoUrl: detail.photoUrl,
+                                          birthDate: detail.birthDate,
+                                          deathDate: detail.deathDate,
+                                      }
+                                    : r
+                            )
+                        );
+                        setSelectedRow((prev) =>
+                            prev && prev.deceasedProfileId === detail.deceasedProfileId
+                                ? {
+                                      ...prev,
+                                      fullName: detail.fullName,
+                                      cemeteryCity: detail.cemeteryCity,
+                                      cemeteryName: detail.cemeteryName,
+                                      gravePosition: detail.gravePosition,
+                                      photoUrl: detail.photoUrl,
+                                      birthDate: detail.birthDate,
+                                      deathDate: detail.deathDate,
+                                  }
+                                : prev
+                        );
                     }}
                 />
             ) : null}

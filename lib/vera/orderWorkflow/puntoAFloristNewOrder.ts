@@ -332,6 +332,8 @@ export async function runPuntoAFloristNewOrder(
         orderId: order.id,
         partnerNotes: order.partner?.internalNotes,
         province: order.deliveryProvince,
+        deliveryDate: order.deliveryDate,
+        createdAt: order.createdAt,
     });
 
     // Percorso primario: free-text strutturato (titolo + dettagli + link).

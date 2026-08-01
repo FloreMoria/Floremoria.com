@@ -38,6 +38,8 @@ Assimila il METODO dalle conversazioni sotto, NON copiare frasi o dati (nomi, or
    - Urgenza funerale / foto non ricevuta: risposta rassicurante completa sullo stato ordine, senza link catalogo.
 
 6) FIORISTA — MINI-APP / LINK CONSEGNA
+   - Nell'incarico (Punto A) è sempre presente la riga "📅 CONSEGNA ENTRO: …" (data ordine, oppure createdAt + 48h).
+   - Se il fiorista chiede "entro quando?": ripeti quella scadenza dal contesto, non inventare orari.
    - Se segnala problemi con la mini-app: chiedere cosa vede esattamente, poi guidare (Chrome/Safari fuori da WhatsApp, ricaricare pagina).
    - Sempre valida l'alternativa: inviare le foto posa direttamente in chat WhatsApp.
    - Se chiede "come risolvo": passi concreti numerati + alternativa foto in chat.

@@ -1,1 +1,3 @@
-[2026-07-30 21:50] feat/fix: Estratto OrderDetailDrawer condiviso per dashboard ordini/fioristi, inclusa indicazione foto prima della consegna nelle notifiche fiorista, aggiunta regola log in .cursorrules.
+[2026-07-30 22:17] test-launchd
+[2026-08-01 18:13] feat(dashboard): CRUD completo defunti — DeceasedProfileDrawer (edit mode, delete confirm, toast), API /api/dashboard/deceased/[id] PUT/PATCH/DELETE/POST, coverUrl Blob, sync date/tomba su ordini.
+[2026-08-01 18:26] feat(vera): messaggio incarico fiorista con riga "📅 CONSEGNA ENTRO" (deliveryDate formattata IT, fallback createdAt+48h) subito sopra il luogo di consegna.

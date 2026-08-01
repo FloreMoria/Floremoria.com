@@ -1,0 +1,52 @@
+---
+description: Log giornaliero verbali in append + verbale fine giornata con sync Obsidian e push
+alwaysApply: true
+---
+
+# Regola Log Verbali (Append Mode)
+
+## Durante la giornata (ogni task completato)
+
+Dopo ogni modifica, refactoring o task completato, **append** una riga in `docs/verbali/.today_log.txt`.
+
+Formato riga:
+
+```text
+[YYYY-MM-DD HH:mm] tipo: sintesi breve dell'intervento
+```
+
+Esempio:
+
+```text
+[2026-07-30 21:50] feat/fix: Estratto OrderDetailDrawer condiviso; foto stato di fatto in notifica fiorista.
+```
+
+### Divieti
+
+- **Vietato** sovrascrivere `.today_log.txt` (no `Write` che sostituisce tutto il file).
+- Usare solo append (`>>` in shell, o lettura + riscrittura dell’intero contenuto precedente + nuova riga).
+- Non cancellare righe già presenti durante la giornata.
+
+## Fine giornata (comando creazione verbale)
+
+Quando l’utente chiede il verbale di fine giornata (o equivalente):
+
+1. **Leggere** l’intero `docs/verbali/.today_log.txt`.
+2. **Redigere** il verbale definitivo in `docs/verbali/DD-MM-YYYY.md`  
+   (convenzione repo / sync Obsidian: giorno-mese-anno, es. `30-07-2026.md` — non `YYYY-MM-DD`).
+3. **Eseguire** `npm run log:verbale:sync-docs` (allinea Obsidian vault + mirror `notes/obsidian/verbali/`).
+4. **Commit + push** dei file verbale/changelog/mirror, con messaggio chiaro tipo  
+   `chore(verbali): sincronizzato verbale integrale DD mese YYYY`.
+5. **Svuotare** `.today_log.txt` (solo a questo punto, dopo sync e commit riusciti) lasciando il file vuoto o con un’unica riga di reset per il giorno successivo.
+
+## Automazione Mac (fallback 23:50)
+
+`scripts/daily-verbale-cron.sh` via **LaunchAgent** `~/Library/LaunchAgents/com.floremoria.daily-verbale.plist` (ore 23:50, `TZ=Europe/Rome`).  
+Su macOS moderno `cron` non appare in Privacy e spesso non ha i permessi giusti: non usare crontab.  
+Se il verbale Regia esiste già, **non lo sovrascrive**: aggiorna solo la sezione `## Registro operativo automatico (.today_log)`.
+
+## Note
+
+- Il verbale di fine giornata consolida Cursor + eventuali attività da Regia/Antigravity; il log è la fonte operativa accumulata in giornata.
+- Non commitare `.obsidian/workspace.json` insieme al verbale.
+- Log cron: `logs/daily-verbale-cron.log` (cartella ignorata da git).

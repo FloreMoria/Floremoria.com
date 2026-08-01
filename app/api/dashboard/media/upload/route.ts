@@ -48,6 +48,8 @@ export async function POST(request: Request) {
         const entity = String(form.get('entity') || '').trim() as MediaEntityKind;
         const entityId = String(form.get('entityId') || '').trim();
         const orderId = String(form.get('orderId') || '').trim();
+        const variantRaw = String(form.get('variant') || 'portrait').trim().toLowerCase();
+        const variant = variantRaw === 'cover' ? 'cover' : 'portrait';
         const file = form.get('file');
 
         if (entity !== 'user' && entity !== 'deceased') {
@@ -93,13 +95,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ ok: false, error: 'Profilo defunto non trovato.' }, { status: 404 });
         }
 
-        const url = await uploadProfileImage(file, 'deceased', entityId);
+        const url = await uploadProfileImage(file, 'deceased', entityId, variant);
         await prisma.deceasedProfile.update({
             where: { id: entityId },
-            data: { photoUrl: url },
+            data: variant === 'cover' ? { coverUrl: url } : { photoUrl: url },
         });
 
-        return NextResponse.json({ ok: true, url, deceasedProfileId: entityId });
+        return NextResponse.json({
+            ok: true,
+            url,
+            deceasedProfileId: entityId,
+            variant,
+        });
     } catch (error) {
         console.error('[dashboard/media/upload]', error);
         const message = error instanceof Error ? error.message : 'Errore upload.';

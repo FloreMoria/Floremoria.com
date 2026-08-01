@@ -87,6 +87,8 @@ model DeceasedProfile {
   cemeteryName  String?
   verifiedNotes String?  @db.Text
   photoUrl      String?  @map("photo_url")
+  /** Immagine di copertina scheda commemorativa (Vercel Blob). */
+  coverUrl      String?  @map("cover_url")
   orders        Order[]
   userLinks     UserDeceasedLink[]
   partnerLinks  PartnerDeceasedAssignment[]

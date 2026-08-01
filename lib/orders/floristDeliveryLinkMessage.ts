@@ -15,6 +15,7 @@ import {
     FIRST_OUTBOUND_TITLES,
     withBoldWhatsAppTitle,
 } from '@/lib/whatsapp/firstOutboundTitle';
+import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
 
 /**
  * Testo WhatsApp Punto A — nuovo incarico fiorista.
@@ -46,6 +47,12 @@ export interface FloristNewOrderMessageInput {
     orderId?: string;
     partnerNotes?: string | null;
     province?: string | null;
+    /** Data consegna richiesta / prevista (ordine). */
+    deliveryDate?: Date | string | null;
+    /** Alias opzionale usato in alcuni import. */
+    requestedDeliveryDate?: Date | string | null;
+    /** Usato per fallback scadenza = createdAt + 48h. */
+    createdAt?: Date | string | null;
 }
 
 /** Rimuove il refuso "Gramato" da qualsiasi pezzo di testo outbound. */
@@ -151,6 +158,11 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     const deceased = sanitizeLine(rawDeceased, 'il caro defunto');
 
     const luogo = `${cityLabel}, ${cemetery}`;
+    const deadline = resolveFloristDeliveryDeadline({
+        deliveryDate: input.deliveryDate,
+        requestedDeliveryDate: input.requestedDeliveryDate,
+        createdAt: input.createdAt,
+    });
     const prodotto = stripGramatoArtifact(formatFloristOrderProductsLabel(input.items));
 
     let rawTicket = (input.ticketMessage || '').trim();
@@ -186,10 +198,12 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
             orderNumber: orderCode,
         });
 
+    // Scadenza subito sopra il luogo (cimitero / loculo) per massima visibilità operativa.
     const body =
         `Ciao ${floristName}! 🌸\n` +
         `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${cityLabel} - ${cemetery}.\n` +
         `🕊️ In memoria di: ${deceased}\n` +
+        `${deadline.messageLine}\n` +
         `📍 Luogo: ${luogo}\n` +
         `💐 Prodotto: ${prodotto}\n` +
         `➕ Optional / Accessori: ${accessori}\n` +
@@ -230,6 +244,7 @@ export function buildFloristDeliveryWhatsAppText(input: FloristDeliveryMessageIn
         cemeteryName: input.cimitero,
         cemeteryCity: input.comune_cimitero,
         gravePosition: input.posizione_tomba,
+        deliveryDate: input.data_consegna,
         items: [],
         deliveryUrl: input.deliveryUrl,
     });

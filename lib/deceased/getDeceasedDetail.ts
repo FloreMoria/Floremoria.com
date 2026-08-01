@@ -13,6 +13,7 @@ export type DeceasedDetailPayload = {
     deceasedProfileId: string | null;
     fullName: string;
     photoUrl: string | null;
+    coverUrl: string | null;
     cemeteryCity: string;
     cemeteryName: string | null;
     verifiedNotes: string | null;
@@ -140,6 +141,7 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         deceasedProfileId: profile.id,
         fullName: profile.fullName,
         photoUrl: profile.photoUrl ?? null,
+        coverUrl: profile.coverUrl ?? null,
         cemeteryCity: profile.cemeteryCity,
         cemeteryName: profile.cemeteryName,
         verifiedNotes: profile.verifiedNotes,
@@ -194,6 +196,7 @@ export async function getOrphanDeceasedDetail(seedOrderId: string): Promise<Dece
         deceasedProfileId: null,
         fullName: seed.deceasedName,
         photoUrl: null,
+        coverUrl: null,
         cemeteryCity: seed.cemeteryCity,
         cemeteryName: seed.cemeteryName,
         verifiedNotes: null,

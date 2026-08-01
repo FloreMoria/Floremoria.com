@@ -32,6 +32,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Log locali cron / automazioni Mac
+/logs/
+
 # Variabili d'ambiente (segreti) — non versionare. Il template `.env.example` resta tracciato.
 .env
 .env.local

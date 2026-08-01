@@ -13,6 +13,7 @@ import {
     calculateFloristCompensation,
     formatFloristCompensationForTemplate,
 } from '@/lib/pricing/calculateFloristCompensation';
+import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
 import { sessionHasRecentOutboundPhotos } from '@/lib/vera/deliveryContextGate';
 import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 
@@ -129,9 +130,13 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const optionals = order ? buildOrderOptionalsList(order.items) : [];
     const ticketMessage = order?.ticketMessage?.trim() || null;
     const customerNotes = stripInternalNotes(order?.additionalInstructions);
-    const deliveryDate = order?.deliveryDate
-        ? new Date(order.deliveryDate).toLocaleDateString('it-IT')
+    const deliveryDeadline = order
+        ? resolveFloristDeliveryDeadline({
+              deliveryDate: order.deliveryDate,
+              createdAt: order.createdAt,
+          })
         : null;
+    const deliveryDate = deliveryDeadline?.label ?? null;
     const floristCompensation =
         session.userType === 'FLORIST' && order
             ? formatFloristCompensationForTemplate(calculateFloristCompensation(order.items, partnerNotes))
@@ -223,7 +228,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             ctx.gravePosition
                 ? `- Indicazioni tomba/consegna: ${ctx.gravePosition}`
                 : `- Indicazioni tomba/consegna: MANCANTI (se richieste: una sola presa in carico + escalation prioritaria Staff, senza loop)`,
-            `- Data di consegna prevista: ${ctx.deliveryDate ?? 'Non specificata'}`,
+            `- 📅 CONSEGNA ENTRO: ${ctx.deliveryDate ?? 'Non specificata'}`,
             ctx.proofStatus ? `- Stato prove di consegna: ${ctx.proofStatus}` : '',
             ctx.photosAlreadySentInChat
                 ? `- Foto già inviate in questa chat: SÌ — VIETATO dire "in preparazione" / "non appena sarà posizionato"; conferma che le foto sono già state inviate`

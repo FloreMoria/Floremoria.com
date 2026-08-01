@@ -43,8 +43,8 @@ function main(): void {
     assert(stripGramatoArtifact('Ciao Gramato Simone') === 'Ciao Simone', 'rimozione Gramato');
     assert(
         sanitizeFloristDeliveryNotes('IMPORT_MANUALE: dashboard admin', 'Campo C, Tomba 83') ===
-            'Campo C, Tomba 83',
-        'import → coordinate'
+            'Nessuna nota aggiuntiva',
+        'import → nessuna nota spurio'
     );
     assert(
         sanitizeFloristDeliveryNotes('IMPORT_MANUALE: dashboard admin', null) ===
@@ -69,6 +69,8 @@ function main(): void {
         gravePosition: 'Campo C, Tomba 83',
         ticketMessage: null,
         additionalInstructions: 'IMPORT_MANUALE: dashboard admin',
+        deliveryDate: '2026-08-03T00:00:00+02:00',
+        createdAt: '2026-08-01T10:00:00+02:00',
         items: [
             {
                 quantity: 1,
@@ -81,20 +83,26 @@ function main(): void {
 
     assert(text.includes('Ciao Simone! 🌸'), 'saluto');
     assert(text.includes('ordine FT-MB-26-001 a Milano'), 'codice e città');
+    assert(text.includes('📅 CONSEGNA ENTRO:'), 'riga scadenza consegna');
+    assert(text.includes('03 Agosto 2026'), 'data consegna formattata');
+    assert(
+        text.indexOf('📅 CONSEGNA ENTRO:') < text.indexOf('📍 Luogo:'),
+        'scadenza subito sopra il luogo'
+    );
     assert(text.includes('💐 Prodotto: Bouquet'), 'prodotto formattato');
     assert(text.includes('📝 Testo: Nessuno'), 'etichetta Testo (non Biglietto)');
     assert(!text.includes('Testo Biglietto'), 'niente etichetta Biglietto');
     assert(text.includes('➕ Optional / Accessori: Lumino'), 'accessori');
-    assert(text.includes('📌 Note di Consegna: Campo C, Tomba 83'), 'note = coordinate');
+    assert(text.includes('📌 Note di Consegna: Nessuna nota aggiuntiva'), 'note pulite da import');
     assert(
         text.indexOf('➕ Optional / Accessori:') < text.indexOf('📌 Note di Consegna:'),
         'optional sopra note'
     );
     assert(
         text.includes(
-            'Per caricare le foto mentre effettui la consegna puoi usare il link alla mini-app dedicata a questo ordine:'
+            'Per caricare le foto mentre effettui la consegna dovresti usare il link alla mini-app dedicata a questo ordine:'
         ),
-        'dicitura foto al plurale'
+        'dicitura foto mini-app'
     );
     assert(text.includes('🔗 https://www.floremoria.com/fiorista/consegna/FT-MB-26-001'), 'link mini-app');
     assert(text.endsWith('Vera | Staff FloreMoria 🌹'), 'chiusura con rosa unica');

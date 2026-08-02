@@ -3,6 +3,11 @@ export function resolveWhatsAppChatMediaUrl(mediaUrl: string | null | undefined)
     const value = mediaUrl?.trim();
     if (!value) return null;
 
+    const chatMediaMatch = value.match(/\/api\/chat\/media\/([^/?#]+)/i);
+    if (chatMediaMatch?.[1]) {
+        return `/api/dashboard/whatsapp/delivery-staging/${chatMediaMatch[1]}`;
+    }
+
     const stagingMatch = value.match(/\/api\/whatsapp\/delivery-staging\/([^/?#]+)/i);
     if (stagingMatch?.[1]) {
         return `/api/dashboard/whatsapp/delivery-staging/${stagingMatch[1]}`;
@@ -42,6 +47,7 @@ export function isImageMediaUrl(mediaUrl: string | null | undefined): boolean {
         /\.(jpe?g|png|gif|webp)(\?|$)/i.test(value) ||
         value.includes('/whatsapp/media/') ||
         value.includes('/whatsapp/delivery-staging/') ||
+        value.includes('/api/chat/media/') ||
         value.includes('blob.vercel-storage.com')
     );
 }

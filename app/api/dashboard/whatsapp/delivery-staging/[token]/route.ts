@@ -40,6 +40,8 @@ export async function GET(
             headers: {
                 'Content-Type': 'image/jpeg',
                 'Cache-Control': 'private, max-age=86400',
+                'Access-Control-Allow-Origin': '*',
+                'X-Content-Type-Options': 'nosniff',
             },
         });
     } catch (err) {

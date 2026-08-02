@@ -106,11 +106,26 @@ export function extractDeliveryStagingToken(mediaUrl: string | null | undefined)
     return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
-/** Ricostruisce URL Blob privato dal pathname staging. */
+/**
+ * Ricostruisce URL Blob dal pathname staging rispettando BLOB_STORE_ACCESS.
+ * Perché: con store pubblico un URL `.private.` faceva fallire il proxy → Meta senza foto.
+ */
 export function stagingPathnameToBlobUrl(pathname: string): string {
     const storeId = process.env.BLOB_STORE_ID?.replace(/^store_/i, '').trim();
     if (!storeId) {
         throw new Error('BLOB_STORE_ID mancante per servire immagine staging.');
     }
-    return `https://${storeId.toLowerCase()}.private.blob.vercel-storage.com/${pathname}`;
+    const access = (process.env.BLOB_STORE_ACCESS || 'public').trim().toLowerCase();
+    const hostKind = access === 'private' ? 'private' : 'public';
+    return `https://${storeId.toLowerCase()}.${hostKind}.blob.vercel-storage.com/${pathname}`;
 }
+
+/** Header HTTP per media pubblici consumati da Meta WhatsApp / browser. */
+export const META_PUBLIC_IMAGE_HEADERS: Record<string, string> = {
+    'Content-Type': 'image/jpeg',
+    'Cache-Control': 'public, max-age=300, immutable',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'X-Content-Type-Options': 'nosniff',
+};

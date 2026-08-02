@@ -110,12 +110,20 @@ export async function sendVeraTemplate(
 
     const components: WhatsAppTemplateComponent[] = [];
     if (spec.hasImageHeader) {
-        const url = options?.headerImageUrl?.trim();
-        if (!url) {
+        const rawUrl = options?.headerImageUrl?.trim();
+        if (!rawUrl) {
             return { ok: false, error: 'Header immagine mancante per template multimediale.' };
         }
+        const { stripUrlQueryAndFragment } = await import('@/lib/whatsapp/metaPublicImageUrl');
+        const url = stripUrlQueryAndFragment(rawUrl);
         if (!/^https:\/\//i.test(url)) {
             return { ok: false, error: 'URL immagine header deve essere HTTPS pubblico per Meta.' };
+        }
+        if (/private\.blob\.vercel-storage\.com/i.test(url)) {
+            return {
+                ok: false,
+                error: 'URL immagine header privato: usare /api/chat/media o Blob pubblico JPEG.',
+            };
         }
         console.info(`[vera-template] ${spec.id} header image host: ${url.replace(/^https?:\/\/([^/]+).*/, '$1')}`);
         components.push(buildImageHeaderComponent(url));

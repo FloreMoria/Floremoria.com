@@ -240,10 +240,28 @@ export async function sendWhatsAppImageMessage(
         return { ok: false, error: 'invalid_phone' };
     }
 
-    const image: Record<string, unknown> = { link: imageUrl };
+    // Meta: HTTPS pubblico, senza query string (rompe mediaUrl su alcuni client).
+    const { stripUrlQueryAndFragment } = await import('@/lib/whatsapp/metaPublicImageUrl');
+    const cleanLink = stripUrlQueryAndFragment(imageUrl);
+    if (!/^https:\/\//i.test(cleanLink)) {
+        console.warn(`[meta-cloud-api] URL immagine non HTTPS pubblico: ${imageUrl.slice(0, 80)}`);
+        return { ok: false, error: 'image_url_not_https_public' };
+    }
+    if (/private\.blob\.vercel-storage\.com/i.test(cleanLink)) {
+        console.warn('[meta-cloud-api] URL Blob privato non inviabile a Meta — usare staging /api/chat/media');
+        return { ok: false, error: 'image_url_private_blob' };
+    }
+
+    const image: Record<string, unknown> = { link: cleanLink };
     if (caption?.trim()) {
         image.caption = caption.trim().slice(0, 1024);
     }
+
+    console.info('[meta-cloud-api] Invio immagine', {
+        to: recipient,
+        host: cleanLink.replace(/^https?:\/\/([^/]+).*/, '$1'),
+        pathTail: cleanLink.slice(-48),
+    });
 
     return postWhatsAppMessage({
         messaging_product: 'whatsapp',

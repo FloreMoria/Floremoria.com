@@ -44,7 +44,7 @@ export default async function CommunicationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] p-6 lg:p-8">
+    <div className="min-h-screen bg-[#FAF8F5] -mx-4 -my-4 md:mx-0 md:my-0 p-0 md:p-6 lg:p-8">
       <div className="max-w-[1400px] mx-auto">
         <CommunicationsHubClient initialProofs={proofs} isDashboardAdmin={isDashboardAdmin} />
       </div>

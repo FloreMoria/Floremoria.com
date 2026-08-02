@@ -5,3 +5,4 @@
 [2026-08-02 19:10] fix(whatsapp): foto Luciano — JPEG HTTPS pubblico per Meta, rotta /api/chat/media con CORS+Content-Type, staging Blob public/private corretto, strip query string.
 [2026-08-02 19:13] feat(dashboard): aggiunta sezione "Sistema" con accordion mobile (Partner B2B, Log di Sistema, Buoni) in DashboardMobileNav.
 [2026-08-02 19:22] fix(dashboard): rimosso collegamento inattivo WhatsApp dal menu nav mobile.
+[2026-08-02 19:24] style(communications): layout mobile a filo estremo con lo schermo (edge-to-edge 0px margin/padding) e testo messaggi ingrandito a 16px elegante.

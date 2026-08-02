@@ -18,7 +18,10 @@ import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
-import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import {
+    normalizePhoneE164,
+    sendWhatsAppTextMessage,
+} from '@/lib/whatsapp/metaCloudApiClient';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { groupIncomingByPhone } from '@/lib/whatsapp/replyCoalesce';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
@@ -27,6 +30,7 @@ import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
 import { shouldSilenceVeraReply } from '@/lib/vera/courtesyDebounce';
 import {
     extractMetaInboundContent,
+    FLORIST_UNSUPPORTED_MEDIA_REPLY,
     type MetaInboundMediaMessage,
 } from '@/lib/whatsapp/extractMetaInboundContent';
 import { persistInboundChatMediaToBlob } from '@/lib/whatsapp/persistInboundChatMedia';
@@ -67,6 +71,8 @@ interface ParsedIncomingMessage {
     mediaUrl?: string;
     senderName: string;
     silenceVera?: boolean;
+    /** Allegato non leggibile / tipo non foto → guida fiorista. */
+    unsupportedMedia?: boolean;
     /** Meta WhatsApp message id (wamid.*) — usato per dedup retry webhook. */
     inboundMessageId?: string;
 }
@@ -128,8 +134,9 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                     continue;
                 }
 
-                const { text, mediaUrl, silenceVera } = extractMetaInboundContent(msg);
-                if (!text && !mediaUrl) continue;
+                const { text, mediaUrl, silenceVera, unsupportedMedia } = extractMetaInboundContent(msg);
+                // Inclusi anche allegati “vuoti” non supportati (serve guida al fiorista).
+                if (!text && !mediaUrl && !unsupportedMedia) continue;
 
                 results.push({
                     phoneE164,
@@ -138,6 +145,7 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                     mediaUrl,
                     senderName: contactName || phoneE164,
                     silenceVera,
+                    unsupportedMedia,
                     inboundMessageId: msg.id?.trim() || undefined,
                 });
             }
@@ -158,9 +166,20 @@ async function processIncomingWhatsAppMessage(
     sent?: boolean;
     coalesced?: boolean;
 }> {
-    const { phoneE164, phoneKey, messageText, mediaUrl, senderName, silenceVera, inboundMessageId } =
-        incoming;
-    const inboundBody = messageText || (mediaUrl ? '[media]' : '');
+    const {
+        phoneE164,
+        phoneKey,
+        messageText,
+        mediaUrl,
+        senderName,
+        silenceVera,
+        unsupportedMedia,
+        inboundMessageId,
+    } = incoming;
+    // Mai loggare testi tecnici OTP/"Tipo sconosciuto" — placeholder neutro per staff.
+    const inboundBody =
+        messageText ||
+        (mediaUrl ? '[media]' : unsupportedMedia ? '[allegato non leggibile via API]' : '');
 
     console.info(`[wa-webhook] Messaggio da ${phoneE164} (${senderName}): "${inboundBody.slice(0, 80)}"`);
 
@@ -254,7 +273,7 @@ async function processIncomingWhatsAppMessage(
         return { ok: true, skipped: 'defer_reply' };
     }
 
-    // Reaction / unsupported / system: registra in chat, niente risposta VERA.
+    // Reaction / system: registra in chat, niente risposta VERA.
     if (silenceVera) {
         console.info(`[wa-webhook] VERA silenzio (tipo non conversazionale) per ${phoneE164}`);
         void notifyStaffOfWhatsAppInbound({
@@ -267,6 +286,43 @@ async function processIncomingWhatsAppMessage(
         return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence_non_conversational' };
     }
 
+    // Fiorista: file non foto (o unsupported senza media) → guida umanizzata, zero Gemini/OTP.
+    if (unsupportedMedia && session.userType === 'FLORIST' && !mediaUrl) {
+        return sendFloristUnsupportedMediaGuidance({
+            phoneKey,
+            phoneE164,
+            senderName,
+            inboundMessageId,
+            userType: session.userType,
+        });
+    }
+
+    // Documento non-immagine con mediaUrl: prova ingest; se fallisce la guida parte da VERA deterministico.
+    if (unsupportedMedia && session.userType === 'FLORIST' && mediaUrl) {
+        return finalizeVeraOutboundReply({
+            phoneKey,
+            phoneE164,
+            senderName,
+            inboundBody,
+            mediaUrl,
+            inboundMessageId,
+            forceFloristUnsupportedMediaReply: true,
+        });
+    }
+
+    // Utente finale con allegato non leggibile: silenzio (niente testo tecnico).
+    if (unsupportedMedia && session.userType !== 'FLORIST' && !mediaUrl) {
+        console.info(`[wa-webhook] Allegato non leggibile da utente ${phoneE164}: silenzio`);
+        void notifyStaffOfWhatsAppInbound({
+            senderName,
+            phoneE164,
+            messagePreview: inboundBody,
+            userType: session.userType,
+            escalated: false,
+        }).catch((err) => console.warn('[staff-push] notify failed:', err));
+        return { ok: true, source: 'silence', sent: false, skipped: 'unsupported_media_user_silence' };
+    }
+
     return finalizeVeraOutboundReply({
         phoneKey,
         phoneE164,
@@ -277,6 +333,64 @@ async function processIncomingWhatsAppMessage(
     });
 }
 
+async function sendFloristUnsupportedMediaGuidance(params: {
+    phoneKey: string;
+    phoneE164: string;
+    senderName: string;
+    inboundMessageId?: string;
+    userType: string;
+}): Promise<{
+    ok: boolean;
+    skipped?: string;
+    source?: string;
+    escalated?: boolean;
+    sent?: boolean;
+}> {
+    const { phoneKey, phoneE164, senderName, inboundMessageId, userType } = params;
+    const reply = FLORIST_UNSUPPORTED_MEDIA_REPLY;
+
+    if (inboundMessageId) {
+        const alreadyReplied = await hasOutboundReplyForInboundMessageId(phoneKey, inboundMessageId);
+        if (alreadyReplied) {
+            return { ok: true, skipped: 'already_replied_to_inbound', sent: false };
+        }
+    }
+
+    const lock = await tryClaimVeraOutboundReplyLock({
+        phoneE164,
+        inboundMessageId,
+        hasMedia: false,
+    });
+    if (!lock.ok) {
+        return { ok: true, skipped: `outbound_lock_${lock.reason}`, sent: false };
+    }
+
+    const sendResult = await sendWhatsAppTextMessage(phoneE164, reply);
+    if (!sendResult.ok) {
+        await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
+        console.error('[wa-webhook] Guida media fiorista fallita:', sendResult.error);
+        return { ok: true, source: 'deterministic', sent: false, skipped: 'send_failed' };
+    }
+
+    await addMessage(phoneKey, 'OUTBOUND', reply, undefined, {
+        source: 'deterministic',
+        eventType: 'FLORIST_UNSUPPORTED_MEDIA_GUIDANCE',
+        ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+        ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
+    });
+
+    void notifyStaffOfWhatsAppInbound({
+        senderName,
+        phoneE164,
+        messagePreview: '[allegato non leggibile]',
+        userType,
+        escalated: false,
+    }).catch((err) => console.warn('[staff-push] notify failed:', err));
+
+    console.info(`[wa-webhook] Guida media non supportato → fiorista ${phoneE164}`);
+    return { ok: true, source: 'deterministic', sent: true };
+}
+
 async function finalizeVeraOutboundReply(params: {
     phoneKey: string;
     phoneE164: string;
@@ -284,6 +398,7 @@ async function finalizeVeraOutboundReply(params: {
     inboundBody: string;
     mediaUrl?: string | null;
     inboundMessageId?: string;
+    forceFloristUnsupportedMediaReply?: boolean;
 }): Promise<{
     ok: boolean;
     skipped?: string;
@@ -292,7 +407,15 @@ async function finalizeVeraOutboundReply(params: {
     sent?: boolean;
     coalesced?: boolean;
 }> {
-    const { phoneKey, phoneE164, senderName, inboundBody, mediaUrl, inboundMessageId } = params;
+    const {
+        phoneKey,
+        phoneE164,
+        senderName,
+        inboundBody,
+        mediaUrl,
+        inboundMessageId,
+        forceFloristUnsupportedMediaReply,
+    } = params;
 
     if (inboundMessageId) {
         const alreadyReplied = await hasOutboundReplyForInboundMessageId(phoneKey, inboundMessageId);
@@ -320,6 +443,32 @@ async function finalizeVeraOutboundReply(params: {
     if (shouldSilenceVeraReply(replySeed, updatedSession) && !seedMedia) {
         console.info(`[wa-webhook] VERA silenzio (post-burst) per ${phoneE164}`);
         return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence' };
+    }
+
+    // Documento/PDF o video: guida foto galleria (senza passare da Gemini).
+    if (forceFloristUnsupportedMediaReply && updatedSession.userType === 'FLORIST') {
+        const reply = FLORIST_UNSUPPORTED_MEDIA_REPLY;
+        const sendResult = await sendWhatsAppMessage(phoneE164, reply, {
+            recipientName: senderName,
+            sessionPhone: phoneKey,
+            source: 'deterministic',
+        });
+        if (!sendResult.ok) {
+            await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
+        } else if (!sendResult.fallbackExecuted) {
+            await addMessage(phoneKey, 'OUTBOUND', reply, undefined, {
+                source: 'deterministic',
+                eventType: 'FLORIST_UNSUPPORTED_MEDIA_GUIDANCE',
+                ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+                ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
+            });
+        }
+        return {
+            ok: true,
+            source: 'deterministic',
+            escalated: false,
+            sent: sendResult.ok,
+        };
     }
 
     const veraResult = await generateVeraReply(replySeed, updatedSession, seedMedia);

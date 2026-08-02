@@ -1,17 +1,23 @@
 /**
  * Estrae testo/media leggibili da un messaggio webhook Meta Cloud API.
- * Perché: tipi come reaction/unsupported finivano in chat come "[unsupported]" / "[reaction]"
- * senza emoji né contesto utile allo staff.
+ * Perché: foto iOS/Android spesso arrivano come `document` o `unsupported`;
+ * il vecchio testo "Tipo sconosciuto…OTP" finiva in chat e confondeva i fioristi.
  */
 
 export type MetaInboundMediaMessage = {
     type?: string;
     text?: { body?: string };
-    image?: { caption?: string; id?: string };
-    audio?: { id?: string };
-    document?: { caption?: string; id?: string; filename?: string };
-    video?: { caption?: string; id?: string };
-    sticker?: { id?: string; animated?: boolean };
+    image?: { caption?: string; id?: string; mime_type?: string; sha256?: string };
+    audio?: { id?: string; mime_type?: string };
+    document?: {
+        caption?: string;
+        id?: string;
+        filename?: string;
+        mime_type?: string;
+        sha256?: string;
+    };
+    video?: { caption?: string; id?: string; mime_type?: string };
+    sticker?: { id?: string; animated?: boolean; mime_type?: string };
     interactive?: {
         button_reply?: { title?: string; id?: string };
         list_reply?: { title?: string; id?: string; description?: string };
@@ -44,64 +50,54 @@ export type MetaInboundMediaMessage = {
 export type ExtractedMetaInbound = {
     text: string;
     mediaUrl?: string;
-    /** true = non merita risposta VERA (reaction, unsupported, system…) */
+    /** true = non merita risposta VERA (reaction, system…) */
     silenceVera: boolean;
+    /**
+     * true = allegato non leggibile / tipo non supportato senza media recuperabile.
+     * Per i fioristi: risposta umanizzata (niente testo tecnico OTP).
+     */
+    unsupportedMedia?: boolean;
+    /** Suggerimento mime dall'header Meta (document/image). */
+    mimeHint?: string;
 };
+
+/** Messaggio cortese per fiorista quando il file non è una foto WhatsApp leggibile. */
+export const FLORIST_UNSUPPORTED_MEDIA_REPLY =
+    '📸 Non sono riuscita ad aprire questo file. Per favore, inviami la foto scattandola o selezionandola direttamente dalla galleria come normale immagine WhatsApp!';
 
 function metaMediaProxyUrl(mediaId: string): string {
     return `/api/dashboard/whatsapp/media/${mediaId}`;
 }
 
-const UNSUPPORTED_TYPE_LABELS: Record<string, string> = {
-    reaction: 'Reazione WhatsApp',
-    poll_creation: 'Sondaggio WhatsApp',
-    poll_update: 'Aggiornamento sondaggio WhatsApp',
-    gif: 'GIF WhatsApp',
-    group_invite: 'Invito a gruppo WhatsApp',
-    interactive: 'Messaggio interattivo',
-    button: 'Pulsante WhatsApp',
-    location: 'Posizione',
-    order: 'Ordine catalogo',
-    product: 'Prodotto catalogo',
-    edit: 'Messaggio modificato',
-    media_placeholder: 'Anteprima media',
-    keep_in_chat: 'Messaggio fissato in chat',
-    pin: 'Messaggio fissato',
-    hsm: 'Template / messaggio di sistema',
-    list: 'Lista interattiva',
-    link_preview: 'Anteprima link',
-    contacts: 'Contatto condiviso',
-    sticker: 'Sticker',
-    ephemeral: 'Messaggio monouso / effimero',
-    view_once: 'Messaggio monouso',
-    unknown: 'Tipo sconosciuto',
-};
+function looksLikeImageFile(params: {
+    mimeType?: string | null;
+    filename?: string | null;
+}): boolean {
+    const mime = (params.mimeType || '').toLowerCase();
+    if (mime.startsWith('image/') || mime.includes('webp')) return true;
+    const name = (params.filename || '').toLowerCase();
+    return /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)$/i.test(name);
+}
 
-function formatUnsupported(msg: MetaInboundMediaMessage): string {
-    const subtype = (msg.unsupported?.type || '').trim().toLowerCase();
-    const label =
-        (subtype && UNSUPPORTED_TYPE_LABELS[subtype]) ||
-        (subtype ? `Messaggio «${subtype}»` : null);
+/** Recupera un media id anche se Meta ha messo type=unsupported ma lascia i nodi media. */
+function salvageMediaId(msg: MetaInboundMediaMessage): string | undefined {
+    return (
+        msg.image?.id?.trim() ||
+        msg.document?.id?.trim() ||
+        msg.video?.id?.trim() ||
+        msg.sticker?.id?.trim() ||
+        msg.audio?.id?.trim() ||
+        undefined
+    );
+}
 
-    // OTP / auth da PayPal, Stripe, banche: Meta espone type=unsupported e non passa il codice.
-    const details = msg.errors?.[0]?.error_data?.details || msg.errors?.[0]?.title || '';
-    const looksLikeProtected =
-        !subtype ||
-        /not supported|unknown|hsm|ephemeral|view_once/i.test(`${subtype} ${details}`);
-
-    if (label && subtype === 'reaction') {
-        return 'Reazione WhatsApp (Meta non ha inviato l’emoji via API)';
-    }
-
-    if (label && !looksLikeProtected) {
-        return label;
-    }
-
-    if (label) {
-        return `${label}. Se era un codice OTP o un contenuto protetto, Meta non lo espone alla Business API: chiedi di copiarlo e inviarlo come testo.`;
-    }
-
-    return 'Messaggio non supportato da Meta Business API (spesso OTP/codici o contenuti protetti). Chiedi di inviarlo come testo.';
+function salvageCaption(msg: MetaInboundMediaMessage): string {
+    return (
+        msg.image?.caption?.trim() ||
+        msg.document?.caption?.trim() ||
+        msg.video?.caption?.trim() ||
+        ''
+    );
 }
 
 function formatLocation(loc: NonNullable<MetaInboundMediaMessage['location']>): string {
@@ -127,6 +123,7 @@ function formatContacts(contacts: NonNullable<MetaInboundMediaMessage['contacts'
 
 /**
  * Converte un messaggio Meta webhook in testo/media per la dashboard Communications.
+ * Non espone mai all'utente testi tecnici tipo "Tipo sconosciuto / OTP".
  */
 export function extractMetaInboundContent(msg: MetaInboundMediaMessage): ExtractedMetaInbound {
     const type = (msg.type || '').trim().toLowerCase();
@@ -140,6 +137,7 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                 text: msg.image?.caption?.trim() ?? '',
                 mediaUrl: msg.image?.id ? metaMediaProxyUrl(msg.image.id) : undefined,
                 silenceVera: false,
+                mimeHint: msg.image?.mime_type,
             };
 
         case 'audio':
@@ -147,15 +145,33 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                 text: 'Messaggio vocale',
                 mediaUrl: msg.audio?.id ? metaMediaProxyUrl(msg.audio.id) : undefined,
                 silenceVera: false,
+                mimeHint: msg.audio?.mime_type,
             };
 
         case 'document': {
             const caption = msg.document?.caption?.trim();
             const filename = msg.document?.filename?.trim();
+            const mimeHint = msg.document?.mime_type;
+            const mediaUrl = msg.document?.id ? metaMediaProxyUrl(msg.document.id) : undefined;
+            const asImage = looksLikeImageFile({ mimeType: mimeHint, filename });
+
+            // Foto inviata come "documento" (tipico iOS/Android): trattala come prova posa.
+            if (asImage && mediaUrl) {
+                return {
+                    text: caption || '',
+                    mediaUrl,
+                    silenceVera: false,
+                    mimeHint: mimeHint || 'image/*',
+                };
+            }
+
             return {
                 text: caption || (filename ? `Documento: ${filename}` : 'Documento'),
-                mediaUrl: msg.document?.id ? metaMediaProxyUrl(msg.document.id) : undefined,
+                mediaUrl,
                 silenceVera: false,
+                mimeHint,
+                // Documento non-immagine: guida il fiorista a inviare foto dalla galleria.
+                unsupportedMedia: Boolean(mediaUrl) && !asImage,
             };
         }
 
@@ -164,6 +180,9 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                 text: msg.video?.caption?.trim() ?? 'Video',
                 mediaUrl: msg.video?.id ? metaMediaProxyUrl(msg.video.id) : undefined,
                 silenceVera: false,
+                mimeHint: msg.video?.mime_type,
+                // Video non è prova foto standard → guida fiorista se serve.
+                unsupportedMedia: true,
             };
 
         case 'sticker':
@@ -171,6 +190,7 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                 text: 'Sticker',
                 mediaUrl: msg.sticker?.id ? metaMediaProxyUrl(msg.sticker.id) : undefined,
                 silenceVera: true,
+                mimeHint: msg.sticker?.mime_type,
             };
 
         case 'interactive': {
@@ -222,11 +242,36 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                 silenceVera: true,
             };
 
-        case 'unsupported':
-            return { text: formatUnsupported(msg), silenceVera: true };
+        case 'unsupported': {
+            // Se Meta lascia comunque un nodo media, salvalo (foto mascherata da unsupported).
+            const mediaId = salvageMediaId(msg);
+            if (mediaId) {
+                const mimeHint =
+                    msg.image?.mime_type ||
+                    msg.document?.mime_type ||
+                    msg.video?.mime_type ||
+                    msg.sticker?.mime_type;
+                const asImage = looksLikeImageFile({
+                    mimeType: mimeHint,
+                    filename: msg.document?.filename,
+                });
+                return {
+                    text: salvageCaption(msg),
+                    mediaUrl: metaMediaProxyUrl(mediaId),
+                    silenceVera: false,
+                    mimeHint,
+                    unsupportedMedia: !asImage,
+                };
+            }
+            // Nessun media recuperabile: niente testo OTP tecnico in chat.
+            return {
+                text: '',
+                silenceVera: false,
+                unsupportedMedia: true,
+            };
+        }
 
         default: {
-            // Payload anomalo: reaction senza type, o type nuovo.
             if (msg.reaction) {
                 const emoji = msg.reaction.emoji?.trim();
                 return {
@@ -234,9 +279,34 @@ export function extractMetaInboundContent(msg: MetaInboundMediaMessage): Extract
                     silenceVera: true,
                 };
             }
-            if (msg.unsupported || (msg.errors && msg.errors.length > 0)) {
-                return { text: formatUnsupported(msg), silenceVera: true };
+
+            const mediaId = salvageMediaId(msg);
+            if (mediaId) {
+                const mimeHint =
+                    msg.image?.mime_type ||
+                    msg.document?.mime_type ||
+                    msg.video?.mime_type;
+                const asImage = looksLikeImageFile({
+                    mimeType: mimeHint,
+                    filename: msg.document?.filename,
+                });
+                return {
+                    text: salvageCaption(msg) || (type ? `Messaggio WhatsApp (${type})` : ''),
+                    mediaUrl: metaMediaProxyUrl(mediaId),
+                    silenceVera: false,
+                    mimeHint,
+                    unsupportedMedia: !asImage,
+                };
             }
+
+            if (msg.unsupported || (msg.errors && msg.errors.length > 0) || type === 'unknown') {
+                return {
+                    text: '',
+                    silenceVera: false,
+                    unsupportedMedia: true,
+                };
+            }
+
             if (type) {
                 return { text: `Messaggio WhatsApp (${type})`, silenceVera: false };
             }

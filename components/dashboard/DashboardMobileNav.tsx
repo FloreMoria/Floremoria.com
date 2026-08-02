@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 
 type NavItem = { href: string; label: string };
 
@@ -12,8 +12,15 @@ const PRIMARY_LINKS: NavItem[] = [
     { href: '/dashboard/orders', label: 'Ordini' },
     { href: '/dashboard/users', label: 'Utenti' },
     { href: '/dashboard/defunti', label: 'Defunti' },
+    { href: '/dashboard/products', label: 'Prodotti' },
     { href: '/dashboard/fioristi', label: 'Fioristi' },
     { href: '/dashboard/communications', label: 'Messaggi' },
+];
+
+const SISTEMA_LINKS: NavItem[] = [
+    { href: '/dashboard/partner', label: 'Partner B2B' },
+    { href: '/dashboard/logs', label: 'Log di Sistema' },
+    { href: '/dashboard/offers', label: 'Buoni' },
 ];
 
 function MobileNavLink({ href, label, onNavigate }: NavItem & { onNavigate: () => void }) {
@@ -35,6 +42,69 @@ function MobileNavLink({ href, label, onNavigate }: NavItem & { onNavigate: () =
         >
             {label}
         </Link>
+    );
+}
+
+function MobileNavAccordion({
+    label,
+    items,
+    onNavigate,
+}: {
+    label: string;
+    items: NavItem[];
+    onNavigate: () => void;
+}) {
+    const pathname = usePathname() || '';
+    const isChildActive = items.some((item) => pathname.startsWith(item.href));
+    const [isOpen, setIsOpen] = useState(isChildActive);
+
+    useEffect(() => {
+        if (isChildActive) {
+            setIsOpen(true);
+        }
+    }, [isChildActive]);
+
+    return (
+        <div className="space-y-1">
+            <button
+                type="button"
+                onClick={() => setIsOpen((prev) => !prev)}
+                className={`flex items-center justify-between w-full rounded-xl px-4 py-3.5 text-[15px] font-semibold transition-colors ${
+                    isChildActive
+                        ? 'bg-gray-100 text-black font-bold'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-black'
+                }`}
+            >
+                <span>{label}</span>
+                <ChevronDown
+                    className={`h-4 w-4 transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-black' : 'text-gray-500'
+                    }`}
+                />
+            </button>
+
+            {isOpen ? (
+                <div className="pl-4 space-y-1 transition-all duration-200">
+                    {items.map((item) => {
+                        const active = pathname.startsWith(item.href);
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={onNavigate}
+                                className={`block rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+                                    active
+                                        ? 'bg-black text-white shadow-sm'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-black'
+                                }`}
+                            >
+                                {item.label}
+                            </Link>
+                        );
+                    })}
+                </div>
+            ) : null}
+        </div>
     );
 }
 
@@ -102,6 +172,14 @@ export default function DashboardMobileNav({
                                 <MobileNavLink key={item.href} {...item} onNavigate={close} />
                             ))}
 
+                            {isDashboardAdmin ? (
+                                <MobileNavAccordion
+                                    label="Sistema"
+                                    items={SISTEMA_LINKS}
+                                    onNavigate={close}
+                                />
+                            ) : null}
+
                             {extraLinks.length > 0 ? (
                                 <div className="mt-4 border-t border-gray-100 pt-4 space-y-1.5">
                                     {extraLinks.map((item) => (
@@ -116,3 +194,4 @@ export default function DashboardMobileNav({
         </div>
     );
 }
+

@@ -28,9 +28,25 @@ type Props = {
     hasPreDeliveryPhotoOpt?: boolean;
 };
 
-async function forceDownload(url: string, filename: string) {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Download non riuscito.');
+/** Download HD via proxy autenticato (evita CORS Blob) — Utente e Admin. */
+async function forceDownload(orderId: string, url: string, filename: string) {
+    const endpoint = `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;
+    const res = await fetch(endpoint, { cache: 'no-store', credentials: 'same-origin' });
+    if (!res.ok) {
+        // Fallback diretto se il proxy fallisce ma l'URL è pubblico.
+        const direct = await fetch(url, { cache: 'no-store' }).catch(() => null);
+        if (!direct?.ok) throw new Error('Download non riuscito.');
+        const blob = await direct.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+        return;
+    }
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -40,6 +56,10 @@ async function forceDownload(url: string, filename: string) {
     link.click();
     link.remove();
     URL.revokeObjectURL(objectUrl);
+}
+
+export function proofPhotoDownloadHref(orderId: string, url: string): string {
+    return `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;
 }
 
 type PhotoTileProps = {
@@ -106,7 +126,11 @@ function PhotoTile({
         setBusy('download');
         setError(null);
         try {
-            await forceDownload(url, downloadFilenameFromProofUrl(url, deceasedName));
+            await forceDownload(
+                orderId,
+                url,
+                downloadFilenameFromProofUrl(url, deceasedName)
+            );
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Download fallito.');
         } finally {
@@ -132,11 +156,18 @@ function PhotoTile({
                         type="button"
                         onClick={handleDownload}
                         disabled={!!busy}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:border-[#c5a880] hover:text-[#8a7349]"
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#8a7048] hover:bg-[#c5a880]/20"
                     >
                         <Download size={11} />
-                        Scarica
+                        Scarica HD
                     </button>
+                    <a
+                        href={proofPhotoDownloadHref(orderId, url)}
+                        download
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 hover:border-[#c5a880]"
+                    >
+                        Link
+                    </a>
                     <button
                         type="button"
                         onClick={() => replaceInputRef.current?.click()}
@@ -181,14 +212,24 @@ function PhotoTile({
                     />
                 </div>
             ) : (
-                <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 py-1.5 text-[10px] font-bold text-slate-600 hover:border-[#c5a880]"
-                >
-                    <Download size={11} />
-                    Scarica
-                </button>
+                <div className="flex flex-col gap-1">
+                    <button
+                        type="button"
+                        onClick={handleDownload}
+                        disabled={!!busy}
+                        className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-[#c5a880]/50 bg-[#c5a880]/10 py-2 text-[10px] font-bold uppercase tracking-wide text-[#8a7048] hover:bg-[#c5a880]/20"
+                    >
+                        <Download size={11} />
+                        Scarica in alta risoluzione
+                    </button>
+                    <a
+                        href={proofPhotoDownloadHref(orderId, url)}
+                        download
+                        className="text-center text-[10px] font-medium text-slate-400 underline-offset-2 hover:underline"
+                    >
+                        Apri / salva sul dispositivo
+                    </a>
+                </div>
             )}
             {error ? <p className="text-[10px] text-red-600">{error}</p> : null}
         </div>
@@ -314,30 +355,42 @@ export default function CustodiedProofGallery({
                 </div>
             ) : null}
 
-            {!compact && !isAdmin && primaryAfter ? (
+            {!compact && primaryAfter ? (
                 <div className="flex flex-col sm:flex-row gap-2">
                     <button
                         type="button"
                         onClick={() =>
                             forceDownload(
+                                orderId,
                                 primaryAfter,
                                 downloadFilenameFromProofUrl(primaryAfter, deceasedName)
                             )
                         }
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-slate-200 hover:border-[#c5a880] hover:text-[#c5a880] rounded-xl text-xs font-bold transition-colors text-slate-700 bg-white"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-[#c5a880]/40 bg-[#c5a880]/10 hover:bg-[#c5a880]/20 text-[#8a7048] rounded-xl text-xs font-bold transition-colors"
                     >
                         <Download size={13} />
-                        Scarica testimonianza
+                        Scarica testimonianza HD
                     </button>
-                    <a
-                        href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${deceasedName}: ${primaryAfter}`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-colors bg-white font-bold text-xs"
-                    >
-                        <Share2 size={13} />
-                        Condividi con i tuoi cari
-                    </a>
+                    {!isAdmin ? (
+                        <a
+                            href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${deceasedName}: ${primaryAfter}`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-colors bg-white font-bold text-xs"
+                        >
+                            <Share2 size={13} />
+                            Condividi con i tuoi cari
+                        </a>
+                    ) : (
+                        <a
+                            href={proofPhotoDownloadHref(orderId, primaryAfter)}
+                            download
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-slate-200 hover:border-[#c5a880] rounded-xl text-xs font-bold text-slate-700 bg-white"
+                        >
+                            <Download size={13} />
+                            Link download diretto
+                        </a>
+                    )}
                 </div>
             ) : null}
         </div>

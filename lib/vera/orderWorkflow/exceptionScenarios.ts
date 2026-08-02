@@ -17,8 +17,15 @@ const TOMB_NOT_FOUND_PATTERN =
 const CEMETERY_CLOSED_PATTERN =
     /cimitero\s+chiuso|chiuso\s+il\s+cimitero|non\s+aperto|porta\s+chiusa/i;
 
+/**
+ * Modifica ordine: richiede verbo di cambiamento + oggetto operativo.
+ * Perché: "ordine per i fiori" / PayPal NON devono attivare il flusso modifica (caso Luciano).
+ */
 const USER_MODIFICATION_PATTERN =
-    /modific|cambiar|spostar|orario|nastro|bigliett|messaggio|ritard|anticip|variet[aà]|fiori|colore|anthurium|gigli|rosa|consegna\s+(domani|il|per)|onomastic|data\s+di\s+consegna|preferisc/i;
+    /(?:modific|cambiar|spostar|anticip|ritard|preferisc\w*).{0,48}(?:orario|nastro|bigliett|messaggio|data|consegna|variet|colore|fiori|anthurium|gigli|rosa|omaggio)|(?:nastro|bigliett|variet[aà]|anthurium|gigli|colore).{0,24}(?:modific|cambiar|divers|altro)|consegna\s+(domani|il|per)\b|onomastic|data\s+di\s+consegna/i;
+
+const PAYMENT_CONTEXT_PATTERN =
+    /\b(paypal|stripe|pagament|addebit|bonific|transazion|carta|home\s*banking|rifiutat|in attesa di pagament)\b/i;
 
 export function detectFloristException(message: string): FloristExceptionType | null {
     if (TOMB_NOT_FOUND_PATTERN.test(message)) return 'tomb_not_found';
@@ -27,7 +34,9 @@ export function detectFloristException(message: string): FloristExceptionType | 
 }
 
 export function isUserModificationRequest(message: string): boolean {
-    return USER_MODIFICATION_PATTERN.test(message);
+    const text = message || '';
+    if (PAYMENT_CONTEXT_PATTERN.test(text)) return false;
+    return USER_MODIFICATION_PATTERN.test(text);
 }
 
 export async function resolveActiveFloristOrder(partnerId: string) {

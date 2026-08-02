@@ -145,6 +145,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const location = order ? formatLocation(order.cemeteryCity, order.cemeteryName) : null;
     const grave = order?.gravePosition?.trim() || null;
     const structuredDeliveryAddress = [grave, location].filter(Boolean).join(' — ') || null;
+    // Foto già in chat: solo outbound con media (non basta un template testo).
     const photosAlreadySentInChat = sessionHasRecentOutboundPhotos(session);
 
     const rawNameForFirst = session.userType === 'FLORIST' 
@@ -190,7 +191,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
 export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
     const whoIsTalking = ctx.userType === 'FLORIST'
         ? `Fiorista Partner (Nome: ${ctx.partnerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`
-        : `Cliente (Nome: ${ctx.buyerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`;
+        : `Utente (Nome: ${ctx.buyerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`;
 
     const lines = [
         '=== CONTESTO DETTAGLIATO E DINAMICO DELL\'ORDINE (DATABASE) ===',
@@ -212,7 +213,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
                 : '',
             `- Opzione "Foto prima della posa": ${ctx.hasPhotoBefore ? 'ATTIVA (Il fiorista deve inviare sia la foto prima che dopo la posa)' : 'DISATTIVA (Il fiorista deve inviare solo la foto dopo la posa)'}`,
             ctx.optionals && ctx.optionals.length
-                ? `- Optional/accessori inclusi: ${ctx.optionals.join(', ')} (ricorda al fiorista di posizionarli e conferma al cliente che sono previsti)`
+                ? `- Optional/accessori inclusi: ${ctx.optionals.join(', ')} (ricorda al fiorista di posizionarli e conferma all'utente che sono previsti)`
                 : '',
             ctx.ticketMessage
                 ? `- Testo biglietto/nastro commemorativo (ESATTO): "${ctx.ticketMessage}"`
@@ -231,10 +232,10 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             `- 📅 CONSEGNA ENTRO: ${ctx.deliveryDate ?? 'Non specificata'}`,
             ctx.proofStatus ? `- Stato prove di consegna: ${ctx.proofStatus}` : '',
             ctx.photosAlreadySentInChat
-                ? `- Foto già inviate in questa chat: SÌ — VIETATO dire "in preparazione" / "non appena sarà posizionato"; conferma che le foto sono già state inviate`
+                ? `- Foto già inviate in questa chat: SÌ — VIETATO dire "in preparazione" / "non appena sarà posizionato"; se l'utente contesta foto uguali/sbagliate → escalate Staff, non ripetere "già inviate"`
                 : `- Foto già inviate in questa chat: no o non rilevate`,
             'REGOLA DATI: rispondi solo con questi campi. Se un dato operativo manca, non inventarlo e non ripetere richieste di attesa: scala allo Staff con i pezzi già noti.',
-            'REGOLA MODIFICA CLIENTE: se chiede cambio data/orario/varietà fiori, presa in carico + staff — nessuna conferma arbitraria di fattibilità.'
+            'REGOLA MODIFICA UTENTE: se chiede cambio data/orario/varietà fiori, presa in carico + staff — nessuna conferma arbitraria di fattibilità. Pagamenti PayPal/Stripe non sono modifiche ordine.'
         );
     } else {
         lines.push(

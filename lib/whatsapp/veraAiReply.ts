@@ -23,8 +23,10 @@ import {
 } from '@/lib/whatsapp/veraWebhookDedup';
 import {
     buildDeliveryAlreadyDoneReply,
+    buildPhotoProofDisputeReply,
     isAskingAboutPhotosOrDelivery,
     isOrderDeliveryCompleted,
+    isPhotoProofDispute,
     replyViolatesDeliveryContextGate,
 } from '@/lib/vera/deliveryContextGate';
 import {
@@ -421,6 +423,59 @@ export async function generateVeraReply(
 
     const callerContext = await resolveVeraCallerContext(session);
 
+    // Fiorista invia foto in chat: registra come prova posa, niente Gemini ridondante.
+    if (session.userType === 'FLORIST' && mediaUrl && callerContext.phoneE164) {
+        const claimed = await tryClaimConversationIntent({
+            phoneE164: callerContext.phoneE164,
+            intentFingerprint: `florist_pose_photo:${mediaUrl.slice(-48)}`,
+        });
+        if (!claimed) {
+            return { text: '', source: 'silence', shouldEscalate: false };
+        }
+        const name = getDisplayNameFromSession(session, callerContext) || 'partner';
+        const orderHint = callerContext.orderNumber
+            ? ` per l'ordine ${callerContext.orderNumber}`
+            : '';
+        return {
+            text:
+                `Grazie ${name}, ho ricevuto la foto${orderHint}. ` +
+                `La registro come prova di posa. Se manca ancora lo scatto "dopo la posa" (fiori già sul posto), invialo pure qui in chat — è valido come testimonianza.`,
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
+    // Utente contesta foto errate/duplicate: escalate staff (caso Luciano), non "già inviate".
+    if (session.userType !== 'FLORIST' && isPhotoProofDispute(message) && callerContext.phoneE164) {
+        const claimed = await tryClaimConversationIntent({
+            phoneE164: callerContext.phoneE164,
+            intentFingerprint: `photo_dispute:${buildCourtesyConfirmIntentFingerprint(message)}`,
+        });
+        if (!claimed) {
+            return { text: '', source: 'silence', shouldEscalate: false };
+        }
+        if (callerContext.orderId) {
+            const { setVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+            await setVeraOperationalAlert({
+                orderId: callerContext.orderId,
+                type: 'workflow_blocked',
+                message: `Utente contesta foto posa WhatsApp: "${message.slice(0, 240)}"`,
+                priority: 'urgent',
+                freezeOrder: false,
+            }).catch((err) => {
+                console.error('[vera-ai] Alert photo dispute fallito:', err);
+            });
+        }
+        return {
+            text: buildPhotoProofDisputeReply({
+                firstName: callerContext.firstName,
+                deceasedName: callerContext.deceasedName,
+            }),
+            source: 'deterministic',
+            shouldEscalate: true,
+        };
+    }
+
     const scheduleConfirm = isCourtesyScheduleConfirmation(message);
 
     // Conferma cortesia/data: claim immediato in DB → stesso intento non riapre Gemini.
@@ -500,10 +555,11 @@ export async function generateVeraReply(
         return { text: '', source: 'silence', shouldEscalate: false };
     }
 
-    // P0 context gate foto/consegna (Carolina/Maria).
+    // P0 context gate foto/consegna (Carolina/Maria) — mai se l'utente contesta le foto.
     if (
         session.userType !== 'FLORIST' &&
         isAskingAboutPhotosOrDelivery(message) &&
+        !isPhotoProofDispute(message) &&
         isOrderDeliveryCompleted(callerContext)
     ) {
         return {

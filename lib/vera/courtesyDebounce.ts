@@ -58,7 +58,7 @@ const OPERATIONAL_INTENT_KEYWORDS = [
 ];
 
 const ISOLATED_COURTESY_PATTERN =
-    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille)?|ti ringrazio|la ringrazio|molte grazie|prego|di nulla)$/;
+    /^(ciao( ciao)?|buongiorno|buon giorno|buonasera|buona sera|buona serata|buona giornata|buona notte|salve|buon pomeriggio|buondi|hey|ehi|grazie( mille)?( a (voi|te|lei))?|ti ringrazio|la ringrazio|molte grazie|prego|di nulla)$/;
 
 /** Ack corti senza richiesta operativa (OK, sì, d'accordo, emoji già coperte altrove). */
 const SHORT_ACK_PATTERN =
@@ -184,14 +184,56 @@ export function isRedundantPostFarewellCourtesy(
 }
 
 /**
+ * Dopo conferma data/presa in carico già inviata da VERA, non riaprire loop
+ * su "Buona serata" / "Grazie" / "ok" (caso Benedetta Carrozza).
+ */
+export function isRedundantAfterScheduleConfirmAck(
+    message: string,
+    session: ChatSession
+): boolean {
+    const m = normalizeForCourtesy(message);
+    if (!m) return false;
+    if (hasOperationalServiceIntent(message) && !isCourtesyScheduleConfirmation(message)) {
+        return false;
+    }
+    const closingOrAck =
+        POST_FAREWELL_COURTESY_PATTERN.test(m) ||
+        ISOLATED_COURTESY_PATTERN.test(m) ||
+        SHORT_ACK_PATTERN.test(m) ||
+        /^(buona serata|a luned[iì]|a presto|grazie mille a voi)/.test(m);
+    if (!closingOrAck) return false;
+
+    const recentOutbound = [...session.messages]
+        .reverse()
+        .filter((msg) => msg.direction === 'OUTBOUND')
+        .slice(0, 5);
+
+    const scheduleAckHints =
+        /luned[iì] va benissimo|annotato|grazie della conferma|incarico confermato|perfettamente nei tempi|consegna [eè] prevista|va benissimo/;
+
+    return recentOutbound.some((msg) => scheduleAckHints.test((msg.body || '').toLowerCase()));
+}
+
+/** Fragmenti rumorosi / typo isolati (es. "?*", "okV" già coperto da ack). */
+export function isNoiseFragmentMessage(message: string): boolean {
+    const raw = (message || '').trim();
+    if (!raw) return true;
+    if (/^[?*!.…,\-\s]+$/.test(raw)) return true;
+    if (raw.length <= 2 && !/^(ok|si|sì)$/i.test(raw)) return true;
+    return false;
+}
+
+/**
  * Vera non risponde: reaction, cortesia/ack isolati, o ringraziamento dopo congedo.
- * Perché: P0 anti-ridondanza (Simone/Carolina) — niente ping-pong su "Grazie"/"OK"/emoji.
+ * Perché: P0 anti-ridondanza (Simone/Carolina/Benedetta) — niente ping-pong su "Grazie"/"OK"/emoji.
  */
 export function shouldSilenceVeraReply(message: string, session: ChatSession): boolean {
+    if (isNoiseFragmentMessage(message)) return true;
     if (isWhatsAppReactionOrEmojiOnly(message)) return true;
     if (isIsolatedCourtesyMessage(message)) return true;
     if (isShortAckWithoutOperationalIntent(message)) return true;
     if (isRedundantPostFarewellCourtesy(message, session)) return true;
+    if (isRedundantAfterScheduleConfirmAck(message, session)) return true;
     return false;
 }
 

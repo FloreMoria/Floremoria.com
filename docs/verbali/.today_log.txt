@@ -1,0 +1,2 @@
+
+[2026-08-02 18:50] fix(vera+ux): analisi chat Luciano/Benedetta — anti-loop fiorista (burst 25s), dispute foto posa, PayPal≠modifica; download HD foto posa Utente/Admin via /api/delivery-proof/download.

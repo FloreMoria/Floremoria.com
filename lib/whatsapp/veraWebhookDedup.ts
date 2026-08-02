@@ -72,9 +72,30 @@ export async function tryClaimInboundWhatsAppMessageId(
     }
 }
 
+function phoneBurstKey(phoneE164: string): string {
+    return `wa:outphone:${shortHash(phoneE164)}`;
+}
+
+async function tryClaimLockKey(
+    key: string,
+    value: string,
+    lockMs: number
+): Promise<boolean> {
+    const claimed = await prisma.$queryRaw<Array<{ key: string }>>`
+        INSERT INTO system_state (key, value, updated_at)
+        VALUES (${key}, ${value}, NOW())
+        ON CONFLICT (key) DO UPDATE
+          SET value = EXCLUDED.value, updated_at = NOW()
+          WHERE system_state.updated_at < NOW() - (${lockMs} * INTERVAL '1 millisecond')
+        RETURNING key
+    `;
+    return claimed.length > 0;
+}
+
 /**
- * Lock risposta automatica: stesso telefono + stesso inbound → al massimo 1 reply in 25s.
- * Senza inboundMessageId: lock sul solo telefono (fallback per payload incompleti).
+ * Lock risposta automatica:
+ * 1) stesso inbound messageId → max 1 reply (retry Meta);
+ * 2) stesso telefono → max 1 reply VERA ogni 25s (burst multi-messaggio, caso Benedetta).
  */
 export async function tryClaimVeraOutboundReplyLock(params: {
     phoneE164: string;
@@ -86,9 +107,6 @@ export async function tryClaimVeraOutboundReplyLock(params: {
     const inboundId = params.inboundMessageId?.trim() || '';
     const lockMs = VERA_OUTBOUND_LOCK_MS;
     const nowIso = new Date().toISOString();
-    const key = inboundId
-        ? outboundLockKey(phone, inboundId)
-        : `wa:outphone:${shortHash(phone)}`;
     const value = JSON.stringify({
         phoneE164: phone,
         inboundMessageId: inboundId || null,
@@ -96,20 +114,20 @@ export async function tryClaimVeraOutboundReplyLock(params: {
     });
 
     try {
-        const claimed = await prisma.$queryRaw<Array<{ key: string }>>`
-            INSERT INTO system_state (key, value, updated_at)
-            VALUES (${key}, ${value}, NOW())
-            ON CONFLICT (key) DO UPDATE
-              SET value = EXCLUDED.value, updated_at = NOW()
-              WHERE system_state.updated_at < NOW() - (${lockMs} * INTERVAL '1 millisecond')
-            RETURNING key
-        `;
-        if (!claimed.length) {
-            console.info(
-                `[wa-dedup] Outbound bloccato phone=${phone}` +
-                    (inboundId ? ` inbound=${inboundId.slice(0, 24)}…` : ' (no messageId)')
-            );
-            return { ok: false, reason: inboundId ? 'same_inbound' : 'phone_window' };
+        if (inboundId) {
+            const sameInbound = await tryClaimLockKey(outboundLockKey(phone, inboundId), value, lockMs);
+            if (!sameInbound) {
+                console.info(
+                    `[wa-dedup] Outbound bloccato (same inbound) phone=${phone} inbound=${inboundId.slice(0, 24)}…`
+                );
+                return { ok: false, reason: 'same_inbound' };
+            }
+        }
+
+        const phoneOk = await tryClaimLockKey(phoneBurstKey(phone), value, lockMs);
+        if (!phoneOk) {
+            console.info(`[wa-dedup] Outbound bloccato (phone burst 25s) phone=${phone}`);
+            return { ok: false, reason: 'phone_window' };
         }
         return { ok: true };
     } catch (err) {
@@ -126,11 +144,12 @@ export async function releaseVeraOutboundReplyLock(params: {
     const phone = params.phoneE164.trim();
     if (!phone) return;
     const inboundId = params.inboundMessageId?.trim() || '';
-    const key = inboundId
-        ? outboundLockKey(phone, inboundId)
-        : `wa:outphone:${shortHash(phone)}`;
     try {
-        await prisma.systemState.deleteMany({ where: { key } });
+        const keys = [phoneBurstKey(phone)];
+        if (inboundId) keys.push(outboundLockKey(phone, inboundId));
+        for (const key of keys) {
+            await prisma.systemState.deleteMany({ where: { key } });
+        }
     } catch (err) {
         console.warn('[wa-dedup] Release outbound lock fallito:', err);
     }

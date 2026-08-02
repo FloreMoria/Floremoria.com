@@ -29,10 +29,18 @@ export {
     hasOperationalServiceIntent,
     isCourtesyScheduleConfirmation,
     isIsolatedCourtesyMessage,
+    isRedundantAfterScheduleConfirmAck,
     shouldSilenceVeraReply,
     VERA_INTENT_BEFORE_ACTION_RULE,
     VERA_SYMMETRIC_GREETING_RULE,
 } from '@/lib/vera/courtesyDebounce';
+export {
+    buildDeliveryAlreadyDoneReply,
+    buildPhotoProofDisputeReply,
+    isAskingAboutPhotosOrDelivery,
+    isOrderDeliveryCompleted,
+    isPhotoProofDispute,
+} from '@/lib/vera/deliveryContextGate';
 export { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 export * from '@/lib/vera/orderWorkflow';

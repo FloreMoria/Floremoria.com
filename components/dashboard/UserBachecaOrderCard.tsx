@@ -186,7 +186,7 @@ export function UserBachecaOrderCard({
                     </div>
 
                     {isDelivered && primaryPhotoUrl ? (
-                        <div className="border-t border-slate-100 pt-4">
+                        <div className="border-t border-slate-100 pt-4 flex flex-wrap gap-2">
                             <a
                                 href={primaryPhotoUrl}
                                 target="_blank"
@@ -195,6 +195,13 @@ export function UserBachecaOrderCard({
                             >
                                 <ExternalLink size={14} />
                                 Vedi foto della posa
+                            </a>
+                            <a
+                                href={`/api/delivery-proof/download?orderId=${encodeURIComponent(order.id)}&url=${encodeURIComponent(primaryPhotoUrl)}`}
+                                download
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold uppercase tracking-wider hover:border-[#c5a880] hover:text-[#8a7048] transition-colors"
+                            >
+                                Scarica HD
                             </a>
                         </div>
                     ) : null}

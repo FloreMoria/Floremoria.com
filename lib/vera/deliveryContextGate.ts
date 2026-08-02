@@ -11,8 +11,17 @@ const PHOTO_OR_DELIVERY_ASK =
 const FORBIDDEN_PENDING_PHRASES =
     /non appena (sar[aà]|verr[aà]|saranno)|in preparazione|si sta occupando|ancora non|appena (sar[aà]|complet|posizion)|quando (sar[aà]|avr[aà]) (posizion|consegn)|preparando i fiori|partner.{0,40}al lavoro/i;
 
+/** Segnalazione che le foto sono sbagliate / duplicate / solo "prima della posa". */
+const PHOTO_DISPUTE_PATTERN =
+    /foto.{0,60}(ugual|sbagli|errat|non (sono|è|e) (la|corrett)|stess[oa]|prima della posa)|due foto.{0,20}ugual|errore.{0,40}foto|prima della posa|non (ho )?ricevut[oa].{0,30}foto|nella chat non ho ricevuto le foto/i;
+
 export function isAskingAboutPhotosOrDelivery(message: string): boolean {
     return PHOTO_OR_DELIVERY_ASK.test(message || '');
+}
+
+/** True se l'utente contesta qualità/slot delle foto (non basta dire "già inviate"). */
+export function isPhotoProofDispute(message: string): boolean {
+    return PHOTO_DISPUTE_PATTERN.test(message || '');
 }
 
 /** Prove / stato ordine già conclusi lato sistema. */
@@ -46,7 +55,7 @@ export function buildDeliveryAlreadyDoneReply(params: {
         return (
             `Confermo: la posa risulta già registrata a sistema` +
             (params.deceasedName ? ` per ${params.deceasedName}` : '') +
-            `. Se il cliente non vede le foto, lo staff può reinviare da Communications. Grazie.`
+            `. Se l'utente non vede le foto, lo staff può reinviare da Communications. Grazie.`
         );
     }
     const who = params.firstName ? `Gentile ${params.firstName}, ` : '';
@@ -58,6 +67,19 @@ export function buildDeliveryAlreadyDoneReply(params: {
     );
 }
 
+/** Contesta foto: presa in carico staff, niente "già inviate". */
+export function buildPhotoProofDisputeReply(params: {
+    firstName?: string | null;
+    deceasedName?: string | null;
+}): string {
+    const who = params.firstName ? `Gentile ${params.firstName}, ` : '';
+    const dear = params.deceasedName?.trim();
+    return (
+        `${who}La ringrazio per la segnalazione` +
+        (dear ? ` sulle foto nel ricordo di ${dear}` : ' sulle foto') +
+        `. Ho avvisato subito lo Staff: verifichiamo e Le reinviamo la testimonianza corretta della posa qui in chat. Restiamo a Sua disposizione.`
+    );
+}
 /** Post-check: se il modello ignora il gate, blocca formulazioni “ancora in preparazione”. */
 export function replyViolatesDeliveryContextGate(reply: string): boolean {
     return FORBIDDEN_PENDING_PHRASES.test(reply || '');

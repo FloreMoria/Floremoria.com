@@ -302,18 +302,20 @@ async function finalizeVeraOutboundReply(params: {
         }
     }
 
-    const outboundLock = await tryClaimVeraOutboundReplyLock({
-        phoneE164,
-        inboundMessageId,
-    });
-    if (!outboundLock.ok) {
-        return { ok: true, skipped: `outbound_lock_${outboundLock.reason}`, sent: false };
-    }
-
     const updatedSession = await getSession(phoneKey);
     const lastInbound = [...updatedSession.messages].reverse().find((m) => m.direction === 'INBOUND');
     const replySeed = lastInbound?.body || inboundBody;
     const seedMedia = lastInbound?.mediaUrl || mediaUrl;
+
+    const outboundLock = await tryClaimVeraOutboundReplyLock({
+        phoneE164,
+        inboundMessageId,
+        // Foto inbound: no phone-burst — consente ack su foto posa sequenziali.
+        hasMedia: Boolean(seedMedia),
+    });
+    if (!outboundLock.ok) {
+        return { ok: true, skipped: `outbound_lock_${outboundLock.reason}`, sent: false };
+    }
 
     if (shouldSilenceVeraReply(replySeed, updatedSession) && !seedMedia) {
         console.info(`[wa-webhook] VERA silenzio (post-burst) per ${phoneE164}`);

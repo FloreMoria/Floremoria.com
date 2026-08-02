@@ -95,11 +95,16 @@ async function tryClaimLockKey(
 /**
  * Lock risposta automatica:
  * 1) stesso inbound messageId → max 1 reply (retry Meta);
- * 2) stesso telefono → max 1 reply VERA ogni 25s (burst multi-messaggio, caso Benedetta).
+ * 2) stesso telefono → max 1 reply VERA testo ogni 25s (burst, caso Benedetta).
+ *
+ * Media/foto inbound: salta il burst sul telefono così foto posa sequenziali
+ * non vengono scartate come "duplicato" (resta solo il claim per wamid).
  */
 export async function tryClaimVeraOutboundReplyLock(params: {
     phoneE164: string;
     inboundMessageId?: string | null;
+    /** Se true (allegato immagine), non applicare il phone burst. */
+    hasMedia?: boolean;
 }): Promise<{ ok: true } | { ok: false; reason: 'same_inbound' | 'phone_window' }> {
     const phone = params.phoneE164.trim();
     if (!phone) return { ok: true };
@@ -110,6 +115,7 @@ export async function tryClaimVeraOutboundReplyLock(params: {
     const value = JSON.stringify({
         phoneE164: phone,
         inboundMessageId: inboundId || null,
+        hasMedia: Boolean(params.hasMedia),
         at: nowIso,
     });
 
@@ -124,9 +130,14 @@ export async function tryClaimVeraOutboundReplyLock(params: {
             }
         }
 
+        // Foto/allegati: consentiti in sequenza (niente phone burst).
+        if (params.hasMedia) {
+            return { ok: true };
+        }
+
         const phoneOk = await tryClaimLockKey(phoneBurstKey(phone), value, lockMs);
         if (!phoneOk) {
-            console.info(`[wa-dedup] Outbound bloccato (phone burst 25s) phone=${phone}`);
+            console.info(`[wa-dedup] Outbound bloccato (phone burst 25s, testo) phone=${phone}`);
             return { ok: false, reason: 'phone_window' };
         }
         return { ok: true };
@@ -232,4 +243,37 @@ export function buildCourtesyConfirmIntentFingerprint(message: string): string {
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, 120);
+}
+
+/** Finestra corta per testo outbound identico (non si applica a media). */
+export const VERA_IDENTICAL_TEXT_DEDUP_MS = 12_000;
+
+/**
+ * Blocca solo testo outbound IDENTICO allo stesso numero entro pochi secondi.
+ * Perché: anti double-click / doppio send staff — le foto restano sempre libere.
+ */
+export async function tryClaimIdenticalTextOutbound(params: {
+    phoneE164: string;
+    text: string;
+}): Promise<boolean> {
+    const phone = params.phoneE164.trim();
+    const text = params.text.trim();
+    if (!phone || !text) return true;
+
+    const key = `wa:txt:${shortHash(`${phone}|${text}`)}`;
+    const value = JSON.stringify({ phoneE164: phone, at: new Date().toISOString() });
+    const lockMs = VERA_IDENTICAL_TEXT_DEDUP_MS;
+
+    try {
+        const claimed = await tryClaimLockKey(key, value, lockMs);
+        if (!claimed) {
+            console.info(
+                `[wa-dedup] Testo outbound identico bloccato phone=${phone} (${text.slice(0, 40)}…)`
+            );
+        }
+        return claimed;
+    } catch (err) {
+        console.error('[wa-dedup] Claim testo identico fallito (fail-open):', err);
+        return true;
+    }
 }

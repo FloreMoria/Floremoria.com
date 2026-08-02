@@ -130,6 +130,8 @@ export async function sendOperatorChatPhoto(input: {
         headerImageUrl: publicUrl,
         orderId: ctx.order.id,
         orderNumber: ctx.order.orderNumber,
+        // Foto distinte in sequenza: mai bloccare come "template già inviato".
+        skipOrderDedup: true,
     });
 
     if (!templateSend.ok) {

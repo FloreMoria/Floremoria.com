@@ -143,10 +143,11 @@ export async function sendDeliveryProofWhatsApp(
                 phoneE164,
                 'customer_delivery_photo',
                 bodyParams,
-                { 
+                {
                     headerImageUrl: publicImageUrl,
                     orderId: input.orderId,
-                    orderNumber: input.orderNumber
+                    orderNumber: input.orderNumber,
+                    skipOrderDedup: true,
                 }
             );
 

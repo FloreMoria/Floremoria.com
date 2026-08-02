@@ -7,6 +7,7 @@ import { addMessage, getSession, updateSessionProfile } from '@/lib/chatStore';
 import {
     sendWhatsAppTextMessage,
     sendWhatsAppTemplateMessage,
+    normalizePhoneE164,
     type WhatsAppSendResult,
 } from '@/lib/whatsapp/metaCloudApiClient';
 import {
@@ -15,6 +16,7 @@ import {
     extractFirstName,
     normalizeOrderCode,
 } from '@/lib/whatsapp/approvedTemplates';
+import { tryClaimIdenticalTextOutbound } from '@/lib/whatsapp/veraWebhookDedup';
 
 export interface SendWhatsAppMessageOptions {
     recipientName?: string;
@@ -89,6 +91,19 @@ export async function sendWhatsAppMessage(
     const text = messageText.trim();
     if (!text) {
         return { ok: false, error: 'Messaggio vuoto.' };
+    }
+
+    // Dedup SOLO testo identico entro pochi secondi (mai per media/image API).
+    const phoneE164 = normalizePhoneE164(phone);
+    if (phoneE164) {
+        const textOk = await tryClaimIdenticalTextOutbound({ phoneE164, text });
+        if (!textOk) {
+            return {
+                ok: false,
+                error: 'duplicate_text_prevented: stesso testo già inviato pochi secondi fa.',
+                errorCode: 409,
+            };
+        }
     }
 
     // 1. Tenta invio messaggio libero (session message), salvo forceTemplate

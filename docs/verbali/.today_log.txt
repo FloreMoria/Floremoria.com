@@ -1,2 +1,3 @@
 
 [2026-08-02 18:50] fix(vera+ux): analisi chat Luciano/Benedetta — anti-loop fiorista (burst 25s), dispute foto posa, PayPal≠modifica; download HD foto posa Utente/Admin via /api/delivery-proof/download.
+[2026-08-02 18:55] fix(whatsapp): esclude foto/media dalla dedup outbound — foto posa sequenziali all Utente consentite; dedup resta solo su testo identico (12s) e template testo.

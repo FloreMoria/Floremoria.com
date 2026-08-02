@@ -43,17 +43,31 @@ function buildImageHeaderComponent(imageUrl: string): WhatsAppTemplateComponent 
 
 /**
  * Invia un template Meta del workflow VERA con validazione param count.
+ *
+ * Dedup ordine 24h: SOLO template testo (conferme/reminder).
+ * Template con header immagine (foto posa) sono esclusi: Admin/Utente devono
+ * poter inviare 2+ foto sequenziali senza `duplicate_prevented`.
  */
 export async function sendVeraTemplate(
     phone: string,
     templateId: VeraTemplateId,
     bodyParams: string[],
-    options?: { headerImageUrl?: string; headerTextParams?: string[]; orderId?: string; orderNumber?: string | null }
+    options?: {
+        headerImageUrl?: string;
+        headerTextParams?: string[];
+        orderId?: string;
+        orderNumber?: string | null;
+        /** Forza skip dedup (es. reinvio foto esplicito). */
+        skipOrderDedup?: boolean;
+    }
 ): Promise<SendVeraTemplateResult> {
     const spec = getVeraTemplate(templateId);
 
-    // Controllo Deduplicazione/Idempotenza basato su orderId nelle ultime 24 ore
-    if (options?.orderId) {
+    const isMediaTemplate = Boolean(spec.hasImageHeader || options?.headerImageUrl?.trim());
+    const skipDedup = Boolean(options?.skipOrderDedup || isMediaTemplate);
+
+    // Controllo Deduplicazione/Idempotenza basato su orderId nelle ultime 24 ore (solo testo).
+    if (options?.orderId && !skipDedup) {
         try {
             const alreadySent = await wasOrderTemplateSentRecent(
                 options.orderId,
@@ -69,6 +83,10 @@ export async function sendVeraTemplate(
         } catch (err) {
             console.error('[vera-template] Errore durante il controllo deduplicazione:', err);
         }
+    } else if (isMediaTemplate && options?.orderId) {
+        console.info(
+            `[vera-template] Dedup ordine saltato per template media ${templateId} (foto sequenziali consentite).`
+        );
     }
 
     if (bodyParams.length !== spec.bodyParamCount) {

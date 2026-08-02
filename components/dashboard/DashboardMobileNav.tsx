@@ -129,7 +129,6 @@ export default function DashboardMobileNav({
     const close = () => setOpen(false);
 
     const extraLinks: NavItem[] = [
-        ...(isDashboardAdmin ? [{ href: '/admin-panel/whatsapp-setup', label: 'WhatsApp' }] : []),
         ...(isSuperAdmin ? [{ href: '/dashboard/settings/roles', label: 'Ruoli' }] : []),
         { href: '/dashboard/profile', label: 'Profilo' },
     ];

@@ -4,3 +4,4 @@
 [2026-08-02 19:00] fix(whatsapp): elimina "Tipo sconosciuto/OTP" — foto-as-document per prova posa; guida umanizzata fiorista su allegati non supportati.
 [2026-08-02 19:10] fix(whatsapp): foto Luciano — JPEG HTTPS pubblico per Meta, rotta /api/chat/media con CORS+Content-Type, staging Blob public/private corretto, strip query string.
 [2026-08-02 19:13] feat(dashboard): aggiunta sezione "Sistema" con accordion mobile (Partner B2B, Log di Sistema, Buoni) in DashboardMobileNav.
+[2026-08-02 19:22] fix(dashboard): rimosso collegamento inattivo WhatsApp dal menu nav mobile.

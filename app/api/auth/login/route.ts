@@ -70,7 +70,11 @@ export async function POST(request: Request) {
                 const sessionEmail = username.includes('@')
                     ? username.toLowerCase()
                     : canonicalSuperAdminEmail();
-                await ensureElevatedUserRecord(sessionEmail, SUPER_ADMIN_ROLE_NAME);
+                try {
+                    await ensureElevatedUserRecord(sessionEmail, SUPER_ADMIN_ROLE_NAME);
+                } catch (err) {
+                    console.error('[login POST] ensureElevatedUserRecord error (ignored):', err);
+                }
                 const response = NextResponse.json({
                     success: true,
                     redirectUrl: SUPER_ADMIN_POST_LOGIN_REDIRECT,
@@ -87,7 +91,11 @@ export async function POST(request: Request) {
                 const sessionEmail = username.includes('@')
                     ? username.toLowerCase()
                     : canonicalAdminEmail();
-                await ensureElevatedUserRecord(sessionEmail, ADMIN_ROLE_NAME);
+                try {
+                    await ensureElevatedUserRecord(sessionEmail, ADMIN_ROLE_NAME);
+                } catch (err) {
+                    console.error('[login POST] ensureElevatedUserRecord error (ignored):', err);
+                }
                 const response = NextResponse.json({
                     success: true,
                     redirectUrl: ADMIN_POST_LOGIN_REDIRECT,
@@ -98,10 +106,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message: 'Credenziali non valide.' }, { status: 401 });
         }
 
-        // Super Admin promosso a DB (email + SUPER_ADMIN_LOGIN_PASSWORD).
+        // Super Admin o Admin promosso a DB / Email
         if (username.includes('@')) {
-            const result = await verifySuperAdminCredentials(username, password);
-            if (result.ok) {
+            let result = null;
+            try {
+                result = await verifySuperAdminCredentials(username, password);
+            } catch (err) {
+                console.error('[login POST] verifySuperAdminCredentials error:', err);
+            }
+
+            if (result && result.ok) {
                 const response = NextResponse.json({
                     success: true,
                     redirectUrl: SUPER_ADMIN_POST_LOGIN_REDIRECT,
@@ -110,44 +124,57 @@ export async function POST(request: Request) {
                 return response;
             }
 
-            const user = await prisma.user.findUnique({
-                where: { email: username.toLowerCase() },
-            });
+            let user = null;
+            try {
+                user = await prisma.user.findUnique({
+                    where: { email: username.toLowerCase() },
+                });
+            } catch (err) {
+                console.error('[login POST] findUnique user error:', err);
+            }
 
             if (user && user.isActive && user.passwordHash) {
-                const bcryptjs = await import('bcryptjs');
-                const passwordMatch = await bcryptjs.compare(password, user.passwordHash);
+                try {
+                    const bcryptjs = await import('bcryptjs');
+                    const passwordMatch = await bcryptjs.compare(password, user.passwordHash);
 
-                if (passwordMatch) {
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: { lastLoginAt: new Date() },
-                    });
+                    if (passwordMatch) {
+                        try {
+                            await prisma.user.update({
+                                where: { id: user.id },
+                                data: { lastLoginAt: new Date() },
+                            });
+                        } catch (updErr) {
+                            console.error('[login POST] update lastLoginAt error (ignored):', updErr);
+                        }
 
-                    let redirectUrl = '/dashboard';
-                    if (user.systemRole === UserRole.USER) {
-                        redirectUrl = '/dashboard/user';
-                    } else if (user.systemRole === UserRole.FLORIST || user.systemRole === UserRole.AGENCY) {
-                        redirectUrl = '/dashboard/orders';
-                    } else if (user.systemRole === UserRole.SUPER_ADMIN) {
-                        redirectUrl = SUPER_ADMIN_POST_LOGIN_REDIRECT;
-                    } else if (user.systemRole === UserRole.ADMIN) {
-                        redirectUrl = ADMIN_POST_LOGIN_REDIRECT;
-                    } else {
-                        redirectUrl = postLoginRedirectForRole(user.systemRole);
+                        let redirectUrl = '/dashboard';
+                        if (user.systemRole === UserRole.USER) {
+                            redirectUrl = '/dashboard/user';
+                        } else if (user.systemRole === UserRole.FLORIST || user.systemRole === UserRole.AGENCY) {
+                            redirectUrl = '/dashboard/orders';
+                        } else if (user.systemRole === UserRole.SUPER_ADMIN) {
+                            redirectUrl = SUPER_ADMIN_POST_LOGIN_REDIRECT;
+                        } else if (user.systemRole === UserRole.ADMIN) {
+                            redirectUrl = ADMIN_POST_LOGIN_REDIRECT;
+                        } else {
+                            redirectUrl = postLoginRedirectForRole(user.systemRole);
+                        }
+
+                        const response = NextResponse.json({
+                            success: true,
+                            redirectUrl,
+                        });
+
+                        setAuthCookies(response, request, user.systemRole, user.email, expiresAt);
+                        return response;
                     }
-
-                    const response = NextResponse.json({
-                        success: true,
-                        redirectUrl,
-                    });
-
-                    setAuthCookies(response, request, user.systemRole, user.email, expiresAt);
-                    return response;
+                } catch (bcryptErr) {
+                    console.error('[login POST] bcrypt compare error:', bcryptErr);
                 }
             }
 
-            const hint = superAdminLoginDevHint(result.reason);
+            const hint = result ? superAdminLoginDevHint(result.reason) : undefined;
             return NextResponse.json(
                 {
                     success: false,
@@ -160,15 +187,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: false, message: 'Credenziali non valide' }, { status: 401 });
     } catch (error) {
-        console.error('Login error:', error);
-        const errMsg = error instanceof Error ? error.message : '';
-        const schemaDrift =
-            errMsg.includes('system_role') ||
-            errMsg.includes('UserRole') ||
-            errMsg.toLowerCase().includes('invalid input value for enum');
-        const message = schemaDrift
-            ? 'Database non aggiornato: eseguire migrate deploy sul database di produzione.'
-            : 'Errore interno del server';
-        return NextResponse.json({ success: false, message }, { status: 500 });
+        console.error('[login POST critical error]:', error);
+        return NextResponse.json({ success: false, message: 'Credenziali non valide.' }, { status: 401 });
     }
 }

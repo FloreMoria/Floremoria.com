@@ -29,24 +29,38 @@ export function isElevatedDashboardRole(role: string): boolean {
  * Per ADMIN/SUPER_ADMIN senza record, esegue ensureElevatedUserRecord.
  */
 export async function resolveSessionUser(): Promise<SessionContext> {
-    const cookieStore = await cookies();
-    const role = cookieStore.get('fm_user_role')?.value?.trim() || '';
-    const email = cookieStore.get('fm_user_email')?.value?.trim().toLowerCase() || null;
+    try {
+        const cookieStore = await cookies();
+        const role = cookieStore.get('fm_user_role')?.value?.trim() || '';
+        const email = cookieStore.get('fm_user_email')?.value?.trim().toLowerCase() || null;
 
-    if (!email) {
-        return { role, email: null, user: null };
+        if (!email) {
+            return { role, email: null, user: null };
+        }
+
+        let user: User | null = null;
+        try {
+            user = await findUserByEmail(email);
+        } catch (findErr) {
+            console.error('[resolveSessionUser] Warning: findUserByEmail failed:', findErr);
+        }
+
+        if (!user && isElevatedDashboardRole(role)) {
+            try {
+                user = await ensureElevatedUserRecord(
+                    email,
+                    role === SUPER_ADMIN_ROLE_NAME ? SUPER_ADMIN_ROLE_NAME : ADMIN_ROLE_NAME
+                );
+            } catch (ensureErr) {
+                console.error('[resolveSessionUser] Warning: ensureElevatedUserRecord failed:', ensureErr);
+            }
+        }
+
+        return { role, email, user };
+    } catch (error) {
+        console.error('[resolveSessionUser] Unexpected error during session resolution:', error);
+        return { role: '', email: null, user: null };
     }
-
-    let user = await findUserByEmail(email);
-
-    if (!user && isElevatedDashboardRole(role)) {
-        user = await ensureElevatedUserRecord(
-            email,
-            role === SUPER_ADMIN_ROLE_NAME ? SUPER_ADMIN_ROLE_NAME : ADMIN_ROLE_NAME
-        );
-    }
-
-    return { role, email, user };
 }
 
 /**

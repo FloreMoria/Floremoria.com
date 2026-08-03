@@ -6,6 +6,7 @@ import {
     parseWorkflowFlags,
     type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export interface FloristDeliveryNotifyResult {
     ok: boolean;
@@ -51,6 +52,15 @@ export async function notifyFloristDeliveryLinkForOrder(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+
+    const pendingBlock = veraAutomationBlockedSkipReason(order.status);
+    if (pendingBlock) {
+        console.info(
+            `[vera-workflow] Punto A notify BLOCCATO (ATTESA/PENDING) ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: pendingBlock };
+    }
+
     if (order.status !== 'IN_PROGRESS' && !options.force) {
         return { ok: true, skipped: 'not_in_progress' };
     }

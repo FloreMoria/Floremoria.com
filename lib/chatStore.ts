@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import prisma from './prisma';
 import { formatItalyTime } from '@/lib/datetime/italyTimezone';
+import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface ChatMessage {
     id: string;
@@ -162,17 +164,66 @@ function mapDbSessionToChatSession(session: {
 }
 
 async function ensureDbSession(phone: string, isTest = false): Promise<ChatSession> {
+    // Canonicalizza sempre su whatsapp:+E164 — evita doppie chat (es. Isabella Cesaroni).
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
+
     const existing = await prisma.whatsAppChatSession.findUnique({
-        where: { phone },
+        where: { phone: canonicalPhone },
         include: { messages: { orderBy: { createdAt: 'asc' } } },
     });
-    if (existing) return mapDbSessionToChatSession(existing);
+    if (existing) {
+        await mergeDuplicateSessionsIntoCanonical(canonicalPhone).catch((err) => {
+            console.warn('[chatStore] merge duplicate sessions fallito:', err);
+        });
+        const refreshed = await prisma.whatsAppChatSession.findUnique({
+            where: { phone: canonicalPhone },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+        return mapDbSessionToChatSession(refreshed || existing);
+    }
 
-    const initials = phone.replace(/[^\d]/g, '').slice(-2) || 'UT';
+    // Cerca varianti non canoniche dello stesso E.164 e promuovi/merge.
+    const e164 = normalizePhoneE164(phone);
+    if (e164) {
+        const variants = await prisma.whatsAppChatSession.findMany({
+            where: {
+                OR: [
+                    { phone: { contains: e164 } },
+                    { phone: { contains: e164.replace(/^\+/, '') } },
+                    { phone: { contains: e164.slice(-9) } },
+                ],
+            },
+            include: { messages: { orderBy: { createdAt: 'asc' } } },
+            take: 20,
+        });
+        const sameE164 = variants.filter((s) => normalizePhoneE164(s.phone) === e164);
+        if (sameE164.length > 0) {
+            const keeper =
+                sameE164.find((s) => s.phone === canonicalPhone) ||
+                [...sameE164].sort(
+                    (a, b) => b.messages.length - a.messages.length || b.updatedAt.getTime() - a.updatedAt.getTime()
+                )[0]!;
+
+            if (keeper.phone !== canonicalPhone) {
+                await prisma.whatsAppChatSession.update({
+                    where: { id: keeper.id },
+                    data: { phone: canonicalPhone },
+                });
+            }
+            await mergeDuplicateSessionsIntoCanonical(canonicalPhone);
+            const merged = await prisma.whatsAppChatSession.findUnique({
+                where: { phone: canonicalPhone },
+                include: { messages: { orderBy: { createdAt: 'asc' } } },
+            });
+            if (merged) return mapDbSessionToChatSession(merged);
+        }
+    }
+
+    const initials = canonicalPhone.replace(/[^\d]/g, '').slice(-2) || 'UT';
     const created = await prisma.whatsAppChatSession.create({
         data: {
-            phone,
-            name: phone.replace('whatsapp:', ''),
+            phone: canonicalPhone,
+            name: canonicalPhone.replace('whatsapp:', ''),
             userType: 'UNKNOWN',
             status: 'AI_ACTIVE',
             welcomeSent: false,
@@ -188,22 +239,57 @@ async function ensureDbSession(phone: string, isTest = false): Promise<ChatSessi
     return mapDbSessionToChatSession(created);
 }
 
+/** Sposta messaggi da sessioni duplicate (stesso E.164) nella chiave canonica e le elimina. */
+async function mergeDuplicateSessionsIntoCanonical(canonicalPhone: string): Promise<void> {
+    const e164 = normalizePhoneE164(canonicalPhone);
+    if (!e164) return;
+
+    const keeper = await prisma.whatsAppChatSession.findUnique({
+        where: { phone: canonicalPhone },
+        select: { id: true },
+    });
+    if (!keeper) return;
+
+    const candidates = await prisma.whatsAppChatSession.findMany({
+        where: {
+            id: { not: keeper.id },
+            OR: [
+                { phone: { contains: e164 } },
+                { phone: { contains: e164.replace(/^\+/, '') } },
+            ],
+        },
+        select: { id: true, phone: true },
+        take: 30,
+    });
+
+    for (const dup of candidates) {
+        if (normalizePhoneE164(dup.phone) !== e164) continue;
+        await prisma.whatsAppChatMessage.updateMany({
+            where: { sessionId: dup.id },
+            data: { sessionId: keeper.id },
+        });
+        await prisma.whatsAppChatSession.delete({ where: { id: dup.id } }).catch(() => undefined);
+        console.info(`[chatStore] Merge sessione duplicata ${dup.phone} → ${canonicalPhone}`);
+    }
+}
+
 export type GetChatStoreOptions = {
     isTest?: boolean;
 };
 
 export async function markChatSessionAsTest(phone: string): Promise<void> {
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
     if (useDatabasePersistence()) {
-        await ensureDbSession(phone);
+        await ensureDbSession(canonicalPhone);
         await prisma.whatsAppChatSession.update({
-            where: { phone },
+            where: { phone: canonicalPhone },
             data: { isTest: true },
         });
         return;
     }
     const store = await getChatStore();
-    if (store[phone]) {
-        store[phone].isTest = true;
+    if (store[canonicalPhone]) {
+        store[canonicalPhone].isTest = true;
         await saveChatStore(store);
     }
 }
@@ -215,11 +301,18 @@ export async function getChatStore(options?: GetChatStoreOptions): Promise<Recor
             orderBy: { updatedAt: 'desc' },
             include: { messages: { orderBy: { createdAt: 'asc' } } },
         });
-        return sessions.reduce<Record<string, ChatSession>>((acc, session) => {
+
+        // Una sola voce UI per E.164 (se restano duplicate legacy in DB).
+        const byCanonical = new Map<string, ChatSession>();
+        for (const session of sessions) {
             const mapped = mapDbSessionToChatSession(session);
-            acc[mapped.phone] = mapped;
-            return acc;
-        }, {});
+            const key = toWhatsAppSessionPhone(mapped.phone) || mapped.phone;
+            const prev = byCanonical.get(key);
+            if (!prev || new Date(mapped.updatedAt) > new Date(prev.updatedAt)) {
+                byCanonical.set(key, { ...mapped, phone: key });
+            }
+        }
+        return Object.fromEntries(byCanonical);
     }
 
     if (persistenceMode === 'memory') {
@@ -280,16 +373,17 @@ export async function saveChatStore(store: Record<string, ChatSession>) {
 }
 
 export async function getSession(phone: string): Promise<ChatSession> {
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
     if (useDatabasePersistence()) {
-        return ensureDbSession(phone);
+        return ensureDbSession(canonicalPhone);
     }
 
     const store = await getChatStore();
-    if (!store[phone]) {
-        const initials = phone.replace(/[^\d]/g, '').slice(-2);
-        store[phone] = {
-            phone,
-            name: phone.replace('whatsapp:', ''),
+    if (!store[canonicalPhone]) {
+        const initials = canonicalPhone.replace(/[^\d]/g, '').slice(-2);
+        store[canonicalPhone] = {
+            phone: canonicalPhone,
+            name: canonicalPhone.replace('whatsapp:', ''),
             userType: 'UNKNOWN',
             status: 'AI_ACTIVE',
             welcomeSent: false,
@@ -302,7 +396,7 @@ export async function getSession(phone: string): Promise<ChatSession> {
         };
         await saveChatStore(store);
     }
-    return store[phone];
+    return store[canonicalPhone];
 }
 
 export async function addMessage(
@@ -312,11 +406,12 @@ export async function addMessage(
     mediaUrl?: string,
     metadata?: Record<string, string>
 ): Promise<ChatSession> {
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
     if (useDatabasePersistence()) {
-        const session = await ensureDbSession(phone);
+        const session = await ensureDbSession(canonicalPhone);
         const timeStr = nowTimeLabel();
         const updated = await prisma.whatsAppChatSession.update({
-            where: { phone },
+            where: { phone: canonicalPhone },
             data: {
                 lastMessage: body,
                 hasPhoto: mediaUrl ? true : session.hasPhoto || false,
@@ -338,7 +433,7 @@ export async function addMessage(
     }
 
     const store = await getChatStore();
-    const session = store[phone] || (await getSession(phone));
+    const session = store[canonicalPhone] || (await getSession(canonicalPhone));
     const now = new Date();
     const timeStr = formatItalyTime(now);
     const newMessage: ChatMessage = {
@@ -359,16 +454,17 @@ export async function addMessage(
     session.time = timeStr;
     session.date = 'oggi';
     session.updatedAt = now.toISOString();
-    store[phone] = session;
+    store[canonicalPhone] = session;
     await saveChatStore(store);
     return session;
 }
 
 export async function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUMAN_INTERVENTION' | 'CLOSED'): Promise<ChatSession> {
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
     if (useDatabasePersistence()) {
-        await ensureDbSession(phone);
+        await ensureDbSession(canonicalPhone);
         const updated = await prisma.whatsAppChatSession.update({
-            where: { phone },
+            where: { phone: canonicalPhone },
             data: { status },
             include: { messages: { orderBy: { createdAt: 'asc' } } },
         });
@@ -376,22 +472,24 @@ export async function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUM
     }
 
     const store = await getChatStore();
-    const session = store[phone] || (await getSession(phone));
+    const session = store[canonicalPhone] || (await getSession(canonicalPhone));
     session.status = status;
-    session.updatedAt = new Date().toISOString();
-    store[phone] = session;
+    store[canonicalPhone] = session;
     await saveChatStore(store);
     return session;
 }
 
 export async function updateSessionProfile(
     phone: string,
-    updates: Partial<Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>>
+    updates: Partial<
+        Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>
+    >
 ): Promise<ChatSession> {
+    const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
     if (useDatabasePersistence()) {
-        await ensureDbSession(phone);
+        await ensureDbSession(canonicalPhone);
         const updated = await prisma.whatsAppChatSession.update({
-            where: { phone },
+            where: { phone: canonicalPhone },
             data: {
                 ...(updates.name !== undefined ? { name: updates.name } : {}),
                 ...(updates.userType !== undefined ? { userType: updates.userType } : {}),
@@ -407,13 +505,13 @@ export async function updateSessionProfile(
     }
 
     const store = await getChatStore();
-    const session = store[phone] || (await getSession(phone));
+    const session = store[canonicalPhone] || (await getSession(canonicalPhone));
     const nextSession: ChatSession = {
         ...session,
         ...updates,
         updatedAt: new Date().toISOString(),
     };
-    store[phone] = nextSession;
+    store[canonicalPhone] = nextSession;
     await saveChatStore(store);
     return nextSession;
 }

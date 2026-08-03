@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
+import type { ProfileUserType } from '@prisma/client';
 import { MAX_PLANNED_DELIVERY_DATES } from '@/lib/users/profileUserType';
 
 const NO_COMMITMENT_BANNER =
@@ -9,23 +10,28 @@ const NO_COMMITMENT_BANNER =
 type PlannedDeliveryDatesEditorProps = {
     dates: string[];
     onChange: (dates: string[]) => void;
-    /** Testo banner (default: copy utente-facing rassicurante). */
     bannerText?: string;
     idPrefix?: string;
     disabled?: boolean;
+    /** Nasconde il banner se SUBSCRIBER. */
+    userType?: ProfileUserType | null;
+    showNoCommitmentBanner?: boolean;
 };
 
-/**
- * Lista dinamica fino a 10 date future — prenotazione senza impegno.
- */
 export default function PlannedDeliveryDatesEditor({
     dates,
     onChange,
     bannerText = NO_COMMITMENT_BANNER,
     idPrefix = 'planned-date',
     disabled = false,
+    userType = null,
+    showNoCommitmentBanner,
 }: PlannedDeliveryDatesEditorProps) {
     const canAdd = dates.length < MAX_PLANNED_DELIVERY_DATES;
+    const showBanner =
+        showNoCommitmentBanner !== undefined
+            ? showNoCommitmentBanner
+            : userType !== 'SUBSCRIBER';
 
     const updateAt = (index: number, value: string) => {
         const next = [...dates];
@@ -44,9 +50,11 @@ export default function PlannedDeliveryDatesEditor({
 
     return (
         <div className="space-y-3">
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 leading-relaxed">
-                {bannerText}
-            </div>
+            {showBanner ? (
+                <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+                    {bannerText}
+                </div>
+            ) : null}
 
             <div className="flex items-center justify-between gap-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">

@@ -5,7 +5,7 @@ import {
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import prisma from '@/lib/prisma';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus } from '@prisma/client';
 
 export type DashboardManualOrderVeraResult =
     | { skipped: string }
@@ -14,9 +14,12 @@ export type DashboardManualOrderVeraResult =
 /**
  * Dopo creazione ordine manuale:
  * 1) auto-assegnazione tomba nota se possibile;
- * 2) PAID + ACCEPTED/PENDING → IN_PROGRESS;
- * 3) Punto B cliente **immediato** (bypass +30 min: la presa in carico dashboard non può dipendere dal wake Hobby);
+ * 2) Punto A/B SOLO se già IN_PROGRESS (mai da PENDING/ATTESA — zero automazioni);
+ * 3) Punto B cliente immediato se in lavorazione (bypass +30 min);
  * 4) Punto A fiorista se assegnato.
+ *
+ * Perché non promuovere più PENDING+PAID → IN_PROGRESS: lo stato ATTESA resta
+ * esclusivamente sotto controllo umano da dashboard.
  */
 export async function runVeraAfterDashboardManualOrder(input: {
     orderId: string;
@@ -29,7 +32,7 @@ export async function runVeraAfterDashboardManualOrder(input: {
             return { assigned: false as const, reason: 'auto_assign_error' };
         });
 
-        let order = await prisma.order.findFirst({
+        const order = await prisma.order.findFirst({
             where: { id: input.orderId, deletedAt: null },
             select: {
                 id: true,
@@ -45,30 +48,11 @@ export async function runVeraAfterDashboardManualOrder(input: {
             return { skipped: 'order_not_found' };
         }
 
-        const paymentConfirmed =
-            order.partnerPaymentStatus === PaymentStatus.PAID ||
-            input.partnerPaymentStatus === PaymentStatus.PAID ||
-            input.partnerPaymentStatus === 'PAID';
-
-        if (
-            paymentConfirmed &&
-            (order.status === OrderStatus.ACCEPTED || order.status === OrderStatus.PENDING)
-        ) {
-            order = await prisma.order.update({
-                where: { id: order.id },
-                data: { status: OrderStatus.IN_PROGRESS },
-                select: {
-                    id: true,
-                    status: true,
-                    partnerId: true,
-                    partnerPaymentStatus: true,
-                    customerPhone: true,
-                    orderNumber: true,
-                },
-            });
+        if (order.status === OrderStatus.PENDING) {
             console.info(
-                `[vera-workflow] Ordine manuale ${order.orderNumber || order.id}: ACCEPTED/PENDING+PAID → IN_PROGRESS`
+                `[vera-workflow] Ordine ${order.orderNumber || order.id} in PENDING/ATTESA: zero notifiche VERA (solo intervento umano)`
             );
+            return { skipped: 'order_status_pending_manual_only' };
         }
 
         if (order.status !== OrderStatus.IN_PROGRESS) {

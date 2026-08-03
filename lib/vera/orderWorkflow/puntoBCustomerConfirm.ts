@@ -27,6 +27,7 @@ import {
 } from '@/lib/whatsapp/outboundGuards';
 import { finalizeCustomerConfirmWarmSlot } from '@/lib/vera/customerOrderConfirmCopy';
 import { addMessage } from '@/lib/chatStore';
+import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export interface PuntoBResult {
     ok: boolean;
@@ -75,6 +76,14 @@ export async function runPuntoBCustomerOrderConfirm(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+
+    const pendingBlock = veraAutomationBlockedSkipReason(order.status);
+    if (pendingBlock) {
+        console.info(
+            `[vera-workflow] Punto B BLOCCATO (stato ATTESA/PENDING, solo manuale) ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: pendingBlock };
+    }
 
     if (order.status !== 'IN_PROGRESS' && !options.force) {
         console.info(

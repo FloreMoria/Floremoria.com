@@ -174,6 +174,7 @@ export default async function UserDashboardPage({
                                 initialCity={user.city ?? ''}
                                 initialDeliveryDate={initialDeliveryDate}
                                 initialPlannedDeliveryDates={initialPlannedDeliveryDates}
+                                userType={user.userType}
                                 saveEndpoint="/api/dashboard/user/profile"
                                 sectionTitle="I Suoi Dati Personali"
                             />

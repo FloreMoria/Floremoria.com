@@ -13,6 +13,7 @@ import { runPuntoGOrderReminders } from '@/lib/vera/orderWorkflow/puntoGReminder
 import { tryRunPuntoHReviewRequest } from '@/lib/vera/orderWorkflow/puntoHReview';
 import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow/flushPendingPuntoA';
 import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
+import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export {
     runPuntoAFloristNewOrder,
@@ -63,6 +64,14 @@ export async function runVeraPostPaymentWorkflowWithResults(
         return {
             customer: { ok: false, skipped: 'order_not_found' },
             florist: { ok: false, skipped: 'order_not_found' },
+        };
+    }
+
+    const pendingBlock = veraAutomationBlockedSkipReason(order.status);
+    if (pendingBlock) {
+        return {
+            customer: { ok: true, skipped: pendingBlock },
+            florist: { ok: true, skipped: pendingBlock },
         };
     }
 

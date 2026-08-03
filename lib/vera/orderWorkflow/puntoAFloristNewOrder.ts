@@ -42,6 +42,7 @@ import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
+import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export interface PuntoAResult {
     ok: boolean;
@@ -206,6 +207,14 @@ export async function runPuntoAFloristNewOrder(
             freezeOrder: false,
         }).catch(() => undefined);
         return { ok: false, skipped: 'no_partner_whatsapp' };
+    }
+
+    const pendingBlock = veraAutomationBlockedSkipReason(order.status);
+    if (pendingBlock) {
+        console.info(
+            `[vera-workflow] Punto A BLOCCATO (stato ATTESA/PENDING, solo manuale) ordine ${order.orderNumber || order.id}`
+        );
+        return { ok: true, skipped: pendingBlock };
     }
 
     if (isWhatsAppAutoNotifyDisabledForOrder(order.isTest)) {

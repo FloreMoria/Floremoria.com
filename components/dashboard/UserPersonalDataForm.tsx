@@ -12,6 +12,8 @@ export interface UserPersonalDataFormProps {
     initialCity?: string;
     initialDeliveryDate?: string;
     initialPlannedDeliveryDates?: string[];
+    /** Nasconde banner "senza impegno" se SUBSCRIBER. */
+    userType?: 'NEW' | 'REGULAR' | 'SUBSCRIBER' | null;
     emailEditable?: boolean;
     saveEndpoint: string;
     /** Etichetta sezione (default: "I Suoi Dati Personali") */
@@ -27,6 +29,7 @@ export default function UserPersonalDataForm({
     initialCity = '',
     initialDeliveryDate = '',
     initialPlannedDeliveryDates,
+    userType = null,
     emailEditable = true,
     saveEndpoint,
     sectionTitle = 'I Suoi Dati Personali',
@@ -210,6 +213,7 @@ export default function UserPersonalDataForm({
                         dates={plannedDeliveryDates}
                         onChange={setPlannedDeliveryDates}
                         disabled={isLoading}
+                        userType={userType}
                     />
                 </div>
 

@@ -32,6 +32,7 @@ export type DeceasedDetailPayload = {
         email: string | null;
         phone: string | null;
         relationship: string | null;
+        userType: 'NEW' | 'REGULAR' | 'SUBSCRIBER' | null;
     }>;
     orders: Array<{
         id: string;
@@ -121,7 +122,7 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         include: {
             userLinks: {
                 include: {
-                    user: { select: { id: true, name: true, email: true, phone: true } },
+                    user: { select: { id: true, name: true, email: true, phone: true, userType: true } },
                 },
             },
             partnerLinks: {
@@ -165,6 +166,7 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
             email: link.user.email,
             phone: link.user.phone,
             relationship: link.relationship,
+            userType: link.user.userType ?? null,
         })),
         orders: orders.map(serializeOrder),
     };

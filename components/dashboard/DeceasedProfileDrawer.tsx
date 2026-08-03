@@ -556,6 +556,9 @@ export default function DeceasedProfileDrawer({
                                                 setForm((f) => (f ? { ...f, plannedDeliveryDates: dates } : f))
                                             }
                                             disabled={saving}
+                                            showNoCommitmentBanner={
+                                                !detail.linkedUsers.some((u) => u.userType === 'SUBSCRIBER')
+                                            }
                                         />
                                     </div>
                                 </section>

@@ -14,7 +14,10 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { isOrderStatusBlockingVeraAutomation } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
+/** Finestra promemoria: da 0 a 72h (3 giorni) prima della consegna — mai un mese prima. */
+const REMINDER_MAX_HOURS_BEFORE = 72;
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 export interface PuntoGRunResult {
@@ -25,11 +28,12 @@ export interface PuntoGRunResult {
 }
 
 /**
- * PUNTO G — Un solo sollecito per ordine (cliente + fiorista), nella finestra 48h dalla consegna.
+ * PUNTO G — Un solo sollecito per ordine (cliente + fiorista), 2–3 giorni prima della consegna.
  *
  * Perché one-shot: i keep-alive ricorrenti ogni ~20h inviavano lo stesso template
  * ieri e oggi (stesso testo a Isabella / Antonella). Non è accettabile sul canale commemorativo.
  * La finestra Meta 24h resta gestita da inbound reali; non si “tiene aperta” con messaggi doppi.
+ * PENDING/ATTESA: esclusi (solo intervento umano da dashboard).
  */
 export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
     const result: PuntoGRunResult = {
@@ -49,7 +53,8 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
             deletedAt: null,
             isTest: false,
             partnerPaymentStatus: 'PAID',
-            status: { in: ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING'] },
+            // PENDING/ATTESA esclusi: zero automazioni finché lo staff non passa a lavorazione.
+            status: { in: ['ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
             partnerId: { not: null },
         },
         include: {
@@ -61,6 +66,11 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
     });
 
     for (const order of openOrders) {
+        if (isOrderStatusBlockingVeraAutomation(order.status)) {
+            result.skipped += 1;
+            continue;
+        }
+
         if (order.deliveryProof?.status === 'COMPLETED') {
             result.skipped += 1;
             continue;
@@ -73,7 +83,8 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
             continue;
         }
         const diffHours = (targetDate.getTime() - Date.now()) / MS_PER_HOUR;
-        if (diffHours > 48) {
+        // Solo entro 72h (3 giorni) dalla consegna — mai anticipi di settimane/mesi.
+        if (diffHours > REMINDER_MAX_HOURS_BEFORE || diffHours < -12) {
             result.skipped += 1;
             continue;
         }

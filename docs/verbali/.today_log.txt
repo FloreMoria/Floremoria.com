@@ -8,3 +8,5 @@
 [2026-08-02 19:24] style(communications): layout mobile a filo estremo con lo schermo (edge-to-edge 0px margin/padding) e testo messaggi ingrandito a 16px elegante.
 
 [2026-08-03 17:00] feat(users): profilazione NEW/REGULAR/SUBSCRIBER (badge admin + contesto VERA); date future x10 senza impegno (bacheca + scheda defunto); fix sessione profilo Isabella (self-heal + magic-link case-insensitive).
+
+[2026-08-03 17:15] feat(vera): regole Guest/contatti non profilati — accoglienza empatica, discrimina FT/FF/PA, guida delicata + Giardino senza impegno (callerContext, systemPrompt, metodoFloremoria).

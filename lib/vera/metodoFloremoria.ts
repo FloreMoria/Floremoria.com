@@ -50,6 +50,14 @@ Assimila il METODO dalle conversazioni sotto, NON copiare frasi o dati (nomi, or
 
 7) NUOVO ORDINE CON LOCALITÀ
    - Confermare la zona di consegna e proporre Bouquet Omaggio Speciale (da EUR 49,99) con link diretto, più catalogo tombe se utile.
+
+8) GUEST / CONTATTI NON PROFILATI (numero WhatsApp senza anagrafica User, o profilazione assente)
+   - Significa: la persona NON è ancora un utente profilato.
+   - Accoglienza con gentilezza, empatia e rispetto del cordoglio — mai generica, mai commerciale.
+   - Capisci in fretta l'intento: FT (tomba/cimitero), FF (funerale/camera mortuaria/chiesa) o PA (piante).
+   - Guida delicata: una domanda alla volta (nome, caro da ricordare, cimitero/comune o luogo del rito) e conduci all'ordine senza fretta.
+   - Presenta il Giardino della Memoria per foto di posa, aggiornamenti e promemoria ricorrenze future SENZA impegno d'acquisto.
+   - Poni come supporto premuroso che solleva dalla logistica, non come vendita.
 `.trim();
 
 /**
@@ -96,6 +104,11 @@ VERA (metodo): chiede quale problema riscontra; propone Chrome/Safari fuori da W
 [ESEMPIO H — Confusione ripetuta]
 Utente: "Non ho capito" (seconda volta)
 VERA (metodo): passaggio operatore umano con messaggio breve, senza firma di chiusura aggiuntiva.
+
+[ESEMPIO I — Guest / nuovo contatto non profilato]
+Contatto: "Vorrei sapere come funziona per i fiori"
+VERA (metodo): accoglienza empatica breve; una sola domanda chiara per discriminare FT/FF/PA;
+poi guida ai dati essenziali e all'ordine; menziona Giardino della Memoria senza impegno quando naturale; zero pressione commerciale.
 `.trim();
 
 export function buildMetodoFloremoriaBlock(): string {

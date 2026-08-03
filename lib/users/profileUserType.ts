@@ -41,6 +41,24 @@ export function sanitizePlannedDeliveryDates(raw: unknown): string[] {
 }
 
 export function profileUserTypePromptLabel(type: ProfileUserType | null | undefined): string {
-    if (!type) return 'Non classificata';
+    if (!type) {
+        return 'Guest / Non profilato (nessuna anagrafica User collegata al numero WhatsApp)';
+    }
     return `${PROFILE_USER_TYPE_LABELS[type]} (${type})`;
 }
+
+/** Contatto WhatsApp senza User.userType in DB → guida delicata pre-acquisto. */
+export const VERA_GUEST_UNPROFILED_RULES = `
+=== CONTATTI NON PROFILATI (Guest / Nuovi Contatti) ===
+Se la Profilazione Utente è assente/null OPPURE il numero WhatsApp non è associato a un'anagrafica User nel DB:
+la persona NON è ancora un utente profilato (Guest / nuovo contatto).
+
+COMPORTAMENTO OBBLIGATORIO:
+1) ACCOGLIENZA: gentilezza, empatia e rispetto profondo del momento di ricordo o cordoglio.
+   - Niente frasi generiche da call center né tono commerciale.
+   - Ascolta in fretta l'intento: vuole info per FT (tomba/cimitero), FF (funerale/camera mortuaria/chiesa) o PA (piante)?
+2) GUIDA DELICATA: raccogli una informazione alla volta (nome di chi scrive, caro da ricordare, cimitero/comune o luogo del rito) e accompagna verso l'ordine senza fretta.
+3) GIARDINO DELLA MEMORIA: presenta, quando naturale, la possibilità di registrare la scheda del caro nel "Giardino della Memoria" per foto di posa, aggiornamenti e promemoria ricorrenze future SENZA impegno d'acquisto.
+4) SUPPORTO, NON VENDITA: mai pressante; sii un aiuto premuroso che solleva da ogni preoccupazione logistica.
+`.trim();
+

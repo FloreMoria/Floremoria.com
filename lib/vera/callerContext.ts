@@ -20,6 +20,7 @@ import type { ProfileUserType } from '@prisma/client';
 import {
     profileUserTypePromptLabel,
     sanitizePlannedDeliveryDates,
+    VERA_GUEST_UNPROFILED_RULES,
 } from '@/lib/users/profileUserType';
 
 export type VeraConversationMode = 'pre_acquisto' | 'ordine_attivo' | 'fiorista';
@@ -29,8 +30,13 @@ export interface VeraCallerContext {
     displayNameFromWhatsApp: string | null;
     firstName: string | null;
     userType: ChatSession['userType'];
-    /** Profilazione commerciale User.userType (Nuovo / Abituale / Abbonato). */
+    /** Profilazione commerciale User.userType (Nuovo / Abituale / Abbonato). Null = Guest non profilato. */
     profileUserType: ProfileUserType | null;
+    /**
+     * True se non fiorista e manca anagrafica User (o profilazione assente):
+     * contatto WhatsApp non ancora profilato → regole Guest.
+     */
+    isGuestOrUnprofiled: boolean;
     mode: VeraConversationMode;
     hasActiveOrder: boolean;
     orderNumber: string | null;
@@ -197,12 +203,16 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         }
     }
 
+    // Nessuna anagrafica User collegata al numero → Guest / non profilato.
+    const isGuestOrUnprofiled = session.userType !== 'FLORIST' && profileUserType === null;
+
     return {
         phoneE164,
         displayNameFromWhatsApp: displayName,
         firstName,
         userType: session.userType,
         profileUserType,
+        isGuestOrUnprofiled,
         mode,
         hasActiveOrder: hasActiveOrder || hasOrderContext,
         orderId: order?.id ?? null,
@@ -230,7 +240,20 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
 export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
     const whoIsTalking = ctx.userType === 'FLORIST'
         ? `Fiorista Partner (Nome: ${ctx.partnerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`
-        : `Utente (Nome: ${ctx.buyerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`;
+        : ctx.isGuestOrUnprofiled
+          ? `Guest / Nuovo contatto (Nome WhatsApp: ${ctx.displayNameFromWhatsApp || 'Non specificato'} — non ancora profilato in anagrafica)`
+          : `Utente (Nome: ${ctx.buyerName || ctx.displayNameFromWhatsApp || 'Non specificato'})`;
+
+    const profileLine =
+        ctx.userType === 'FLORIST'
+            ? ''
+            : ctx.isGuestOrUnprofiled
+              ? [
+                    `Profilazione Utente: ${profileUserTypePromptLabel(ctx.profileUserType)}`,
+                    'STATO: CONTATTO NON PROFILATO — applica le regole Guest (accoglienza empatica, discrimina FT/FF/PA, guida delicata all\'ordine, presenta Giardino della Memoria senza impegno, mai pressione commerciale).',
+                    VERA_GUEST_UNPROFILED_RULES,
+                ].join('\n')
+              : `Profilazione Utente: ${profileUserTypePromptLabel(ctx.profileUserType)} — adatta tono e continuità (Nuovo=guida delicata; Abituale=familiare; Abbonato=riconosci il percorso ricorrente, mai pressione commerciale)`;
 
     const lines = [
         '=== CONTESTO DETTAGLIATO E DINAMICO DELL\'ORDINE (DATABASE) ===',
@@ -238,9 +261,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
         `Nome di battesimo da usare per il saluto (Usa questo per "Gentile [Nome]" o "Buongiorno [Nome]"): ${ctx.firstName || 'Non specificato'}`,
         `Telefono: ${ctx.phoneE164 ?? 'Non disponibile'}`,
         `Ruolo interlocutore: ${ctx.userType}`,
-        ctx.userType !== 'FLORIST'
-            ? `Profilazione Utente: ${profileUserTypePromptLabel(ctx.profileUserType)} — adatta tono e continuità (Nuovo=guida delicata; Abituale=familiare; Abbonato=riconosci il percorso ricorrente, mai pressione commerciale)`
-            : '',
+        profileLine,
         ctx.plannedDeliveryDates && ctx.plannedDeliveryDates.length
             ? `Date future programmate (prenotazione SENZA impegno): ${ctx.plannedDeliveryDates.join(', ')} — non inventare addebiti; sono solo preferenze commemorative`
             : '',
@@ -284,7 +305,10 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
         );
     } else {
         lines.push(
-            'Nessun ordine attivo rilevato per questo numero.'
+            'Nessun ordine attivo rilevato per questo numero.',
+            ctx.isGuestOrUnprofiled
+                ? 'GUEST: non inventare ordini o defunti; chiedi con garbo se serve un omaggio su tomba (FT), per un funerale (FF) o una pianta (PA), poi guida verso i dati essenziali.'
+                : ''
         );
     }
 

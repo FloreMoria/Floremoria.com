@@ -18,31 +18,45 @@ export async function ensureElevatedUserRecord(
         throw new Error(`Email non valida per ensureElevatedUserRecord: ${email}`);
     }
 
-    await ensureSystemRoles(prisma);
+    try {
+        await ensureSystemRoles(prisma);
+    } catch (roleError) {
+        console.error('[ensureElevatedUserRecord] Warning: ensureSystemRoles failed:', roleError);
+    }
 
     const roleName = systemRole === SUPER_ADMIN_ROLE_NAME ? SUPER_ADMIN_ROLE_NAME : ADMIN_ROLE_NAME;
-    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    let role = null;
+    try {
+        role = await prisma.role.findUnique({ where: { name: roleName } });
+    } catch (findRoleErr) {
+        console.error('[ensureElevatedUserRecord] Warning: findUnique role failed:', findRoleErr);
+    }
 
     const defaultName =
         systemRole === SUPER_ADMIN_ROLE_NAME
             ? 'Super Admin FloreMoria'
             : 'Amministratore FloreMoria';
 
-    return prisma.user.upsert({
-        where: { email: normalizedEmail },
-        update: {
-            systemRole: systemRole as UserRole,
-            isActive: true,
-            roleId: role?.id ?? null,
-            roleExpiresAt: null,
-            lastLoginAt: new Date(),
-        },
-        create: {
-            email: normalizedEmail,
-            name: normalizedEmail.split('@')[0] || defaultName,
-            systemRole: systemRole as UserRole,
-            isActive: true,
-            roleId: role?.id ?? null,
-        },
-    });
+    try {
+        return await prisma.user.upsert({
+            where: { email: normalizedEmail },
+            update: {
+                systemRole: systemRole as UserRole,
+                isActive: true,
+                ...(role?.id ? { roleId: role.id } : {}),
+                roleExpiresAt: null,
+                lastLoginAt: new Date(),
+            },
+            create: {
+                email: normalizedEmail,
+                name: normalizedEmail.split('@')[0] || defaultName,
+                systemRole: systemRole as UserRole,
+                isActive: true,
+                roleId: role?.id ?? null,
+            },
+        });
+    } catch (error) {
+        console.error('[ensureElevatedUserRecord] Critical error during user upsert:', error);
+        throw error;
+    }
 }

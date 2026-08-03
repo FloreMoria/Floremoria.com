@@ -9,11 +9,15 @@ export const ADMIN_POST_LOGIN_REDIRECT = '/dashboard' as const;
 export const SUPER_ADMIN_POST_LOGIN_REDIRECT = '/dashboard/settings/roles' as const;
 
 export function isSuperAdminRole(role: string | undefined | null): boolean {
-    return role === SUPER_ADMIN_ROLE_NAME;
+    if (!role) return false;
+    const r = String(role).trim().toUpperCase();
+    return r === SUPER_ADMIN_ROLE_NAME || r === 'SUPERADMIN';
 }
 
 export function isAdminRole(role: string | undefined | null): boolean {
-    return role === ADMIN_ROLE_NAME;
+    if (!role) return false;
+    const r = String(role).trim().toUpperCase();
+    return r === ADMIN_ROLE_NAME || r === 'ADMINISTRATOR';
 }
 
 /** ADMIN o SUPER_ADMIN: accesso bacheca staff, ma Ruoli resta solo SUPER_ADMIN. */

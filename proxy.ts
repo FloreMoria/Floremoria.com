@@ -87,215 +87,219 @@ function getHostContext(request: NextRequest): DashboardHostContext {
     const isDashboardHost = !isLocal && hostname === 'dashboard.floremoria.com';
     const isPrimaryHost = !isLocal && (hostname === 'floremoria.com' || hostname === 'www.floremoria.com');
     return { hostname, isLocal, isDashboardHost, isPrimaryHost };
-}
+}export function proxy(request: NextRequest) {
+    try {
+        const { pathname } = request.nextUrl;
 
-export function proxy(request: NextRequest) {
-    const { pathname } = request.nextUrl;
-
-    // TikTok verifica l'URL esatto con trailing slash e non segue redirect 308.
-    if (pathname === '/termini-condizioni/') {
-        const rewriteUrl = request.nextUrl.clone();
-        rewriteUrl.pathname = '/termini-condizioni';
-        return NextResponse.rewrite(rewriteUrl);
-    }
-
-    if (isPartnerApiDocsPath(pathname)) {
-        const expectedUser = process.env.PARTNER_DOCS_BASIC_USER?.trim();
-        const expectedPass = process.env.PARTNER_DOCS_BASIC_PASSWORD?.trim();
-        if (!expectedUser || !expectedPass) {
-            return NextResponse.redirect(new URL('/', request.url), 302);
+        // TikTok verifica l'URL esatto con trailing slash e non segue redirect 308.
+        if (pathname === '/termini-condizioni/') {
+            const rewriteUrl = request.nextUrl.clone();
+            rewriteUrl.pathname = '/termini-condizioni';
+            return NextResponse.rewrite(rewriteUrl);
         }
-        const creds = parseBasicAuth(request.headers.get('authorization'));
-        if (!creds || creds.user !== expectedUser || creds.pass !== expectedPass) {
-            return new NextResponse('Autenticazione richiesta per la documentazione Partner API.', {
-                status: 401,
-                headers: { 'WWW-Authenticate': 'Basic realm="FloreMoria Partner API"' },
+
+        if (isPartnerApiDocsPath(pathname)) {
+            const expectedUser = process.env.PARTNER_DOCS_BASIC_USER?.trim();
+            const expectedPass = process.env.PARTNER_DOCS_BASIC_PASSWORD?.trim();
+            if (!expectedUser || !expectedPass) {
+                return NextResponse.redirect(new URL('/', request.url), 302);
+            }
+            const creds = parseBasicAuth(request.headers.get('authorization'));
+            if (!creds || creds.user !== expectedUser || creds.pass !== expectedPass) {
+                return new NextResponse('Autenticazione richiesta per la documentazione Partner API.', {
+                    status: 401,
+                    headers: { 'WWW-Authenticate': 'Basic realm="FloreMoria Partner API"' },
+                });
+            }
+        }
+
+        const hostCtx = getHostContext(request);
+        const { isLocal, isDashboardHost, isPrimaryHost } = hostCtx;
+        const isApiRoute = pathname.startsWith('/api/');
+        const isStaticAsset = pathname.startsWith('/_next/') || pathname.startsWith('/images/') || pathname.includes('.');
+
+        // Redirect verso sottodominio solo se esplicitamente abilitato (DNS + SSL pronti).
+        if (!isLocal && isDashboardSubdomainRoutingEnabled()) {
+            if (isPrimaryHost && pathname.startsWith('/dashboard')) {
+                const dest = new URL(
+                    request.nextUrl.pathname + request.nextUrl.search,
+                    'https://dashboard.floremoria.com'
+                );
+                return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
+            }
+
+            if (isDashboardHost && pathname === '/') {
+                const dest = new URL('/dashboard', 'https://dashboard.floremoria.com');
+                return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
+            }
+
+            if (
+                isDashboardHost &&
+                !pathname.startsWith('/dashboard') &&
+                pathname !== '/login' &&
+                !isApiRoute &&
+                !isStaticAsset
+            ) {
+                const dest = new URL('/dashboard', 'https://dashboard.floremoria.com');
+                return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
+            }
+        }
+
+        const userRole = request.cookies.get('fm_user_role')?.value;
+        const roleExpiresAt = request.cookies.get('fm_role_expires_at')?.value;
+
+        const cookieBase = getFloremAuthCookieBase({
+            headers: request.headers,
+            url: request.nextUrl.href,
+        });
+
+        const clearAuthCookies = (res: NextResponse) => {
+            res.cookies.delete({
+                name: 'fm_user_role',
+                path: cookieBase.path,
+                ...(cookieBase.domain ? { domain: cookieBase.domain } : {}),
             });
-        }
-    }
+            res.cookies.delete({
+                name: 'fm_role_expires_at',
+                path: cookieBase.path,
+                ...(cookieBase.domain ? { domain: cookieBase.domain } : {}),
+            });
+            return res;
+        };
 
-    const hostCtx = getHostContext(request);
-    const { isLocal, isDashboardHost, isPrimaryHost } = hostCtx;
-    const isApiRoute = pathname.startsWith('/api/');
-    const isStaticAsset = pathname.startsWith('/_next/') || pathname.startsWith('/images/') || pathname.includes('.');
+        const loginUrl = buildAppUrl(request, hostCtx, '/login?expired=1');
 
-    // Redirect verso sottodominio solo se esplicitamente abilitato (DNS + SSL pronti).
-    if (!isLocal && isDashboardSubdomainRoutingEnabled()) {
-        if (isPrimaryHost && pathname.startsWith('/dashboard')) {
-            const dest = new URL(
-                request.nextUrl.pathname + request.nextUrl.search,
-                'https://dashboard.floremoria.com'
-            );
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
-        }
-
-        if (isDashboardHost && pathname === '/') {
-            const dest = new URL('/dashboard', 'https://dashboard.floremoria.com');
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
-        }
-
-        if (
-            isDashboardHost &&
-            !pathname.startsWith('/dashboard') &&
-            pathname !== '/login' &&
-            !isApiRoute &&
-            !isStaticAsset
-        ) {
-            const dest = new URL('/dashboard', 'https://dashboard.floremoria.com');
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dest, 307));
-        }
-    }
-
-    const userRole = request.cookies.get('fm_user_role')?.value;
-    const roleExpiresAt = request.cookies.get('fm_role_expires_at')?.value;
-    const cookieBase = getFloremAuthCookieBase({
-        headers: request.headers,
-        url: request.nextUrl.href,
-    });
-
-    const clearAuthCookies = (res: NextResponse) => {
-        res.cookies.delete({
-            name: 'fm_user_role',
-            path: cookieBase.path,
-            ...(cookieBase.domain ? { domain: cookieBase.domain } : {}),
-        });
-        res.cookies.delete({
-            name: 'fm_role_expires_at',
-            path: cookieBase.path,
-            ...(cookieBase.domain ? { domain: cookieBase.domain } : {}),
-        });
-        return res;
-    };
-
-    const loginUrl = buildAppUrl(request, hostCtx, '/login?expired=1');
-
-    if (roleExpiresAt) {
-        if (new Date() > new Date(roleExpiresAt)) {
-            const response = NextResponse.redirect(loginUrl, 307);
-            clearAuthCookies(response);
-            return applyDashboardSecurityHeaders(request, response);
-        }
-    }
-
-    if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
-        if (!userRole) {
-            if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
-                return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+        if (roleExpiresAt) {
+            if (new Date() > new Date(roleExpiresAt)) {
+                const response = NextResponse.redirect(loginUrl, 307);
+                clearAuthCookies(response);
+                return applyDashboardSecurityHeaders(request, response);
             }
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
-            );
         }
-        if (!isDashboardAdminRole(userRole)) {
-            if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
-                return NextResponse.json({ error: 'Accesso riservato agli admin.' }, { status: 403 });
-            }
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
-            );
-        }
-        return applyDashboardSecurityHeaders(request, NextResponse.next());
-    }
 
-    // Buoni sconto: API sotto /api/admin/offers ma accessibile allo staff dashboard.
-    if (pathname.startsWith('/api/admin/offers')) {
-        if (hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
-            return NextResponse.next();
-        }
-        if (!userRole) {
-            return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
-        }
-        if (!isDashboardAdminRole(userRole)) {
-            return NextResponse.json({ error: 'Accesso riservato allo staff.' }, { status: 403 });
-        }
-        return applyDashboardSecurityHeaders(request, NextResponse.next());
-    }
-
-    if (isSuperAdminOnlyPath(pathname)) {
-        if (pathname.startsWith('/api/admin/') && hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
-            return NextResponse.next();
-        }
-        if (!userRole) {
-            if (pathname.startsWith('/api/admin/')) {
-                return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+        if (isWhatsAppSetupPath(pathname) || isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
+            if (!userRole) {
+                if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
+                    return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+                }
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+                );
             }
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
-            );
-        }
-        if (!isSuperAdminRole(userRole)) {
-            if (pathname.startsWith('/api/admin/')) {
-                return NextResponse.json({ error: 'Accesso riservato al Super Admin.' }, { status: 403 });
+            if (!isDashboardAdminRole(userRole)) {
+                if (isWhatsAppAdminApiPath(pathname) || isWhatsAppMediaApiPath(pathname)) {
+                    return NextResponse.json({ error: 'Accesso riservato agli admin.' }, { status: 403 });
+                }
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
+                );
             }
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
-            );
-        }
-        if (pathname.startsWith('/admin-panel') || pathname.startsWith('/api/admin/')) {
             return applyDashboardSecurityHeaders(request, NextResponse.next());
         }
-    }
 
-    if (pathname.startsWith('/dashboard')) {
-        const dashboardOrigin = getDashboardAppOrigin(request, hostCtx);
-
-        if (!userRole) {
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
-            );
+        // Buoni sconto: API sotto /api/admin/offers ma accessibile allo staff dashboard.
+        if (pathname.startsWith('/api/admin/offers')) {
+            if (hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
+                return NextResponse.next();
+            }
+            if (!userRole) {
+                return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+            }
+            if (!isDashboardAdminRole(userRole)) {
+                return NextResponse.json({ error: 'Accesso riservato allo staff.' }, { status: 403 });
+            }
+            return applyDashboardSecurityHeaders(request, NextResponse.next());
         }
 
-        // Domain Isolation: gli utenti finali (USER) possono accedere SOLO alla bacheca cliente /dashboard/user
-        if (userRole === 'USER') {
+        if (isSuperAdminOnlyPath(pathname)) {
+            if (pathname.startsWith('/api/admin/') && hasValidAdminApiKeyHeader(request.headers.get('x-admin-key'))) {
+                return NextResponse.next();
+            }
+            if (!userRole) {
+                if (pathname.startsWith('/api/admin/')) {
+                    return NextResponse.json({ error: 'Non autenticato.' }, { status: 401 });
+                }
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+                );
+            }
+            if (!isSuperAdminRole(userRole)) {
+                if (pathname.startsWith('/api/admin/')) {
+                    return NextResponse.json({ error: 'Accesso riservato al Super Admin.' }, { status: 403 });
+                }
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(buildAppUrl(request, hostCtx, '/dashboard'), 307)
+                );
+            }
+            if (pathname.startsWith('/admin-panel') || pathname.startsWith('/api/admin/')) {
+                return applyDashboardSecurityHeaders(request, NextResponse.next());
+            }
+        }
+
+        if (pathname.startsWith('/dashboard')) {
+            const dashboardOrigin = getDashboardAppOrigin(request, hostCtx);
+
+            if (!userRole) {
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+                );
+            }
+
+            // Domain Isolation: gli utenti finali (USER) possono accedere SOLO alla bacheca cliente /dashboard/user
+            if (userRole === 'USER') {
+                if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
+                    return applyDashboardSecurityHeaders(request, NextResponse.next());
+                }
+                return applyDashboardSecurityHeaders(
+                    request,
+                    NextResponse.redirect(new URL('/dashboard/user', request.url), 307)
+                );
+            }
+
+            // Inibisce l'accesso a /dashboard/user per lo staff operativo (non ADMIN di sistema).
             if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
-                return applyDashboardSecurityHeaders(request, NextResponse.next());
+                if (isDashboardAdminRole(userRole)) {
+                    return applyDashboardSecurityHeaders(request, NextResponse.next());
+                }
+                const dashboardHome = isLocal
+                    ? new URL('/dashboard', request.nextUrl.origin)
+                    : new URL('/dashboard', dashboardOrigin);
+                return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
             }
-            return applyDashboardSecurityHeaders(
-                request,
-                NextResponse.redirect(new URL('/dashboard/user', request.url), 307)
-            );
-        }
 
-        // Inibisce l'accesso a /dashboard/user per lo staff operativo (non ADMIN di sistema).
-        if (pathname === '/dashboard/user' || pathname.startsWith('/dashboard/user/')) {
-            if (isDashboardAdminRole(userRole)) {
+            if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
                 return applyDashboardSecurityHeaders(request, NextResponse.next());
             }
+
             const dashboardHome = isLocal
                 ? new URL('/dashboard', request.nextUrl.origin)
                 : new URL('/dashboard', dashboardOrigin);
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
-        }
 
-        if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
-            return applyDashboardSecurityHeaders(request, NextResponse.next());
-        }
-
-        const dashboardHome = isLocal
-            ? new URL('/dashboard', request.nextUrl.origin)
-            : new URL('/dashboard', dashboardOrigin);
-
-        const ordersAccessRoles = ['STAKEHOLDER', 'ACCOUNTANT', 'OPERATOR', 'FLORIST', 'AGENCY', 'MUNICIPALITY'];
-        
-        if (ordersAccessRoles.includes(userRole)) {
-            if (pathname.startsWith('/dashboard/orders') || pathname === '/dashboard' || pathname.startsWith('/dashboard/profile')) {
-                return applyDashboardSecurityHeaders(request, NextResponse.next());
+            const ordersAccessRoles = ['STAKEHOLDER', 'ACCOUNTANT', 'OPERATOR', 'FLORIST', 'AGENCY', 'MUNICIPALITY'];
+            
+            if (ordersAccessRoles.includes(userRole)) {
+                if (pathname.startsWith('/dashboard/orders') || pathname === '/dashboard' || pathname.startsWith('/dashboard/profile')) {
+                    return applyDashboardSecurityHeaders(request, NextResponse.next());
+                }
+                return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
             }
-            return applyDashboardSecurityHeaders(request, NextResponse.redirect(dashboardHome, 307));
+
+            return applyDashboardSecurityHeaders(
+                request,
+                NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
+            );
         }
 
-        return applyDashboardSecurityHeaders(
-            request,
-            NextResponse.redirect(buildAppUrl(request, hostCtx, '/login'), 307)
-        );
+        return NextResponse.next();
+    } catch (error) {
+        console.error('[proxy middleware error]', error);
+        return NextResponse.next();
     }
-
-    return NextResponse.next();
 }
 
 export const config = {

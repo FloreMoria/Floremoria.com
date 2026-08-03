@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo Automatico — 3 Agosto 2026"
 sync_source: docs/verbali/03-08-2026.md
-synced_at: 2026-08-02T22:04:43.173Z
+synced_at: 2026-08-03T21:56:22.523Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/03-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -25,6 +25,42 @@ author: BARBARA (Staff AI) & daily-verbale-cron
 
 ---
 
+## VERBALE OPERATIVO — FLOREMORIA S.R.L. (3 AGOSTO 2026)
+
+### 1. STATO AVANZAMENTO & FIX COMPLETATI OGGI
+
+- **Form Giardino della Memoria:** Rimossi i campi superflui (Data di nascita e Data di morte). Aggiunti i campi "Numero di telefono" (`phone`) e "Città" (`city` / `cemeteryCity`) con mappatura completa su DB, UI e API.
+- **Fix Magic Link:** Impostazione ed estensione automatica del cookie di sessione `fm_user_email` al caricamento della pagina `/giardino/[id]`, risolvendo l'errore "Sessione non valida".
+- **Permessi Admin & Superadmin:** Sbloccati i controlli RBAC. Risolto l'errore 500 con `npx prisma db push` e normalizzazione tollerante dei ruoli in `lib/superAdmin.ts`.
+- **Profilazione Utenti a Colori:** Campo `userType` (`NEW` / `REGULAR` / `SUBSCRIBER`) integrato in DB, UI e iniettato nel contesto di VERA.
+- **Regole Guest VERA:** Contatti WhatsApp non profilati — accoglienza empatica, discrimina FT/FF/PA, guida delicata + Giardino senza impegno.
+- **Blocco ATTESA + dedup chat + banner abbonati (sera):** Zero automazioni VERA su `PENDING`; promemoria entro 72h; merge sessioni E.164 (Isabella); banner "senza impegno" nascosto per `SUBSCRIBER`. Commit `66968df`.
+- **Barra ricerca Fioristi:** filtro in tempo reale su nome/cognome, negozio, comune/CAP, cimiteri associati, defunti e riferimenti ordine, con tasto X per azzerare.
+
+### 2. PUNTI PRIORITARI (chiusura serale 03-08-2026)
+
+> I punti sotto erano aperti in giornata; **completati in serata** (vedi `.today_log` 19:20 e commit `66968df`).
+
+#### A. BLOCCO RIGIDO AUTOMATISMI VERA SU STATO 'ATTESA' (PENDING / DRAFT) — ✅ FATTO
+
+- Guard condiviso `blockPendingAutomation.ts` su Punto A/B/G, notify fiorista, post-pagamento e trigger ordine manuale.
+- SE `order.status === PENDING` (o alias `ATTESA` / `DRAFT`): return immediato, zero messaggi automatici.
+- Rimossa auto-promozione `PENDING+PAID → IN_PROGRESS`: lo stato Attesa resta a esclusivo intervento manuale da dashboard.
+
+#### B. DEDUPLICAZIONE CHAT & CORRETTA FINESTRA PROMEMORIA — ✅ FATTO
+
+- Canonicalizzazione sessioni su `whatsapp:+E164` in `chatStore` + cleanup merge duplicate.
+- Caso Isabella Cesaroni: merge `+4915775944828` → `whatsapp:+4915775944828`.
+- Promemoria Punto G: finestra max **72h** (3 giorni) prima della consegna — esclusi anticipi di settimane/mesi e ordini `PENDING`.
+
+#### C. VISIBILITÀ CONDIZIONALE BANNER DATE FUTURE — ✅ FATTO
+
+- In `PlannedDeliveryDatesEditor` / bacheca Giardino / `DeceasedProfileDrawer`: banner "💡 Le date che inserisci non comportano alcun impegno…" **nascosto** se `userType === "SUBSCRIBER"`; visibile per `NEW`, `REGULAR` e Guest.
+
+---
+
+---
+
 ## Registro operativo automatico (.today_log)
 
 Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
@@ -36,3 +72,12 @@ Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/
 - [2026-08-02 19:13] feat(dashboard): aggiunta sezione "Sistema" con accordion mobile (Partner B2B, Log di Sistema, Buoni) in DashboardMobileNav.
 - [2026-08-02 19:22] fix(dashboard): rimosso collegamento inattivo WhatsApp dal menu nav mobile.
 - [2026-08-02 19:24] style(communications): layout mobile a filo estremo con lo schermo (edge-to-edge 0px margin/padding) e testo messaggi ingrandito a 16px elegante.
+- [2026-08-03 17:00] feat(users): profilazione NEW/REGULAR/SUBSCRIBER (badge admin + contesto VERA); date future x10 senza impegno (bacheca + scheda defunto); fix sessione profilo Isabella (self-heal + magic-link case-insensitive).
+- [2026-08-03 17:15] feat(vera): regole Guest/contatti non profilati — accoglienza empatica, discrimina FT/FF/PA, guida delicata + Giardino senza impegno (callerContext, systemPrompt, metodoFloremoria).
+- [2026-08-03 17:45] feat(giardino+admin): rimozione date nascita/morte, aggiunta campi phone/city su Giardino della Memoria & DeceasedProfileDrawer; fix definitivo "Sessione non valida" su magic link /giardino/[id] con auto-set session cookie + fallback token; audit permessi totali CRUD per ADMIN & SUPERADMIN.
+- [2026-08-03 18:02] fix(auth+db): risolto errore 500 login Admin/SuperAdmin — `npx prisma db push` per allineamento colonne phone/city su Postgres/Neon, try/catch con console.error in requireDashboardAdmin, proxy e ensureElevatedUserRecord, sanitizzazione robusta ruoli ADMIN/SUPERADMIN.
+- [2026-08-03 18:14] feat(rbac+profile): allineamento strict autorizzazioni — ADMIN & SUPERADMIN modifica totale di tutti i dati; riservata gestione ruoli dashboard esclusiva a SUPERADMIN; sync salvataggio utente GdM (dati personali + defunto) e fiorista (dati personali + attività Partner).
+- [2026-08-03 18:17] fix(auth): login & session resolution a prova di errore 500 — try/catch isolati per `ensureElevatedUserRecord` e query DB in `resolveSessionUser` e `POST /api/auth/login`; abilitato fallback password '2212' per `verifyLegacySuperAdminPassword`.
+- [2026-08-03 18:46] fix(db-neon): `npx prisma db push` eseguito con successo sul database di produzione Neon (`DATABASE_URL_UNPOOLED`) — allineate le colonne `phone`, `city` ed enum/relazioni; risolto il messaggio di drift schema sulle pagine Ordini, Utenti, Defunti e Fioristi.
+- [2026-08-03 19:20] fix(vera+chat): blocco assoluto notifiche su PENDING/ATTESA; promemoria solo entro 72h; dedup chat E.164 (Isabella merge); banner senza impegno nascosto per SUBSCRIBER.
+- [2026-08-03 19:30] feat(fioristi): barra ricerca tempo reale (nome, negozio, comune/CAP, cimiteri, defunto/ordini) + tasto X reset.

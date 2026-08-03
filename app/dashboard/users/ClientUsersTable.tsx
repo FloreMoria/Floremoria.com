@@ -7,8 +7,10 @@ import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery'
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CreateUserModal from '@/components/dashboard/CreateUserModal';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
+import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
+import type { ProfileUserType } from '@prisma/client';
 
 const formatITDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -267,6 +269,7 @@ export default function ClientUsersTable({
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500 uppercase tracking-wider">
                                 <th className="px-6 py-4">Giardino Utente</th>
+                                <th className="px-6 py-4">Profilo</th>
                                 <th className="px-6 py-4">Telefono</th>
                                 <th className="px-6 py-4">Città</th>
                                 <th className="px-6 py-4">Ordini (Memorie)</th>
@@ -277,7 +280,7 @@ export default function ClientUsersTable({
                         <tbody className="divide-y divide-gray-100">
                             {filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">Nessun utente trovato.</td>
+                                    <td colSpan={7} className="px-6 py-8 text-center text-gray-400">Nessun utente trovato.</td>
                                 </tr>
                             ) : (
                                 filteredUsers.map((u, i) => (
@@ -326,6 +329,24 @@ export default function ClientUsersTable({
                                                     <span className="font-semibold text-gray-900">{u.name}</span>
                                                 )}
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <UserTypeBadge
+                                                userId={u.id}
+                                                initialType={(u.userType as ProfileUserType) || 'NEW'}
+                                                onChanged={(next) => {
+                                                    setUsers((prev) =>
+                                                        prev.map((item) =>
+                                                            item.id === u.id ? { ...item, userType: next } : item
+                                                        )
+                                                    );
+                                                    if (selectedUser?.id === u.id) {
+                                                        setSelectedUser((prev: any) =>
+                                                            prev ? { ...prev, userType: next } : prev
+                                                        );
+                                                    }
+                                                }}
+                                            />
                                         </td>
                                         <td className="px-6 py-4 text-gray-600">
                                             {editingUserId === u.id ? (
@@ -446,9 +467,28 @@ export default function ClientUsersTable({
                                 <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 leading-tight truncate">
                                     Il Giardino di {selectedUser.name}
                                 </h2>
-                                <p className="text-sm text-gray-500 font-medium">
-                                    Giardino della Memoria Infinita · {selectedUser.orders.length} consegnati
-                                </p>
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    <p className="text-sm text-gray-500 font-medium">
+                                        Giardino della Memoria Infinita · {selectedUser.orders.length} consegnati
+                                    </p>
+                                    <UserTypeBadge
+                                        userId={selectedUser.id}
+                                        initialType={(selectedUser.userType as ProfileUserType) || 'NEW'}
+                                        size="md"
+                                        onChanged={(next) => {
+                                            setSelectedUser((prev: any) =>
+                                                prev ? { ...prev, userType: next } : prev
+                                            );
+                                            setUsers((prev) =>
+                                                prev.map((item) =>
+                                                    item.id === selectedUser.id
+                                                        ? { ...item, userType: next }
+                                                        : item
+                                                )
+                                            );
+                                        }}
+                                    />
+                                </div>
                             </div>
                         </div>
                         <button

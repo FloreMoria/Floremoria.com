@@ -13,6 +13,7 @@ import {
     composeFullName,
     composeGravePosition,
 } from '@/lib/deceased/deceasedProfileFormUtils';
+import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
 export type DeceasedProfileUpdateInput = {
     firstName?: string | null;
@@ -29,6 +30,7 @@ export type DeceasedProfileUpdateInput = {
     coverUrl?: string | null;
     verifiedNotes?: string | null;
     partnerId?: string | null;
+    plannedDeliveryDates?: string[] | null;
 };
 
 function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
@@ -84,6 +86,7 @@ export async function updateDeceasedProfileFull(
         verifiedNotes?: string | null;
         photoUrl?: string | null;
         coverUrl?: string | null;
+        plannedDeliveryDates?: string[];
     } = {
         fullName: formatDeceasedIdentityField(fullName),
         cemeteryCity: formatDeceasedIdentityField(cemeteryCityRaw),
@@ -100,6 +103,14 @@ export async function updateDeceasedProfileFull(
     }
     if (input.coverUrl !== undefined) {
         profileData.coverUrl = input.coverUrl?.trim() || null;
+    }
+
+    const plannedDeliveryDates =
+        input.plannedDeliveryDates !== undefined
+            ? sanitizePlannedDeliveryDates(input.plannedDeliveryDates)
+            : undefined;
+    if (plannedDeliveryDates !== undefined) {
+        profileData.plannedDeliveryDates = plannedDeliveryDates;
     }
 
     await prisma.$transaction(async (tx) => {
@@ -136,6 +147,21 @@ export async function updateDeceasedProfileFull(
             where: { deceasedProfileId },
             data: orderPatch,
         });
+
+        // Sync date future sugli Utenti collegati (bacheca / reminder WhatsApp)
+        if (plannedDeliveryDates !== undefined) {
+            const links = await tx.userDeceasedLink.findMany({
+                where: { deceasedProfileId },
+                select: { userId: true },
+            });
+            const userIds = links.map((l) => l.userId);
+            if (userIds.length > 0) {
+                await tx.user.updateMany({
+                    where: { id: { in: userIds } },
+                    data: { plannedDeliveryDates },
+                });
+            }
+        }
     });
 
     if (input.partnerId !== undefined) {

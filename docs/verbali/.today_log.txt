@@ -6,3 +6,5 @@
 [2026-08-02 19:13] feat(dashboard): aggiunta sezione "Sistema" con accordion mobile (Partner B2B, Log di Sistema, Buoni) in DashboardMobileNav.
 [2026-08-02 19:22] fix(dashboard): rimosso collegamento inattivo WhatsApp dal menu nav mobile.
 [2026-08-02 19:24] style(communications): layout mobile a filo estremo con lo schermo (edge-to-edge 0px margin/padding) e testo messaggi ingrandito a 16px elegante.
+
+[2026-08-03 17:00] feat(users): profilazione NEW/REGULAR/SUBSCRIBER (badge admin + contesto VERA); date future x10 senza impegno (bacheca + scheda defunto); fix sessione profilo Isabella (self-heal + magic-link case-insensitive).

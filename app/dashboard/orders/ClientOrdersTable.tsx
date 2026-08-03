@@ -13,6 +13,8 @@ import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
+import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
+import type { ProfileUserType } from '@prisma/client';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -581,7 +583,32 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="font-medium text-black leading-tight break-words">{order.buyerFullName || 'Utente Sconosciuto'}</div>
+                                                    <div className="font-medium text-black leading-tight break-words flex flex-wrap items-center gap-1.5">
+                                                        <span>{order.buyerFullName || 'Utente Sconosciuto'}</span>
+                                                        {order.userId ? (
+                                                            <span onClick={(e) => e.stopPropagation()}>
+                                                                <UserTypeBadge
+                                                                    userId={order.userId}
+                                                                    initialType={(order.user?.userType as ProfileUserType) || 'NEW'}
+                                                                    onChanged={(next) => {
+                                                                        setLocalOrders((prev) =>
+                                                                            prev.map((o) =>
+                                                                                o.id === order.id
+                                                                                    ? {
+                                                                                          ...o,
+                                                                                          user: {
+                                                                                              ...(o.user || {}),
+                                                                                              userType: next,
+                                                                                          },
+                                                                                      }
+                                                                                    : o
+                                                                            )
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
                                                     <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5">{order.customerPhone || 'Nessun Recapito'}</div>
                                                 </>
                                             )}

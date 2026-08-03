@@ -159,6 +159,14 @@ export default async function UserDashboardPage({
                         const initialBirthDate = latestOrder?.deceasedBirthDate ? latestOrder.deceasedBirthDate.toISOString().slice(0, 10) : '';
                         const initialDeathDate = latestOrder?.deceasedDeathDate ? latestOrder.deceasedDeathDate.toISOString().slice(0, 10) : '';
                         const initialDeliveryDate = latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '';
+                        const plannedFromUser = Array.isArray(user.plannedDeliveryDates)
+                            ? user.plannedDeliveryDates
+                            : [];
+                        const plannedFromDeceased = Array.isArray(latestOrder?.deceasedProfile?.plannedDeliveryDates)
+                            ? latestOrder!.deceasedProfile!.plannedDeliveryDates
+                            : [];
+                        const initialPlannedDeliveryDates =
+                            plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
 
                         return (
                             <UserPersonalDataForm
@@ -167,6 +175,7 @@ export default async function UserDashboardPage({
                                 initialBirthDate={initialBirthDate}
                                 initialDeathDate={initialDeathDate}
                                 initialDeliveryDate={initialDeliveryDate}
+                                initialPlannedDeliveryDates={initialPlannedDeliveryDates}
                                 saveEndpoint="/api/dashboard/user/profile"
                                 sectionTitle="I Suoi Dati Personali"
                             />

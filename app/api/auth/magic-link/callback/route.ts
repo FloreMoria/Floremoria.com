@@ -3,6 +3,7 @@ import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { verifyMagicLinkToken } from '@/lib/auth/magicLink';
+import { findUserByEmail } from '@/lib/auth/identity';
 
 function setAuthCookies(response: NextResponse, request: Request, roleName: string, email: string, expiresAt: Date) {
     const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
@@ -20,9 +21,10 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
     });
 
     // Cookie con l'email dell'utente per riconoscerlo nella bacheca
+    const normalizedEmail = email.trim().toLowerCase();
     response.cookies.set({
         name: 'fm_user_email',
-        value: email,
+        value: normalizedEmail,
         httpOnly: true,
         path: base.path,
         ...(base.domain ? { domain: base.domain } : {}),
@@ -64,14 +66,12 @@ export async function GET(request: Request) {
 
     try {
         // Cerca o crea l'utente per garantire l'esistenza del record
-        let user = await prisma.user.findUnique({
-            where: { email },
-        });
+        let user = await findUserByEmail(email);
 
         if (!user) {
             user = await prisma.user.create({
                 data: {
-                    email,
+                    email: email.trim().toLowerCase(),
                     systemRole: UserRole.USER,
                     isActive: true,
                 },

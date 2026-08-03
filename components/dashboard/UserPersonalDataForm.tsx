@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { User, Mail, Check, AlertCircle } from 'lucide-react';
+import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
+import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
 export interface UserPersonalDataFormProps {
     initialName: string;
@@ -9,6 +11,7 @@ export interface UserPersonalDataFormProps {
     initialBirthDate?: string;
     initialDeathDate?: string;
     initialDeliveryDate?: string;
+    initialPlannedDeliveryDates?: string[];
     emailEditable?: boolean;
     saveEndpoint: string;
     /** Etichetta sezione (default: "I Suoi Dati Personali") */
@@ -23,16 +26,24 @@ export default function UserPersonalDataForm({
     initialBirthDate = '',
     initialDeathDate = '',
     initialDeliveryDate = '',
+    initialPlannedDeliveryDates,
     emailEditable = true,
     saveEndpoint,
     sectionTitle = 'I Suoi Dati Personali',
     compact = false,
 }: UserPersonalDataFormProps) {
+    const seedPlanned =
+        initialPlannedDeliveryDates && initialPlannedDeliveryDates.length > 0
+            ? sanitizePlannedDeliveryDates(initialPlannedDeliveryDates)
+            : initialDeliveryDate
+              ? [initialDeliveryDate]
+              : [];
+
     const [name, setName] = useState(initialName);
     const [email, setEmail] = useState(initialEmail);
     const [deceasedBirthDate, setDeceasedBirthDate] = useState(initialBirthDate);
     const [deceasedDeathDate, setDeceasedDeathDate] = useState(initialDeathDate);
-    const [deliveryDate, setDeliveryDate] = useState(initialDeliveryDate);
+    const [plannedDeliveryDates, setPlannedDeliveryDates] = useState<string[]>(seedPlanned);
     const [isLoading, setIsLoading] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -50,11 +61,13 @@ export default function UserPersonalDataForm({
         setErrorMsg('');
 
         try {
-            const payload: Record<string, any> = { 
+            const cleanedDates = sanitizePlannedDeliveryDates(plannedDeliveryDates);
+            const payload: Record<string, unknown> = {
                 name: name.trim(),
                 deceasedBirthDate: deceasedBirthDate || null,
                 deceasedDeathDate: deceasedDeathDate || null,
-                deliveryDate: deliveryDate || null,
+                plannedDeliveryDates: cleanedDates,
+                deliveryDate: cleanedDates[0] || null,
             };
             if (emailEditable) {
                 payload.email = email.trim();
@@ -78,7 +91,9 @@ export default function UserPersonalDataForm({
                 setEmail(data.profile.email ?? email);
                 setDeceasedBirthDate(data.profile.deceasedBirthDate ?? '');
                 setDeceasedDeathDate(data.profile.deceasedDeathDate ?? '');
-                setDeliveryDate(data.profile.deliveryDate ?? '');
+                setPlannedDeliveryDates(
+                    sanitizePlannedDeliveryDates(data.profile.plannedDeliveryDates)
+                );
             }
 
             setSuccessMsg(data.message || 'Dati aggiornati con successo.');
@@ -151,7 +166,7 @@ export default function UserPersonalDataForm({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
                     <div className="space-y-1.5">
                         <label
                             className="text-xs font-semibold uppercase tracking-wider text-slate-400"
@@ -183,22 +198,14 @@ export default function UserPersonalDataForm({
                             className={dateInputClass}
                         />
                     </div>
+                </div>
 
-                    <div className="space-y-1.5">
-                        <label
-                            className="text-xs font-semibold uppercase tracking-wider text-slate-400"
-                            htmlFor="garden-profile-deliverydate"
-                        >
-                            Date delle future consegne
-                        </label>
-                        <input
-                            id="garden-profile-deliverydate"
-                            type="date"
-                            value={deliveryDate}
-                            onChange={(e) => setDeliveryDate(e.target.value)}
-                            className={dateInputClass}
-                        />
-                    </div>
+                <div className="border-t border-slate-100 pt-4">
+                    <PlannedDeliveryDatesEditor
+                        dates={plannedDeliveryDates}
+                        onChange={setPlannedDeliveryDates}
+                        disabled={isLoading}
+                    />
                 </div>
 
                 {successMsg && (

@@ -16,6 +16,11 @@ import {
 import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
 import { sessionHasRecentOutboundPhotos } from '@/lib/vera/deliveryContextGate';
 import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
+import type { ProfileUserType } from '@prisma/client';
+import {
+    profileUserTypePromptLabel,
+    sanitizePlannedDeliveryDates,
+} from '@/lib/users/profileUserType';
 
 export type VeraConversationMode = 'pre_acquisto' | 'ordine_attivo' | 'fiorista';
 
@@ -24,6 +29,8 @@ export interface VeraCallerContext {
     displayNameFromWhatsApp: string | null;
     firstName: string | null;
     userType: ChatSession['userType'];
+    /** Profilazione commerciale User.userType (Nuovo / Abituale / Abbonato). */
+    profileUserType: ProfileUserType | null;
     mode: VeraConversationMode;
     hasActiveOrder: boolean;
     orderNumber: string | null;
@@ -38,6 +45,8 @@ export interface VeraCallerContext {
     productsList?: string[] | null;
     hasPhotoBefore?: boolean | null;
     deliveryDate?: string | null;
+    /** Date future programmate (prenotazione senza impegno). */
+    plannedDeliveryDates?: string[] | null;
     /** Optional accessori (lumino, ceri, nastro/biglietto commemorativo). */
     optionals?: string[] | null;
     /** Testo del biglietto/nastro commemorativo scelto dal cliente. */
@@ -160,11 +169,40 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
               ? 'ordine_attivo'
               : 'pre_acquisto';
 
+    let profileUserType: ProfileUserType | null = null;
+    let plannedDeliveryDates: string[] = [];
+
+    if (session.userType !== 'FLORIST' && phoneE164) {
+        const phoneDigits = phoneE164.replace(/\D/g, '');
+        const linkedUser =
+            (order?.userId
+                ? await prisma.user.findUnique({
+                      where: { id: order.userId },
+                      select: { userType: true, plannedDeliveryDates: true },
+                  })
+                : null) ||
+            (await prisma.user.findFirst({
+                where: {
+                    deletedAt: null,
+                    OR: [
+                        { phone: phoneE164 },
+                        { phone: { contains: phoneDigits.slice(-9) } },
+                    ],
+                },
+                select: { userType: true, plannedDeliveryDates: true },
+            }));
+        if (linkedUser) {
+            profileUserType = linkedUser.userType;
+            plannedDeliveryDates = sanitizePlannedDeliveryDates(linkedUser.plannedDeliveryDates);
+        }
+    }
+
     return {
         phoneE164,
         displayNameFromWhatsApp: displayName,
         firstName,
         userType: session.userType,
+        profileUserType,
         mode,
         hasActiveOrder: hasActiveOrder || hasOrderContext,
         orderId: order?.id ?? null,
@@ -181,6 +219,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         productsList,
         hasPhotoBefore,
         deliveryDate,
+        plannedDeliveryDates,
         optionals,
         ticketMessage,
         customerNotes,
@@ -199,6 +238,12 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
         `Nome di battesimo da usare per il saluto (Usa questo per "Gentile [Nome]" o "Buongiorno [Nome]"): ${ctx.firstName || 'Non specificato'}`,
         `Telefono: ${ctx.phoneE164 ?? 'Non disponibile'}`,
         `Ruolo interlocutore: ${ctx.userType}`,
+        ctx.userType !== 'FLORIST'
+            ? `Profilazione Utente: ${profileUserTypePromptLabel(ctx.profileUserType)} — adatta tono e continuità (Nuovo=guida delicata; Abituale=familiare; Abbonato=riconosci il percorso ricorrente, mai pressione commerciale)`
+            : '',
+        ctx.plannedDeliveryDates && ctx.plannedDeliveryDates.length
+            ? `Date future programmate (prenotazione SENZA impegno): ${ctx.plannedDeliveryDates.join(', ')} — non inventare addebiti; sono solo preferenze commemorative`
+            : '',
         `Stato conversazione: ${ctx.mode === 'pre_acquisto' ? 'PRE-ACQUISTO (Nessun ordine attivo)' : ctx.mode === 'ordine_attivo' ? 'ORDINE ATTIVO' : 'FIORISTA PARTNER'}`,
     ];
 

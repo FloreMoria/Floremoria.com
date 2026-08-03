@@ -40,6 +40,8 @@ export default async function UsersPage() {
         phone: string;
         city: string;
         profilePicUrl: string | null;
+        userType: 'NEW' | 'REGULAR' | 'SUBSCRIBER';
+        plannedDeliveryDates: string[];
         orders: any[];
         totalSpentCents: number;
         lastOrderDate: Date | string;
@@ -58,6 +60,8 @@ export default async function UsersPage() {
                 phone: order.user?.phone || order.customerPhone || 'Non specificato',
                 city: order.buyerCity || 'Non specificata',
                 profilePicUrl: order.user?.avatarUrl || null,
+                userType: order.user?.userType || 'NEW',
+                plannedDeliveryDates: order.user?.plannedDeliveryDates || [],
                 orders: [],
                 totalSpentCents: 0,
                 lastOrderDate: order.createdAt,

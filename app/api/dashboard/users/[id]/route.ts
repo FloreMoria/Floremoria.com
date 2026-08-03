@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
+import { isProfileUserType } from '@/lib/users/profileUserType';
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
     const auth = await requireDashboardAdmin();
@@ -17,6 +18,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             typeof body.email === 'string' && body.email.trim()
                 ? normalizeMagicLinkEmail(body.email)
                 : undefined;
+        const userType = isProfileUserType(body.userType) ? body.userType : undefined;
 
         const user = await prisma.user.findFirst({
             where: { id, deletedAt: null },
@@ -26,13 +28,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             return NextResponse.json({ ok: false, error: 'Utente non trovato.' }, { status: 404 });
         }
 
-        await prisma.user.update({
+        const updated = await prisma.user.update({
             where: { id },
             data: {
                 ...(name !== undefined ? { name } : {}),
                 ...(phone !== undefined ? { phone } : {}),
                 ...(email !== undefined ? { email } : {}),
+                ...(userType !== undefined ? { userType } : {}),
             },
+            select: { id: true, userType: true, name: true, email: true, phone: true },
         });
 
         if (name !== undefined || phone !== undefined || email !== undefined) {
@@ -46,7 +50,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             });
         }
 
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({ ok: true, user: updated });
     } catch (error) {
         console.error('[dashboard/users/:id PUT]', error);
         const message = error instanceof Error ? error.message : 'Aggiornamento non riuscito.';

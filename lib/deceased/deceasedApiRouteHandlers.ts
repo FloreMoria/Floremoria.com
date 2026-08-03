@@ -78,6 +78,7 @@ async function deceasedUpdateById(request: Request, context: IdContext) {
                 coverUrl: body.coverUrl,
                 verifiedNotes: body.verifiedNotes,
                 partnerId: body.partnerId,
+                plannedDeliveryDates: body.plannedDeliveryDates,
             });
             return NextResponse.json({ ok: true, detail, message: 'Profilo aggiornato con successo' });
         }

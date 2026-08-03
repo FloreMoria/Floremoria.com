@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
+import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
@@ -30,6 +31,7 @@ import {
     splitFullName,
     toDateInputValue,
 } from '@/lib/deceased/deceasedProfileFormUtils';
+import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
 type PartnerOption = {
     id: string;
@@ -56,6 +58,7 @@ type EditForm = {
     graveSector: string;
     graveNumber: string;
     verifiedNotes: string;
+    plannedDeliveryDates: string[];
 };
 
 function formatDisplayDate(iso: string | null): string {
@@ -92,6 +95,7 @@ function detailToForm(detail: DeceasedDetailPayload): EditForm {
         graveSector: grave.graveSector,
         graveNumber: grave.graveNumber,
         verifiedNotes: detail.verifiedNotes || '',
+        plannedDeliveryDates: sanitizePlannedDeliveryDates(detail.plannedDeliveryDates),
     };
 }
 
@@ -245,6 +249,7 @@ export default function DeceasedProfileDrawer({
                     graveSector: form.graveSector || null,
                     graveNumber: form.graveNumber || null,
                     verifiedNotes: form.verifiedNotes || null,
+                    plannedDeliveryDates: sanitizePlannedDeliveryDates(form.plannedDeliveryDates),
                 }),
             });
             const data = (await res.json()) as {
@@ -567,6 +572,17 @@ export default function DeceasedProfileDrawer({
                                         />
                                     </label>
 
+                                    <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                                        <PlannedDeliveryDatesEditor
+                                            dates={form.plannedDeliveryDates}
+                                            onChange={(dates) =>
+                                                setForm((f) => (f ? { ...f, plannedDeliveryDates: dates } : f))
+                                            }
+                                            disabled={saving}
+                                            idPrefix="deceased-planned"
+                                        />
+                                    </div>
+
                                     {detail.deceasedProfileId ? (
                                         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-4">
                                             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
@@ -631,6 +647,24 @@ export default function DeceasedProfileDrawer({
                                             </p>
                                         </div>
                                     </section>
+
+                                    {(detail.plannedDeliveryDates?.length ?? 0) > 0 ? (
+                                        <section className="rounded-xl border border-amber-100 bg-amber-50/60 p-5">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/80 mb-2 flex items-center gap-1.5">
+                                                <Calendar size={12} /> Date future (senza impegno)
+                                            </p>
+                                            <ul className="flex flex-wrap gap-2">
+                                                {detail.plannedDeliveryDates.map((d) => (
+                                                    <li
+                                                        key={d}
+                                                        className="rounded-full bg-white border border-amber-200 px-3 py-1 text-sm font-medium text-amber-950"
+                                                    >
+                                                        {formatDisplayDate(d)}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </section>
+                                    ) : null}
 
                                     {detail.verifiedNotes ? (
                                         <section className="rounded-xl border border-gray-100 bg-[#FAF9F6] p-5">

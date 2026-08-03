@@ -2,18 +2,47 @@ import { NextResponse } from 'next/server';
 import { applySessionEmailCookie } from '@/lib/auth/sessionEmailCookie';
 import { saveUserProfileFields, UserEmailUpdateError } from '@/lib/auth/userProfileSave';
 import { resolveSessionUser } from '@/lib/auth/sessionUser';
+import { createUserFromOrder, findOrderByEmail, findUserByEmail } from '@/lib/auth/identity';
 import prisma from '@/lib/prisma';
+import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
+import type { User } from '@prisma/client';
 
-async function resolveBachecaUser() {
-    const { user } = await resolveSessionUser();
-    return user;
+/**
+ * Risolve l'Utente bacheca con self-heal:
+ * se il cookie email è valido ma manca il record User (caso Isabella / ordini storici),
+ * lo ricrea agganciando lo storico — evita "Sessione non valida" al salvataggio date.
+ */
+async function resolveBachecaUser(): Promise<User | null> {
+    const { user, email } = await resolveSessionUser();
+    if (user) return user;
+    if (!email) return null;
+
+    const existing = await findUserByEmail(email);
+    if (existing) return existing;
+
+    const order = await findOrderByEmail(email);
+    if (!order) return null;
+
+    try {
+        return await createUserFromOrder(order);
+    } catch (error) {
+        console.error('[user/profile] self-heal createUserFromOrder fallito:', error);
+        return null;
+    }
+}
+
+function toDateInput(value: Date | null | undefined): string {
+    return value ? value.toISOString().slice(0, 10) : '';
 }
 
 /** GET — dati personali bacheca cliente inclusi i campi data. */
 export async function GET() {
     const user = await resolveBachecaUser();
     if (!user) {
-        return NextResponse.json({ success: false, message: 'Sessione non valida.' }, { status: 401 });
+        return NextResponse.json(
+            { success: false, message: 'Sessione non valida. Effettui di nuovo l\'accesso al Giardino della Memoria.' },
+            { status: 401 }
+        );
     }
 
     const latestOrder = await prisma.order.findFirst({
@@ -24,30 +53,49 @@ export async function GET() {
             ],
         },
         orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+        include: {
+            deceasedProfile: { select: { plannedDeliveryDates: true } },
+        },
     });
+
+    const plannedFromUser = sanitizePlannedDeliveryDates(user.plannedDeliveryDates);
+    const plannedFromDeceased = sanitizePlannedDeliveryDates(
+        latestOrder?.deceasedProfile?.plannedDeliveryDates
+    );
+    const plannedDeliveryDates =
+        plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
 
     return NextResponse.json({
         success: true,
         profile: {
             name: user.name ?? '',
             email: user.email,
-            deceasedBirthDate: latestOrder?.deceasedBirthDate ? latestOrder.deceasedBirthDate.toISOString().slice(0, 10) : '',
-            deceasedDeathDate: latestOrder?.deceasedDeathDate ? latestOrder.deceasedDeathDate.toISOString().slice(0, 10) : '',
-            deliveryDate: latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '',
+            userType: user.userType,
+            deceasedBirthDate: toDateInput(latestOrder?.deceasedBirthDate),
+            deceasedDeathDate: toDateInput(latestOrder?.deceasedDeathDate),
+            deliveryDate: toDateInput(latestOrder?.deliveryDate),
+            plannedDeliveryDates,
         },
     });
 }
 
-/** PUT — aggiorna nome/email e date bacheca cliente. */
+/** PUT — aggiorna nome/email e date bacheca cliente (incl. fino a 10 date future senza impegno). */
 export async function PUT(request: Request) {
     try {
         const user = await resolveBachecaUser();
         if (!user) {
-            return NextResponse.json({ success: false, message: 'Sessione non valida.' }, { status: 401 });
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        'Sessione non valida. Effettui di nuovo l\'accesso al Giardino della Memoria (link email/WhatsApp o login).',
+                },
+                { status: 401 }
+            );
         }
 
         const body = await request.json();
-        const forbiddenKeys = ['password', 'passwordHash', 'systemRole', 'roleId', 'isActive'];
+        const forbiddenKeys = ['password', 'passwordHash', 'systemRole', 'roleId', 'isActive', 'userType'];
         for (const key of forbiddenKeys) {
             if (key in body && body[key] !== undefined) {
                 return NextResponse.json(
@@ -57,17 +105,21 @@ export async function PUT(request: Request) {
             }
         }
 
-        const { deceasedBirthDate, deceasedDeathDate, deliveryDate, ...profileBody } = body;
+        const {
+            deceasedBirthDate,
+            deceasedDeathDate,
+            deliveryDate,
+            plannedDeliveryDates: plannedRaw,
+            ...profileBody
+        } = body;
 
-        // Esegui salvataggio anagrafica utente
         const { user: updated, emailChanged } = await saveUserProfileFields({
             user,
             body: profileBody,
             allowEmailChange: true,
         });
 
-        // Aggiorna le date del defunto su tutti gli ordini dell'utente
-        const orderUpdateData: Record<string, any> = {};
+        const orderUpdateData: Record<string, Date | null> = {};
         if (deceasedBirthDate !== undefined) {
             orderUpdateData.deceasedBirthDate = deceasedBirthDate ? new Date(deceasedBirthDate) : null;
         }
@@ -87,8 +139,8 @@ export async function PUT(request: Request) {
             });
         }
 
-        // Aggiorna la data di consegna futura (solo per gli ordini non completati/annullati)
-        if (deliveryDate !== undefined) {
+        // Retrocompatibilità: singola deliveryDate sugli ordini aperti
+        if (deliveryDate !== undefined && plannedRaw === undefined) {
             const parsedDeliveryDate = deliveryDate ? new Date(deliveryDate) : null;
             await prisma.order.updateMany({
                 where: {
@@ -104,7 +156,53 @@ export async function PUT(request: Request) {
             });
         }
 
-        // Ricarica l'ordine più recente aggiornato per restituire le date caricate a chi le richiede
+        let plannedDeliveryDates = sanitizePlannedDeliveryDates(updated.plannedDeliveryDates);
+
+        if (plannedRaw !== undefined) {
+            plannedDeliveryDates = sanitizePlannedDeliveryDates(plannedRaw);
+            await prisma.user.update({
+                where: { id: updated.id },
+                data: { plannedDeliveryDates },
+            });
+
+            // Sync scheda defunto collegata (se presente) — stessa lista date commemorative
+            const linkedDeceasedIds = await prisma.order.findMany({
+                where: {
+                    OR: [
+                        { userId: updated.id },
+                        { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
+                    ],
+                    deceasedProfileId: { not: null },
+                },
+                select: { deceasedProfileId: true },
+                distinct: ['deceasedProfileId'],
+            });
+            const ids = linkedDeceasedIds
+                .map((row) => row.deceasedProfileId)
+                .filter((id): id is string => Boolean(id));
+            if (ids.length > 0) {
+                await prisma.deceasedProfile.updateMany({
+                    where: { id: { in: ids } },
+                    data: { plannedDeliveryDates },
+                });
+            }
+
+            // Prima data futura → aggiorna anche deliveryDate sul prossimo ordine aperto (hint operativo)
+            const firstFuture = plannedDeliveryDates[0];
+            if (firstFuture) {
+                await prisma.order.updateMany({
+                    where: {
+                        OR: [
+                            { userId: updated.id },
+                            { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
+                        ],
+                        status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
+                    },
+                    data: { deliveryDate: new Date(firstFuture) },
+                });
+            }
+        }
+
         const latestOrder = await prisma.order.findFirst({
             where: {
                 OR: [
@@ -124,13 +222,14 @@ export async function PUT(request: Request) {
             profile: {
                 name: updated.name ?? '',
                 email: updated.email,
-                deceasedBirthDate: latestOrder?.deceasedBirthDate ? latestOrder.deceasedBirthDate.toISOString().slice(0, 10) : '',
-                deceasedDeathDate: latestOrder?.deceasedDeathDate ? latestOrder.deceasedDeathDate.toISOString().slice(0, 10) : '',
-                deliveryDate: latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '',
+                userType: updated.userType,
+                deceasedBirthDate: toDateInput(latestOrder?.deceasedBirthDate),
+                deceasedDeathDate: toDateInput(latestOrder?.deceasedDeathDate),
+                deliveryDate: toDateInput(latestOrder?.deliveryDate),
+                plannedDeliveryDates,
             },
         });
 
-        // Sempre: riallinea cookie alla email canonica in DB (anche se invariata / solo casing).
         applySessionEmailCookie(response, request, updated.email);
 
         return response;

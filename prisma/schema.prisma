@@ -24,6 +24,13 @@ enum UserRole {
   PARTNER_FLORIST
 }
 
+/// Profilazione commerciale Utente (dashboard admin + contesto VERA). Distinto da ChatSession.userType.
+enum ProfileUserType {
+  NEW
+  REGULAR
+  SUBSCRIBER
+}
+
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -61,6 +68,16 @@ model User {
   hasLeftGoogleReview Boolean     @default(false) @map("has_left_google_review")
   /** Record creati in Modalità Test (sandbox admin). */
   isTest          Boolean         @default(false) @map("is_test")
+  /**
+   * Profilazione a colori: Nuovo / Abituale / Abbonato.
+   * Impostabile dall'Admin; iniettata nel contesto VERA.
+   */
+  userType        ProfileUserType @default(NEW) @map("user_type")
+  /**
+   * Date future di consegna/commemorazione (max 10) — prenotazione senza impegno.
+   * Formato ISO YYYY-MM-DD. Qualche giorno prima VERA invierà un link WhatsApp di conferma.
+   */
+  plannedDeliveryDates String[]   @default([]) @map("planned_delivery_dates")
   orders          Order[]
   role            Role?           @relation(fields: [roleId], references: [id])
   confirmedProofs DeliveryProof[]
@@ -89,6 +106,11 @@ model DeceasedProfile {
   photoUrl      String?  @map("photo_url")
   /** Immagine di copertina scheda commemorativa (Vercel Blob). */
   coverUrl      String?  @map("cover_url")
+  /**
+   * Date future commemorative/consegna (max 10, YYYY-MM-DD) — senza impegno d'acquisto.
+   * Fonte primaria lato scheda defunto; sincronizzate con gli Utenti collegati in salvataggio.
+   */
+  plannedDeliveryDates String[] @default([]) @map("planned_delivery_dates")
   orders        Order[]
   userLinks     UserDeceasedLink[]
   partnerLinks  PartnerDeceasedAssignment[]

@@ -19,6 +19,8 @@ export type DeceasedDetailPayload = {
     verifiedNotes: string | null;
     birthDate: string | null;
     deathDate: string | null;
+    /** Date future commemorative/consegna (YYYY-MM-DD), max 10 — senza impegno. */
+    plannedDeliveryDates: string[];
     gravePosition: string | null;
     floristPartnerId: string | null;
     floristName: string | null;
@@ -147,6 +149,9 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         verifiedNotes: profile.verifiedNotes,
         birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,
         deathDate: latest?.deceasedDeathDate?.toISOString() ?? null,
+        plannedDeliveryDates: Array.isArray(profile.plannedDeliveryDates)
+            ? profile.plannedDeliveryDates
+            : [],
         gravePosition: latest?.gravePosition ?? null,
         floristPartnerId: florist?.id ?? null,
         floristName: florist?.shopName ?? null,
@@ -202,6 +207,7 @@ export async function getOrphanDeceasedDetail(seedOrderId: string): Promise<Dece
         verifiedNotes: null,
         birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,
         deathDate: latest?.deceasedDeathDate?.toISOString() ?? null,
+        plannedDeliveryDates: [],
         gravePosition: latest?.gravePosition ?? null,
         floristPartnerId: null,
         floristName: null,

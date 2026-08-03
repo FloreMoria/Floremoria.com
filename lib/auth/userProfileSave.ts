@@ -58,6 +58,22 @@ export async function saveUserProfileFields(
                 ...(updateData.phone !== undefined ? { customerPhone: updateData.phone } : {}),
             },
         });
+
+        // Sincronizza i dati dell'attività/fiorista se l'utente ha un Partner collegato
+        const partner = await prisma.partner.findFirst({
+            where: { OR: [{ userId: user.id }, { email: user.email }] },
+        });
+        if (partner) {
+            await prisma.partner.update({
+                where: { id: partner.id },
+                data: {
+                    ...(updateData.name ? { ownerName: updateData.name } : {}),
+                    ...(updateData.phone !== undefined ? { whatsappNumber: updateData.phone } : {}),
+                    ...(updateData.company ? { shopName: updateData.company } : {}),
+                    ...(updateData.vatNumber !== undefined ? { vatNumber: updateData.vatNumber } : {}),
+                },
+            });
+        }
     } else if (emailChanged) {
         updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     }

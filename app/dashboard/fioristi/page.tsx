@@ -18,6 +18,18 @@ export default async function PartnersPage() {
                         items: { include: { product: true } },
                     },
                 },
+                deceasedAssignments: {
+                    include: {
+                        deceasedProfile: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                cemeteryCity: true,
+                                cemeteryName: true,
+                            },
+                        },
+                    },
+                },
             },
         })
     );

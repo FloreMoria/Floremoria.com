@@ -3,11 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Partner, PaymentStatus } from '@prisma/client';
-import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2 } from 'lucide-react';
+import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2, Search } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
 
-export type ExtendedPartner = Partner & { orders?: any[] };
+export type ExtendedPartner = Partner & {
+    orders?: any[];
+    deceasedAssignments?: Array<{
+        deceasedProfile?: {
+            id: string;
+            fullName: string;
+            cemeteryCity: string;
+            cemeteryName: string | null;
+        } | null;
+    }>;
+};
 
 function sortOrdersByRecency(orders: any[]): any[] {
     return [...orders].sort((a, b) => {
@@ -15,6 +25,52 @@ function sortOrdersByRecency(orders: any[]): any[] {
         const bMs = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
         return bMs - aMs;
     });
+}
+
+/** Haystack ricerca fiorista: anagrafica + copertura + cimiteri + defunti/ordini. */
+function partnerSearchHaystack(p: ExtendedPartner): string {
+    const parts: string[] = [
+        p.shopName,
+        p.ownerName,
+        p.province || '',
+        p.coverageArea || '',
+        p.address || '',
+        p.uniqueCode || '',
+        p.whatsappNumber || '',
+        p.email || '',
+        p.vatNumber || '',
+    ];
+
+    for (const link of p.deceasedAssignments || []) {
+        const d = link.deceasedProfile;
+        if (!d) continue;
+        parts.push(d.fullName, d.cemeteryCity, d.cemeteryName || '');
+    }
+
+    for (const order of p.orders || []) {
+        parts.push(
+            order.deceasedName || '',
+            order.cemeteryName || '',
+            order.cemeteryCity || '',
+            order.orderNumber || '',
+            order.buyerFullName || '',
+            order.gravePosition || ''
+        );
+    }
+
+    // CAP italiani (5 cifre) eventualmente presenti in address/coverage
+    const capMatch = `${p.address || ''} ${p.coverageArea || ''}`.match(/\b\d{5}\b/g);
+    if (capMatch) parts.push(...capMatch);
+
+    return parts.join(' ').toLowerCase();
+}
+
+function partnerMatchesSearch(p: ExtendedPartner, rawQuery: string): boolean {
+    const q = rawQuery.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = partnerSearchHaystack(p);
+    // Tutti i token devono matchare (es. "bergamo rosa" → comune + defunto)
+    return q.split(/\s+/).filter(Boolean).every((token) => haystack.includes(token));
 }
 
 interface Props {
@@ -249,7 +305,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     };
 
     const sortedPartners = [...partners].sort((a, b) => a.shopName.localeCompare(b.shopName)).filter(p => {
-        const matchSearch = p.shopName.toLowerCase().includes(filterSearch.toLowerCase()) || p.ownerName.toLowerCase().includes(filterSearch.toLowerCase()) || (p.coverageArea || '').toLowerCase().includes(filterSearch.toLowerCase());
+        const matchSearch = partnerMatchesSearch(p, filterSearch);
         const matchStatus = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' && p.isActive) || (filterStatus === 'INACTIVE' && !p.isActive);
         return matchSearch && matchStatus;
     });
@@ -271,10 +327,44 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
     return (
         <div className="relative fade-in">
+            {/* Barra ricerca primaria — tempo reale */}
+            <div className="mb-5">
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                    <input
+                        type="search"
+                        value={filterSearch}
+                        onChange={(e) => setFilterSearch(e.target.value)}
+                        placeholder="Cerca per nome fiorista, negozio, comune/CAP, cimitero, defunto o codice ordine…"
+                        className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-black focus:ring-2 focus:ring-black/10 outline-none transition-all"
+                        aria-label="Cerca fioristi"
+                    />
+                    {filterSearch ? (
+                        <button
+                            type="button"
+                            onClick={() => setFilterSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                            aria-label="Azzera ricerca"
+                            title="Azzera ricerca"
+                        >
+                            <X size={18} />
+                        </button>
+                    ) : null}
+                </div>
+                {filterSearch.trim() ? (
+                    <p className="mt-2 text-xs text-gray-500 font-medium">
+                        {sortedPartners.length} risultat{sortedPartners.length === 1 ? 'o' : 'i'} per &laquo;{filterSearch.trim()}&raquo;
+                    </p>
+                ) : null}
+            </div>
+
             {/* Action Bar */}
             <div className="flex justify-between items-center mb-6">
                 <div className="text-sm font-medium text-gray-500 uppercase tracking-wider">
                     {partners.length} Fioristi Operativi
+                    {filterSearch.trim() && sortedPartners.length !== partners.length
+                        ? ` · ${sortedPartners.length} filtrati`
+                        : ''}
                 </div>
                 <div className="flex items-center gap-3">
                     <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold transition-colors shadow-sm ${showFilters ? 'bg-gray-100 text-black shadow-inner' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
@@ -297,16 +387,17 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 mb-6 animate-in fade-in slide-in-from-top-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ricerca Testuale</label>
-                            <input type="text" placeholder="Nome negozio, titolare o area..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black" />
-                        </div>
-                        <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stato Operativo</label>
                             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
                                 <option value="ALL">Tutti gli stati</option>
                                 <option value="ACTIVE">Solo Operativi (Attivi)</option>
                                 <option value="INACTIVE">Solo In Pausa (Inattivi)</option>
                             </select>
+                        </div>
+                        <div className="md:col-span-2 flex items-end">
+                            <p className="text-xs text-gray-500 leading-relaxed pb-1">
+                                La ricerca in alto filtra per nome/cognome, negozio, comune e CAP, cimiteri associati, defunti e riferimenti ordine.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -331,7 +422,13 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {sortedPartners.length === 0 ? (
-                                <tr><td colSpan={9} className="p-8 text-center text-gray-400">Nessun fiorista inserito. Clicca "Registra Fiorista"</td></tr>
+                                <tr>
+                                    <td colSpan={9} className="p-8 text-center text-gray-400">
+                                        {filterSearch.trim()
+                                            ? 'Nessun fiorista corrisponde alla ricerca. Prova altri termini o azzera il filtro.'
+                                            : 'Nessun fiorista inserito. Clicca "Registra Fiorista"'}
+                                    </td>
+                                </tr>
                             ) : sortedPartners.map(partner => (
                                 <tr
                                     key={partner.id}

@@ -21,6 +21,8 @@ export type DeceasedProfileUpdateInput = {
     fullName?: string | null;
     birthDate?: string | null;
     deathDate?: string | null;
+    phone?: string | null;
+    city?: string | null;
     cemeteryName?: string | null;
     cemeteryCity?: string | null;
     graveSector?: string | null;
@@ -49,7 +51,7 @@ export async function updateDeceasedProfileFull(
 ): Promise<DeceasedDetailPayload> {
     const existing = await prisma.deceasedProfile.findUnique({
         where: { id: deceasedProfileId },
-        select: { id: true, fullName: true, cemeteryCity: true, cemeteryName: true, verifiedNotes: true, photoUrl: true, coverUrl: true },
+        select: { id: true, fullName: true, cemeteryCity: true, cemeteryName: true, verifiedNotes: true, photoUrl: true, coverUrl: true, phone: true },
     });
     if (!existing) {
         throw new Error('Defunto non trovato.');
@@ -60,10 +62,11 @@ export async function updateDeceasedProfileFull(
         throw new Error('Nome e cognome del defunto sono obbligatori.');
     }
 
+    const cityInput = input.city !== undefined ? input.city : input.cemeteryCity;
     const cemeteryCityRaw =
-        input.cemeteryCity !== undefined ? String(input.cemeteryCity || '').trim() : existing.cemeteryCity;
+        cityInput !== undefined ? String(cityInput || '').trim() : existing.cemeteryCity;
     if (!cemeteryCityRaw) {
-        throw new Error('Il comune di sepoltura è obbligatorio.');
+        throw new Error('Il comune / città di sepoltura è obbligatorio.');
     }
 
     const cemeteryNameRaw =
@@ -83,6 +86,7 @@ export async function updateDeceasedProfileFull(
         fullName: string;
         cemeteryCity: string;
         cemeteryName: string | null;
+        phone?: string | null;
         verifiedNotes?: string | null;
         photoUrl?: string | null;
         coverUrl?: string | null;
@@ -95,6 +99,9 @@ export async function updateDeceasedProfileFull(
             : null,
     };
 
+    if (input.phone !== undefined) {
+        profileData.phone = input.phone?.trim() || null;
+    }
     if (input.verifiedNotes !== undefined) {
         profileData.verifiedNotes = input.verifiedNotes?.trim() || null;
     }

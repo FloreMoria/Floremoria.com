@@ -54,6 +54,7 @@ model User {
   systemRole      UserRole        @default(USER) @map("system_role")
   company         String?
   phone           String?
+  city            String?         @map("city")
   vatNumber       String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -102,6 +103,7 @@ model DeceasedProfile {
   fullName      String
   cemeteryCity  String
   cemeteryName  String?
+  phone         String?  @map("phone")
   verifiedNotes String?  @db.Text
   photoUrl      String?  @map("photo_url")
   /** Immagine di copertina scheda commemorativa (Vercel Blob). */

@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Mail, Check, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Check, AlertCircle } from 'lucide-react';
 import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
 import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
 export interface UserPersonalDataFormProps {
     initialName: string;
     initialEmail: string;
-    initialBirthDate?: string;
-    initialDeathDate?: string;
+    initialPhone?: string;
+    initialCity?: string;
     initialDeliveryDate?: string;
     initialPlannedDeliveryDates?: string[];
     emailEditable?: boolean;
@@ -23,8 +23,8 @@ export interface UserPersonalDataFormProps {
 export default function UserPersonalDataForm({
     initialName,
     initialEmail,
-    initialBirthDate = '',
-    initialDeathDate = '',
+    initialPhone = '',
+    initialCity = '',
     initialDeliveryDate = '',
     initialPlannedDeliveryDates,
     emailEditable = true,
@@ -41,8 +41,8 @@ export default function UserPersonalDataForm({
 
     const [name, setName] = useState(initialName);
     const [email, setEmail] = useState(initialEmail);
-    const [deceasedBirthDate, setDeceasedBirthDate] = useState(initialBirthDate);
-    const [deceasedDeathDate, setDeceasedDeathDate] = useState(initialDeathDate);
+    const [phone, setPhone] = useState(initialPhone);
+    const [city, setCity] = useState(initialCity);
     const [plannedDeliveryDates, setPlannedDeliveryDates] = useState<string[]>(seedPlanned);
     const [isLoading, setIsLoading] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
@@ -50,9 +50,6 @@ export default function UserPersonalDataForm({
 
     const inputClass =
         'w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:ring-2 focus:ring-[#c5a880] focus:border-[#c5a880] outline-none';
-
-    const dateInputClass =
-        'w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-2 focus:ring-[#c5a880] focus:border-[#c5a880] outline-none';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,8 +61,8 @@ export default function UserPersonalDataForm({
             const cleanedDates = sanitizePlannedDeliveryDates(plannedDeliveryDates);
             const payload: Record<string, unknown> = {
                 name: name.trim(),
-                deceasedBirthDate: deceasedBirthDate || null,
-                deceasedDeathDate: deceasedDeathDate || null,
+                phone: phone.trim() || null,
+                city: city.trim() || null,
                 plannedDeliveryDates: cleanedDates,
                 deliveryDate: cleanedDates[0] || null,
             };
@@ -89,8 +86,8 @@ export default function UserPersonalDataForm({
             if (data.profile) {
                 setName(data.profile.name ?? '');
                 setEmail(data.profile.email ?? email);
-                setDeceasedBirthDate(data.profile.deceasedBirthDate ?? '');
-                setDeceasedDeathDate(data.profile.deceasedDeathDate ?? '');
+                setPhone(data.profile.phone ?? phone);
+                setCity(data.profile.city ?? city);
                 setPlannedDeliveryDates(
                     sanitizePlannedDeliveryDates(data.profile.plannedDeliveryDates)
                 );
@@ -170,33 +167,41 @@ export default function UserPersonalDataForm({
                     <div className="space-y-1.5">
                         <label
                             className="text-xs font-semibold uppercase tracking-wider text-slate-400"
-                            htmlFor="garden-profile-birthdate"
+                            htmlFor="garden-profile-phone"
                         >
-                            Data di nascita defunto
+                            Numero di telefono
                         </label>
-                        <input
-                            id="garden-profile-birthdate"
-                            type="date"
-                            value={deceasedBirthDate}
-                            onChange={(e) => setDeceasedBirthDate(e.target.value)}
-                            className={dateInputClass}
-                        />
+                        <div className="relative">
+                            <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                id="garden-profile-phone"
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className={inputClass}
+                                placeholder="Es. +39 333 1234567"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-1.5">
                         <label
                             className="text-xs font-semibold uppercase tracking-wider text-slate-400"
-                            htmlFor="garden-profile-deathdate"
+                            htmlFor="garden-profile-city"
                         >
-                            Data di morte/commemorazione
+                            Città
                         </label>
-                        <input
-                            id="garden-profile-deathdate"
-                            type="date"
-                            value={deceasedDeathDate}
-                            onChange={(e) => setDeceasedDeathDate(e.target.value)}
-                            className={dateInputClass}
-                        />
+                        <div className="relative">
+                            <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                id="garden-profile-city"
+                                type="text"
+                                value={city}
+                                onChange={(e) => setCity(e.target.value)}
+                                className={inputClass}
+                                placeholder="Es. Bergamo"
+                            />
+                        </div>
                     </div>
                 </div>
 

@@ -15,6 +15,8 @@ export type DeceasedDetailPayload = {
     photoUrl: string | null;
     coverUrl: string | null;
     cemeteryCity: string;
+    city: string;
+    phone: string | null;
     cemeteryName: string | null;
     verifiedNotes: string | null;
     birthDate: string | null;
@@ -145,6 +147,8 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         photoUrl: profile.photoUrl ?? null,
         coverUrl: profile.coverUrl ?? null,
         cemeteryCity: profile.cemeteryCity,
+        city: profile.cemeteryCity,
+        phone: profile.phone ?? latest?.user?.phone ?? null,
         cemeteryName: profile.cemeteryName,
         verifiedNotes: profile.verifiedNotes,
         birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,
@@ -203,6 +207,8 @@ export async function getOrphanDeceasedDetail(seedOrderId: string): Promise<Dece
         photoUrl: null,
         coverUrl: null,
         cemeteryCity: seed.cemeteryCity,
+        city: seed.cemeteryCity,
+        phone: latest?.user?.phone ?? null,
         cemeteryName: seed.cemeteryName,
         verifiedNotes: null,
         birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,

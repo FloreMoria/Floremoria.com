@@ -51,8 +51,8 @@ type Props = {
 type EditForm = {
     firstName: string;
     lastName: string;
-    birthDate: string;
-    deathDate: string;
+    phone: string;
+    city: string;
     cemeteryName: string;
     cemeteryCity: string;
     graveSector: string;
@@ -88,10 +88,10 @@ function detailToForm(detail: DeceasedDetailPayload): EditForm {
     return {
         firstName,
         lastName,
-        birthDate: toDateInputValue(detail.birthDate),
-        deathDate: toDateInputValue(detail.deathDate),
+        phone: detail.phone || '',
+        city: detail.city || detail.cemeteryCity || '',
         cemeteryName: detail.cemeteryName || '',
-        cemeteryCity: detail.cemeteryCity || '',
+        cemeteryCity: detail.cemeteryCity || detail.city || '',
         graveSector: grave.graveSector,
         graveNumber: grave.graveNumber,
         verifiedNotes: detail.verifiedNotes || '',
@@ -242,10 +242,10 @@ export default function DeceasedProfileDrawer({
                     action: 'update_profile',
                     firstName: form.firstName,
                     lastName: form.lastName,
-                    birthDate: form.birthDate || null,
-                    deathDate: form.deathDate || null,
+                    phone: form.phone || null,
+                    city: form.city || form.cemeteryCity,
                     cemeteryName: form.cemeteryName || null,
-                    cemeteryCity: form.cemeteryCity,
+                    cemeteryCity: form.city || form.cemeteryCity,
                     graveSector: form.graveSector || null,
                     graveNumber: form.graveNumber || null,
                     verifiedNotes: form.verifiedNotes || null,
@@ -433,25 +433,17 @@ export default function DeceasedProfileDrawer({
                                     </button>
                                 </section>
                             ) : null}
-
-                            {error ? (
-                                <p className="text-sm text-red-600 rounded-lg border border-red-100 bg-red-50 px-3 py-2">
-                                    {error}
-                                </p>
-                            ) : null}
-
-                            {editMode && form && detail.kind === 'profile' ? (
-                                <section className="rounded-xl border border-[#c5a880]/40 bg-[#FAF9F6] p-5 space-y-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">
-                                            Modifica anagrafica
+                            {editMode && form ? (
+                                <section className="space-y-4 bg-gray-50/80 p-5 rounded-2xl border border-gray-200/80">
+                                    <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+                                        <h3 className="font-display font-semibold text-sm text-gray-900">
+                                            Modifica anagrafica defunto
                                         </h3>
-                                        <div className="flex gap-2">
+                                        <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
-                                                onClick={cancelEdit}
-                                                disabled={saving}
-                                                className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-600"
+                                                onClick={() => setEditMode(false)}
+                                                className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900"
                                             >
                                                 Annulla
                                             </button>
@@ -459,7 +451,7 @@ export default function DeceasedProfileDrawer({
                                                 type="button"
                                                 onClick={saveProfile}
                                                 disabled={saving}
-                                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0f172a] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
                                             >
                                                 {saving ? (
                                                     <Loader2 size={13} className="animate-spin" />
@@ -470,7 +462,6 @@ export default function DeceasedProfileDrawer({
                                             </button>
                                         </div>
                                     </div>
-
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Nome
@@ -493,45 +484,36 @@ export default function DeceasedProfileDrawer({
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
-                                            Data di nascita
+                                            Numero di telefono
                                             <input
-                                                type="date"
-                                                value={form.birthDate}
+                                                type="tel"
+                                                value={form.phone}
                                                 onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, birthDate: e.target.value } : f))
+                                                    setForm((f) => (f ? { ...f, phone: e.target.value } : f))
                                                 }
+                                                placeholder="Es. +39 333 1234567"
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
-                                            Data di decesso
+                                            Città / Comune
                                             <input
-                                                type="date"
-                                                value={form.deathDate}
+                                                value={form.city}
                                                 onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, deathDate: e.target.value } : f))
+                                                    setForm((f) => (f ? { ...f, city: e.target.value, cemeteryCity: e.target.value } : f))
                                                 }
+                                                required
+                                                placeholder="Es. Bergamo"
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                                             />
                                         </label>
-                                        <label className="block text-xs font-semibold text-gray-500">
+                                        <label className="block text-xs font-semibold text-gray-500 sm:col-span-2">
                                             Cimitero di sepoltura
                                             <input
                                                 value={form.cemeteryName}
                                                 onChange={(e) =>
                                                     setForm((f) => (f ? { ...f, cemeteryName: e.target.value } : f))
                                                 }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
-                                            />
-                                        </label>
-                                        <label className="block text-xs font-semibold text-gray-500">
-                                            Comune / Città
-                                            <input
-                                                value={form.cemeteryCity}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, cemeteryCity: e.target.value } : f))
-                                                }
-                                                required
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                                             />
                                         </label>
@@ -543,7 +525,6 @@ export default function DeceasedProfileDrawer({
                                                     setForm((f) => (f ? { ...f, graveSector: e.target.value } : f))
                                                 }
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
-                                                placeholder="Es. Settore B"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
@@ -554,13 +535,11 @@ export default function DeceasedProfileDrawer({
                                                     setForm((f) => (f ? { ...f, graveNumber: e.target.value } : f))
                                                 }
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
-                                                placeholder="Es. 142"
                                             />
                                         </label>
                                     </div>
-
                                     <label className="block text-xs font-semibold text-gray-500">
-                                        Frase commemorativa / Dedica principale
+                                        Frase commemorativa
                                         <textarea
                                             value={form.verifiedNotes}
                                             onChange={(e) =>
@@ -568,58 +547,30 @@ export default function DeceasedProfileDrawer({
                                             }
                                             rows={3}
                                             className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
-                                            placeholder="Una frase di memoria…"
                                         />
                                     </label>
-
-                                    <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                                    <div className="rounded-xl border border-gray-100 bg-white p-4">
                                         <PlannedDeliveryDatesEditor
                                             dates={form.plannedDeliveryDates}
                                             onChange={(dates) =>
                                                 setForm((f) => (f ? { ...f, plannedDeliveryDates: dates } : f))
                                             }
                                             disabled={saving}
-                                            idPrefix="deceased-planned"
                                         />
                                     </div>
-
-                                    {detail.deceasedProfileId ? (
-                                        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-                                                <ImageIcon size={14} /> Immagine di copertina
-                                            </div>
-                                            <AdminMediaUploadAvatar
-                                                imageUrl={detail.coverUrl}
-                                                fallbackLabel="Copertina"
-                                                entity="deceased"
-                                                entityId={detail.deceasedProfileId}
-                                                variant="cover"
-                                                size="sm"
-                                                onUploaded={(url) => {
-                                                    setDetail((prev) =>
-                                                        prev ? { ...prev, coverUrl: url } : prev
-                                                    );
-                                                    showToast('Copertina aggiornata');
-                                                }}
-                                            />
-                                            <p className="text-xs text-gray-400">
-                                                Caricamento su Vercel Blob Storage.
-                                            </p>
-                                        </div>
-                                    ) : null}
                                 </section>
                             ) : (
                                 <>
                                     <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Date commemorative
+                                                Contatto & Città
                                             </p>
                                             <p className="text-sm text-gray-700">
-                                                Nascita: <strong>{formatDisplayDate(detail.birthDate)}</strong>
+                                                Telefono: <strong>{detail.phone || '—'}</strong>
                                             </p>
                                             <p className="text-sm text-gray-700 mt-1">
-                                                Morte: <strong>{formatDisplayDate(detail.deathDate)}</strong>
+                                                Città: <strong>{detail.city || detail.cemeteryCity || '—'}</strong>
                                             </p>
                                         </div>
                                         <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">

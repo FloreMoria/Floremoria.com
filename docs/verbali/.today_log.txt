@@ -10,3 +10,4 @@
 [2026-08-03 17:00] feat(users): profilazione NEW/REGULAR/SUBSCRIBER (badge admin + contesto VERA); date future x10 senza impegno (bacheca + scheda defunto); fix sessione profilo Isabella (self-heal + magic-link case-insensitive).
 
 [2026-08-03 17:15] feat(vera): regole Guest/contatti non profilati — accoglienza empatica, discrimina FT/FF/PA, guida delicata + Giardino senza impegno (callerContext, systemPrompt, metodoFloremoria).
+[2026-08-03 17:45] feat(giardino+admin): rimozione date nascita/morte, aggiunta campi phone/city su Giardino della Memoria & DeceasedProfileDrawer; fix definitivo "Sessione non valida" su magic link /giardino/[id] con auto-set session cookie + fallback token; audit permessi totali CRUD per ADMIN & SUPERADMIN.

@@ -12,15 +12,64 @@ import type { User } from '@prisma/client';
  * se il cookie email è valido ma manca il record User (caso Isabella / ordini storici),
  * lo ricrea agganciando lo storico — evita "Sessione non valida" al salvataggio date.
  */
-async function resolveBachecaUser(): Promise<User | null> {
+/**
+ * Risolve l'Utente bacheca con self-heal:
+ * 1. Dalla sessione attiva (cookie fm_user_email).
+ * 2. Tramite token/userId/userCode/email nei parametri della richiesta, headers o Referer.
+ * 3. Se il record Manca, lo rigenera dagli ordini storici.
+ */
+async function resolveBachecaUser(request?: Request, bodyParams?: Record<string, unknown>): Promise<User | null> {
     const { user, email } = await resolveSessionUser();
     if (user) return user;
-    if (!email) return null;
 
-    const existing = await findUserByEmail(email);
+    let targetIdentifier = email;
+
+    if (!targetIdentifier && request) {
+        try {
+            const url = new URL(request.url);
+            targetIdentifier =
+                url.searchParams.get('email') ||
+                url.searchParams.get('userId') ||
+                url.searchParams.get('userCode') ||
+                url.searchParams.get('code') ||
+                url.searchParams.get('token') ||
+                '';
+
+            if (!targetIdentifier && bodyParams) {
+                targetIdentifier = String(
+                    bodyParams.userId || bodyParams.userCode || bodyParams.email || bodyParams.token || ''
+                ).trim();
+            }
+
+            if (!targetIdentifier) {
+                const referer = request.headers.get('referer') || '';
+                if (referer.includes('/giardino/')) {
+                    const slug = referer.split('/giardino/')[1]?.split('?')[0]?.split('/')[0];
+                    if (slug && slug !== 'UT-DEMO') {
+                        targetIdentifier = slug;
+                    }
+                }
+            }
+        } catch {
+            // Error parsing URL or referer ignored
+        }
+    }
+
+    if (!targetIdentifier) return null;
+
+    const lower = targetIdentifier.toLowerCase();
+    const existing = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { email: lower },
+                { uniqueCode: targetIdentifier },
+                { id: targetIdentifier },
+            ],
+        },
+    });
     if (existing) return existing;
 
-    const order = await findOrderByEmail(email);
+    const order = await findOrderByEmail(lower);
     if (!order) return null;
 
     try {
@@ -36,8 +85,8 @@ function toDateInput(value: Date | null | undefined): string {
 }
 
 /** GET — dati personali bacheca cliente inclusi i campi data. */
-export async function GET() {
-    const user = await resolveBachecaUser();
+export async function GET(request: Request) {
+    const user = await resolveBachecaUser(request);
     if (!user) {
         return NextResponse.json(
             { success: false, message: 'Sessione non valida. Effettui di nuovo l\'accesso al Giardino della Memoria.' },
@@ -65,24 +114,28 @@ export async function GET() {
     const plannedDeliveryDates =
         plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
         success: true,
         profile: {
             name: user.name ?? '',
             email: user.email,
+            phone: user.phone ?? '',
+            city: user.city ?? '',
             userType: user.userType,
-            deceasedBirthDate: toDateInput(latestOrder?.deceasedBirthDate),
-            deceasedDeathDate: toDateInput(latestOrder?.deceasedDeathDate),
             deliveryDate: toDateInput(latestOrder?.deliveryDate),
             plannedDeliveryDates,
         },
     });
+
+    applySessionEmailCookie(response, request, user.email);
+    return response;
 }
 
 /** PUT — aggiorna nome/email e date bacheca cliente (incl. fino a 10 date future senza impegno). */
 export async function PUT(request: Request) {
     try {
-        const user = await resolveBachecaUser();
+        const body = await request.json();
+        const user = await resolveBachecaUser(request, body);
         if (!user) {
             return NextResponse.json(
                 {
@@ -94,7 +147,6 @@ export async function PUT(request: Request) {
             );
         }
 
-        const body = await request.json();
         const forbiddenKeys = ['password', 'passwordHash', 'systemRole', 'roleId', 'isActive', 'userType'];
         for (const key of forbiddenKeys) {
             if (key in body && body[key] !== undefined) {
@@ -110,34 +162,24 @@ export async function PUT(request: Request) {
             deceasedDeathDate,
             deliveryDate,
             plannedDeliveryDates: plannedRaw,
+            phone,
+            city,
             ...profileBody
         } = body;
 
+        const profileDataToSave: Record<string, unknown> = { ...profileBody };
+        if (phone !== undefined) {
+            profileDataToSave.phone = phone ? String(phone).trim() : null;
+        }
+        if (city !== undefined) {
+            profileDataToSave.city = city ? String(city).trim() : null;
+        }
+
         const { user: updated, emailChanged } = await saveUserProfileFields({
             user,
-            body: profileBody,
+            body: profileDataToSave,
             allowEmailChange: true,
         });
-
-        const orderUpdateData: Record<string, Date | null> = {};
-        if (deceasedBirthDate !== undefined) {
-            orderUpdateData.deceasedBirthDate = deceasedBirthDate ? new Date(deceasedBirthDate) : null;
-        }
-        if (deceasedDeathDate !== undefined) {
-            orderUpdateData.deceasedDeathDate = deceasedDeathDate ? new Date(deceasedDeathDate) : null;
-        }
-
-        if (Object.keys(orderUpdateData).length > 0) {
-            await prisma.order.updateMany({
-                where: {
-                    OR: [
-                        { userId: user.id },
-                        { buyerEmail: { equals: user.email, mode: 'insensitive' } },
-                    ],
-                },
-                data: orderUpdateData,
-            });
-        }
 
         // Retrocompatibilità: singola deliveryDate sugli ordini aperti
         if (deliveryDate !== undefined && plannedRaw === undefined) {
@@ -222,9 +264,9 @@ export async function PUT(request: Request) {
             profile: {
                 name: updated.name ?? '',
                 email: updated.email,
+                phone: updated.phone ?? '',
+                city: updated.city ?? '',
                 userType: updated.userType,
-                deceasedBirthDate: toDateInput(latestOrder?.deceasedBirthDate),
-                deceasedDeathDate: toDateInput(latestOrder?.deceasedDeathDate),
                 deliveryDate: toDateInput(latestOrder?.deliveryDate),
                 plannedDeliveryDates,
             },

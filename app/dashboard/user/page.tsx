@@ -156,8 +156,6 @@ export default async function UserDashboardPage({
                 {!showFinancialDetails ? (
                     (() => {
                         const latestOrder = orders[0] || null;
-                        const initialBirthDate = latestOrder?.deceasedBirthDate ? latestOrder.deceasedBirthDate.toISOString().slice(0, 10) : '';
-                        const initialDeathDate = latestOrder?.deceasedDeathDate ? latestOrder.deceasedDeathDate.toISOString().slice(0, 10) : '';
                         const initialDeliveryDate = latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '';
                         const plannedFromUser = Array.isArray(user.plannedDeliveryDates)
                             ? user.plannedDeliveryDates
@@ -172,8 +170,8 @@ export default async function UserDashboardPage({
                             <UserPersonalDataForm
                                 initialName={user.name ?? ''}
                                 initialEmail={user.email}
-                                initialBirthDate={initialBirthDate}
-                                initialDeathDate={initialDeathDate}
+                                initialPhone={user.phone ?? ''}
+                                initialCity={user.city ?? ''}
                                 initialDeliveryDate={initialDeliveryDate}
                                 initialPlannedDeliveryDates={initialPlannedDeliveryDates}
                                 saveEndpoint="/api/dashboard/user/profile"

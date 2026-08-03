@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import Image from 'next/image';
@@ -98,6 +99,24 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
 
     if (!user) {
         notFound();
+    }
+
+    if (user.email && user.id !== 'demo-user-123') {
+        try {
+            const cookieStore = await cookies();
+            cookieStore.set('fm_user_email', user.email.toLowerCase(), {
+                httpOnly: true,
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7,
+            });
+            cookieStore.set('fm_user_role', 'USER', {
+                httpOnly: true,
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7,
+            });
+        } catch {
+            // ignore cookie setting errors in server components
+        }
     }
 
     const timelineOrders = [...user.orders].sort((a, b) => {

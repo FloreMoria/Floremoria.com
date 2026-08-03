@@ -14,5 +14,7 @@
 [2026-08-03 18:02] fix(auth+db): risolto errore 500 login Admin/SuperAdmin — `npx prisma db push` per allineamento colonne phone/city su Postgres/Neon, try/catch con console.error in requireDashboardAdmin, proxy e ensureElevatedUserRecord, sanitizzazione robusta ruoli ADMIN/SUPERADMIN.
 [2026-08-03 18:14] feat(rbac+profile): allineamento strict autorizzazioni — ADMIN & SUPERADMIN modifica totale di tutti i dati; riservata gestione ruoli dashboard esclusiva a SUPERADMIN; sync salvataggio utente GdM (dati personali + defunto) e fiorista (dati personali + attività Partner).
 [2026-08-03 18:17] fix(auth): login & session resolution a prova di errore 500 — try/catch isolati per `ensureElevatedUserRecord` e query DB in `resolveSessionUser` e `POST /api/auth/login`; abilitato fallback password '2212' per `verifyLegacySuperAdminPassword`.
+[2026-08-03 18:46] fix(db-neon): `npx prisma db push` eseguito con successo sul database di produzione Neon (`DATABASE_URL_UNPOOLED`) — allineate le colonne `phone`, `city` ed enum/relazioni; risolto il messaggio di drift schema sulle pagine Ordini, Utenti, Defunti e Fioristi.
+
 
 

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Integrazione modulo Silent Intelligence. Tutela del know-how tramite DeceasedProfile."
 sync_source: docs/verbali/01-04-2026.md
-synced_at: 2026-08-03T16:18:58.065Z
+synced_at: 2026-08-03T16:47:24.092Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/01-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

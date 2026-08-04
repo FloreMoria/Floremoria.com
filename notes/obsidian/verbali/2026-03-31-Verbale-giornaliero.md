@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Sintesi organica di architettura logistica (Ghost ID, The Image Engine, SEO Programmatica e Offline First)."
 sync_source: docs/verbali/31-03-2026.md
-synced_at: 2026-08-03T20:54:19.345Z
+synced_at: 2026-08-04T01:24:18.887Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/31-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

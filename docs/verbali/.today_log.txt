@@ -25,3 +25,6 @@
 
 [2026-08-04 15:45] audit(whatsapp): audit completo invii & delivery status Meta — parsing webhook `statuses` (wamid, SENT, DELIVERED, READ, FAILED + codici errore 131026/131047), modulo `updateWhatsAppDeliveryStatus.ts`, rotta audit `/api/admin/whatsapp/status-audit`, `safeTruncateUtf8` per integrità emoji/testo, banner alert rosso + badge "Mancata Consegna / Errore Meta" in dashboard chat.
 
+[2026-08-04 16:00] feat(analytics+chat): integrazione API `/api/admin/whatsapp/status-audit` in pagina Analytics Controllo (5 KPI carte, barra ripartizione status Meta e registro tabella fallimenti); formato data e ora omogeneo `GG-MM-AAAA | HH:mm` applicato a tutte le conversazioni chat (anteprime laterali e messaggi).
+
+

@@ -9,15 +9,36 @@ import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 
 function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
+  const now = new Date();
+  const dayNow = String(now.getDate()).padStart(2, '0');
+  const monthNow = String(now.getMonth() + 1).padStart(2, '0');
+  const yearNow = now.getFullYear();
+  const todayDateStr = `${dayNow}-${monthNow}-${yearNow}`;
+
   if (!createdAtStr) {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    return `${day}-${month}-${year} | ${fallback || ''}`;
+    if (!fallback || fallback.trim() === '') {
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      return `${todayDateStr} | ${hh}:${mm}`;
+    }
+    const cleanFallback = fallback.trim();
+    if (cleanFallback.includes('|')) return cleanFallback;
+    if (/^\d{2}:\d{2}$/.test(cleanFallback)) return `${todayDateStr} | ${cleanFallback}`;
+    if (cleanFallback.toLowerCase() === 'oggi') {
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      return `${todayDateStr} | ${hh}:${mm}`;
+    }
+    return `${todayDateStr} | ${cleanFallback}`;
   }
+
   try {
     const d = new Date(createdAtStr);
+    if (isNaN(d.getTime())) {
+      if (fallback?.includes('|')) return fallback;
+      if (fallback && /^\d{2}:\d{2}$/.test(fallback.trim())) return `${todayDateStr} | ${fallback.trim()}`;
+      return fallback || todayDateStr;
+    }
     const formatter = new Intl.DateTimeFormat('it-IT', {
       day: '2-digit',
       month: '2-digit',
@@ -38,7 +59,7 @@ function formatMessageTimestamp(createdAtStr?: string, fallback?: string): strin
     return `${day}-${month}-${year} | ${hour}:${minute}`;
   } catch (err) {
     console.error('Error formatting time:', err);
-    return fallback || '';
+    return fallback || todayDateStr;
   }
 }
 
@@ -529,7 +550,7 @@ function VisioneTab({
                           )}
                         </h4>
                         <span className={`text-[11px] font-medium ${chat.status === 'HUMAN_INTERVENTION' ? 'text-red-500 font-bold' : 'text-[#667781]'}`}>
-                          {chat.time || chat.timeLabel}
+                          {formatMessageTimestamp(chat.updatedAt, chat.time || chat.timeLabel)}
                         </span>
                       </div>
                       {chat.subtitle ? (
@@ -769,72 +790,268 @@ function ControlloTab() {
       openedAt: string;
       device: string;
     }>,
+    whatsappAudit: {
+      totalOutbound: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      readCount: 0,
+      failedCount: 0,
+      deliveredRate: 100,
+      readRate: 0,
+      failedRate: 0,
+      failedDetails: [] as Array<{
+        id: string;
+        phone: string;
+        recipientName: string;
+        userType: string;
+        bodyPreview: string;
+        deliveryStatus: string;
+        deliveryError?: string;
+        createdAt: string;
+      }>,
+    },
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const res = await fetch('/api/dashboard/communications/analytics');
+      const analytics = await res.json();
+      if (analytics.success) {
+        setData({
+          veraAutonomyRate: analytics.veraAutonomyRate,
+          humanEscalationRate: analytics.humanEscalationRate,
+          gdmOpens: analytics.gdmOpens || [],
+          whatsappAudit: analytics.whatsappAudit || {
+            totalOutbound: 0,
+            sentCount: 0,
+            deliveredCount: 0,
+            readCount: 0,
+            failedCount: 0,
+            deliveredRate: 100,
+            readRate: 0,
+            failedRate: 0,
+            failedDetails: [],
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching communications analytics:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        const res = await fetch('/api/dashboard/communications/analytics');
-        const analytics = await res.json();
-        if (analytics.success) {
-          setData({
-            veraAutonomyRate: analytics.veraAutonomyRate,
-            humanEscalationRate: analytics.humanEscalationRate,
-            gdmOpens: analytics.gdmOpens
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching communications analytics:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchAnalytics();
-  }, []);
+  }, [fetchAnalytics]);
+
+  const audit = data.whatsappAudit;
+  const total = audit.totalOutbound || 1;
 
   return (
     <div className="animate-in fade-in duration-500 space-y-10">
-      <div className="flex justify-between items-center">
-         <div>
-           <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Analytics di Consegna</h2>
-           <p className="text-[#6F6F6F] mt-1">Efficienza operativa e tracciamento dell'interazione emotiva dei clienti.</p>
-         </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Analytics di Consegna & Audit Meta WhatsApp</h2>
+          <p className="text-[#6F6F6F] mt-1 text-sm">
+            Efficienza operativa di recapito messaggi, tasso di lettura testimoniale e tracciamento dell'interazione emotiva dei clienti.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={fetchAnalytics}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#EAE3D9] text-xs font-semibold text-[#111B21] hover:bg-[#FAF8F5] transition-colors shadow-sm disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 text-[#00A884] ${refreshing ? 'animate-spin' : ''}`} />
+          Aggiorna Audit Meta
+        </button>
       </div>
 
-      {/* Metriche Principali */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">Tasso Autonomia VERA</h4>
-            <span className="w-8 h-8 rounded-full bg-[#E6F3EA] flex items-center justify-center"><Bot className="w-4 h-4 text-[#2F6B43]" /></span>
+      {/* KPI METRICS (5 Carte Responsive) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Autonomia VERA</h4>
+            <span className="w-8 h-8 rounded-full bg-[#E6F3EA] flex items-center justify-center">
+              <Bot className="w-4 h-4 text-[#2F6B43]" />
+            </span>
           </div>
           <div>
-            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : `${data.veraAutonomyRate}%`}</p>
-            <p className="text-xs font-semibold text-[#2F6B43] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Risposte gestite autonomamente dall'AI</p>
+            <p className="text-3xl font-display font-bold text-[#2B2B2B] mb-1">{loading ? '...' : `${data.veraAutonomyRate}%`}</p>
+            <p className="text-[11px] font-semibold text-[#2F6B43] flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Risposte gestite autonomamente
+            </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">Richiesta Intervento Umano</h4>
-            <span className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center"><UserIcon className="w-4 h-4 text-red-600" /></span>
+        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Tasso Consegna</h4>
+            <span className="w-8 h-8 rounded-full bg-[#E7F7F1] flex items-center justify-center">
+              <CheckCheck className="w-4 h-4 text-[#00A884]" />
+            </span>
           </div>
           <div>
-            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : `${data.humanEscalationRate}%`}</p>
-            <p className="text-xs font-semibold text-red-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5"/> Richieste di SOS / Intervento manuale</p>
+            <p className="text-3xl font-display font-bold text-[#00A884] mb-1">{loading ? '...' : `${audit.deliveredRate}%`}</p>
+            <p className="text-[11px] font-semibold text-[#00A884] flex items-center gap-1">
+              <Smartphone className="w-3.5 h-3.5 shrink-0" /> {audit.deliveredCount + audit.readCount} su {audit.totalOutbound} recapitati
+            </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-4">
-            <h4 className="text-[#6F6F6F] font-semibold text-sm">Aperture Giardino della Memoria</h4>
-            <span className="w-8 h-8 rounded-full bg-[#EFF6FF] flex items-center justify-center"><Activity className="w-4 h-4 text-[#2563EB]" /></span>
+        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Interazione Emotiva</h4>
+            <span className="w-8 h-8 rounded-full bg-[#E0F4FC] flex items-center justify-center">
+              <Eye className="w-4 h-4 text-[#34B7F1]" />
+            </span>
           </div>
           <div>
-            <p className="text-4xl font-display font-bold text-[#2B2B2B] mb-2">{loading ? '...' : data.gdmOpens.length}</p>
-            <p className="text-xs font-semibold text-[#2563EB] flex items-center gap-1"><CheckCheck className="w-3.5 h-3.5"/> Clic tracciati sui link foto di consegna</p>
+            <p className="text-3xl font-display font-bold text-[#0284C7] mb-1">{loading ? '...' : `${audit.readRate}%`}</p>
+            <p className="text-[11px] font-semibold text-[#0284C7] flex items-center gap-1">
+              <CheckCheck className="w-3.5 h-3.5 shrink-0 text-[#34B7F1]" /> {audit.readCount} letture foto tracciate
+            </p>
           </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Mancata Consegna</h4>
+            <span className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </span>
+          </div>
+          <div>
+            <p className="text-3xl font-display font-bold text-red-600 mb-1">{loading ? '...' : `${audit.failedRate}%`}</p>
+            <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {audit.failedCount} errori scartati da Meta
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start mb-3">
+            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">SOS / Manuale</h4>
+            <span className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
+              <UserIcon className="w-4 h-4 text-amber-600" />
+            </span>
+          </div>
+          <div>
+            <p className="text-3xl font-display font-bold text-[#2B2B2B] mb-1">{loading ? '...' : `${data.humanEscalationRate}%`}</p>
+            <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+              <Activity className="w-3.5 h-3.5 shrink-0" /> Richieste intervento staff
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* RECAPITO VISUAL BREAKDOWN BAR */}
+      <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm space-y-4">
+        <div className="flex justify-between items-center">
+          <h4 className="font-display font-semibold text-base text-[#111B21] flex items-center gap-2">
+            <Activity className="w-4.5 h-4.5 text-[#00A884]" />
+            Ripartizione Status Consegna Meta WhatsApp
+          </h4>
+          <span className="text-xs text-gray-500 font-medium">{audit.totalOutbound} messaggi totali analizzati</span>
+        </div>
+
+        <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex">
+          <div style={{ width: `${Math.max(audit.readRate, 2)}%` }} className="bg-[#34B7F1] h-full" title={`READ: ${audit.readCount}`} />
+          <div style={{ width: `${Math.max(audit.deliveredRate - audit.readRate, 2)}%` }} className="bg-[#00A884] h-full" title={`DELIVERED: ${audit.deliveredCount}`} />
+          <div style={{ width: `${Math.max((audit.sentCount / total) * 100, 1)}%` }} className="bg-[#8696A0] h-full" title={`SENT: ${audit.sentCount}`} />
+          <div style={{ width: `${Math.max(audit.failedRate, 1)}%` }} className="bg-red-500 h-full" title={`FAILED: ${audit.failedCount}`} />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#34B7F1] shrink-0" />
+            <span className="text-gray-600 font-medium">Letto (READ): <strong className="text-gray-900">{audit.readCount}</strong></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#00A884] shrink-0" />
+            <span className="text-gray-600 font-medium">Consegnato (DELIVERED): <strong className="text-gray-900">{audit.deliveredCount}</strong></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#8696A0] shrink-0" />
+            <span className="text-gray-600 font-medium">Inviato (SENT): <strong className="text-gray-900">{audit.sentCount}</strong></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
+            <span className="text-gray-600 font-medium">Mancata Consegna (FAILED): <strong className="text-red-600">{audit.failedCount}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* REGISTRO ERRORI META WHATSAPP (failedDetails) */}
+      <div className="bg-[#FDFCF9] rounded-[24px] border border-[#EAE3D9] overflow-hidden">
+        <div className="p-6 border-b border-[#EAE3D9] bg-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div>
+              <h4 className="font-display font-semibold text-base text-[#111B21]">Registro Mancata Consegna & Errori Webhook Meta</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Messaggi respinti o non consegnati sui dispositivi (es. finestra 24h o errori di rete Meta).</p>
+            </div>
+          </div>
+          {audit.failedCount > 0 && (
+            <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full border border-red-200">
+              {audit.failedCount} Errori
+            </span>
+          )}
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="py-6 text-center text-[#6F6F6F] text-sm animate-pulse">Caricamento errori...</div>
+          ) : audit.failedDetails.length === 0 ? (
+            <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 flex items-center gap-3 text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>Nessun errore di recapito registrato. Tutti i messaggi inviati via Meta Cloud API risultano consegnati o letti.</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-[#EAE3D9] text-[#6F6F6F] text-xs uppercase tracking-wider font-semibold">
+                    <th className="pb-3 pr-4">Data e Ora</th>
+                    <th className="pb-3 pr-4">Destinatario</th>
+                    <th className="pb-3 pr-4">Telefono</th>
+                    <th className="pb-3 pr-4">Errore Meta Webhook</th>
+                    <th className="pb-3">Anteprima Testo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {audit.failedDetails.map(failed => (
+                    <tr key={failed.id} className="hover:bg-[#FAF8F5]/50 transition-colors">
+                      <td className="py-3.5 pr-4 text-xs font-semibold text-gray-700 whitespace-nowrap">
+                        {formatMessageTimestamp(failed.createdAt)}
+                      </td>
+                      <td className="py-3.5 pr-4">
+                        <span className="font-medium text-[#111B21]">{failed.recipientName}</span>
+                        {failed.userType === 'FLORIST' && (
+                          <span className="ml-1.5 text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded border border-emerald-100 font-bold uppercase">Fiorista</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 pr-4 font-mono text-xs text-gray-600">{failed.phone}</td>
+                      <td className="py-3.5 pr-4 text-xs">
+                        <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-lg border border-red-200 font-semibold">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                          {failed.deliveryError}
+                        </span>
+                      </td>
+                      <td className="py-3.5 text-xs text-[#6F6F6F] max-w-[240px] truncate" title={failed.bodyPreview}>
+                        {failed.bodyPreview}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -874,7 +1091,7 @@ function ControlloTab() {
                       </td>
                       <td className="py-3.5 pr-4 font-mono text-xs">{open.orderNumber}</td>
                       <td className="py-3.5 pr-4">{open.deceasedName}</td>
-                      <td className="py-3.5 pr-4 text-xs font-medium text-gray-500">{open.openedAt}</td>
+                      <td className="py-3.5 pr-4 text-xs font-semibold text-gray-600">{open.openedAt}</td>
                       <td className="py-3.5 text-xs text-[#8696A0] max-w-[200px] truncate" title={open.device}>{open.device}</td>
                     </tr>
                   ))}

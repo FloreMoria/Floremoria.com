@@ -143,6 +143,8 @@ export async function runDeceasedAnniversaryReminders(
         select: {
             id: true,
             fullName: true,
+            birthDate: true,
+            deathDate: true,
             userLinks: {
                 select: {
                     userId: true,
@@ -179,9 +181,13 @@ export async function runDeceasedAnniversaryReminders(
 
     for (const profile of profiles) {
         const birthDate =
-            profile.orders.find((o) => o.deceasedBirthDate)?.deceasedBirthDate ?? null;
+            profile.birthDate ??
+            profile.orders.find((o) => o.deceasedBirthDate)?.deceasedBirthDate ??
+            null;
         const deathDate =
-            profile.orders.find((o) => o.deceasedDeathDate)?.deceasedDeathDate ?? null;
+            profile.deathDate ??
+            profile.orders.find((o) => o.deceasedDeathDate)?.deceasedDeathDate ??
+            null;
 
         const kinds: AnniversaryKind[] = [];
         if (matchesMonthDay(birthDate, target.month, target.day)) kinds.push('birth');

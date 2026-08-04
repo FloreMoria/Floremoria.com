@@ -61,3 +61,27 @@ export function toDateInputValue(iso: string | null | undefined): string {
     const day = String(d.getUTCDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
 }
+
+/**
+ * Parsa YYYY-MM-DD (o ISO) in Date a mezzogiorno UTC.
+ * Perché: evita shift di giorno Europe/Rome sulle sole date commemorative.
+ * undefined = campo assente; null = campo svuotato.
+ */
+export function parseCommemorativeDate(
+    value: string | null | undefined
+): Date | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || String(value).trim() === '') return null;
+    const trimmed = String(value).trim();
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+    if (ymd) {
+        return new Date(
+            Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12, 0, 0)
+        );
+    }
+    const d = new Date(trimmed);
+    if (Number.isNaN(d.getTime())) {
+        throw new Error('Data non valida.');
+    }
+    return d;
+}

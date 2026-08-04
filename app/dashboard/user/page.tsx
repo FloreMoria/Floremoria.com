@@ -13,6 +13,7 @@ import {
     UserBachecaOrderCard,
 } from '@/components/dashboard/UserBachecaOrderCard';
 import UserPersonalDataForm from '@/components/dashboard/UserPersonalDataForm';
+import { toDateInputValue } from '@/lib/deceased/deceasedProfileFormUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,15 +157,31 @@ export default async function UserDashboardPage({
                 {!showFinancialDetails ? (
                     (() => {
                         const latestOrder = orders[0] || null;
-                        const initialDeliveryDate = latestOrder?.deliveryDate ? latestOrder.deliveryDate.toISOString().slice(0, 10) : '';
+                        const initialDeliveryDate = latestOrder?.deliveryDate
+                            ? latestOrder.deliveryDate.toISOString().slice(0, 10)
+                            : '';
                         const plannedFromUser = Array.isArray(user.plannedDeliveryDates)
                             ? user.plannedDeliveryDates
                             : [];
-                        const plannedFromDeceased = Array.isArray(latestOrder?.deceasedProfile?.plannedDeliveryDates)
+                        const plannedFromDeceased = Array.isArray(
+                            latestOrder?.deceasedProfile?.plannedDeliveryDates
+                        )
                             ? latestOrder!.deceasedProfile!.plannedDeliveryDates
                             : [];
                         const initialPlannedDeliveryDates =
                             plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
+                        const initialBirthDate =
+                            toDateInputValue(
+                                latestOrder?.deceasedProfile?.birthDate?.toISOString() ||
+                                    latestOrder?.deceasedBirthDate?.toISOString() ||
+                                    ''
+                            );
+                        const initialDeathDate =
+                            toDateInputValue(
+                                latestOrder?.deceasedProfile?.deathDate?.toISOString() ||
+                                    latestOrder?.deceasedDeathDate?.toISOString() ||
+                                    ''
+                            );
 
                         return (
                             <UserPersonalDataForm
@@ -172,6 +189,8 @@ export default async function UserDashboardPage({
                                 initialEmail={user.email}
                                 initialPhone={user.phone ?? ''}
                                 initialCity={user.city ?? ''}
+                                initialBirthDate={initialBirthDate}
+                                initialDeathDate={initialDeathDate}
                                 initialDeliveryDate={initialDeliveryDate}
                                 initialPlannedDeliveryDates={initialPlannedDeliveryDates}
                                 userType={user.userType}

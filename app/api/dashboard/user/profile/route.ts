@@ -2,21 +2,20 @@ import { NextResponse } from 'next/server';
 import { applySessionEmailCookie } from '@/lib/auth/sessionEmailCookie';
 import { saveUserProfileFields, UserEmailUpdateError } from '@/lib/auth/userProfileSave';
 import { resolveSessionUser } from '@/lib/auth/sessionUser';
-import { createUserFromOrder, findOrderByEmail, findUserByEmail } from '@/lib/auth/identity';
+import { createUserFromOrder, findOrderByEmail } from '@/lib/auth/identity';
 import prisma from '@/lib/prisma';
 import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
+import {
+    parseCommemorativeDate,
+    toDateInputValue,
+} from '@/lib/deceased/deceasedProfileFormUtils';
 import type { User } from '@prisma/client';
 
 /**
  * Risolve l'Utente bacheca con self-heal:
- * se il cookie email è valido ma manca il record User (caso Isabella / ordini storici),
- * lo ricrea agganciando lo storico — evita "Sessione non valida" al salvataggio date.
- */
-/**
- * Risolve l'Utente bacheca con self-heal:
  * 1. Dalla sessione attiva (cookie fm_user_email).
  * 2. Tramite token/userId/userCode/email nei parametri della richiesta, headers o Referer.
- * 3. Se il record Manca, lo rigenera dagli ordini storici.
+ * 3. Se il record manca, lo rigenera dagli ordini storici.
  */
 async function resolveBachecaUser(request?: Request, bodyParams?: Record<string, unknown>): Promise<User | null> {
     const { user, email } = await resolveSessionUser();
@@ -80,8 +79,91 @@ async function resolveBachecaUser(request?: Request, bodyParams?: Record<string,
     }
 }
 
-function toDateInput(value: Date | null | undefined): string {
-    return value ? value.toISOString().slice(0, 10) : '';
+async function resolveLinkedDeceasedIds(userId: string, email: string): Promise<string[]> {
+    const fromOrders = await prisma.order.findMany({
+        where: {
+            OR: [{ userId }, { buyerEmail: { equals: email, mode: 'insensitive' } }],
+            deceasedProfileId: { not: null },
+        },
+        select: { deceasedProfileId: true },
+        distinct: ['deceasedProfileId'],
+    });
+    const fromLinks = await prisma.userDeceasedLink.findMany({
+        where: { userId },
+        select: { deceasedProfileId: true },
+    });
+    return [
+        ...new Set(
+            [...fromOrders, ...fromLinks]
+                .map((row) => row.deceasedProfileId)
+                .filter((id): id is string => Boolean(id))
+        ),
+    ];
+}
+
+async function resolveCommemorativeDatesForUser(userId: string, email: string): Promise<{
+    birthDate: string;
+    deathDate: string;
+    deliveryDate: string;
+    plannedDeliveryDates: string[];
+}> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { plannedDeliveryDates: true },
+    });
+
+    const deceasedIds = await resolveLinkedDeceasedIds(userId, email);
+    const primaryDeceased =
+        deceasedIds.length > 0
+            ? await prisma.deceasedProfile.findFirst({
+                  where: { id: { in: deceasedIds } },
+                  select: {
+                      birthDate: true,
+                      deathDate: true,
+                      plannedDeliveryDates: true,
+                  },
+                  orderBy: { updatedAt: 'desc' },
+              })
+            : null;
+
+    const latestOrder = await prisma.order.findFirst({
+        where: {
+            OR: [
+                { userId },
+                { buyerEmail: { equals: email, mode: 'insensitive' } },
+            ],
+        },
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+            deliveryDate: true,
+            deceasedBirthDate: true,
+            deceasedDeathDate: true,
+            deceasedProfile: { select: { plannedDeliveryDates: true, birthDate: true, deathDate: true } },
+        },
+    });
+
+    const plannedFromUser = sanitizePlannedDeliveryDates(user?.plannedDeliveryDates);
+    const plannedFromDeceased = sanitizePlannedDeliveryDates(
+        primaryDeceased?.plannedDeliveryDates ?? latestOrder?.deceasedProfile?.plannedDeliveryDates
+    );
+
+    const birth =
+        primaryDeceased?.birthDate ??
+        latestOrder?.deceasedProfile?.birthDate ??
+        latestOrder?.deceasedBirthDate ??
+        null;
+    const death =
+        primaryDeceased?.deathDate ??
+        latestOrder?.deceasedProfile?.deathDate ??
+        latestOrder?.deceasedDeathDate ??
+        null;
+
+    return {
+        birthDate: toDateInputValue(birth?.toISOString()),
+        deathDate: toDateInputValue(death?.toISOString()),
+        deliveryDate: toDateInputValue(latestOrder?.deliveryDate?.toISOString()),
+        plannedDeliveryDates: plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased,
+    };
 }
 
 /** GET — dati personali bacheca cliente inclusi i campi data. */
@@ -94,25 +176,7 @@ export async function GET(request: Request) {
         );
     }
 
-    const latestOrder = await prisma.order.findFirst({
-        where: {
-            OR: [
-                { userId: user.id },
-                { buyerEmail: { equals: user.email, mode: 'insensitive' } },
-            ],
-        },
-        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
-        include: {
-            deceasedProfile: { select: { plannedDeliveryDates: true } },
-        },
-    });
-
-    const plannedFromUser = sanitizePlannedDeliveryDates(user.plannedDeliveryDates);
-    const plannedFromDeceased = sanitizePlannedDeliveryDates(
-        latestOrder?.deceasedProfile?.plannedDeliveryDates
-    );
-    const plannedDeliveryDates =
-        plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
+    const dates = await resolveCommemorativeDatesForUser(user.id, user.email);
 
     const response = NextResponse.json({
         success: true,
@@ -122,8 +186,12 @@ export async function GET(request: Request) {
             phone: user.phone ?? '',
             city: user.city ?? '',
             userType: user.userType,
-            deliveryDate: toDateInput(latestOrder?.deliveryDate),
-            plannedDeliveryDates,
+            birthDate: dates.birthDate,
+            deathDate: dates.deathDate,
+            deceasedBirthDate: dates.birthDate,
+            deceasedDeathDate: dates.deathDate,
+            deliveryDate: dates.deliveryDate,
+            plannedDeliveryDates: dates.plannedDeliveryDates,
         },
     });
 
@@ -158,6 +226,8 @@ export async function PUT(request: Request) {
         }
 
         const {
+            birthDate: birthAlias,
+            deathDate: deathAlias,
             deceasedBirthDate,
             deceasedDeathDate,
             deliveryDate,
@@ -181,21 +251,65 @@ export async function PUT(request: Request) {
             allowEmailChange: true,
         });
 
-        // Retrocompatibilità: singola deliveryDate sugli ordini aperti
-        if (deliveryDate !== undefined && plannedRaw === undefined) {
-            const parsedDeliveryDate = deliveryDate ? new Date(deliveryDate) : null;
+        // Date commemorative: alias birthDate/deathDate oppure deceasedBirthDate/deceasedDeathDate
+        const birthRaw = birthAlias !== undefined ? birthAlias : deceasedBirthDate;
+        const deathRaw = deathAlias !== undefined ? deathAlias : deceasedDeathDate;
+        const birthDate = parseCommemorativeDate(
+            birthRaw === undefined ? undefined : birthRaw == null ? null : String(birthRaw)
+        );
+        const deathDate = parseCommemorativeDate(
+            deathRaw === undefined ? undefined : deathRaw == null ? null : String(deathRaw)
+        );
+
+        if (birthDate !== undefined || deathDate !== undefined) {
+            const orderUpdateData: {
+                deceasedBirthDate?: Date | null;
+                deceasedDeathDate?: Date | null;
+            } = {};
+            if (birthDate !== undefined) orderUpdateData.deceasedBirthDate = birthDate;
+            if (deathDate !== undefined) orderUpdateData.deceasedDeathDate = deathDate;
+
             await prisma.order.updateMany({
                 where: {
                     OR: [
-                        { userId: user.id },
-                        { buyerEmail: { equals: user.email, mode: 'insensitive' } },
+                        { userId: updated.id },
+                        { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
                     ],
-                    status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
                 },
-                data: {
-                    deliveryDate: parsedDeliveryDate,
-                },
+                data: orderUpdateData,
             });
+
+            const deceasedIds = await resolveLinkedDeceasedIds(updated.id, updated.email);
+            if (deceasedIds.length > 0) {
+                const profileDatePatch: { birthDate?: Date | null; deathDate?: Date | null } = {};
+                if (birthDate !== undefined) profileDatePatch.birthDate = birthDate;
+                if (deathDate !== undefined) profileDatePatch.deathDate = deathDate;
+                await prisma.deceasedProfile.updateMany({
+                    where: { id: { in: deceasedIds } },
+                    data: profileDatePatch,
+                });
+            }
+        }
+
+        // Retrocompatibilità: singola deliveryDate sugli ordini aperti
+        if (deliveryDate !== undefined && plannedRaw === undefined) {
+            const parsedDeliveryDate = parseCommemorativeDate(
+                deliveryDate == null ? null : String(deliveryDate)
+            );
+            if (parsedDeliveryDate !== undefined) {
+                await prisma.order.updateMany({
+                    where: {
+                        OR: [
+                            { userId: updated.id },
+                            { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
+                        ],
+                        status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
+                    },
+                    data: {
+                        deliveryDate: parsedDeliveryDate,
+                    },
+                });
+            }
         }
 
         let plannedDeliveryDates = sanitizePlannedDeliveryDates(updated.plannedDeliveryDates);
@@ -207,21 +321,7 @@ export async function PUT(request: Request) {
                 data: { plannedDeliveryDates },
             });
 
-            // Sync scheda defunto collegata (se presente) — stessa lista date commemorative
-            const linkedDeceasedIds = await prisma.order.findMany({
-                where: {
-                    OR: [
-                        { userId: updated.id },
-                        { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
-                    ],
-                    deceasedProfileId: { not: null },
-                },
-                select: { deceasedProfileId: true },
-                distinct: ['deceasedProfileId'],
-            });
-            const ids = linkedDeceasedIds
-                .map((row) => row.deceasedProfileId)
-                .filter((id): id is string => Boolean(id));
+            const ids = await resolveLinkedDeceasedIds(updated.id, updated.email);
             if (ids.length > 0) {
                 await prisma.deceasedProfile.updateMany({
                     where: { id: { in: ids } },
@@ -229,31 +329,25 @@ export async function PUT(request: Request) {
                 });
             }
 
-            // Prima data futura → aggiorna anche deliveryDate sul prossimo ordine aperto (hint operativo)
             const firstFuture = plannedDeliveryDates[0];
             if (firstFuture) {
-                await prisma.order.updateMany({
-                    where: {
-                        OR: [
-                            { userId: updated.id },
-                            { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
-                        ],
-                        status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
-                    },
-                    data: { deliveryDate: new Date(firstFuture) },
-                });
+                const firstDate = parseCommemorativeDate(firstFuture);
+                if (firstDate) {
+                    await prisma.order.updateMany({
+                        where: {
+                            OR: [
+                                { userId: updated.id },
+                                { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
+                            ],
+                            status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING'] },
+                        },
+                        data: { deliveryDate: firstDate },
+                    });
+                }
             }
         }
 
-        const latestOrder = await prisma.order.findFirst({
-            where: {
-                OR: [
-                    { userId: updated.id },
-                    { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
-                ],
-            },
-            orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
-        });
+        const dates = await resolveCommemorativeDatesForUser(updated.id, updated.email);
 
         const response = NextResponse.json({
             success: true,
@@ -267,8 +361,14 @@ export async function PUT(request: Request) {
                 phone: updated.phone ?? '',
                 city: updated.city ?? '',
                 userType: updated.userType,
-                deliveryDate: toDateInput(latestOrder?.deliveryDate),
-                plannedDeliveryDates,
+                birthDate: dates.birthDate,
+                deathDate: dates.deathDate,
+                deceasedBirthDate: dates.birthDate,
+                deceasedDeathDate: dates.deathDate,
+                deliveryDate: dates.deliveryDate,
+                plannedDeliveryDates: dates.plannedDeliveryDates.length
+                    ? dates.plannedDeliveryDates
+                    : plannedDeliveryDates,
             },
         });
 

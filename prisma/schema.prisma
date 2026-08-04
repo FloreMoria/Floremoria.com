@@ -104,6 +104,10 @@ model DeceasedProfile {
   cemeteryCity  String
   cemeteryName  String?
   phone         String?  @map("phone")
+  /** Data di nascita commemorativa (fonte primaria per ricorrenze VERA). */
+  birthDate     DateTime? @map("birth_date")
+  /** Data di morte / commemorazione (fonte primaria per ricorrenze VERA). */
+  deathDate     DateTime? @map("death_date")
   verifiedNotes String?  @db.Text
   photoUrl      String?  @map("photo_url")
   /** Immagine di copertina scheda commemorativa (Vercel Blob). */

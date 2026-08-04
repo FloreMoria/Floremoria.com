@@ -152,8 +152,8 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         phone: profile.phone ?? latest?.user?.phone ?? null,
         cemeteryName: profile.cemeteryName,
         verifiedNotes: profile.verifiedNotes,
-        birthDate: latest?.deceasedBirthDate?.toISOString() ?? null,
-        deathDate: latest?.deceasedDeathDate?.toISOString() ?? null,
+        birthDate: profile.birthDate?.toISOString() ?? latest?.deceasedBirthDate?.toISOString() ?? null,
+        deathDate: profile.deathDate?.toISOString() ?? latest?.deceasedDeathDate?.toISOString() ?? null,
         plannedDeliveryDates: Array.isArray(profile.plannedDeliveryDates)
             ? profile.plannedDeliveryDates
             : [],

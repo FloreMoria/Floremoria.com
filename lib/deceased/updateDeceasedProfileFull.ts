@@ -1,6 +1,6 @@
 /**
  * Aggiornamento anagrafica defunto + sync campi denormalizzati sugli ordini collegati.
- * Le date e la posizione tomba vivono su Order; il profilo resta la fonte nome/cimitero/media/dedica.
+ * Date nascita/morte: fonte primaria su DeceasedProfile, mirror su Order per storico.
  */
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
@@ -12,6 +12,7 @@ import { setDeceasedFlorist } from '@/lib/deceased/setDeceasedFlorist';
 import {
     composeFullName,
     composeGravePosition,
+    parseCommemorativeDate,
 } from '@/lib/deceased/deceasedProfileFormUtils';
 import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
@@ -34,24 +35,6 @@ export type DeceasedProfileUpdateInput = {
     partnerId?: string | null;
     plannedDeliveryDates?: string[] | null;
 };
-
-function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
-    if (value === undefined) return undefined;
-    if (value === null || value.trim() === '') return null;
-    const trimmed = value.trim();
-    // Date-only da input HTML: mezzogiorno UTC evita shift di giorno su Europe/Rome.
-    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
-    if (ymd) {
-        return new Date(
-            Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12, 0, 0)
-        );
-    }
-    const d = new Date(trimmed);
-    if (Number.isNaN(d.getTime())) {
-        throw new Error('Data non valida.');
-    }
-    return d;
-}
 
 export async function updateDeceasedProfileFull(
     deceasedProfileId: string,
@@ -87,14 +70,16 @@ export async function updateDeceasedProfileFull(
             ? composeGravePosition(input.graveSector, input.graveNumber, input.gravePosition)
             : undefined;
 
-    const birthDate = parseOptionalDate(input.birthDate);
-    const deathDate = parseOptionalDate(input.deathDate);
+    const birthDate = parseCommemorativeDate(input.birthDate);
+    const deathDate = parseCommemorativeDate(input.deathDate);
 
     const profileData: {
         fullName: string;
         cemeteryCity: string;
         cemeteryName: string | null;
         phone?: string | null;
+        birthDate?: Date | null;
+        deathDate?: Date | null;
         verifiedNotes?: string | null;
         photoUrl?: string | null;
         coverUrl?: string | null;
@@ -109,6 +94,12 @@ export async function updateDeceasedProfileFull(
 
     if (input.phone !== undefined) {
         profileData.phone = input.phone?.trim() || null;
+    }
+    if (birthDate !== undefined) {
+        profileData.birthDate = birthDate;
+    }
+    if (deathDate !== undefined) {
+        profileData.deathDate = deathDate;
     }
     if (input.verifiedNotes !== undefined) {
         profileData.verifiedNotes = input.verifiedNotes?.trim() || null;

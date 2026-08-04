@@ -429,6 +429,21 @@ export async function addMessage(
             },
             include: { messages: { orderBy: { createdAt: 'asc' } } },
         });
+        // Race Meta statuses: se DELIVERED/READ è arrivato prima dell'INSERT, applica ora.
+        if (direction === 'OUTBOUND') {
+            const wamid =
+                metadata?.whatsAppMessageId?.trim() || metadata?.wamid?.trim() || '';
+            if (wamid) {
+                try {
+                    const { applyPendingDeliveryStatusForWamid } = await import(
+                        '@/lib/whatsapp/updateWhatsAppDeliveryStatus'
+                    );
+                    await applyPendingDeliveryStatusForWamid(wamid);
+                } catch (err) {
+                    console.warn('[chatStore] applyPendingDeliveryStatus fallita:', err);
+                }
+            }
+        }
         return mapDbSessionToChatSession(updated);
     }
 

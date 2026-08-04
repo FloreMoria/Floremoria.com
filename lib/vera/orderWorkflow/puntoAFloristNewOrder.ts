@@ -8,6 +8,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import { addMessage, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { FIRST_OUTBOUND_TITLES } from '@/lib/whatsapp/firstOutboundTitle';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
@@ -375,7 +376,7 @@ export async function runPuntoAFloristNewOrder(
                 outboundMode: 'free_text',
                 orderId: order.id,
                 orderNumber: orderCode,
-                ...(freeTextSend.messageId ? { whatsAppMessageId: freeTextSend.messageId } : {}),
+                ...buildOutboundWamidMetadata(freeTextSend.messageId),
             });
             if (order.isTest) {
                 await markChatSessionAsTest(sessionPhone);

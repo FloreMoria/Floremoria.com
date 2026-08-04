@@ -13,7 +13,7 @@
  */
 
 import crypto from 'crypto';
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
@@ -44,6 +44,7 @@ import {
     processMetaStatusUpdate,
     type MetaWebhookStatusPayload,
 } from '@/lib/whatsapp/updateWhatsAppDeliveryStatus';
+import { buildOutboundWamidMetadata, normalizeWamid } from '@/lib/whatsapp/normalizeWamid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -222,7 +223,7 @@ async function processIncomingWhatsAppMessage(
     }
 
     const inboundMeta = inboundMessageId
-        ? { whatsAppMessageId: inboundMessageId }
+        ? { whatsAppMessageId: normalizeWamid(inboundMessageId) || inboundMessageId }
         : undefined;
 
     if (session.status === 'HUMAN_INTERVENTION') {
@@ -379,7 +380,7 @@ async function sendFloristUnsupportedMediaGuidance(params: {
     await addMessage(phoneKey, 'OUTBOUND', reply, undefined, {
         source: 'deterministic',
         eventType: 'FLORIST_UNSUPPORTED_MEDIA_GUIDANCE',
-        ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+        ...buildOutboundWamidMetadata(sendResult.messageId),
         ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
     });
 
@@ -463,7 +464,7 @@ async function finalizeVeraOutboundReply(params: {
             await addMessage(phoneKey, 'OUTBOUND', reply, undefined, {
                 source: 'deterministic',
                 eventType: 'FLORIST_UNSUPPORTED_MEDIA_GUIDANCE',
-                ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+                ...buildOutboundWamidMetadata(sendResult.messageId),
                 ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
             });
         }
@@ -512,7 +513,7 @@ async function finalizeVeraOutboundReply(params: {
         await addMessage(phoneKey, 'OUTBOUND', veraResult.text, undefined, {
             source: veraResult.source,
             escalated: veraResult.shouldEscalate ? 'true' : 'false',
-            ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+            ...buildOutboundWamidMetadata(sendResult.messageId),
             ...(inboundMessageId ? { replyToMessageId: inboundMessageId } : {}),
             eventType: 'VERA_AUTO_REPLY',
         });
@@ -574,17 +575,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Processa gli aggiornamenti di stato di consegna (statuses: SENT, DELIVERED, READ, FAILED)
     let processedStatusesCount = 0;
+    const pendingStatuses: MetaWebhookStatusPayload[] = [];
     for (const entry of payload.entry ?? []) {
         for (const change of entry.changes ?? []) {
             if (change.field !== 'messages') continue;
             const value = change.value as { statuses?: MetaWebhookStatusPayload[] } | undefined;
             if (value?.statuses && Array.isArray(value.statuses)) {
                 for (const st of value.statuses) {
-                    await processMetaStatusUpdate(st);
+                    const result = await processMetaStatusUpdate(st);
                     processedStatusesCount++;
+                    // Race residuale: ritenta in background dopo la risposta 200 a Meta.
+                    if (result.updatedCount === 0 && result.pendingStashed) {
+                        pendingStatuses.push(st);
+                    }
                 }
             }
         }
+    }
+
+    if (pendingStatuses.length > 0) {
+        after(() => {
+            void (async () => {
+                for (const st of pendingStatuses) {
+                    await processMetaStatusUpdate(st, {
+                        skipPendingStash: true,
+                        retryDelaysMs: [800, 1500, 2500, 4000],
+                    });
+                }
+            })();
+        });
     }
 
     const incomingMessages = parseMetaIncomingMessages(payload);

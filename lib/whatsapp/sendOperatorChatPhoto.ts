@@ -18,6 +18,7 @@ import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplatePar
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import { resolvePartnerCity } from '@/lib/whatsapp/deliveryProofCopy';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { sessionPhoneToE164 } from '@/lib/whatsapp/sessionPhone';
 
 export type OperatorPhotoResult =
@@ -93,7 +94,7 @@ export async function sendOperatorChatPhoto(input: {
         const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', dashboardMediaUrl, {
             source: 'operator',
             outboundMode: input.outboundMode,
-            ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+            ...buildOutboundWamidMetadata(sendResult.messageId),
         });
 
         return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'freetext' };
@@ -172,7 +173,7 @@ export async function sendOperatorChatPhoto(input: {
         outboundMode: input.outboundMode,
         sendMode: 'template',
         templateId: 'customer_delivery_photo',
-        ...(templateSend.messageId ? { whatsAppMessageId: templateSend.messageId } : {}),
+        ...buildOutboundWamidMetadata(templateSend.messageId),
     });
 
     return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'template' };

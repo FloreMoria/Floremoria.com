@@ -10,6 +10,7 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 import { enrichChatSessionsForDashboard } from '@/lib/whatsapp/enrichChatSessionDisplay';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
 
@@ -209,7 +210,7 @@ export async function POST(req: Request) {
                 await addMessage(phone, 'OUTBOUND', text, undefined, {
                     source: 'operator',
                     outboundMode: 'freetext',
-                    ...(sendResult.messageId ? { whatsAppMessageId: sendResult.messageId } : {}),
+                    ...buildOutboundWamidMetadata(sendResult.messageId),
                 });
             }
 

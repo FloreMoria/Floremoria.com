@@ -28,3 +28,5 @@
 [2026-08-04 16:00] feat(analytics+chat): integrazione API `/api/admin/whatsapp/status-audit` in pagina Analytics Controllo (5 KPI carte, barra ripartizione status Meta e registro tabella fallimenti); formato data e ora omogeneo `GG-MM-AAAA | HH:mm` applicato a tutte le conversazioni chat (anteprime laterali e messaggi).
 
 
+
+[2026-08-04 16:40] fix(whatsapp): root-cause wamid↔statuses — normalizeWamid unico, lookup SQL tollerante, retry+pending stash (race webhook-before-DB), apply-on-save in addMessage, deliveryStatus SENT all’invio; dashboard già in poll 4s.

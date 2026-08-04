@@ -17,6 +17,7 @@ import {
     normalizeOrderCode,
 } from '@/lib/whatsapp/approvedTemplates';
 import { tryClaimIdenticalTextOutbound } from '@/lib/whatsapp/veraWebhookDedup';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
 export interface SendWhatsAppMessageOptions {
     recipientName?: string;
@@ -223,7 +224,7 @@ export async function sendWhatsAppMessage(
             orderCode,
             headerTitle,
             recipientFirstName,
-            ...(templateResult.messageId ? { whatsAppMessageId: templateResult.messageId } : {}),
+            ...buildOutboundWamidMetadata(templateResult.messageId),
         });
         console.info(`[whatsapp-24h-fallback] Messaggio registrato con successo su chat Dashboard per ${sessionPhone}`);
     } catch (dbErr) {

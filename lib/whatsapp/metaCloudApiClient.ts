@@ -10,6 +10,8 @@
  * Principio Set-and-Forget: le funzioni non rilanciano eccezioni verso il chiamante.
  */
 
+import { normalizeWamid } from '@/lib/whatsapp/normalizeWamid';
+
 const META_GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || 'v21.0';
 
 export interface WhatsAppSendResult {
@@ -201,7 +203,8 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
         }
 
         const data = (await res.json()) as { messages?: Array<{ id?: string }> };
-        const messageId = data?.messages?.[0]?.id;
+        // Normalizza subito: stesso wamid. canonico usato in DB e nei callback statuses.
+        const messageId = normalizeWamid(data?.messages?.[0]?.id) || data?.messages?.[0]?.id;
         const recipient = String(payload.to ?? '');
         console.info(`[meta-cloud-api] Messaggio inviato a +${recipient} (id: ${messageId ?? 'N/A'})`);
         return { ok: true, messageId };

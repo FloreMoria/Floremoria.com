@@ -23,6 +23,7 @@ import {
     type WhatsAppSendResult,
 } from '@/lib/whatsapp/metaCloudApiClient';
 import { buildContactInitials, toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
 export interface StartConversationInput {
     phoneRaw: string;
@@ -143,7 +144,7 @@ export async function startProactiveConversation(
             templateName: template.metaName,
             recipientFirstName: templateValues.recipientFirstName,
             orderCode: templateValues.orderCode,
-            ...(send.messageId ? { whatsAppMessageId: send.messageId } : {}),
+            ...buildOutboundWamidMetadata(send.messageId),
         });
 
         return { ok: true, session: logged, mode: 'template', send };
@@ -169,7 +170,7 @@ export async function startProactiveConversation(
     const logged = await addMessage(sessionPhone, 'OUTBOUND', text, undefined, {
         source: 'operator',
         outboundMode: 'freetext',
-        ...(send.messageId ? { whatsAppMessageId: send.messageId } : {}),
+        ...buildOutboundWamidMetadata(send.messageId),
     });
 
     return { ok: true, session: logged, mode: 'freetext', send };

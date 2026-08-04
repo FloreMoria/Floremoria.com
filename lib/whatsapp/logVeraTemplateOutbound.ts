@@ -5,6 +5,7 @@ import {
     CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
 } from '@/lib/vera/customerOrderConfirmCopy';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
 const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'WHATSAPP_TEMPLATE_CUSTOMER_ORDER_CONFIRM_BODY',
@@ -71,7 +72,7 @@ export async function logVeraTemplateOutbound(input: {
             templateId: input.templateId,
             ...(input.orderId ? { orderId: input.orderId } : {}),
             ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
-            ...(input.messageId ? { whatsAppMessageId: input.messageId } : {}),
+            ...buildOutboundWamidMetadata(input.messageId),
         });
 
         await updateSessionProfile(sessionPhone, {

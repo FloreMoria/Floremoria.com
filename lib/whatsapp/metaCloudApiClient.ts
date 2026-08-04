@@ -101,6 +101,14 @@ export function toMetaRecipientPhone(phone: string): string | null {
     return e164.replace(/^\+/, '');
 }
 
+/** Tronca in sicurezza su codepoint Unicode senza spezzare emoji / coppie surrogate. */
+export function safeTruncateUtf8(str: string, maxLen: number): string {
+    if (!str) return '';
+    const chars = Array.from(str);
+    if (chars.length <= maxLen) return str;
+    return chars.slice(0, maxLen).join('');
+}
+
 export function resolveMetaCloudCredentials(): MetaCloudCredentials {
     return {
         apiKey: process.env.WHATSAPP_CLOUD_API_KEY?.trim() ?? '',
@@ -214,15 +222,17 @@ export async function sendWhatsAppTextMessage(
     const recipient = toMetaRecipientPhone(phone);
     if (!recipient) {
         console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
-        return { ok: false, error: 'invalid_phone' };
+        return { ok: false, error: 'invalid_phone: Numero di telefono non valido o privo di prefisso internazionale.' };
     }
+
+    const safeBody = safeTruncateUtf8(text, 4000);
 
     return postWhatsAppMessage({
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
         to: recipient,
         type: 'text',
-        text: { preview_url: true, body: text },
+        text: { preview_url: true, body: safeBody },
     });
 }
 

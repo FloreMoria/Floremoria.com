@@ -40,6 +40,10 @@ import {
     tryClaimInboundWhatsAppMessageId,
     tryClaimVeraOutboundReplyLock,
 } from '@/lib/whatsapp/veraWebhookDedup';
+import {
+    processMetaStatusUpdate,
+    type MetaWebhookStatusPayload,
+} from '@/lib/whatsapp/updateWhatsAppDeliveryStatus';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -568,9 +572,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ ok: true, skipped: 'unsupported_object' });
     }
 
+    // Processa gli aggiornamenti di stato di consegna (statuses: SENT, DELIVERED, READ, FAILED)
+    let processedStatusesCount = 0;
+    for (const entry of payload.entry ?? []) {
+        for (const change of entry.changes ?? []) {
+            if (change.field !== 'messages') continue;
+            const value = change.value as { statuses?: MetaWebhookStatusPayload[] } | undefined;
+            if (value?.statuses && Array.isArray(value.statuses)) {
+                for (const st of value.statuses) {
+                    await processMetaStatusUpdate(st);
+                    processedStatusesCount++;
+                }
+            }
+        }
+    }
+
     const incomingMessages = parseMetaIncomingMessages(payload);
     if (!incomingMessages.length) {
-        return NextResponse.json({ ok: true, skipped: 'no_messages' });
+        return NextResponse.json({ ok: true, skipped: 'no_messages', processedStatuses: processedStatusesCount });
     }
 
     void triggerPostmanBackgroundSync();
@@ -588,5 +607,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
     }
 
-    return NextResponse.json({ ok: true, provider: 'meta', processed: results.length, results });
+    return NextResponse.json({
+        ok: true,
+        provider: 'meta',
+        processed: results.length,
+        processedStatuses: processedStatusesCount,
+        results,
+    });
 }

@@ -622,14 +622,28 @@ function VisioneTab({
               >
                 {activeChat.messages?.map((m: any, idx: number) => {
                   const isOutbound = m.direction === 'OUTBOUND';
+                  const deliveryStatus = (m.metadata?.deliveryStatus || '').toUpperCase();
+                  const deliveryError = m.metadata?.deliveryError;
+                  const isFailed = deliveryStatus === 'FAILED' || Boolean(deliveryError);
+                  const isRead = deliveryStatus === 'READ';
+                  const isDelivered = deliveryStatus === 'DELIVERED';
+
                   return (
                     <div key={m.id || idx} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
                       <div 
                         className={`px-4 py-3 md:py-3.5 rounded-2xl shadow-sm relative text-[16px] md:text-[15px] text-[#111B21] max-w-[88%] sm:max-w-[82%] md:max-w-[80%] leading-relaxed border font-normal tracking-wide
                         ${isOutbound 
-                          ? 'bg-[#D9FDD3] rounded-tr-none border-[#C1E7B9]' 
+                          ? isFailed
+                            ? 'bg-red-50 rounded-tr-none border-red-200 text-red-950'
+                            : 'bg-[#D9FDD3] rounded-tr-none border-[#C1E7B9]' 
                           : 'bg-white rounded-tl-none border-[#E6E6E6]'}`}
                       >
+                        {isFailed && (
+                          <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-red-100/90 px-2.5 py-1 text-[12px] font-semibold text-red-700 border border-red-300">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-600" />
+                            <span>Mancata Consegna / Errore Meta{deliveryError ? `: ${deliveryError}` : ''}</span>
+                          </div>
+                        )}
                         {m.mediaUrl ? (
                           <div>
                             <ChatMessageMedia
@@ -650,7 +664,25 @@ function VisioneTab({
                         )}
                         <div className="absolute bottom-1 right-2.5 flex items-center gap-1">
                           <span className="text-[11px] md:text-[10px] text-[#8696A0] font-medium tracking-normal">{formatMessageTimestamp(m.createdAt, m.timestampLabel || m.timestamp || 'ora')}</span>
-                          {isOutbound && <CheckCheck className="w-[14px] h-[14px] text-[#53BDEB]" />}
+                          {isOutbound && (
+                            isFailed ? (
+                              <span title={deliveryError || 'Mancata Consegna / Errore Meta'}>
+                                <AlertCircle className="w-[14px] h-[14px] text-red-600 shrink-0" />
+                              </span>
+                            ) : isRead ? (
+                              <span title="Letto">
+                                <CheckCheck className="w-[14px] h-[14px] text-[#53BDEB]" />
+                              </span>
+                            ) : isDelivered ? (
+                              <span title="Consegnato">
+                                <CheckCheck className="w-[14px] h-[14px] text-[#8696A0]" />
+                              </span>
+                            ) : (
+                              <span title="Inviato">
+                                <Check className="w-[14px] h-[14px] text-[#8696A0]" />
+                              </span>
+                            )
+                          )}
                         </div>
                       </div>
                     </div>

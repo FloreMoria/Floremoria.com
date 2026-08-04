@@ -22,3 +22,6 @@
 [2026-08-03 19:20] fix(vera+chat): blocco assoluto notifiche su PENDING/ATTESA; promemoria solo entro 72h; dedup chat E.164 (Isabella merge); banner senza impegno nascosto per SUBSCRIBER.
 
 [2026-08-03 19:30] feat(fioristi): barra ricerca tempo reale (nome, negozio, comune/CAP, cimiteri, defunto/ordini) + tasto X reset.
+
+[2026-08-04 15:45] audit(whatsapp): audit completo invii & delivery status Meta — parsing webhook `statuses` (wamid, SENT, DELIVERED, READ, FAILED + codici errore 131026/131047), modulo `updateWhatsAppDeliveryStatus.ts`, rotta audit `/api/admin/whatsapp/status-audit`, `safeTruncateUtf8` per integrità emoji/testo, banner alert rosso + badge "Mancata Consegna / Errore Meta" in dashboard chat.
+

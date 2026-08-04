@@ -30,3 +30,5 @@
 
 
 [2026-08-04 16:40] fix(whatsapp): root-cause wamid↔statuses — normalizeWamid unico, lookup SQL tollerante, retry+pending stash (race webhook-before-DB), apply-on-save in addMessage, deliveryStatus SENT all’invio; dashboard già in poll 4s.
+
+[2026-08-04 17:10] feat(defunti+vera): editing birthDate/deathDate in Admin drawer+API; cron ricorrenze -3gg (nascita/morte) via vera-order-reminders, skip ATTESA/PENDING, dedup anno, WhatsApp empatico + link catalogo.

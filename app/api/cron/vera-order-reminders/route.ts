@@ -3,15 +3,19 @@
  * - Flush Punto A differiti (creazione/assegnazione fuori fascia → invio in 08:00–20:00 Europe/Rome)
  * - Flush Punto B schedulati (+30 min diurno / 08:30 notturno)
  * - PUNTO G — un solo sollecito cliente/fiorista per ordine (finestra 48h consegna)
+ * - Promemoria ricorrenze defunto (nascita/morte) a -3 giorni
  *
  * Rinvio manuale singolo ordine (test):
  *   GET /api/cron/vera-order-reminders?orderNumber=FT-CO-26-005&force=1
+ * Solo ricorrenze:
+ *   GET /api/cron/vera-order-reminders?anniversaryOnly=1
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { runPuntoGOrderReminders } from '@/lib/vera/orderWorkflow/puntoGReminders';
 import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow/flushPendingPuntoA';
 import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
 import { resendCustomerWaitingUpdateForOrder, backfillCustomerWaitingUpdateChatLog } from '@/lib/vera/orderWorkflow/resendCustomerWaitingUpdate';
+import { runDeceasedAnniversaryReminders } from '@/lib/vera/deceasedAnniversaryReminders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,14 +50,36 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: result.ok, mode: 'single_order', ...result });
     }
 
+    // Solo promemoria ricorrenze (test/manual): ?anniversaryOnly=1
+    if (request.nextUrl.searchParams.get('anniversaryOnly') === '1') {
+        const anniversaryReminders = await runDeceasedAnniversaryReminders();
+        return NextResponse.json({
+            success: anniversaryReminders.ok,
+            mode: 'anniversary_only',
+            anniversaryReminders,
+        });
+    }
+
     const puntoAFlush = await flushPendingPuntoAFloristNotifications();
     const puntoBFlush = await flushPendingPuntoBCustomerConfirm();
     const result = await runPuntoGOrderReminders();
+    // Ricorrenze nascita/morte a -3 giorni (Europe/Rome), sullo stesso cron giornaliero Hobby.
+    let anniversaryReminders;
+    try {
+        anniversaryReminders = await runDeceasedAnniversaryReminders();
+    } catch (err) {
+        console.error('[cron/vera-order-reminders] anniversary reminders failed:', err);
+        anniversaryReminders = {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+        };
+    }
     return NextResponse.json({
         success: true,
         mode: 'batch',
         puntoAFlush,
         puntoBFlush,
         ...result,
+        anniversaryReminders,
     });
 }

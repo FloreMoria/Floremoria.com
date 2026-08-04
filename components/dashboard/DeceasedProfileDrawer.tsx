@@ -57,6 +57,8 @@ type EditForm = {
     cemeteryCity: string;
     graveSector: string;
     graveNumber: string;
+    birthDate: string;
+    deathDate: string;
     verifiedNotes: string;
     plannedDeliveryDates: string[];
 };
@@ -94,6 +96,8 @@ function detailToForm(detail: DeceasedDetailPayload): EditForm {
         cemeteryCity: detail.cemeteryCity || detail.city || '',
         graveSector: grave.graveSector,
         graveNumber: grave.graveNumber,
+        birthDate: toDateInputValue(detail.birthDate),
+        deathDate: toDateInputValue(detail.deathDate),
         verifiedNotes: detail.verifiedNotes || '',
         plannedDeliveryDates: sanitizePlannedDeliveryDates(detail.plannedDeliveryDates),
     };
@@ -248,6 +252,8 @@ export default function DeceasedProfileDrawer({
                     cemeteryCity: form.city || form.cemeteryCity,
                     graveSector: form.graveSector || null,
                     graveNumber: form.graveNumber || null,
+                    birthDate: form.birthDate || null,
+                    deathDate: form.deathDate || null,
                     verifiedNotes: form.verifiedNotes || null,
                     plannedDeliveryDates: sanitizePlannedDeliveryDates(form.plannedDeliveryDates),
                 }),
@@ -537,6 +543,28 @@ export default function DeceasedProfileDrawer({
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                                             />
                                         </label>
+                                        <label className="block text-xs font-semibold text-gray-500">
+                                            Data di nascita
+                                            <input
+                                                type="date"
+                                                value={form.birthDate}
+                                                onChange={(e) =>
+                                                    setForm((f) => (f ? { ...f, birthDate: e.target.value } : f))
+                                                }
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                            />
+                                        </label>
+                                        <label className="block text-xs font-semibold text-gray-500">
+                                            Data di morte / commemorazione
+                                            <input
+                                                type="date"
+                                                value={form.deathDate}
+                                                onChange={(e) =>
+                                                    setForm((f) => (f ? { ...f, deathDate: e.target.value } : f))
+                                                }
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                            />
+                                        </label>
                                     </div>
                                     <label className="block text-xs font-semibold text-gray-500">
                                         Frase commemorativa
@@ -591,9 +619,16 @@ export default function DeceasedProfileDrawer({
                                         </div>
                                         <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Cronologia
+                                                Date & cronologia
                                             </p>
                                             <p className="text-sm text-gray-700">
+                                                Nascita: <strong>{formatDisplayDate(detail.birthDate)}</strong>
+                                            </p>
+                                            <p className="text-sm text-gray-700 mt-1">
+                                                Morte / commemorazione:{' '}
+                                                <strong>{formatDisplayDate(detail.deathDate)}</strong>
+                                            </p>
+                                            <p className="text-sm text-gray-700 mt-2">
                                                 <strong>{detail.orders.length}</strong>{' '}
                                                 {detail.orders.length === 1 ? 'ordine' : 'ordini'} ·{' '}
                                                 <strong>{detail.linkedUsers.length}</strong>{' '}

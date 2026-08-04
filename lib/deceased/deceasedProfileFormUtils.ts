@@ -51,7 +51,13 @@ export function parseGravePosition(raw: string | null | undefined): {
 
 export function toDateInputValue(iso: string | null | undefined): string {
     if (!iso) return '';
-    const d = new Date(iso);
+    const trimmed = iso.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+    const d = new Date(trimmed);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0, 10);
+    // UTC: allineato a parseOptionalDate (mezzogiorno UTC sulle sole date commemorative).
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }

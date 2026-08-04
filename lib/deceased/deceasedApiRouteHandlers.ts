@@ -67,6 +67,8 @@ async function deceasedUpdateById(request: Request, context: IdContext) {
                 firstName: body.firstName,
                 lastName: body.lastName,
                 fullName: body.fullName,
+                birthDate: body.birthDate,
+                deathDate: body.deathDate,
                 phone: body.phone,
                 city: body.city ?? body.cemeteryCity,
                 cemeteryName: body.cemeteryName,

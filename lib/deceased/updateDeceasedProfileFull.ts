@@ -38,7 +38,15 @@ export type DeceasedProfileUpdateInput = {
 function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
     if (value === undefined) return undefined;
     if (value === null || value.trim() === '') return null;
-    const d = new Date(value);
+    const trimmed = value.trim();
+    // Date-only da input HTML: mezzogiorno UTC evita shift di giorno su Europe/Rome.
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (ymd) {
+        return new Date(
+            Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12, 0, 0)
+        );
+    }
+    const d = new Date(trimmed);
     if (Number.isNaN(d.getTime())) {
         throw new Error('Data non valida.');
     }

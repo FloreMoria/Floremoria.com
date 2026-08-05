@@ -142,12 +142,23 @@ export async function POST(request: Request) {
                 where: { offerId: offer.id },
             });
 
+            const normalizedBuyerEmail = String(buyerEmail ?? '').trim().toLowerCase();
+            const userUsageCount = normalizedBuyerEmail
+                ? await (prisma as any).offerRedemption.count({
+                      where: {
+                          offerId: offer.id,
+                          buyerEmail: { equals: normalizedBuyerEmail, mode: 'insensitive' },
+                      },
+                  })
+                : 0;
+
             const resolution = resolveOfferDiscount({
                 offer,
                 subtotalCents: subtotalFromCartCents,
                 buyerEmail,
                 buyerFullName,
                 usageCount,
+                userUsageCount,
             });
 
             if (!resolution.ok) {

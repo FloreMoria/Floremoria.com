@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 
 type OfferRow = {
   id: string;
@@ -33,6 +34,8 @@ export default function OffersManagerClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdWhatsappLink, setCreatedWhatsappLink] = useState('');
+  const [offerPendingDelete, setOfferPendingDelete] = useState<OfferRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -187,6 +190,27 @@ export default function OffersManagerClient() {
     }
   };
 
+  const confirmDeleteOffer = async () => {
+    if (!offerPendingDelete || deleting) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/offers/${offerPendingDelete.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Errore eliminazione buono.');
+      }
+      setOfferPendingDelete(null);
+      await loadOffers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore eliminazione buono.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
@@ -291,13 +315,25 @@ export default function OffersManagerClient() {
                   <td className="px-4 py-2">{offer.endsAt ? new Date(offer.endsAt).toLocaleString('it-IT') : 'Nessuna'}</td>
                   <td className="px-4 py-2">{offer.isActive ? 'Attivo' : 'Disattivo'}</td>
                   <td className="px-4 py-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleOfferActive(offer)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${offer.isActive ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}
-                    >
-                      {offer.isActive ? 'Disattiva' : 'Attiva'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleOfferActive(offer)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${offer.isActive ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}
+                      >
+                        {offer.isActive ? 'Disattiva' : 'Attiva'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOfferPendingDelete(offer)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                        title="Elimina definitivamente"
+                        aria-label={`Elimina buono ${offer.code || offer.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Elimina
+                      </button>
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-600">
                     {offer.redemptions && offer.redemptions.length > 0 ? (
@@ -323,6 +359,45 @@ export default function OffersManagerClient() {
           </table>
         </div>
       </div>
+
+      {offerPendingDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-[1px]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-offer-title"
+            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl space-y-4"
+          >
+            <h3 id="delete-offer-title" className="text-lg font-semibold text-gray-900">
+              Elimina buono sconto
+            </h3>
+            <p className="text-sm text-gray-600">
+              Sei sicuro di voler eliminare definitivamente questo buono sconto?
+            </p>
+            <p className="text-sm font-mono text-gray-800 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
+              {offerPendingDelete.code || offerPendingDelete.name}
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => !deleting && setOfferPendingDelete(null)}
+                disabled={deleting}
+                className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteOffer()}
+                disabled={deleting}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Eliminazione…' : 'Elimina definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

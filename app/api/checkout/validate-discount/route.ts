@@ -29,16 +29,30 @@ export async function POST(request: Request) {
       where: { offerId: offer.id },
     });
 
+    const normalizedEmail = buyerEmail.trim().toLowerCase();
+    const userUsageCount = normalizedEmail
+      ? await prisma.offerRedemption.count({
+          where: {
+            offerId: offer.id,
+            buyerEmail: { equals: normalizedEmail, mode: 'insensitive' },
+          },
+        })
+      : 0;
+
     const resolution = resolveOfferDiscount({
       offer,
       subtotalCents,
       buyerEmail,
       buyerFullName,
       usageCount,
+      userUsageCount,
     });
 
     if (!resolution.ok) {
-      return NextResponse.json({ ok: false, error: resolution.reason ?? 'Codice non valido.' }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: resolution.reason ?? 'Codice non valido.' },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({

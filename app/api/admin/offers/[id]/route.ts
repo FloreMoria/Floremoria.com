@@ -84,11 +84,20 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     const resolvedParams = await context.params;
     try {
-        await prisma.offer.update({
-            where: { id: resolvedParams.id },
-            data: { deletedAt: new Date() },
+        const existing = await prisma.offer.findFirst({
+            where: { id: resolvedParams.id, deletedAt: null },
+            select: { id: true },
         });
-        return new NextResponse(null, { status: 204 });
+        if (!existing) {
+            return NextResponse.json({ error: 'Buono sconto non trovato.' }, { status: 404 });
+        }
+
+        // Soft-delete: resta traccia per redemptions storiche; sparisce dalla lista admin.
+        await prisma.offer.update({
+            where: { id: existing.id },
+            data: { deletedAt: new Date(), isActive: false },
+        });
+        return NextResponse.json({ ok: true, deleted: true });
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 });
     }

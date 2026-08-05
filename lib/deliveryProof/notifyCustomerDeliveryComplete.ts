@@ -1,15 +1,17 @@
 import prisma from '@/lib/prisma';
 import { sendDeliveryProofWhatsApp } from '@/lib/whatsapp/deliveryProofNotify';
+import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 export interface NotifyCustomerDeliveryCompleteResult {
     ok: boolean;
     skipped?: string;
     giardinoUrl?: string;
+    photosSent?: number;
     error?: string;
 }
 
 /**
- * Orchestratore post-consegna: invia foto e messaggio all'utente (Punto E).
+ * Orchestratore post-consegna: invia TUTTE le foto e il messaggio all'utente (Punto E).
  * Il ringraziamento al fiorista (Punto F) è gestito da runPuntoEFDeliveryComplete.
  */
 export async function notifyCustomerDeliveryComplete(
@@ -31,12 +33,15 @@ export async function notifyCustomerDeliveryComplete(
         return { ok: false, skipped: 'proof_not_completed' };
     }
 
-    const photoAfterUrl =
-        order.deliveryProof.photoAfterUrl ||
-        order.deliveryProof.photosAfterUrls?.[0] ||
-        null;
+    const afterPhotos = getOrderProofPhotos(order).after;
+    const photoAfterUrls =
+        afterPhotos.length > 0
+            ? afterPhotos
+            : order.deliveryProof.photoAfterUrl
+              ? [order.deliveryProof.photoAfterUrl]
+              : [];
 
-    if (!photoAfterUrl) {
+    if (photoAfterUrls.length === 0) {
         return { ok: false, skipped: 'missing_after_photo' };
     }
 
@@ -49,7 +54,8 @@ export async function notifyCustomerDeliveryComplete(
         cemeteryCity: order.cemeteryCity,
         cemeteryName: order.cemeteryName,
         deliveryProvince: order.deliveryProvince,
-        photoAfterUrl,
+        photoAfterUrl: photoAfterUrls[0],
+        photoAfterUrls,
     });
 
     if (!result.ok) {
@@ -57,9 +63,14 @@ export async function notifyCustomerDeliveryComplete(
             ok: false,
             skipped: result.skipped,
             giardinoUrl: result.giardinoUrl,
+            photosSent: result.photosSent,
             error: result.error,
         };
     }
 
-    return { ok: true, giardinoUrl: result.giardinoUrl };
+    return {
+        ok: true,
+        giardinoUrl: result.giardinoUrl,
+        photosSent: result.photosSent,
+    };
 }

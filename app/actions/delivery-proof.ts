@@ -2,11 +2,11 @@
 
     import prisma from '@/lib/prisma';
     import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
-    import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
     import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
     import { revalidatePath } from 'next/cache';
     import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
     import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
+    import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
     export async function submitDeliveryProof(formData: FormData) {
         try {
@@ -116,7 +116,7 @@
             if (newStatus === 'COMPLETED' && photoAfterUrl) {
                 void triggerSocialSanitizationForOrder(order.id, [photoAfterUrl]);
                 await ensureUserForOrder(order);
-                void notifyCustomerDeliveryComplete(order.id).catch((err) => {
+                void onOrderStatusChanged(order.id, 'COMPLETED').catch((err) => {
                     console.error('[delivery-proof] Notifica VERA post-consegna non riuscita (non bloccante):', err);
                 });
             }

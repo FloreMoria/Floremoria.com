@@ -99,9 +99,10 @@ export async function submitFloristDeliveryProof(
             longitude: gpsLongitude ?? order.longitude,
         });
 
+        // injectDeliveryPhotosOnOrder imposta già COMPLETED; conferma esplicita per chiarezza.
         await tx.order.update({
             where: { id: order.id },
-            data: { status: 'DELIVERING' },
+            data: { status: 'COMPLETED' },
         });
     });
 
@@ -121,13 +122,15 @@ export async function submitFloristDeliveryProof(
 
     const giardinoUrl = await buildProofFotoAccessUrl(order.id, order.orderNumber);
     try {
-        await onOrderStatusChanged(order.id, 'DELIVERING');
+        // COMPLETED: multi-foto utente + ringraziamento/fattura fiorista + (eventuale) review.
+        await onOrderStatusChanged(order.id, 'COMPLETED');
     } catch (err) {
         console.error('[submitFloristDeliveryProof] Notifica VERA post-consegna fallita:', err);
     }
 
     revalidatePath('/dashboard/user');
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/orders');
     revalidatePath(`/fiorista/consegna/${order.id}`);
     if (order.orderNumber) {
         revalidatePath(`/fiorista/consegna/${order.orderNumber}`);

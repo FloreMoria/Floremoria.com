@@ -17,7 +17,8 @@ export async function injectDeliveryPhotosOnOrder(
     await tx.order.update({
         where: { id: orderId },
         data: {
-            status: 'DELIVERING',
+            // Mini-app / foto posa = consegna completata (UI Admin + workflow VERA).
+            status: 'COMPLETED',
             photos,
             ...(extra?.latitude != null ? { latitude: extra.latitude } : {}),
             ...(extra?.longitude != null ? { longitude: extra.longitude } : {}),

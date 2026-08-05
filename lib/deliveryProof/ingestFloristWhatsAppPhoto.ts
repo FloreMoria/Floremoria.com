@@ -194,7 +194,7 @@ export async function ingestFloristWhatsAppPhoto(
         await injectDeliveryPhotosOnOrder(tx, order.id, photosBeforeUrls, photosAfterUrls);
         await tx.order.update({
             where: { id: order.id },
-            data: { status: 'DELIVERING' },
+            data: { status: 'COMPLETED' },
         });
     });
 
@@ -221,7 +221,7 @@ export async function ingestFloristWhatsAppPhoto(
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
 
         try {
-            await onOrderStatusChanged(order.id, 'DELIVERING');
+            await onOrderStatusChanged(order.id, 'COMPLETED');
         } catch (err) {
             console.error('[ingestFloristWhatsAppPhoto] Error calling onOrderStatusChanged:', err);
         }

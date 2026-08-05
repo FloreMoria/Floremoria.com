@@ -40,7 +40,7 @@ export async function runFloristDeliveryAutomation(input: {
     }
 
     try {
-        await onOrderStatusChanged(ingest.orderId, 'DELIVERING');
+        await onOrderStatusChanged(ingest.orderId, 'COMPLETED');
         console.log(
             "[delivery-automation] Notifica automatica foto e fiorista inviata per l'ordine:",
             ingest.orderId

@@ -33,11 +33,14 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
                 orderId,
                 result: floristResult,
             });
-        } else if (nextStatus === 'DELIVERING') {
+        } else if (nextStatus === 'DELIVERING' || nextStatus === 'COMPLETED') {
+            // Mini-app e foto WhatsApp chiudono in COMPLETED; DELIVERING resta supportato per legacy.
             await runPuntoEFDeliveryComplete(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in runPuntoEFDeliveryComplete:', err);
             });
-        } else if (nextStatus === 'COMPLETED') {
+        }
+
+        if (nextStatus === 'COMPLETED') {
             const order = await prisma.order.findUnique({
                 where: { id: orderId },
                 include: { user: true },

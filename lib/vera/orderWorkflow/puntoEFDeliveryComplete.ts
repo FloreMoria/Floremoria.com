@@ -12,24 +12,44 @@ import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
-import { getSession } from '@/lib/chatStore';
+import { addMessage, getSession } from '@/lib/chatStore';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
+import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
 
 export interface PuntoEFResult {
     ok: boolean;
     skipped?: string;
     giardinoUrl?: string;
+    photosSent?: number;
     error?: string;
 }
 
+function buildFloristCompletionThanksMessage(input: {
+    floristFirstName: string;
+    orderCode: string;
+}): string {
+    return (
+        `Grazie ${input.floristFirstName} per aver completato la consegna con successo! ` +
+        `Le foto sono state inviate al cliente. ` +
+        `Ti ricordiamo, se non l'hai già fatto, di inviarci la fattura relativa all'ordine ${input.orderCode}. ` +
+        `Buon lavoro da FloreMoria! 🌹`
+    );
+}
+
 /**
- * PUNTO E/F — Foto utente (inline o template) + ringraziamento fiorista.
+ * PUNTO E/F — Tutte le foto utente + ringraziamento fiorista con promemoria fattura.
  */
 export async function runPuntoEFDeliveryComplete(orderId: string): Promise<PuntoEFResult> {
     const orderEarly = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
-        select: { id: true, orderNumber: true, isTest: true },
+        select: {
+            id: true,
+            orderNumber: true,
+            isTest: true,
+            veraWorkflowFlags: true,
+        },
     });
     if (!orderEarly) return { ok: false, skipped: 'order_not_found' };
     if (isWhatsAppAutoNotifyDisabledForOrder(orderEarly.isTest)) {
@@ -39,12 +59,22 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
         return { ok: true, skipped: 'test_order_meta_blocked' };
     }
 
+    const flagsEarly = parseWorkflowFlags(orderEarly.veraWorkflowFlags);
+    if (isWorkflowStepDone(flagsEarly, 'puntoEF_delivery')) {
+        const giardinoUrl = await buildProofFotoAccessUrl(
+            orderEarly.id,
+            orderEarly.orderNumber
+        ).catch(() => undefined);
+        return { ok: true, skipped: 'already_done', giardinoUrl };
+    }
+
     const customerResult = await notifyCustomerDeliveryComplete(orderId);
     if (!customerResult.ok) {
         return {
             ok: false,
             skipped: customerResult.skipped,
             giardinoUrl: customerResult.giardinoUrl,
+            photosSent: customerResult.photosSent,
             error: customerResult.error,
         };
     }
@@ -62,34 +92,57 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
                 order.partner.ownerName || order.partner.shopName
             );
             const orderCode = order.orderNumber || order.id;
+            const thanksText = buildFloristCompletionThanksMessage({
+                floristFirstName: floristName || 'Partner',
+                orderCode,
+            });
 
             const sessionPhone = `whatsapp:${order.partner.whatsappNumber}`;
             const session = await getSession(sessionPhone);
             const withinWindow = isWithinCustomerServiceWindow(session);
 
             if (withinWindow) {
-                // Finestra aperta: invio testo libero formattato
-                const text = `Aggiornamento Ordine ${orderCode}
-Gentile ${floristName}, Ti ringraziamo per la consegna e per le foto inviate. 
-Restiamo a disposizione per eventuali aggiornamenti.
-
-Tutto lo Staff di FloreMoria ti ringrazia per la preziosa collaborazione e ti augura un buon lavoro.🌹`;
-                await sendWhatsAppTextMessage(order.partner.whatsappNumber, text);
+                const send = await sendWhatsAppTextMessage(order.partner.whatsappNumber, thanksText);
+                if (send.ok) {
+                    await addMessage(sessionPhone, 'OUTBOUND', thanksText, undefined, {
+                        eventType: 'FLORIST_DELIVERY_THANKS',
+                        orderId: order.id,
+                        orderNumber: orderCode,
+                        source: 'punto_f_florist_thanks',
+                        ...buildOutboundWamidMetadata(send.messageId),
+                    }).catch((err) =>
+                        console.warn('[punto-ef] Log chat fiorista fallito:', err)
+                    );
+                }
             } else {
-                // Finestra chiusa: usiamo il template Meta proactive_staff
-                const staffNote = `Ti ringraziamo per la consegna e per le foto inviate. Restiamo a disposizione per eventuali aggiornamenti.
-
-Tutto lo Staff di FloreMoria ti ringrazia per la preziosa collaborazione e ti augura un buon lavoro.🌹`;
+                const staffNote =
+                    `Grazie per aver completato la consegna con successo! Le foto sono state inviate al cliente. ` +
+                    `Ti ricordiamo, se non l'hai già fatto, di inviarci la fattura relativa all'ordine ${orderCode}. ` +
+                    `Buon lavoro da FloreMoria!`;
 
                 const { bodyParams, headerTextParams } = buildProactiveStaffParams({
-                    floristFirstName: floristName,
+                    floristFirstName: floristName || 'Partner',
                     orderCode,
                     staffNotes: staffNote,
                 });
 
-                await sendVeraTemplate(order.partner.whatsappNumber, 'proactive_staff', bodyParams, {
-                    headerTextParams,
-                });
+                const templateSend = await sendVeraTemplate(
+                    order.partner.whatsappNumber,
+                    'proactive_staff',
+                    bodyParams,
+                    { headerTextParams }
+                );
+                if (templateSend.ok) {
+                    await addMessage(sessionPhone, 'OUTBOUND', thanksText, undefined, {
+                        eventType: 'FLORIST_DELIVERY_THANKS',
+                        orderId: order.id,
+                        orderNumber: orderCode,
+                        source: 'punto_f_florist_thanks_template',
+                        ...buildOutboundWamidMetadata(templateSend.messageId),
+                    }).catch((err) =>
+                        console.warn('[punto-ef] Log chat fiorista template fallito:', err)
+                    );
+                }
             }
         }
 
@@ -99,5 +152,9 @@ Tutto lo Staff di FloreMoria ti ringrazia per la preziosa collaborazione e ti au
         });
     }
 
-    return { ok: true, giardinoUrl: customerResult.giardinoUrl };
+    return {
+        ok: true,
+        giardinoUrl: customerResult.giardinoUrl,
+        photosSent: customerResult.photosSent,
+    };
 }

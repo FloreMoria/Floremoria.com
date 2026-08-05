@@ -1,25 +1,23 @@
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
-import { getSession } from '@/lib/chatStore';
+import { addMessage, getSession } from '@/lib/chatStore';
 import { ensureWhatsAppDeliveryImageUrl } from '@/lib/whatsapp/deliveryImageStaging';
 import {
     renderDeliveryProofCaption,
     renderGiardinoDellaMemoriaLinkMessage,
     resolvePartnerCity,
-    extractBuyerLastName,
     extractBuyerFirstName,
 } from '@/lib/whatsapp/deliveryProofCopy';
 import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
-import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
     sendWhatsAppImageMessage,
-    sendWhatsAppTextMessage,
 } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface DeliveryProofWhatsAppInput {
@@ -31,7 +29,10 @@ export interface DeliveryProofWhatsAppInput {
     cemeteryCity?: string | null;
     cemeteryName?: string | null;
     deliveryProvince?: string | null;
+    /** Retrocompat: singola foto "dopo". */
     photoAfterUrl?: string | null;
+    /** Tutte le foto "dopo" dalla mini-app (prioritarie rispetto a photoAfterUrl). */
+    photoAfterUrls?: string[] | null;
 }
 
 export interface DeliveryProofWhatsAppResult {
@@ -40,6 +41,7 @@ export interface DeliveryProofWhatsAppResult {
     giardinoUrl?: string;
     imageMessageId?: string;
     linkMessageId?: string;
+    photosSent?: number;
     error?: string;
 }
 
@@ -52,8 +54,23 @@ function isBusinessWhatsAppLine(phoneE164: string): boolean {
     return Boolean(business && business === phoneE164);
 }
 
+function resolveAfterPhotoUrls(input: DeliveryProofWhatsAppInput): string[] {
+    const fromList = (input.photoAfterUrls || [])
+        .map((u) => (u || '').trim())
+        .filter(Boolean);
+    if (fromList.length > 0) {
+        return [...new Set(fromList)];
+    }
+    const single = input.photoAfterUrl?.trim();
+    return single ? [single] : [];
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Invio nativo VERA post-consegna: foto posa + testo empatico + link Giardino della Memoria.
+ * Invio nativo VERA post-consegna: TUTTE le foto di posa + testo empatico + link Giardino.
  */
 export async function sendDeliveryProofWhatsApp(
     input: DeliveryProofWhatsAppInput
@@ -76,7 +93,8 @@ export async function sendDeliveryProofWhatsApp(
         return { ok: false, skipped: 'recipient_is_business_line' };
     }
 
-    if (!input.photoAfterUrl?.trim()) {
+    const photoUrls = resolveAfterPhotoUrls(input);
+    if (photoUrls.length === 0) {
         return { ok: false, skipped: 'missing_photo' };
     }
 
@@ -93,46 +111,35 @@ export async function sendDeliveryProofWhatsApp(
     const linkMessage = renderGiardinoDellaMemoriaLinkMessage(giardinoUrl);
 
     try {
-        const publicImageUrl = await ensureWhatsAppDeliveryImageUrl(input.orderId, input.photoAfterUrl);
-        if (!/^https:\/\//i.test(publicImageUrl)) {
-            console.error('[delivery-proof-whatsapp] URL immagine non HTTPS pubblico:', publicImageUrl);
-            return { ok: false, skipped: 'invalid_image_url', error: 'image_url_not_https' };
+        const publicImageUrls: string[] = [];
+        for (let i = 0; i < photoUrls.length; i += 1) {
+            const publicUrl = await ensureWhatsAppDeliveryImageUrl(
+                `${input.orderId}-after-${i}`,
+                photoUrls[i]!
+            );
+            if (!/^https:\/\//i.test(publicUrl)) {
+                console.error('[delivery-proof-whatsapp] URL immagine non HTTPS pubblico:', publicUrl);
+                return { ok: false, skipped: 'invalid_image_url', error: 'image_url_not_https', giardinoUrl };
+            }
+            publicImageUrls.push(publicUrl);
         }
 
-        console.info('[delivery-proof-whatsapp] URL immagine per Meta:', {
+        console.info('[delivery-proof-whatsapp] URL immagini per Meta:', {
             orderId: input.orderId,
             orderNumber: input.orderNumber,
-            imageHost: publicImageUrl.replace(/^https?:\/\/([^/]+).*/, '$1'),
+            count: publicImageUrls.length,
         });
 
         const sessionPhone = `whatsapp:${phoneE164}`;
         const session = await getSession(sessionPhone);
-        const withinWindow = isWithinCustomerServiceWindow(session);
+        let withinWindow = isWithinCustomerServiceWindow(session);
 
         let imageMessageId: string | undefined;
         let linkMessageId: string | undefined;
+        let photosSent = 0;
 
-        if (withinWindow) {
-            // Uniamo la didascalia con la foto e il link al Giardino in un unico messaggio
-            const combinedCaption = `${caption}\n\n${linkMessage}`;
-            const imageSend = await sendWhatsAppImageMessage(phoneE164, publicImageUrl, combinedCaption);
-            if (!imageSend.ok) {
-                console.error('[delivery-proof-whatsapp] Invio immagine in finestra aperta fallito:', {
-                    orderId: input.orderId,
-                    error: imageSend.error,
-                    imageUrl: publicImageUrl,
-                });
-                return {
-                    ok: false,
-                    skipped: 'image_send_failed',
-                    giardinoUrl,
-                    error: imageSend.error,
-                };
-            }
-            imageMessageId = imageSend.messageId;
-            linkMessageId = imageSend.messageId; // impostiamo lo stesso ID poiché il messaggio è unico
-        } else {
-            // Fuori finestra: usiamo il primo nome dell'acquirente per il saluto
+        if (!withinWindow) {
+            // Fuori finestra: prima foto via template (apre il thread), poi le altre in free-text.
             const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
             const bodyParams = buildCustomerDeliveryPhotoParams({
                 buyerFirstName,
@@ -144,7 +151,7 @@ export async function sendDeliveryProofWhatsApp(
                 'customer_delivery_photo',
                 bodyParams,
                 {
-                    headerImageUrl: publicImageUrl,
+                    headerImageUrl: publicImageUrls[0]!,
                     orderId: input.orderId,
                     orderNumber: input.orderNumber,
                     skipOrderDedup: true,
@@ -155,7 +162,7 @@ export async function sendDeliveryProofWhatsApp(
                 console.error('[delivery-proof-whatsapp] Template foto fuori finestra 24h fallito:', {
                     orderId: input.orderId,
                     error: templateSend.error,
-                    imageUrl: publicImageUrl,
+                    imageUrl: publicImageUrls[0],
                     bodyParams,
                 });
                 return {
@@ -166,7 +173,9 @@ export async function sendDeliveryProofWhatsApp(
                 };
             }
 
-            linkMessageId = templateSend.messageId;
+            imageMessageId = templateSend.messageId;
+            photosSent = 1;
+            withinWindow = true;
 
             try {
                 await logVeraTemplateOutbound({
@@ -184,6 +193,46 @@ export async function sendDeliveryProofWhatsApp(
                 console.error('[delivery-proof-whatsapp] Log dashboard template foto fallito:', logErr);
             }
 
+            // Foto successive (2..N) come messaggi immagine distinti.
+            for (let i = 1; i < publicImageUrls.length; i += 1) {
+                await sleep(800);
+                const imageSend = await sendWhatsAppImageMessage(
+                    phoneE164,
+                    publicImageUrls[i]!,
+                    undefined
+                );
+                if (!imageSend.ok) {
+                    console.error('[delivery-proof-whatsapp] Invio foto aggiuntiva fallito:', {
+                        orderId: input.orderId,
+                        index: i,
+                        error: imageSend.error,
+                    });
+                    return {
+                        ok: false,
+                        skipped: 'image_send_failed',
+                        giardinoUrl,
+                        photosSent,
+                        error: imageSend.error,
+                        imageMessageId,
+                    };
+                }
+                imageMessageId = imageSend.messageId;
+                photosSent += 1;
+                await addMessage(
+                    sessionPhone,
+                    'OUTBOUND',
+                    `Foto consegna (${i + 1}/${publicImageUrls.length})`,
+                    publicImageUrls[i],
+                    {
+                        eventType: 'PROOF_OF_DELIVERY',
+                        orderId: input.orderId,
+                        ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
+                        outboundMode: 'delivery_proof_photo',
+                        ...buildOutboundWamidMetadata(imageSend.messageId),
+                    }
+                );
+            }
+
             const linkSend = await sendWhatsAppMessage(phoneE164, linkMessage, {
                 recipientName: buyerName,
                 orderCode: input.orderNumber || undefined,
@@ -192,25 +241,95 @@ export async function sendDeliveryProofWhatsApp(
                 sessionPhone,
             });
             if (linkSend.ok) linkMessageId = linkSend.messageId;
+
+            await logProofToDashboard(
+                phoneE164,
+                buyerName,
+                `[Template Meta customer_delivery_photo inviato]\n\n${linkMessage}`,
+                {
+                    orderId: input.orderId,
+                    orderNumber: input.orderNumber,
+                    buyerFullName: input.buyerFullName,
+                    mediaUrl: publicImageUrls[0],
+                }
+            );
+        } else {
+            // Finestra aperta: ogni foto è un messaggio distinto; caption+link sulla prima.
+            for (let i = 0; i < publicImageUrls.length; i += 1) {
+                if (i > 0) await sleep(800);
+                const isFirst = i === 0;
+                const isLast = i === publicImageUrls.length - 1;
+                let captionForPhoto: string | undefined;
+                if (isFirst && publicImageUrls.length === 1) {
+                    captionForPhoto = `${caption}\n\n${linkMessage}`;
+                } else if (isFirst) {
+                    captionForPhoto = caption;
+                } else if (isLast) {
+                    captionForPhoto = linkMessage;
+                }
+
+                const imageSend = await sendWhatsAppImageMessage(
+                    phoneE164,
+                    publicImageUrls[i]!,
+                    captionForPhoto
+                );
+                if (!imageSend.ok) {
+                    console.error('[delivery-proof-whatsapp] Invio immagine fallito:', {
+                        orderId: input.orderId,
+                        index: i,
+                        error: imageSend.error,
+                        imageUrl: publicImageUrls[i],
+                    });
+                    return {
+                        ok: false,
+                        skipped: 'image_send_failed',
+                        giardinoUrl,
+                        photosSent,
+                        error: imageSend.error,
+                        imageMessageId,
+                    };
+                }
+
+                imageMessageId = imageSend.messageId;
+                if (isLast) linkMessageId = imageSend.messageId;
+                photosSent += 1;
+
+                await addMessage(
+                    sessionPhone,
+                    'OUTBOUND',
+                    captionForPhoto || `Foto consegna (${i + 1}/${publicImageUrls.length})`,
+                    publicImageUrls[i],
+                    {
+                        eventType: 'PROOF_OF_DELIVERY',
+                        orderId: input.orderId,
+                        ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
+                        outboundMode: 'delivery_proof_photo',
+                        ...buildOutboundWamidMetadata(imageSend.messageId),
+                    }
+                );
+            }
+
+            // Se più foto: link già sulla ultima caption. Se una sola: già inclusa.
+            // Nessun messaggio testo extra.
+            await logProofToDashboard(phoneE164, buyerName, `${caption}\n\n${linkMessage}`, {
+                orderId: input.orderId,
+                orderNumber: input.orderNumber,
+                buyerFullName: input.buyerFullName,
+                mediaUrl: publicImageUrls[0],
+            });
         }
 
-        const logBody = withinWindow
-            ? `${caption}\n\n${linkMessage}`
-            : `[Template Meta customer_delivery_photo inviato]\n\n${linkMessage}`;
-
-        await logProofToDashboard(phoneE164, buyerName, logBody, {
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-            buyerFullName: input.buyerFullName,
-            // Staging Meta: in dashboard viene riscritto su proxy staff (anche se il token è scaduto).
-            mediaUrl: publicImageUrl,
-        });
-
         console.info(
-            `[delivery-proof-whatsapp] Inviato ordine ${input.orderNumber || input.orderId} window=${withinWindow ? 'open' : 'closed'}`
+            `[delivery-proof-whatsapp] Inviato ordine ${input.orderNumber || input.orderId} photos=${photosSent} window=${withinWindow ? 'open' : 'closed'}`
         );
 
-        return { ok: true, giardinoUrl, imageMessageId, linkMessageId };
+        return {
+            ok: true,
+            giardinoUrl,
+            imageMessageId,
+            linkMessageId,
+            photosSent,
+        };
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[delivery-proof-whatsapp] Errore ordine ${input.orderNumber || input.orderId}:`, msg);

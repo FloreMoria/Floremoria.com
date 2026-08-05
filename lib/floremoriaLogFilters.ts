@@ -41,10 +41,14 @@ export function floremoriaLogExcludedWhere(): Prisma.FloremoriaLogWhereInput {
     };
 }
 
-/** Include tutti i log operativi; esclude solo POSTMAN / email assistenza come mittente. */
+/** Include tutti i log operativi; esclude solo POSTMAN / email assistenza a meno che includePostman sia true. */
 export function floremoriaLogPublicWhere(
-    extra?: Prisma.FloremoriaLogWhereInput
+    extra?: Prisma.FloremoriaLogWhereInput,
+    includePostman: boolean = false
 ): Prisma.FloremoriaLogWhereInput {
+    if (includePostman) {
+        return extra || {};
+    }
     const base: Prisma.FloremoriaLogWhereInput = {
         NOT: floremoriaLogExcludedWhere(),
     };

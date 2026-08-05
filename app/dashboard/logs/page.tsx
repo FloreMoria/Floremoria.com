@@ -11,9 +11,7 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-// Categorie operative ufficiali (CEO): mappate sul campo `tag` di FloremoriaLog,
-// così non serve un modello parallelo e la ricerca/filtro resta unica e coerente.
-export const OPERATIONAL_CATEGORIES = ['STRATEGIA', 'WEBHOOK', 'PARTNERS', 'BREVETTI'] as const;
+export const OPERATIONAL_CATEGORIES = ['STRATEGIA', 'WEBHOOK', 'PARTNERS', 'BREVETTI', 'POSTMAN'] as const;
 
 // Limite di sicurezza: la timeline può crescere a centinaia/migliaia di record.
 // Caricarli tutti in un colpo rallenterebbe la pagina; impaginiamo lato server.
@@ -40,7 +38,14 @@ export default async function SystemLogsPage({
     const from = resolvedParams.from?.trim() || '';
     const to = resolvedParams.to?.trim() || '';
 
-    const andClauses: Prisma.FloremoriaLogWhereInput[] = [floremoriaLogPublicWhere()];
+    const isPostmanSearch =
+        category.toUpperCase() === 'POSTMAN' ||
+        /postman|clevermadehub|email|assistenza/i.test(q) ||
+        /postman/i.test(category);
+
+    const andClauses: Prisma.FloremoriaLogWhereInput[] = [
+        floremoriaLogPublicWhere(undefined, isPostmanSearch),
+    ];
 
     if (category) {
         andClauses.push({ tag: { contains: category, mode: 'insensitive' } });

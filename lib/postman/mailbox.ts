@@ -1,18 +1,17 @@
 /**
- * POSTMAN — Accesso IMAP alla casella assistenza@floremoria.com (Aruba).
+ * POSTMAN — Accesso IMAP ed invio risposte per assistenza@floremoria.com.
  *
  * Operazioni:
- *  - connessione IMAPS sicura (default imaps.aruba.it:993, SSL);
+ *  - connessione IMAPS sicura (imaps.aruba.it:993, SSL);
  *  - lettura delle mail NON LETTE (UNSEEN) della INBOX con parsing del testo;
- *  - invio diretto della risposta via SMTP (thread In-Reply-To / References);
- *  - marcatura della mail come letta (\Seen) per garantire l'idempotenza tra esecuzioni del cron.
- *
- * Stack: imapflow (IMAP), mailparser (parsing), nodemailer/MailComposer (composizione MIME della bozza).
+ *  - invio diretto della risposta via SMTP Aruba o fallback automatico su Resend/serverMail;
+ *  - marcatura della mail come letta (\Seen).
  */
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import nodemailer from 'nodemailer';
+import { sendFloremTransactionalMail } from '@/lib/serverMail';
 
 export interface IncomingEmail {
     uid: number;
@@ -35,18 +34,12 @@ export interface MailboxConfig {
 
 export class MailboxConfigError extends Error {}
 
-export function getMailboxConfigFromEnv(): MailboxConfig {
-    const host = process.env.ASSISTENZA_IMAP_HOST?.trim() || 'imaps.aruba.it';
-    const port = Number(process.env.ASSISTENZA_IMAP_PORT?.trim() || '993');
+export function tryGetMailboxConfigFromEnv(): MailboxConfig | null {
     const user = process.env.ASSISTENZA_EMAIL_USER?.trim();
     const password = process.env.ASSISTENZA_EMAIL_PASSWORD;
-
-    if (!user || !password) {
-        throw new MailboxConfigError(
-            'Credenziali IMAP mancanti: imposta ASSISTENZA_EMAIL_USER e ASSISTENZA_EMAIL_PASSWORD.'
-        );
-    }
-
+    if (!user || !password) return null;
+    const host = process.env.ASSISTENZA_IMAP_HOST?.trim() || 'imaps.aruba.it';
+    const port = Number(process.env.ASSISTENZA_IMAP_PORT?.trim() || '993');
     return {
         host,
         port: Number.isFinite(port) ? port : 993,
@@ -54,6 +47,16 @@ export function getMailboxConfigFromEnv(): MailboxConfig {
         password,
         draftsFolder: process.env.ASSISTENZA_DRAFTS_FOLDER?.trim() || undefined,
     };
+}
+
+export function getMailboxConfigFromEnv(): MailboxConfig {
+    const config = tryGetMailboxConfigFromEnv();
+    if (!config) {
+        throw new MailboxConfigError(
+            'Credenziali IMAP/SMTP Aruba mancanti: imposta ASSISTENZA_EMAIL_USER e ASSISTENZA_EMAIL_PASSWORD.'
+        );
+    }
+    return config;
 }
 
 export function createImapClient(config: MailboxConfig): ImapFlow {
@@ -67,13 +70,11 @@ export function createImapClient(config: MailboxConfig): ImapFlow {
 }
 
 function firstAddress(value: unknown): { name: string; address: string } {
-    // mailparser AddressObject: { value: [{ name, address }], ... }
     const v = value as { value?: { name?: string; address?: string }[] } | undefined;
     const first = v?.value?.[0];
     return { name: first?.name?.trim() || '', address: first?.address?.trim() || '' };
 }
 
-/** Legge le mail UNSEEN della INBOX (fino a `limit`) e ne estrae i campi utili. */
 export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promise<IncomingEmail[]> {
     const out: IncomingEmail[] = [];
     const lock = await client.getMailboxLock('INBOX');
@@ -81,7 +82,6 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
         const uids = (await client.search({ seen: false }, { uid: true })) || [];
         if (!uids.length) return out;
 
-        // I più recenti per primi, troncati a `limit`.
         const selected = uids.slice(-Math.max(0, limit)).reverse();
 
         for await (const message of client.fetch(
@@ -92,7 +92,7 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
             try {
                 const parsed = await simpleParser(message.source as Buffer);
                 const from = firstAddress(parsed.from);
-                
+
                 let messageId = parsed.messageId || message.envelope?.messageId || null;
                 if (!messageId) {
                     const fromStr = from.address || 'unknown';
@@ -103,7 +103,6 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
 
                 let text = (parsed.text || '').trim();
                 if (!text && parsed.html) {
-                    // Simple regex fallback to strip HTML tags and extract usable text for Gemini
                     text = parsed.html
                         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -139,7 +138,6 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
     return out;
 }
 
-/** Risolve il path della cartella Bozze (env, poi special-use \Drafts, poi euristica nome). */
 export async function resolveDraftsPath(client: ImapFlow, configured?: string): Promise<string> {
     if (configured) return configured;
     try {
@@ -154,7 +152,7 @@ export async function resolveDraftsPath(client: ImapFlow, configured?: string): 
     return 'Drafts';
 }
 
-function buildReferencesHeader(
+export function buildReferencesHeader(
     inReplyToMessageId?: string | null,
     priorReferences?: string | null
 ): string | undefined {
@@ -169,7 +167,7 @@ function buildReferencesHeader(
     return parts.length ? parts.join(' ') : undefined;
 }
 
-function buildMimeMessage(opts: {
+export function buildMimeMessage(opts: {
     from: string;
     to: string;
     subject: string;
@@ -194,9 +192,9 @@ function buildMimeMessage(opts: {
     });
 }
 
-/** Invia direttamente la risposta al cliente via SMTP (Aruba assistenza@). */
+/** Invia direttamente la risposta al cliente via SMTP (Aruba o Resend/serverMail fallback). */
 export async function sendDirectReply(
-    config: MailboxConfig,
+    config: MailboxConfig | null | undefined,
     params: {
         fromAddress: string;
         toAddress: string;
@@ -205,30 +203,58 @@ export async function sendDirectReply(
         inReplyToMessageId?: string | null;
         references?: string | null;
     }
-): Promise<void> {
+): Promise<{ ok: boolean; provider: string; error?: string }> {
     const host = process.env.ASSISTENZA_SMTP_HOST?.trim() || 'smtps.aruba.it';
     const port = Number(process.env.ASSISTENZA_SMTP_PORT?.trim() || '465');
     const secure = process.env.ASSISTENZA_SMTP_SECURE?.trim() !== 'false';
 
-    const transporter = nodemailer.createTransport({
-        host,
-        port: Number.isFinite(port) ? port : 465,
-        secure: secure || port === 465,
-        auth: { user: config.user, pass: config.password },
-    });
+    if (config?.user && config?.password) {
+        try {
+            const transporter = nodemailer.createTransport({
+                host,
+                port: Number.isFinite(port) ? port : 465,
+                secure: secure || port === 465,
+                auth: { user: config.user, pass: config.password },
+            });
 
-    const references = buildReferencesHeader(params.inReplyToMessageId, params.references);
+            const references = buildReferencesHeader(params.inReplyToMessageId, params.references);
 
-    await transporter.sendMail({
-        from: params.fromAddress.includes('<')
-            ? params.fromAddress
-            : `FloreMoria Assistenza <${params.fromAddress}>`,
+            await transporter.sendMail({
+                from: params.fromAddress.includes('<')
+                    ? params.fromAddress
+                    : `FloreMoria Assistenza <${params.fromAddress}>`,
+                to: params.toAddress,
+                subject: params.subject,
+                text: params.body,
+                inReplyTo: params.inReplyToMessageId || undefined,
+                references,
+            });
+            console.log(`[postman] Risposta SMTP Aruba inviata a ${params.toAddress}`);
+            return { ok: true, provider: 'aruba_smtp' };
+        } catch (e) {
+            console.warn('[postman] Invio SMTP Aruba fallito, tentiamo fallback serverMail/Resend:', e);
+        }
+    }
+
+    // Fallback serverMail (Resend API o SMTP generico)
+    const fallbackRes = await sendFloremTransactionalMail({
         to: params.toAddress,
+        replyTo: params.fromAddress.includes('<') ? params.fromAddress : `assistenza@floremoria.com`,
         subject: params.subject,
         text: params.body,
-        inReplyTo: params.inReplyToMessageId || undefined,
-        references,
+        html: params.body.replace(/\n/g, '<br />'),
     });
+
+    if (fallbackRes.ok) {
+        console.log(`[postman] Risposta inviata con successo a ${params.toAddress} via serverMail/Resend.`);
+        return { ok: true, provider: 'server_mail' };
+    }
+
+    return {
+        ok: false,
+        provider: 'none',
+        error: fallbackRes.error || 'Nessun provider email disponibile (imposta ASSISTENZA_EMAIL_USER/PASS o RESEND_API_KEY)',
+    };
 }
 
 /** @deprecated Usare sendDirectReply. Mantenuto per compatibilità test. */

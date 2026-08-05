@@ -277,20 +277,20 @@ export default function ClientDeceasedTable({
             ) : null}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto sm:overflow-x-visible">
+                    <table className="w-full text-left border-collapse table-fixed text-xs">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                                <th className="px-5 py-4">Defunto</th>
-                                <th className="px-5 py-4 hidden md:table-cell">Nascita</th>
-                                <th className="px-5 py-4 hidden md:table-cell">Morte</th>
-                                <th className="px-5 py-4">Comune</th>
-                                <th className="px-5 py-4 hidden lg:table-cell">Cimitero</th>
-                                <th className="px-5 py-4 hidden lg:table-cell">Posizione tomba</th>
-                                <th className="px-5 py-4">Ordini</th>
-                                <th className="px-5 py-4 hidden md:table-cell">Fiorista</th>
-                                <th className="px-5 py-4">Stato</th>
-                                <th className="px-5 py-4 text-right"> </th>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                <th className="px-2 py-2.5 w-[20%]">Defunto</th>
+                                <th className="px-2 py-2.5 w-[8%] hidden md:table-cell">Nascita</th>
+                                <th className="px-2 py-2.5 w-[8%] hidden md:table-cell">Morte</th>
+                                <th className="px-2 py-2.5 w-[14%]">Comune</th>
+                                <th className="px-2 py-2.5 w-[15%] hidden lg:table-cell">Cimitero</th>
+                                <th className="px-2 py-2.5 w-[13%] hidden lg:table-cell">Posizione tomba</th>
+                                <th className="px-2 py-2.5 w-[6%] text-center">Ordini</th>
+                                <th className="px-2 py-2.5 w-[10%] hidden md:table-cell">Fiorista</th>
+                                <th className="px-2 py-2.5 w-[8%]">Stato</th>
+                                <th className="px-2 py-2.5 w-[10%] text-right"> </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -307,20 +307,20 @@ export default function ClientDeceasedTable({
                                         className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${row.isOrphan ? 'bg-amber-50/30' : ''}`}
                                         onClick={() => setSelectedRow(row)}
                                     >
-                                        <td className="px-5 py-4">
-                                            <div className="flex items-center gap-3">
+                                        <td className="px-2 py-2 overflow-hidden">
+                                            <div className="flex items-center gap-2 min-w-0">
                                                 {row.photoUrl ? (
                                                     <Image
                                                         src={row.photoUrl}
                                                         alt={row.fullName}
-                                                        width={36}
-                                                        height={36}
-                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                                        width={28}
+                                                        height={28}
+                                                        className="w-7 h-7 rounded-full object-cover border border-gray-200 shrink-0"
                                                         unoptimized
                                                     />
                                                 ) : (
-                                                    <div className="w-9 h-9 rounded-full bg-[#EFEAE2] flex items-center justify-center text-[#8a7349]">
-                                                        <Heart size={14} className="fill-current" />
+                                                    <div className="w-7 h-7 rounded-full bg-[#EFEAE2] flex items-center justify-center text-[#8a7349] shrink-0">
+                                                        <Heart size={12} className="fill-current" />
                                                     </div>
                                                 )}
                                                 {editingRowKey === row.rowKey ? (
@@ -340,16 +340,22 @@ export default function ClientDeceasedTable({
                                                             }))
                                                         }
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="border border-gray-200 rounded px-2 py-1 text-sm"
+                                                        className="border border-gray-200 rounded px-1.5 py-0.5 text-xs w-full"
                                                     />
                                                 ) : (
-                                                    <span className="font-semibold text-gray-900">{row.fullName}</span>
+                                                    <span className="font-semibold text-gray-900 truncate block text-xs sm:text-sm" title={row.fullName}>
+                                                        {row.fullName}
+                                                    </span>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{formatDisplayDate(row.birthDate)}</td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{formatDisplayDate(row.deathDate)}</td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">
+                                        <td className="px-2 py-2 text-xs text-gray-600 hidden md:table-cell truncate" title={formatDisplayDate(row.birthDate)}>
+                                            {formatDisplayDate(row.birthDate)}
+                                        </td>
+                                        <td className="px-2 py-2 text-xs text-gray-600 hidden md:table-cell truncate" title={formatDisplayDate(row.deathDate)}>
+                                            {formatDisplayDate(row.deathDate)}
+                                        </td>
+                                        <td className="px-2 py-2 text-xs text-gray-600 overflow-hidden">
                                             {editingRowKey === row.rowKey ? (
                                                 <input
                                                     value={rowDrafts[row.rowKey]?.cemeteryCity || ''}
@@ -367,13 +373,15 @@ export default function ClientDeceasedTable({
                                                         }))
                                                     }
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
+                                                    className="border border-gray-200 rounded px-1.5 py-0.5 text-xs w-full"
                                                 />
                                             ) : (
-                                                row.cemeteryCity
+                                                <span className="truncate block" title={row.cemeteryCity}>
+                                                    {row.cemeteryCity}
+                                                </span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 hidden lg:table-cell">
+                                        <td className="px-2 py-2 text-xs text-gray-600 hidden lg:table-cell overflow-hidden">
                                             {editingRowKey === row.rowKey ? (
                                                 <input
                                                     value={rowDrafts[row.rowKey]?.cemeteryName || ''}
@@ -389,37 +397,51 @@ export default function ClientDeceasedTable({
                                                                 cemeteryName: e.target.value,
                                                             },
                                                         }))
-                                                     }
+                                                    }
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="border border-gray-200 rounded px-2 py-1 text-sm w-full"
+                                                    className="border border-gray-200 rounded px-1.5 py-0.5 text-xs w-full"
                                                 />
                                             ) : (
-                                                row.cemeteryName || '—'
+                                                <span className="truncate block" title={row.cemeteryName || '—'}>
+                                                    {row.cemeteryName || '—'}
+                                                </span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 max-w-[180px] truncate hidden lg:table-cell">
-                                            {row.gravePosition || '—'}
+                                        <td className="px-2 py-2 text-xs text-gray-600 hidden lg:table-cell overflow-hidden">
+                                            <span className="truncate block" title={row.gravePosition || '—'}>
+                                                {row.gravePosition || '—'}
+                                            </span>
                                         </td>
-                                        <td className="px-5 py-4">
-                                            <span className="inline-flex px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">
+                                        <td className="px-2 py-2 text-center">
+                                            <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold">
                                                 {row.orderCount}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600 hidden md:table-cell">{row.floristName || '—'}</td>
-                                        <td className="px-5 py-4">
+                                        <td className="px-2 py-2 text-xs text-gray-600 hidden md:table-cell overflow-hidden">
+                                            <span className="truncate block" title={row.floristName || '—'}>
+                                                {row.floristName || '—'}
+                                            </span>
+                                        </td>
+                                        <td className="px-2 py-2">
                                             {row.isOrphan ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wide">
-                                                    <AlertTriangle size={11} />
+                                                <span
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap"
+                                                    title="Orfano (creato da ordine senza profilo)"
+                                                >
+                                                    <AlertTriangle size={10} />
                                                     Orfano
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
+                                                <span
+                                                    className="inline-flex px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap"
+                                                    title="Profilo registrato"
+                                                >
                                                     Registrato
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-5 py-4 text-right">
-                                            <div className="inline-flex items-center gap-2">
+                                        <td className="px-2 py-2 text-right">
+                                            <div className="inline-flex items-center justify-end gap-1">
                                                 {editingRowKey === row.rowKey ? (
                                                     <>
                                                         <button
@@ -429,7 +451,7 @@ export default function ClientDeceasedTable({
                                                                 void saveRowEdit(row);
                                                             }}
                                                             disabled={savingRowKey === row.rowKey}
-                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50 whitespace-nowrap"
                                                         >
                                                             Salva
                                                         </button>
@@ -439,7 +461,7 @@ export default function ClientDeceasedTable({
                                                                 e.stopPropagation();
                                                                 cancelRowEdit();
                                                             }}
-                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                                                         >
                                                             Annulla
                                                         </button>
@@ -448,35 +470,38 @@ export default function ClientDeceasedTable({
                                                     <>
                                                         <button
                                                             type="button"
+                                                            title="Modifica anagrafica defunto"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 beginRowEdit(row);
                                                             }}
                                                             disabled={row.isOrphan || !row.deceasedProfileId}
-                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap"
                                                         >
                                                             Modifica
                                                         </button>
                                                         <button
                                                             type="button"
+                                                            title="Cancella defunto"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 void deleteRow(row);
                                                             }}
                                                             disabled={row.isOrphan || !row.deceasedProfileId}
-                                                            className="px-2.5 py-1.5 text-xs font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40"
+                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40 whitespace-nowrap"
                                                         >
                                                             Cancella
                                                         </button>
                                                         <button
                                                             type="button"
+                                                            title="Apri scheda dettagliata"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setSelectedRow(row);
                                                             }}
-                                                            className="px-1.5 py-1 rounded text-gray-500 hover:text-gray-700"
+                                                            className="p-1 rounded text-gray-400 hover:text-gray-700 shrink-0"
                                                         >
-                                                            <ChevronRight className="w-5 h-5 inline-block" />
+                                                            <ChevronRight className="w-4 h-4 inline-block" />
                                                         </button>
                                                     </>
                                                 )}

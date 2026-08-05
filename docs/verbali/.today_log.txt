@@ -47,3 +47,6 @@
 [2026-08-05 19:05] fix(postman+email): diagnosi & invio risposta Postman a clevermadehub.uk@gmail.com — aggiunta gestione fallback automatica `sendDirectReply` su Resend API / `sendFloremTransactionalMail` in assenza o errore credenziali Aruba SMTP; aggiornato log #204 in `floremoriaLog` e sbloccata ricerca tag `POSTMAN` in Dashboard Logs.
 
 [2026-08-05 19:51] feat/offers: invio WhatsApp buono con scadenza personale per destinatario (OfferGrant).
+
+[2026-08-05 20:28] style(defunti): compattazione tabella Anagrafica Defunti (ClientDeceasedTable.tsx) — impostata classe `table-fixed w-full`, ridotti padding celle a `px-2 py-2`, dimensione font `text-xs`, troncamento `truncate` con attributi `title` per tooltip al passaggio del mouse su testi lunghi, eliminato scrollbar orizzontale su schermi desktop.
+

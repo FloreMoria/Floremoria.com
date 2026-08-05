@@ -44,9 +44,23 @@ export async function GET(request: Request) {
                         },
                     },
                 },
+                grants: {
+                    orderBy: { sentAt: 'desc' },
+                    take: 20,
+                    select: {
+                        id: true,
+                        recipientPhone: true,
+                        recipientName: true,
+                        endsAt: true,
+                        sentAt: true,
+                        maxUses: true,
+                        _count: { select: { redemptions: true } },
+                    },
+                },
                 _count: {
                     select: {
                         redemptions: true,
+                        grants: true,
                     },
                 },
             },

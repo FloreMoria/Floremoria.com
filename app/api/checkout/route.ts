@@ -123,6 +123,7 @@ export async function POST(request: Request) {
 
         let appliedDiscountCode: string | null = null;
         let appliedOfferId: string | null = null;
+        let appliedGrantId: string | null = null;
         let discountCents = 0;
         let finalTotalCents = subtotalFromCartCents;
         if (typeof discountCode === 'string' && discountCode.trim()) {
@@ -138,13 +139,34 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Codice sconto non trovato.' }, { status: 400 });
             }
 
-            const usageCount = await (prisma as any).offerRedemption.count({
+            const { findOfferGrantForBuyer } = await import('@/lib/discounts');
+            const grant = await findOfferGrantForBuyer({
+                prisma,
+                offerId: offer.id,
+                buyerPhone: typeof buyerPhone === 'string' ? buyerPhone : null,
+                buyerEmail,
+            });
+
+            const grantCount = await prisma.offerGrant.count({
+                where: { offerId: offer.id },
+            });
+            if (grantCount > 0 && !grant) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Questo buono è personale: usi lo stesso numero WhatsApp a cui è stato inviato.',
+                    },
+                    { status: 400 }
+                );
+            }
+
+            const usageCount = await prisma.offerRedemption.count({
                 where: { offerId: offer.id },
             });
 
             const normalizedBuyerEmail = String(buyerEmail ?? '').trim().toLowerCase();
             const userUsageCount = normalizedBuyerEmail
-                ? await (prisma as any).offerRedemption.count({
+                ? await prisma.offerRedemption.count({
                       where: {
                           offerId: offer.id,
                           buyerEmail: { equals: normalizedBuyerEmail, mode: 'insensitive' },
@@ -152,13 +174,20 @@ export async function POST(request: Request) {
                   })
                 : 0;
 
+            const grantUsageCount = grant
+                ? await prisma.offerRedemption.count({ where: { grantId: grant.id } })
+                : 0;
+
             const resolution = resolveOfferDiscount({
                 offer,
                 subtotalCents: subtotalFromCartCents,
                 buyerEmail,
                 buyerFullName,
+                buyerPhone: typeof buyerPhone === 'string' ? buyerPhone : undefined,
                 usageCount,
                 userUsageCount,
+                grant,
+                grantUsageCount,
             });
 
             if (!resolution.ok) {
@@ -167,6 +196,7 @@ export async function POST(request: Request) {
 
             appliedDiscountCode = normalizedCode;
             appliedOfferId = offer.id;
+            appliedGrantId = resolution.grantId ?? null;
             discountCents = resolution.discountCents;
             finalTotalCents = resolution.finalTotalCents;
         }
@@ -381,10 +411,11 @@ export async function POST(request: Request) {
         }
 
         if (appliedOfferId) {
-            await (prisma as any).offerRedemption.create({
+            await prisma.offerRedemption.create({
                 data: {
                     offerId: appliedOfferId,
                     orderId: order.id,
+                    grantId: appliedGrantId,
                     buyerEmail: buyerEmail ? buyerEmail.trim().toLowerCase() : null,
                     buyerFullName: buyerFullName ? buyerFullName.trim() : null,
                 },

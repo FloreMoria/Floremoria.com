@@ -91,6 +91,7 @@ model User {
   resetPasswordToken     String?          @unique @map("reset_password_token")
   resetPasswordTokenExpires DateTime?     @map("reset_password_token_expires")
   partner                Partner?
+  offerGrants            OfferGrant[]
 }
 
 /**
@@ -289,20 +290,52 @@ model Offer {
   updatedAt   DateTime          @updatedAt
   deletedAt   DateTime?
   redemptions OfferRedemption[]
+  grants      OfferGrant[]
+}
+
+/**
+ * Assegnazione personale di un buono a un numero WhatsApp.
+ * Perché: stesso codice (es. FLORE10) può avere scadenze diverse per destinatario.
+ */
+model OfferGrant {
+  id             String            @id @default(cuid())
+  offerId        String            @map("offer_id")
+  recipientPhone String            @map("recipient_phone") @db.VarChar(32)
+  recipientName  String?           @map("recipient_name")
+  recipientEmail String?           @map("recipient_email")
+  userId         String?           @map("user_id")
+  startsAt       DateTime          @default(now()) @map("starts_at")
+  endsAt         DateTime          @map("ends_at")
+  maxUses        Int               @default(1) @map("max_uses")
+  sentAt         DateTime?         @map("sent_at")
+  whatsappWamid  String?           @map("whatsapp_wamid") @db.VarChar(128)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  offer          Offer             @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  redemptions    OfferRedemption[]
+
+  @@unique([offerId, recipientPhone])
+  @@index([recipientPhone])
+  @@index([endsAt])
+  @@map("offer_grants")
 }
 
 model OfferRedemption {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   offerId       String
   orderId       String
+  grantId       String?     @map("grant_id")
   buyerEmail    String?
   buyerFullName String?
-  usedAt        DateTime @default(now())
-  offer         Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  usedAt        DateTime    @default(now())
+  offer         Offer       @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  grant         OfferGrant? @relation(fields: [grantId], references: [id], onDelete: SetNull)
 
   @@index([offerId, usedAt])
   @@index([buyerEmail])
+  @@index([grantId])
 }
 
 model Article {

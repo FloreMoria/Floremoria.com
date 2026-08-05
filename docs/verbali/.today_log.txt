@@ -46,3 +46,4 @@
 
 [2026-08-05 19:05] fix(postman+email): diagnosi & invio risposta Postman a clevermadehub.uk@gmail.com — aggiunta gestione fallback automatica `sendDirectReply` su Resend API / `sendFloremTransactionalMail` in assenza o errore credenziali Aruba SMTP; aggiornato log #204 in `floremoriaLog` e sbloccata ricerca tag `POSTMAN` in Dashboard Logs.
 
+[2026-08-05 19:51] feat/offers: invio WhatsApp buono con scadenza personale per destinatario (OfferGrant).

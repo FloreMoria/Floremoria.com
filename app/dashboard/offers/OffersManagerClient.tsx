@@ -1,7 +1,19 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Loader2, Send, Trash2 } from 'lucide-react';
+
+type OfferSendDuration = '1w' | '1m' | '3m' | '6m' | '1y';
+
+type OfferGrantRow = {
+  id: string;
+  recipientPhone: string;
+  recipientName: string | null;
+  endsAt: string;
+  sentAt: string | null;
+  maxUses: number;
+  _count?: { redemptions: number };
+};
 
 type OfferRow = {
   id: string;
@@ -12,7 +24,8 @@ type OfferRow = {
   maxUses: number | null;
   endsAt: string | null;
   isActive: boolean;
-  _count?: { redemptions: number };
+  _count?: { redemptions: number; grants?: number };
+  grants?: OfferGrantRow[];
   redemptions?: Array<{
     id: string;
     buyerEmail: string | null;
@@ -29,6 +42,15 @@ type OfferRow = {
   } | null;
 };
 
+type ContactHit = {
+  type: 'UTENTE' | 'FLORIST';
+  id: string;
+  name: string;
+  phone: string;
+  recipientFirstName: string;
+  subtitle?: string;
+};
+
 export default function OffersManagerClient() {
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +58,17 @@ export default function OffersManagerClient() {
   const [createdWhatsappLink, setCreatedWhatsappLink] = useState('');
   const [offerPendingDelete, setOfferPendingDelete] = useState<OfferRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sendOfferId, setSendOfferId] = useState<string | null>(null);
+  const [sendPhone, setSendPhone] = useState('');
+  const [sendName, setSendName] = useState('');
+  const [sendUserId, setSendUserId] = useState<string | null>(null);
+  const [sendDuration, setSendDuration] = useState<OfferSendDuration>('6m');
+  const [sendForceTemplate, setSendForceTemplate] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendMessage, setSendMessage] = useState('');
+  const [contactQuery, setContactQuery] = useState('');
+  const [contactHits, setContactHits] = useState<ContactHit[]>([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -83,6 +116,85 @@ export default function OffersManagerClient() {
   useEffect(() => {
     void loadOffers();
   }, []);
+
+  useEffect(() => {
+    if (!sendOfferId) return;
+    const q = contactQuery.trim();
+    if (q.length < 2) {
+      setContactHits([]);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setSearchingContacts(true);
+      try {
+        const res = await fetch(`/api/dashboard/communications/contacts?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setContactHits(data.success ? data.results || [] : []);
+      } catch {
+        setContactHits([]);
+      } finally {
+        setSearchingContacts(false);
+      }
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [contactQuery, sendOfferId]);
+
+  const openSendPanel = (offer: OfferRow) => {
+    setSendOfferId(offer.id);
+    setSendPhone('');
+    setSendName('');
+    setSendUserId(null);
+    setSendDuration('6m');
+    setSendForceTemplate(false);
+    setSendMessage('');
+    setContactQuery('');
+    setContactHits([]);
+    setError('');
+  };
+
+  const selectContact = (contact: ContactHit) => {
+    setSendPhone(contact.phone);
+    setSendName(contact.name);
+    setSendUserId(contact.type === 'UTENTE' ? contact.id : null);
+    setContactQuery(contact.name);
+    setContactHits([]);
+  };
+
+  const sendOfferWhatsApp = async () => {
+    if (!sendOfferId || sending) return;
+    setSending(true);
+    setError('');
+    setSendMessage('');
+    try {
+      const res = await fetch(`/api/admin/offers/${sendOfferId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneRaw: sendPhone,
+          duration: sendDuration,
+          recipientName: sendName || undefined,
+          userId: sendUserId || undefined,
+          forceTemplate: sendForceTemplate,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Invio WhatsApp non riuscito.');
+      }
+      const endsLabel = payload.endsAt
+        ? new Date(payload.endsAt).toLocaleDateString('it-IT')
+        : '';
+      setSendMessage(
+        `Inviato a ${payload.phoneE164}. Scadenza personale: ${endsLabel}` +
+          (payload.fallbackExecuted ? ' (template Meta).' : '.')
+      );
+      await loadOffers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore invio WhatsApp.');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const resetForm = () => {
     setName('');
@@ -215,7 +327,10 @@ export default function OffersManagerClient() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Buoni Sconto</h1>
-        <p className="text-sm text-gray-500">Crea codici per utente singolo o per tutti, con scadenza e invio WhatsApp.</p>
+        <p className="text-sm text-gray-500">
+          Crea il buono una volta, poi invialo via WhatsApp a ogni destinatario con una scadenza personale
+          (es. Pinco 6 mesi, Cinciallegra 3 mesi sullo stesso codice).
+        </p>
       </div>
 
       <form onSubmit={onCreateOffer} className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
@@ -315,13 +430,21 @@ export default function OffersManagerClient() {
                   <td className="px-4 py-2">{offer.endsAt ? new Date(offer.endsAt).toLocaleString('it-IT') : 'Nessuna'}</td>
                   <td className="px-4 py-2">{offer.isActive ? 'Attivo' : 'Disattivo'}</td>
                   <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => toggleOfferActive(offer)}
                         className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${offer.isActive ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}
                       >
                         {offer.isActive ? 'Disattiva' : 'Attiva'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openSendPanel(offer)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-emerald-700 text-white hover:bg-emerald-800"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        Invia WA
                       </button>
                       <button
                         type="button"
@@ -334,6 +457,103 @@ export default function OffersManagerClient() {
                         Elimina
                       </button>
                     </div>
+                    {sendOfferId === offer.id && (
+                      <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2 min-w-[280px]">
+                        <p className="text-xs font-semibold text-emerald-900">
+                          Invio WhatsApp · scadenza personale
+                        </p>
+                        <input
+                          value={contactQuery}
+                          onChange={(e) => setContactQuery(e.target.value)}
+                          placeholder="Cerca in anagrafica (nome/tel)…"
+                          className="w-full rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs"
+                        />
+                        {searchingContacts && (
+                          <p className="text-[11px] text-emerald-700 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Ricerca…
+                          </p>
+                        )}
+                        {contactHits.length > 0 && (
+                          <div className="max-h-28 overflow-y-auto rounded-lg border border-emerald-100 bg-white">
+                            {contactHits.map((c) => (
+                              <button
+                                key={`${c.type}-${c.id}`}
+                                type="button"
+                                onClick={() => selectContact(c)}
+                                className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-emerald-50 border-b border-emerald-50 last:border-0"
+                              >
+                                <span className="font-semibold">{c.name}</span>
+                                <span className="text-gray-500"> · {c.phone}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <input
+                          value={sendPhone}
+                          onChange={(e) => {
+                            setSendPhone(e.target.value);
+                            setSendUserId(null);
+                          }}
+                          placeholder="WhatsApp +3933…"
+                          className="w-full rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs"
+                        />
+                        <input
+                          value={sendName}
+                          onChange={(e) => setSendName(e.target.value)}
+                          placeholder="Nome destinatario (opzionale)"
+                          className="w-full rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs"
+                        />
+                        <select
+                          value={sendDuration}
+                          onChange={(e) => setSendDuration(e.target.value as OfferSendDuration)}
+                          className="w-full rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs"
+                        >
+                          <option value="1w">Validità: 1 settimana</option>
+                          <option value="1m">Validità: 1 mese</option>
+                          <option value="3m">Validità: 3 mesi</option>
+                          <option value="6m">Validità: 6 mesi</option>
+                          <option value="1y">Validità: 1 anno</option>
+                        </select>
+                        <label className="flex items-center gap-2 text-[11px] text-emerald-900">
+                          <input
+                            type="checkbox"
+                            checked={sendForceTemplate}
+                            onChange={(e) => setSendForceTemplate(e.target.checked)}
+                          />
+                          Usa template Meta (consigliato fuori finestra 24h)
+                        </label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={sending || !sendPhone.trim()}
+                            onClick={() => void sendOfferWhatsApp()}
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"
+                          >
+                            {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                            Invia messaggio
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSendOfferId(null)}
+                            className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-900"
+                          >
+                            Chiudi
+                          </button>
+                        </div>
+                        {sendMessage && <p className="text-[11px] text-emerald-800">{sendMessage}</p>}
+                      </div>
+                    )}
+                    {offer.grants && offer.grants.length > 0 && (
+                      <div className="mt-2 text-[10px] text-gray-500 space-y-0.5">
+                        {offer.grants.slice(0, 5).map((g) => (
+                          <div key={g.id}>
+                            {(g.recipientName || g.recipientPhone)} · scade{' '}
+                            {new Date(g.endsAt).toLocaleDateString('it-IT')} · usi{' '}
+                            {g._count?.redemptions ?? 0}/{g.maxUses}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-600">
                     {offer.redemptions && offer.redemptions.length > 0 ? (

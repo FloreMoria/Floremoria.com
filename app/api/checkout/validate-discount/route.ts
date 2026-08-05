@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { normalizeOfferCode, resolveOfferDiscount } from '@/lib/discounts';
+import {
+  findOfferGrantForBuyer,
+  normalizeOfferCode,
+  resolveOfferDiscount,
+} from '@/lib/discounts';
 
 export async function POST(request: Request) {
   try {
@@ -9,6 +13,7 @@ export async function POST(request: Request) {
     const subtotalCents = Number(body?.subtotalCents ?? 0);
     const buyerEmail = String(body?.buyerEmail ?? '');
     const buyerFullName = String(body?.buyerFullName ?? '');
+    const buyerPhone = String(body?.buyerPhone ?? '');
 
     if (!code) {
       return NextResponse.json({ ok: false, error: 'Inserisci un codice sconto.' }, { status: 400 });
@@ -25,6 +30,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'Codice sconto non trovato.' }, { status: 404 });
     }
 
+    const grant = await findOfferGrantForBuyer({
+      prisma,
+      offerId: offer.id,
+      buyerPhone,
+      buyerEmail,
+    });
+
+    const grantCount = await prisma.offerGrant.count({
+      where: { offerId: offer.id },
+    });
+    if (grantCount > 0 && !grant) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Questo buono è personale: inserisca nel checkout lo stesso numero WhatsApp a cui è stato inviato.',
+        },
+        { status: 400 }
+      );
+    }
+
     const usageCount = await prisma.offerRedemption.count({
       where: { offerId: offer.id },
     });
@@ -39,13 +65,20 @@ export async function POST(request: Request) {
         })
       : 0;
 
+    const grantUsageCount = grant
+      ? await prisma.offerRedemption.count({ where: { grantId: grant.id } })
+      : 0;
+
     const resolution = resolveOfferDiscount({
       offer,
       subtotalCents,
       buyerEmail,
       buyerFullName,
+      buyerPhone,
       usageCount,
       userUsageCount,
+      grant,
+      grantUsageCount,
     });
 
     if (!resolution.ok) {
@@ -61,6 +94,8 @@ export async function POST(request: Request) {
       offerName: offer.name,
       discountCents: resolution.discountCents,
       finalTotalCents: resolution.finalTotalCents,
+      grantId: resolution.grantId ?? null,
+      grantEndsAt: grant?.endsAt?.toISOString() ?? null,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

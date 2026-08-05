@@ -484,6 +484,7 @@ export default function CheckoutPage() {
                     subtotalCents: cartTotalCents,
                     buyerEmail,
                     buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
+                    buyerPhone,
                 }),
             });
             const payload = await res.json();

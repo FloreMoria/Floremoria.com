@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Definito logo outline grigio/bianco, opacità 25%, integrazione nativa e standard cromatico per Categoria FT."
 sync_source: docs/verbali/11-03-2026.md
-synced_at: 2026-08-05T10:24:11.930Z
+synced_at: 2026-08-05T10:58:41.174Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/11-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

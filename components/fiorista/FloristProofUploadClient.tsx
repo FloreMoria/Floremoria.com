@@ -141,8 +141,8 @@ export default function FloristProofUploadClient({
     const beforePreviews = useMemo(() => readFilesAsPreviews(beforeFiles), [beforeFiles]);
     const afterPreviews = useMemo(() => readFilesAsPreviews(afterFiles), [afterFiles]);
 
-    // Solo le foto "Dopo" (posa) sono obbligatorie; "Prima" resta opzionale.
-    const canSubmit = afterFiles.length > 0 && !submitting;
+    // Completa Consegna: almeno 1 scatto Prima e 1 scatto Dopo.
+    const canSubmit = beforeFiles.length > 0 && afterFiles.length > 0 && !submitting;
 
     // Una sola richiesta GPS all'apertura (no doppio pop-up iOS / remount React).
     useEffect(() => {
@@ -240,8 +240,8 @@ export default function FloristProofUploadClient({
     const uploadFields = (
         <>
             <PhotoSlot
-                title="Prima (facoltativo)"
-                subtitle="Fino a 3 foto prima della posa"
+                title="Prima (obbligatoria)"
+                subtitle="Almeno 1 foto prima della posa (max 3)"
                 previews={beforePreviews}
                 count={beforeFiles.length}
                 onPick={() => beforeInputRef.current?.click()}
@@ -258,8 +258,8 @@ export default function FloristProofUploadClient({
             />
 
             <PhotoSlot
-                title="Dopo"
-                subtitle="Fino a 3 foto dopo la posa"
+                title="Dopo (obbligatoria)"
+                subtitle="Almeno 1 foto dopo la posa (max 3)"
                 previews={afterPreviews}
                 count={afterFiles.length}
                 onPick={() => afterInputRef.current?.click()}
@@ -301,7 +301,7 @@ export default function FloristProofUploadClient({
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] py-3 text-sm font-bold text-white transition enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    {submitting ? 'Invio in corso…' : 'Invia foto alla bacheca'}
+                    {submitting ? 'Invio in corso…' : 'Completa Consegna'}
                 </button>
             </div>
         );
@@ -328,7 +328,7 @@ export default function FloristProofUploadClient({
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0f172a] py-4 text-sm font-bold text-white transition enabled:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                    {submitting ? 'Invio in corso…' : 'Invia foto'}
+                    {submitting ? 'Invio in corso…' : 'Completa Consegna'}
                 </button>
             </div>
         </div>

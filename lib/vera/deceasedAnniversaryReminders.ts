@@ -273,13 +273,20 @@ export async function runDeceasedAnniversaryReminders(
                     deceasedFullName: profile.fullName,
                     catalogUrl: catalogProposalsUrl(),
                 });
-                const bodyParams = buildAnniversaryGdmReminderParams({
+                const { bodyParams, headerTextParams } = buildAnniversaryGdmReminderParams({
                     userFirstName: resolved.userFirstName,
                     deceasedName: resolved.deceasedFullName,
                     catalogUrl: resolved.catalogUrl,
                 });
 
                 const components: WhatsAppTemplateComponent[] = [
+                    {
+                        type: 'header',
+                        parameters: headerTextParams.map((text) => ({
+                            type: 'text' as const,
+                            text: sanitizeMetaTemplateParam(text),
+                        })),
+                    },
                     {
                         type: 'body',
                         parameters: bodyParams.map((text) => ({
@@ -297,7 +304,10 @@ export async function runDeceasedAnniversaryReminders(
                         templateSpec.metaName,
                         templateSpec.language,
                         components,
-                        { expectedBodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT }
+                        {
+                            expectedBodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT,
+                            expectedHeaderTextParamCount: 1,
+                        }
                     );
 
                     if (!send.ok) {
@@ -312,10 +322,10 @@ export async function runDeceasedAnniversaryReminders(
                         continue;
                     }
 
-                    const preview = renderVeraTemplateBodyPreview(
-                        'anniversary_gdm_reminder',
-                        bodyParams
-                    );
+                    const preview = [
+                        `Interstazione: ${headerTextParams[0] || ''}`,
+                        renderVeraTemplateBodyPreview('anniversary_gdm_reminder', bodyParams),
+                    ].join('\n\n');
                     const anniversaryMeta = {
                         eventType: ANNIVERSARY_REMINDER_EVENT,
                         anniversaryKind: kind,

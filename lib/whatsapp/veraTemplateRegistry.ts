@@ -190,11 +190,13 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         language: process.env.WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_LANGUAGE?.trim() || 'it',
         bodyParamCount: 3,
         bodySlots: ['userFirstName', 'rememberedPerson', 'catalogUrl'],
+        headerTextParamCount: 1,
+        headerSlots: ['rememberedPerson'],
         bodyCanonical:
             'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
             'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
         description:
-            '{{1}} nome utente, {{2}} nome e cognome defunto, {{3}} link catalogo/GdM',
+            'Header {{1}} defunto · body {{1}} utente, {{2}} defunto, {{3}} link catalogo/GdM',
     },
 };
 

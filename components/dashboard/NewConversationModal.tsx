@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquarePlus, Phone, Search, Send, X } from 'lucide-react';
 import { toE164 } from '@/lib/auth/phone';
-import { renderProactiveTemplateMessage } from '@/lib/whatsapp/approvedTemplates';
+import {
+    PROACTIVE_CONVERSATION_TEMPLATE_ID,
+    renderOperatorTemplatePreview,
+    type WhatsAppTemplateDefinition,
+} from '@/lib/whatsapp/approvedTemplates';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 
 type ContactType = 'UTENTE' | 'FLORIST';
@@ -38,6 +42,36 @@ async function fetchLastOrderCode(type: ContactType, id: string): Promise<string
     }
 }
 
+function seedFieldValues(
+    template: WhatsAppTemplateDefinition,
+    contact: MessagingContact,
+    orderCode: string
+): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const field of template.fields) {
+        if (field.defaultValue) {
+            values[field.key] = field.defaultValue;
+            continue;
+        }
+        if (
+            field.key === 'recipientFirstName' ||
+            field.key === 'userFirstName' ||
+            field.key === 'buyerFirstName' ||
+            field.key === 'floristFirstName'
+        ) {
+            values[field.key] =
+                contact.recipientFirstName || extractFirstName(contact.name) || '';
+            continue;
+        }
+        if (field.key === 'orderCode') {
+            values[field.key] = orderCode;
+            continue;
+        }
+        values[field.key] = '';
+    }
+    return values;
+}
+
 export default function NewConversationModal({
     open,
     onClose,
@@ -49,13 +83,18 @@ export default function NewConversationModal({
     const [searching, setSearching] = useState(false);
     const [selected, setSelected] = useState<MessagingContact | null>(null);
     const [requiresTemplate, setRequiresTemplate] = useState<boolean | null>(null);
-    const [recipientFirstName, setRecipientFirstName] = useState('');
-    const [orderCode, setOrderCode] = useState('');
-    const [staffNotes, setStaffNotes] = useState('');
+    const [templates, setTemplates] = useState<WhatsAppTemplateDefinition[]>([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState(PROACTIVE_CONVERSATION_TEMPLATE_ID);
+    const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
     const [messageText, setMessageText] = useState('');
     const [loadingOrderCode, setLoadingOrderCode] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const selectedTemplate = useMemo(
+        () => templates.find((t) => t.id === selectedTemplateId) || templates[0] || null,
+        [templates, selectedTemplateId]
+    );
 
     useEffect(() => {
         if (!open) return;
@@ -65,12 +104,31 @@ export default function NewConversationModal({
         setResults([]);
         setSelected(null);
         setRequiresTemplate(null);
-        setRecipientFirstName('');
-        setOrderCode('');
-        setStaffNotes('');
+        setFieldValues({});
         setMessageText('');
         setLoadingOrderCode(false);
         setError(null);
+        setSelectedTemplateId(PROACTIVE_CONVERSATION_TEMPLATE_ID);
+
+        void (async () => {
+            try {
+                const res = await fetch('/api/dashboard/communications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'getTemplates' }),
+                });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.templates) && data.templates.length) {
+                    setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+                    setSelectedTemplateId(
+                        (data.templates[0] as WhatsAppTemplateDefinition).id ||
+                            PROACTIVE_CONVERSATION_TEMPLATE_ID
+                    );
+                }
+            } catch {
+                // Catalogo caricato al bisogno; fallback lato server su startConversation.
+            }
+        })();
     }, [open]);
 
     useEffect(() => {
@@ -97,15 +155,29 @@ export default function NewConversationModal({
         return () => window.clearTimeout(timer);
     }, [open, query]);
 
-    const applyContactSelection = async (contact: MessagingContact) => {
+    const applyContactSelection = async (
+        contact: MessagingContact,
+        templateOverride?: WhatsAppTemplateDefinition | null
+    ) => {
         setSelected(contact);
-        setRecipientFirstName(contact.recipientFirstName || extractFirstName(contact.name));
-        setStaffNotes('');
-
         setLoadingOrderCode(true);
         const lastOrder = await fetchLastOrderCode(contact.type, contact.id);
-        setOrderCode(lastOrder ? normalizeOrderCode(lastOrder) : '');
+        const orderCode = lastOrder ? normalizeOrderCode(lastOrder) : '';
         setLoadingOrderCode(false);
+
+        const template = templateOverride || selectedTemplate;
+        if (template) {
+            setFieldValues(seedFieldValues(template, contact, orderCode));
+        }
+    };
+
+    const handleTemplateChange = (templateId: string) => {
+        setSelectedTemplateId(templateId);
+        const template = templates.find((t) => t.id === templateId);
+        if (template && selected) {
+            const orderCode = fieldValues.orderCode || '';
+            setFieldValues(seedFieldValues(template, selected, orderCode));
+        }
     };
 
     const resolveSelection = async (contact: MessagingContact | null, rawPhone?: string) => {
@@ -149,6 +221,9 @@ export default function NewConversationModal({
                 return;
             }
             setRequiresTemplate(Boolean(data.requiresTemplate));
+            if (Array.isArray(data.templates) && data.templates.length) {
+                setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+            }
         } catch {
             setError('Errore di rete durante la verifica del contatto.');
         }
@@ -158,15 +233,20 @@ export default function NewConversationModal({
         await resolveSelection(null, manualPhone.trim());
     };
 
+    const templateFieldsValid = useMemo(() => {
+        if (!selectedTemplate) return false;
+        return selectedTemplate.fields.every((field) => {
+            if (!field.required) return true;
+            return Boolean((fieldValues[field.key] || '').trim());
+        });
+    }, [selectedTemplate, fieldValues]);
+
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!selected || submitting) return;
 
         setSubmitting(true);
         setError(null);
-
-        const normalizedOrderCode = normalizeOrderCode(orderCode);
-        const normalizedFirstName = extractFirstName(recipientFirstName);
 
         try {
             const payload: Record<string, unknown> = {
@@ -177,9 +257,12 @@ export default function NewConversationModal({
             };
 
             if (requiresTemplate) {
-                payload.recipientFirstName = normalizedFirstName;
-                payload.orderCode = normalizedOrderCode;
-                payload.staffNotes = staffNotes.trim();
+                payload.templateId = selectedTemplate?.id || PROACTIVE_CONVERSATION_TEMPLATE_ID;
+                payload.templateFieldValues = fieldValues;
+                // Retrocompat campi legacy
+                payload.recipientFirstName = fieldValues.recipientFirstName || fieldValues.userFirstName;
+                payload.orderCode = fieldValues.orderCode;
+                payload.staffNotes = fieldValues.staffNotes;
             } else {
                 payload.messageText = messageText.trim();
             }
@@ -192,6 +275,9 @@ export default function NewConversationModal({
             const data = await res.json();
 
             if (!data.success) {
+                if (Array.isArray(data.templates) && data.templates.length) {
+                    setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+                }
                 setError(data.error || 'Invio non riuscito.');
                 return;
             }
@@ -206,12 +292,8 @@ export default function NewConversationModal({
     };
 
     const previewText =
-        requiresTemplate
-            ? renderProactiveTemplateMessage(
-                  recipientFirstName,
-                  orderCode,
-                  staffNotes
-              )
+        requiresTemplate && selectedTemplate
+            ? renderOperatorTemplatePreview(selectedTemplate, fieldValues)
             : '';
 
     if (!open) return null;
@@ -226,7 +308,7 @@ export default function NewConversationModal({
                             Nuova conversazione
                         </h3>
                         <p className="text-sm text-[#6F6F6F] mt-1">
-                            Messaggio proattivo WhatsApp · saluto personalizzato, ordine e note staff
+                            Messaggio proattivo WhatsApp · template Meta o testo libero in finestra 24h
                         </p>
                     </div>
                     <button
@@ -331,9 +413,7 @@ export default function NewConversationModal({
                                     onClick={() => {
                                         setSelected(null);
                                         setRequiresTemplate(null);
-                                        setRecipientFirstName('');
-                                        setOrderCode('');
-                                        setStaffNotes('');
+                                        setFieldValues({});
                                         setError(null);
                                     }}
                                     className="text-xs font-semibold text-[#B89F78] hover:underline"
@@ -350,60 +430,98 @@ export default function NewConversationModal({
                             ) : requiresTemplate ? (
                                 <div className="space-y-4">
                                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                        Il destinatario vedrà l&apos;incipit <strong>Gentile [Nome]</strong> (es.
-                                        &quot;Gentile Carlo&quot;), composto automaticamente dal nome inserito.
+                                        Fuori finestra 24h (o primo contatto): selezioni un Template Meta approvato e
+                                        compili i parametri richiesti.
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Nome di battesimo
+                                            Template Meta
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={recipientFirstName}
-                                            onChange={(e) => setRecipientFirstName(e.target.value)}
-                                            placeholder="Es. Carlo"
-                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
-                                        />
-                                        <p className="text-[11px] text-gray-400 mt-1">
-                                            Pre-compilato dal DB. In anteprima e in invio diventa &quot;Gentile Carlo&quot;.
-                                        </p>
+                                        <select
+                                            value={selectedTemplateId}
+                                            onChange={(e) => handleTemplateChange(e.target.value)}
+                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm bg-white focus:outline-none focus:border-[#C0A062]"
+                                        >
+                                            {(templates.length
+                                                ? templates
+                                                : [
+                                                      {
+                                                          id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
+                                                          label: 'Messaggio personalizzato (staff)',
+                                                      },
+                                                  ]
+                                            ).map((t) => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedTemplate?.description ? (
+                                            <p className="text-[11px] text-gray-400 mt-1">
+                                                {selectedTemplate.description}
+                                            </p>
+                                        ) : null}
                                     </div>
 
-                                    <div>
-                                        <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Codice ordine
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={orderCode}
-                                                onChange={(e) => setOrderCode(e.target.value)}
-                                                onBlur={() => setOrderCode(normalizeOrderCode(orderCode))}
-                                                placeholder="Es. FF-PN-26-004"
-                                                className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#C0A062]"
-                                            />
-                                            {loadingOrderCode && (
-                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
+                                    {selectedTemplate?.fields.map((field) => (
+                                        <div key={field.key}>
+                                            <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
+                                                {field.label}
+                                                {field.location === 'header' ? (
+                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-700 font-bold">
+                                                        Interstazione
+                                                    </span>
+                                                ) : (
+                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                        {`Body {{${field.index + 1}}}`}
+                                                    </span>
+                                                )}
+                                            </label>
+                                            {field.multiline ? (
+                                                <textarea
+                                                    value={fieldValues[field.key] || ''}
+                                                    onChange={(e) =>
+                                                        setFieldValues((prev) => ({
+                                                            ...prev,
+                                                            [field.key]: e.target.value,
+                                                        }))
+                                                    }
+                                                    rows={5}
+                                                    placeholder={field.placeholder}
+                                                    className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884] resize-y min-h-[120px]"
+                                                />
+                                            ) : (
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        value={fieldValues[field.key] || ''}
+                                                        onChange={(e) =>
+                                                            setFieldValues((prev) => ({
+                                                                ...prev,
+                                                                [field.key]: e.target.value,
+                                                            }))
+                                                        }
+                                                        onBlur={() => {
+                                                            if (field.key === 'orderCode') {
+                                                                setFieldValues((prev) => ({
+                                                                    ...prev,
+                                                                    orderCode: normalizeOrderCode(
+                                                                        prev.orderCode || ''
+                                                                    ),
+                                                                }));
+                                                            }
+                                                        }}
+                                                        placeholder={field.placeholder}
+                                                        className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
+                                                    />
+                                                    {loadingOrderCode && field.key === 'orderCode' ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
+                                                    ) : null}
+                                                </div>
                                             )}
                                         </div>
-                                        <p className="text-[11px] text-gray-400 mt-1">
-                                            Pre-compilato con l&apos;ultimo ordine del contatto, se presente. Modificabile.
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Note dello Staff
-                                        </label>
-                                        <textarea
-                                            value={staffNotes}
-                                            onChange={(e) => setStaffNotes(e.target.value)}
-                                            rows={6}
-                                            placeholder="Testo libero del messaggio personalizzato..."
-                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884] resize-y min-h-[140px]"
-                                        />
-                                    </div>
+                                    ))}
 
                                     <div>
                                         <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
@@ -413,9 +531,6 @@ export default function NewConversationModal({
                                             <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
                                                 {previewText}
                                             </div>
-                                            <p className="text-[10px] text-[#667781] mt-2 text-right">
-                                                Testo esatto che il destinatario riceverà sul telefono
-                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -456,11 +571,7 @@ export default function NewConversationModal({
                                 type="submit"
                                 disabled={
                                     submitting ||
-                                    (requiresTemplate
-                                        ? !extractFirstName(recipientFirstName) ||
-                                          !normalizeOrderCode(orderCode) ||
-                                          !staffNotes.trim()
-                                        : !messageText.trim())
+                                    (requiresTemplate ? !templateFieldsValid : !messageText.trim())
                                 }
                                 className="px-5 py-2.5 rounded-xl bg-[#00A884] text-white text-sm font-semibold hover:bg-[#008f6f] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
                             >

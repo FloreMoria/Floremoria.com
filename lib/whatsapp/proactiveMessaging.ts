@@ -7,11 +7,14 @@ import {
     type ChatSession,
 } from '@/lib/chatStore';
 import {
+    buildOperatorTemplateComponents,
     buildProactiveTemplateComponents,
+    getApprovedWhatsAppTemplate,
     getProactiveWhatsAppTemplate,
     listApprovedWhatsAppTemplates,
     PROACTIVE_CONVERSATION_TEMPLATE_ID,
     ProactiveTemplateValidationError,
+    renderOperatorTemplatePreview,
     renderProactiveTemplateMessage,
     validateProactiveTemplateBodyValues,
     type WhatsAppTemplateDefinition,
@@ -29,7 +32,7 @@ export interface StartConversationInput {
     phoneRaw: string;
     displayName?: string;
     userType?: 'UTENTE' | 'FLORIST' | 'UNKNOWN';
-    /** {{1}} Nome di battesimo destinatario */
+    /** {{1}} Nome di battesimo destinatario (legacy proactive) */
     recipientFirstName?: string;
     /** {{2}} Codice ordine (es. FF-PN-26-004) */
     orderCode?: string;
@@ -37,6 +40,8 @@ export interface StartConversationInput {
     staffNotes?: string;
     templateId?: string;
     templateParams?: string[];
+    /** Valori dinamici per i campi del template selezionato. */
+    templateFieldValues?: Record<string, string>;
     messageText?: string;
 }
 
@@ -82,6 +87,28 @@ export async function evaluateConversationOutbound(
     };
 }
 
+function resolveFieldValues(input: StartConversationInput): Record<string, string> {
+    const fromPayload =
+        input.templateFieldValues && typeof input.templateFieldValues === 'object'
+            ? Object.fromEntries(
+                  Object.entries(input.templateFieldValues).map(([k, v]) => [k, String(v ?? '')])
+              )
+            : {};
+
+    // Retrocompat: campi legacy del template personalizzato staff.
+    if (input.recipientFirstName && !fromPayload.recipientFirstName) {
+        fromPayload.recipientFirstName = input.recipientFirstName;
+    }
+    if (input.orderCode && !fromPayload.orderCode) {
+        fromPayload.orderCode = input.orderCode;
+    }
+    if (input.staffNotes && !fromPayload.staffNotes) {
+        fromPayload.staffNotes = input.staffNotes;
+    }
+
+    return fromPayload;
+}
+
 export async function startProactiveConversation(
     input: StartConversationInput
 ): Promise<StartConversationResult> {
@@ -96,13 +123,39 @@ export async function startProactiveConversation(
     const { session, requiresTemplate } = await evaluateConversationOutbound(sessionPhone);
 
     if (requiresTemplate) {
-        let templateValues;
+        const templateId = input.templateId?.trim() || PROACTIVE_CONVERSATION_TEMPLATE_ID;
+        const template = getApprovedWhatsAppTemplate(templateId);
+        if (!template) {
+            return {
+                ok: false,
+                requiresTemplate: true,
+                templates: listApprovedWhatsAppTemplates(),
+                session,
+                error: 'Template Meta non riconosciuto.',
+            };
+        }
+
+        const fieldValues = resolveFieldValues(input);
+        let components;
+        let logBody: string;
+
         try {
-            templateValues = validateProactiveTemplateBodyValues({
-                recipientFirstName: input.recipientFirstName,
-                orderCode: input.orderCode,
-                staffNotes: input.staffNotes,
-            });
+            if (template.id === PROACTIVE_CONVERSATION_TEMPLATE_ID) {
+                const templateValues = validateProactiveTemplateBodyValues({
+                    recipientFirstName: fieldValues.recipientFirstName ?? input.recipientFirstName,
+                    orderCode: fieldValues.orderCode ?? input.orderCode,
+                    staffNotes: fieldValues.staffNotes ?? input.staffNotes,
+                });
+                components = buildProactiveTemplateComponents(templateValues);
+                logBody = renderProactiveTemplateMessage(
+                    templateValues.recipientFirstName,
+                    templateValues.orderCode,
+                    templateValues.staffNotes
+                );
+            } else {
+                components = buildOperatorTemplateComponents(template, fieldValues);
+                logBody = renderOperatorTemplatePreview(template, fieldValues);
+            }
         } catch (e) {
             const message =
                 e instanceof ProactiveTemplateValidationError
@@ -117,33 +170,29 @@ export async function startProactiveConversation(
             };
         }
 
-        const template = getProactiveWhatsAppTemplate();
-        const components = buildProactiveTemplateComponents(templateValues);
-
-        const send = await sendWhatsAppTemplateMessage(sessionPhone, template.metaName, template.language, components, {
-            expectedBodyParamCount: 2,
-            expectedHeaderTextParamCount: 1,
-        });
+        const send = await sendWhatsAppTemplateMessage(
+            sessionPhone,
+            template.metaName,
+            template.language,
+            components,
+            {
+                expectedBodyParamCount: template.bodyParamCount,
+                expectedHeaderTextParamCount:
+                    template.headerTextParamCount > 0 ? template.headerTextParamCount : undefined,
+            }
+        );
 
         if (!send.ok) {
             return { ok: false, session, error: send.error ?? 'Invio template WhatsApp fallito.', send };
         }
-
-        const logBody = renderProactiveTemplateMessage(
-            templateValues.recipientFirstName,
-            templateValues.orderCode,
-            templateValues.staffNotes
-        );
 
         await ensureStaffSession(sessionPhone, input.displayName, input.userType ?? 'UNKNOWN');
         await setSessionStatus(sessionPhone, 'HUMAN_INTERVENTION');
         const logged = await addMessage(sessionPhone, 'OUTBOUND', logBody, undefined, {
             source: 'operator',
             outboundMode: 'template',
-            templateId: PROACTIVE_CONVERSATION_TEMPLATE_ID,
+            templateId: template.id,
             templateName: template.metaName,
-            recipientFirstName: templateValues.recipientFirstName,
-            orderCode: templateValues.orderCode,
             ...buildOutboundWamidMetadata(send.messageId),
         });
 
@@ -174,4 +223,13 @@ export async function startProactiveConversation(
     });
 
     return { ok: true, session: logged, mode: 'freetext', send };
+}
+
+/** Espone il catalogo template per la dashboard (senza side-effect). */
+export function listOperatorWhatsAppTemplates(): WhatsAppTemplateDefinition[] {
+    return listApprovedWhatsAppTemplates();
+}
+
+export function getDefaultOperatorTemplate(): WhatsAppTemplateDefinition {
+    return getProactiveWhatsAppTemplate();
 }

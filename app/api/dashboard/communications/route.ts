@@ -72,6 +72,7 @@ export async function POST(req: Request) {
             userType,
             templateId,
             templateParams,
+            templateFieldValues,
             recipientFirstName,
             orderCode,
             staffNotes,
@@ -90,6 +91,9 @@ export async function POST(req: Request) {
                     language: template.language,
                     parameterLabels: template.parameterLabels,
                     bodyTemplate: template.bodyTemplate,
+                    headerTextParamCount: template.headerTextParamCount,
+                    bodyParamCount: template.bodyParamCount,
+                    fields: template.fields,
                 },
                 templates: listApprovedWhatsAppTemplates().map((item) => ({
                     id: item.id,
@@ -99,6 +103,9 @@ export async function POST(req: Request) {
                     language: item.language,
                     parameterLabels: item.parameterLabels,
                     bodyTemplate: item.bodyTemplate,
+                    headerTextParamCount: item.headerTextParamCount,
+                    bodyParamCount: item.bodyParamCount,
+                    fields: item.fields,
                 })),
             });
         }
@@ -127,6 +134,12 @@ export async function POST(req: Request) {
                 orderCode: typeof orderCode === 'string' ? orderCode : undefined,
                 staffNotes: typeof staffNotes === 'string' ? staffNotes : undefined,
                 templateParams: Array.isArray(templateParams) ? templateParams.map(String) : undefined,
+                templateFieldValues:
+                    templateFieldValues &&
+                    typeof templateFieldValues === 'object' &&
+                    !Array.isArray(templateFieldValues)
+                        ? (templateFieldValues as Record<string, string>)
+                        : undefined,
                 messageText,
             });
 

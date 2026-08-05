@@ -4,15 +4,35 @@ import {
     normalizeOrderCode,
 } from '@/lib/whatsapp/proactiveTemplateParams';
 
+export interface WhatsAppTemplateField {
+    /** Chiave stabile usata nel payload dashboard. */
+    key: string;
+    label: string;
+    placeholder?: string;
+    required?: boolean;
+    /** Posizione Meta: header o body. */
+    location: 'header' | 'body';
+    /** Indice 0-based nello slot Meta di quella sezione ({{1}} = 0). */
+    index: number;
+    /** Suggerimento UI (textarea vs input). */
+    multiline?: boolean;
+    /** Valore di default opzionale (es. link catalogo). */
+    defaultValue?: string;
+}
+
 export interface WhatsAppTemplateDefinition {
     id: string;
     metaName: string;
     label: string;
     description: string;
     language: string;
+    /** Etichette legacy (ordine header+body) per retrocompat UI. */
     parameterLabels: string[];
-    /** Testo fisso approvato su Meta con {{1}} nome, {{2}} ordine, {{3}} note staff. */
+    /** Testo fisso approvato su Meta con {{1}}… per anteprima body. */
     bodyTemplate: string;
+    headerTextParamCount: number;
+    bodyParamCount: number;
+    fields: WhatsAppTemplateField[];
 }
 
 export const PROACTIVE_CONVERSATION_TEMPLATE_ID = 'messaggio_personalizzato_fiorista';
@@ -24,6 +44,7 @@ export const PROACTIVE_CONVERSATION_META_TEMPLATE_NAME = 'floremoria_messaggio_p
 export const ANNIVERSARY_GDM_TEMPLATE_ID = 'promemoria_anniversario_gdm';
 export const ANNIVERSARY_GDM_META_TEMPLATE_NAME = 'promemoria_anniversario_gdm';
 export const ANNIVERSARY_GDM_BODY_PARAM_COUNT = 3;
+export const ANNIVERSARY_GDM_HEADER_PARAM_COUNT = 1;
 
 /** Numero tassativo di variabili body sul template Meta approvato. */
 export const PROACTIVE_TEMPLATE_BODY_PARAM_COUNT = 2;
@@ -65,12 +86,41 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
     return {
         id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
         metaName: envTemplateName('WHATSAPP_TEMPLATE_PROACTIVE', PROACTIVE_CONVERSATION_META_TEMPLATE_NAME),
-        label: 'Messaggio personalizzato fiorista',
+        label: 'Messaggio personalizzato (staff)',
         description:
             'Template Meta: header ordine, body {{1}} nome, {{2}} note staff.',
         language: process.env.WHATSAPP_TEMPLATE_PROACTIVE_LANGUAGE?.trim() || 'it',
         parameterLabels: ['Codice ordine (header)', 'Nome destinatario', 'Note dello Staff'],
         bodyTemplate: resolveProactiveBodyTemplate(),
+        headerTextParamCount: PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT,
+        bodyParamCount: PROACTIVE_TEMPLATE_BODY_PARAM_COUNT,
+        fields: [
+            {
+                key: 'orderCode',
+                label: 'Codice ordine (interstazione)',
+                placeholder: 'Es. FF-PN-26-004',
+                required: true,
+                location: 'header',
+                index: 0,
+            },
+            {
+                key: 'recipientFirstName',
+                label: 'Nome destinatario',
+                placeholder: 'Es. Carlo',
+                required: true,
+                location: 'body',
+                index: 0,
+            },
+            {
+                key: 'staffNotes',
+                label: 'Note dello Staff',
+                placeholder: 'Testo libero del messaggio…',
+                required: true,
+                location: 'body',
+                index: 1,
+                multiline: true,
+            },
+        ],
     };
 }
 
@@ -83,23 +133,247 @@ export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition 
         ),
         label: 'Promemoria anniversario GdM',
         description:
-            'Template Meta: {{1}} nome utente, {{2}} defunto, {{3}} link catalogo/GdM.',
+            'Header {{1}} defunto · body {{1}} utente, {{2}} defunto, {{3}} link catalogo.',
         language: process.env.WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_LANGUAGE?.trim() || 'it',
-        parameterLabels: ['Nome utente', 'Nome e cognome defunto', 'Link catalogo/GdM'],
+        parameterLabels: [
+            'Nome defunto (interstazione)',
+            'Nome utente',
+            'Nome defunto',
+            'Link catalogo/GdM',
+        ],
         bodyTemplate:
             'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
             'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
+        headerTextParamCount: ANNIVERSARY_GDM_HEADER_PARAM_COUNT,
+        bodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT,
+        fields: [
+            {
+                key: 'headerDeceasedName',
+                label: 'Nome del Defunto (interstazione)',
+                placeholder: 'Es. Maria Pullano',
+                required: true,
+                location: 'header',
+                index: 0,
+            },
+            {
+                key: 'userFirstName',
+                label: 'Nome dell\'Utente',
+                placeholder: 'Es. Valentina',
+                required: true,
+                location: 'body',
+                index: 0,
+            },
+            {
+                key: 'deceasedName',
+                label: 'Nome del Defunto',
+                placeholder: 'Es. Maria Pullano',
+                required: true,
+                location: 'body',
+                index: 1,
+            },
+            {
+                key: 'catalogUrl',
+                label: 'Link catalogo / GdM',
+                placeholder: 'https://www.floremoria.com/fiori-sulle-tombe',
+                required: true,
+                location: 'body',
+                index: 2,
+                defaultValue: 'https://www.floremoria.com/fiori-sulle-tombe',
+            },
+        ],
+    };
+}
+
+export function getCustomerWaitingUpdateWhatsAppTemplate(): WhatsAppTemplateDefinition {
+    return {
+        id: 'customer_waiting_update',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_CUSTOMER_WAITING_UPDATE',
+            'floremoria_aggiornamento_attesa'
+        ),
+        label: 'Notifica utente (aggiornamento attesa)',
+        description: 'Template Meta: {{1}} nome utente, {{2}} defunto.',
+        language: 'it',
+        parameterLabels: ['Nome utente', 'Nome defunto'],
+        bodyTemplate:
+            'Gentile {{1}}, desideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}.',
+        headerTextParamCount: 0,
+        bodyParamCount: 2,
+        fields: [
+            {
+                key: 'buyerFirstName',
+                label: 'Nome dell\'Utente',
+                placeholder: 'Es. Luciano',
+                required: true,
+                location: 'body',
+                index: 0,
+            },
+            {
+                key: 'deceasedName',
+                label: 'Nome del Defunto',
+                placeholder: 'Es. Salvatore Tusa',
+                required: true,
+                location: 'body',
+                index: 1,
+            },
+        ],
+    };
+}
+
+export function getFloristReminderWhatsAppTemplate(): WhatsAppTemplateDefinition {
+    return {
+        id: 'florist_reminder',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_REMINDER',
+            'floremoria_sollecito_fiorista'
+        ),
+        label: 'Sollecito fiorista',
+        description: 'Template Meta: {{1}} fiorista, {{2}} codice ordine, {{3}} defunto.',
+        language: 'it',
+        parameterLabels: ['Nome fiorista', 'Codice ordine', 'Nome defunto'],
+        bodyTemplate:
+            "Gentile {{1}}, Le ricordiamo di completare l'ordine {{2}} per il ricordo di {{3}}.",
+        headerTextParamCount: 0,
+        bodyParamCount: 3,
+        fields: [
+            {
+                key: 'floristFirstName',
+                label: 'Nome fiorista',
+                placeholder: 'Es. Tindaro',
+                required: true,
+                location: 'body',
+                index: 0,
+            },
+            {
+                key: 'orderCode',
+                label: 'Codice ordine',
+                placeholder: 'Es. FT-ME-26-002',
+                required: true,
+                location: 'body',
+                index: 1,
+            },
+            {
+                key: 'deceasedName',
+                label: 'Nome del Defunto',
+                placeholder: 'Es. Tropea Teresa',
+                required: true,
+                location: 'body',
+                index: 2,
+            },
+        ],
     };
 }
 
 export function listApprovedWhatsAppTemplates(): WhatsAppTemplateDefinition[] {
-    return [getProactiveWhatsAppTemplate(), getAnniversaryGdmWhatsAppTemplate()];
+    return [
+        getProactiveWhatsAppTemplate(),
+        getAnniversaryGdmWhatsAppTemplate(),
+        getCustomerWaitingUpdateWhatsAppTemplate(),
+        getFloristReminderWhatsAppTemplate(),
+    ];
 }
 
 export function getApprovedWhatsAppTemplate(templateId?: string): WhatsAppTemplateDefinition | null {
     const templates = listApprovedWhatsAppTemplates();
     if (!templateId) return templates[0] ?? null;
     return templates.find((t) => t.id === templateId) ?? null;
+}
+
+/**
+ * Costruisce i componenti Meta da valori campo UI (header + body).
+ */
+export function buildOperatorTemplateComponents(
+    template: WhatsAppTemplateDefinition,
+    fieldValues: Record<string, string>
+): Array<{
+    type: 'header' | 'body';
+    parameters: Array<{ type: 'text'; text: string }>;
+}> {
+    const headerFields = template.fields
+        .filter((f) => f.location === 'header')
+        .sort((a, b) => a.index - b.index);
+    const bodyFields = template.fields
+        .filter((f) => f.location === 'body')
+        .sort((a, b) => a.index - b.index);
+
+    for (const field of template.fields) {
+        if (!field.required) continue;
+        const value = sanitizeMetaTemplateParam(fieldValues[field.key] ?? '');
+        if (!value) {
+            throw new ProactiveTemplateValidationError(`Compili il campo "${field.label}".`);
+        }
+    }
+
+    const components: Array<{
+        type: 'header' | 'body';
+        parameters: Array<{ type: 'text'; text: string }>;
+    }> = [];
+
+    if (headerFields.length > 0) {
+        components.push({
+            type: 'header',
+            parameters: headerFields.map((field) => ({
+                type: 'text' as const,
+                text: sanitizeMetaTemplateParam(fieldValues[field.key] ?? ''),
+            })),
+        });
+    }
+
+    components.push({
+        type: 'body',
+        parameters: bodyFields.map((field) => {
+            let raw = fieldValues[field.key] ?? '';
+            if (field.key === 'recipientFirstName' || field.key === 'userFirstName' || field.key === 'buyerFirstName' || field.key === 'floristFirstName') {
+                raw = extractFirstName(raw) || raw;
+            }
+            if (field.key === 'orderCode') {
+                raw = normalizeOrderCode(raw);
+            }
+            return {
+                type: 'text' as const,
+                text: sanitizeMetaTemplateParam(raw),
+            };
+        }),
+    });
+
+    if (components.find((c) => c.type === 'body')!.parameters.length !== template.bodyParamCount) {
+        throw new ProactiveTemplateValidationError(
+            `Template richiede ${template.bodyParamCount} parametri body.`
+        );
+    }
+
+    return components;
+}
+
+/** Anteprima testo da campi dinamici (header + body). */
+export function renderOperatorTemplatePreview(
+    template: WhatsAppTemplateDefinition,
+    fieldValues: Record<string, string>
+): string {
+    const header = template.fields
+        .filter((f) => f.location === 'header')
+        .sort((a, b) => a.index - b.index)
+        .map((f) => sanitizeMetaTemplateParam(fieldValues[f.key] ?? '') || '…')
+        .join(' · ');
+
+    let body = template.bodyTemplate;
+    const bodyFields = template.fields
+        .filter((f) => f.location === 'body')
+        .sort((a, b) => a.index - b.index);
+    bodyFields.forEach((field, i) => {
+        let raw = fieldValues[field.key] ?? '';
+        if (
+            field.key === 'recipientFirstName' ||
+            field.key === 'userFirstName' ||
+            field.key === 'buyerFirstName' ||
+            field.key === 'floristFirstName'
+        ) {
+            raw = extractFirstName(raw) || raw;
+        }
+        body = body.replace(new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'), sanitizeMetaTemplateParam(raw) || '…');
+    });
+
+    return header ? `Interstazione: ${header}\n\n${body}` : body;
 }
 
 export class ProactiveTemplateValidationError extends Error {

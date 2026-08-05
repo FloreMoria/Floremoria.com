@@ -30,9 +30,12 @@ export async function submitFloristDeliveryProof(
 ): Promise<SubmitFloristProofResult> {
     const { orderId, beforeFiles, afterFiles, gpsLatitude, gpsLongitude } = input;
 
-    // "Dopo" obbligatoria (posa); "Prima" opzionale — i fioristi spesso caricano solo le foto finali.
-    if (!afterFiles.length) {
-        return { ok: false, error: 'Serve almeno 1 foto della posa (Dopo).' };
+    // "Prima" e "Dopo" obbligatori: almeno 1 scatto per fase.
+    if (!beforeFiles.length || !afterFiles.length) {
+        return {
+            ok: false,
+            error: 'Servono almeno 1 foto "Prima" e 1 foto "Dopo" per completare la consegna.',
+        };
     }
     if (beforeFiles.length > MAX_PHOTOS_PER_SLOT || afterFiles.length > MAX_PHOTOS_PER_SLOT) {
         return { ok: false, error: `Massimo ${MAX_PHOTOS_PER_SLOT} foto per slot.` };

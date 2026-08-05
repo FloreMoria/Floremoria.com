@@ -17,9 +17,12 @@ export type BachecaOrder = Order & {
 
 export type DeceasedOrderGroup = {
     key: string;
+    deceasedProfileId: string | null;
     deceasedName: string;
     cemeteryLabel: string;
     photoUrl: string | null;
+    birthDate: string | null;
+    deathDate: string | null;
     orders: BachecaOrder[];
 };
 
@@ -27,25 +30,49 @@ function orderSortTime(order: BachecaOrder): number {
     return resolveCustomerFacingDeliveryDate(order)?.getTime() ?? order.createdAt.getTime();
 }
 
+function toUtcDateInput(value: Date | null | undefined): string | null {
+    if (!value) return null;
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(value.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 export function groupOrdersByDeceased(orders: BachecaOrder[]): DeceasedOrderGroup[] {
     const map = new Map<string, DeceasedOrderGroup>();
 
     for (const order of orders) {
-        const key = order.deceasedProfileId ?? `name:${order.deceasedName.trim().toLowerCase()}`;
+        const deceasedProfileId = order.deceasedProfileId ?? order.deceasedProfile?.id ?? null;
+        const key = deceasedProfileId ?? `name:${order.deceasedName.trim().toLowerCase()}`;
         const deceasedName = order.deceasedProfile?.fullName ?? order.deceasedName;
         const cemeteryLabel = order.deceasedProfile?.cemeteryName
             ? `${order.deceasedProfile.cemeteryName}, ${order.deceasedProfile.cemeteryCity}`
             : `${order.cemeteryName}, ${order.cemeteryCity}`;
+        const birthDate =
+            toUtcDateInput(order.deceasedProfile?.birthDate) ??
+            toUtcDateInput(order.deceasedBirthDate);
+        const deathDate =
+            toUtcDateInput(order.deceasedProfile?.deathDate) ??
+            toUtcDateInput(order.deceasedDeathDate);
 
         const group = map.get(key);
         if (group) {
             group.orders.push(order);
+            // Preferisci date già sul profilo; altrimenti completa da ordini successivi.
+            if (!group.birthDate && birthDate) group.birthDate = birthDate;
+            if (!group.deathDate && deathDate) group.deathDate = deathDate;
+            if (!group.deceasedProfileId && deceasedProfileId) {
+                group.deceasedProfileId = deceasedProfileId;
+            }
         } else {
             map.set(key, {
                 key,
+                deceasedProfileId,
                 deceasedName,
                 cemeteryLabel,
                 photoUrl: order.deceasedProfile?.photoUrl ?? null,
+                birthDate,
+                deathDate,
                 orders: [order],
             });
         }

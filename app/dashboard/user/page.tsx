@@ -13,7 +13,7 @@ import {
     UserBachecaOrderCard,
 } from '@/components/dashboard/UserBachecaOrderCard';
 import UserPersonalDataForm from '@/components/dashboard/UserPersonalDataForm';
-import { toDateInputValue } from '@/lib/deceased/deceasedProfileFormUtils';
+import UserDeceasedDatesForm from '@/components/dashboard/UserDeceasedDatesForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -170,18 +170,6 @@ export default async function UserDashboardPage({
                             : [];
                         const initialPlannedDeliveryDates =
                             plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased;
-                        const initialBirthDate =
-                            toDateInputValue(
-                                latestOrder?.deceasedProfile?.birthDate?.toISOString() ||
-                                    latestOrder?.deceasedBirthDate?.toISOString() ||
-                                    ''
-                            );
-                        const initialDeathDate =
-                            toDateInputValue(
-                                latestOrder?.deceasedProfile?.deathDate?.toISOString() ||
-                                    latestOrder?.deceasedDeathDate?.toISOString() ||
-                                    ''
-                            );
 
                         return (
                             <UserPersonalDataForm
@@ -189,8 +177,6 @@ export default async function UserDashboardPage({
                                 initialEmail={user.email}
                                 initialPhone={user.phone ?? ''}
                                 initialCity={user.city ?? ''}
-                                initialBirthDate={initialBirthDate}
-                                initialDeathDate={initialDeathDate}
                                 initialDeliveryDate={initialDeliveryDate}
                                 initialPlannedDeliveryDates={initialPlannedDeliveryDates}
                                 userType={user.userType}
@@ -259,6 +245,14 @@ export default async function UserDashboardPage({
                                         {group.orders.length === 1 ? 'omaggio' : 'omaggi'}
                                     </span>
                                 </div>
+                                {group.deceasedProfileId && !showFinancialDetails ? (
+                                    <UserDeceasedDatesForm
+                                        deceasedProfileId={group.deceasedProfileId}
+                                        deceasedName={group.deceasedName}
+                                        initialBirthDate={group.birthDate}
+                                        initialDeathDate={group.deathDate}
+                                    />
+                                ) : null}
                                 <div className="space-y-5">
                                     {group.orders.map((order) => (
                                         <UserBachecaOrderCard

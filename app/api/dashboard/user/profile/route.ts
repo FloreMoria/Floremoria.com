@@ -101,9 +101,7 @@ async function resolveLinkedDeceasedIds(userId: string, email: string): Promise<
     ];
 }
 
-async function resolveCommemorativeDatesForUser(userId: string, email: string): Promise<{
-    birthDate: string;
-    deathDate: string;
+async function resolveProfileDatesForUser(userId: string, email: string): Promise<{
     deliveryDate: string;
     plannedDeliveryDates: string[];
 }> {
@@ -117,11 +115,7 @@ async function resolveCommemorativeDatesForUser(userId: string, email: string): 
         deceasedIds.length > 0
             ? await prisma.deceasedProfile.findFirst({
                   where: { id: { in: deceasedIds } },
-                  select: {
-                      birthDate: true,
-                      deathDate: true,
-                      plannedDeliveryDates: true,
-                  },
+                  select: { plannedDeliveryDates: true },
                   orderBy: { updatedAt: 'desc' },
               })
             : null;
@@ -136,9 +130,7 @@ async function resolveCommemorativeDatesForUser(userId: string, email: string): 
         orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
         select: {
             deliveryDate: true,
-            deceasedBirthDate: true,
-            deceasedDeathDate: true,
-            deceasedProfile: { select: { plannedDeliveryDates: true, birthDate: true, deathDate: true } },
+            deceasedProfile: { select: { plannedDeliveryDates: true } },
         },
     });
 
@@ -147,26 +139,13 @@ async function resolveCommemorativeDatesForUser(userId: string, email: string): 
         primaryDeceased?.plannedDeliveryDates ?? latestOrder?.deceasedProfile?.plannedDeliveryDates
     );
 
-    const birth =
-        primaryDeceased?.birthDate ??
-        latestOrder?.deceasedProfile?.birthDate ??
-        latestOrder?.deceasedBirthDate ??
-        null;
-    const death =
-        primaryDeceased?.deathDate ??
-        latestOrder?.deceasedProfile?.deathDate ??
-        latestOrder?.deceasedDeathDate ??
-        null;
-
     return {
-        birthDate: toDateInputValue(birth?.toISOString()),
-        deathDate: toDateInputValue(death?.toISOString()),
         deliveryDate: toDateInputValue(latestOrder?.deliveryDate?.toISOString()),
         plannedDeliveryDates: plannedFromUser.length > 0 ? plannedFromUser : plannedFromDeceased,
     };
 }
 
-/** GET — dati personali bacheca cliente inclusi i campi data. */
+/** GET — dati personali bacheca cliente (date commemorative vivono sul Defunto). */
 export async function GET(request: Request) {
     const user = await resolveBachecaUser(request);
     if (!user) {
@@ -176,7 +155,7 @@ export async function GET(request: Request) {
         );
     }
 
-    const dates = await resolveCommemorativeDatesForUser(user.id, user.email);
+    const dates = await resolveProfileDatesForUser(user.id, user.email);
 
     const response = NextResponse.json({
         success: true,
@@ -186,10 +165,6 @@ export async function GET(request: Request) {
             phone: user.phone ?? '',
             city: user.city ?? '',
             userType: user.userType,
-            birthDate: dates.birthDate,
-            deathDate: dates.deathDate,
-            deceasedBirthDate: dates.birthDate,
-            deceasedDeathDate: dates.deathDate,
             deliveryDate: dates.deliveryDate,
             plannedDeliveryDates: dates.plannedDeliveryDates,
         },
@@ -226,10 +201,10 @@ export async function PUT(request: Request) {
         }
 
         const {
-            birthDate: birthAlias,
-            deathDate: deathAlias,
-            deceasedBirthDate,
-            deceasedDeathDate,
+            birthDate: _ignoredBirth,
+            deathDate: _ignoredDeath,
+            deceasedBirthDate: _ignoredDeceasedBirth,
+            deceasedDeathDate: _ignoredDeceasedDeath,
             deliveryDate,
             plannedDeliveryDates: plannedRaw,
             phone,
@@ -237,6 +212,7 @@ export async function PUT(request: Request) {
             ...profileBody
         } = body;
 
+        // Date commemorative: non più qui — PATCH /api/dashboard/user/deceased/[id]
         const profileDataToSave: Record<string, unknown> = { ...profileBody };
         if (phone !== undefined) {
             profileDataToSave.phone = phone ? String(phone).trim() : null;
@@ -250,46 +226,6 @@ export async function PUT(request: Request) {
             body: profileDataToSave,
             allowEmailChange: true,
         });
-
-        // Date commemorative: alias birthDate/deathDate oppure deceasedBirthDate/deceasedDeathDate
-        const birthRaw = birthAlias !== undefined ? birthAlias : deceasedBirthDate;
-        const deathRaw = deathAlias !== undefined ? deathAlias : deceasedDeathDate;
-        const birthDate = parseCommemorativeDate(
-            birthRaw === undefined ? undefined : birthRaw == null ? null : String(birthRaw)
-        );
-        const deathDate = parseCommemorativeDate(
-            deathRaw === undefined ? undefined : deathRaw == null ? null : String(deathRaw)
-        );
-
-        if (birthDate !== undefined || deathDate !== undefined) {
-            const orderUpdateData: {
-                deceasedBirthDate?: Date | null;
-                deceasedDeathDate?: Date | null;
-            } = {};
-            if (birthDate !== undefined) orderUpdateData.deceasedBirthDate = birthDate;
-            if (deathDate !== undefined) orderUpdateData.deceasedDeathDate = deathDate;
-
-            await prisma.order.updateMany({
-                where: {
-                    OR: [
-                        { userId: updated.id },
-                        { buyerEmail: { equals: updated.email, mode: 'insensitive' } },
-                    ],
-                },
-                data: orderUpdateData,
-            });
-
-            const deceasedIds = await resolveLinkedDeceasedIds(updated.id, updated.email);
-            if (deceasedIds.length > 0) {
-                const profileDatePatch: { birthDate?: Date | null; deathDate?: Date | null } = {};
-                if (birthDate !== undefined) profileDatePatch.birthDate = birthDate;
-                if (deathDate !== undefined) profileDatePatch.deathDate = deathDate;
-                await prisma.deceasedProfile.updateMany({
-                    where: { id: { in: deceasedIds } },
-                    data: profileDatePatch,
-                });
-            }
-        }
 
         // Retrocompatibilità: singola deliveryDate sugli ordini aperti
         if (deliveryDate !== undefined && plannedRaw === undefined) {
@@ -347,7 +283,7 @@ export async function PUT(request: Request) {
             }
         }
 
-        const dates = await resolveCommemorativeDatesForUser(updated.id, updated.email);
+        const dates = await resolveProfileDatesForUser(updated.id, updated.email);
 
         const response = NextResponse.json({
             success: true,
@@ -361,10 +297,6 @@ export async function PUT(request: Request) {
                 phone: updated.phone ?? '',
                 city: updated.city ?? '',
                 userType: updated.userType,
-                birthDate: dates.birthDate,
-                deathDate: dates.deathDate,
-                deceasedBirthDate: dates.birthDate,
-                deceasedDeathDate: dates.deathDate,
                 deliveryDate: dates.deliveryDate,
                 plannedDeliveryDates: dates.plannedDeliveryDates.length
                     ? dates.plannedDeliveryDates

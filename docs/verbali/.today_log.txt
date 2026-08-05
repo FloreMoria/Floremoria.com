@@ -34,3 +34,5 @@
 [2026-08-04 17:10] feat(defunti+vera): editing birthDate/deathDate in Admin drawer+API; cron ricorrenze -3gg (nascita/morte) via vera-order-reminders, skip ATTESA/PENDING, dedup anno, WhatsApp empatico + link catalogo.
 
 [2026-08-04 17:20] fix(giardino+defunti): ripristino birthDate/deathDate su UserPersonalDataForm + API profile; colonne DeceasedProfile.birth_date/death_date (Neon push + backfill); admin drawer editabile; job ricorrenze -3gg legge profilo.
+
+[2026-08-05 12:50] refactor(giardino): date nascita/morte spostate dai dati utente alla scheda Defunto (UserDeceasedDatesForm + PATCH /api/dashboard/user/deceased/[id] su DeceasedProfile); profilo personale senza date commemorative; job ricorrenze già legge DeceasedProfile.

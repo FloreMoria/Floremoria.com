@@ -171,6 +171,29 @@ export function buildProactiveStaffParams(input: {
     };
 }
 
+/** Template Meta promemoria_anniversario_gdm: {{1}} utente, {{2}} defunto, {{3}} link catalogo. */
+export function buildAnniversaryGdmReminderParams(input: {
+    userFirstName?: string | null;
+    deceasedName?: string | null;
+    catalogUrl?: string | null;
+}): string[] {
+    const params = buildVeraTemplateBodyParams('anniversary_gdm_reminder', {
+        userFirstName: extractFirstName(input.userFirstName || 'Cliente') || 'Cliente',
+        rememberedPerson: requireText(
+            input.deceasedName || 'il Suo caro',
+            'rememberedPerson',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
+        catalogUrl: requireText(
+            input.catalogUrl || 'https://www.floremoria.com/fiori-sulle-tombe',
+            'catalogUrl',
+            META_TEMPLATE_LIMITS.url
+        ),
+    });
+    logBuiltTemplateParams('anniversary_gdm_reminder', params);
+    return params;
+}
+
 export function describeTemplateParamMapping(spec: VeraTemplateSpec): string {
     const header =
         spec.headerTextParamCount && spec.headerTextParamCount > 0

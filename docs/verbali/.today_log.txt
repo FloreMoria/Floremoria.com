@@ -40,3 +40,4 @@
 [2026-08-05 13:05] feat(florist): mini-app multi-foto WhatsApp all’Utente; ordine → COMPLETED automatico; ringraziamento+promemoria fattura al fiorista (Punto E/F).
 
 [2026-08-05 17:24] fix/florist: Ripristino multi-foto mini-app → Order/Defunto/GdM + WhatsApp tutte le foto/MagicLink + thanks fattura fiorista (sendWhatsAppMessage).
+[2026-08-05 17:43] feat/whatsapp: Template Meta promemoria_anniversario_gdm + cron ricorrenze a -4 giorni.

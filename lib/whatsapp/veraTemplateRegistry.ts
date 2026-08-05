@@ -17,7 +17,8 @@ export type VeraTemplateId =
     | 'customer_waiting_update'
     | 'florist_reminder'
     | 'florist_tomb_not_found'
-    | 'customer_cemetery_closed';
+    | 'customer_cemetery_closed'
+    | 'anniversary_gdm_reminder';
 
 export interface VeraTemplateSpec {
     id: VeraTemplateId;
@@ -179,6 +180,21 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'deceasedName', 'cemeteryName'],
         bodyCanonical: 'Gentile {{1}} | {{2}} | cimitero {{3}}',
         description: '{{1}} nome, {{2}} defunto, {{3}} cimitero',
+    },
+    anniversary_gdm_reminder: {
+        id: 'anniversary_gdm_reminder',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_ANNIVERSARY_GDM',
+            'promemoria_anniversario_gdm'
+        ),
+        language: process.env.WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_LANGUAGE?.trim() || 'it',
+        bodyParamCount: 3,
+        bodySlots: ['userFirstName', 'rememberedPerson', 'catalogUrl'],
+        bodyCanonical:
+            'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
+            'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
+        description:
+            '{{1}} nome utente, {{2}} nome e cognome defunto, {{3}} link catalogo/GdM',
     },
 };
 

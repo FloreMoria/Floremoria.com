@@ -20,6 +20,11 @@ export const PROACTIVE_CONVERSATION_TEMPLATE_ID = 'messaggio_personalizzato_fior
 /** Nome registrato su Meta Business Manager. */
 export const PROACTIVE_CONVERSATION_META_TEMPLATE_NAME = 'floremoria_messaggio_personalizzato_fiorista';
 
+/** Template Meta promemoria ricorrenze GdM (−4 giorni). */
+export const ANNIVERSARY_GDM_TEMPLATE_ID = 'promemoria_anniversario_gdm';
+export const ANNIVERSARY_GDM_META_TEMPLATE_NAME = 'promemoria_anniversario_gdm';
+export const ANNIVERSARY_GDM_BODY_PARAM_COUNT = 3;
+
 /** Numero tassativo di variabili body sul template Meta approvato. */
 export const PROACTIVE_TEMPLATE_BODY_PARAM_COUNT = 2;
 
@@ -69,14 +74,32 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
     };
 }
 
+export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition {
+    return {
+        id: ANNIVERSARY_GDM_TEMPLATE_ID,
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_ANNIVERSARY_GDM',
+            ANNIVERSARY_GDM_META_TEMPLATE_NAME
+        ),
+        label: 'Promemoria anniversario GdM',
+        description:
+            'Template Meta: {{1}} nome utente, {{2}} defunto, {{3}} link catalogo/GdM.',
+        language: process.env.WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_LANGUAGE?.trim() || 'it',
+        parameterLabels: ['Nome utente', 'Nome e cognome defunto', 'Link catalogo/GdM'],
+        bodyTemplate:
+            'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
+            'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
+    };
+}
+
 export function listApprovedWhatsAppTemplates(): WhatsAppTemplateDefinition[] {
-    return [getProactiveWhatsAppTemplate()];
+    return [getProactiveWhatsAppTemplate(), getAnniversaryGdmWhatsAppTemplate()];
 }
 
 export function getApprovedWhatsAppTemplate(templateId?: string): WhatsAppTemplateDefinition | null {
-    const template = getProactiveWhatsAppTemplate();
-    if (!templateId || templateId === template.id) return template;
-    return null;
+    const templates = listApprovedWhatsAppTemplates();
+    if (!templateId) return templates[0] ?? null;
+    return templates.find((t) => t.id === templateId) ?? null;
 }
 
 export class ProactiveTemplateValidationError extends Error {

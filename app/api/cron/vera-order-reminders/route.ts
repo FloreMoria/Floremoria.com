@@ -3,7 +3,7 @@
  * - Flush Punto A differiti (creazione/assegnazione fuori fascia → invio in 08:00–20:00 Europe/Rome)
  * - Flush Punto B schedulati (+30 min diurno / 08:30 notturno)
  * - PUNTO G — un solo sollecito cliente/fiorista per ordine (finestra 48h consegna)
- * - Promemoria ricorrenze defunto (nascita/morte) a -3 giorni
+ * - Promemoria ricorrenze defunto (nascita/morte) a -4 giorni via template Meta promemoria_anniversario_gdm
  *
  * Rinvio manuale singolo ordine (test):
  *   GET /api/cron/vera-order-reminders?orderNumber=FT-CO-26-005&force=1
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     const puntoAFlush = await flushPendingPuntoAFloristNotifications();
     const puntoBFlush = await flushPendingPuntoBCustomerConfirm();
     const result = await runPuntoGOrderReminders();
-    // Ricorrenze nascita/morte a -3 giorni (Europe/Rome), sullo stesso cron giornaliero Hobby.
+    // Ricorrenze nascita/morte a -4 giorni (Europe/Rome), template Meta promemoria_anniversario_gdm.
     let anniversaryReminders;
     try {
         anniversaryReminders = await runDeceasedAnniversaryReminders();

@@ -51,3 +51,21 @@ export function resolveProactiveTemplateParams(input: {
         staffNotes: (input.staffNotes ?? input.templateParams?.[2] ?? '').trim(),
     };
 }
+
+/** Parametri body Meta `promemoria_anniversario_gdm` ({{1}} utente, {{2}} defunto, {{3}} link). */
+export function resolveAnniversaryGdmTemplateParams(input: {
+    userName?: string | null;
+    deceasedFullName?: string | null;
+    catalogUrl?: string | null;
+}): {
+    userFirstName: string;
+    deceasedFullName: string;
+    catalogUrl: string;
+} {
+    const userFirstName = extractFirstName(input.userName || '') || 'Cliente';
+    const deceasedFullName = (input.deceasedFullName || 'il Suo caro').trim() || 'il Suo caro';
+    const catalogUrl =
+        (input.catalogUrl || 'https://www.floremoria.com/fiori-sulle-tombe').trim() ||
+        'https://www.floremoria.com/fiori-sulle-tombe';
+    return { userFirstName, deceasedFullName, catalogUrl };
+}

@@ -12,6 +12,7 @@ const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
     customer_waiting_update: 'WHATSAPP_TEMPLATE_CUSTOMER_WAITING_UPDATE_BODY',
     customer_delivery_photo: 'WHATSAPP_TEMPLATE_CUSTOMER_DELIVERY_PHOTO_BODY',
     florist_reminder: 'WHATSAPP_TEMPLATE_FLORIST_REMINDER_BODY',
+    anniversary_gdm_reminder: 'WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_BODY',
 };
 
 function isUsableCustomerOrderConfirmBody(value: string): boolean {

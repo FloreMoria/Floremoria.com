@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma';
 import { sendDeliveryProofWhatsApp } from '@/lib/whatsapp/deliveryProofNotify';
-import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
+import { getFlatProofPhotoUrls, getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 export interface NotifyCustomerDeliveryCompleteResult {
     ok: boolean;
@@ -33,15 +33,19 @@ export async function notifyCustomerDeliveryComplete(
         return { ok: false, skipped: 'proof_not_completed' };
     }
 
-    const afterPhotos = getOrderProofPhotos(order).after;
-    const photoAfterUrls =
-        afterPhotos.length > 0
-            ? afterPhotos
-            : order.deliveryProof.photoAfterUrl
-              ? [order.deliveryProof.photoAfterUrl]
-              : [];
+    // Tutte le foto mini-app (prima + dopo), non solo lo slot "dopo".
+    const photoUrls = getFlatProofPhotoUrls(order);
+    const afterFallback = getOrderProofPhotos(order).after;
+    const deliveryPhotoUrls =
+        photoUrls.length > 0
+            ? photoUrls
+            : afterFallback.length > 0
+              ? afterFallback
+              : order.deliveryProof.photoAfterUrl
+                ? [order.deliveryProof.photoAfterUrl]
+                : [];
 
-    if (photoAfterUrls.length === 0) {
+    if (deliveryPhotoUrls.length === 0) {
         return { ok: false, skipped: 'missing_after_photo' };
     }
 
@@ -54,8 +58,8 @@ export async function notifyCustomerDeliveryComplete(
         cemeteryCity: order.cemeteryCity,
         cemeteryName: order.cemeteryName,
         deliveryProvince: order.deliveryProvince,
-        photoAfterUrl: photoAfterUrls[0],
-        photoAfterUrls,
+        photoAfterUrl: deliveryPhotoUrls[0],
+        photoAfterUrls: deliveryPhotoUrls,
     });
 
     if (!result.ok) {

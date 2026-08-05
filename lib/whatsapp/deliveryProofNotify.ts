@@ -29,9 +29,9 @@ export interface DeliveryProofWhatsAppInput {
     cemeteryCity?: string | null;
     cemeteryName?: string | null;
     deliveryProvince?: string | null;
-    /** Retrocompat: singola foto "dopo". */
+    /** Retrocompat: singola foto consegna. */
     photoAfterUrl?: string | null;
-    /** Tutte le foto "dopo" dalla mini-app (prioritarie rispetto a photoAfterUrl). */
+    /** Tutte le foto dalla mini-app (prima + dopo), prioritarie rispetto a photoAfterUrl. */
     photoAfterUrls?: string[] | null;
 }
 

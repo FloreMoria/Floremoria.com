@@ -38,3 +38,5 @@
 [2026-08-05 12:50] refactor(giardino): date nascita/morte spostate dai dati utente alla scheda Defunto (UserDeceasedDatesForm + PATCH /api/dashboard/user/deceased/[id] su DeceasedProfile); profilo personale senza date commemorative; job ricorrenze già legge DeceasedProfile.
 
 [2026-08-05 13:05] feat(florist): mini-app multi-foto WhatsApp all’Utente; ordine → COMPLETED automatico; ringraziamento+promemoria fattura al fiorista (Punto E/F).
+
+[2026-08-05 17:24] fix/florist: Ripristino multi-foto mini-app → Order/Defunto/GdM + WhatsApp tutte le foto/MagicLink + thanks fattura fiorista (sendWhatsAppMessage).

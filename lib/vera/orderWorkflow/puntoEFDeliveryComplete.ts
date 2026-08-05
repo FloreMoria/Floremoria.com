@@ -1,8 +1,6 @@
 import prisma from '@/lib/prisma';
 import { notifyCustomerDeliveryComplete } from '@/lib/deliveryProof/notifyCustomerDeliveryComplete';
-import { buildProactiveStaffParams } from '@/lib/whatsapp/veraTemplateParams';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
-import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import {
     isWorkflowStepDone,
     markWorkflowStep,
@@ -12,11 +10,12 @@ import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
-import { addMessage, getSession } from '@/lib/chatStore';
-import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
-import { sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { addMessage } from '@/lib/chatStore';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
+import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 
 export interface PuntoEFResult {
     ok: boolean;
@@ -87,23 +86,32 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
     if (!isWorkflowStepDone(flags, 'puntoEF_delivery')) {
-        if (order.partner?.whatsappNumber?.trim()) {
+        const floristPhoneRaw = order.partner?.whatsappNumber?.trim();
+        const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
+        if (floristPhoneE164) {
             const floristName = extractFirstName(
-                order.partner.ownerName || order.partner.shopName
+                order.partner?.ownerName || order.partner?.shopName || ''
             );
             const orderCode = order.orderNumber || order.id;
             const thanksText = buildFloristCompletionThanksMessage({
                 floristFirstName: floristName || 'Partner',
                 orderCode,
             });
+            const sessionPhone =
+                toWhatsAppSessionPhone(floristPhoneE164) || `whatsapp:${floristPhoneE164}`;
 
-            const sessionPhone = `whatsapp:${order.partner.whatsappNumber}`;
-            const session = await getSession(sessionPhone);
-            const withinWindow = isWithinCustomerServiceWindow(session);
+            // Free-text + fallback template Meta se fuori finestra 24h (path collaudato).
+            const send = await sendWhatsAppMessage(floristPhoneE164, thanksText, {
+                recipientName: floristName || order.partner?.ownerName || 'Partner',
+                orderCode,
+                userType: 'FLORIST',
+                source: 'punto_f_florist_thanks',
+                sessionPhone,
+            });
 
-            if (withinWindow) {
-                const send = await sendWhatsAppTextMessage(order.partner.whatsappNumber, thanksText);
-                if (send.ok) {
+            if (send.ok) {
+                // Template fallback già registra in chat via sendWhatsAppMessage.
+                if (!send.fallbackExecuted) {
                     await addMessage(sessionPhone, 'OUTBOUND', thanksText, undefined, {
                         eventType: 'FLORIST_DELIVERY_THANKS',
                         orderId: order.id,
@@ -113,37 +121,27 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
                     }).catch((err) =>
                         console.warn('[punto-ef] Log chat fiorista fallito:', err)
                     );
-                }
-            } else {
-                const staffNote =
-                    `Grazie per aver completato la consegna con successo! Le foto sono state inviate al cliente. ` +
-                    `Ti ricordiamo, se non l'hai già fatto, di inviarci la fattura relativa all'ordine ${orderCode}. ` +
-                    `Buon lavoro da FloreMoria!`;
-
-                const { bodyParams, headerTextParams } = buildProactiveStaffParams({
-                    floristFirstName: floristName || 'Partner',
-                    orderCode,
-                    staffNotes: staffNote,
-                });
-
-                const templateSend = await sendVeraTemplate(
-                    order.partner.whatsappNumber,
-                    'proactive_staff',
-                    bodyParams,
-                    { headerTextParams }
-                );
-                if (templateSend.ok) {
-                    await addMessage(sessionPhone, 'OUTBOUND', thanksText, undefined, {
-                        eventType: 'FLORIST_DELIVERY_THANKS',
+                } else {
+                    console.info('[punto-ef] Ringraziamento fiorista inviato via template 24h', {
                         orderId: order.id,
                         orderNumber: orderCode,
-                        source: 'punto_f_florist_thanks_template',
-                        ...buildOutboundWamidMetadata(templateSend.messageId),
-                    }).catch((err) =>
-                        console.warn('[punto-ef] Log chat fiorista template fallito:', err)
-                    );
+                        messageId: send.messageId,
+                    });
                 }
+            } else {
+                console.error('[punto-ef] Ringraziamento fiorista fallito:', {
+                    orderId: order.id,
+                    orderNumber: orderCode,
+                    phone: floristPhoneE164,
+                    error: send.error,
+                    errorCode: send.errorCode,
+                });
             }
+        } else if (floristPhoneRaw) {
+            console.error('[punto-ef] Numero fiorista non normalizzabile:', {
+                orderId: order.id,
+                raw: floristPhoneRaw,
+            });
         }
 
         await prisma.order.update({

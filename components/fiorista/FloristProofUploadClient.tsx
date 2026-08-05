@@ -141,7 +141,8 @@ export default function FloristProofUploadClient({
     const beforePreviews = useMemo(() => readFilesAsPreviews(beforeFiles), [beforeFiles]);
     const afterPreviews = useMemo(() => readFilesAsPreviews(afterFiles), [afterFiles]);
 
-    const canSubmit = beforeFiles.length > 0 && afterFiles.length > 0 && !submitting;
+    // Solo le foto "Dopo" (posa) sono obbligatorie; "Prima" resta opzionale.
+    const canSubmit = afterFiles.length > 0 && !submitting;
 
     // Una sola richiesta GPS all'apertura (no doppio pop-up iOS / remount React).
     useEffect(() => {
@@ -239,7 +240,7 @@ export default function FloristProofUploadClient({
     const uploadFields = (
         <>
             <PhotoSlot
-                title="Prima"
+                title="Prima (facoltativo)"
                 subtitle="Fino a 3 foto prima della posa"
                 previews={beforePreviews}
                 count={beforeFiles.length}

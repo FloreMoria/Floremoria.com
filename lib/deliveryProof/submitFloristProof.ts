@@ -1,7 +1,10 @@
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { processProofImageFile } from '@/lib/deliveryProof/processProofImage';
-import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
+import {
+    injectDeceasedCoverFromDelivery,
+    injectDeliveryPhotosOnOrder,
+} from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
@@ -27,8 +30,9 @@ export async function submitFloristDeliveryProof(
 ): Promise<SubmitFloristProofResult> {
     const { orderId, beforeFiles, afterFiles, gpsLatitude, gpsLongitude } = input;
 
-    if (!beforeFiles.length || !afterFiles.length) {
-        return { ok: false, error: 'Servono almeno 1 foto "Prima" e 1 foto "Dopo".' };
+    // "Dopo" obbligatoria (posa); "Prima" opzionale — i fioristi spesso caricano solo le foto finali.
+    if (!afterFiles.length) {
+        return { ok: false, error: 'Serve almeno 1 foto della posa (Dopo).' };
     }
     if (beforeFiles.length > MAX_PHOTOS_PER_SLOT || afterFiles.length > MAX_PHOTOS_PER_SLOT) {
         return { ok: false, error: `Massimo ${MAX_PHOTOS_PER_SLOT} foto per slot.` };
@@ -115,6 +119,7 @@ export async function submitFloristDeliveryProof(
     }
 
     await syncDeceasedRelationsForOrder(order.id);
+    await injectDeceasedCoverFromDelivery(order.id, photosAfterUrls);
 
     if (photosAfterUrls.length) {
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);

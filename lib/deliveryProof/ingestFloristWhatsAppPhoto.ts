@@ -1,7 +1,10 @@
 import prisma from '@/lib/prisma';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
-import { injectDeliveryPhotosOnOrder } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
+import {
+    injectDeceasedCoverFromDelivery,
+    injectDeliveryPhotosOnOrder,
+} from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { processProofImageBuffer } from '@/lib/deliveryProof/processProofImage';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
@@ -218,6 +221,7 @@ export async function ingestFloristWhatsAppPhoto(
             });
         }
         await syncDeceasedRelationsForOrder(order.id);
+        await injectDeceasedCoverFromDelivery(order.id, photosAfterUrls);
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
 
         try {

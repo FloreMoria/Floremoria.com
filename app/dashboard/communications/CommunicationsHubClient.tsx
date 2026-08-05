@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft, Paperclip, Forward, Loader2, Smartphone, Wifi, RefreshCw, Cloud, AlertTriangle } from 'lucide-react';
+import { Eye, MessageCircle, AlertCircle, Camera, Check, ShieldCheck, Mail, Send, Activity, CheckCheck, Image as ImageIcon, X, Bot, User as UserIcon, Ban, Trash2, Search, SlidersHorizontal, Users, CheckCircle2, MessageSquarePlus, ArrowLeft, Paperclip, Forward, Loader2, Smartphone, Wifi, RefreshCw, Cloud, AlertTriangle, Clock, Heart } from 'lucide-react';
 import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
@@ -779,8 +779,12 @@ function VisioneTab({
 // -------------------------------------------------------------
 function ControlloTab() {
   const [data, setData] = useState({
+    windowDays: 30,
     veraAutonomyRate: 0,
     humanEscalationRate: 0,
+    veraSessions: 0,
+    humanSessions: 0,
+    totalSessions: 0,
     gdmOpens: [] as Array<{
       id: string;
       buyerName: string;
@@ -789,16 +793,34 @@ function ControlloTab() {
       deceasedName: string;
       openedAt: string;
       device: string;
+      isBot?: boolean;
+      deviceHint?: string | null;
+      userAgent?: string | null;
     }>,
     whatsappAudit: {
+      windowDays: 30,
+      outboundTotal: 0,
+      inboundTotal: 0,
+      photosSent: 0,
+      photosReceived: 0,
+      outside24hCount: 0,
+      outside24hRate: 0,
+      veraOutbound: 0,
+      humanOutbound: 0,
+      veraMsgRate: 0,
+      humanMsgRate: 0,
       totalOutbound: 0,
       sentCount: 0,
       deliveredCount: 0,
       readCount: 0,
       failedCount: 0,
-      deliveredRate: 100,
+      trackedWithStatus: 0,
+      deliveredOrRead: 0,
+      openOnDeliveredRate: 0,
+      deliveredRate: 0,
       readRate: 0,
       failedRate: 0,
+      sentOkVsFailedRate: 100,
       failedDetails: [] as Array<{
         id: string;
         phone: string;
@@ -820,22 +842,19 @@ function ControlloTab() {
       const res = await fetch('/api/dashboard/communications/analytics');
       const analytics = await res.json();
       if (analytics.success) {
-        setData({
+        setData((prev) => ({
+          windowDays: analytics.windowDays ?? 30,
           veraAutonomyRate: analytics.veraAutonomyRate,
           humanEscalationRate: analytics.humanEscalationRate,
+          veraSessions: analytics.veraSessions ?? 0,
+          humanSessions: analytics.humanSessions ?? 0,
+          totalSessions: analytics.totalSessions ?? 0,
           gdmOpens: analytics.gdmOpens || [],
-          whatsappAudit: analytics.whatsappAudit || {
-            totalOutbound: 0,
-            sentCount: 0,
-            deliveredCount: 0,
-            readCount: 0,
-            failedCount: 0,
-            deliveredRate: 100,
-            readRate: 0,
-            failedRate: 0,
-            failedDetails: [],
+          whatsappAudit: {
+            ...prev.whatsappAudit,
+            ...(analytics.whatsappAudit || {}),
           },
-        });
+        }));
       }
     } catch (err) {
       console.error('Error fetching communications analytics:', err);
@@ -851,6 +870,32 @@ function ControlloTab() {
 
   const audit = data.whatsappAudit;
   const total = audit.totalOutbound || 1;
+  const days = data.windowDays || 30;
+
+  const kpiCard = (
+    title: string,
+    value: string,
+    subtitle: string,
+    icon: React.ReactNode,
+    valueClass: string,
+    subtitleClass: string,
+    iconBg: string
+  ) => (
+    <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">{title}</h4>
+        <span className={`w-8 h-8 rounded-full ${iconBg} flex items-center justify-center`}>{icon}</span>
+      </div>
+      <div>
+        <p className={`text-3xl font-display font-bold mb-1 ${valueClass}`}>
+          {loading ? '...' : value}
+        </p>
+        <p className={`text-[11px] font-semibold flex items-center gap-1 ${subtitleClass}`}>
+          {subtitle}
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="animate-in fade-in duration-500 space-y-10">
@@ -858,7 +903,7 @@ function ControlloTab() {
         <div>
           <h2 className="text-2xl font-display font-medium text-[#2B2B2B]">Analytics di Consegna & Audit Meta WhatsApp</h2>
           <p className="text-[#6F6F6F] mt-1 text-sm">
-            Efficienza operativa di recapito messaggi, tasso di lettura testimoniale e tracciamento dell'interazione emotiva dei clienti.
+            Metriche operative ultimi {days} giorni · status Meta sul campione outbound più recente.
           </p>
         </div>
         <button
@@ -872,99 +917,98 @@ function ControlloTab() {
         </button>
       </div>
 
-      {/* KPI METRICS (5 Carte Responsive) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-3">
-            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Autonomia VERA</h4>
-            <span className="w-8 h-8 rounded-full bg-[#E6F3EA] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#2F6B43]" />
-            </span>
-          </div>
-          <div>
-            <p className="text-3xl font-display font-bold text-[#2B2B2B] mb-1">{loading ? '...' : `${data.veraAutonomyRate}%`}</p>
-            <p className="text-[11px] font-semibold text-[#2F6B43] flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Risposte gestite autonomamente
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-3">
-            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Tasso Consegna</h4>
-            <span className="w-8 h-8 rounded-full bg-[#E7F7F1] flex items-center justify-center">
-              <CheckCheck className="w-4 h-4 text-[#00A884]" />
-            </span>
-          </div>
-          <div>
-            <p className="text-3xl font-display font-bold text-[#00A884] mb-1">{loading ? '...' : `${audit.deliveredRate}%`}</p>
-            <p className="text-[11px] font-semibold text-[#00A884] flex items-center gap-1">
-              <Smartphone className="w-3.5 h-3.5 shrink-0" /> {audit.deliveredCount + audit.readCount} su {audit.totalOutbound} recapitati
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-3">
-            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Interazione Emotiva</h4>
-            <span className="w-8 h-8 rounded-full bg-[#E0F4FC] flex items-center justify-center">
-              <Eye className="w-4 h-4 text-[#34B7F1]" />
-            </span>
-          </div>
-          <div>
-            <p className="text-3xl font-display font-bold text-[#0284C7] mb-1">{loading ? '...' : `${audit.readRate}%`}</p>
-            <p className="text-[11px] font-semibold text-[#0284C7] flex items-center gap-1">
-              <CheckCheck className="w-3.5 h-3.5 shrink-0 text-[#34B7F1]" /> {audit.readCount} letture foto tracciate
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-3">
-            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">Mancata Consegna</h4>
-            <span className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-            </span>
-          </div>
-          <div>
-            <p className="text-3xl font-display font-bold text-red-600 mb-1">{loading ? '...' : `${audit.failedRate}%`}</p>
-            <p className="text-[11px] font-semibold text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {audit.failedCount} errori scartati da Meta
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-[#EAE3D9] shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-start mb-3">
-            <h4 className="text-[#6F6F6F] font-semibold text-xs uppercase tracking-wider">SOS / Manuale</h4>
-            <span className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
-              <UserIcon className="w-4 h-4 text-amber-600" />
-            </span>
-          </div>
-          <div>
-            <p className="text-3xl font-display font-bold text-[#2B2B2B] mb-1">{loading ? '...' : `${data.humanEscalationRate}%`}</p>
-            <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
-              <Activity className="w-3.5 h-3.5 shrink-0" /> Richieste intervento staff
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {kpiCard(
+          'Uso VERA vs Umano',
+          loading ? '...' : `${audit.veraMsgRate}% / ${audit.humanMsgRate}%`,
+          `${audit.veraOutbound} auto · ${audit.humanOutbound} staff (msg ${days}g)`,
+          <Bot className="w-4 h-4 text-[#2F6B43]" />,
+          'text-[#2B2B2B]',
+          'text-[#2F6B43]',
+          'bg-[#E6F3EA]'
+        )}
+        {kpiCard(
+          'Aperti su consegnati',
+          loading ? '...' : `${audit.openOnDeliveredRate}%`,
+          `${audit.readCount} letti / ${audit.deliveredOrRead} con status Meta`,
+          <Eye className="w-4 h-4 text-[#0284C7]" />,
+          'text-[#0284C7]',
+          'text-[#0284C7]',
+          'bg-[#E0F4FC]'
+        )}
+        {kpiCard(
+          'Inviati vs falliti',
+          loading ? '...' : `${audit.sentOkVsFailedRate}% ok`,
+          `${Math.max(audit.totalOutbound - audit.failedCount, 0)} ok · ${audit.failedCount} falliti (campione)`,
+          <CheckCheck className="w-4 h-4 text-[#00A884]" />,
+          'text-[#00A884]',
+          'text-[#00A884]',
+          'bg-[#E7F7F1]'
+        )}
+        {kpiCard(
+          'Messaggi ricevuti',
+          loading ? '...' : String(audit.inboundTotal),
+          `Inbound clienti/fioristi (ultimi ${days} giorni)`,
+          <Smartphone className="w-4 h-4 text-[#5B6B7A]" />,
+          'text-[#2B2B2B]',
+          'text-[#6F6F6F]',
+          'bg-slate-100'
+        )}
+        {kpiCard(
+          'Foto inviate / ricevute',
+          loading ? '...' : `${audit.photosSent} / ${audit.photosReceived}`,
+          `Outbound con media · inbound con media (${days}g)`,
+          <Camera className="w-4 h-4 text-[#B89F78]" />,
+          'text-[#2B2B2B]',
+          'text-[#8A7355]',
+          'bg-[#F5F0E8]'
+        )}
+        {kpiCard(
+          'Fuori finestra 24h',
+          loading ? '...' : `${audit.outside24hCount}`,
+          `${audit.outside24hRate}% outbound via template Meta`,
+          <Clock className="w-4 h-4 text-amber-700" />,
+          'text-amber-800',
+          'text-amber-700',
+          'bg-amber-50'
+        )}
+        {kpiCard(
+          'Interazione emotiva',
+          loading ? '...' : `${audit.readRate}%`,
+          `${audit.readCount} READ tracciati sul campione status`,
+          <Heart className="w-4 h-4 text-[#E11D48]" />,
+          'text-[#E11D48]',
+          'text-[#BE123C]',
+          'bg-rose-50'
+        )}
+        {kpiCard(
+          'SOS / Manuale',
+          loading ? '...' : `${data.humanEscalationRate}%`,
+          `${data.humanSessions} sessioni in intervento umano / ${data.totalSessions}`,
+          <UserIcon className="w-4 h-4 text-amber-600" />,
+          'text-[#2B2B2B]',
+          'text-amber-700',
+          'bg-amber-50'
+        )}
       </div>
 
       {/* RECAPITO VISUAL BREAKDOWN BAR */}
       <div className="bg-white rounded-2xl p-6 border border-[#EAE3D9] shadow-sm space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <h4 className="font-display font-semibold text-base text-[#111B21] flex items-center gap-2">
             <Activity className="w-4.5 h-4.5 text-[#00A884]" />
             Ripartizione Status Consegna Meta WhatsApp
           </h4>
-          <span className="text-xs text-gray-500 font-medium">{audit.totalOutbound} messaggi totali analizzati</span>
+          <span className="text-xs text-gray-500 font-medium">
+            {audit.totalOutbound} outbound analizzati · {audit.trackedWithStatus} con callback Meta
+          </span>
         </div>
 
         <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex">
-          <div style={{ width: `${Math.max(audit.readRate, 2)}%` }} className="bg-[#34B7F1] h-full" title={`READ: ${audit.readCount}`} />
-          <div style={{ width: `${Math.max(audit.deliveredRate - audit.readRate, 2)}%` }} className="bg-[#00A884] h-full" title={`DELIVERED: ${audit.deliveredCount}`} />
-          <div style={{ width: `${Math.max((audit.sentCount / total) * 100, 1)}%` }} className="bg-[#8696A0] h-full" title={`SENT: ${audit.sentCount}`} />
-          <div style={{ width: `${Math.max(audit.failedRate, 1)}%` }} className="bg-red-500 h-full" title={`FAILED: ${audit.failedCount}`} />
+          <div style={{ width: `${Math.max(pctBar(audit.readCount, total), audit.readCount ? 2 : 0)}%` }} className="bg-[#34B7F1] h-full" title={`READ: ${audit.readCount}`} />
+          <div style={{ width: `${Math.max(pctBar(audit.deliveredCount, total), audit.deliveredCount ? 2 : 0)}%` }} className="bg-[#00A884] h-full" title={`DELIVERED: ${audit.deliveredCount}`} />
+          <div style={{ width: `${Math.max(pctBar(audit.sentCount, total), audit.sentCount ? 1 : 0)}%` }} className="bg-[#8696A0] h-full" title={`SENT (senza callback): ${audit.sentCount}`} />
+          <div style={{ width: `${Math.max(pctBar(audit.failedCount, total), audit.failedCount ? 1 : 0)}%` }} className="bg-red-500 h-full" title={`FAILED: ${audit.failedCount}`} />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
@@ -978,13 +1022,16 @@ function ControlloTab() {
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-[#8696A0] shrink-0" />
-            <span className="text-gray-600 font-medium">Inviato (SENT): <strong className="text-gray-900">{audit.sentCount}</strong></span>
+            <span className="text-gray-600 font-medium">Inviato senza callback (SENT): <strong className="text-gray-900">{audit.sentCount}</strong></span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
             <span className="text-gray-600 font-medium">Mancata Consegna (FAILED): <strong className="text-red-600">{audit.failedCount}</strong></span>
           </div>
         </div>
+        <p className="text-[11px] text-[#8696A0]">
+          SENT = accettato da Meta ma senza webhook di stato (non significa “non arrivato”). READ/DELIVERED richiedono il callback wamid.
+        </p>
       </div>
 
       {/* REGISTRO ERRORI META WHATSAPP (failedDetails) */}
@@ -994,7 +1041,7 @@ function ControlloTab() {
             <AlertTriangle className="w-5 h-5 text-red-600" />
             <div>
               <h4 className="font-display font-semibold text-base text-[#111B21]">Registro Mancata Consegna & Errori Webhook Meta</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Messaggi respinti o non consegnati sui dispositivi (es. finestra 24h o errori di rete Meta).</p>
+              <p className="text-xs text-gray-500 mt-0.5">Messaggi con status FAILED o deliveryError (numero errato, rifiuto Meta, ecc.).</p>
             </div>
           </div>
           {audit.failedCount > 0 && (
@@ -1010,7 +1057,7 @@ function ControlloTab() {
           ) : audit.failedDetails.length === 0 ? (
             <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 flex items-center gap-3 text-sm">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <span>Nessun errore di recapito registrato. Tutti i messaggi inviati via Meta Cloud API risultano consegnati o letti.</span>
+              <span>Nessun errore FAILED registrato nel campione analizzato.</span>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1061,7 +1108,10 @@ function ControlloTab() {
           <SlidersHorizontal className="w-5 h-5 text-[#B89F78]" />
           <div>
             <h4 className="font-display font-semibold text-base text-[#111B21]">Tracciamento Apertura Link Consegna (Giardino della Memoria)</h4>
-            <p className="text-xs text-gray-500 mt-0.5">Visualizzazioni in tempo reale dei link inviati ai clienti via WhatsApp.</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Ultime {data.gdmOpens.length || 20} aperture. Se il dispositivo è &quot;Anteprima Meta (bot)&quot; è solo il crawler
+              facebookexternalhit che genera l&apos;anteprima del link su WhatsApp, non un click umano.
+            </p>
           </div>
         </div>
 
@@ -1092,7 +1142,14 @@ function ControlloTab() {
                       <td className="py-3.5 pr-4 font-mono text-xs">{open.orderNumber}</td>
                       <td className="py-3.5 pr-4">{open.deceasedName}</td>
                       <td className="py-3.5 pr-4 text-xs font-semibold text-gray-600">{open.openedAt}</td>
-                      <td className="py-3.5 text-xs text-[#8696A0] max-w-[200px] truncate" title={open.device}>{open.device}</td>
+                      <td className="py-3.5 text-xs max-w-[220px]" title={open.deviceHint || open.userAgent || open.device}>
+                        <span className={open.isBot ? 'text-amber-700 font-semibold' : 'text-[#8696A0]'}>
+                          {open.device}
+                        </span>
+                        {open.isBot ? (
+                          <span className="block text-[10px] text-amber-600/90 mt-0.5">Non è un’apertura umana</span>
+                        ) : null}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1104,6 +1161,12 @@ function ControlloTab() {
     </div>
   );
 }
+
+function pctBar(part: number, whole: number): number {
+  if (whole <= 0) return 0;
+  return (part / whole) * 100;
+}
+
 
 // -------------------------------------------------------------
 // 3. MANUTENZIONE & BLACKLIST (Email Blacklist Panel)

@@ -24,6 +24,10 @@ import {
   type MetaEnv,
 } from '@/lib/postman/metaStoriesReels';
 import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
+import {
+  resolveEffectiveContentFormat,
+  resolvePublishVideoUrl,
+} from '@/lib/postman/resolvePublishFormat';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { publishToTikTok } from '@/lib/postman/tiktokPublish';
 import type { TikTokPublishUxOptions } from '@/lib/postman/tiktokCreatorInfo';
@@ -53,9 +57,13 @@ export interface CampaignPublishResult {
   channel: MarketingChannel;
   campaignId: string;
   externalId?: string;
+  /** Permalink pubblico del Reel/post quando disponibile. */
+  permalink?: string;
   videoUrl?: string;
   error?: string;
   privatePost?: boolean;
+  /** Formato effettivamente usato in pubblicazione (es. video forzato a REEL). */
+  contentFormat?: ContentFormat;
 }
 
 interface SocialPublishEnv extends MetaEnv {
@@ -657,8 +665,16 @@ export async function publishCampaignToChannel(
 
   try {
     let externalId: string;
-    let videoUrl: string | undefined = payload.videoUrl ?? undefined;
-    const contentFormat = payload.contentFormat ?? ContentFormat.FEED_POST;
+    let permalink: string | undefined;
+    let videoUrl: string | undefined = resolvePublishVideoUrl({
+      videoUrl: payload.videoUrl,
+      imageUrl: payload.imageUrl,
+    });
+    const contentFormat = resolveEffectiveContentFormat({
+      contentFormat: payload.contentFormat,
+      videoUrl,
+      imageUrl: payload.imageUrl,
+    });
 
     if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
       videoUrl =
@@ -669,38 +685,52 @@ export async function publishCampaignToChannel(
         })) ?? undefined;
     }
 
+    if (
+      payload.contentFormat &&
+      payload.contentFormat !== contentFormat &&
+      contentFormat === ContentFormat.REEL
+    ) {
+      console.log(
+        `[POSTMAN] Formato forzato REEL (era ${payload.contentFormat}) — video rilevato · campagna ${payload.id}`
+      );
+    }
+
     switch (payload.targetChannel) {
       case MarketingChannel.META_FACEBOOK:
-        if (contentFormat === ContentFormat.STORY) {
-          externalId = await publishToFacebookStory(payload, env);
-        } else if (contentFormat === ContentFormat.REEL) {
+        if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
               'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
             );
           }
-          externalId = await publishToFacebookReel(
+          const fbReel = await publishToFacebookReel(
             { ...payload, videoUrl, contentFormat },
             env
           );
+          externalId = fbReel.externalId;
+          permalink = fbReel.permalink;
+        } else if (contentFormat === ContentFormat.STORY) {
+          externalId = await publishToFacebookStory(payload, env);
         } else {
           externalId = await publishToFacebook(payload, env);
         }
         break;
       case MarketingChannel.META_INSTAGRAM:
-        if (contentFormat === ContentFormat.STORY) {
-          externalId = await publishToInstagramStory(
-            { ...payload, contentFormat },
-            env
-          );
-        } else if (contentFormat === ContentFormat.REEL || videoUrl?.trim()) {
+        if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl?.trim()) {
             throw new Error(
               'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
             );
           }
-          externalId = await publishToInstagramReel(
+          const igReel = await publishToInstagramReel(
             { ...payload, videoUrl, contentFormat: ContentFormat.REEL },
+            env
+          );
+          externalId = igReel.externalId;
+          permalink = igReel.permalink;
+        } else if (contentFormat === ContentFormat.STORY) {
+          externalId = await publishToInstagramStory(
+            { ...payload, contentFormat },
             env
           );
         } else {
@@ -727,6 +757,7 @@ export async function publishCampaignToChannel(
           campaignId: payload.id,
           externalId: tiktokResult.externalId,
           videoUrl,
+          contentFormat,
           privatePost: tiktokResult.privatePost,
         };
       }
@@ -751,6 +782,7 @@ export async function publishCampaignToChannel(
           channel: payload.targetChannel,
           campaignId: payload.id,
           externalId: pinResult.pinId,
+          contentFormat,
         };
       }
       default:
@@ -761,6 +793,7 @@ export async function publishCampaignToChannel(
           channel: payload.targetChannel,
           campaignId: payload.id,
           externalId: `simulated-${payload.id}`,
+          contentFormat,
         };
     }
 
@@ -769,7 +802,9 @@ export async function publishCampaignToChannel(
       channel: payload.targetChannel,
       campaignId: payload.id,
       externalId,
+      permalink,
       videoUrl,
+      contentFormat,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

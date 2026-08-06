@@ -102,21 +102,37 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
     results.push(result);
 
     if (result.success) {
+      const existingMetrics =
+        campaign.metricsJson && typeof campaign.metricsJson === 'object'
+          ? (campaign.metricsJson as Record<string, unknown>)
+          : {};
       await prisma.marketingCampaign.update({
         where: { id: campaign.id },
         data: {
           status: CampaignStatus.PUBLISHED,
           publishedAt: new Date(),
           videoUrl: result.videoUrl ?? campaign.videoUrl,
+          ...(result.contentFormat ? { contentFormat: result.contentFormat } : {}),
           ...(result.externalId && !result.simulated
             ? { externalId: String(result.externalId) }
+            : {}),
+          ...(result.permalink && !result.simulated
+            ? {
+                metricsJson: {
+                  ...existingMetrics,
+                  permalink: result.permalink,
+                },
+                metricsSyncedAt: new Date(),
+              }
             : {}),
         },
       });
       console.log(
         `[Marketing Publish] ✔ ${formatLabelForSlot(slot)} → PUBLISHED${
           result.simulated ? ' (simulata)' : ''
-        }${result.externalId ? ` · ext=${result.externalId}` : ''}`
+        }${result.externalId ? ` · ext=${result.externalId}` : ''}${
+          result.permalink ? ` · ${result.permalink}` : ''
+        }`
       );
     } else {
       console.warn(

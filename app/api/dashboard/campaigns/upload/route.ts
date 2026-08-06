@@ -34,6 +34,10 @@ export async function POST(request: Request) {
     const filename = file.name;
     const ext = filename.split('.').pop() || 'png';
     const isVideo = mimeType.startsWith('video/');
+    // Video → sempre REEL (mai Story: gli endpoint Story attuali sono foto-only).
+    const resolvedFormat = isVideo
+      ? ContentFormat.REEL
+      : (contentFormat as ContentFormat);
 
     // Immagini: watermark su ogni canale. Video raw: nessuna overlay frame-by-frame qui.
     const buffer = isVideo ? rawBuffer : await overlayFloreMoriaWatermark(rawBuffer);
@@ -57,12 +61,18 @@ export async function POST(request: Request) {
           .filter(Boolean)
       : [];
 
+    if (isVideo && contentFormat !== ContentFormat.REEL) {
+      console.log(
+        `[Upload API] contentFormat forzato REEL (era ${contentFormat}) — file video ${filename}`
+      );
+    }
+
     const newCampaign = await prisma.marketingCampaign.create({
       data: {
         status: CampaignStatus.APPROVED,
         category,
         targetChannel: channel as MarketingChannel,
-        contentFormat: contentFormat as ContentFormat,
+        contentFormat: resolvedFormat,
         copy: copy.trim(),
         hashtags,
         imageUrl: blobResult.url,

@@ -587,7 +587,12 @@ export default function CampaignsDashboardClient() {
   const handleManualFileSelected = async (file: File | null) => {
     setManualFile(file);
     if (!file) return;
-    await runSuggestCopyFromMedia(file, manualChannel, manualFormat);
+    // Video → formato Reel automatico (evita pubblicazione come Story).
+    const nextFormat = file.type.startsWith('video/') ? 'REEL' : manualFormat;
+    if (nextFormat !== manualFormat) {
+      setManualFormat(nextFormat);
+    }
+    await runSuggestCopyFromMedia(file, manualChannel, nextFormat);
   };
 
   const handleDeleteCampaign = async (campaignId: string) => {

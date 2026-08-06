@@ -34,16 +34,31 @@ export async function POST(request: Request) {
     });
 
     if (result.success) {
-      // Aggiorna lo stato nel DB + ID post social per metriche successive
+      // Aggiorna lo stato nel DB + ID post social + permalink Reel
+      const existingMetrics =
+        campaign.metricsJson && typeof campaign.metricsJson === 'object'
+          ? (campaign.metricsJson as Record<string, unknown>)
+          : {};
+
       await prisma.marketingCampaign.update({
         where: { id: campaignId },
         data: {
           status: CampaignStatus.PUBLISHED,
           publishedAt: new Date(),
+          ...(result.contentFormat ? { contentFormat: result.contentFormat } : {}),
           ...(result.externalId && !result.simulated
             ? { externalId: String(result.externalId) }
             : {}),
           ...(result.videoUrl ? { videoUrl: result.videoUrl } : {}),
+          ...(result.permalink && !result.simulated
+            ? {
+                metricsJson: {
+                  ...existingMetrics,
+                  permalink: result.permalink,
+                },
+                metricsSyncedAt: new Date(),
+              }
+            : {}),
         },
       });
 
@@ -51,6 +66,8 @@ export async function POST(request: Request) {
         success: true,
         simulated: result.simulated,
         externalId: result.externalId,
+        permalink: result.permalink,
+        contentFormat: result.contentFormat,
         privatePost: result.privatePost,
       });
     } else {

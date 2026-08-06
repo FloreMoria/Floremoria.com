@@ -171,7 +171,7 @@ export async function publishToInstagramReel(
     contentFormat: ContentFormat;
   },
   env: MetaEnv
-): Promise<string> {
+): Promise<{ externalId: string; permalink?: string }> {
   const { metaAccessToken, igBusinessAccountId, blobToken } = env;
   if (!metaAccessToken || !igBusinessAccountId) {
     throw new Error('META_ACCESS_TOKEN o IG_BUSINESS_ACCOUNT_ID assenti');
@@ -184,6 +184,7 @@ export async function publishToInstagramReel(
     blobToken
   );
 
+  // Instagram Graph: container REELS (mai STORIES) + media_publish
   const container = await metaGraphPost<{ id?: string }>(
     `/${igBusinessAccountId}/media`,
     metaAccessToken,
@@ -206,8 +207,11 @@ export async function publishToInstagramReel(
     { isVideo: true }
   );
 
-  console.log(`[POSTMAN] Instagram Reel pubblicato — ${mediaId}`);
-  return mediaId;
+  const permalink = await fetchInstagramPermalink(mediaId, metaAccessToken);
+  console.log(
+    `[POSTMAN] Instagram Reel pubblicato — ${mediaId}${permalink ? ` · ${permalink}` : ''}`
+  );
+  return { externalId: mediaId, permalink };
 }
 
 export async function publishToFacebookStory(
@@ -254,7 +258,7 @@ export async function publishToFacebookReel(
     contentFormat: ContentFormat;
   },
   env: MetaEnv
-): Promise<string> {
+): Promise<{ externalId: string; permalink?: string }> {
   const { metaAccessToken, fbPageId, blobToken } = env;
   if (!metaAccessToken || !fbPageId) {
     throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
@@ -326,8 +330,12 @@ export async function publishToFacebookReel(
     throw new Error('Meta Facebook Reel: finish/publish non riuscito.');
   }
 
-  console.log(`[POSTMAN] Facebook Reel pubblicato — ${videoId}`);
-  return videoId;
+  const permalink =
+    (await fetchFacebookReelPermalink(videoId, pageToken)) ||
+    `https://www.facebook.com/reel/${videoId}`;
+
+  console.log(`[POSTMAN] Facebook Reel pubblicato — ${videoId} · ${permalink}`);
+  return { externalId: videoId, permalink };
 }
 
 async function uploadFacebookReelBinary(
@@ -429,4 +437,43 @@ async function waitFacebookReelUploadReady(
   console.warn(
     `[POSTMAN] Facebook Reel ${videoId}: timeout attesa status — procedo con upload_phase=finish.`
   );
+}
+
+async function fetchInstagramPermalink(
+  mediaId: string,
+  accessToken: string
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${mediaId}?fields=permalink,media_type&access_token=${encodeURIComponent(accessToken)}`
+    );
+    const payload = (await res.json()) as {
+      permalink?: string;
+      media_type?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok || payload.error || !payload.permalink) return undefined;
+    return payload.permalink;
+  } catch {
+    return undefined;
+  }
+}
+
+async function fetchFacebookReelPermalink(
+  videoId: string,
+  pageToken: string
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${videoId}?fields=permalink_url,id&access_token=${encodeURIComponent(pageToken)}`
+    );
+    const payload = (await res.json()) as {
+      permalink_url?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok || payload.error) return undefined;
+    return payload.permalink_url || undefined;
+  } catch {
+    return undefined;
+  }
 }

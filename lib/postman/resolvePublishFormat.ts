@@ -14,6 +14,23 @@ export function looksLikeVideoUrl(url: string | null | undefined): boolean {
 }
 
 /**
+ * Asset fioristi / prova consegna / social-ready: vietati come sorgente Reel.
+ * I Reel automatici usano solo B-roll d'archivio.
+ */
+export function isFloristOrDeliveryMediaUrl(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes('social-ready') ||
+    lower.includes('foto-consegne') ||
+    lower.includes('delivery-proof') ||
+    lower.includes('deliveryproof') ||
+    lower.includes('/consegne/') ||
+    lower.includes('proof-photo')
+  );
+}
+
+/**
  * Formato effettivo di pubblicazione.
  * Regola: se c’è un video, su Meta si pubblica sempre come REEL
  * (mai Story: gli endpoint Story attuali sono foto-only).
@@ -24,8 +41,14 @@ export function resolveEffectiveContentFormat(input: {
   imageUrl?: string | null;
 }): ContentFormat {
   const declared = input.contentFormat ?? ContentFormat.FEED_POST;
+  const videoCandidate = input.videoUrl?.trim() || undefined;
+  const imageAsVideo =
+    looksLikeVideoUrl(input.imageUrl) && !isFloristOrDeliveryMediaUrl(input.imageUrl)
+      ? input.imageUrl!.trim()
+      : undefined;
   const hasVideo =
-    Boolean(input.videoUrl?.trim()) || looksLikeVideoUrl(input.imageUrl);
+    (Boolean(videoCandidate) && !isFloristOrDeliveryMediaUrl(videoCandidate)) ||
+    Boolean(imageAsVideo);
 
   if (hasVideo) {
     return ContentFormat.REEL;
@@ -39,7 +62,23 @@ export function resolvePublishVideoUrl(input: {
   imageUrl?: string | null;
 }): string | undefined {
   const explicit = input.videoUrl?.trim();
-  if (explicit) return explicit;
-  if (looksLikeVideoUrl(input.imageUrl)) return input.imageUrl!.trim();
+  if (explicit) {
+    if (isFloristOrDeliveryMediaUrl(explicit)) {
+      console.warn(
+        '[POSTMAN] Video fiorista/consegna ignorato per pubblicazione — solo B-roll per Reel.'
+      );
+      return undefined;
+    }
+    return explicit;
+  }
+  if (looksLikeVideoUrl(input.imageUrl)) {
+    if (isFloristOrDeliveryMediaUrl(input.imageUrl)) {
+      console.warn(
+        '[POSTMAN] Media fiorista/consegna ignorato come video — solo B-roll per Reel.'
+      );
+      return undefined;
+    }
+    return input.imageUrl!.trim();
+  }
   return undefined;
 }

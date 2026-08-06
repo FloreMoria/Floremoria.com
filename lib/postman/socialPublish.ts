@@ -681,6 +681,7 @@ export async function publishCampaignToChannel(
         (await ensureCampaignReelVideoUrl({
           campaignId: payload.id,
           imageUrl: payload.imageUrl,
+          copy: payload.copy,
           blobToken: env.blobToken,
         })) ?? undefined;
     }
@@ -700,7 +701,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
-              'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+              'Video reel mancante. Configura MARKETING_REEL_BROLL_URLS (B-roll 4K archivio) e opzionalmente MARKETING_REEL_MUSIC_URL + FFMPEG_PATH.'
             );
           }
           const fbReel = await publishToFacebookReel(
@@ -719,7 +720,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl?.trim()) {
             throw new Error(
-              'Video reel mancante. Configura MARKETING_REEL_FALLBACK_VIDEO_URL o FFMPEG_PATH.'
+              'Video reel mancante. Configura MARKETING_REEL_BROLL_URLS (B-roll 4K archivio) e opzionalmente MARKETING_REEL_MUSIC_URL + FFMPEG_PATH.'
             );
           }
           const igReel = await publishToInstagramReel(

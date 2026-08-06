@@ -29,13 +29,33 @@ function proofNeedsChannel(
 }
 
 /**
- * Pubblica foto consegna sanificate (socialReadyPrimaryUrl + socialCopyCategory)
- * su Meta via POSTMAN.
+ * Pubblicazione social da foto/video fioristi (delivery proof).
+ * DISABILITATA di default: i Reel/post automatici usano solo B-roll d'archivio.
+ * Riabilita solo con MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=1 (non consigliato).
  */
 export async function runDeliveryProofSocialPublishPipeline(
   limit = 30
 ): Promise<DeliveryProofPublishSummary> {
   const startedAt = new Date();
+  const enabled = process.env.MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL === '1';
+
+  if (!enabled) {
+    console.log(
+      '[Marketing Publish] Foto/video fioristi su social DISABILITATI ' +
+        '(standard visual: solo B-roll 4K). Imposta MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=1 per override.'
+    );
+    return {
+      startedAt: startedAt.toISOString(),
+      finishedAt: new Date().toISOString(),
+      proofsCandidates: 0,
+      postsAttempted: 0,
+      published: 0,
+      simulated: 0,
+      failed: 0,
+      results: [],
+    };
+  }
+
   console.log('[Marketing Publish] ═══ Avvio pubblicazione foto consegna (social-ready) ═══');
 
   const proofs = await prisma.deliveryProof.findMany({

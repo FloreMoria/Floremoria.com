@@ -62,8 +62,9 @@ export const ZIGGY_PLATFORM_GUIDELINES: Record<string, SocialPlatformGuidelines>
       "Utilizzare un linguaggio semplice, diretto e colloquiale."
     ],
     imageRules: [
-      "Visual in formato verticale (9:16) con forte dinamismo o montaggio ritmato.",
-      "Utilizzare scene che mostrano il 'dietro le quinte' o la preparazione reale (es. mani che compongono il bouquet, o il momento della consegna in stile POV/UGC)."
+      "Visual in formato verticale (9:16) con montaggio ritmato su B-roll 4K d'archivio (cimiteri monumentali, marmo, fiori in luce naturale, viali al tramonto).",
+      "Vietato usare foto o video inviati dai fioristi come sorgente per Reel/social automatici.",
+      "Testo on-screen breve (slogan/CTA), typography elegante; audio solo strumentale/ambiente — mai TTS o voce sintetica."
     ],
     hashtagsCount: 4
   }

@@ -15,11 +15,14 @@ export function createGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey: getGeminiApiKeyForReel() });
 }
 
-/** Modello Veo: override con MARKETING_VEO_MODEL. */
+/**
+ * Modello Veo: default qualità (non fast).
+ * Override: MARKETING_VEO_MODEL=veo-3.1-fast-generate-preview per costi/velocità.
+ */
 export function resolveVeoModel(): string {
   return (
     process.env.MARKETING_VEO_MODEL?.trim() ||
-    'veo-3.1-fast-generate-preview'
+    'veo-3.1-generate-preview'
   );
 }
 

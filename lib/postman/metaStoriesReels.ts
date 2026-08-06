@@ -255,7 +255,7 @@ export async function publishToFacebookReel(
   },
   env: MetaEnv
 ): Promise<string> {
-  const { metaAccessToken, fbPageId } = env;
+  const { metaAccessToken, fbPageId, blobToken } = env;
   if (!metaAccessToken || !fbPageId) {
     throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
   }
@@ -263,21 +263,170 @@ export async function publishToFacebookReel(
   const pageToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
   const caption = captionForFormat(campaign.contentFormat, campaign.copy, campaign.hashtags);
 
-  const container = await metaGraphPost<{ id?: string }>(`/${fbPageId}/video_reels`, pageToken, {
-    upload_phase: 'start',
-  });
+  // Meta richiede URL pubblico fetchabile da facebookexternalhit (no Blob privato).
+  const publicVideoUrl = await ensureSocialFetchableVideoUrl(
+    campaign.id,
+    campaign.videoUrl,
+    blobToken
+  );
 
-  // Facebook Reels richiede upload resumable — semplificato con video_url se supportato dalla pagina
-  const reel = await metaGraphPost<{ id?: string }>(`/${fbPageId}/video_reels`, pageToken, {
-    video_url: campaign.videoUrl,
-    description: caption,
-    published: 'true',
-  });
+  // Step 1 — inizializza sessione upload
+  const started = await metaGraphPost<{ video_id?: string; upload_url?: string }>(
+    `/${fbPageId}/video_reels`,
+    pageToken,
+    { upload_phase: 'start' }
+  );
 
-  if (!reel.id) {
-    throw new Error('Meta Facebook Reel: id mancante.');
+  const videoId = started.video_id;
+  if (!videoId) {
+    throw new Error('Meta Facebook Reel: video_id mancante dopo upload_phase=start.');
   }
 
-  console.log(`[POSTMAN] Facebook Reel pubblicato — ${reel.id}`);
-  return reel.id;
+  console.log(`[POSTMAN] Facebook Reel session start — video_id ${videoId}`);
+
+  // Step 2 — upload file hosted su rupload.facebook.com
+  const ruploadUrl =
+    started.upload_url?.trim() ||
+    `https://rupload.facebook.com/video-upload/${META_GRAPH_VERSION}/${videoId}`;
+
+  const uploadRes = await fetch(ruploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `OAuth ${pageToken}`,
+      file_url: publicVideoUrl,
+    },
+  });
+
+  const uploadPayload = (await uploadRes.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+
+  if (!uploadRes.ok || uploadPayload.error || uploadPayload.success === false) {
+    // Fallback: upload binario se file_url viene rifiutato (CDN/robots).
+    console.warn(
+      `[POSTMAN] Facebook Reel file_url fallito (${uploadPayload.error?.message || uploadRes.status}); provo upload binario.`
+    );
+    await uploadFacebookReelBinary(videoId, pageToken, campaign.videoUrl, blobToken);
+  } else {
+    console.log(`[POSTMAN] Facebook Reel rupload file_url OK — ${videoId}`);
+  }
+
+  await waitFacebookReelUploadReady(videoId, pageToken);
+
+  // Step 3 — finish + publish
+  const finished = await metaGraphPost<{ success?: boolean }>(`/${fbPageId}/video_reels`, pageToken, {
+    upload_phase: 'finish',
+    video_id: videoId,
+    video_state: 'PUBLISHED',
+    description: caption,
+  });
+
+  if (finished.success === false) {
+    throw new Error('Meta Facebook Reel: finish/publish non riuscito.');
+  }
+
+  console.log(`[POSTMAN] Facebook Reel pubblicato — ${videoId}`);
+  return videoId;
+}
+
+async function uploadFacebookReelBinary(
+  videoId: string,
+  pageToken: string,
+  videoUrl: string,
+  blobToken?: string
+): Promise<void> {
+  const publicOrSource = await ensureSocialFetchableVideoUrl(
+    `fb-reel-bin-${videoId}`,
+    videoUrl,
+    blobToken
+  );
+  const fileRes = await fetch(publicOrSource);
+  if (!fileRes.ok) {
+    throw new Error(`Download video per rupload binario fallito (${fileRes.status}).`);
+  }
+  const bytes = Buffer.from(await fileRes.arrayBuffer());
+  const ruploadUrl = `https://rupload.facebook.com/video-upload/${META_GRAPH_VERSION}/${videoId}`;
+  const uploadRes = await fetch(ruploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `OAuth ${pageToken}`,
+      offset: '0',
+      file_size: String(bytes.length),
+      'Content-Type': 'application/octet-stream',
+    },
+    body: bytes,
+  });
+  const payload = (await uploadRes.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!uploadRes.ok || payload.error || payload.success === false) {
+    throw new Error(
+      payload.error?.message ||
+        `Meta Facebook Reel: upload binario fallito (${uploadRes.status}).`
+    );
+  }
+}
+
+async function waitFacebookReelUploadReady(
+  videoId: string,
+  pageToken: string,
+  options?: { maxAttempts?: number; delayMs?: number }
+): Promise<void> {
+  const maxAttempts = options?.maxAttempts ?? 40;
+  const delayMs = options?.delayMs ?? 3000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${videoId}?fields=status&access_token=${encodeURIComponent(pageToken)}`
+    );
+    const payload = (await res.json()) as {
+      status?: {
+        video_status?: string;
+        uploading_phase?: { status?: string; error?: { message?: string } };
+        processing_phase?: { status?: string; error?: { message?: string } };
+        publishing_phase?: { status?: string; error?: { message?: string } };
+      };
+      error?: { message?: string };
+    };
+
+    if (!res.ok || payload.error) {
+      throw new Error(payload.error?.message || `Facebook Reel status error (${res.status})`);
+    }
+
+    const status = payload.status;
+    const uploading = status?.uploading_phase?.status;
+    const processing = status?.processing_phase?.status;
+    const videoStatus = status?.video_status;
+
+    console.log(
+      `[POSTMAN] Facebook Reel ${videoId} — tentativo ${attempt}/${maxAttempts}: video=${videoStatus ?? '?'} upload=${uploading ?? '?'} process=${processing ?? '?'}`
+    );
+
+    const uploadErr = status?.uploading_phase?.error?.message;
+    const processErr = status?.processing_phase?.error?.message;
+    if (uploadErr || processErr) {
+      throw new Error(
+        `Meta Facebook Reel elaborazione fallita: ${uploadErr || processErr}`
+      );
+    }
+
+    // Pronto per finish quando upload completo (processing può continuare dopo publish).
+    if (uploading === 'complete' || videoStatus === 'ready' || videoStatus === 'upload_complete') {
+      return;
+    }
+
+    // Alcune risposte omettono i sotto-status ma segnalano errore esplicito.
+    if (videoStatus === 'error') {
+      throw new Error('Meta Facebook Reel: video_status=error durante upload.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  // Non bloccare forever: Meta accetta spesso finish anche se processing è ancora in corso.
+  console.warn(
+    `[POSTMAN] Facebook Reel ${videoId}: timeout attesa status — procedo con upload_phase=finish.`
+  );
 }

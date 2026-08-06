@@ -49,6 +49,9 @@ export interface CampaignPublishInput {
   tiktokUx?: TikTokPublishUxOptions;
   /** Foto consegna: risolve socialReadyPrimaryUrl + copy da socialCopyCategory. */
   deliveryProofId?: string;
+  /** Per privacy guard Reel (anagrafica mai in copy/video). */
+  deceasedName?: string | null;
+  category?: string | null;
 }
 
 export interface CampaignPublishResult {
@@ -98,6 +101,7 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
   copy: string;
   hashtags: string[];
   category: string;
+  deceasedName: string | null;
 } | null> {
   const proof = await prisma.deliveryProof.findUnique({
     where: { id: deliveryProofId },
@@ -122,11 +126,12 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
 
   const category = coerceSocialCategoryCode(proof.socialCopyCategory);
   const copyPack = buildSocialProofCopy(category, { salt: deliveryProofId });
+  const deceasedName = proof.order?.deceasedName ?? null;
 
   assertDeliveryServiceSocialPrivacy({
     imageUrl,
     copy: copyPack.copy,
-    deceasedName: proof.order?.deceasedName,
+    deceasedName,
     context: `deliveryProof:${deliveryProofId}`,
   });
 
@@ -135,6 +140,7 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
     copy: copyPack.copy,
     hashtags: copyPack.hashtags,
     category,
+    deceasedName,
   };
 }
 
@@ -161,6 +167,8 @@ async function resolveCampaignPublishPayload(
     copy: fromProof.copy,
     hashtags: fromProof.hashtags,
     imageUrl: fromProof.imageUrl,
+    category: fromProof.category,
+    deceasedName: fromProof.deceasedName,
   };
 }
 
@@ -682,6 +690,8 @@ export async function publishCampaignToChannel(
           campaignId: payload.id,
           imageUrl: payload.imageUrl,
           copy: payload.copy,
+          category: payload.category,
+          deceasedName: payload.deceasedName,
           blobToken: env.blobToken,
         })) ?? undefined;
     }
@@ -701,7 +711,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
-              'Video reel mancante. Configura MARKETING_REEL_BROLL_URLS (B-roll 4K archivio) e opzionalmente MARKETING_REEL_MUSIC_URL + FFMPEG_PATH.'
+              'Video reel mancante. Verifica GEMINI_API_KEY e accesso Veo (MARKETING_VEO_MODEL) su Google AI Studio.'
             );
           }
           const fbReel = await publishToFacebookReel(
@@ -720,7 +730,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl?.trim()) {
             throw new Error(
-              'Video reel mancante. Configura MARKETING_REEL_BROLL_URLS (B-roll 4K archivio) e opzionalmente MARKETING_REEL_MUSIC_URL + FFMPEG_PATH.'
+              'Video reel mancante. Verifica GEMINI_API_KEY e accesso Veo (MARKETING_VEO_MODEL) su Google AI Studio.'
             );
           }
           const igReel = await publishToInstagramReel(

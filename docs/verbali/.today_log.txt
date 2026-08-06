@@ -66,3 +66,5 @@
 [2026-08-06 17:58] feat/social: Reel automatici su B-roll 4K + testo elegante + musica strumentale (no TTS); disabilitata pubblicazione social foto fioristi.
 [2026-08-06 18:05] fix(social+metrics): resilienza query Graph API per metriche live Meta — risolta incompatibilità parametri per `media_type` (IMAGE/REELS/VIDEO/CAROUSEL); implementato query fallback per-metrica isolato (queryMetrics) che impedisce a errori 400 di cancellare views/impressions/reach e popola dati reali in tempo reale sia per Instagram che per Facebook Page.
 
+
+[2026-08-06 18:38] feat/social: Reel AI via Gemini Imagen+Veo da foto social-ready; pipeline consegna ON; no TTS.

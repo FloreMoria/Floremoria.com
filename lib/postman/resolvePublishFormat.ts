@@ -14,20 +14,25 @@ export function looksLikeVideoUrl(url: string | null | undefined): boolean {
 }
 
 /**
- * Asset fioristi / prova consegna / social-ready: vietati come sorgente Reel.
- * I Reel automatici usano solo B-roll d'archivio.
+ * Asset video grezzi da fioristi (non social-ready): non pubblicare direttamente come Reel.
+ * Le foto /social-ready/ vanno bene come still di partenza per Veo.
  */
-export function isFloristOrDeliveryMediaUrl(url: string | null | undefined): boolean {
-  if (!url?.trim()) return false;
+export function isRawFloristDeliveryVideoUrl(url: string | null | undefined): boolean {
+  if (!url?.trim() || !looksLikeVideoUrl(url)) return false;
   const lower = url.toLowerCase();
   return (
-    lower.includes('social-ready') ||
     lower.includes('foto-consegne') ||
     lower.includes('delivery-proof') ||
     lower.includes('deliveryproof') ||
-    lower.includes('/consegne/') ||
-    lower.includes('proof-photo')
+    lower.includes('/consegne/')
   );
+}
+
+/**
+ * @deprecated Preferisci isRawFloristDeliveryVideoUrl. Mantenuto per compat.
+ */
+export function isFloristOrDeliveryMediaUrl(url: string | null | undefined): boolean {
+  return isRawFloristDeliveryVideoUrl(url);
 }
 
 /**
@@ -43,11 +48,11 @@ export function resolveEffectiveContentFormat(input: {
   const declared = input.contentFormat ?? ContentFormat.FEED_POST;
   const videoCandidate = input.videoUrl?.trim() || undefined;
   const imageAsVideo =
-    looksLikeVideoUrl(input.imageUrl) && !isFloristOrDeliveryMediaUrl(input.imageUrl)
+    looksLikeVideoUrl(input.imageUrl) && !isRawFloristDeliveryVideoUrl(input.imageUrl)
       ? input.imageUrl!.trim()
       : undefined;
   const hasVideo =
-    (Boolean(videoCandidate) && !isFloristOrDeliveryMediaUrl(videoCandidate)) ||
+    (Boolean(videoCandidate) && !isRawFloristDeliveryVideoUrl(videoCandidate)) ||
     Boolean(imageAsVideo);
 
   if (hasVideo) {
@@ -63,18 +68,18 @@ export function resolvePublishVideoUrl(input: {
 }): string | undefined {
   const explicit = input.videoUrl?.trim();
   if (explicit) {
-    if (isFloristOrDeliveryMediaUrl(explicit)) {
+    if (isRawFloristDeliveryVideoUrl(explicit)) {
       console.warn(
-        '[POSTMAN] Video fiorista/consegna ignorato per pubblicazione — solo B-roll per Reel.'
+        '[POSTMAN] Video grezzo fiorista ignorato — genera Reel AI da foto social-ready.'
       );
       return undefined;
     }
     return explicit;
   }
   if (looksLikeVideoUrl(input.imageUrl)) {
-    if (isFloristOrDeliveryMediaUrl(input.imageUrl)) {
+    if (isRawFloristDeliveryVideoUrl(input.imageUrl)) {
       console.warn(
-        '[POSTMAN] Media fiorista/consegna ignorato come video — solo B-roll per Reel.'
+        '[POSTMAN] Media video grezzo fiorista ignorato — genera Reel AI da foto social-ready.'
       );
       return undefined;
     }

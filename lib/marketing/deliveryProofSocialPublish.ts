@@ -1,4 +1,4 @@
-import { DeliveryProofStatus, MarketingChannel } from '@prisma/client';
+import { ContentFormat, DeliveryProofStatus, MarketingChannel } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import {
   publishCampaignToChannel,
@@ -29,20 +29,19 @@ function proofNeedsChannel(
 }
 
 /**
- * Pubblicazione social da foto/video fioristi (delivery proof).
- * DISABILITATA di default: i Reel/post automatici usano solo B-roll d'archivio.
- * Riabilita solo con MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=1 (non consigliato).
+ * Pubblicazione social da foto consegna sanificate (/social-ready/).
+ * ON di default. Disattiva con MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0.
+ * Per IG/FB prova REEL AI (Veo da foto fiori) — privacy: niente volti/anagrafiche.
  */
 export async function runDeliveryProofSocialPublishPipeline(
   limit = 30
 ): Promise<DeliveryProofPublishSummary> {
   const startedAt = new Date();
-  const enabled = process.env.MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL === '1';
+  const disabled = process.env.MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL === '0';
 
-  if (!enabled) {
+  if (disabled) {
     console.log(
-      '[Marketing Publish] Foto/video fioristi su social DISABILITATI ' +
-        '(standard visual: solo B-roll 4K). Imposta MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=1 per override.'
+      '[Marketing Publish] Foto consegna su social disabilitate (MARKETING_PUBLISH_DELIVERY_PROOF_SOCIAL=0).'
     );
     return {
       startedAt: startedAt.toISOString(),
@@ -56,7 +55,12 @@ export async function runDeliveryProofSocialPublishPipeline(
     };
   }
 
-  console.log('[Marketing Publish] ═══ Avvio pubblicazione foto consegna (social-ready) ═══');
+  console.log(
+    '[Marketing Publish] ═══ Pubblicazione foto consegna social-ready → Reel AI ═══'
+  );
+
+  // Veo è lento: limita batch per restare entro maxDuration cron (300s).
+  const batchLimit = Math.min(limit, Number(process.env.MARKETING_DELIVERY_REEL_BATCH || 4));
 
   const proofs = await prisma.deliveryProof.findMany({
     where: {
@@ -64,7 +68,7 @@ export async function runDeliveryProofSocialPublishPipeline(
       socialReadyPrimaryUrl: { not: null },
     },
     orderBy: { socialSanitizedAt: 'asc' },
-    take: limit,
+    take: batchLimit,
     select: {
       id: true,
       orderId: true,
@@ -104,6 +108,7 @@ export async function runDeliveryProofSocialPublishPipeline(
       const result = await publishCampaignToChannel({
         id: publishId,
         targetChannel: channel,
+        contentFormat: ContentFormat.REEL,
         copy: '',
         hashtags: [],
         imageUrl: proof.socialReadyPrimaryUrl!,

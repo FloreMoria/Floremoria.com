@@ -26,7 +26,7 @@ export interface MarketingPublishSummary {
 
 /**
  * Pubblica campagne marketing APPROVED via POSTMAN.
- * Foto consegna fioristi: disabilitate di default (solo B-roll per social).
+ * Foto consegna social-ready → Reel AI (Veo) ON di default (disattiva con =0).
  * Calendario: 1 contenuto per slot editoriale del giorno (IG/FB/TikTok post, story, reel).
  */
 export async function runMarketingPublishPipeline(limit = 50): Promise<MarketingPublishSummary> {

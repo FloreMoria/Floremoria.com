@@ -1,214 +1,188 @@
 /**
- * Generatore Reel automatici FloreMoria — standard visual 2026-08.
+ * Generatore Reel automatici FloreMoria — AI-first (Gemini Imagen + Veo).
  *
- * 1) Sorgente visiva ESCLUSIVA: B-roll 4K d'archivio (mai foto/video fioristi).
- * 2) Testo on-screen: typography elegante, slogan/CTA a comparsa ritmica.
- * 3) Audio: solo musica strumentale/ambiente (vietato TTS / voce sintetica).
+ * Priorità sorgente visiva:
+ * 1) Foto consegna /social-ready/ (solo fiori; privacy guard)
+ * 2) Still campagna (se non privata consegna)
+ * 3) Still Imagen Quiet Luxury
+ * 4) (opz.) B-roll URL env se Veo non disponibile
+ *
+ * Audio: ambient/strumentale (Veo native e/o Lyria) — mai TTS.
  */
 import { put } from '@vercel/blob';
+import { isSocialReadyProofUrl } from '@/lib/deliveryProof/storagePaths';
 import {
-  loadConfiguredBrollClips,
-  pickBrollClip,
-  resolveInstrumentalMusicUrl,
-} from '@/lib/marketing/reel/brollLibrary';
+  assertDeliveryServiceSocialPrivacy,
+  SOCIAL_PRIVACY_PRIMARY_RULE,
+} from '@/lib/marketing/socialPrivacyGuard';
+import { loadConfiguredBrollClips, pickBrollClip } from '@/lib/marketing/reel/brollLibrary';
+import { generateQuietLuxuryStill } from '@/lib/marketing/reel/generateStill';
 import {
-  buildElegantTextVideoFilter,
-  buildReelOnScreenLines,
-} from '@/lib/marketing/reel/reelTextAudio';
+  defaultVeoPromptForAiStill,
+  defaultVeoPromptForDeliveryFlowers,
+  generateVeoReelClip,
+} from '@/lib/marketing/reel/generateVeoClip';
+import { resolveOrCreateInstrumentalMusicUrl } from '@/lib/marketing/reel/instrumentalAudio';
+import { buildReelOnScreenLines } from '@/lib/marketing/reel/reelTextAudio';
 
 const REEL_VIDEO_PREFIX = 'marketing/campagne/reel-videos';
-const REEL_DURATION_SEC = 15;
 
 export type GenerateReelInput = {
   campaignId: string;
-  /** @deprecated Ignorato: non usare mai immagini campagna/consegna come B-roll. */
   imageUrl?: string;
   copy?: string | null;
+  category?: string | null;
+  deceasedName?: string | null;
   blobToken?: string;
 };
 
+type StillSource = {
+  buffer: Buffer;
+  mimeType: string;
+  kind: 'social-ready' | 'campaign' | 'imagen';
+};
+
+async function fetchStillBytes(
+  url: string,
+  blobToken?: string
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const isPrivateBlob = url.includes('private.blob.vercel-storage.com');
+  if (isPrivateBlob) {
+    const token = blobToken || process.env.BLOB_READ_WRITE_TOKEN?.trim();
+    if (!token) {
+      throw new Error('BLOB_READ_WRITE_TOKEN richiesto per leggere still privato.');
+    }
+    const { getBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
+    const pathname = new URL(url).pathname.replace(/^\//, '');
+    const blobResult = await getBlobWithAccessFallback(pathname, {
+      token,
+      useCache: false,
+    });
+    if (!blobResult?.stream || blobResult.statusCode !== 200) {
+      throw new Error('Impossibile scaricare still da Vercel Blob privato.');
+    }
+    return {
+      buffer: Buffer.from(await new Response(blobResult.stream).arrayBuffer()),
+      mimeType: 'image/jpeg',
+    };
+  }
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Download still fallito (${res.status})`);
+  }
+  const mimeType = res.headers.get('content-type') || 'image/jpeg';
+  return { buffer: Buffer.from(await res.arrayBuffer()), mimeType };
+}
+
+async function resolveStillSource(input: GenerateReelInput): Promise<StillSource> {
+  const imageUrl = input.imageUrl?.trim();
+
+  if (imageUrl && isSocialReadyProofUrl(imageUrl)) {
+    assertDeliveryServiceSocialPrivacy({
+      imageUrl,
+      copy: input.copy || '',
+      deceasedName: input.deceasedName,
+      context: `reel:${input.campaignId}`,
+    });
+    const fetched = await fetchStillBytes(imageUrl, input.blobToken);
+    return { ...fetched, kind: 'social-ready' };
+  }
+
+  if (imageUrl && !/delivery-proof|foto-consegne\/delivery/i.test(imageUrl)) {
+    // Still campagna (Imagen / upload) — non foto privata consegna.
+    try {
+      const fetched = await fetchStillBytes(imageUrl, input.blobToken);
+      if (fetched.mimeType.startsWith('image/')) {
+        return { ...fetched, kind: 'campaign' };
+      }
+    } catch (e) {
+      console.warn(
+        '[ReelGenerator] Still campagna non leggibile, fallback Imagen:',
+        e instanceof Error ? e.message : e
+      );
+    }
+  }
+
+  if (imageUrl && /delivery-proof|foto-consegne\/delivery/i.test(imageUrl) && !isSocialReadyProofUrl(imageUrl)) {
+    console.warn(
+      `[ReelGenerator] ${SOCIAL_PRIVACY_PRIMARY_RULE} Foto privata ignorata → Imagen.`
+    );
+  }
+
+  const still = await generateQuietLuxuryStill({
+    copy: input.copy,
+    category: input.category,
+  });
+  return { ...still, kind: 'imagen' };
+}
+
 /**
  * Restituisce URL MP4 9:16 per pubblicazione Reel.
- * Non usa mai asset fioristi / social-ready / foto campagna.
  */
 export async function generateAutomaticReelVideo(
   input: GenerateReelInput
 ): Promise<string | null> {
-  const clips = loadConfiguredBrollClips();
-  const clip = pickBrollClip(input.campaignId, clips);
-
-  if (!clip) {
-    console.error(
-      '[ReelGenerator] Nessun B-roll configurato. Imposta MARKETING_REEL_BROLL_URLS ' +
-        '(video 4K archivio: cimiteri monumentali, marmo, fiori, tramonti) ' +
-        'e opzionalmente MARKETING_REEL_MUSIC_URL (strumentale). ' +
-        'Foto/video fioristi sono disabilitati per i Reel automatici.'
-    );
+  const token = input.blobToken || process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!token) {
+    console.error('[ReelGenerator] BLOB_READ_WRITE_TOKEN mancante.');
     return null;
   }
 
-  if (input.imageUrl && /social-ready|foto-consegne|delivery/i.test(input.imageUrl)) {
+  // Side-effect: prova a popolare cache musica strumentale (mai TTS).
+  void resolveOrCreateInstrumentalMusicUrl().catch(() => undefined);
+
+  // Linee on-screen usate solo se ffmpeg locale; Veo non burna testo — copy resta in caption Meta.
+  void buildReelOnScreenLines(input.copy);
+
+  try {
+    const still = await resolveStillSource(input);
+    const prompt =
+      still.kind === 'social-ready'
+        ? defaultVeoPromptForDeliveryFlowers()
+        : defaultVeoPromptForAiStill();
+
+    console.log(
+      `[ReelGenerator] Campagna ${input.campaignId} · still=${still.kind} · Veo · TTS=vietato`
+    );
+
+    const mp4 = await generateVeoReelClip({
+      prompt,
+      image: { buffer: still.buffer, mimeType: still.mimeType },
+    });
+
+    const blobPath = `${REEL_VIDEO_PREFIX}/${input.campaignId}-${Date.now()}.mp4`;
+    const { url } = await put(blobPath, mp4, {
+      access: 'public',
+      contentType: 'video/mp4',
+      token,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+
+    console.log(`[ReelGenerator] ✔ Reel AI caricato: ${url}`);
+    return url;
+  } catch (e) {
     console.warn(
-      `[ReelGenerator] Ignorata sorgente consegna/fiorista per campagna ${input.campaignId} — uso solo B-roll.`
+      '[ReelGenerator] Generazione Veo/Imagen fallita, provo fallback B-roll env:',
+      e instanceof Error ? e.message : e
     );
   }
 
-  const lines = buildReelOnScreenLines(input.copy);
-  const musicUrl = resolveInstrumentalMusicUrl();
-  const ffmpegPath = process.env.FFMPEG_PATH?.trim();
-
-  console.log(
-    `[ReelGenerator] Campagna ${input.campaignId} · B-roll=${clip.id} (${clip.mood}) · ` +
-      `music=${musicUrl ? 'strumentale' : 'nessuna'} · ffmpeg=${ffmpegPath ? 'sì' : 'no'} · TTS=vietato`
-  );
-
-  if (ffmpegPath) {
-    const rendered = await renderReelWithFfmpeg({
-      ffmpegPath,
-      brollUrl: clip.url,
-      musicUrl,
-      lines,
-      campaignId: input.campaignId,
-    });
-    if (rendered) {
-      const token = input.blobToken || process.env.BLOB_READ_WRITE_TOKEN?.trim();
-      if (!token) {
-        console.warn('[ReelGenerator] BLOB_READ_WRITE_TOKEN assente — ritorno URL B-roll diretto.');
-        return clip.url;
-      }
-      const blobPath = `${REEL_VIDEO_PREFIX}/${input.campaignId}.mp4`;
-      const { url } = await put(blobPath, rendered, {
-        access: 'public',
-        contentType: 'video/mp4',
-        token,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-      });
-      return url;
-    }
+  const clips = loadConfiguredBrollClips();
+  const clip = pickBrollClip(input.campaignId, clips);
+  if (clip) {
+    console.log(`[ReelGenerator] Fallback B-roll env: ${clip.label}`);
+    return clip.url;
   }
 
-  // Senza ffmpeg: pubblica il B-roll grezzo (meglio del fotogramma fiorista).
-  // Template pre-montato opzionale (già con testo/musica autorizzata).
   const prebuilt = process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim();
   if (prebuilt && /^https?:\/\//i.test(prebuilt)) {
-    console.log('[ReelGenerator] Uso MARKETING_REEL_TEMPLATE_MP4_URL (template pre-montato).');
     return prebuilt;
   }
 
-  console.log(
-    `[ReelGenerator] Pubblico B-roll diretto (senza overlay locale): ${clip.label}`
+  console.error(
+    '[ReelGenerator] Nessun Reel generabile. Verifica GEMINI_API_KEY + accesso Veo/Imagen su AI Studio.'
   );
-  return clip.url;
-}
-
-async function renderReelWithFfmpeg(input: {
-  ffmpegPath: string;
-  brollUrl: string;
-  musicUrl: string | null;
-  lines: ReturnType<typeof buildReelOnScreenLines>;
-  campaignId: string;
-}): Promise<Buffer | null> {
-  try {
-    const { execFile } = await import('node:child_process');
-    const { promisify } = await import('node:util');
-    const { writeFile, readFile, unlink, mkdtemp } = await import('node:fs/promises');
-    const { tmpdir } = await import('node:os');
-    const { join } = await import('node:path');
-    const execFileAsync = promisify(execFile);
-
-    const dir = await mkdtemp(join(tmpdir(), 'floremoria-reel-'));
-    const brollPath = join(dir, 'broll-src.mp4');
-    const musicPath = join(dir, 'music-src.audio');
-    const outputPath = join(dir, 'reel-out.mp4');
-
-    const brollRes = await fetch(input.brollUrl);
-    if (!brollRes.ok) {
-      throw new Error(`Download B-roll fallito (${brollRes.status})`);
-    }
-    await writeFile(brollPath, Buffer.from(await brollRes.arrayBuffer()));
-
-    let hasMusic = false;
-    if (input.musicUrl) {
-      const musicRes = await fetch(input.musicUrl);
-      if (musicRes.ok) {
-        await writeFile(musicPath, Buffer.from(await musicRes.arrayBuffer()));
-        hasMusic = true;
-      } else {
-        console.warn('[ReelGenerator] Download musica strumentale fallito — proseguo senza audio.');
-      }
-    }
-
-    const vf = buildElegantTextVideoFilter(input.lines);
-    const args = hasMusic
-      ? [
-          '-y',
-          '-stream_loop',
-          '-1',
-          '-i',
-          brollPath,
-          '-stream_loop',
-          '-1',
-          '-i',
-          musicPath,
-          '-t',
-          String(REEL_DURATION_SEC),
-          '-vf',
-          vf,
-          '-map',
-          '0:v:0',
-          '-map',
-          '1:a:0',
-          '-c:v',
-          'libx264',
-          '-pix_fmt',
-          'yuv420p',
-          '-c:a',
-          'aac',
-          '-b:a',
-          '128k',
-          '-shortest',
-          // Nessuna traccia voce / TTS: solo mix strumentale.
-          '-af',
-          'volume=0.35',
-          outputPath,
-        ]
-      : [
-          '-y',
-          '-stream_loop',
-          '-1',
-          '-i',
-          brollPath,
-          '-t',
-          String(REEL_DURATION_SEC),
-          '-vf',
-          vf,
-          '-an',
-          '-c:v',
-          'libx264',
-          '-pix_fmt',
-          'yuv420p',
-          outputPath,
-        ];
-
-    await execFileAsync(input.ffmpegPath, args, { maxBuffer: 20 * 1024 * 1024 });
-    const mp4 = await readFile(outputPath);
-
-    await Promise.all([
-      unlink(brollPath).catch(() => undefined),
-      unlink(outputPath).catch(() => undefined),
-      hasMusic ? unlink(musicPath).catch(() => undefined) : Promise.resolve(),
-    ]);
-
-    console.log(
-      `[ReelGenerator] Render ffmpeg OK · campagna ${input.campaignId} · ${mp4.length} bytes · TTS=no`
-    );
-    return mp4;
-  } catch (e) {
-    console.warn(
-      '[ReelGenerator] ffmpeg render fallito:',
-      e instanceof Error ? e.message : e
-    );
-    return null;
-  }
+  return null;
 }

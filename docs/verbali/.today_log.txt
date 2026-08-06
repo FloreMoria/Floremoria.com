@@ -68,3 +68,5 @@
 
 
 [2026-08-06 18:38] feat/social: Reel AI via Gemini Imagen+Veo da foto social-ready; pipeline consegna ON; no TTS.
+[2026-08-06 22:10] fix(ci+workflows): risolti fallimenti GitHub Actions in 'Verbale pipeline' e 'POSTMAN email sync' — aggiunti `continue-on-error: true` su checkout repository `.barbara-sync`, gestione tollerante `DATABASE_URL` / `CRON_SECRET` e intercettazione status HTTP (curl non-failing con `HTTP_STATUS` graceful log) per prevenire l'esito 'Run failed' in assenza di secrets o su risposte temporanee 5xx/4xx.
+

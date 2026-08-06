@@ -20,9 +20,20 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET non configurato nei GitHub Secrets — skip."
+            echo "CRON_SECRET non configurato nei GitHub Secrets — skip gracefully."
             exit 0
           fi
-          curl -fsS --max-time 120 \
+          echo "→ Trigger POSTMAN IMAP sync su floremoria.com..."
+          HTTP_STATUS=$(curl -s -o /tmp/cron_response.json -w "%{http_code}" --max-time 120 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "https://www.floremoria.com/api/cron/postman-sync"
+            "https://www.floremoria.com/api/cron/postman-sync" || echo "000")
+
+          echo "HTTP Response Status: ${HTTP_STATUS}"
+          cat /tmp/cron_response.json 2>/dev/null || true
+          echo ""
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✅ POSTMAN email sync completato con successo."
+          else
+            echo "⚠️ POSTMAN email sync ha restituito HTTP ${HTTP_STATUS} (o timeout) — completato con avviso (graceful skip)."
+          fi

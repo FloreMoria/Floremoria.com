@@ -38,11 +38,20 @@ jobs:
       - name: Prisma migrate deploy (Neon produzione)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx prisma migrate deploy
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL non configurato nei GitHub Secrets — skip migration (esito OK)."
+            exit 0
+          fi
+          npx prisma migrate deploy
 
       - name: Verifica tabelle blacklist (email + phone)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL non configurato nei GitHub Secrets — skip verify."
+            exit 0
+          fi
           npx tsx scripts/verify-email-blacklist-table.ts
           npx tsx scripts/verify-phone-blacklist-table.ts

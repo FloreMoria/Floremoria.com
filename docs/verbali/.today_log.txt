@@ -52,3 +52,4 @@
 
 [2026-08-05 20:42] feat/analytics: KPI reali Communications Hub (VERA/umano, aperti, foto, 24h, GdM×20, label facebookexternalhit).
 [2026-08-06 09:09] fix/facebook: diagnosi post dark (app Dev Mode); publish foto published=true; no fallback user token; copy varianti FT/FF.
+[2026-08-06 09:45] chore(env): consolidato blocco META in .env.local (app Live Social Media Dept., rimossi duplicati/alias).

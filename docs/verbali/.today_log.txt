@@ -59,4 +59,6 @@
 [2026-08-06 11:18] fix/social: FB Reel attende processing+verifica PUBLISHED (no bozza); upload multi-canale + propaga ad altri social.
 
 [2026-08-06 17:22] feat(social+metrics): endpoint refresh metriche Meta `/api/social/refresh-metrics` e `/api/dashboard/social/sync` (FB: post_impressions, post_impressions_unique, post_engaged_users, post_reactions_by_type_total; IG: views, plays, reach, total_interactions, saved, shares); collegato pulsante "Aggiorna da social" con stato di caricamento spinner e revalidation sincrona; visualizzazione strip metriche live (Views, Copertura, Interazioni, Like, Commenti) visibile anche a 0 su ciascuna card post.
+[2026-08-06 17:44] feat(social+table): esclusione Storie scadute/ephemere dalla tabella metriche (`contentFormat: { not: ContentFormat.STORY }` sia lato API che UI); applicata intestazione fissa `sticky top-0 z-20 bg-slate-900 text-slate-200` con wrapper `overflow-auto max-h-[calc(100vh-220px)]` e min-widths per scorrimento mobile & desktop a prova di sovrapposizioni.
+
 

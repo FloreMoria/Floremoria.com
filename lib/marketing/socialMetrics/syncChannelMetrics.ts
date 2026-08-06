@@ -1,4 +1,4 @@
-import { CampaignStatus, MarketingChannel, Prisma } from '@prisma/client';
+import { CampaignStatus, ContentFormat, MarketingChannel, Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import {
   enrichFacebookCampaignMetrics,
@@ -64,6 +64,7 @@ export async function syncAndListChannelMetrics(
     where: {
       targetChannel: channel,
       status: CampaignStatus.PUBLISHED,
+      contentFormat: { not: ContentFormat.STORY },
     },
     orderBy: [{ updatedAt: 'desc' }],
     take: 100,
@@ -131,6 +132,7 @@ export async function syncAndListChannelMetrics(
     where: {
       targetChannel: channel,
       status: CampaignStatus.PUBLISHED,
+      contentFormat: { not: ContentFormat.STORY },
     },
     orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
     take: limit,

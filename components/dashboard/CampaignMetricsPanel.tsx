@@ -66,13 +66,18 @@ export default function CampaignMetricsPanel({
   rows,
   onRefresh,
 }: Props) {
+  // Filtra la lista escludendo Storie (mostra solo contenuti permanenti: Reel, Feed, Foto, Caroselli)
+  const activeRows = rows.filter(
+    (row) => row.contentFormat !== 'STORY' && row.contentFormat !== 'STORIES'
+  );
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6">
       <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} className="text-slate-500" />
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
-            Metriche pubblicazioni
+            Metriche pubblicazioni permanenti (Feed, Reel, Caroselli)
           </h3>
         </div>
         <button
@@ -89,7 +94,7 @@ export default function CampaignMetricsPanel({
       {summary ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100">
           {[
-            { label: 'Post', value: summary.posts },
+            { label: 'Post Permanenti', value: activeRows.length },
             { label: 'Con metriche', value: summary.withLiveMetrics },
             { label: 'Visualizzazioni', value: summary.views },
             { label: 'Copertura', value: summary.reach },
@@ -107,67 +112,67 @@ export default function CampaignMetricsPanel({
       ) : null}
 
       <div className="px-4 py-2 text-[11px] text-slate-500 border-b border-slate-100 bg-white">
-        Instagram & Facebook: metriche live (views, reach, like, commenti, condivisioni) sincronizzate via Graph API.
+        Instagram & Facebook: metriche live dei post permanenti (views, reach, like, commenti, condivisioni). Storie escluse.
       </div>
 
       {error ? (
         <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-100">{error}</div>
       ) : null}
 
-      <div className="overflow-x-auto w-full">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">
+      <div className="overflow-auto max-h-[calc(100vh-220px)] min-h-[300px] relative w-full border-t border-b border-slate-100 bg-white">
+        <table className="w-full min-w-[1050px] text-sm text-left border-collapse">
+          <thead className="sticky top-0 z-20 bg-slate-900 text-slate-100 shadow-md">
+            <tr>
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-center min-w-[64px]">
                 Media
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider min-w-[135px]">
                 Pubblicato
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider min-w-[100px]">
                 Formato
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider min-w-[180px]">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider min-w-[220px]">
                 Copy
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[125px]">
                 Visualizzazioni
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[110px]">
                 Copertura
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[80px]">
                 Like
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[95px]">
                 Commenti
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[100px]">
                 Salvi/Cond.
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider text-right min-w-[110px]">
                 Interazioni
               </th>
-              <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">
+              <th className="sticky top-0 z-20 bg-slate-900 text-slate-200 font-bold py-3 px-3.5 uppercase text-[11px] tracking-wider min-w-[110px]">
                 Stato sync
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading && rows.length === 0 ? (
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {loading && activeRows.length === 0 ? (
               <tr>
                 <td colSpan={11} className="text-center py-10 text-slate-500">
                   Caricamento metriche…
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : activeRows.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center py-10 text-slate-500">
-                  Nessun post pubblicato su questo social.
+                <td colSpan={11} className="text-center py-10 text-slate-500 font-medium">
+                  Nessun post permanente (Feed, Reel, Caroselli) pubblicato su questo social.
                 </td>
               </tr>
             ) : (
-              rows.map((row) => {
+              activeRows.map((row) => {
                 const thumb = thumbUrl(row);
                 const m = row.metrics;
                 const views = m.views ?? m.impressions ?? 0;
@@ -178,7 +183,7 @@ export default function CampaignMetricsPanel({
                 const engagement = m.engagement ?? (likes + comments + savesOrShares);
 
                 return (
-                  <tr key={row.id} className="hover:bg-gray-50/80 transition-colors">
+                  <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-2.5 px-3">
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 mx-auto">
                         {thumb ? (
@@ -195,7 +200,7 @@ export default function CampaignMetricsPanel({
                       {fmtDate(row.publishedAt)}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                         {row.contentFormat}
                       </span>
                     </td>
@@ -238,7 +243,7 @@ export default function CampaignMetricsPanel({
                           {m.error}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
                           {m.source === 'live' ? 'Live' : m.source === 'cached' ? 'Cache' : 'N/D'}
                         </span>
                       )}

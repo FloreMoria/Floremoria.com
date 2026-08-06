@@ -38,7 +38,7 @@ type IgRemoteMedia = {
   media_type?: string;
 };
 
-function insightValue(data: Array<{ name?: string; values?: Array<{ value?: number }> }>, name: string): number | null {
+function insightValue(data: Array<{ name?: string; values?: Array<{ value?: unknown }> }>, name: string): number | null {
   const row = data.find((d) => d.name === name);
   const v = row?.values?.[0]?.value;
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
@@ -63,54 +63,59 @@ async function fetchIgMediaInsights(
   options?: { isStory?: boolean }
 ): Promise<CampaignSocialMetrics> {
   const tryMetrics = async (metricList: string) => {
-    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number }> }> }>(
+    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> }>(
       `/${mediaId}/insights?metric=${metricList}`,
       accessToken
     );
     return payload.data || [];
   };
 
-  let data: Array<{ name?: string; values?: Array<{ value?: number }> }> = [];
+  let data: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> = [];
   try {
     data = options?.isStory
       ? await tryMetrics('views,reach,replies,shares,total_interactions')
-      : await tryMetrics('views,reach,saved,shares,total_interactions');
+      : await tryMetrics('views,plays,reach,saved,shares,total_interactions,impressions');
   } catch {
     try {
       data = options?.isStory
         ? await tryMetrics('views,reach,replies')
-        : await tryMetrics('impressions,reach,engagement,saved');
+        : await tryMetrics('impressions,reach,engagement,saved,plays');
     } catch {
       const likes = base.likes ?? 0;
       const comments = base.comments ?? 0;
       return emptyMetrics({
         ...base,
-        engagement: likes + comments || null,
+        views: 0,
+        impressions: 0,
+        reach: 0,
+        engagement: likes + comments || 0,
         source: 'live',
         error: null,
       });
     }
   }
 
-  const views = insightValue(data, 'views') ?? insightValue(data, 'impressions');
-  const reach = insightValue(data, 'reach');
-  const saves = insightValue(data, 'saved');
-  const shares = insightValue(data, 'shares');
-  const replies = insightValue(data, 'replies');
+  const views = insightValue(data, 'views') ?? insightValue(data, 'plays') ?? insightValue(data, 'impressions') ?? 0;
+  const impressions = insightValue(data, 'impressions') ?? views ?? 0;
+  const reach = insightValue(data, 'reach') ?? 0;
+  const saves = insightValue(data, 'saved') ?? 0;
+  const shares = insightValue(data, 'shares') ?? 0;
+  const replies = insightValue(data, 'replies') ?? 0;
   const engagement =
     insightValue(data, 'total_interactions') ??
     insightValue(data, 'engagement') ??
-    (base.likes ?? 0) + (base.comments ?? replies ?? 0) + (saves ?? 0) + (shares ?? 0);
+    ((base.likes ?? 0) + (base.comments ?? replies ?? 0) + saves + shares);
 
   return emptyMetrics({
     ...base,
     views,
-    impressions: insightValue(data, 'impressions') ?? views,
+    impressions,
     reach,
-    comments: base.comments ?? replies,
+    comments: base.comments ?? replies ?? 0,
     saves,
     shares,
-    engagement: engagement || null,
+    likes: base.likes ?? 0,
+    engagement,
     source: 'live',
     error: null,
   });
@@ -122,22 +127,35 @@ async function fetchFbPostInsights(
   base: Partial<CampaignSocialMetrics>
 ): Promise<CampaignSocialMetrics> {
   try {
-    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number }> }> }>(
-      `/${postId}/insights?metric=post_impressions,post_impressions_unique,post_engaged_users,post_clicks`,
+    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> }>(
+      `/${postId}/insights?metric=post_impressions,post_impressions_unique,post_engaged_users,post_clicks,post_reactions_by_type_total`,
       accessToken
     );
     const data = payload.data || [];
-    const impressions = insightValue(data, 'post_impressions');
-    const reach = insightValue(data, 'post_impressions_unique');
-    const engagement = insightValue(data, 'post_engaged_users');
-    const clicks = insightValue(data, 'post_clicks');
+    const impressions = insightValue(data, 'post_impressions') ?? 0;
+    const reach = insightValue(data, 'post_impressions_unique') ?? 0;
+    const engagement = insightValue(data, 'post_engaged_users') ?? 0;
+    const clicks = insightValue(data, 'post_clicks') ?? 0;
+
+    const reactionsRow = data.find((d) => d.name === 'post_reactions_by_type_total');
+    let totalReactions = 0;
+    if (reactionsRow?.values?.[0]?.value && typeof reactionsRow.values[0].value === 'object') {
+      const recObj = reactionsRow.values[0].value as Record<string, number>;
+      totalReactions = Object.values(recObj).reduce((acc, v) => acc + (typeof v === 'number' ? v : 0), 0);
+    }
+
+    const likes = base.likes ?? (totalReactions > 0 ? totalReactions : 0);
+
     return emptyMetrics({
       ...base,
+      likes,
+      comments: base.comments ?? 0,
+      shares: base.shares ?? 0,
       views: impressions,
       impressions,
       reach,
       clicks,
-      engagement,
+      engagement: engagement || (likes + (base.comments ?? 0) + (base.shares ?? 0)),
       source: 'live',
       error: null,
     });
@@ -147,7 +165,13 @@ async function fetchFbPostInsights(
     const shares = base.shares ?? 0;
     return emptyMetrics({
       ...base,
-      engagement: likes + comments + shares || null,
+      views: 0,
+      impressions: 0,
+      reach: 0,
+      likes,
+      comments,
+      shares,
+      engagement: likes + comments + shares,
       source: 'live',
       error: null,
     });

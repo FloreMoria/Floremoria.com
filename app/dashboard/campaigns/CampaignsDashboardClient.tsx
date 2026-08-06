@@ -210,7 +210,7 @@ export default function CampaignsDashboardClient() {
     setMetricsError(null);
     try {
       const res = await fetch(
-        `/api/dashboard/campaigns/metrics?channel=${encodeURIComponent(channel)}&refresh=${refresh ? '1' : '0'}`,
+        `/api/social/refresh-metrics?channel=${encodeURIComponent(channel)}&refresh=${refresh ? '1' : '0'}`,
         { cache: 'no-store' }
       );
       const data = await res.json();
@@ -222,6 +222,9 @@ export default function CampaignsDashboardClient() {
       }
       setMetricsRows(Array.isArray(data.rows) ? data.rows : []);
       setMetricsSummary(data.summary || null);
+      if (refresh) {
+        void fetchData();
+      }
     } catch {
       setMetricsError('Errore di rete durante il caricamento metriche.');
     } finally {
@@ -1059,20 +1062,34 @@ export default function CampaignsDashboardClient() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => setMetricsOpen((open) => !open)}
-            className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
-              metricsOpen
-                ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
-            aria-expanded={metricsOpen}
-            aria-controls="campaign-metrics-panel"
-          >
-            <BarChart3 size={14} />
-            Metriche
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMetricsOpen((open) => !open)}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all ${
+                metricsOpen
+                  ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+              aria-expanded={metricsOpen}
+              aria-controls="campaign-metrics-panel"
+            >
+              <BarChart3 size={14} />
+              Metriche
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMetricsOpen(true);
+                void fetchMetrics(activeTab, true);
+              }}
+              disabled={metricsRefreshing || metricsLoading}
+              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 disabled:opacity-50 transition-all shadow-2xs"
+            >
+              <RefreshCw size={14} className={metricsRefreshing ? 'animate-spin text-slate-600' : ''} />
+              {metricsRefreshing ? 'Aggiornamento…' : 'Aggiorna da social'}
+            </button>
+          </div>
         </div>
 
         <div className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3.5 py-2.5 rounded-full shadow-sm">
@@ -1337,7 +1354,57 @@ export default function CampaignsDashboardClient() {
                   )}
                 </div>
 
-              </div>
+                {/* STRIP METRICHE SOCIAL PER POST PUBBLICATI */}
+                  {c.status === 'PUBLISHED' && (
+                    <div className="mx-5 mb-4 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-black text-slate-700 uppercase tracking-wider text-[10px]">
+                          <BarChart3 size={12} className="text-amber-500" />
+                          <span>Metriche Social (Live)</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {metricsRows.find((m) => m.id === c.id)?.metricsSyncedAt
+                            ? `Sync ${new Date(metricsRows.find((m) => m.id === c.id)!.metricsSyncedAt!).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+                            : 'Live'}
+                        </span>
+                      </div>
+                      {(() => {
+                        const row = metricsRows.find((m) => m.id === c.id);
+                        const m = row?.metrics;
+                        const views = m?.views ?? m?.impressions ?? 0;
+                        const reach = m?.reach ?? 0;
+                        const engagement = m?.engagement ?? ((m?.likes ?? 0) + (m?.comments ?? 0));
+                        const likes = m?.likes ?? 0;
+                        const comments = m?.comments ?? 0;
+
+                        return (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px] font-semibold text-slate-600">
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Views</span>
+                              <span className="text-slate-900 font-black">{views}</span>
+                            </div>
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Copertura</span>
+                              <span className="text-slate-900 font-black">{reach}</span>
+                            </div>
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Interazioni</span>
+                              <span className="text-slate-900 font-black">{engagement}</span>
+                            </div>
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Like</span>
+                              <span className="text-slate-900 font-black">{likes}</span>
+                            </div>
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Commenti</span>
+                              <span className="text-slate-900 font-black">{comments}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
 
               {/* CARD FOOTER CON AZIONI */}
               <div className="p-5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-4 mt-auto">

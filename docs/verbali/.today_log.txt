@@ -57,3 +57,6 @@
 [2026-08-06 10:40] privacy/social: regola primaria solo-fiori — guard anagrafica defunto + skill IG/FB.
 [2026-08-06 11:05] fix/social: video sempre REEL (non Story) — IG media_type=REELS, FB /video_reels, auto-format + permalink.
 [2026-08-06 11:18] fix/social: FB Reel attende processing+verifica PUBLISHED (no bozza); upload multi-canale + propaga ad altri social.
+
+[2026-08-06 17:22] feat(social+metrics): endpoint refresh metriche Meta `/api/social/refresh-metrics` e `/api/dashboard/social/sync` (FB: post_impressions, post_impressions_unique, post_engaged_users, post_reactions_by_type_total; IG: views, plays, reach, total_interactions, saved, shares); collegato pulsante "Aggiorna da social" con stato di caricamento spinner e revalidation sincrona; visualizzazione strip metriche live (Views, Copertura, Interazioni, Like, Commenti) visibile anche a 0 su ciascuna card post.
+

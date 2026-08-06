@@ -9,7 +9,7 @@ import type {
 } from '@/lib/marketing/socialMetrics/types';
 
 function fmt(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—';
+  if (n == null || Number.isNaN(n)) return '0';
   return new Intl.NumberFormat('it-IT').format(n);
 }
 
@@ -67,7 +67,7 @@ export default function CampaignMetricsPanel({
   onRefresh,
 }: Props) {
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6">
       <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 size={16} className="text-slate-500" />
@@ -79,10 +79,10 @@ export default function CampaignMetricsPanel({
           type="button"
           onClick={onRefresh}
           disabled={refreshing || loading}
-          className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-50 transition-all shadow-2xs"
         >
-          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-          Aggiorna da social
+          <RefreshCw size={12} className={refreshing ? 'animate-spin text-slate-600' : ''} />
+          {refreshing ? 'Aggiornamento…' : 'Aggiorna da social'}
         </button>
       </div>
 
@@ -91,8 +91,8 @@ export default function CampaignMetricsPanel({
           {[
             { label: 'Post', value: summary.posts },
             { label: 'Con metriche', value: summary.withLiveMetrics },
-            { label: 'Views', value: summary.views },
-            { label: 'Reach', value: summary.reach },
+            { label: 'Visualizzazioni', value: summary.views },
+            { label: 'Copertura', value: summary.reach },
             { label: 'Like', value: summary.likes },
             { label: 'Commenti', value: summary.comments },
           ].map((kpi) => (
@@ -107,8 +107,7 @@ export default function CampaignMetricsPanel({
       ) : null}
 
       <div className="px-4 py-2 text-[11px] text-slate-500 border-b border-slate-100 bg-white">
-        Instagram: views/reach/like live su Feed e Reel. Le Story solo se ancora attive (~24h) o con ID salvato.
-        Facebook: like/commenti e link post quando il match trova la pubblicazione.
+        Instagram & Facebook: metriche live (views, reach, like, commenti, condivisioni) sincronizzate via Graph API.
       </div>
 
       {error ? (
@@ -132,10 +131,10 @@ export default function CampaignMetricsPanel({
                 Copy
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
-                Views
+                Visualizzazioni
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
-                Reach
+                Copertura
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
                 Like
@@ -144,10 +143,10 @@ export default function CampaignMetricsPanel({
                 Commenti
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
-                Share/Save
+                Salvi/Cond.
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">
-                Eng.
+                Interazioni
               </th>
               <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">
                 Stato sync
@@ -171,6 +170,13 @@ export default function CampaignMetricsPanel({
               rows.map((row) => {
                 const thumb = thumbUrl(row);
                 const m = row.metrics;
+                const views = m.views ?? m.impressions ?? 0;
+                const reach = m.reach ?? 0;
+                const likes = m.likes ?? 0;
+                const comments = m.comments ?? 0;
+                const savesOrShares = (m.shares ?? 0) + (m.saves ?? 0);
+                const engagement = m.engagement ?? (likes + comments + savesOrShares);
+
                 return (
                   <tr key={row.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="py-2.5 px-3">
@@ -209,22 +215,22 @@ export default function CampaignMetricsPanel({
                       ) : null}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-slate-800">
-                      {fmt(m.views ?? m.impressions)}
+                      {fmt(views)}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums text-slate-700">
-                      {fmt(m.reach)}
+                      {fmt(reach)}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums text-slate-700">
-                      {fmt(m.likes)}
+                      {fmt(likes)}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums text-slate-700">
-                      {fmt(m.comments)}
+                      {fmt(comments)}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums text-slate-700">
-                      {fmt(m.shares ?? m.saves)}
+                      {fmt(savesOrShares)}
                     </td>
                     <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-slate-800">
-                      {fmt(m.engagement)}
+                      {fmt(engagement)}
                     </td>
                     <td className="py-2.5 px-3">
                       {m.error ? (

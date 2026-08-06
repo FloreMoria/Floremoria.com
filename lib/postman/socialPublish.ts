@@ -111,7 +111,7 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
   }
 
   const category = coerceSocialCategoryCode(proof.socialCopyCategory);
-  const copyPack = buildSocialProofCopy(category);
+  const copyPack = buildSocialProofCopy(category, { salt: deliveryProofId });
 
   return {
     imageUrl,
@@ -191,26 +191,41 @@ function contentTypeFromImageUrl(imageUrl: string): string {
   return 'image/webp';
 }
 
+/**
+ * Upload foto pagina Facebook.
+ * - published=true + caption → post pubblico in un passo (preferito per FEED).
+ * - published=false → media da allegare a /feed o Story (non creare post standalone).
+ */
 async function metaGraphUploadPhoto(
   fbPageId: string,
   accessToken: string,
   imageUrl: string,
-  blobToken?: string
-): Promise<{ id?: string }> {
+  blobToken?: string,
+  options?: { published?: boolean; caption?: string }
+): Promise<{ id?: string; post_id?: string }> {
+  const published = options?.published ?? false;
+  const caption = options?.caption?.trim() || '';
   const isPrivateBlob = imageUrl.includes('private.blob.vercel-storage.com');
 
   if (!isPrivateBlob) {
-    return metaGraphPost<{ id?: string }>(`/${fbPageId}/photos`, accessToken, {
+    const body: Record<string, string> = {
       url: imageUrl,
-      published: 'false',
-    });
+      published: published ? 'true' : 'false',
+    };
+    if (caption) body.caption = caption;
+    return metaGraphPost<{ id?: string; post_id?: string }>(
+      `/${fbPageId}/photos`,
+      accessToken,
+      body
+    );
   }
 
   const bytes = await fetchImageBytes(imageUrl, blobToken);
   const contentType = contentTypeFromImageUrl(imageUrl);
   const ext = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpg' : 'webp';
   const formData = new FormData();
-  formData.append('published', 'false');
+  formData.append('published', published ? 'true' : 'false');
+  if (caption) formData.append('caption', caption);
   formData.append('access_token', accessToken);
   formData.append('source', new Blob([new Uint8Array(bytes)], { type: contentType }), `photo.${ext}`);
 
@@ -219,7 +234,11 @@ async function metaGraphUploadPhoto(
     body: formData,
   });
 
-  const payload = (await res.json()) as { id?: string; error?: { message?: string } };
+  const payload = (await res.json()) as {
+    id?: string;
+    post_id?: string;
+    error?: { message?: string };
+  };
   if (!res.ok || payload.error) {
     throw new Error(payload.error?.message || `Meta Graph API upload error (${res.status})`);
   }
@@ -249,23 +268,20 @@ async function getFacebookPageAccessToken(
   fbPageId: string,
   userAccessToken: string
 ): Promise<string> {
-  try {
-    const res = await fetch(
-      `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
+  const res = await fetch(
+    `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
+  );
+  const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
+  if (!res.ok || payload.error) {
+    throw new Error(
+      payload.error?.message ||
+        `Page Access Token non recuperabile (${res.status}). Senza page token Meta pubblica post invisibili al pubblico.`
     );
-    const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
-    if (!res.ok || payload.error) {
-      throw new Error(payload.error?.message || `Failed to fetch page token (${res.status})`);
-    }
-    if (!payload.access_token) {
-      throw new Error('Page access token not returned from Meta API');
-    }
-    return payload.access_token;
-  } catch (err) {
-    console.error(`[POSTMAN] Errore recupero Page Access Token per pagina ${fbPageId}:`, err);
-    // In caso di errore proviamo comunque a fare fallback sul token utente configurato
-    return userAccessToken;
   }
+  if (!payload.access_token) {
+    throw new Error('Page access token non restituito da Meta API');
+  }
+  return payload.access_token;
 }
 
 async function publishToFacebook(
@@ -277,7 +293,7 @@ async function publishToFacebook(
     throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
   }
 
-  // Risolviamo dinamicamente il Page Access Token per evitare errore #200 (Unpublished posts)
+  // Page token obbligatorio: fallback su user token → post "dark" (solo admin / app roles).
   const pageAccessToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
 
   const caption = captionForFormat(
@@ -285,28 +301,26 @@ async function publishToFacebook(
     campaign.copy,
     campaign.hashtags
   );
+
+  // Un solo passo: foto pubblicata con caption (visibile al pubblico se l'app Meta è Live).
   const photoRes = await metaGraphUploadPhoto(
     fbPageId,
     pageAccessToken,
     campaign.imageUrl,
-    blobToken
+    blobToken,
+    { published: true, caption }
   );
 
-  if (!photoRes.id) {
-    throw new Error('Meta Facebook: photo id mancante.');
+  const externalId = photoRes.post_id || photoRes.id;
+  if (!externalId) {
+    throw new Error('Meta Facebook: photo/post id mancante dopo publish.');
   }
 
-  const feedRes = await metaGraphPost<{ id?: string }>(`/${fbPageId}/feed`, pageAccessToken, {
-    message: caption,
-    attached_media: JSON.stringify([{ media_fbid: photoRes.id }]),
-  });
-
-  if (!feedRes.id) {
-    throw new Error('Meta Facebook: post id mancante su /feed.');
-  }
-
-  console.log(`[POSTMAN] Facebook pubblicato — feed post_id ${feedRes.id} (campagna ${campaign.id})`);
-  return feedRes.id;
+  console.log(
+    `[POSTMAN] Facebook pubblicato — post_id ${externalId} (campagna ${campaign.id}). ` +
+      'Se il permalink risulta "contenuto non disponibile" al pubblico, l’app Meta è in Development Mode: passarla a Live su developers.facebook.com.'
+  );
+  return externalId;
 }
 
 async function publishToInstagram(

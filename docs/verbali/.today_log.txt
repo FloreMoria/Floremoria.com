@@ -51,3 +51,4 @@
 [2026-08-05 20:28] style(defunti): compattazione tabella Anagrafica Defunti (ClientDeceasedTable.tsx) — impostata classe `table-fixed w-full`, ridotti padding celle a `px-2 py-2`, dimensione font `text-xs`, troncamento `truncate` con attributi `title` per tooltip al passaggio del mouse su testi lunghi, eliminato scrollbar orizzontale su schermi desktop.
 
 [2026-08-05 20:42] feat/analytics: KPI reali Communications Hub (VERA/umano, aperti, foto, 24h, GdM×20, label facebookexternalhit).
+[2026-08-06 09:09] fix/facebook: diagnosi post dark (app Dev Mode); publish foto published=true; no fallback user token; copy varianti FT/FF.

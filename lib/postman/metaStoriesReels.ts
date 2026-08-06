@@ -108,18 +108,17 @@ async function getFacebookPageAccessToken(
   fbPageId: string,
   userAccessToken: string
 ): Promise<string> {
-  try {
-    const res = await fetch(
-      `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
+  const res = await fetch(
+    `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
+  );
+  const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
+  if (!res.ok || payload.error || !payload.access_token) {
+    throw new Error(
+      payload.error?.message ||
+        `Page Access Token non recuperabile per ${fbPageId}. Evitato fallback user token (post dark).`
     );
-    const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
-    if (!res.ok || payload.error || !payload.access_token) {
-      return userAccessToken;
-    }
-    return payload.access_token;
-  } catch {
-    return userAccessToken;
   }
+  return payload.access_token;
 }
 
 export async function publishToInstagramStory(

@@ -60,62 +60,82 @@ async function fetchIgMediaInsights(
   mediaId: string,
   accessToken: string,
   base: Partial<CampaignSocialMetrics>,
-  options?: { isStory?: boolean }
+  options?: { isStory?: boolean; mediaType?: string }
 ): Promise<CampaignSocialMetrics> {
-  const tryMetrics = async (metricList: string) => {
-    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> }>(
-      `/${mediaId}/insights?metric=${metricList}`,
-      accessToken
-    );
-    return payload.data || [];
+  const dataMap = new Map<string, number>();
+
+  const queryMetrics = async (metrics: string[]) => {
+    try {
+      const payload = await metaGet<{
+        data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
+      }>(`/${mediaId}/insights?metric=${metrics.join(',')}`, accessToken);
+
+      if (payload.data && Array.isArray(payload.data)) {
+        for (const item of payload.data) {
+          if (item.name && item.values?.[0]?.value != null) {
+            const val = item.values[0].value;
+            if (typeof val === 'number') {
+              dataMap.set(item.name, val);
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback metrica per metrica se una combinazione fallisce su Graph API
+      for (const m of metrics) {
+        try {
+          const single = await metaGet<{
+            data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
+          }>(`/${mediaId}/insights?metric=${m}`, accessToken);
+          const val = single.data?.[0]?.values?.[0]?.value;
+          if (typeof val === 'number') {
+            dataMap.set(m, val);
+          }
+        } catch {
+          // Metrica non disponibile per questa specifica media_type
+        }
+      }
+    }
   };
 
-  let data: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> = [];
-  try {
-    data = options?.isStory
-      ? await tryMetrics('views,reach,replies,shares,total_interactions')
-      : await tryMetrics('views,plays,reach,saved,shares,total_interactions,impressions');
-  } catch {
-    try {
-      data = options?.isStory
-        ? await tryMetrics('views,reach,replies')
-        : await tryMetrics('impressions,reach,engagement,saved,plays');
-    } catch {
-      const likes = base.likes ?? 0;
-      const comments = base.comments ?? 0;
-      return emptyMetrics({
-        ...base,
-        views: 0,
-        impressions: 0,
-        reach: 0,
-        engagement: likes + comments || 0,
-        source: 'live',
-        error: null,
-      });
+  const mediaType = (options?.mediaType || '').toUpperCase();
+
+  if (options?.isStory) {
+    await queryMetrics(['views', 'reach', 'replies', 'shares', 'total_interactions']);
+  } else if (mediaType === 'VIDEO' || mediaType === 'REELS') {
+    await queryMetrics(['plays', 'views', 'reach', 'saved', 'shares', 'total_interactions']);
+  } else if (mediaType === 'IMAGE' || mediaType === 'CAROUSEL_ALBUM') {
+    await queryMetrics(['impressions', 'reach', 'saved', 'shares', 'total_interactions']);
+  } else {
+    // Media type non specificato: proviamo prima le metriche standard, poi quelle video
+    await queryMetrics(['impressions', 'reach', 'saved', 'shares', 'total_interactions']);
+    if (!dataMap.has('impressions') && !dataMap.has('reach')) {
+      await queryMetrics(['plays', 'views']);
     }
   }
 
-  const views = insightValue(data, 'views') ?? insightValue(data, 'plays') ?? insightValue(data, 'impressions') ?? 0;
-  const impressions = insightValue(data, 'impressions') ?? views ?? 0;
-  const reach = insightValue(data, 'reach') ?? 0;
-  const saves = insightValue(data, 'saved') ?? 0;
-  const shares = insightValue(data, 'shares') ?? 0;
-  const replies = insightValue(data, 'replies') ?? 0;
+  const views = dataMap.get('views') ?? dataMap.get('plays') ?? dataMap.get('impressions') ?? null;
+  const impressions = dataMap.get('impressions') ?? views;
+  const reach = dataMap.get('reach');
+  const saves = dataMap.get('saved');
+  const shares = dataMap.get('shares');
+  const replies = dataMap.get('replies');
+
   const engagement =
-    insightValue(data, 'total_interactions') ??
-    insightValue(data, 'engagement') ??
-    ((base.likes ?? 0) + (base.comments ?? replies ?? 0) + saves + shares);
+    dataMap.get('total_interactions') ??
+    dataMap.get('engagement') ??
+    ((base.likes ?? 0) + (base.comments ?? replies ?? 0) + (saves ?? 0) + (shares ?? 0));
 
   return emptyMetrics({
     ...base,
-    views,
-    impressions,
-    reach,
+    views: views ?? 0,
+    impressions: impressions ?? 0,
+    reach: reach ?? 0,
     comments: base.comments ?? replies ?? 0,
-    saves,
-    shares,
+    saves: saves ?? 0,
+    shares: shares ?? 0,
     likes: base.likes ?? 0,
-    engagement,
+    engagement: engagement ?? 0,
     source: 'live',
     error: null,
   });
@@ -126,56 +146,89 @@ async function fetchFbPostInsights(
   accessToken: string,
   base: Partial<CampaignSocialMetrics>
 ): Promise<CampaignSocialMetrics> {
-  try {
-    const payload = await metaGet<{ data?: Array<{ name?: string; values?: Array<{ value?: number | Record<string, number> }> }> }>(
-      `/${postId}/insights?metric=post_impressions,post_impressions_unique,post_engaged_users,post_clicks,post_reactions_by_type_total`,
-      accessToken
-    );
-    const data = payload.data || [];
-    const impressions = insightValue(data, 'post_impressions') ?? 0;
-    const reach = insightValue(data, 'post_impressions_unique') ?? 0;
-    const engagement = insightValue(data, 'post_engaged_users') ?? 0;
-    const clicks = insightValue(data, 'post_clicks') ?? 0;
+  const dataMap = new Map<string, number>();
 
-    const reactionsRow = data.find((d) => d.name === 'post_reactions_by_type_total');
-    let totalReactions = 0;
-    if (reactionsRow?.values?.[0]?.value && typeof reactionsRow.values[0].value === 'object') {
-      const recObj = reactionsRow.values[0].value as Record<string, number>;
-      totalReactions = Object.values(recObj).reduce((acc, v) => acc + (typeof v === 'number' ? v : 0), 0);
+  const queryMetrics = async (metrics: string[]) => {
+    try {
+      const payload = await metaGet<{
+        data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
+      }>(`/${postId}/insights?metric=${metrics.join(',')}`, accessToken);
+
+      if (payload.data && Array.isArray(payload.data)) {
+        for (const item of payload.data) {
+          if (item.name && item.values?.[0]?.value != null) {
+            const val = item.values[0].value;
+            if (typeof val === 'number') {
+              dataMap.set(item.name, val);
+            } else if (typeof val === 'object' && val !== null) {
+              const total = Object.values(val as Record<string, number>).reduce(
+                (acc, v) => acc + (typeof v === 'number' ? v : 0),
+                0
+              );
+              dataMap.set(item.name, total);
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback metrica per metrica se una combinazione fallisce su Graph API
+      for (const m of metrics) {
+        try {
+          const single = await metaGet<{
+            data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
+          }>(`/${postId}/insights?metric=${m}`, accessToken);
+          const val = single.data?.[0]?.values?.[0]?.value;
+          if (typeof val === 'number') {
+            dataMap.set(m, val);
+          } else if (typeof val === 'object' && val !== null) {
+            const total = Object.values(val as Record<string, number>).reduce(
+              (acc, v) => acc + (typeof v === 'number' ? v : 0),
+              0
+            );
+            dataMap.set(m, total);
+          }
+        } catch {
+          // Metrica non supportata per questa tipologia di post FB
+        }
+      }
     }
+  };
 
-    const likes = base.likes ?? (totalReactions > 0 ? totalReactions : 0);
+  await queryMetrics([
+    'post_impressions',
+    'post_impressions_unique',
+    'post_engaged_users',
+    'post_clicks',
+    'post_reactions_by_type_total',
+    'post_video_views',
+    'blue_reels_play_count',
+  ]);
 
-    return emptyMetrics({
-      ...base,
-      likes,
-      comments: base.comments ?? 0,
-      shares: base.shares ?? 0,
-      views: impressions,
-      impressions,
-      reach,
-      clicks,
-      engagement: engagement || (likes + (base.comments ?? 0) + (base.shares ?? 0)),
-      source: 'live',
-      error: null,
-    });
-  } catch {
-    const likes = base.likes ?? 0;
-    const comments = base.comments ?? 0;
-    const shares = base.shares ?? 0;
-    return emptyMetrics({
-      ...base,
-      views: 0,
-      impressions: 0,
-      reach: 0,
-      likes,
-      comments,
-      shares,
-      engagement: likes + comments + shares,
-      source: 'live',
-      error: null,
-    });
-  }
+  const impressions =
+    dataMap.get('post_impressions') ??
+    dataMap.get('post_video_views') ??
+    dataMap.get('blue_reels_play_count') ??
+    0;
+  const reach = dataMap.get('post_impressions_unique') ?? 0;
+  const engagement = dataMap.get('post_engaged_users') ?? 0;
+  const clicks = dataMap.get('post_clicks') ?? 0;
+  const totalReactions = dataMap.get('post_reactions_by_type_total') ?? 0;
+
+  const likes = base.likes ?? totalReactions;
+
+  return emptyMetrics({
+    ...base,
+    likes,
+    comments: base.comments ?? 0,
+    shares: base.shares ?? 0,
+    views: impressions,
+    impressions,
+    reach,
+    clicks,
+    engagement: engagement || (likes + (base.comments ?? 0) + (base.shares ?? 0)),
+    source: 'live',
+    error: null,
+  });
 }
 
 function pickMatch(
@@ -280,7 +333,10 @@ export async function enrichInstagramCampaignMetrics(
       permalink: remote?.permalink ?? null,
       thumbnailUrl: remote ? mediaThumb(remote) : null,
     };
-    const metrics = await fetchIgMediaInsights(c.externalId, token, base, { isStory });
+    const metrics = await fetchIgMediaInsights(c.externalId, token, base, {
+      isStory,
+      mediaType: remote?.media_type,
+    });
     used.add(c.id);
     out.push({ campaignId: c.id, externalId: c.externalId, metrics });
   }
@@ -300,7 +356,9 @@ export async function enrichInstagramCampaignMetrics(
       permalink: remote.permalink ?? null,
       thumbnailUrl: mediaThumb(remote),
     };
-    const metrics = await fetchIgMediaInsights(remote.id, token, base);
+    const metrics = await fetchIgMediaInsights(remote.id, token, base, {
+      mediaType: remote.media_type,
+    });
     out.push({ campaignId: match.id, externalId: remote.id, metrics });
   }
 

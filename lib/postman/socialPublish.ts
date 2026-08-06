@@ -14,6 +14,7 @@ import {
   buildSocialProofCopy,
   coerceSocialCategoryCode,
 } from '@/lib/marketing/socialProofCopy';
+import { assertDeliveryServiceSocialPrivacy } from '@/lib/marketing/socialPrivacyGuard';
 import {
   publishToFacebookReel,
   publishToFacebookStory,
@@ -95,6 +96,7 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
     select: {
       socialReadyPrimaryUrl: true,
       socialCopyCategory: true,
+      order: { select: { deceasedName: true } },
     },
   });
 
@@ -112,6 +114,13 @@ export async function resolveDeliveryProofPublishPayload(deliveryProofId: string
 
   const category = coerceSocialCategoryCode(proof.socialCopyCategory);
   const copyPack = buildSocialProofCopy(category, { salt: deliveryProofId });
+
+  assertDeliveryServiceSocialPrivacy({
+    imageUrl,
+    copy: copyPack.copy,
+    deceasedName: proof.order?.deceasedName,
+    context: `deliveryProof:${deliveryProofId}`,
+  });
 
   return {
     imageUrl,

@@ -19,11 +19,12 @@ const DEFAULTS: Required<SocialSanitizeOptions> = {
 };
 
 /**
- * Sanifica un buffer foto consegna per uso social:
- * - crop centrale sul bouquet
- * - sfocatura pesante permanente sullo sfondo (lapidi/cimitero irriconoscibili)
+ * Sanifica un buffer foto consegna per uso social (regola primaria FloreMoria):
+ * - solo fiori/composizione a fuoco (crop centrale)
+ * - sfocatura pesante permanente sullo sfondo (lapidi / volti / cimitero irriconoscibili)
  * - strip completo metadati EXIF/GPS
  *
+ * Vietato pubblicare nome, cognome o foto riconoscibile del defunto.
  * Non modifica mai il file sorgente: opera su una copia in memoria.
  */
 export async function sanitizeDeliveryPhotoForSocial(

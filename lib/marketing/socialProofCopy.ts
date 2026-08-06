@@ -1,4 +1,6 @@
-/** Codici categoria social FloreMoria (nessun dato ordine reale nei post). */
+/** Codici categoria social FloreMoria.
+ * Regola primaria: nessun dato ordine reale nei post (niente nome/cognome/foto defunto — solo fiori).
+ */
 export type SocialProofCategoryCode = 'FF' | 'FT' | 'FA' | 'FP';
 
 export interface SocialProofCopy {

@@ -316,9 +316,9 @@ export async function publishToFacebookReel(
     console.log(`[POSTMAN] Facebook Reel rupload file_url OK — ${videoId}`);
   }
 
-  await waitFacebookReelUploadReady(videoId, pageToken);
+  await waitFacebookReelProcessingReady(videoId, pageToken);
 
-  // Step 3 — finish + publish
+  // Step 3 — finish + publish esplicito (PUBLISHED, mai DRAFT)
   const finished = await metaGraphPost<{ success?: boolean }>(`/${fbPageId}/video_reels`, pageToken, {
     upload_phase: 'finish',
     video_id: videoId,
@@ -329,6 +329,9 @@ export async function publishToFacebookReel(
   if (finished.success === false) {
     throw new Error('Meta Facebook Reel: finish/publish non riuscito.');
   }
+
+  // Step 4 — verifica publishing_phase; se resta in draft riprova finish PUBLISHED
+  await ensureFacebookReelPublished(videoId, fbPageId, pageToken, caption);
 
   const permalink =
     (await fetchFacebookReelPermalink(videoId, pageToken)) ||
@@ -377,65 +380,163 @@ async function uploadFacebookReelBinary(
   }
 }
 
-async function waitFacebookReelUploadReady(
+async function fetchFacebookReelStatus(
+  videoId: string,
+  pageToken: string
+): Promise<{
+  videoStatus?: string;
+  uploading?: string;
+  processing?: string;
+  publishing?: string;
+  publishStatus?: string;
+  uploadError?: string;
+  processError?: string;
+  publishError?: string;
+}> {
+  const res = await fetch(
+    `${META_GRAPH_BASE}/${videoId}?fields=status&access_token=${encodeURIComponent(pageToken)}`
+  );
+  const payload = (await res.json()) as {
+    status?: {
+      video_status?: string;
+      uploading_phase?: { status?: string; error?: { message?: string } };
+      processing_phase?: { status?: string; error?: { message?: string } };
+      publishing_phase?: {
+        status?: string;
+        publish_status?: string;
+        error?: { message?: string };
+      };
+    };
+    error?: { message?: string };
+  };
+  if (!res.ok || payload.error) {
+    throw new Error(payload.error?.message || `Facebook Reel status error (${res.status})`);
+  }
+  const status = payload.status;
+  return {
+    videoStatus: status?.video_status,
+    uploading: status?.uploading_phase?.status,
+    processing: status?.processing_phase?.status,
+    publishing: status?.publishing_phase?.status,
+    publishStatus: status?.publishing_phase?.publish_status,
+    uploadError: status?.uploading_phase?.error?.message,
+    processError: status?.processing_phase?.error?.message,
+    publishError: status?.publishing_phase?.error?.message,
+  };
+}
+
+/**
+ * Attende upload + processing completi prima del finish PUBLISHED.
+ * Se si fa finish troppo presto Meta lascia il Reel in bozza
+ * («video pronto per essere pubblicato»).
+ */
+async function waitFacebookReelProcessingReady(
   videoId: string,
   pageToken: string,
   options?: { maxAttempts?: number; delayMs?: number }
 ): Promise<void> {
-  const maxAttempts = options?.maxAttempts ?? 40;
+  const maxAttempts = options?.maxAttempts ?? 60;
   const delayMs = options?.delayMs ?? 3000;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(
-      `${META_GRAPH_BASE}/${videoId}?fields=status&access_token=${encodeURIComponent(pageToken)}`
-    );
-    const payload = (await res.json()) as {
-      status?: {
-        video_status?: string;
-        uploading_phase?: { status?: string; error?: { message?: string } };
-        processing_phase?: { status?: string; error?: { message?: string } };
-        publishing_phase?: { status?: string; error?: { message?: string } };
-      };
-      error?: { message?: string };
-    };
-
-    if (!res.ok || payload.error) {
-      throw new Error(payload.error?.message || `Facebook Reel status error (${res.status})`);
-    }
-
-    const status = payload.status;
-    const uploading = status?.uploading_phase?.status;
-    const processing = status?.processing_phase?.status;
-    const videoStatus = status?.video_status;
-
+    const s = await fetchFacebookReelStatus(videoId, pageToken);
     console.log(
-      `[POSTMAN] Facebook Reel ${videoId} — tentativo ${attempt}/${maxAttempts}: video=${videoStatus ?? '?'} upload=${uploading ?? '?'} process=${processing ?? '?'}`
+      `[POSTMAN] Facebook Reel ${videoId} — ${attempt}/${maxAttempts}: video=${s.videoStatus ?? '?'} upload=${s.uploading ?? '?'} process=${s.processing ?? '?'} publish=${s.publishStatus ?? s.publishing ?? '?'}`
     );
 
-    const uploadErr = status?.uploading_phase?.error?.message;
-    const processErr = status?.processing_phase?.error?.message;
-    if (uploadErr || processErr) {
+    if (s.uploadError || s.processError) {
       throw new Error(
-        `Meta Facebook Reel elaborazione fallita: ${uploadErr || processErr}`
+        `Meta Facebook Reel elaborazione fallita: ${s.uploadError || s.processError}`
       );
     }
-
-    // Pronto per finish quando upload completo (processing può continuare dopo publish).
-    if (uploading === 'complete' || videoStatus === 'ready' || videoStatus === 'upload_complete') {
-      return;
+    if (s.videoStatus === 'error') {
+      throw new Error('Meta Facebook Reel: video_status=error durante upload/processing.');
     }
 
-    // Alcune risposte omettono i sotto-status ma segnalano errore esplicito.
-    if (videoStatus === 'error') {
-      throw new Error('Meta Facebook Reel: video_status=error durante upload.');
+    const uploadDone = s.uploading === 'complete' || s.uploading === 'completed';
+    const processDone =
+      s.processing === 'complete' ||
+      s.processing === 'completed' ||
+      s.videoStatus === 'ready' ||
+      s.videoStatus === 'processed';
+
+    // Serve processing completo: altrimenti Meta lascia il Reel in bozza.
+    if (uploadDone && processDone) {
+      return;
+    }
+    if (s.videoStatus === 'ready' || s.videoStatus === 'processed') {
+      return;
     }
 
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
-  // Non bloccare forever: Meta accetta spesso finish anche se processing è ancora in corso.
   console.warn(
-    `[POSTMAN] Facebook Reel ${videoId}: timeout attesa status — procedo con upload_phase=finish.`
+    `[POSTMAN] Facebook Reel ${videoId}: timeout processing — procedo con finish PUBLISHED.`
+  );
+}
+
+/** Dopo finish: se Meta lascia publish_status=draft, ritenta finish PUBLISHED. */
+async function ensureFacebookReelPublished(
+  videoId: string,
+  fbPageId: string,
+  pageToken: string,
+  caption: string
+): Promise<void> {
+  for (let attempt = 1; attempt <= 12; attempt++) {
+    const s = await fetchFacebookReelStatus(videoId, pageToken);
+    console.log(
+      `[POSTMAN] Facebook Reel publish check ${videoId} — ${attempt}/12: publish_status=${s.publishStatus ?? '?'} phase=${s.publishing ?? '?'}`
+    );
+
+    if (s.publishError) {
+      throw new Error(`Meta Facebook Reel publish error: ${s.publishError}`);
+    }
+
+    if (
+      s.publishStatus === 'published' ||
+      s.publishing === 'completed' ||
+      s.videoStatus === 'published'
+    ) {
+      return;
+    }
+
+    if (s.publishStatus === 'draft' || s.publishStatus === 'error' || attempt === 3 || attempt === 6) {
+      console.warn(
+        `[POSTMAN] Facebook Reel ${videoId} ancora non live (status=${s.publishStatus ?? s.publishing}) — ritento finish PUBLISHED.`
+      );
+      await metaGraphPost<{ success?: boolean }>(`/${fbPageId}/video_reels`, pageToken, {
+        upload_phase: 'finish',
+        video_id: videoId,
+        video_state: 'PUBLISHED',
+        description: caption,
+      });
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+  }
+
+  // Ultimo controllo: se ancora draft, fallisci in modo esplicito (niente falso PUBLISHED in dashboard).
+  const finalStatus = await fetchFacebookReelStatus(videoId, pageToken);
+  if (
+    finalStatus.publishStatus === 'published' ||
+    finalStatus.publishing === 'completed' ||
+    finalStatus.videoStatus === 'published'
+  ) {
+    return;
+  }
+
+  // Se Meta non espone publish_status (campo assente) ma finish ha risposto OK, non bloccare.
+  if (!finalStatus.publishStatus && !finalStatus.publishError) {
+    console.warn(
+      `[POSTMAN] Facebook Reel ${videoId}: publish_status non esposto da Meta dopo finish — considero pubblicato.`
+    );
+    return;
+  }
+
+  throw new Error(
+    `Meta Facebook Reel rimasto in bozza (publish_status=${finalStatus.publishStatus || 'n/d'}). ` +
+      `Apri il Creator Studio e pubblica il video ${videoId}, oppure riprova: Meta richiede processing completo prima del PUBLISHED.`
   );
 }
 

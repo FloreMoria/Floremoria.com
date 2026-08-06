@@ -131,6 +131,7 @@ export default function CampaignsDashboardClient() {
   const [showModal, setShowModal] = useState(false);
   const [manualChannel, setManualChannel] = useState<'META_INSTAGRAM' | 'META_FACEBOOK' | 'TIKTOK' | 'LINKEDIN' | 'YOUTUBE_SHORTS' | 'PINTEREST' | 'GOOGLE_ADS'>('META_INSTAGRAM');
   const [manualFormat, setManualFormat] = useState<'FEED_POST' | 'STORY' | 'REEL'>('FEED_POST');
+  const [shareAllChannels, setShareAllChannels] = useState(true);
   const [manualCopy, setManualCopy] = useState('');
   const [manualHashtags, setManualHashtags] = useState('');
   const [manualCategory, setManualCategory] = useState<'FF' | 'FT' | 'FA' | 'FP'>('FT');
@@ -648,6 +649,7 @@ export default function CampaignsDashboardClient() {
     formData.append('copy', manualCopy);
     formData.append('hashtags', manualHashtags);
     formData.append('category', manualCategory);
+    formData.append('shareAllChannels', shareAllChannels ? 'true' : 'false');
 
     try {
       const res = await fetch('/api/dashboard/campaigns/upload', {
@@ -656,18 +658,26 @@ export default function CampaignsDashboardClient() {
       });
       const data = await res.json();
       if (data.success) {
-        setSuccessMessage('Nuovo post manuale creato ed approvato con successo!');
-        setCampaigns(prev => [data.campaign, ...prev]);
+        const sharedCount = Array.isArray(data.campaigns) ? data.campaigns.length : 1;
+        setSuccessMessage(
+          sharedCount > 1
+            ? `Contenuto creato su ${sharedCount} social (stesso media/testo). Pubblica da ogni tab.`
+            : 'Nuovo post manuale creato ed approvato con successo!'
+        );
+        if (Array.isArray(data.campaigns) && data.campaigns.length > 0) {
+          setCampaigns((prev) => [...data.campaigns, ...prev]);
+        } else if (data.campaign) {
+          setCampaigns((prev) => [data.campaign, ...prev]);
+        }
         setShowModal(false);
-        // Resetta i campi del form
         setManualCopy('');
         setManualHashtags('');
         setManualCategory('FT');
         setManualFile(null);
+        setShareAllChannels(true);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        // Forza tab sul social caricato per vederlo
         handleTabChange(manualChannel);
-        setTimeout(() => setSuccessMessage(null), 4000);
+        setTimeout(() => setSuccessMessage(null), 5000);
       } else {
         setErrorMessage(data.error || 'Errore nel caricamento del post.');
       }
@@ -675,6 +685,36 @@ export default function CampaignsDashboardClient() {
       setErrorMessage('Errore di connessione durante il caricamento del post.');
     } finally {
       setUploadProgress(false);
+    }
+  };
+
+  const handleShareToAllChannels = async (campaignId: string) => {
+    setPublishingId(campaignId);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      const res = await fetch('/api/dashboard/campaigns/share-channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setErrorMessage(data.error || 'Impossibile condividere sugli altri social.');
+        return;
+      }
+      const n = data.createdCount || 0;
+      if (n === 0) {
+        setSuccessMessage('Già presente su tutti i social organici.');
+      } else {
+        setCampaigns((prev) => [...(data.campaigns || []), ...prev]);
+        setSuccessMessage(`Clonato su ${n} altri social. Apri le tab e pubblica.`);
+      }
+      setTimeout(() => setSuccessMessage(null), 4500);
+    } catch {
+      setErrorMessage('Errore di rete durante la condivisione multi-social.');
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -1306,6 +1346,23 @@ export default function CampaignsDashboardClient() {
                 </span>
 
                 <div className="flex items-center gap-2">
+                  {(c.status === 'APPROVED' || c.status === 'DRAFT') && (
+                    <button
+                      type="button"
+                      onClick={() => handleShareToAllChannels(c.id)}
+                      disabled={deletingId !== null || publishingId !== null}
+                      className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                      title="Clona sugli altri social"
+                    >
+                      {publishingId === c.id ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" /> ...
+                        </>
+                      ) : (
+                        <>Altri social</>
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleDeleteCampaign(c.id)}
@@ -1541,7 +1598,7 @@ export default function CampaignsDashboardClient() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
-                    Social Network *
+                    Social di partenza *
                   </label>
                   <select
                     value={manualChannel}
@@ -1650,6 +1707,21 @@ export default function CampaignsDashboardClient() {
                   disabled={suggestCopyLoading}
                 />
               </div>
+
+              <label className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-xl p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={shareAllChannels}
+                  onChange={(e) => setShareAllChannels(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300"
+                />
+                <span className="text-xs text-slate-700 leading-relaxed">
+                  <span className="font-bold uppercase tracking-wide text-slate-800">Disponibile su tutti i social</span>
+                  <span className="block text-slate-500 mt-0.5">
+                    Crea lo stesso contenuto (media + testo) su Instagram, Facebook, TikTok, YouTube Shorts, Pinterest e LinkedIn. Poi pubblichi da ogni tab.
+                  </span>
+                </span>
+              </label>
 
               <div className="flex gap-2 justify-end border-t border-slate-150 pt-4 mt-2">
                 <button

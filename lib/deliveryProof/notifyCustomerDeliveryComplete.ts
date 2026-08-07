@@ -12,8 +12,9 @@ export interface NotifyCustomerDeliveryCompleteResult {
 
 /**
  * Orchestratore post-consegna (Punto E):
- * template `ordine_completato` + MagicLink — senza foto WhatsApp immediate.
- * Le foto Prima/Dopo partono solo su richiesta utente («Inviatemi le foto»).
+ * template Meta `floremoria_consegna_foto_utente` (4 variabili + MagicLink) —
+ * senza foto WhatsApp immediate (anti Meta 131047).
+ * Le foto Prima/Dopo partono solo se l'utente risponde Sì.
  */
 export async function notifyCustomerDeliveryComplete(
     orderId: string

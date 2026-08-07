@@ -8,13 +8,6 @@ import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { ensureWhatsAppDeliveryImageUrl } from '@/lib/whatsapp/deliveryImageStaging';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
-import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
-import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
-import {
-    extractBuyerFirstName,
-    resolvePartnerCity,
-} from '@/lib/whatsapp/deliveryProofCopy';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
@@ -36,14 +29,16 @@ export interface SendDeliveryPhotosOnDemandResult {
 
 /**
  * Rileva richieste esplicite di ricevere le foto in chat
- * (pulsante rapido / testo libero).
+ * (pulsante rapido / risposta a «Vuole ricevere qui la foto della posa?»).
  */
 export function isRequestingDeliveryPhotosInChat(message: string): boolean {
     const t = (message || '').trim().toLowerCase();
     if (!t) return false;
 
-    // Ack corti tipici dei quick-reply template.
-    if (/^(s[iì]|si+|yes|ok|okay|va bene|certo|prego|grazie.?si)$/i.test(t)) {
+    if (isDecliningDeliveryPhotosInChat(message)) return false;
+
+    // Affermativi corti (quick-reply / Sì alla domanda posa).
+    if (/^(s[iì]|si+|yes|ok|okay|va bene|certo|prego|volentieri)$/i.test(t)) {
         return true;
     }
 
@@ -53,9 +48,44 @@ export function isRequestingDeliveryPhotosInChat(message: string): boolean {
         /mandami\s+le\s+foto/i.test(t) ||
         /mandatemi\s+le\s+foto/i.test(t) ||
         /voglio\s+(vedere\s+)?le\s+foto/i.test(t) ||
-        /ricevere\s+le\s+foto/i.test(t) ||
+        /ricevere\s+(qui\s+)?(la\s+)?foto/i.test(t) ||
         /le\s+foto\s+(per\s+)?(favore|piacere)/i.test(t) ||
         /^(foto|le foto|foto per favore|foto please)$/i.test(t)
+    );
+}
+
+/** Risposta negativa alla domanda «Vuole ricevere qui la foto della posa?». */
+export function isDecliningDeliveryPhotosInChat(message: string): boolean {
+    const t = (message || '').trim().toLowerCase();
+    if (!t) return false;
+    if (/^(no|nò|nope)$/i.test(t)) return true;
+    if (/^no[,!.\s]/i.test(t) && !/non\s+ho\s+ricevut/i.test(t)) return true;
+    return (
+        /no\s+grazie/i.test(t) ||
+        /non\s+(serve|occorre|le voglio)/i.test(t) ||
+        /basta\s+(il\s+)?link/i.test(t) ||
+        /solo\s+(il\s+)?link/i.test(t) ||
+        /preferisco\s+(il\s+)?link/i.test(t)
+    );
+}
+
+/** Ringraziamento / ack generico senza richiesta foto. */
+export function isPoliteDeliveryAckWithoutPhotos(message: string): boolean {
+    const t = (message || '').trim().toLowerCase();
+    if (!t || isRequestingDeliveryPhotosInChat(t) || isDecliningDeliveryPhotosInChat(t)) {
+        return false;
+    }
+    return /^(grazie|grazie mille|grazie di cuore|perfetto|ricevuto|ok grazie|va bene grazie|grazie,?\s*ok|👍|🙏|❤️|🌹)+[!!.]*$/i.test(
+        t
+    );
+}
+
+export function buildDeliveryPhotoDeclineOrAckReply(firstName?: string | null): string {
+    const who = firstName?.trim() ? `Gentile ${firstName.trim()}, ` : '';
+    return (
+        `${who}La ringraziamo di cuore. ` +
+        `Può sempre rivedere le foto nel Suo Giardino della Memoria tramite il link già inviato. ` +
+        `Restiamo a Sua completa disposizione.\nLo Staff di FloreMoria 🌹`
     );
 }
 
@@ -151,9 +181,6 @@ export async function sendDeliveryPhotosOnDemand(input: {
     const sessionPhone = `whatsapp:${phoneE164}`;
     const session = await getSession(sessionPhone);
     const withinWindow = isWithinCustomerServiceWindow(session);
-    const partnerCity = resolvePartnerCity(order);
-    const buyerName = (input.buyerFullName || order.buyerFullName || 'Utente').trim();
-    const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
 
     const publicUrls: string[] = [];
     for (let i = 0; i < urls.length; i += 1) {
@@ -170,110 +197,42 @@ export async function sendDeliveryPhotosOnDemand(input: {
     let photosSent = 0;
     let lastMessageId: string | undefined;
 
+    // Dopo la risposta Sì la finestra 24h è aperta: solo image free-text (niente template media a freddo).
     if (!withinWindow) {
-        const bodyParams = buildCustomerDeliveryPhotoParams({
-            buyerFirstName,
-            partnerCity,
-            deceasedName: order.deceasedName,
-        });
-        const templateSend = await sendVeraTemplate(
-            phoneE164,
-            'customer_delivery_photo',
-            bodyParams,
-            {
-                headerImageUrl: publicUrls[0]!,
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                skipOrderDedup: true,
-            }
+        console.warn(
+            `[delivery-photos-ondemand] Finestra ancora chiusa per ${phoneE164} — provo comunque image (inbound dovrebbe averla aperta).`
         );
-        if (!templateSend.ok) {
+    }
+
+    for (let i = 0; i < publicUrls.length; i += 1) {
+        if (i > 0) await sleep(800);
+        const label =
+            i === 0 && order.before[0]
+                ? 'Foto prima della posa'
+                : 'Foto dopo la posa';
+        const imageSend = await sendWhatsAppImageMessage(
+            phoneE164,
+            publicUrls[i]!,
+            i === 0 ? `${label} 🌹` : label
+        );
+        if (!imageSend.ok) {
             return {
                 ok: false,
-                skipped: 'template_send_failed',
+                skipped: 'image_send_failed',
                 orderId: order.id,
-                error: templateSend.error,
+                photosSent,
+                error: imageSend.error,
             };
         }
-        photosSent = 1;
-        lastMessageId = templateSend.messageId;
-        await logVeraTemplateOutbound({
-            phoneE164,
-            templateId: 'customer_delivery_photo',
-            bodyParams,
-            eventType: 'DELIVERY_PHOTO_ON_DEMAND',
+        photosSent += 1;
+        lastMessageId = imageSend.messageId;
+        await addMessage(sessionPhone, 'OUTBOUND', label, publicUrls[i], {
+            eventType: 'PROOF_OF_DELIVERY_ON_DEMAND',
             orderId: order.id,
-            orderNumber: order.orderNumber,
-            messageId: templateSend.messageId,
-            contactName: buyerName,
-            userType: 'UTENTE',
-        }).catch(() => undefined);
-
-        for (let i = 1; i < publicUrls.length; i += 1) {
-            await sleep(800);
-            const imageSend = await sendWhatsAppImageMessage(phoneE164, publicUrls[i]!);
-            if (!imageSend.ok) {
-                return {
-                    ok: false,
-                    skipped: 'image_send_failed',
-                    orderId: order.id,
-                    photosSent,
-                    error: imageSend.error,
-                };
-            }
-            photosSent += 1;
-            lastMessageId = imageSend.messageId;
-            await addMessage(
-                sessionPhone,
-                'OUTBOUND',
-                `Foto posa (${i + 1}/${publicUrls.length})`,
-                publicUrls[i],
-                {
-                    eventType: 'PROOF_OF_DELIVERY_ON_DEMAND',
-                    orderId: order.id,
-                    ...(order.orderNumber ? { orderNumber: order.orderNumber } : {}),
-                    outboundMode: 'delivery_proof_photo_ondemand',
-                    ...buildOutboundWamidMetadata(imageSend.messageId),
-                }
-            );
-        }
-    } else {
-        for (let i = 0; i < publicUrls.length; i += 1) {
-            if (i > 0) await sleep(800);
-            const label =
-                i === 0 && order.before[0]
-                    ? 'Foto prima della posa'
-                    : 'Foto dopo la posa';
-            const imageSend = await sendWhatsAppImageMessage(
-                phoneE164,
-                publicUrls[i]!,
-                i === 0 ? `${label} 🌹` : label
-            );
-            if (!imageSend.ok) {
-                return {
-                    ok: false,
-                    skipped: 'image_send_failed',
-                    orderId: order.id,
-                    photosSent,
-                    error: imageSend.error,
-                };
-            }
-            photosSent += 1;
-            lastMessageId = imageSend.messageId;
-            await addMessage(
-                sessionPhone,
-                'OUTBOUND',
-                label,
-                publicUrls[i],
-                {
-                    eventType: 'PROOF_OF_DELIVERY_ON_DEMAND',
-                    orderId: order.id,
-                    ...(order.orderNumber ? { orderNumber: order.orderNumber } : {}),
-                    outboundMode: 'delivery_proof_photo_ondemand',
-                    ...buildOutboundWamidMetadata(imageSend.messageId),
-                }
-            );
-        }
+            ...(order.orderNumber ? { orderNumber: order.orderNumber } : {}),
+            outboundMode: 'delivery_proof_photo_ondemand',
+            ...buildOutboundWamidMetadata(imageSend.messageId),
+        });
     }
 
     console.info(

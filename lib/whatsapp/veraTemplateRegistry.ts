@@ -123,19 +123,11 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodyCanonical: CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
         description: '{{1}} nome acquirente, {{2}} defunto (warm thought in messaggio libero successivo)',
     },
-    ordine_completato: {
-        id: 'ordine_completato',
-        metaName: envTemplateName('WHATSAPP_TEMPLATE_ORDINE_COMPLETATO', 'ordine_completato'),
-        language: process.env.WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_LANGUAGE?.trim() || 'it',
-        bodyParamCount: 4,
-        bodySlots: ['buyerFirstName', 'deceasedName', 'partnerCity', 'magicLink'],
-        bodyCanonical:
-            'Gentile {{1}}, abbiamo completato la consegna dei Suoi fiori nel ricordo di {{2}} a {{3}}. ' +
-            'Può vedere tutte le foto al link: {{4}}\n\n' +
-            'Se desidera riceverle anche qui in chat, risponda «Inviatemi le foto».',
-        description:
-            '{{1}} nome, {{2}} defunto, {{3}} città, {{4}} MagicLink Giardino — senza foto WhatsApp immediate',
-    },
+    /**
+     * Template Meta `floremoria_consegna_foto_utente` — notifica post-posa PRIMARIA.
+     * 4 variabili body, nessun header immagine (evita 131047 fuori finestra 24h).
+     * Foto Prima/Dopo solo su risposta affermativa dell'utente.
+     */
     customer_delivery_photo: {
         id: 'customer_delivery_photo',
         metaName: envTemplateName(
@@ -143,12 +135,33 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floremoria_consegna_foto_utente'
         ),
         language: 'it',
-        bodyParamCount: 3,
-        bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName'],
-        hasImageHeader: true,
+        bodyParamCount: 4,
+        bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
+        hasImageHeader: false,
         bodyCanonical:
-            'Gentile {{1}}, con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}. Le alleghiamo la testimonianza fotografica della consegna.',
-        description: 'Header immagine + {{1}} nome, {{2}} città partner, {{3}} defunto',
+            'Gentile {{1}}, con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}. ' +
+            'Può vedere tutte le foto qui: {{4}}\n\n' +
+            'Vuole ricevere qui la foto della posa? Risponda Sì oppure No.',
+        description:
+            '{{1}} nome utente, {{2}} comune/cimitero, {{3}} defunto, {{4}} MagicLink — senza foto WhatsApp immediate',
+    },
+    /**
+     * @deprecated Preferire customer_delivery_photo (floremoria_consegna_foto_utente).
+     * Mantenuto per env legacy WHATSAPP_TEMPLATE_ORDINE_COMPLETATO.
+     */
+    ordine_completato: {
+        id: 'ordine_completato',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_ORDINE_COMPLETATO',
+            'floremoria_consegna_foto_utente'
+        ),
+        language: process.env.WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_LANGUAGE?.trim() || 'it',
+        bodyParamCount: 4,
+        bodySlots: ['buyerFirstName', 'deceasedName', 'partnerCity', 'magicLink'],
+        bodyCanonical:
+            'Gentile {{1}}, abbiamo completato la consegna dei Suoi fiori nel ricordo di {{2}} a {{3}}. ' +
+            'Può vedere tutte le foto al link: {{4}}',
+        description: 'Legacy alias — stesso Meta name di floremoria_consegna_foto_utente se non override',
     },
     customer_waiting_update: {
         id: 'customer_waiting_update',

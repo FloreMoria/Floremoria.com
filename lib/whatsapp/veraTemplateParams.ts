@@ -129,6 +129,7 @@ export function buildCustomerDeliveryPhotoParams(input: {
     buyerFirstName?: string | null;
     partnerCity?: string | null;
     deceasedName?: string | null;
+    magicLink: string;
 }): string[] {
     const params = buildVeraTemplateBodyParams('customer_delivery_photo', {
         buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
@@ -138,29 +139,25 @@ export function buildCustomerDeliveryPhotoParams(input: {
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
         ),
+        magicLink: requireText(input.magicLink, 'magicLink', 500),
     });
     logBuiltTemplateParams('customer_delivery_photo', params);
     return params;
 }
 
+/** @deprecated Usa buildCustomerDeliveryPhotoParams (stesso mapping Meta 4 variabili). */
 export function buildOrdineCompletatoParams(input: {
     buyerFirstName?: string | null;
     deceasedName?: string | null;
     partnerCity?: string | null;
     magicLink: string;
 }): string[] {
-    const params = buildVeraTemplateBodyParams('ordine_completato', {
-        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
-        deceasedName: requireText(
-            input.deceasedName || 'chi ama',
-            'deceasedName',
-            META_TEMPLATE_LIMITS.deceasedName
-        ),
-        partnerCity: requireText(input.partnerCity || 'zona', 'partnerCity', 80),
-        magicLink: requireText(input.magicLink, 'magicLink', 500),
+    return buildCustomerDeliveryPhotoParams({
+        buyerFirstName: input.buyerFirstName,
+        partnerCity: input.partnerCity,
+        deceasedName: input.deceasedName,
+        magicLink: input.magicLink,
     });
-    logBuiltTemplateParams('ordine_completato', params);
-    return params;
 }
 
 export function buildFloristReminderParams(input: {

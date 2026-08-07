@@ -1,5 +1,5 @@
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
-import { addMessage, getSession } from '@/lib/chatStore';
+import { getSession } from '@/lib/chatStore';
 import {
     renderGiardinoDellaMemoriaLinkMessage,
     resolvePartnerCity,
@@ -9,7 +9,7 @@ import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
-import { buildOrdineCompletatoParams } from '@/lib/whatsapp/veraTemplateParams';
+import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import {
     isMetaCloudConfigured,
@@ -25,7 +25,7 @@ export interface DeliveryProofWhatsAppInput {
     cemeteryCity?: string | null;
     cemeteryName?: string | null;
     deliveryProvince?: string | null;
-    /** Retrocompat: non più inviato subito in chat (solo MagicLink). */
+    /** Non inviato a freddo: solo MagicLink nel template (evita Meta 131047). */
     photoAfterUrl?: string | null;
     photoAfterUrls?: string[] | null;
 }
@@ -36,7 +36,7 @@ export interface DeliveryProofWhatsAppResult {
     giardinoUrl?: string;
     imageMessageId?: string;
     linkMessageId?: string;
-    /** Sempre 0 in questo flusso: le foto partono solo su richiesta utente. */
+    /** Sempre 0 qui: le foto partono solo su risposta Sì dell'utente. */
     photosSent?: number;
     error?: string;
 }
@@ -51,9 +51,9 @@ function isBusinessWhatsAppLine(phoneE164: string): boolean {
 }
 
 /**
- * Punto E — sequenza invertita:
- * 1) Template Meta `ordine_completato` (dati ordine + MagicLink tutte le foto)
- * 2) Nessuna foto WhatsApp immediata (prima/dopo partono solo se l'utente chiede «Inviatemi le foto»)
+ * Punto E — template primario Meta `floremoria_consegna_foto_utente`:
+ * {{1}} nome · {{2}} comune/cimitero · {{3}} defunto · {{4}} MagicLink
+ * Nessuna foto WhatsApp immediata (anti-131047 fuori finestra 24h).
  */
 export async function sendDeliveryProofWhatsApp(
     input: DeliveryProofWhatsAppInput
@@ -85,38 +85,42 @@ export async function sendDeliveryProofWhatsApp(
     const sessionPhone = `whatsapp:${phoneE164}`;
 
     try {
-        const bodyParams = buildOrdineCompletatoParams({
+        const bodyParams = buildCustomerDeliveryPhotoParams({
             buyerFirstName,
-            deceasedName,
             partnerCity,
+            deceasedName,
             magicLink: giardinoUrl,
         });
 
-        const templateSend = await sendVeraTemplate(phoneE164, 'ordine_completato', bodyParams, {
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-            skipOrderDedup: true,
-        });
+        const templateSend = await sendVeraTemplate(
+            phoneE164,
+            'customer_delivery_photo',
+            bodyParams,
+            {
+                orderId: input.orderId,
+                orderNumber: input.orderNumber,
+                skipOrderDedup: true,
+            }
+        );
 
         if (!templateSend.ok) {
-            // Fallback: free-text con MagicLink se la finestra 24h è aperta.
             const session = await getSession(sessionPhone);
             if (!isWithinCustomerServiceWindow(session)) {
-                console.error('[delivery-proof-whatsapp] Template ordine_completato fallito fuori finestra:', {
-                    orderId: input.orderId,
-                    error: templateSend.error,
-                });
+                console.error(
+                    '[delivery-proof-whatsapp] Template floremoria_consegna_foto_utente fallito fuori finestra:',
+                    { orderId: input.orderId, error: templateSend.error }
+                );
                 return {
                     ok: false,
                     skipped: 'template_send_failed',
                     giardinoUrl,
-                    error: templateSend.error ?? 'ordine_completato_failed',
+                    error: templateSend.error ?? 'floremoria_consegna_foto_utente_failed',
                     photosSent: 0,
                 };
             }
 
             console.warn(
-                '[delivery-proof-whatsapp] Template ordine_completato fallito — fallback free-text MagicLink:',
+                '[delivery-proof-whatsapp] Template fallito — fallback free-text MagicLink:',
                 templateSend.error
             );
             const fallbackText =
@@ -126,7 +130,7 @@ export async function sendDeliveryProofWhatsApp(
                 recipientName: buyerName,
                 orderCode: input.orderNumber || undefined,
                 userType: 'UTENTE',
-                source: 'delivery_proof_ordine_completato_fallback',
+                source: 'delivery_proof_consegna_foto_fallback',
                 sessionPhone,
             });
             if (!linkSend.ok) {
@@ -153,9 +157,9 @@ export async function sendDeliveryProofWhatsApp(
 
         await logVeraTemplateOutbound({
             phoneE164,
-            templateId: 'ordine_completato',
+            templateId: 'customer_delivery_photo',
             bodyParams,
-            eventType: 'ORDINE_COMPLETATO_TEMPLATE',
+            eventType: 'DELIVERY_PHOTO_TEMPLATE',
             orderId: input.orderId,
             orderNumber: input.orderNumber,
             messageId: templateSend.messageId,
@@ -163,35 +167,10 @@ export async function sendDeliveryProofWhatsApp(
             userType: 'UTENTE',
         });
 
-        // CTA in free-text se finestra aperta (template già contiene MagicLink).
-        const session = await getSession(sessionPhone);
-        let linkMessageId: string | undefined;
-        if (isWithinCustomerServiceWindow(session)) {
-            const cta =
-                `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\n` +
-                `Se desidera riceverle anche qui in chat, risponda «Inviatemi le foto» oppure «Sì» 🌹`;
-            const ctaSend = await sendWhatsAppMessage(phoneE164, cta, {
-                recipientName: buyerName,
-                orderCode: input.orderNumber || undefined,
-                userType: 'UTENTE',
-                source: 'delivery_proof_photo_cta',
-                sessionPhone,
-            });
-            if (ctaSend.ok) {
-                linkMessageId = ctaSend.messageId;
-                await addMessage(sessionPhone, 'OUTBOUND', cta, undefined, {
-                    eventType: 'DELIVERY_PHOTO_CTA',
-                    orderId: input.orderId,
-                    ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
-                    outboundMode: 'delivery_proof_cta',
-                }).catch(() => undefined);
-            }
-        }
-
         await logProofToDashboard(
             phoneE164,
             buyerName,
-            `[Template Meta ordine_completato]\n\n${linkMessage}`,
+            `[Template Meta floremoria_consegna_foto_utente]\n\n${linkMessage}`,
             {
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
@@ -200,14 +179,13 @@ export async function sendDeliveryProofWhatsApp(
         );
 
         console.info(
-            `[delivery-proof-whatsapp] ordine_completato OK ${input.orderNumber || input.orderId} photosSent=0 (on-demand)`
+            `[delivery-proof-whatsapp] floremoria_consegna_foto_utente OK ${input.orderNumber || input.orderId} photosSent=0 (on-demand)`
         );
 
         return {
             ok: true,
             giardinoUrl,
             imageMessageId: templateSend.messageId,
-            linkMessageId,
             photosSent: 0,
         };
     } catch (e) {

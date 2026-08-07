@@ -1,11 +1,10 @@
 /**
  * Invio foto dallo staff in bacheca WhatsApp.
  * Dentro finestra 24h: messaggio image libero.
- * Fuori finestra: template Meta customer_delivery_photo (header immagine),
- * così la foto parte anche come primo messaggio senza attendere risposta.
+ * Fuori finestra: Meta non consente image free-text (131047);
+ * il template floremoria_consegna_foto_utente è solo testo+MagicLink (no header foto).
  */
 import { addMessage, getSession, setSessionStatus } from '@/lib/chatStore';
-import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { uploadChatImageBuffer } from '@/lib/media/uploadChatMedia';
 import { ensureWhatsAppImageUrlFromBuffer } from '@/lib/whatsapp/deliveryImageStaging';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
@@ -13,11 +12,6 @@ import {
     normalizePhoneE164,
     sendWhatsAppImageMessage,
 } from '@/lib/whatsapp/metaCloudApiClient';
-import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
-import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
-import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
-import { resolvePartnerCity } from '@/lib/whatsapp/deliveryProofCopy';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { sessionPhoneToE164 } from '@/lib/whatsapp/sessionPhone';
 
@@ -30,21 +24,8 @@ export type OperatorPhotoResult =
       }
     | { ok: false; error: string; requiresTemplate?: boolean; errorCode?: number };
 
-async function resolveOrderContextForPhoto(phoneE164: string) {
-    const order = await lookupLastOrderByPhone(phoneE164);
-    if (!order) return null;
-    return {
-        order,
-        partnerCity: resolvePartnerCity({
-            cemeteryCity: order.cemeteryCity,
-            deliveryProvince: order.deliveryProvince,
-            cemeteryName: order.cemeteryName,
-        }),
-    };
-}
-
 /**
- * Carica la foto su Blob e la consegna al destinatario (libero o template).
+ * Carica la foto su Blob e la consegna al destinatario (libero se finestra 24h aperta).
  */
 export async function sendOperatorChatPhoto(input: {
     sessionPhone: string;
@@ -64,7 +45,6 @@ export async function sendOperatorChatPhoto(input: {
     let publicUrl: string;
     let dashboardMediaUrl: string;
     try {
-        // JPEG su Blob (archivio dashboard) + URL staging pubblico per Meta.
         dashboardMediaUrl = await uploadChatImageBuffer(input.buffer, sessionPhone);
         publicUrl = await ensureWhatsAppImageUrlFromBuffer(
             phoneE164.replace(/\D/g, '') || 'chat',
@@ -77,104 +57,34 @@ export async function sendOperatorChatPhoto(input: {
 
     const needsTemplate = requiresTemplateMessage(session);
 
-    if (!needsTemplate) {
-        const sendResult = await sendWhatsAppImageMessage(sessionPhone, publicUrl, caption || undefined);
-        if (!sendResult.ok) {
-            return {
-                ok: false,
-                error: sendResult.error ?? 'Invio foto WhatsApp fallito.',
-                errorCode: sendResult.errorCode,
-            };
-        }
-
-        if (session.status === 'AI_ACTIVE') {
-            await setSessionStatus(sessionPhone, 'HUMAN_INTERVENTION');
-        }
-
-        const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', dashboardMediaUrl, {
-            source: 'operator',
-            outboundMode: input.outboundMode,
-            ...buildOutboundWamidMetadata(sendResult.messageId),
-        });
-
-        return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'freetext' };
-    }
-
-    // Fuori finestra 24h: solo template con header immagine (customer_delivery_photo).
-    if (session.userType === 'FLORIST') {
+    if (needsTemplate) {
         return {
             ok: false,
             requiresTemplate: true,
             error:
-                'Finestra 24h chiusa sul fiorista: Meta non consente foto libere. Attendi il keep-alive a 20h o una sua risposta, poi riprova.',
+                'Finestra 24h chiusa: Meta blocca le foto libere (131047). ' +
+                'Il template floremoria_consegna_foto_utente non ha header immagine: attendi una risposta dell\'utente (riapre la finestra) e riprova, oppure reinoltra il MagicLink.',
         };
     }
 
-    const ctx = await resolveOrderContextForPhoto(phoneE164);
-    if (!ctx) {
+    const sendResult = await sendWhatsAppImageMessage(sessionPhone, publicUrl, caption || undefined);
+    if (!sendResult.ok) {
         return {
             ok: false,
-            requiresTemplate: true,
-            error:
-                'Finestra 24h chiusa e nessun ordine collegato a questo numero: impossibile usare il template foto. Avvia una nuova conversazione con template, oppure attendi una risposta dell\'utente.',
+            error: sendResult.error ?? 'Invio foto WhatsApp fallito.',
+            errorCode: sendResult.errorCode,
         };
-    }
-
-    const buyerName = ctx.order.buyerFullName || session.name || 'Utente';
-    const bodyParams = buildCustomerDeliveryPhotoParams({
-        buyerFirstName: extractFirstNameFromProfile(buyerName),
-        partnerCity: ctx.partnerCity,
-        deceasedName: ctx.order.deceasedName,
-    });
-
-    const templateSend = await sendVeraTemplate(phoneE164, 'customer_delivery_photo', bodyParams, {
-        headerImageUrl: publicUrl,
-        orderId: ctx.order.id,
-        orderNumber: ctx.order.orderNumber,
-        // Foto distinte in sequenza: mai bloccare come "template già inviato".
-        skipOrderDedup: true,
-    });
-
-    if (!templateSend.ok) {
-        return {
-            ok: false,
-            requiresTemplate: true,
-            error: templateSend.error ?? 'Invio template foto fallito.',
-            errorCode: templateSend.errorCode,
-        };
-    }
-
-    try {
-        await logVeraTemplateOutbound({
-            phoneE164,
-            templateId: 'customer_delivery_photo',
-            bodyParams,
-            eventType: 'OPERATOR_PHOTO_TEMPLATE',
-            orderId: ctx.order.id,
-            orderNumber: ctx.order.orderNumber,
-            messageId: templateSend.messageId,
-            contactName: buyerName,
-            userType: 'UTENTE',
-        });
-    } catch (logErr) {
-        console.error('[operator-photo] Log template fallito:', logErr);
     }
 
     if (session.status === 'AI_ACTIVE') {
         await setSessionStatus(sessionPhone, 'HUMAN_INTERVENTION');
     }
 
-    const bodyForLog =
-        caption ||
-        `Foto inviata (template post-consegna) — ordine ${ctx.order.orderNumber || ctx.order.id}`;
-
-    const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', bodyForLog, dashboardMediaUrl, {
+    const updatedSession = await addMessage(sessionPhone, 'OUTBOUND', caption || '', dashboardMediaUrl, {
         source: 'operator',
         outboundMode: input.outboundMode,
-        sendMode: 'template',
-        templateId: 'customer_delivery_photo',
-        ...buildOutboundWamidMetadata(templateSend.messageId),
+        ...buildOutboundWamidMetadata(sendResult.messageId),
     });
 
-    return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'template' };
+    return { ok: true, session: updatedSession, mediaUrl: dashboardMediaUrl, mode: 'freetext' };
 }

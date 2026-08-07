@@ -30,6 +30,9 @@ import {
     replyViolatesDeliveryContextGate,
 } from '@/lib/vera/deliveryContextGate';
 import {
+    buildDeliveryPhotoDeclineOrAckReply,
+    isDecliningDeliveryPhotosInChat,
+    isPoliteDeliveryAckWithoutPhotos,
     isRequestingDeliveryPhotosInChat,
     sendDeliveryPhotosOnDemand,
 } from '@/lib/whatsapp/sendDeliveryPhotosOnDemand';
@@ -559,7 +562,7 @@ export async function generateVeraReply(
         return { text: '', source: 'silence', shouldEscalate: false };
     }
 
-    // P0: richiesta esplicita foto in chat → invia Prima/Dopo (non solo testo «già inviate»).
+    // P0: richiesta esplicita foto in chat → invia Prima/Dopo (finestra riaperta dall'inbound).
     if (
         session.userType !== 'FLORIST' &&
         isRequestingDeliveryPhotosInChat(message) &&
@@ -587,12 +590,26 @@ export async function generateVeraReply(
         console.warn('[vera-ai] Invio foto on-demand non riuscito:', photoSend);
     }
 
+    // No / ack generico dopo consegna → ringraziamento, senza foto.
+    if (
+        session.userType !== 'FLORIST' &&
+        isOrderDeliveryCompleted(callerContext) &&
+        (isDecliningDeliveryPhotosInChat(message) || isPoliteDeliveryAckWithoutPhotos(message))
+    ) {
+        return {
+            text: buildDeliveryPhotoDeclineOrAckReply(callerContext.firstName),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
     // P0 context gate foto/consegna (Carolina/Maria) — mai se l'utente contesta le foto.
     if (
         session.userType !== 'FLORIST' &&
         isAskingAboutPhotosOrDelivery(message) &&
         !isPhotoProofDispute(message) &&
         !isRequestingDeliveryPhotosInChat(message) &&
+        !isDecliningDeliveryPhotosInChat(message) &&
         isOrderDeliveryCompleted(callerContext)
     ) {
         return {

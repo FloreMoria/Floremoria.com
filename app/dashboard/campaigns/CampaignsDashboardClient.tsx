@@ -136,11 +136,17 @@ export default function CampaignsDashboardClient() {
   const [manualHashtags, setManualHashtags] = useState('');
   const [manualCategory, setManualCategory] = useState<'FF' | 'FT' | 'FA' | 'FP'>('FT');
   const [manualFile, setManualFile] = useState<File | null>(null);
+  const [manualVideoPreviewUrl, setManualVideoPreviewUrl] = useState<string | null>(null);
+  const [ziggySlogans, setZiggySlogans] = useState<
+    Array<{ text: string; startSec: number; endSec: number }>
+  >([]);
+  const [ziggyGenerating, setZiggyGenerating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
   const [suggestCopyLoading, setSuggestCopyLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const suggestRequestRef = useRef(0);
+  const ziggyPreviewObjectUrlRef = useRef<string | null>(null);
 
   // Modale pubblicazione TikTok (linee guida Direct Post API)
   const [showTiktokPublishModal, setShowTiktokPublishModal] = useState(false);
@@ -589,12 +595,18 @@ export default function CampaignsDashboardClient() {
   };
 
   const handleManualFileSelected = async (file: File | null) => {
+    clearZiggyPreview();
     setManualFile(file);
     if (!file) return;
     // Video → formato Reel automatico (evita pubblicazione come Story).
     const nextFormat = file.type.startsWith('video/') ? 'REEL' : manualFormat;
     if (nextFormat !== manualFormat) {
       setManualFormat(nextFormat);
+    }
+    if (file.type.startsWith('video/')) {
+      const objectUrl = URL.createObjectURL(file);
+      ziggyPreviewObjectUrlRef.current = objectUrl;
+      setManualVideoPreviewUrl(objectUrl);
     }
     await runSuggestCopyFromMedia(file, manualChannel, nextFormat);
   };
@@ -630,6 +642,93 @@ export default function CampaignsDashboardClient() {
       setErrorMessage('Errore di rete durante la cancellazione.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const clearZiggyPreview = () => {
+    if (ziggyPreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(ziggyPreviewObjectUrlRef.current);
+      ziggyPreviewObjectUrlRef.current = null;
+    }
+    setManualVideoPreviewUrl(null);
+    setZiggySlogans([]);
+  };
+
+  const resetManualModal = () => {
+    suggestRequestRef.current += 1;
+    setManualCopy('');
+    setManualHashtags('');
+    setManualCategory('FT');
+    setManualFile(null);
+    setShareAllChannels(true);
+    setManualFormat('FEED_POST');
+    clearZiggyPreview();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleGenerateZiggyReel = async () => {
+    setZiggyGenerating(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const res = await fetch('/api/dashboard/campaigns/generate-ziggy-reel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: manualCategory }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.videoUrl) {
+        setErrorMessage(data.error || 'Ziggy non ha generato il Reel.');
+        return;
+      }
+
+      const mediaRes = await fetch(data.videoUrl);
+      if (!mediaRes.ok) {
+        setErrorMessage('Impossibile scaricare il video Ziggy generato.');
+        return;
+      }
+      const blob = await mediaRes.blob();
+      const file = new File([blob], `ziggy-reel-${Date.now()}.mp4`, {
+        type: blob.type || 'video/mp4',
+      });
+
+      clearZiggyPreview();
+      const objectUrl = URL.createObjectURL(blob);
+      ziggyPreviewObjectUrlRef.current = objectUrl;
+      setManualVideoPreviewUrl(objectUrl);
+      setManualFile(file);
+      setManualFormat('REEL');
+      setManualCopy(String(data.copy || '').trim());
+      setManualHashtags(
+        Array.isArray(data.hashtags) ? data.hashtags.map((t: string) => String(t)).join(', ') : ''
+      );
+      if (data.category === 'FF' || data.category === 'FT' || data.category === 'FA' || data.category === 'FP') {
+        setManualCategory(data.category);
+      }
+      if (Array.isArray(data.sloganTimeline) && data.sloganTimeline.length > 0) {
+        setZiggySlogans(
+          data.sloganTimeline.map((s: { text: string; startSec: number; endSec: number }) => ({
+            text: String(s.text || ''),
+            startSec: Number(s.startSec) || 0,
+            endSec: Number(s.endSec) || 0,
+          }))
+        );
+      } else if (Array.isArray(data.slogans)) {
+        setZiggySlogans(
+          data.slogans.map((text: string, i: number) => ({
+            text: String(text),
+            startSec: i === 0 ? 0.2 : i === 1 ? 2.4 : 4.6,
+            endSec: i === 0 ? 4.2 : i === 1 ? 6.4 : 8,
+          }))
+        );
+      }
+
+      setSuccessMessage('Reel Ziggy (Veo) generato: video, copy, hashtag e slogan overlay pronti.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch {
+      setErrorMessage('Errore di rete durante la generazione Reel Ziggy.');
+    } finally {
+      setZiggyGenerating(false);
     }
   };
 
@@ -673,12 +772,7 @@ export default function CampaignsDashboardClient() {
           setCampaigns((prev) => [data.campaign, ...prev]);
         }
         setShowModal(false);
-        setManualCopy('');
-        setManualHashtags('');
-        setManualCategory('FT');
-        setManualFile(null);
-        setShareAllChannels(true);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        resetManualModal();
         handleTabChange(manualChannel);
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
@@ -1653,7 +1747,10 @@ export default function CampaignsDashboardClient() {
                 </h3>
               </div>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  resetManualModal();
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1"
               >
                 <X size={20} />
@@ -1710,6 +1807,49 @@ export default function CampaignsDashboardClient() {
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                  Categoria contenuto *
+                </label>
+                <select
+                  value={manualCategory}
+                  onChange={(e) => setManualCategory(e.target.value as typeof manualCategory)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 transition-all"
+                >
+                  <option value="FT">FT — Fiori sulle tombe</option>
+                  <option value="FF">FF — Funerale / omaggio</option>
+                  <option value="FA">FA — Piccoli amici</option>
+                  <option value="FP">FP — Piante / accessori</option>
+                </select>
+              </div>
+
+              {manualFormat === 'REEL' && (
+                <div className="rounded-2xl border border-amber-200/80 bg-amber-50/60 p-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerateZiggyReel()}
+                    disabled={ziggyGenerating || uploadProgress || suggestCopyLoading}
+                    className="w-full bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {ziggyGenerating ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        Ziggy sta generando il Reel (Veo)…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        Genera Video Reel con Ziggy (Veo)
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-amber-900/80 leading-relaxed">
+                    Genera B-roll Quiet Luxury 8s con Google Veo, copy, hashtag e 3 slogan overlay
+                    (fade 1s / hold 2s / fade 1s). Può richiedere 1–3 minuti.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
                   Seleziona File (Foto o Video) *
                 </label>
                 <div
@@ -1741,10 +1881,43 @@ export default function CampaignsDashboardClient() {
                 </div>
               </div>
 
+              {manualVideoPreviewUrl && (
+                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-[9/16] max-h-64 mx-auto w-full max-w-[180px]">
+                  <video
+                    src={manualVideoPreviewUrl}
+                    className="w-full h-full object-cover"
+                    controls
+                    playsInline
+                    muted
+                  />
+                </div>
+              )}
+
+              {ziggySlogans.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <Video size={12} /> Preview slogan overlay (8s)
+                  </p>
+                  <ol className="space-y-1.5">
+                    {ziggySlogans.map((s, i) => (
+                      <li
+                        key={`${s.startSec}-${i}`}
+                        className="text-xs text-slate-700 font-serif italic leading-snug flex gap-2"
+                      >
+                        <span className="shrink-0 font-sans not-italic text-[10px] font-bold text-slate-400 tabular-nums">
+                          {s.startSec.toFixed(1)}s–{s.endSec.toFixed(1)}s
+                        </span>
+                        <span>«{s.text}»</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-1">
                   Copy del Post *{' '}
-                  {suggestCopyLoading ? (
+                  {suggestCopyLoading || ziggyGenerating ? (
                     <span className="text-amber-600 normal-case tracking-normal font-semibold">
                       (generazione…)
                     </span>
@@ -1754,10 +1927,10 @@ export default function CampaignsDashboardClient() {
                   rows={4}
                   value={manualCopy}
                   onChange={(e) => setManualCopy(e.target.value)}
-                  placeholder="Si compila in automatico dopo il caricamento del media (puoi modificare)."
+                  placeholder="Si compila in automatico dopo il caricamento del media o con Ziggy (puoi modificare)."
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all resize-none disabled:opacity-60"
                   required
-                  disabled={suggestCopyLoading}
+                  disabled={suggestCopyLoading || ziggyGenerating}
                 />
               </div>
 
@@ -1771,7 +1944,7 @@ export default function CampaignsDashboardClient() {
                   onChange={(e) => setManualHashtags(e.target.value)}
                   placeholder="Generati in automatico per il social scelto"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-700 outline-none focus:border-slate-400 focus:bg-white transition-all disabled:opacity-60"
-                  disabled={suggestCopyLoading}
+                  disabled={suggestCopyLoading || ziggyGenerating}
                 />
               </div>
 
@@ -1793,14 +1966,17 @@ export default function CampaignsDashboardClient() {
               <div className="flex gap-2 justify-end border-t border-slate-150 pt-4 mt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    resetManualModal();
+                  }}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
                 >
                   Chiudi
                 </button>
                 <button
                   type="submit"
-                  disabled={uploadProgress || suggestCopyLoading}
+                  disabled={uploadProgress || suggestCopyLoading || ziggyGenerating}
                   className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {uploadProgress ? (

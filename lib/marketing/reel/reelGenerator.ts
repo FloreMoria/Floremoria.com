@@ -1,5 +1,5 @@
 /**
- * Generatore Reel automatici FloreMoria — AI-first (Gemini Imagen + Veo).
+ * Generatore Reel automatici FloreMoria — Ziggy × Gemini Imagen + Veo.
  *
  * Priorità sorgente visiva:
  * 1) Foto consegna /social-ready/ (solo fiori; privacy guard)
@@ -7,6 +7,7 @@
  * 3) Still Imagen Quiet Luxury
  * 4) (opz.) B-roll URL env se Veo non disponibile
  *
+ * Overlay: 3 slogan Serif (fade 1s / hold 2s / fade 1s) via ffmpeg se disponibile.
  * Audio: ambient/strumentale (Veo native e/o Lyria) — mai TTS.
  */
 import { put } from '@vercel/blob';
@@ -16,6 +17,7 @@ import {
   SOCIAL_PRIVACY_PRIMARY_RULE,
 } from '@/lib/marketing/socialPrivacyGuard';
 import { loadConfiguredBrollClips, pickBrollClip } from '@/lib/marketing/reel/brollLibrary';
+import { burnZiggyTextOverlay } from '@/lib/marketing/reel/burnTextOverlay';
 import { generateQuietLuxuryStill } from '@/lib/marketing/reel/generateStill';
 import {
   defaultVeoPromptForAiStill,
@@ -90,7 +92,6 @@ async function resolveStillSource(input: GenerateReelInput): Promise<StillSource
   }
 
   if (imageUrl && !/delivery-proof|foto-consegne\/delivery/i.test(imageUrl)) {
-    // Still campagna (Imagen / upload) — non foto privata consegna.
     try {
       const fetched = await fetchStillBytes(imageUrl, input.blobToken);
       if (fetched.mimeType.startsWith('image/')) {
@@ -104,7 +105,11 @@ async function resolveStillSource(input: GenerateReelInput): Promise<StillSource
     }
   }
 
-  if (imageUrl && /delivery-proof|foto-consegne\/delivery/i.test(imageUrl) && !isSocialReadyProofUrl(imageUrl)) {
+  if (
+    imageUrl &&
+    /delivery-proof|foto-consegne\/delivery/i.test(imageUrl) &&
+    !isSocialReadyProofUrl(imageUrl)
+  ) {
     console.warn(
       `[ReelGenerator] ${SOCIAL_PRIVACY_PRIMARY_RULE} Foto privata ignorata → Imagen.`
     );
@@ -129,11 +134,9 @@ export async function generateAutomaticReelVideo(
     return null;
   }
 
-  // Side-effect: prova a popolare cache musica strumentale (mai TTS).
   void resolveOrCreateInstrumentalMusicUrl().catch(() => undefined);
 
-  // Linee on-screen usate solo se ffmpeg locale; Veo non burna testo — copy resta in caption Meta.
-  void buildReelOnScreenLines(input.copy);
+  const overlayLines = buildReelOnScreenLines(input.copy);
 
   try {
     const still = await resolveStillSource(input);
@@ -143,13 +146,27 @@ export async function generateAutomaticReelVideo(
         : defaultVeoPromptForAiStill();
 
     console.log(
-      `[ReelGenerator] Campagna ${input.campaignId} · still=${still.kind} · Veo · TTS=vietato`
+      `[ReelGenerator] Campagna ${input.campaignId} · still=${still.kind} · Veo Ziggy · slogans=${overlayLines.length} · TTS=vietato`
     );
 
-    const mp4 = await generateVeoReelClip({
+    let mp4 = await generateVeoReelClip({
       prompt,
       image: { buffer: still.buffer, mimeType: still.mimeType },
+      durationSeconds: 8,
     });
+
+    const burned = await burnZiggyTextOverlay({
+      videoMp4: mp4,
+      copy: input.copy,
+      lines: overlayLines,
+    });
+    if (burned) {
+      mp4 = burned;
+    } else {
+      console.info(
+        '[ReelGenerator] Overlay testo non applicato (no ffmpeg) — caption Meta resta la fonte slogan.'
+      );
+    }
 
     const blobPath = `${REEL_VIDEO_PREFIX}/${input.campaignId}-${Date.now()}.mp4`;
     const { url } = await put(blobPath, mp4, {
@@ -160,7 +177,7 @@ export async function generateAutomaticReelVideo(
       allowOverwrite: true,
     });
 
-    console.log(`[ReelGenerator] ✔ Reel AI caricato: ${url}`);
+    console.log(`[ReelGenerator] ✔ Reel Ziggy caricato: ${url}`);
     return url;
   } catch (e) {
     console.warn(

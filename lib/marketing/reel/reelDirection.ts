@@ -1,105 +1,88 @@
 /**
- * Regia visuale Reel FloreMoria (ZIGGY + MARTINA + SOFIA + ALMA).
- * Obiettivo: clip credibili, fotorealistici, Quiet Luxury — mai griefbait / stock cheap.
+ * Regia visuale Reel FloreMoria — Ziggy × Google Veo / AI Studio.
+ * System prompt automatico: macro Quiet Luxury, cimiteri monumentali IT/EU, golden hour.
  */
 
+/** Negative constraints tassativi (Veo config.negativePrompt). */
 export const REEL_NEGATIVE_PROMPT = [
-  // Persone & privacy
-  'people',
-  'faces',
-  'human figures',
-  'hands holding flowers',
-  'portrait',
-  'readable names',
-  'tomb inscriptions',
-  'engraved lettering',
-  'headstone text',
-  'cross with plaque text',
-  // Cheap / fake AI look
-  'plastic flowers',
-  'artificial looking petals',
-  'cartoon',
-  'anime',
-  '3d render',
-  'cgi',
-  'over-sharpened',
-  'hdr heavy',
-  'neon colors',
-  'oversaturated',
-  'stock photo watermark',
-  'low resolution',
-  'blurry mush',
-  'morphing petals',
-  'warping geometry',
-  'flicker',
-  'jittery camera',
-  'dutch angle chaos',
-  // Tone
-  'horror',
-  'jump scare',
-  'melodrama',
-  'funeral home cliché',
-  'griefbait',
-  'crying',
-  'dark gothic excess',
-  // Text / brand clutter
-  'text overlays',
-  'subtitles',
-  'logos',
-  'captions',
-  'watermark',
-  // Audio (se generateAudio)
-  'speech',
-  'talking',
-  'voiceover',
-  'narration',
-  'singing',
-  'lyrics',
-  'vocals',
-  'human voice',
-  'TTS',
-  'podcast voice',
+  'no people',
+  'no face',
+  'no human figures',
+  'no hands',
+  'no floating petals',
+  'no dramatic effects',
+  'no text',
+  'no logos',
+  'no subtitles',
+  'no captions',
+  'no watermark',
+  'no readable names',
+  'no tomb inscriptions',
+  'no engraved lettering',
+  'no plastic flowers',
+  'no cgi',
+  'no 3d render',
+  'no cartoon',
+  'no anime',
+  'no horror',
+  'no jump scare',
+  'no griefbait',
+  'no melodrama',
+  'no neon',
+  'no hdr heavy',
+  'no morphing petals',
+  'no warping geometry',
+  'no speech',
+  'no voiceover',
+  'no singing',
+  'no TTS',
+  'highly realistic',
+  '60fps look',
 ].join(', ');
 
-/** Blocco regia comune: fotorealismo + movimento sobrio. */
+/**
+ * System prompt Ziggy → Veo (testo inviato come prompt di generazione).
+ * Usato anche come riferimento per AI Studio Playground.
+ */
+export const ZIGGY_VEO_SYSTEM_PROMPT = [
+  '[ZIGGY × FloreMoria — Reel Veo 9:16, ~8s]',
+  'FRAMING: Intimate macro close-up on a fresh solemn bouquet (white roses and quiet memorial blooms) resting on pale stone or Carrara-like marble.',
+  'SETTING: European/Italian monumental cemetery atmosphere — inspiration San Michele (Venice) or Cimitero Monumentale: soft cypress silhouettes, distant marble architecture, anonymous and dignified. Never readable inscriptions or personal names.',
+  'LIGHTING: Golden hour, warm natural light, dew drops on petals, creamy bokeh background with cypress or stone arches.',
+  'CAMERA: One slow elegant move only — macro tilt-up OR gentle push-in. No cuts, no whip pans, no jump zooms.',
+  'LOOK: Highly photorealistic, Quiet Luxury, editorial cinema, ~60fps temporal smoothness, ivory–sage–blush palette.',
+  'MOOD: Presence, care, quiet dignity — never spectacle, never griefbait.',
+  'AUDIO (if generated): soft ambient instrumental only — never speech or singing.',
+  'STRICT: no people, no face, no floating petals, no dramatic effects, no text, no logos, highly realistic.',
+].join(' ');
+
+/** Blocco regia condiviso (compatibilità chiamanti). */
 function cinematicCraftBlock(): string {
-  return [
-    'Photorealistic documentary-editorial look, as if shot on a full-frame cinema camera with a 50mm lens.',
-    'True-to-life textures: soft petals, natural dew or soft light, pale marble or stone, gentle depth of field.',
-    'Color grade: muted Quiet Luxury — ivory, sage, blush, warm stone grey; never neon, never HDR punch.',
-    'Camera: ONE slow elegant move only (gentle push-in OR subtle lateral drift OR soft rack focus). No cuts, no whip pans, no zooms jumps.',
-    'Motion of subject: barely-there breeze in petals or leaves; everything else still and stable.',
-    'Lighting: natural daylight or soft golden hour; diffuse, respectful, never harsh flash.',
-    'Vertical 9:16 composition with calm negative space; subject centered or slightly lower third.',
-    'Mood: dignified presence and quiet care — never sad spectacle, never horror, never melodrama.',
-    'If audio is generated: soft ambient instrumental pads only; absolute silence of speech and singing.',
-  ].join(' ');
+  return ZIGGY_VEO_SYSTEM_PROMPT;
 }
 
 /**
  * Image-to-video da foto consegna social-ready (fiori veri).
- * Deve restare fedele all’immagine: non inventare tombe/nomi/persone.
+ * Fedeltà al bouquet + movimento macro Ziggy.
  */
 export function veoPromptFromDeliveryFlowerPhoto(): string {
   return [
-    'Animate this real memorial flower arrangement as a short cinematic Reel.',
-    'Stay strictly faithful to the flowers and composition already in the image: same bouquet, same colors, same placement.',
+    ZIGGY_VEO_SYSTEM_PROMPT,
+    'SOURCE: Animate THIS real memorial flower photo as the hero subject.',
+    'Stay strictly faithful to the bouquet already in the frame: same flowers, colors, placement.',
     'Do not invent people, faces, hands, graves with readable names, plaques, or new objects.',
-    'Only add subtle life: a soft breeze through petals, tiny light shift, shallow focus breathing.',
-    'Background stays soft and unreadable — no inscriptions, no personal identity details.',
-    cinematicCraftBlock(),
+    'Only add subtle life: soft breeze in petals, dew catching golden light, gentle macro push-in or tilt-up.',
+    'Background stays soft bokeh — unreadable, anonymous monumental garden.',
   ].join(' ');
 }
 
 /** Text-to-video / still AI → video (senza foto consegna). */
 export function veoPromptFromAiStill(): string {
   return [
-    'Cinematic vertical Reel of Quiet Luxury memorial florals in an Italian monumental garden.',
-    'Subject: fresh seasonal flowers resting on pale Carrara-like marble or soft weathered stone,',
-    'with blurred cypress or soft foliage in the far background — no readable cemetery text.',
-    'Optional distant architectural marble sculpture silhouette, out of focus, anonymous.',
-    'Atmosphere of serene presence and care, golden-hour rim light on petals.',
-    cinematicCraftBlock(),
+    ZIGGY_VEO_SYSTEM_PROMPT,
+    'Generate an 8-second vertical Reel from this Quiet Luxury floral still.',
+    'Macro intimacy on white roses / solemn blooms on marble; Italian monumental cemetery bokeh (San Michele / Monumentale mood).',
+    'Golden hour rim light, dew on petals, slow elegant macro tilt-up or push-in.',
   ].join(' ');
 }
 
@@ -114,15 +97,18 @@ export function imagenQuietLuxuryStillPrompt(input: {
     .slice(0, 220);
 
   return [
-    'Ultra-photorealistic vertical 9:16 editorial photograph for FloreMoria.',
-    'Quiet Luxury memorial florals: real fresh flowers on pale marble slab, soft natural light, shallow depth of field.',
-    'Real botanical detail (MARTINA): credible petal veins, natural asymmetry, no plastic look.',
-    'Palette: ivory, sage, blush, desaturated terracotta, stone grey.',
-    'Environment: serene Italian cemetery garden atmosphere without any readable names or plaques.',
+    'Ultra-photorealistic vertical 9:16 still for FloreMoria / Ziggy Veo plate.',
+    'Intimate macro close-up: fresh white roses and solemn memorial blooms on pale Carrara marble.',
+    'Italian monumental cemetery atmosphere (San Michele Venice / Monumentale mood) as soft bokeh — cypress, stone arches, no readable names.',
+    'Golden hour warm natural light, dew drops on petals, creamy depth of field.',
+    'Quiet Luxury palette: ivory, sage, blush, warm stone.',
     input.category ? `Service mood hint: ${input.category}.` : '',
     copyExcerpt ? `Emotional tone (never literal text in image): ${copyExcerpt}.` : '',
-    'STRICT AVOID: people, faces, hands, engraved names, logos, typography, neon, CGI look, griefbait, funeral-home cliché.',
+    'STRICT AVOID: people, faces, hands, floating petals, dramatic effects, engraved names, logos, typography, CGI, griefbait.',
   ]
     .filter(Boolean)
     .join(' ');
 }
+
+/** @deprecated Usare ZIGGY_VEO_SYSTEM_PROMPT. */
+export { cinematicCraftBlock };

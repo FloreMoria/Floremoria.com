@@ -140,6 +140,7 @@ export default function CampaignsDashboardClient() {
   const [ziggySlogans, setZiggySlogans] = useState<
     Array<{ text: string; startSec: number; endSec: number }>
   >([]);
+  const [ziggyFallbackNotice, setZiggyFallbackNotice] = useState<string | null>(null);
   const [ziggyGenerating, setZiggyGenerating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
   const [suggestCopyLoading, setSuggestCopyLoading] = useState(false);
@@ -652,6 +653,7 @@ export default function CampaignsDashboardClient() {
     }
     setManualVideoPreviewUrl(null);
     setZiggySlogans([]);
+    setZiggyFallbackNotice(null);
   };
 
   const resetManualModal = () => {
@@ -670,6 +672,7 @@ export default function CampaignsDashboardClient() {
     setZiggyGenerating(true);
     setErrorMessage(null);
     setSuccessMessage(null);
+    setZiggyFallbackNotice(null);
     try {
       const res = await fetch('/api/dashboard/campaigns/generate-ziggy-reel', {
         method: 'POST',
@@ -677,26 +680,11 @@ export default function CampaignsDashboardClient() {
         body: JSON.stringify({ category: manualCategory }),
       });
       const data = await res.json();
-      if (!data.success || !data.videoUrl) {
+      if (!data.success) {
         setErrorMessage(data.error || 'Ziggy non ha generato il Reel.');
         return;
       }
 
-      const mediaRes = await fetch(data.videoUrl);
-      if (!mediaRes.ok) {
-        setErrorMessage('Impossibile scaricare il video Ziggy generato.');
-        return;
-      }
-      const blob = await mediaRes.blob();
-      const file = new File([blob], `ziggy-reel-${Date.now()}.mp4`, {
-        type: blob.type || 'video/mp4',
-      });
-
-      clearZiggyPreview();
-      const objectUrl = URL.createObjectURL(blob);
-      ziggyPreviewObjectUrlRef.current = objectUrl;
-      setManualVideoPreviewUrl(objectUrl);
-      setManualFile(file);
       setManualFormat('REEL');
       setManualCopy(String(data.copy || '').trim());
       setManualHashtags(
@@ -723,8 +711,46 @@ export default function CampaignsDashboardClient() {
         );
       }
 
-      setSuccessMessage('Reel Ziggy (Veo) generato: video, copy, hashtag e slogan overlay pronti.');
-      setTimeout(() => setSuccessMessage(null), 5000);
+      const notice =
+        typeof data.notice === 'string' && data.notice.trim()
+          ? data.notice.trim()
+          : data.usedFallback
+            ? 'Copy e overlay pronti. Video Veo da caricare manualmente se preferisci un B-roll custom'
+            : null;
+      if (notice) setZiggyFallbackNotice(notice);
+
+      if (data.videoUrl) {
+        const mediaRes = await fetch(String(data.videoUrl));
+        if (!mediaRes.ok) {
+          // Copy/slogan già pronti: non bloccare, invita upload manuale.
+          setZiggyFallbackNotice(
+            notice ||
+              'Copy e overlay pronti. Video Veo da caricare manualmente se preferisci un B-roll custom'
+          );
+          setSuccessMessage(notice || 'Copy e overlay Ziggy pronti.');
+          setTimeout(() => setSuccessMessage(null), 6000);
+          return;
+        }
+        const blob = await mediaRes.blob();
+        const file = new File([blob], `ziggy-reel-${Date.now()}.mp4`, {
+          type: blob.type || 'video/mp4',
+        });
+        if (ziggyPreviewObjectUrlRef.current) {
+          URL.revokeObjectURL(ziggyPreviewObjectUrlRef.current);
+          ziggyPreviewObjectUrlRef.current = null;
+        }
+        const objectUrl = URL.createObjectURL(blob);
+        ziggyPreviewObjectUrlRef.current = objectUrl;
+        setManualVideoPreviewUrl(objectUrl);
+        setManualFile(file);
+      }
+
+      setSuccessMessage(
+        data.usedFallback
+          ? notice || 'Copy e overlay Ziggy pronti (fallback B-roll).'
+          : 'Reel Ziggy (Veo) generato: video, copy, hashtag e slogan overlay pronti.'
+      );
+      setTimeout(() => setSuccessMessage(null), 6000);
     } catch {
       setErrorMessage('Errore di rete durante la generazione Reel Ziggy.');
     } finally {
@@ -1843,8 +1869,14 @@ export default function CampaignsDashboardClient() {
                   </button>
                   <p className="text-[10px] text-amber-900/80 leading-relaxed">
                     Genera B-roll Quiet Luxury 8s con Google Veo, copy, hashtag e 3 slogan overlay
-                    (fade 1s / hold 2s / fade 1s). Può richiedere 1–3 minuti.
+                    (fade 1s / hold 2s / fade 1s). Può richiedere 1–3 minuti. Se Veo non è
+                    disponibile, Ziggy prepara comunque copy, hashtag e overlay con B-roll di archivio.
                   </p>
+                  {ziggyFallbackNotice && (
+                    <p className="text-[11px] text-slate-600 leading-relaxed border border-slate-200/80 bg-white/70 rounded-xl px-2.5 py-2">
+                      {ziggyFallbackNotice}
+                    </p>
+                  )}
                 </div>
               )}
 

@@ -50,6 +50,27 @@ export function pickBrollClip(campaignId: string, clips: BrollClip[]): BrollClip
 }
 
 /**
+ * B-roll di backup per Ziggy manuale: env clips → template MP4.
+ * Se assente, il caller lascia il campo video vuoto (upload manuale).
+ */
+export function resolveZiggyFallbackBroll(seed: string): BrollClip | null {
+  const clips = loadConfiguredBrollClips();
+  const picked = pickBrollClip(seed, clips);
+  if (picked) return picked;
+
+  const template = process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim();
+  if (template && /^https?:\/\//i.test(template)) {
+    return {
+      id: 'broll-template',
+      url: template,
+      mood: 'monumentale',
+      label: 'Template Reel Quiet Luxury',
+    };
+  }
+  return null;
+}
+
+/**
  * Traccia musicale strumentale/ambiente (mai TTS / voce sintetica).
  * MARKETING_REEL_MUSIC_URL = https://...mp3|m4a|wav
  */

@@ -122,21 +122,32 @@ async function resolveStillSource(input: GenerateReelInput): Promise<StillSource
   return { ...still, kind: 'imagen' };
 }
 
+export type ReelVideoSource = 'veo' | 'broll' | 'template';
+
+export type ReelGenerationResult = {
+  url: string;
+  source: ReelVideoSource;
+  /** Errore Veo originale se si è degradati a B-roll/template. */
+  veoError?: unknown;
+};
+
 /**
- * Restituisce URL MP4 9:16 per pubblicazione Reel.
+ * Restituisce URL MP4 9:16 + sorgente (Veo vs B-roll) per diagnostica/fallback UI.
  */
-export async function generateAutomaticReelVideo(
+export async function generateAutomaticReelVideoDetailed(
   input: GenerateReelInput
-): Promise<string | null> {
+): Promise<ReelGenerationResult | null> {
   const token = input.blobToken || process.env.BLOB_READ_WRITE_TOKEN?.trim();
   if (!token) {
     console.error('[ReelGenerator] BLOB_READ_WRITE_TOKEN mancante.');
-    return null;
+    // Senza Blob non possiamo caricare Veo: prova comunque B-roll pubblici env.
+    return resolveEnvBrollResult(input.campaignId);
   }
 
   void resolveOrCreateInstrumentalMusicUrl().catch(() => undefined);
 
   const overlayLines = buildReelOnScreenLines(input.copy);
+  let veoError: unknown;
 
   try {
     const still = await resolveStillSource(input);
@@ -178,28 +189,47 @@ export async function generateAutomaticReelVideo(
     });
 
     console.log(`[ReelGenerator] ✔ Reel Ziggy caricato: ${url}`);
-    return url;
+    return { url, source: 'veo' };
   } catch (e) {
+    veoError = e;
     console.warn(
       '[ReelGenerator] Generazione Veo/Imagen fallita, provo fallback B-roll env:',
       e instanceof Error ? e.message : e
     );
   }
 
-  const clips = loadConfiguredBrollClips();
-  const clip = pickBrollClip(input.campaignId, clips);
-  if (clip) {
-    console.log(`[ReelGenerator] Fallback B-roll env: ${clip.label}`);
-    return clip.url;
-  }
-
-  const prebuilt = process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim();
-  if (prebuilt && /^https?:\/\//i.test(prebuilt)) {
-    return prebuilt;
+  const fallback = resolveEnvBrollResult(input.campaignId);
+  if (fallback) {
+    return { ...fallback, veoError };
   }
 
   console.error(
     '[ReelGenerator] Nessun Reel generabile. Verifica GEMINI_API_KEY + accesso Veo/Imagen su AI Studio.'
   );
   return null;
+}
+
+function resolveEnvBrollResult(campaignId: string): ReelGenerationResult | null {
+  const clips = loadConfiguredBrollClips();
+  const clip = pickBrollClip(campaignId, clips);
+  if (clip) {
+    console.log(`[ReelGenerator] Fallback B-roll env: ${clip.label}`);
+    return { url: clip.url, source: 'broll' };
+  }
+
+  const prebuilt = process.env.MARKETING_REEL_TEMPLATE_MP4_URL?.trim();
+  if (prebuilt && /^https?:\/\//i.test(prebuilt)) {
+    return { url: prebuilt, source: 'template' };
+  }
+  return null;
+}
+
+/**
+ * Restituisce URL MP4 9:16 per pubblicazione Reel.
+ */
+export async function generateAutomaticReelVideo(
+  input: GenerateReelInput
+): Promise<string | null> {
+  const result = await generateAutomaticReelVideoDetailed(input);
+  return result?.url ?? null;
 }

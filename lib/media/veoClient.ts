@@ -53,6 +53,16 @@ export function requireGeminiVeoApiKey(): string {
   return key;
 }
 
+/** Errori Veo per cui il Command Center deve degradare a B-roll/copy (no 5xx). */
+export function isVeoUnavailableKind(kind: VeoErrorKind): boolean {
+  return (
+    kind === 'missing_api_key' ||
+    kind === 'authentication' ||
+    kind === 'model_not_found_or_permission' ||
+    kind === 'rate_limit'
+  );
+}
+
 function extractUpstreamStatus(err: unknown): number | undefined {
   if (!err || typeof err !== 'object') return undefined;
   const o = err as Record<string, unknown>;

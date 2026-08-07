@@ -1,14 +1,18 @@
 import { GoogleGenAI } from '@google/genai';
+import {
+  MISSING_VEO_API_KEY_MESSAGE,
+  requireGeminiVeoApiKey,
+  resolveGeminiVeoApiKey,
+} from '@/lib/media/veoClient';
+
+export { MISSING_VEO_API_KEY_MESSAGE, resolveGeminiVeoApiKey };
 
 export function getGeminiApiKeyForReel(): string {
-  const apiKey =
-    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      'GEMINI_API_KEY mancante: impossibile generare Reel AI (Imagen/Veo).'
-    );
+  try {
+    return requireGeminiVeoApiKey();
+  } catch {
+    throw new Error(MISSING_VEO_API_KEY_MESSAGE);
   }
-  return apiKey;
 }
 
 export function createGeminiClient(): GoogleGenAI {

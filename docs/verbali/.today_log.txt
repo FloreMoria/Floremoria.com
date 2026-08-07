@@ -80,3 +80,5 @@
 [2026-08-07 17:38] feat/social: Ziggy Veo system prompt Quiet Luxury + overlay 3 slogan Serif (fade 1/hold 2/fade 1) su Reel 8s.
 
 [2026-08-07 18:22] feat/social: Ziggy Veo collegato al modal Nuovo post manuale (Reel) + API generate-ziggy-reel.
+
+[2026-08-07 18:37] fix/veo: Chiavi API Gemini multi-env + diagnostica auth/model/quota su generate-ziggy-reel.

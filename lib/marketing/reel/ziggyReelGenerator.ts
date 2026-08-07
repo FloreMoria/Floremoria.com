@@ -44,7 +44,7 @@ export async function generateZiggyManualReel(input: {
 
   if (!videoUrl) {
     throw new Error(
-      'Ziggy non ha potuto generare il Reel. Verifica GEMINI_API_KEY e accesso Veo su Google AI Studio.'
+      "Ziggy non ha potuto generare il Reel. Verifica chiave API (GEMINI_API_KEY / GOOGLE_AI_STUDIO_API_KEY / GOOGLE_API_KEY) e abilitazione Veo sul progetto Google."
     );
   }
 

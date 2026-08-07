@@ -5,6 +5,11 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { generateZiggyManualReel } from '@/lib/marketing/reel/ziggyReelGenerator';
+import {
+  MISSING_VEO_API_KEY_MESSAGE,
+  classifyVeoError,
+  resolveGeminiVeoApiKey,
+} from '@/lib/media/veoClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -13,6 +18,18 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   const guard = await requireDashboardAdmin();
   if (!guard.ok) return guard.response;
+
+  if (!resolveGeminiVeoApiKey()) {
+    console.error('[generate-ziggy-reel] kind=missing_api_key');
+    return NextResponse.json(
+      {
+        success: false,
+        error: MISSING_VEO_API_KEY_MESSAGE,
+        errorKind: 'missing_api_key' as const,
+      },
+      { status: 503 }
+    );
+  }
 
   try {
     const body = (await request.json().catch(() => ({}))) as {
@@ -33,8 +50,19 @@ export async function POST(request: Request) {
       category: result.category,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Errore generazione Reel Ziggy.';
-    console.error('[generate-ziggy-reel]', message);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const classified = classifyVeoError(err);
+    console.error(
+      `[generate-ziggy-reel] kind=${classified.kind} http=${classified.httpStatus} upstream=${classified.upstreamStatus ?? 'n/a'} detail=${classified.detail}`
+    );
+    return NextResponse.json(
+      {
+        success: false,
+        error: classified.error,
+        errorKind: classified.kind,
+        detail: classified.detail,
+        upstreamStatus: classified.upstreamStatus ?? null,
+      },
+      { status: classified.httpStatus }
+    );
   }
 }

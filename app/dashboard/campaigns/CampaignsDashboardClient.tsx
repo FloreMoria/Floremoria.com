@@ -711,23 +711,20 @@ export default function CampaignsDashboardClient() {
         );
       }
 
+      // Avviso upload manuale solo se manca proprio il video.
       const notice =
-        typeof data.notice === 'string' && data.notice.trim()
+        !data.videoUrl && typeof data.notice === 'string' && data.notice.trim()
           ? data.notice.trim()
-          : data.usedFallback
-            ? 'Copy e overlay pronti. Video Veo da caricare manualmente se preferisci un B-roll custom'
-            : null;
-      if (notice) setZiggyFallbackNotice(notice);
+          : null;
+      setZiggyFallbackNotice(notice);
 
       if (data.videoUrl) {
         const mediaRes = await fetch(String(data.videoUrl));
         if (!mediaRes.ok) {
-          // Copy/slogan già pronti: non bloccare, invita upload manuale.
           setZiggyFallbackNotice(
-            notice ||
-              'Copy e overlay pronti. Video Veo da caricare manualmente se preferisci un B-roll custom'
+            'Copy e overlay pronti. Video da ricaricare manualmente (download B-roll non riuscito).'
           );
-          setSuccessMessage(notice || 'Copy e overlay Ziggy pronti.');
+          setSuccessMessage('Copy e overlay Ziggy pronti.');
           setTimeout(() => setSuccessMessage(null), 6000);
           return;
         }
@@ -745,10 +742,15 @@ export default function CampaignsDashboardClient() {
         setManualFile(file);
       }
 
+      const source = String(data.videoSource || '');
       setSuccessMessage(
-        data.usedFallback
-          ? notice || 'Copy e overlay Ziggy pronti (fallback B-roll).'
-          : 'Reel Ziggy (Veo) generato: video, copy, hashtag e slogan overlay pronti.'
+        source === 'veo'
+          ? 'Reel Ziggy (Veo) generato: video, copy, hashtag e slogan overlay pronti.'
+          : source === 'pexels'
+            ? 'Reel Ziggy pronto: B-roll Pexels 4K, copy, hashtag e slogan overlay.'
+            : data.videoUrl
+              ? 'Reel Ziggy pronto: B-roll, copy, hashtag e slogan overlay.'
+              : 'Copy e overlay Ziggy pronti.'
       );
       setTimeout(() => setSuccessMessage(null), 6000);
     } catch {
@@ -1868,9 +1870,9 @@ export default function CampaignsDashboardClient() {
                     )}
                   </button>
                   <p className="text-[10px] text-amber-900/80 leading-relaxed">
-                    Genera B-roll Quiet Luxury 8s con Google Veo, copy, hashtag e 3 slogan overlay
-                    (fade 1s / hold 2s / fade 1s). Può richiedere 1–3 minuti. Se Veo non è
-                    disponibile, Ziggy prepara comunque copy, hashtag e overlay con B-roll di archivio.
+                    Genera Reel Quiet Luxury: prova Veo, poi B-roll Pexels 4K portrait (macro fiori /
+                    marmo / golden hour), con copy, hashtag e 3 slogan overlay. Un click, pronto da
+                    pubblicare.
                   </p>
                   {ziggyFallbackNotice && (
                     <p className="text-[11px] text-slate-600 leading-relaxed border border-slate-200/80 bg-white/70 rounded-xl px-2.5 py-2">

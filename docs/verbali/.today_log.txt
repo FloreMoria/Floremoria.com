@@ -84,3 +84,5 @@
 [2026-08-07 18:37] fix/veo: Chiavi API Gemini multi-env + diagnostica auth/model/quota su generate-ziggy-reel.
 
 [2026-08-07 18:49] feat/social: Fallback elegante Ziggy Reel (B-roll + copy/overlay) se Veo non disponibile.
+
+[2026-08-07 18:56] feat/social: Pexels Video API come B-roll 4K nativo Ziggy (fallback Veo) + videoUrl sempre quando chiave presente.

@@ -1,12 +1,15 @@
 /**
  * Facade Ziggy per Command Center — Nuovo post manuale (Reel).
- * Orchestrazione: Imagen (se serve) → Veo 8s → overlay slogan → Blob.
- * Fallback elegante: B-roll archivio + copy/hashtag/slogan se Veo non disponibile.
+ * Motore: Veo (se disponibile) → Pexels Video 4K portrait → env B-roll.
+ * La risposta espone sempre videoUrl MP4 + copy + hashtag + 3 slogan overlay.
  */
 import { buildSocialProofCopy, type SocialProofCategoryCode } from '@/lib/marketing/socialProofCopy';
-import { resolveZiggyFallbackBroll } from '@/lib/marketing/reel/brollLibrary';
 import { generateAutomaticReelVideoDetailed } from '@/lib/marketing/reel/reelGenerator';
 import { buildZiggyReelSlogans } from '@/lib/marketing/reel/reelTextAudio';
+import {
+  resolveZiggyStockMp4,
+  type ZiggyVideoSource,
+} from '@/lib/media/ziggyVideoEngine';
 import {
   MISSING_VEO_API_KEY_MESSAGE,
   classifyVeoError,
@@ -14,18 +17,16 @@ import {
   type VeoErrorKind,
 } from '@/lib/media/veoClient';
 
-/** Avviso discreto quando Veo non è disponibile ma copy/overlay sono pronti. */
+/** Solo se manca qualsiasi sorgente video (caso estremo). */
 export const ZIGGY_VEO_FALLBACK_NOTICE =
   'Copy e overlay pronti. Video Veo da caricare manualmente se preferisci un B-roll custom';
 
 export type ZiggyManualReelResult = {
   videoUrl: string | null;
-  /** veo | broll | template | none (placeholder upload manuale). */
-  videoSource: 'veo' | 'broll' | 'template' | 'none';
+  videoSource: ZiggyVideoSource;
   usedFallback: boolean;
   notice: string | null;
   slogans: [string, string, string];
-  /** Timing overlay (secondi) per preview UI. */
   sloganTimeline: Array<{ text: string; startSec: number; endSec: number }>;
   copy: string;
   hashtags: string[];
@@ -62,56 +63,83 @@ function buildSloganTimeline(slogans: [string, string, string]) {
   ];
 }
 
-/** Pack editoriale senza chiamata Veo (rete di sicurezza API). */
-export function buildZiggyManualEditorialPack(categoryRaw?: string | null): Pick<
-  ZiggyManualReelResult,
-  'slogans' | 'sloganTimeline' | 'copy' | 'hashtags' | 'category' | 'notice' | 'usedFallback' | 'videoSource' | 'videoUrl'
-> {
+function withStockVideo(
+  base: Omit<ZiggyManualReelResult, 'videoUrl' | 'videoSource' | 'usedFallback' | 'notice'>,
+  stock: Awaited<ReturnType<typeof resolveZiggyStockMp4>>,
+  veoMeta?: { kind?: VeoErrorKind | null; detail?: string | null }
+): ZiggyManualReelResult {
+  if (stock) {
+    // Pexels/env/local: Reel pronto — niente avviso di upload manuale.
+    return {
+      ...base,
+      videoUrl: stock.url,
+      videoSource: stock.source,
+      usedFallback: true,
+      notice: null,
+      veoErrorKind: veoMeta?.kind ?? null,
+      veoDetail: veoMeta?.detail ?? null,
+    };
+  }
+  return {
+    ...base,
+    videoUrl: null,
+    videoSource: 'none',
+    usedFallback: true,
+    notice: ZIGGY_VEO_FALLBACK_NOTICE,
+    veoErrorKind: veoMeta?.kind ?? null,
+    veoDetail: veoMeta?.detail ?? null,
+  };
+}
+
+/** Pack editoriale + B-roll stock (Pexels) senza chiamata Veo. */
+export async function buildZiggyManualEditorialPack(
+  categoryRaw?: string | null,
+  requestId?: string
+): Promise<ZiggyManualReelResult> {
   const category = normalizeCategory(categoryRaw);
   const pack = buildSocialProofCopy(category);
   const slogans = buildZiggyReelSlogans(pack.copy);
-  const campaignId = `ziggy-editorial-${Date.now()}`;
-  const clip = resolveZiggyFallbackBroll(campaignId);
-  return {
-    videoUrl: clip?.url ?? null,
-    videoSource: clip ? (clip.id === 'broll-template' ? 'template' : 'broll') : 'none',
-    usedFallback: true,
-    notice: ZIGGY_VEO_FALLBACK_NOTICE,
+  const seed = `ziggy-editorial-${requestId || Date.now()}`;
+  const base = {
     slogans,
     sloganTimeline: buildSloganTimeline(slogans),
     copy: buildEditorialCopy(pack.copy, slogans),
     hashtags: pack.hashtags,
     category,
   };
+  const stock = await resolveZiggyStockMp4({ category, seed });
+  return withStockVideo(base, stock, {
+    kind: 'missing_api_key',
+    detail: MISSING_VEO_API_KEY_MESSAGE,
+  });
 }
 
 /**
- * Genera un Reel Ziggy (Veo) per il modal post manuale.
- * In caso di chiave/permessi/quota Veo: success soft con B-roll + copy completo.
+ * Genera un Reel Ziggy: prova Veo, poi Pexels 4K portrait (sempre MP4 se possibile).
  */
 export async function generateZiggyManualReel(input: {
   category?: string | null;
-  /** Seed deterministico per Blob path / B-roll pick. */
   requestId?: string;
 }): Promise<ZiggyManualReelResult> {
   const category = normalizeCategory(input.category);
   const pack = buildSocialProofCopy(category);
   const slogans = buildZiggyReelSlogans(pack.copy);
   const campaignId = `ziggy-manual-${input.requestId || Date.now()}`;
-  const copy = buildEditorialCopy(pack.copy, slogans);
-  const sloganTimeline = buildSloganTimeline(slogans);
+  const base = {
+    slogans,
+    sloganTimeline: buildSloganTimeline(slogans),
+    copy: buildEditorialCopy(pack.copy, slogans),
+    hashtags: pack.hashtags,
+    category,
+  };
 
-  let videoUrl: string | null = null;
-  let videoSource: ZiggyManualReelResult['videoSource'] = 'none';
-  let usedFallback = false;
   let veoErrorKind: VeoErrorKind | null = null;
   let veoDetail: string | null = null;
 
   if (!resolveGeminiVeoApiKey()) {
-    usedFallback = true;
     veoErrorKind = 'missing_api_key';
     veoDetail = MISSING_VEO_API_KEY_MESSAGE;
-    console.warn('[ZiggyManualReel] Chiave API assente → fallback B-roll/copy.');
+    console.warn('[ZiggyManualReel] Chiave Veo assente → Pexels/stock B-roll.');
   } else {
     try {
       const generated = await generateAutomaticReelVideoDetailed({
@@ -120,60 +148,45 @@ export async function generateZiggyManualReel(input: {
         category,
       });
 
-      if (generated?.source === 'veo') {
-        videoUrl = generated.url;
-        videoSource = 'veo';
-      } else if (generated) {
-        videoUrl = generated.url;
-        videoSource = generated.source;
-        usedFallback = true;
-        if (generated.veoError) {
-          const classified = classifyVeoError(generated.veoError);
-          veoErrorKind = classified.kind;
-          veoDetail = classified.detail;
-        }
-      } else {
-        usedFallback = true;
+      if (generated?.source === 'veo' && generated.url) {
+        return {
+          ...base,
+          videoUrl: generated.url,
+          videoSource: 'veo',
+          usedFallback: false,
+          notice: null,
+          veoErrorKind: null,
+          veoDetail: null,
+        };
+      }
+
+      // Veo non ha prodotto MP4: ignora env B-roll del reelGenerator e passa a Pexels.
+      if (generated?.veoError) {
+        const classified = classifyVeoError(generated.veoError);
+        veoErrorKind = classified.kind;
+        veoDetail = classified.detail;
+      } else if (generated && generated.source !== 'veo') {
+        veoErrorKind = 'unknown';
+        veoDetail = `Veo non disponibile; reelGenerator ha proposto ${generated.source}`;
       }
     } catch (err) {
       const classified = classifyVeoError(err);
-      usedFallback = true;
       veoErrorKind = classified.kind;
       veoDetail = classified.detail;
       console.warn(
-        `[ZiggyManualReel] Veo fallito kind=${classified.kind} → fallback B-roll/copy:`,
+        `[ZiggyManualReel] Veo fallito kind=${classified.kind} → Pexels/stock:`,
         classified.detail
       );
     }
   }
 
-  if (!videoUrl) {
-    const clip = resolveZiggyFallbackBroll(campaignId);
-    if (clip) {
-      videoUrl = clip.url;
-      videoSource = clip.id === 'broll-template' ? 'template' : 'broll';
-      usedFallback = true;
-      console.log(`[ZiggyManualReel] B-roll backup: ${clip.label}`);
-    } else {
-      usedFallback = true;
-      videoSource = 'none';
-      console.warn(
-        '[ZiggyManualReel] Nessun B-roll env: copy/overlay pronti, video da upload manuale.'
-      );
-    }
+  const stock = await resolveZiggyStockMp4({ category, seed: campaignId });
+  if (stock) {
+    console.log(`[ZiggyManualReel] Stock B-roll source=${stock.source}`);
+  } else {
+    console.error(
+      '[ZiggyManualReel] Nessun MP4: configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+    );
   }
-
-  return {
-    videoUrl,
-    videoSource,
-    usedFallback,
-    notice: usedFallback ? ZIGGY_VEO_FALLBACK_NOTICE : null,
-    slogans,
-    sloganTimeline,
-    copy,
-    hashtags: pack.hashtags,
-    category,
-    veoErrorKind,
-    veoDetail,
-  };
+  return withStockVideo(base, stock, { kind: veoErrorKind, detail: veoDetail });
 }

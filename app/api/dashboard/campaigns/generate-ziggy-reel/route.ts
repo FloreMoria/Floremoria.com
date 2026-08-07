@@ -1,7 +1,7 @@
 /**
  * POST /api/dashboard/campaigns/generate-ziggy-reel
- * Genera Reel 8s con Ziggy × Google Veo per il modal «Nuovo post manuale».
- * Se Veo non è disponibile (chiave/permessi/quota): success soft con B-roll + copy.
+ * Reel Ziggy: Veo → Pexels Video 4K portrait → env B-roll.
+ * Garantisce success con videoUrl MP4 (quando Pexels/env disponibili) + copy/hashtag/slogan.
  */
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
@@ -18,6 +18,23 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
+function toResponsePayload(result: Awaited<ReturnType<typeof generateZiggyManualReel>>) {
+  return {
+    success: true as const,
+    videoUrl: result.videoUrl,
+    videoSource: result.videoSource,
+    usedFallback: result.usedFallback,
+    notice: result.notice,
+    slogans: result.slogans,
+    sloganTimeline: result.sloganTimeline,
+    copy: result.copy,
+    hashtags: result.hashtags,
+    category: result.category,
+    veoErrorKind: result.veoErrorKind ?? null,
+    detail: result.veoDetail ?? null,
+  };
+}
+
 export async function POST(request: Request) {
   const guard = await requireDashboardAdmin();
   if (!guard.ok) return guard.response;
@@ -32,38 +49,29 @@ export async function POST(request: Request) {
       requestId: `${Date.now()}`,
     });
 
-    if (result.usedFallback) {
+    if (!result.videoUrl) {
+      console.error(
+        '[generate-ziggy-reel] videoUrl assente — configura PEXELS_API_KEY su Vercel'
+      );
+    } else if (result.usedFallback) {
       console.warn(
-        `[generate-ziggy-reel] fallback source=${result.videoSource} kind=${result.veoErrorKind ?? 'n/a'} video=${result.videoUrl ? 'yes' : 'manual-placeholder'}`
+        `[generate-ziggy-reel] source=${result.videoSource} kind=${result.veoErrorKind ?? 'n/a'}`
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      videoUrl: result.videoUrl,
-      videoSource: result.videoSource,
-      usedFallback: result.usedFallback,
-      notice: result.notice,
-      slogans: result.slogans,
-      sloganTimeline: result.sloganTimeline,
-      copy: result.copy,
-      hashtags: result.hashtags,
-      category: result.category,
-      veoErrorKind: result.veoErrorKind ?? null,
-      detail: result.veoDetail ?? null,
-    });
+    return NextResponse.json(toResponsePayload(result));
   } catch (err) {
     const classified = classifyVeoError(err);
-    // Chiave / auth / modello / quota → mai 5xx: pack copy + eventuale B-roll.
     if (isVeoUnavailableKind(classified.kind)) {
-      const pack = buildZiggyManualEditorialPack(body.category);
+      const pack = await buildZiggyManualEditorialPack(
+        body.category,
+        `soft-${Date.now()}`
+      );
       console.warn(
-        `[generate-ziggy-reel] soft-fail kind=${classified.kind} → editorial pack detail=${classified.detail}`
+        `[generate-ziggy-reel] soft-fail kind=${classified.kind} → stock source=${pack.videoSource}`
       );
       return NextResponse.json({
-        success: true,
-        ...pack,
-        usedFallback: true,
+        ...toResponsePayload(pack),
         veoErrorKind: classified.kind,
         detail: classified.detail,
       });

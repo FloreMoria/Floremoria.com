@@ -1,6 +1,9 @@
 /**
  * Client diagnostico Gemini/Veo — risoluzione chiavi API + classificazione errori.
  * Usato da Reel Ziggy e dalla rotta generate-ziggy-reel.
+ *
+ * Catena video Ziggy (vedi lib/media/ziggyVideoEngine.ts):
+ *   Veo (questo client) → Pexels Video API (PEXELS_API_KEY) → env B-roll.
  */
 
 export const MISSING_VEO_API_KEY_MESSAGE =

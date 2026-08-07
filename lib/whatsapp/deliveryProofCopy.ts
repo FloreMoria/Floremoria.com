@@ -75,5 +75,5 @@ export function renderDeliveryProofCaption(params: {
 }
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
-    return `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\nHa ricevuto bene la foto della posa? Scriva OK o ci risponda qui per qualsiasi richiesta 🌹\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria`;
+    return `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\nSe desidera riceverle anche qui in chat, risponda «Inviatemi le foto» oppure «Sì» 🌹\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria`;
 }

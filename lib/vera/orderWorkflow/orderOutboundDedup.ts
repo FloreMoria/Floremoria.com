@@ -118,6 +118,7 @@ export async function wasOrderTemplateSentRecent(
               AND metadata->>'eventType' = (
                 CASE 
                   WHEN ${templateId} = 'customer_order_confirm' THEN 'ORDER_CONFIRM_TEMPLATE'
+                  WHEN ${templateId} = 'ordine_completato' THEN 'ORDINE_COMPLETATO_TEMPLATE'
                   WHEN ${templateId} = 'customer_delivery_photo' THEN 'DELIVERY_PHOTO_TEMPLATE'
                   WHEN ${templateId} = 'customer_waiting_update' THEN 'WAITING_UPDATE_TEMPLATE'
                   WHEN ${templateId} = 'florist_reminder' THEN 'FLORIST_REMINDER_TEMPLATE'

@@ -112,8 +112,12 @@ export function safeTruncateUtf8(str: string, maxLen: number): string {
 }
 
 export function resolveMetaCloudCredentials(): MetaCloudCredentials {
+    const apiKey =
+        process.env.WHATSAPP_CLOUD_API_KEY?.trim() ||
+        process.env.WHATSAPP_ACCESS_TOKEN?.trim() ||
+        '';
     return {
-        apiKey: process.env.WHATSAPP_CLOUD_API_KEY?.trim() ?? '',
+        apiKey,
         phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() ?? '',
     };
 }
@@ -129,7 +133,10 @@ export function getWhatsAppEnvDiagnostics(): {
     missing: string[];
 } {
     const missing: string[] = [];
-    if (!process.env.WHATSAPP_CLOUD_API_KEY?.trim()) missing.push('WHATSAPP_CLOUD_API_KEY');
+    const hasToken =
+        Boolean(process.env.WHATSAPP_CLOUD_API_KEY?.trim()) ||
+        Boolean(process.env.WHATSAPP_ACCESS_TOKEN?.trim());
+    if (!hasToken) missing.push('WHATSAPP_CLOUD_API_KEY');
     if (!process.env.WHATSAPP_PHONE_NUMBER_ID?.trim()) missing.push('WHATSAPP_PHONE_NUMBER_ID');
     if (!process.env.WHATSAPP_WEBHOOK_SECRET?.trim()) missing.push('WHATSAPP_WEBHOOK_SECRET');
     if (!process.env.WHATSAPP_APP_SECRET?.trim()) missing.push('WHATSAPP_APP_SECRET');
@@ -396,7 +403,18 @@ export async function getWhatsAppConnectionState(): Promise<WhatsAppConnectionSt
         });
 
         if (!res.ok) {
-            return { ok: false, state: 'error', provider: 'meta_cloud', error: `http_${res.status}` };
+            const body = await res.text().catch(() => '');
+            const parsed = parseMetaGraphError(body);
+            console.error(
+                `[meta-cloud-api] status ping HTTP ${res.status}:`,
+                body.slice(0, 300)
+            );
+            return {
+                ok: false,
+                state: 'error',
+                provider: 'meta_cloud',
+                error: parsed.message || `http_${res.status}`,
+            };
         }
 
         const data = (await res.json()) as { display_phone_number?: string };

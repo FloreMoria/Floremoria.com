@@ -31,7 +31,7 @@ function buildFloristCompletionThanksMessage(input: {
 }): string {
     return (
         `Grazie ${input.floristFirstName} per aver completato la consegna con successo! ` +
-        `Le foto sono state inviate al cliente. ` +
+        `Abbiamo notificato il cliente con il link alle foto. ` +
         `Ti ricordiamo, se non l'hai già fatto, di inviarci la fattura relativa all'ordine ${input.orderCode}. ` +
         `Buon lavoro da FloreMoria! 🌹`
     );

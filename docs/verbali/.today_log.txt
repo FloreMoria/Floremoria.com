@@ -72,3 +72,5 @@
 
 
 [2026-08-06 23:02] feat/social: regia Reel Quiet Luxury (prompt Veo/Imagen fotorealistici) + default Veo qualità.
+
+[2026-08-07 13:04] feat/whatsapp: sequenza consegna = template ordine_completato+MagicLink prima; foto on-demand su SI/Inviatemi le foto; status Meta via /api/dashboard/whatsapp/status.

@@ -1,8 +1,6 @@
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
 import { addMessage, getSession } from '@/lib/chatStore';
-import { ensureWhatsAppDeliveryImageUrl } from '@/lib/whatsapp/deliveryImageStaging';
 import {
-    renderDeliveryProofCaption,
     renderGiardinoDellaMemoriaLinkMessage,
     resolvePartnerCity,
     extractBuyerFirstName,
@@ -11,13 +9,11 @@ import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
-import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
+import { buildOrdineCompletatoParams } from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
-    sendWhatsAppImageMessage,
 } from '@/lib/whatsapp/metaCloudApiClient';
 
 export interface DeliveryProofWhatsAppInput {
@@ -29,9 +25,8 @@ export interface DeliveryProofWhatsAppInput {
     cemeteryCity?: string | null;
     cemeteryName?: string | null;
     deliveryProvince?: string | null;
-    /** Retrocompat: singola foto consegna. */
+    /** Retrocompat: non più inviato subito in chat (solo MagicLink). */
     photoAfterUrl?: string | null;
-    /** Tutte le foto dalla mini-app (prima + dopo), prioritarie rispetto a photoAfterUrl. */
     photoAfterUrls?: string[] | null;
 }
 
@@ -41,6 +36,7 @@ export interface DeliveryProofWhatsAppResult {
     giardinoUrl?: string;
     imageMessageId?: string;
     linkMessageId?: string;
+    /** Sempre 0 in questo flusso: le foto partono solo su richiesta utente. */
     photosSent?: number;
     error?: string;
 }
@@ -54,23 +50,10 @@ function isBusinessWhatsAppLine(phoneE164: string): boolean {
     return Boolean(business && business === phoneE164);
 }
 
-function resolveAfterPhotoUrls(input: DeliveryProofWhatsAppInput): string[] {
-    const fromList = (input.photoAfterUrls || [])
-        .map((u) => (u || '').trim())
-        .filter(Boolean);
-    if (fromList.length > 0) {
-        return [...new Set(fromList)];
-    }
-    const single = input.photoAfterUrl?.trim();
-    return single ? [single] : [];
-}
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
- * Invio nativo VERA post-consegna: TUTTE le foto di posa + testo empatico + link Giardino.
+ * Punto E — sequenza invertita:
+ * 1) Template Meta `ordine_completato` (dati ordine + MagicLink tutte le foto)
+ * 2) Nessuna foto WhatsApp immediata (prima/dopo partono solo se l'utente chiede «Inviatemi le foto»)
  */
 export async function sendDeliveryProofWhatsApp(
     input: DeliveryProofWhatsAppInput
@@ -93,246 +76,143 @@ export async function sendDeliveryProofWhatsApp(
         return { ok: false, skipped: 'recipient_is_business_line' };
     }
 
-    const photoUrls = resolveAfterPhotoUrls(input);
-    if (photoUrls.length === 0) {
-        return { ok: false, skipped: 'missing_photo' };
-    }
-
     const partnerCity = resolvePartnerCity(input);
     const deceasedName = (input.deceasedName || 'chi ama').trim();
     const buyerName = (input.buyerFullName || 'Utente').trim();
+    const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
     const giardinoUrl = await buildProofFotoAccessUrl(input.orderId, input.orderNumber);
-
-    const caption = renderDeliveryProofCaption({
-        buyerFullName: input.buyerFullName,
-        partnerCity,
-        deceasedName,
-    });
     const linkMessage = renderGiardinoDellaMemoriaLinkMessage(giardinoUrl);
+    const sessionPhone = `whatsapp:${phoneE164}`;
 
     try {
-        const publicImageUrls: string[] = [];
-        for (let i = 0; i < photoUrls.length; i += 1) {
-            const publicUrl = await ensureWhatsAppDeliveryImageUrl(
-                `${input.orderId}-after-${i}`,
-                photoUrls[i]!
-            );
-            if (!/^https:\/\//i.test(publicUrl)) {
-                console.error('[delivery-proof-whatsapp] URL immagine non HTTPS pubblico:', publicUrl);
-                return { ok: false, skipped: 'invalid_image_url', error: 'image_url_not_https', giardinoUrl };
-            }
-            publicImageUrls.push(publicUrl);
-        }
-
-        console.info('[delivery-proof-whatsapp] URL immagini per Meta:', {
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-            count: publicImageUrls.length,
+        const bodyParams = buildOrdineCompletatoParams({
+            buyerFirstName,
+            deceasedName,
+            partnerCity,
+            magicLink: giardinoUrl,
         });
 
-        const sessionPhone = `whatsapp:${phoneE164}`;
-        const session = await getSession(sessionPhone);
-        let withinWindow = isWithinCustomerServiceWindow(session);
+        const templateSend = await sendVeraTemplate(phoneE164, 'ordine_completato', bodyParams, {
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+            skipOrderDedup: true,
+        });
 
-        let imageMessageId: string | undefined;
-        let linkMessageId: string | undefined;
-        let photosSent = 0;
-
-        if (!withinWindow) {
-            // Fuori finestra: prima foto via template (apre il thread), poi le altre in free-text.
-            const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
-            const bodyParams = buildCustomerDeliveryPhotoParams({
-                buyerFirstName,
-                partnerCity,
-                deceasedName,
-            });
-            const templateSend = await sendVeraTemplate(
-                phoneE164,
-                'customer_delivery_photo',
-                bodyParams,
-                {
-                    headerImageUrl: publicImageUrls[0]!,
-                    orderId: input.orderId,
-                    orderNumber: input.orderNumber,
-                    skipOrderDedup: true,
-                }
-            );
-
-            if (!templateSend.ok) {
-                console.error('[delivery-proof-whatsapp] Template foto fuori finestra 24h fallito:', {
+        if (!templateSend.ok) {
+            // Fallback: free-text con MagicLink se la finestra 24h è aperta.
+            const session = await getSession(sessionPhone);
+            if (!isWithinCustomerServiceWindow(session)) {
+                console.error('[delivery-proof-whatsapp] Template ordine_completato fallito fuori finestra:', {
                     orderId: input.orderId,
                     error: templateSend.error,
-                    imageUrl: publicImageUrls[0],
-                    bodyParams,
                 });
                 return {
                     ok: false,
                     skipped: 'template_send_failed',
                     giardinoUrl,
-                    error: templateSend.error ?? 'customer_delivery_photo_failed',
+                    error: templateSend.error ?? 'ordine_completato_failed',
+                    photosSent: 0,
                 };
             }
 
-            imageMessageId = templateSend.messageId;
-            photosSent = 1;
-            withinWindow = true;
-
-            try {
-                await logVeraTemplateOutbound({
-                    phoneE164,
-                    templateId: 'customer_delivery_photo',
-                    bodyParams,
-                    eventType: 'DELIVERY_PHOTO_TEMPLATE',
-                    orderId: input.orderId,
-                    orderNumber: input.orderNumber,
-                    messageId: templateSend.messageId,
-                    contactName: buyerName,
-                    userType: 'UTENTE',
-                });
-            } catch (logErr) {
-                console.error('[delivery-proof-whatsapp] Log dashboard template foto fallito:', logErr);
-            }
-
-            // Foto successive (2..N) come messaggi immagine distinti.
-            for (let i = 1; i < publicImageUrls.length; i += 1) {
-                await sleep(800);
-                const imageSend = await sendWhatsAppImageMessage(
-                    phoneE164,
-                    publicImageUrls[i]!,
-                    undefined
-                );
-                if (!imageSend.ok) {
-                    console.error('[delivery-proof-whatsapp] Invio foto aggiuntiva fallito:', {
-                        orderId: input.orderId,
-                        index: i,
-                        error: imageSend.error,
-                    });
-                    return {
-                        ok: false,
-                        skipped: 'image_send_failed',
-                        giardinoUrl,
-                        photosSent,
-                        error: imageSend.error,
-                        imageMessageId,
-                    };
-                }
-                imageMessageId = imageSend.messageId;
-                photosSent += 1;
-                await addMessage(
-                    sessionPhone,
-                    'OUTBOUND',
-                    `Foto consegna (${i + 1}/${publicImageUrls.length})`,
-                    publicImageUrls[i],
-                    {
-                        eventType: 'PROOF_OF_DELIVERY',
-                        orderId: input.orderId,
-                        ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
-                        outboundMode: 'delivery_proof_photo',
-                        ...buildOutboundWamidMetadata(imageSend.messageId),
-                    }
-                );
-            }
-
-            const linkSend = await sendWhatsAppMessage(phoneE164, linkMessage, {
+            console.warn(
+                '[delivery-proof-whatsapp] Template ordine_completato fallito — fallback free-text MagicLink:',
+                templateSend.error
+            );
+            const fallbackText =
+                `Gentile ${buyerFirstName}, abbiamo completato la consegna dei Suoi fiori a ${partnerCity} ` +
+                `nel ricordo di ${deceasedName}.\n\n${linkMessage}`;
+            const linkSend = await sendWhatsAppMessage(phoneE164, fallbackText, {
                 recipientName: buyerName,
                 orderCode: input.orderNumber || undefined,
                 userType: 'UTENTE',
-                source: 'delivery_proof',
+                source: 'delivery_proof_ordine_completato_fallback',
                 sessionPhone,
             });
-            if (linkSend.ok) linkMessageId = linkSend.messageId;
-
-            await logProofToDashboard(
-                phoneE164,
-                buyerName,
-                `[Template Meta customer_delivery_photo inviato]\n\n${linkMessage}`,
-                {
-                    orderId: input.orderId,
-                    orderNumber: input.orderNumber,
-                    buyerFullName: input.buyerFullName,
-                    mediaUrl: publicImageUrls[0],
-                }
-            );
-        } else {
-            // Finestra aperta: ogni foto è un messaggio distinto; caption+link sulla prima.
-            for (let i = 0; i < publicImageUrls.length; i += 1) {
-                if (i > 0) await sleep(800);
-                const isFirst = i === 0;
-                const isLast = i === publicImageUrls.length - 1;
-                let captionForPhoto: string | undefined;
-                if (isFirst && publicImageUrls.length === 1) {
-                    captionForPhoto = `${caption}\n\n${linkMessage}`;
-                } else if (isFirst) {
-                    captionForPhoto = caption;
-                } else if (isLast) {
-                    captionForPhoto = linkMessage;
-                }
-
-                const imageSend = await sendWhatsAppImageMessage(
-                    phoneE164,
-                    publicImageUrls[i]!,
-                    captionForPhoto
-                );
-                if (!imageSend.ok) {
-                    console.error('[delivery-proof-whatsapp] Invio immagine fallito:', {
-                        orderId: input.orderId,
-                        index: i,
-                        error: imageSend.error,
-                        imageUrl: publicImageUrls[i],
-                    });
-                    return {
-                        ok: false,
-                        skipped: 'image_send_failed',
-                        giardinoUrl,
-                        photosSent,
-                        error: imageSend.error,
-                        imageMessageId,
-                    };
-                }
-
-                imageMessageId = imageSend.messageId;
-                if (isLast) linkMessageId = imageSend.messageId;
-                photosSent += 1;
-
-                await addMessage(
-                    sessionPhone,
-                    'OUTBOUND',
-                    captionForPhoto || `Foto consegna (${i + 1}/${publicImageUrls.length})`,
-                    publicImageUrls[i],
-                    {
-                        eventType: 'PROOF_OF_DELIVERY',
-                        orderId: input.orderId,
-                        ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
-                        outboundMode: 'delivery_proof_photo',
-                        ...buildOutboundWamidMetadata(imageSend.messageId),
-                    }
-                );
+            if (!linkSend.ok) {
+                return {
+                    ok: false,
+                    skipped: 'fallback_send_failed',
+                    giardinoUrl,
+                    error: linkSend.error,
+                    photosSent: 0,
+                };
             }
-
-            // Se più foto: link già sulla ultima caption. Se una sola: già inclusa.
-            // Nessun messaggio testo extra.
-            await logProofToDashboard(phoneE164, buyerName, `${caption}\n\n${linkMessage}`, {
+            await logProofToDashboard(phoneE164, buyerName, fallbackText, {
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
                 buyerFullName: input.buyerFullName,
-                mediaUrl: publicImageUrls[0],
             });
+            return {
+                ok: true,
+                giardinoUrl,
+                linkMessageId: linkSend.messageId,
+                photosSent: 0,
+            };
         }
 
+        await logVeraTemplateOutbound({
+            phoneE164,
+            templateId: 'ordine_completato',
+            bodyParams,
+            eventType: 'ORDINE_COMPLETATO_TEMPLATE',
+            orderId: input.orderId,
+            orderNumber: input.orderNumber,
+            messageId: templateSend.messageId,
+            contactName: buyerName,
+            userType: 'UTENTE',
+        });
+
+        // CTA in free-text se finestra aperta (template già contiene MagicLink).
+        const session = await getSession(sessionPhone);
+        let linkMessageId: string | undefined;
+        if (isWithinCustomerServiceWindow(session)) {
+            const cta =
+                `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\n` +
+                `Se desidera riceverle anche qui in chat, risponda «Inviatemi le foto» oppure «Sì» 🌹`;
+            const ctaSend = await sendWhatsAppMessage(phoneE164, cta, {
+                recipientName: buyerName,
+                orderCode: input.orderNumber || undefined,
+                userType: 'UTENTE',
+                source: 'delivery_proof_photo_cta',
+                sessionPhone,
+            });
+            if (ctaSend.ok) {
+                linkMessageId = ctaSend.messageId;
+                await addMessage(sessionPhone, 'OUTBOUND', cta, undefined, {
+                    eventType: 'DELIVERY_PHOTO_CTA',
+                    orderId: input.orderId,
+                    ...(input.orderNumber ? { orderNumber: input.orderNumber } : {}),
+                    outboundMode: 'delivery_proof_cta',
+                }).catch(() => undefined);
+            }
+        }
+
+        await logProofToDashboard(
+            phoneE164,
+            buyerName,
+            `[Template Meta ordine_completato]\n\n${linkMessage}`,
+            {
+                orderId: input.orderId,
+                orderNumber: input.orderNumber,
+                buyerFullName: input.buyerFullName,
+            }
+        );
+
         console.info(
-            `[delivery-proof-whatsapp] Inviato ordine ${input.orderNumber || input.orderId} photos=${photosSent} window=${withinWindow ? 'open' : 'closed'}`
+            `[delivery-proof-whatsapp] ordine_completato OK ${input.orderNumber || input.orderId} photosSent=0 (on-demand)`
         );
 
         return {
             ok: true,
             giardinoUrl,
-            imageMessageId,
+            imageMessageId: templateSend.messageId,
             linkMessageId,
-            photosSent,
+            photosSent: 0,
         };
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[delivery-proof-whatsapp] Errore ordine ${input.orderNumber || input.orderId}:`, msg);
-        return { ok: false, skipped: 'send_failed', error: msg };
+        return { ok: false, skipped: 'send_failed', error: msg, photosSent: 0 };
     }
 }

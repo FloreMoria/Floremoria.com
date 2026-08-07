@@ -13,6 +13,7 @@ export type VeraTemplateId =
     | 'florist_first_004'
     | 'florist_repeat'
     | 'customer_order_confirm'
+    | 'ordine_completato'
     | 'customer_delivery_photo'
     | 'customer_waiting_update'
     | 'florist_reminder'
@@ -121,6 +122,19 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'deceasedName'],
         bodyCanonical: CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
         description: '{{1}} nome acquirente, {{2}} defunto (warm thought in messaggio libero successivo)',
+    },
+    ordine_completato: {
+        id: 'ordine_completato',
+        metaName: envTemplateName('WHATSAPP_TEMPLATE_ORDINE_COMPLETATO', 'ordine_completato'),
+        language: process.env.WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_LANGUAGE?.trim() || 'it',
+        bodyParamCount: 4,
+        bodySlots: ['buyerFirstName', 'deceasedName', 'partnerCity', 'magicLink'],
+        bodyCanonical:
+            'Gentile {{1}}, abbiamo completato la consegna dei Suoi fiori nel ricordo di {{2}} a {{3}}. ' +
+            'Può vedere tutte le foto al link: {{4}}\n\n' +
+            'Se desidera riceverle anche qui in chat, risponda «Inviatemi le foto».',
+        description:
+            '{{1}} nome, {{2}} defunto, {{3}} città, {{4}} MagicLink Giardino — senza foto WhatsApp immediate',
     },
     customer_delivery_photo: {
         id: 'customer_delivery_photo',

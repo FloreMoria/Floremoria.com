@@ -30,6 +30,10 @@ import {
     replyViolatesDeliveryContextGate,
 } from '@/lib/vera/deliveryContextGate';
 import {
+    isRequestingDeliveryPhotosInChat,
+    sendDeliveryPhotosOnDemand,
+} from '@/lib/whatsapp/sendDeliveryPhotosOnDemand';
+import {
     buildFloristCertainDataReply,
     buildFloristUncertainEscalateReply,
     detectFloristOperationalDataRequest,
@@ -555,11 +559,40 @@ export async function generateVeraReply(
         return { text: '', source: 'silence', shouldEscalate: false };
     }
 
+    // P0: richiesta esplicita foto in chat → invia Prima/Dopo (non solo testo «già inviate»).
+    if (
+        session.userType !== 'FLORIST' &&
+        isRequestingDeliveryPhotosInChat(message) &&
+        isOrderDeliveryCompleted(callerContext) &&
+        callerContext.phoneE164
+    ) {
+        const photoSend = await sendDeliveryPhotosOnDemand({
+            phoneE164: callerContext.phoneE164,
+            orderId: callerContext.orderId,
+            buyerFullName: callerContext.buyerName || callerContext.firstName,
+        });
+        if (photoSend.ok) {
+            const who = callerContext.firstName ? `Gentile ${callerContext.firstName}, ` : '';
+            return {
+                text:
+                    `${who}ecco le foto principali della posa` +
+                    (callerContext.deceasedName
+                        ? ` nel ricordo di ${callerContext.deceasedName}`
+                        : '') +
+                    `. Se desidera rivederle tutte, può usare anche il link del Giardino della Memoria già inviato. Restiamo a Sua disposizione 🌹`,
+                source: 'deterministic',
+                shouldEscalate: false,
+            };
+        }
+        console.warn('[vera-ai] Invio foto on-demand non riuscito:', photoSend);
+    }
+
     // P0 context gate foto/consegna (Carolina/Maria) — mai se l'utente contesta le foto.
     if (
         session.userType !== 'FLORIST' &&
         isAskingAboutPhotosOrDelivery(message) &&
         !isPhotoProofDispute(message) &&
+        !isRequestingDeliveryPhotosInChat(message) &&
         isOrderDeliveryCompleted(callerContext)
     ) {
         return {

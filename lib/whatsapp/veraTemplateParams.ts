@@ -143,6 +143,26 @@ export function buildCustomerDeliveryPhotoParams(input: {
     return params;
 }
 
+export function buildOrdineCompletatoParams(input: {
+    buyerFirstName?: string | null;
+    deceasedName?: string | null;
+    partnerCity?: string | null;
+    magicLink: string;
+}): string[] {
+    const params = buildVeraTemplateBodyParams('ordine_completato', {
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
+        deceasedName: requireText(
+            input.deceasedName || 'chi ama',
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
+        partnerCity: requireText(input.partnerCity || 'zona', 'partnerCity', 80),
+        magicLink: requireText(input.magicLink, 'magicLink', 500),
+    });
+    logBuiltTemplateParams('ordine_completato', params);
+    return params;
+}
+
 export function buildFloristReminderParams(input: {
     floristFirstName?: string | null;
     orderCode?: string | null;

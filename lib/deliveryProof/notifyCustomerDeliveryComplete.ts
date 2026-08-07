@@ -11,8 +11,9 @@ export interface NotifyCustomerDeliveryCompleteResult {
 }
 
 /**
- * Orchestratore post-consegna: invia TUTTE le foto e il messaggio all'utente (Punto E).
- * Il ringraziamento al fiorista (Punto F) è gestito da runPuntoEFDeliveryComplete.
+ * Orchestratore post-consegna (Punto E):
+ * template `ordine_completato` + MagicLink — senza foto WhatsApp immediate.
+ * Le foto Prima/Dopo partono solo su richiesta utente («Inviatemi le foto»).
  */
 export async function notifyCustomerDeliveryComplete(
     orderId: string

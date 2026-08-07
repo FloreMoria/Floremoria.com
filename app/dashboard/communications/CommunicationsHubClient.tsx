@@ -1348,9 +1348,13 @@ function WhatsAppSetupSection() {
         if (!silent) setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/admin/whatsapp/status');
+            const res = await fetch('/api/dashboard/whatsapp/status');
             const data: StatusResponse = await res.json();
-            if (data.ok && data.state) {
+            if (!res.ok && res.status === 401) {
+                setState('error');
+                setError('Sessione scaduta — rieffettua il login dashboard.');
+                setMissingEnv([]);
+            } else if (data.ok && data.state) {
                 setState(data.state);
                 setDisplayPhone(data.displayPhoneNumber ?? null);
                 setMissingEnv([]);
@@ -1474,7 +1478,7 @@ function WhatsAppSetupSection() {
                 <h4 className="text-sm font-semibold text-gray-700">Variabili Vercel (produzione)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {[
-                        ['WHATSAPP_CLOUD_API_KEY', 'Token permanente Graph API'],
+                        ['WHATSAPP_CLOUD_API_KEY', 'Token permanente Graph API (alias: WHATSAPP_ACCESS_TOKEN)'],
                         ['WHATSAPP_PHONE_NUMBER_ID', 'ID numero WhatsApp Business'],
                         ['WHATSAPP_APP_SECRET', 'App Secret Meta — firma webhook POST'],
                         ['WHATSAPP_WEBHOOK_SECRET', 'Verify token webhook GET (es. FloreMoriaVera2026!)'],

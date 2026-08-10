@@ -132,8 +132,20 @@ export async function sendVeraTemplate(
     }
     components.push(buildBodyComponent(bodyParams));
 
+    const metaPayloadPreview = {
+        type: 'template' as const,
+        template: {
+            name: spec.metaName,
+            language: { code: spec.language },
+            components,
+        },
+        bodyParamCount: bodyParams.length,
+        headerTextParamCount: headerTextParams.length,
+        mapping: describeTemplateParamMapping(spec),
+        paramsPreview: [...headerTextParams, ...bodyParams].map((p) => p.slice(0, 80)),
+    };
     console.info(
-        `[vera-template] ${spec.id} → Meta "${spec.metaName}" | ${describeTemplateParamMapping(spec)} | params=${JSON.stringify([...headerTextParams, ...bodyParams].map((p) => p.slice(0, 60)))}`
+        `[vera-template] ${spec.id} → Meta payload: ${JSON.stringify(metaPayloadPreview)}`
     );
 
     return sendWhatsAppTemplateMessage(phone, spec.metaName, spec.language, components, {

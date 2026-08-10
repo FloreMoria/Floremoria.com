@@ -107,6 +107,22 @@ export async function sendWhatsAppMessage(
         }
     }
 
+    // Hard guard: Punto A / nuovo ordine fiorista non deve mai passare da free-text (Meta 131047).
+    const floristNewOrderTemplateOnly =
+        options?.source === 'puntoA_florist_new_order' ||
+        options?.source === 'florist_new_order';
+    if (floristNewOrderTemplateOnly && !options?.forceTemplate) {
+        console.error(
+            `[whatsapp-send] Rifiutato free-text per fiorista (source=${options?.source}). Usare solo template Meta approvati.`
+        );
+        return {
+            ok: false,
+            error: 'florist_new_order_requires_template: free-text bloccato (Meta 131047).',
+            errorCode: 131047,
+            fallbackExecuted: false,
+        };
+    }
+
     // 1. Tenta invio messaggio libero (session message), salvo forceTemplate
     if (!options?.forceTemplate) {
         const initialSend = await sendWhatsAppTextMessage(phone, text);

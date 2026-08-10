@@ -1,16 +1,10 @@
 import prisma from '@/lib/prisma';
 import { calculateFloristCompensation, formatFloristCompensationForTemplate } from '@/lib/pricing/calculateFloristCompensation';
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
-import { buildFloristNewOrderWhatsAppText } from '@/lib/orders/floristDeliveryLinkMessage';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
-import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { addMessage, markChatSessionAsTest, updateSessionProfile } from '@/lib/chatStore';
-import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
-import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
-import { FIRST_OUTBOUND_TITLES } from '@/lib/whatsapp/firstOutboundTitle';
 import { setVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import {
     detectIsFirstOrderForPartner,
@@ -183,8 +177,8 @@ function buildDeliveryPositionLabel(gravePosition: string, cemeteryLabel: string
 }
 
 /**
- * PUNTO A — Notifica fiorista nuovo ordine (cascata template leggibile).
- * Non reinia template già spediti per lo stesso ordine.
+ * PUNTO A — Notifica fiorista nuovo ordine.
+ * Solo template Meta approvati (type: template). Mai free-text (evita Meta 131047).
  */
 export async function runPuntoAFloristNewOrder(
     orderId: string,
@@ -327,87 +321,9 @@ export async function runPuntoAFloristNewOrder(
         }
     }
 
-    const messageText = buildFloristNewOrderWhatsAppText({
-        floristFirstName: floristName,
-        orderCode,
-        city: order.cemeteryCity,
-        deceasedName: order.deceasedName,
-        cemeteryName: order.cemeteryName,
-        cemeteryCity: order.cemeteryCity,
-        gravePosition: order.gravePosition,
-        ticketMessage: order.ticketMessage,
-        additionalInstructions: order.additionalInstructions,
-        items: order.items,
-        deliveryUrl,
-        orderId: order.id,
-        partnerNotes: order.partner?.internalNotes,
-        province: order.deliveryProvince,
-        deliveryDate: order.deliveryDate,
-        createdAt: order.createdAt,
-    });
-
-    // Percorso primario: free-text strutturato (titolo + dettagli + link).
-    // Mai usare il template proattivo come fallback (body Meta aggiunge testo spurio).
-    // Se free-text fallisce (es. finestra 24h chiusa sullo stesso numero del cliente) → cascata florist_first_*.
-    const sessionPhone = `whatsapp:${floristPhoneE164}`;
-    const freeTextSend = await sendWhatsAppMessage(floristPhoneE164, messageText, {
-        recipientName: floristName,
-        orderCode,
-        headerTitle: FIRST_OUTBOUND_TITLES.floristNewOrder,
-        userType: 'FLORIST',
-        source: 'puntoA_florist_new_order',
-        sessionPhone,
-        forceTemplate: false,
-        disableTemplateFallback: true,
-    });
-
-    if (freeTextSend.ok) {
-        try {
-            await updateSessionProfile(sessionPhone, {
-                name: floristName,
-                initials: buildContactInitials(floristName),
-                userType: 'FLORIST',
-                status: 'AI_ACTIVE',
-                welcomeSent: true,
-            });
-            await addMessage(sessionPhone, 'OUTBOUND', messageText, undefined, {
-                eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
-                templateId: 'florist_first_001',
-                outboundMode: 'free_text',
-                orderId: order.id,
-                orderNumber: orderCode,
-                ...buildOutboundWamidMetadata(freeTextSend.messageId),
-            });
-            if (order.isTest) {
-                await markChatSessionAsTest(sessionPhone);
-            }
-        } catch (logErr) {
-            console.error('[vera-workflow] Punto A inviato ma sessione dashboard non registrata:', logErr);
-        }
-
-        const nextFlags = markWorkflowStep(
-            parseWorkflowFlags(
-                (
-                    await prisma.order.findUnique({
-                        where: { id: order.id },
-                        select: { veraWorkflowFlags: true },
-                    })
-                )?.veraWorkflowFlags
-            ),
-            'puntoA_florist'
-        );
-        delete nextFlags.puntoA_florist_deferred;
-        await updateWorkflowFlags(order.id, nextFlags);
-        const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
-        await clearVeraOperationalAlert(order.id).catch(() => undefined);
-        console.info(`[vera-workflow] Punto A OK (free_text) ordine ${orderCode}`);
-        return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
-    }
-
-    console.warn(
-        `[vera-workflow] Free-text fiorista fallito (${freeTextSend.error || 'unknown'}). Cascata Meta ordine ${orderCode}`
-    );
-
+    // Punto A: SOLO template Meta approvati (type: template).
+    // Mai free-text verso il fiorista: fuori finestra 24h Meta risponde 131047 (re-engagement).
+    // Cascata florist_first_001…004; se i ft_* non esistono sul WABA → florist_repeat.
     const lumino = hasLuminoOption(order.items);
     const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
     const ticketText = order.ticketMessage?.trim() || 'Nessuno';
@@ -433,6 +349,10 @@ export async function runPuntoAFloristNewOrder(
               }
               return repeatSteps;
           })();
+
+    console.info(
+        `[vera-workflow] Punto A template-only ordine ${orderCode} first=${isFirst} steps=${steps.map((s) => s.template).join(',')}`
+    );
 
     const cascadeResult = await sendFloristCascade({
         phoneE164: floristPhoneE164,
@@ -500,7 +420,7 @@ export async function runPuntoAFloristNewOrder(
             console.info(`[vera-workflow] Punto A OK via florist_repeat ordine ${orderCode}`);
             return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
         }
-        cascadeResult.error = `Messaggio strutturato e template Meta non disponibili. Dettaglio free-text: ${freeTextSend.error}; Meta: ${fallback.error || cascadeResult.error}`;
+        cascadeResult.error = `Template Meta fiorista non disponibili. Cascata: ${cascadeResult.error}; florist_repeat: ${fallback.error}`;
     }
 
     if (!cascadeResult.ok) {
@@ -510,7 +430,7 @@ export async function runPuntoAFloristNewOrder(
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'punto_a_send_failed',
-            message: `Punto A fallito per ordine ${orderCode}: ${cascadeResult.error || freeTextSend.error || 'errore Meta'}.`,
+            message: `Punto A fallito per ordine ${orderCode}: ${cascadeResult.error || 'errore Meta template'}.`,
             priority: 'urgent',
             freezeOrder: false,
         }).catch(() => undefined);
@@ -535,7 +455,7 @@ export async function runPuntoAFloristNewOrder(
         await updateWorkflowFlags(order.id, nextFlags);
     }
     console.info(
-        `[vera-workflow] Punto A OK ordine ${orderCode} first=${isFirst} sent=${cascadeResult.sentCount ?? 0} dup=${cascadeResult.skippedDuplicates ?? 0}`
+        `[vera-workflow] Punto A OK (template) ordine ${orderCode} first=${isFirst} sent=${cascadeResult.sentCount ?? 0} dup=${cascadeResult.skippedDuplicates ?? 0}`
     );
     return cascadeResult;
 }

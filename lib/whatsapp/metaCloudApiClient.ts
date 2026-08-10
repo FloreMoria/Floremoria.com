@@ -181,6 +181,10 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
     }
 
     const url = graphApiUrl(`/${config.phoneNumberId}/messages`);
+    const payloadType = String(payload.type ?? 'unknown');
+    console.info(
+        `[meta-cloud-api] POST messages type=${payloadType} to=${String(payload.to ?? '')} body=${JSON.stringify(payload).slice(0, 2500)}`
+    );
 
     try {
         const controller = new AbortController();
@@ -367,13 +371,20 @@ export async function sendWhatsAppTemplateMessage(
         template.components = components;
     }
 
-    return postWhatsAppMessage({
+    const payload = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
         to: recipient,
-        type: 'template',
+        type: 'template' as const,
         template,
-    });
+    };
+
+    // Log payload esatto verso Meta (senza token) per audit re-engagement / param mismatch.
+    console.info(
+        `[meta-cloud-api] Template outbound exact payload: ${JSON.stringify(payload)}`
+    );
+
+    return postWhatsAppMessage(payload);
 }
 
 /**

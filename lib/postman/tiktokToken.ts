@@ -1,6 +1,13 @@
 import { parseTikTokOAuthError, parseTikTokTokenFields } from '@/lib/dashboard/tiktokOAuth';
 import prisma from '@/lib/prisma';
 
+export async function getStoredTikTokGrantedScopes(): Promise<string | null> {
+  const row = await prisma.systemState.findUnique({
+    where: { key: 'tiktok_granted_scopes' },
+  });
+  return row?.value?.trim() || null;
+}
+
 export async function getOrRefreshTikTokToken(): Promise<{
   accessToken: string | null;
   openId: string | null;

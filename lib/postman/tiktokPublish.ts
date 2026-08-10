@@ -1,13 +1,22 @@
 /**
  * TikTok Content Posting API v2 — post foto (feed) e video (reel).
+ * Direct Post: /v2/post/publish/video/init/ (scope video.publish)
+ * Inbox Upload: /v2/post/publish/inbox/video/init/ (scope video.upload)
  * @see https://developers.tiktok.com/doc/content-posting-api-get-started
  */
 import { ContentFormat } from '@prisma/client';
 import {
+  classifyTikTokApiFailure,
   formatTikTokScopeAuthorizationError,
+  formatTikTokUnauditedClientError,
   formatTikTokUrlOwnershipError,
+  getTikTokPublishCapability,
+  hasTikTokPublishScopes,
   isTikTokScopeAuthorizationError,
+  isTikTokUnauditedClientError,
   isTikTokUrlOwnershipError,
+  logTikTokApiVerbal,
+  parseTikTokGrantedScopes,
 } from '@/lib/dashboard/tiktokOAuth';
 import {
   buildTikTokPostInfoFromUx,
@@ -19,10 +28,16 @@ import {
   type TikTokPublishUxOptions,
   validateTikTokPublishUxOptions,
 } from '@/lib/postman/tiktokCreatorInfo';
-import { ensureMetaFetchableImageUrl } from '@/lib/postman/socialImageStaging';
+import {
+  ensureMetaFetchableImageUrl,
+  ensureSocialFetchableVideoUrl,
+} from '@/lib/postman/socialImageStaging';
 import { captionForFormat } from '@/lib/postman/socialStoryCopy';
 import { fetchImageBytes } from '@/lib/postman/socialPublish';
-import { getOrRefreshTikTokToken } from '@/lib/postman/tiktokToken';
+import {
+  getOrRefreshTikTokToken,
+  getStoredTikTokGrantedScopes,
+} from '@/lib/postman/tiktokToken';
 
 export { getOrRefreshTikTokToken } from '@/lib/postman/tiktokToken';
 
@@ -31,6 +46,12 @@ const TIKTOK_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
 const TIKTOK_DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024;
 const TIKTOK_MAX_CHUNK_BYTES = 64 * 1024 * 1024;
 
+type TikTokErrorBody = {
+  code?: string;
+  message?: string;
+  log_id?: string;
+};
+
 function videoMimeTypeFromUrl(url: string): string {
   const lower = url.toLowerCase();
   if (lower.includes('.mov')) return 'video/quicktime';
@@ -38,7 +59,10 @@ function videoMimeTypeFromUrl(url: string): string {
   return 'video/mp4';
 }
 
-function planTikTokVideoChunks(videoSize: number): { chunkSize: number; totalChunkCount: number } {
+function planTikTokVideoChunks(videoSize: number): {
+  chunkSize: number;
+  totalChunkCount: number;
+} {
   if (videoSize <= TIKTOK_MIN_CHUNK_BYTES) {
     return { chunkSize: videoSize, totalChunkCount: 1 };
   }
@@ -50,18 +74,73 @@ function planTikTokVideoChunks(videoSize: number): { chunkSize: number; totalChu
   };
 }
 
-function parseTikTokApiError(payload: { error?: { code?: string; message?: string } }): void {
-  const code = payload.error?.code;
-  if (code && code !== 'ok') {
-    throw new Error(payload.error?.message || code);
+function extractTikTokError(payload: unknown): TikTokErrorBody {
+  if (!payload || typeof payload !== 'object') return {};
+  const root = payload as Record<string, unknown>;
+  const err = root.error;
+  if (!err || typeof err !== 'object') {
+    return {
+      log_id: typeof root.log_id === 'string' ? root.log_id : undefined,
+    };
+  }
+  const e = err as Record<string, unknown>;
+  return {
+    code: typeof e.code === 'string' ? e.code : undefined,
+    message: typeof e.message === 'string' ? e.message : undefined,
+    log_id:
+      typeof e.log_id === 'string'
+        ? e.log_id
+        : typeof root.log_id === 'string'
+          ? root.log_id
+          : undefined,
+  };
+}
+
+function throwTikTokApiError(
+  context: string,
+  payload: unknown,
+  httpStatus?: number
+): never {
+  const err = extractTikTokError(payload);
+  const classification = classifyTikTokApiFailure({
+    code: err.code,
+    message: err.message,
+    httpStatus,
+  });
+  // Verbale completo: body errore TikTok (code / message / log_id) + payload grezzo.
+  logTikTokApiVerbal(`API_FAIL:${context}`, {
+    httpStatus: httpStatus ?? null,
+    error: {
+      code: err.code ?? null,
+      message: err.message ?? null,
+      log_id: err.log_id ?? null,
+    },
+    classification,
+    fullErrorBody: payload,
+  });
+  console.error(
+    `[TikTok Verbale] RAW_ERROR context=${context} http=${httpStatus ?? 'n/a'} ` +
+      `code=${err.code ?? 'n/a'} message=${err.message ?? 'n/a'} log_id=${err.log_id ?? 'n/a'} ` +
+      `body=${JSON.stringify(payload).slice(0, 4000)}`
+  );
+  throw new Error(
+    `[TikTok ${context}] code=${err.code || 'n/a'} message=${err.message || 'n/a'} log_id=${err.log_id || 'n/a'} class=${classification}`
+  );
+}
+
+function parseTikTokApiError(context: string, payload: unknown): void {
+  const err = extractTikTokError(payload);
+  if (err.code && err.code !== 'ok') {
+    throwTikTokApiError(context, payload);
   }
 }
 
 async function tikTokApiPost<T>(
   path: string,
   accessToken: string,
-  body: Record<string, unknown> = {}
-): Promise<T & { data?: Record<string, unknown>; error?: { code?: string; message?: string } }> {
+  body: Record<string, unknown> = {},
+  context = path
+): Promise<T & { data?: Record<string, unknown>; error?: TikTokErrorBody }> {
   const res = await fetch(`${TIKTOK_API_BASE}${path}`, {
     method: 'POST',
     headers: {
@@ -71,43 +150,73 @@ async function tikTokApiPost<T>(
     body: JSON.stringify(body),
   });
 
-  const payload = (await res.json()) as T & {
-    error?: { code?: string; message?: string };
-  };
-
-  if (!res.ok) {
-    throw new Error(payload.error?.message || `TikTok API error (${res.status})`);
+  let payload: T & { data?: Record<string, unknown>; error?: TikTokErrorBody };
+  try {
+    payload = (await res.json()) as typeof payload;
+  } catch {
+    logTikTokApiVerbal(`API_NON_JSON:${context}`, {
+      httpStatus: res.status,
+      path,
+    });
+    throw new Error(`TikTok API non-JSON (${res.status}) su ${path}`);
   }
 
-  parseTikTokApiError(payload);
+  if (!res.ok) {
+    throwTikTokApiError(context, payload, res.status);
+  }
+
+  parseTikTokApiError(context, payload);
   return payload;
 }
 
 async function uploadTikTokVideoBytes(
   videoBytes: Buffer,
   accessToken: string,
-  postInfo: Record<string, unknown>,
-  contentType: string
+  postInfo: Record<string, unknown> | null,
+  contentType: string,
+  mode: 'direct' | 'inbox'
 ): Promise<string> {
   const videoSize = videoBytes.length;
   const { chunkSize, totalChunkCount } = planTikTokVideoChunks(videoSize);
+  const initPath =
+    mode === 'direct'
+      ? '/v2/post/publish/video/init/'
+      : '/v2/post/publish/inbox/video/init/';
 
-  const init = await tikTokApiPost<{
-    data?: { publish_id?: string; upload_url?: string };
-  }>('/v2/post/publish/video/init/', accessToken, {
-    post_info: postInfo,
+  const initBody: Record<string, unknown> = {
     source_info: {
       source: 'FILE_UPLOAD',
       video_size: videoSize,
       chunk_size: chunkSize,
       total_chunk_count: totalChunkCount,
     },
+  };
+  if (mode === 'direct' && postInfo) {
+    initBody.post_info = postInfo;
+  }
+
+  logTikTokApiVerbal('VIDEO_INIT_START', {
+    mode,
+    initPath,
+    videoSize,
+    chunkSize,
+    totalChunkCount,
+    post_info: postInfo,
+    source_info: initBody.source_info,
   });
+
+  console.log(
+    `[TikTok Verbale] VIDEO_INIT_REQUEST path=${initPath} body=${JSON.stringify(initBody).slice(0, 2500)}`
+  );
+
+  const init = await tikTokApiPost<{
+    data?: { publish_id?: string; upload_url?: string };
+  }>(initPath, accessToken, initBody, `video_init_${mode}`);
 
   const uploadUrl = init.data?.upload_url;
   const publishId = init.data?.publish_id;
   if (!uploadUrl || !publishId) {
-    throw new Error('TikTok upload_url o publish_id mancante.');
+    throwTikTokApiError(`video_init_${mode}_missing_fields`, init);
   }
 
   for (let chunkIndex = 0; chunkIndex < totalChunkCount; chunkIndex++) {
@@ -126,8 +235,16 @@ async function uploadTikTokVideoBytes(
     });
 
     if (res.status !== 201 && res.status !== 206) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`TikTok video upload fallito (${res.status})${body ? `: ${body}` : ''}`);
+      const bodyText = await res.text().catch(() => '');
+      logTikTokApiVerbal('VIDEO_CHUNK_FAIL', {
+        mode,
+        chunkIndex,
+        httpStatus: res.status,
+        bodyPreview: bodyText.slice(0, 600),
+      });
+      throw new Error(
+        `TikTok video upload fallito (${res.status}) chunk=${chunkIndex}${bodyText ? `: ${bodyText.slice(0, 400)}` : ''}`
+      );
     }
 
     if (res.status === 201) {
@@ -135,6 +252,7 @@ async function uploadTikTokVideoBytes(
     }
   }
 
+  logTikTokApiVerbal('VIDEO_UPLOAD_OK', { mode, publishId, videoSize });
   return publishId;
 }
 
@@ -166,7 +284,7 @@ function resolveTikTokUx(
   return defaults;
 }
 
-/** Post foto su TikTok (feed giornaliero). */
+/** Post foto su TikTok (feed) — Content Posting v2 Direct Post. */
 async function publishTikTokPhotoPost(
   input: TikTokPublishInput,
   accessToken: string,
@@ -185,32 +303,106 @@ async function publishTikTokPhotoPost(
 
   const init = await tikTokApiPost<{
     data?: { publish_id?: string };
-  }>('/v2/post/publish/content/init/', accessToken, {
-    post_info: postInfo,
-    source_info: {
-      source: 'PULL_FROM_URL',
-      photo_cover_index: 0,
-      photo_images: [publicImageUrl],
+  }>(
+    '/v2/post/publish/content/init/',
+    accessToken,
+    {
+      post_info: postInfo,
+      source_info: {
+        source: 'PULL_FROM_URL',
+        photo_cover_index: 0,
+        photo_images: [publicImageUrl],
+      },
+      post_mode: 'DIRECT_POST',
+      media_type: 'PHOTO',
     },
-    post_mode: 'DIRECT_POST',
-    media_type: 'PHOTO',
-  });
+    'photo_content_init'
+  );
 
   const publishId = init.data?.publish_id;
   if (!publishId) {
-    throw new Error('TikTok photo publish_id mancante.');
+    throwTikTokApiError('photo_publish_id_missing', init);
   }
 
   console.log(`[POSTMAN] TikTok photo pubblicato — publish_id ${publishId}`);
   return publishId;
 }
 
-/** Post video su TikTok tramite FILE_UPLOAD. */
+/** Verifica URL HTTPS pubblico raggiungibile (TikTok PULL_FROM_URL). */
+async function assertPublicHttpsVideoUrl(url: string): Promise<void> {
+  if (!/^https:\/\//i.test(url)) {
+    throw new Error(`Video TikTok non HTTPS pubblico: ${url.slice(0, 120)}`);
+  }
+  try {
+    const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+    if (head.ok) {
+      logTikTokApiVerbal('MEDIA_URL_OK', {
+        urlHost: new URL(url).host,
+        status: head.status,
+        contentType: head.headers.get('content-type'),
+        contentLength: head.headers.get('content-length'),
+      });
+      return;
+    }
+    // Alcuni CDN non espongono HEAD: prova Range GET minimo.
+    const get = await fetch(url, {
+      method: 'GET',
+      headers: { Range: 'bytes=0-1023' },
+      redirect: 'follow',
+    });
+    if (!get.ok && get.status !== 206) {
+      throw new Error(`Video non scaricabile (${get.status}) da ${new URL(url).host}`);
+    }
+    logTikTokApiVerbal('MEDIA_URL_OK_RANGE', {
+      urlHost: new URL(url).host,
+      status: get.status,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logTikTokApiVerbal('MEDIA_URL_FAIL', { urlPreview: url.slice(0, 180), message: msg });
+    throw e instanceof Error ? e : new Error(msg);
+  }
+}
+
+/**
+ * Direct Post via PULL_FROM_URL (preferito se il B-roll Ziggy/Pexels è già su HTTPS pubblico).
+ */
+async function initTikTokVideoPullFromUrl(
+  accessToken: string,
+  postInfo: Record<string, unknown>,
+  videoUrl: string
+): Promise<string> {
+  const initBody = {
+    post_info: postInfo,
+    source_info: {
+      source: 'PULL_FROM_URL' as const,
+      video_url: videoUrl,
+    },
+  };
+  console.log(
+    `[TikTok Verbale] VIDEO_INIT_PULL_REQUEST body=${JSON.stringify({
+      post_info: postInfo,
+      source_info: { source: 'PULL_FROM_URL', video_url: videoUrl.slice(0, 200) },
+    })}`
+  );
+  const init = await tikTokApiPost<{
+    data?: { publish_id?: string };
+  }>('/v2/post/publish/video/init/', accessToken, initBody, 'video_init_pull');
+
+  const publishId = init.data?.publish_id;
+  if (!publishId) {
+    throwTikTokApiError('video_init_pull_missing_publish_id', init);
+  }
+  return publishId;
+}
+
+/** Video: Direct Post (video.publish) oppure Inbox (video.upload). */
 async function publishTikTokVideoPost(
   input: TikTokPublishInput,
   accessToken: string,
   creatorInfo: TikTokCreatorInfo,
-  ux: TikTokPublishUxOptions
+  ux: TikTokPublishUxOptions,
+  capability: ReturnType<typeof getTikTokPublishCapability>
 ): Promise<string> {
   const videoUrl = input.videoUrl?.trim();
   if (!videoUrl) {
@@ -218,15 +410,99 @@ async function publishTikTokVideoPost(
   }
 
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-  const videoBytes = await fetchImageBytes(videoUrl, blobToken);
-  const contentType = videoMimeTypeFromUrl(videoUrl);
+  // Espone B-roll Ziggy/Pexels come HTTPS pubblico scaricabile (staging se Blob privato).
+  const publicVideoUrl = await ensureSocialFetchableVideoUrl(
+    input.campaignId,
+    videoUrl,
+    blobToken
+  );
+  await assertPublicHttpsVideoUrl(publicVideoUrl);
+
   const caption = captionForFormat(input.contentFormat, input.copy, input.hashtags);
-  const postInfo = buildTikTokPostInfoFromUx(caption, creatorInfo, ux, true);
+  const postInfo = capability.canDirectPost
+    ? buildTikTokPostInfoFromUx(caption, creatorInfo, ux, true)
+    : null;
 
-  const publishId = await uploadTikTokVideoBytes(videoBytes, accessToken, postInfo, contentType);
+  if (postInfo) {
+    logTikTokApiVerbal('POST_INFO_READY', {
+      titlePreview: String(postInfo.title || '').slice(0, 120),
+      privacy_level: postInfo.privacy_level,
+      disable_comment: postInfo.disable_comment,
+      disable_duet: postInfo.disable_duet,
+      disable_stitch: postInfo.disable_stitch,
+      creatorPrivacyOptions: creatorInfo.privacyLevelOptions,
+    });
+  }
 
-  console.log(`[POSTMAN] TikTok video caricato via FILE_UPLOAD — publish_id ${publishId}`);
-  return publishId;
+  if (capability.canDirectPost && postInfo) {
+    // Preferenza guidelines: PULL_FROM_URL se il media è già sul nostro storage HTTPS.
+    try {
+      const publishId = await initTikTokVideoPullFromUrl(
+        accessToken,
+        postInfo,
+        publicVideoUrl
+      );
+      console.log(
+        `[POSTMAN] TikTok video Direct Post PULL_FROM_URL — publish_id ${publishId}`
+      );
+      return publishId;
+    } catch (pullErr) {
+      const pullMsg = pullErr instanceof Error ? pullErr.message : String(pullErr);
+      const pullClass = classifyTikTokApiFailure({ message: pullMsg });
+      logTikTokApiVerbal('PULL_FROM_URL_FALLBACK_FILE_UPLOAD', {
+        reason: pullMsg,
+        classification: pullClass,
+        publicVideoHost: (() => {
+          try {
+            return new URL(publicVideoUrl).host;
+          } catch {
+            return 'invalid-url';
+          }
+        })(),
+      });
+      // Auth / audit: non ritentare con FILE_UPLOAD.
+      if (
+        pullClass === 'client_audit' ||
+        pullClass === 'scope_permission' ||
+        isTikTokUnauditedClientError(pullMsg) ||
+        isTikTokScopeAuthorizationError(pullMsg)
+      ) {
+        throw pullErr instanceof Error ? pullErr : new Error(pullMsg);
+      }
+    }
+
+    const videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
+    const contentType = videoMimeTypeFromUrl(publicVideoUrl);
+    const publishId = await uploadTikTokVideoBytes(
+      videoBytes,
+      accessToken,
+      postInfo,
+      contentType,
+      'direct'
+    );
+    console.log(
+      `[POSTMAN] TikTok video Direct Post FILE_UPLOAD — publish_id ${publishId}`
+    );
+    return publishId;
+  }
+
+  if (capability.canInboxUpload) {
+    const videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
+    const contentType = videoMimeTypeFromUrl(publicVideoUrl);
+    const publishId = await uploadTikTokVideoBytes(
+      videoBytes,
+      accessToken,
+      null,
+      contentType,
+      'inbox'
+    );
+    console.log(
+      `[POSTMAN] TikTok video Inbox Upload (Content Posting v2) — publish_id ${publishId}`
+    );
+    return publishId;
+  }
+
+  throw new Error(formatTikTokScopeAuthorizationError());
 }
 
 export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTokPublishResult> {
@@ -243,23 +519,73 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     };
   }
 
+  const grantedScopes = (await getStoredTikTokGrantedScopes()) || '';
+  const capability = getTikTokPublishCapability(grantedScopes);
+
+  logTikTokApiVerbal('PUBLISH_START', {
+    campaignId: input.campaignId,
+    contentFormat: input.contentFormat,
+    hasVideoUrl: Boolean(input.videoUrl?.trim()),
+    grantedScopes: parseTikTokGrantedScopes(grantedScopes),
+    capability,
+  });
+
+  if (!hasTikTokPublishScopes(grantedScopes)) {
+    logTikTokApiVerbal('PUBLISH_BLOCKED_SCOPES', {
+      campaignId: input.campaignId,
+      grantedScopes,
+      required: 'video.publish e/o video.upload',
+    });
+    return { success: false, error: formatTikTokScopeAuthorizationError() };
+  }
+
   try {
     const creatorInfo = await fetchTikTokCreatorInfo(env.accessToken);
-    const isVideo = Boolean(input.videoUrl?.trim() || input.contentFormat === ContentFormat.REEL);
+    const isVideo = Boolean(
+      input.videoUrl?.trim() || input.contentFormat === ContentFormat.REEL
+    );
     const ux = resolveTikTokUx(creatorInfo, input.tiktokUx);
+    // Difesa in profondità: client non auditato → solo SELF_ONLY.
+    if (creatorInfo.requiresPrivatePost) {
+      ux.privacyLevel = 'SELF_ONLY';
+    }
 
     const validationError = validateTikTokPublishUxOptions(creatorInfo, ux, isVideo);
     if (validationError) {
       return { success: false, error: validationError };
     }
 
+    if (!isVideo && !capability.canDirectPost) {
+      return {
+        success: false,
+        error:
+          "Per pubblicare foto su TikTok serve lo scope video.publish (Direct Post). Riautorizza l'account.",
+      };
+    }
+
     let externalId: string;
 
     if (isVideo) {
-      externalId = await publishTikTokVideoPost(input, env.accessToken, creatorInfo, ux);
+      externalId = await publishTikTokVideoPost(
+        input,
+        env.accessToken,
+        creatorInfo,
+        ux,
+        capability
+      );
     } else {
       externalId = await publishTikTokPhotoPost(input, env.accessToken, creatorInfo, ux);
     }
+
+    logTikTokApiVerbal('PUBLISH_OK', {
+      campaignId: input.campaignId,
+      externalId,
+      mode: isVideo
+        ? capability.canDirectPost
+          ? 'direct_video'
+          : 'inbox_video'
+        : 'direct_photo',
+    });
 
     return {
       success: true,
@@ -268,13 +594,23 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    const error = isTikTokScopeAuthorizationError(msg)
-      ? formatTikTokScopeAuthorizationError()
-      : isTikTokUrlOwnershipError(msg)
-        ? formatTikTokUrlOwnershipError()
-        : isTikTokGuidelinesError(msg)
-          ? formatTikTokGuidelinesError(true)
-          : msg;
+    const classification = classifyTikTokApiFailure({ message: msg });
+    logTikTokApiVerbal('PUBLISH_CATCH', {
+      campaignId: input.campaignId,
+      classification,
+      message: msg,
+    });
+    const error = isTikTokUnauditedClientError(msg)
+      ? formatTikTokUnauditedClientError()
+      : isTikTokScopeAuthorizationError(msg)
+        ? formatTikTokScopeAuthorizationError()
+        : isTikTokUrlOwnershipError(msg)
+          ? formatTikTokUrlOwnershipError()
+          : isTikTokGuidelinesError(msg)
+            ? formatTikTokGuidelinesError(true)
+            : classification === 'client_audit'
+              ? formatTikTokUnauditedClientError()
+              : msg;
     console.error(`[POSTMAN] TikTok errore campagna ${input.campaignId}: ${msg}`);
     return { success: false, error };
   }

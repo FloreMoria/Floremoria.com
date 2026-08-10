@@ -1098,7 +1098,7 @@ export default function CampaignsDashboardClient() {
                 <p className="text-slate-400 text-xs mt-0.5 font-medium leading-relaxed">
                   {isTikTokConnected
                     ? tiktokPublishReady
-                      ? 'Profilo connesso con permessi di pubblicazione (video.publish, video.upload).'
+                      ? 'Profilo connesso con permessi di pubblicazione (video.publish e/o video.upload).'
                       : 'Profilo connesso solo per login (user.info.basic). Per pubblicare serve una nuova autorizzazione con i permessi Content Posting.'
                     : 'Nessun account TikTok associato nel database. Connetti il profilo per abilitare la pubblicazione automatica e manuale.'}
                 </p>
@@ -1156,10 +1156,10 @@ export default function CampaignsDashboardClient() {
           {isTikTokConnected && !tiktokPublishReady && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-4 py-3 text-xs leading-relaxed">
               <strong>Pubblicazione non ancora abilitata sul token attuale.</strong> Sul portale TikTok gli scope{' '}
-              <code className="font-mono bg-amber-100 px-1 rounded">video.publish</code> e{' '}
-              <code className="font-mono bg-amber-100 px-1 rounded">video.upload</code> sono già configurati per
-              l&apos;app, ma il profilo è stato collegato chiedendo solo{' '}
-              <code className="font-mono bg-amber-100 px-1 rounded">user.info.basic</code>. Clicca{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">video.publish</code> e/o{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">video.upload</code> devono essere
+              concessi al connect (insieme a{' '}
+              <code className="font-mono bg-amber-100 px-1 rounded">user.info.basic</code>). Clicca{' '}
               <strong>Riautorizza per pubblicare</strong> e accetta tutti i permessi nella schermata TikTok.
             </div>
           )}

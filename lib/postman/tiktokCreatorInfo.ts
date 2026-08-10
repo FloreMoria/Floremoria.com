@@ -149,17 +149,26 @@ export function buildTikTokPostInfoFromUx(
   const brandContent = options.commercialDisclosure && options.brandContent;
   const brandOrganic = options.commercialDisclosure && options.brandOrganic;
 
+  // Content Posting v2: il campo corretto è privacy_level (non privacy_level_options,
+  // che arriva solo da creator_info/query). Client non auditato → forzato SELF_ONLY.
+  const privacyLevel =
+    !isTikTokApiClientAudited() || creatorInfo.requiresPrivatePost
+      ? 'SELF_ONLY'
+      : options.privacyLevel;
+
   const postInfo: Record<string, unknown> = {
     title: title.slice(0, 2200),
-    privacy_level: options.privacyLevel,
+    privacy_level: privacyLevel,
     disable_comment: creatorInfo.commentDisabled || !options.allowComment,
     brand_content_toggle: brandContent,
     brand_organic_toggle: brandOrganic,
   };
 
+  // Video: disable_duet / disable_stitch richiesti dalle guidelines Direct Post.
   if (isVideo) {
     postInfo.disable_duet = creatorInfo.duetDisabled || !options.allowDuet;
     postInfo.disable_stitch = creatorInfo.stitchDisabled || !options.allowStitch;
+    postInfo.video_cover_timestamp_ms = 1000;
   }
 
   return postInfo;
@@ -186,8 +195,9 @@ export function isTikTokGuidelinesError(message: string): boolean {
 export function formatTikTokGuidelinesError(requiresPrivatePost: boolean): string {
   if (requiresPrivatePost) {
     return (
-      'App TikTok non ancora verificata: i post devono essere pubblicati come "Solo io" (privati). ' +
-      'Usa il modulo di pubblicazione per selezionare privacy e dare il consenso richiesto da TikTok.'
+      'App TikTok non ancora verificata: i post devono essere pubblicati come "Solo io" (privati) ' +
+      'e l\'account TikTok deve essere Privato. Usa il modulo di pubblicazione (SELF_ONLY) ' +
+      'e riprova dopo aver impostato il profilo su privato.'
     );
   }
   return 'Verifica le impostazioni di pubblicazione TikTok (privacy, consenso musica, disclosure commerciale).';

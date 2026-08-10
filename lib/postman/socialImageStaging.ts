@@ -197,6 +197,7 @@ export async function ensureMetaFetchableImageUrl(
 
 /**
  * Copia temporanea video su Blob privato + URL pubblico firmato per TikTok PULL_FROM_URL.
+ * Accetta Blob pubblici, staging già pubblici, o URL HTTPS scaricabili (es. Pexels → restage).
  */
 export async function ensureSocialFetchableVideoUrl(
   campaignId: string,
@@ -207,12 +208,35 @@ export async function ensureSocialFetchableVideoUrl(
     return videoUrl;
   }
 
+  // Già URL staging pubblico sul dominio verificato TikTok.
+  if (/\/api\/social-publish\/staging\//i.test(videoUrl) && /^https:\/\//i.test(videoUrl)) {
+    return videoUrl;
+  }
+
   const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
   if (!token) {
     throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre video a TikTok.');
   }
 
-  const sourceBytes = await fetchPrivateBlobBytes(videoUrl, token);
+  let sourceBytes: Buffer;
+  if (/private\.blob\.vercel-storage\.com/i.test(videoUrl) || /blob\.vercel-storage\.com/i.test(videoUrl)) {
+    sourceBytes = await fetchPrivateBlobBytes(videoUrl, token);
+  } else if (/^https:\/\//i.test(videoUrl)) {
+    const res = await fetch(videoUrl, {
+      redirect: 'follow',
+      headers: {
+        Accept: 'video/mp4,video/*,*/*',
+        'User-Agent': 'Mozilla/5.0 (compatible; FloreMoriaTikTok/1.0)',
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`Download video sorgente fallito (${res.status}) per staging TikTok.`);
+    }
+    sourceBytes = Buffer.from(await res.arrayBuffer());
+  } else {
+    throw new Error('videoUrl non HTTPS: impossibile esporre a TikTok.');
+  }
+
   const ext = videoUrl.toLowerCase().includes('.mov')
     ? 'mov'
     : videoUrl.toLowerCase().includes('.webm')

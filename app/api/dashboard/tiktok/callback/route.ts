@@ -77,6 +77,10 @@ export async function GET(request: NextRequest) {
 
     const { access_token, refresh_token, expires_in, open_id, scope } = tokens;
 
+    console.log(
+      `[TikTok Callback] Token OK open_id=${open_id} expires_in=${expires_in}s granted_scopes=${scope || '(assenti nella risposta)'}`
+    );
+
     const upserts = [
       prisma.systemState.upsert({
         where: { key: 'tiktok_access_token' },

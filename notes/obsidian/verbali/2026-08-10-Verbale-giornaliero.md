@@ -1,0 +1,40 @@
+---
+date: 10-08-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale Operativo Automatico — 10 Agosto 2026"
+sync_source: docs/verbali/10-08-2026.md
+synced_at: 2026-08-10T21:55:45.751Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/10-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+---
+title: "Verbale Operativo Automatico — 10 Agosto 2026"
+date: 2026-08-10
+tags: [floremoria, verbale, automatico, cursor, today_log]
+author: BARBARA (Staff AI) & daily-verbale-cron
+---
+
+# Verbale Operativo Automatico — 10 Agosto 2026
+
+**Società:** FloreMoria S.r.l. (Startup Innovativa)  
+**Redazione:** BARBARA (Staff AI) & cron locale (`scripts/daily-verbale-cron.sh`)  
+**Ambiente:** Dashboard Next.js / IDE Cursor / Production Vercel  
+**Giornata di riferimento:** 2026-08-10
+
+---
+
+## Registro operativo automatico (.today_log)
+
+Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
+
+- [2026-08-10 16:28] fix(whatsapp+consegna): eliminato doppio messaggio di consegna (rimossi thanksText e reviewText ridondanti da onOrderStatusChanged in orderStatusFilter.ts — invio esclusivo del template Meta `floremoria_consegna_foto_utente`); perfezionata risposta "Sì" alla foto di posa in sendDeliveryPhotosOnDemand.ts e veraAiReply.ts (parsing tollerante emoji/punteggiatura per "Sì", "Sì 🌹", "Si", "Si grazie", "Sì per favore" + recupero automatico ordine e invio foto posa via WhatsApp con messaggio di cortesia).
+- [2026-08-10 17:03] feat(pinterest+oauth): adattata rotta `/api/auth/pinterest/callback` per la registrazione del Video Demo OAuth — aggiunto supporto query param `demo=true` (o flag in `state`), con rendering schermata HTML/JSON contenente codice `code`, intestazione Authorization Basic (base64) e comando `cURL` completo da eseguire da terminale.
+- [2026-08-10 17:25] fix(pinterest+oauth): ripristinata rotta di callback `/api/auth/pinterest/callback` per la produzione standard — rimossa la schermata di debug demo e ripristinato il reindirizzamento automatico alla dashboard al percorso `/dashboard/campaigns?tab=PINTEREST&success=pinterest-connected` in seguito allo scambio token.
+- [2026-08-10 17:31] fix/tiktok: OAuth scopes obbligatori (user.info.basic+video.publish+video.upload), Direct Post vs Inbox Content Posting v2, log verbale errori API.
+- [2026-08-10 17:43] fix/tiktok: Content Posting v2 — post_info completo, PULL_FROM_URL+FILE_UPLOAD, log error.code/message/log_id, errori unaudited 40001/40004.
+- [2026-08-10 18:07] fix/tiktok: errori connessione dettagliati, token freschi (requireFresh), pre-flight HEAD/GET video prima di video/init.
+- [2026-08-10 18:40] fix/social: TikTok parsing text→JSON (413), PULL_FROM_URL prioritario; Reel FB/IG/TikTok fallback automatico Pexels se Veo fallisce.
+- [2026-08-10 18:46] fix/whatsapp: Punto A fiorista solo template Meta (no free-text 131047); log payload esatto + guard sendWhatsAppMessage.
+- [2026-08-10 19:20] feat/whatsapp: Scenario A — template Meta body-only (no header), librerie Fioristi/Utenti separate, dropdown Command Center + auto-map ordine.

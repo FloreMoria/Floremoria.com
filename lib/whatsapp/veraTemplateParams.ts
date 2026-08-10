@@ -177,18 +177,23 @@ export function buildProactiveStaffParams(input: {
     orderCode?: string | null;
     staffNotes: string;
 }): { bodyParams: string[]; headerTextParams: string[] } {
+    const code = normalizeOrderCode(input.orderCode || '');
+    const notesRaw = requireText(input.staffNotes, 'staffNotes');
+    const notes =
+        code && notesRaw
+            ? requireText(`Rif. ordine ${code}. ${notesRaw}`, 'staffNotes')
+            : notesRaw;
     return {
-        headerTextParams: [
-            requireText(normalizeOrderCode(input.orderCode || ''), 'orderCode', 40),
-        ],
+        // Scenario A: nessun header Meta.
+        headerTextParams: [],
         bodyParams: buildVeraTemplateBodyParams('proactive_staff', {
             floristFirstName: extractFirstName(input.floristFirstName || 'Fiorista') || 'Fiorista',
-            staffNotes: requireText(input.staffNotes, 'staffNotes'),
+            staffNotes: notes,
         }),
     };
 }
 
-/** Template Meta promemoria_anniversario_gdm: header defunto + body utente/defunto/link. */
+/** Template Meta promemoria_anniversario_gdm — Scenario A body-only. */
 export function buildAnniversaryGdmReminderParams(input: {
     userFirstName?: string | null;
     deceasedName?: string | null;
@@ -210,15 +215,11 @@ export function buildAnniversaryGdmReminderParams(input: {
     });
     logBuiltTemplateParams('anniversary_gdm_reminder', bodyParams);
     return {
-        headerTextParams: [rememberedPerson],
+        headerTextParams: [],
         bodyParams,
     };
 }
 
 export function describeTemplateParamMapping(spec: VeraTemplateSpec): string {
-    const header =
-        spec.headerTextParamCount && spec.headerTextParamCount > 0
-            ? `header: ${spec.headerSlots?.join(', ') ?? 'n/a'} | `
-            : '';
-    return `${header}body: ${spec.bodySlots.map((slot, i) => `{{${i + 1}}}=${slot}`).join(', ')}`;
+    return `body: ${spec.bodySlots.map((slot, i) => `{{${i + 1}}}=${slot}`).join(', ')}`;
 }

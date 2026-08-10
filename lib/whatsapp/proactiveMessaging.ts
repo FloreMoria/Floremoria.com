@@ -125,13 +125,24 @@ export async function startProactiveConversation(
     if (requiresTemplate) {
         const templateId = input.templateId?.trim() || PROACTIVE_CONVERSATION_TEMPLATE_ID;
         const template = getApprovedWhatsAppTemplate(templateId);
+        const libraryFilter =
+            input.userType === 'FLORIST' || input.userType === 'UTENTE' ? input.userType : undefined;
         if (!template) {
             return {
                 ok: false,
                 requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(),
+                templates: listApprovedWhatsAppTemplates(libraryFilter),
                 session,
                 error: 'Template Meta non riconosciuto.',
+            };
+        }
+        if (libraryFilter && template.library !== libraryFilter) {
+            return {
+                ok: false,
+                requiresTemplate: true,
+                templates: listApprovedWhatsAppTemplates(libraryFilter),
+                session,
+                error: `Template non disponibile nella Libreria ${libraryFilter === 'FLORIST' ? 'Fioristi' : 'Utenti'}.`,
             };
         }
 
@@ -164,7 +175,7 @@ export async function startProactiveConversation(
             return {
                 ok: false,
                 requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(),
+                templates: listApprovedWhatsAppTemplates(libraryFilter),
                 session,
                 error: message,
             };
@@ -177,8 +188,7 @@ export async function startProactiveConversation(
             components,
             {
                 expectedBodyParamCount: template.bodyParamCount,
-                expectedHeaderTextParamCount:
-                    template.headerTextParamCount > 0 ? template.headerTextParamCount : undefined,
+                expectedHeaderTextParamCount: 0,
             }
         );
 

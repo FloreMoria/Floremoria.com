@@ -29,30 +29,46 @@ interface NewConversationModalProps {
     onConversationStarted: (session: Record<string, unknown>) => void;
 }
 
-async function fetchLastOrderCode(type: ContactType, id: string): Promise<string | null> {
-    if (id.startsWith('manual:')) return null;
+async function fetchLastOrderSeed(
+    type: ContactType,
+    id: string
+): Promise<{ orderNumber: string | null; seed: Record<string, string | null> | null }> {
+    if (id.startsWith('manual:')) return { orderNumber: null, seed: null };
     try {
         const res = await fetch(
             `/api/dashboard/communications/contacts/last-order?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`
         );
         const data = await res.json();
-        return data.success && typeof data.orderNumber === 'string' ? data.orderNumber : null;
+        if (!data.success) return { orderNumber: null, seed: null };
+        return {
+            orderNumber: typeof data.orderNumber === 'string' ? data.orderNumber : null,
+            seed: data.seed && typeof data.seed === 'object' ? data.seed : null,
+        };
     } catch {
-        return null;
+        return { orderNumber: null, seed: null };
     }
 }
 
 function seedFieldValues(
     template: WhatsAppTemplateDefinition,
     contact: MessagingContact,
-    orderCode: string
+    orderCode: string,
+    orderSeed?: Record<string, string | null> | null
 ): Record<string, string> {
     const values: Record<string, string> = {};
     for (const field of template.fields) {
         if (field.defaultValue) {
             values[field.key] = field.defaultValue;
+        } else {
+            values[field.key] = '';
+        }
+
+        const fromSeed = orderSeed?.[field.key];
+        if (typeof fromSeed === 'string' && fromSeed.trim()) {
+            values[field.key] = fromSeed.trim();
             continue;
         }
+
         if (
             field.key === 'recipientFirstName' ||
             field.key === 'userFirstName' ||
@@ -60,14 +76,12 @@ function seedFieldValues(
             field.key === 'floristFirstName'
         ) {
             values[field.key] =
-                contact.recipientFirstName || extractFirstName(contact.name) || '';
+                contact.recipientFirstName || extractFirstName(contact.name) || values[field.key];
             continue;
         }
         if (field.key === 'orderCode') {
-            values[field.key] = orderCode;
-            continue;
+            values[field.key] = orderCode || values[field.key];
         }
-        values[field.key] = '';
     }
     return values;
 }
@@ -83,13 +97,21 @@ export default function NewConversationModal({
     const [searching, setSearching] = useState(false);
     const [selected, setSelected] = useState<MessagingContact | null>(null);
     const [requiresTemplate, setRequiresTemplate] = useState<boolean | null>(null);
-    const [templates, setTemplates] = useState<WhatsAppTemplateDefinition[]>([]);
+    const [allTemplates, setAllTemplates] = useState<WhatsAppTemplateDefinition[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState(PROACTIVE_CONVERSATION_TEMPLATE_ID);
     const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+    const [orderSeed, setOrderSeed] = useState<Record<string, string | null> | null>(null);
     const [messageText, setMessageText] = useState('');
     const [loadingOrderCode, setLoadingOrderCode] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const templates = useMemo(() => {
+        if (!selected) return allTemplates;
+        const library = selected.type === 'FLORIST' ? 'FLORIST' : 'UTENTE';
+        const filtered = allTemplates.filter((t) => t.library === library);
+        return filtered.length ? filtered : allTemplates.filter((t) => !t.library || t.library === library);
+    }, [allTemplates, selected]);
 
     const selectedTemplate = useMemo(
         () => templates.find((t) => t.id === selectedTemplateId) || templates[0] || null,
@@ -105,6 +127,7 @@ export default function NewConversationModal({
         setSelected(null);
         setRequiresTemplate(null);
         setFieldValues({});
+        setOrderSeed(null);
         setMessageText('');
         setLoadingOrderCode(false);
         setError(null);
@@ -119,7 +142,7 @@ export default function NewConversationModal({
                 });
                 const data = await res.json();
                 if (data.success && Array.isArray(data.templates) && data.templates.length) {
-                    setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+                    setAllTemplates(data.templates as WhatsAppTemplateDefinition[]);
                     setSelectedTemplateId(
                         (data.templates[0] as WhatsAppTemplateDefinition).id ||
                             PROACTIVE_CONVERSATION_TEMPLATE_ID
@@ -130,6 +153,14 @@ export default function NewConversationModal({
             }
         })();
     }, [open]);
+
+    useEffect(() => {
+        if (!selected || templates.length === 0) return;
+        const stillValid = templates.some((t) => t.id === selectedTemplateId);
+        if (!stillValid) {
+            setSelectedTemplateId(templates[0]!.id);
+        }
+    }, [selected, templates, selectedTemplateId]);
 
     useEffect(() => {
         if (!open) return;
@@ -161,22 +192,30 @@ export default function NewConversationModal({
     ) => {
         setSelected(contact);
         setLoadingOrderCode(true);
-        const lastOrder = await fetchLastOrderCode(contact.type, contact.id);
-        const orderCode = lastOrder ? normalizeOrderCode(lastOrder) : '';
+        const { orderNumber, seed } = await fetchLastOrderSeed(contact.type, contact.id);
+        const orderCode = orderNumber ? normalizeOrderCode(orderNumber) : '';
+        setOrderSeed(seed);
         setLoadingOrderCode(false);
 
-        const template = templateOverride || selectedTemplate;
-        if (template) {
-            setFieldValues(seedFieldValues(template, contact, orderCode));
+        const library = contact.type === 'FLORIST' ? 'FLORIST' : 'UTENTE';
+        const libraryTemplates = allTemplates.filter((t) => t.library === library);
+        const preferred =
+            templateOverride ||
+            libraryTemplates[0] ||
+            selectedTemplate ||
+            null;
+        if (preferred) {
+            setSelectedTemplateId(preferred.id);
+            setFieldValues(seedFieldValues(preferred, contact, orderCode, seed));
         }
     };
 
     const handleTemplateChange = (templateId: string) => {
         setSelectedTemplateId(templateId);
-        const template = templates.find((t) => t.id === templateId);
+        const template = templates.find((t) => t.id === templateId) || allTemplates.find((t) => t.id === templateId);
         if (template && selected) {
-            const orderCode = fieldValues.orderCode || '';
-            setFieldValues(seedFieldValues(template, selected, orderCode));
+            const orderCode = fieldValues.orderCode || (orderSeed?.orderNumber ? normalizeOrderCode(orderSeed.orderNumber) : '');
+            setFieldValues(seedFieldValues(template, selected, orderCode, orderSeed));
         }
     };
 
@@ -213,6 +252,7 @@ export default function NewConversationModal({
                 body: JSON.stringify({
                     action: 'checkMessagingWindow',
                     phoneRaw: resolvedContact.phone,
+                    userType: resolvedContact.type,
                 }),
             });
             const data = await res.json();
@@ -222,7 +262,13 @@ export default function NewConversationModal({
             }
             setRequiresTemplate(Boolean(data.requiresTemplate));
             if (Array.isArray(data.templates) && data.templates.length) {
-                setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+                setAllTemplates((prev) => {
+                    const byId = new Map(prev.map((t) => [t.id, t]));
+                    for (const t of data.templates as WhatsAppTemplateDefinition[]) {
+                        byId.set(t.id, t);
+                    }
+                    return Array.from(byId.values());
+                });
             }
         } catch {
             setError('Errore di rete durante la verifica del contatto.');
@@ -276,7 +322,13 @@ export default function NewConversationModal({
 
             if (!data.success) {
                 if (Array.isArray(data.templates) && data.templates.length) {
-                    setTemplates(data.templates as WhatsAppTemplateDefinition[]);
+                    setAllTemplates((prev) => {
+                        const byId = new Map(prev.map((t) => [t.id, t]));
+                        for (const t of data.templates as WhatsAppTemplateDefinition[]) {
+                            byId.set(t.id, t);
+                        }
+                        return Array.from(byId.values());
+                    });
                 }
                 setError(data.error || 'Invio non riuscito.');
                 return;
@@ -430,13 +482,16 @@ export default function NewConversationModal({
                             ) : requiresTemplate ? (
                                 <div className="space-y-4">
                                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                        Fuori finestra 24h (o primo contatto): selezioni un Template Meta approvato e
-                                        compili i parametri richiesti.
+                                        Fuori finestra 24h (o primo contatto): selezioni un Template Meta della{' '}
+                                        <strong>
+                                            Libreria {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
+                                        </strong>{' '}
+                                        (Scenario A, solo testo body — senza intestazione).
                                     </div>
 
                                     <div>
                                         <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Template Meta
+                                            Template Meta · {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
                                         </label>
                                         <select
                                             value={selectedTemplateId}
@@ -448,7 +503,7 @@ export default function NewConversationModal({
                                                 : [
                                                       {
                                                           id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
-                                                          label: 'Messaggio personalizzato (staff)',
+                                                          label: 'Messaggio personalizzato fiorista (staff)',
                                                       },
                                                   ]
                                             ).map((t) => (
@@ -468,9 +523,9 @@ export default function NewConversationModal({
                                         <div key={field.key}>
                                             <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
                                                 {field.label}
-                                                {field.location === 'header' ? (
-                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-700 font-bold">
-                                                        Interstazione
+                                                {field.metaBound === false ? (
+                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                        In nota
                                                     </span>
                                                 ) : (
                                                     <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">

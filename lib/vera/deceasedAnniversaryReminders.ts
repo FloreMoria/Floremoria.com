@@ -273,20 +273,14 @@ export async function runDeceasedAnniversaryReminders(
                     deceasedFullName: profile.fullName,
                     catalogUrl: catalogProposalsUrl(),
                 });
-                const { bodyParams, headerTextParams } = buildAnniversaryGdmReminderParams({
+                const { bodyParams } = buildAnniversaryGdmReminderParams({
                     userFirstName: resolved.userFirstName,
                     deceasedName: resolved.deceasedFullName,
                     catalogUrl: resolved.catalogUrl,
                 });
 
+                // Scenario A: solo body (nessuna interstazione/header).
                 const components: WhatsAppTemplateComponent[] = [
-                    {
-                        type: 'header',
-                        parameters: headerTextParams.map((text) => ({
-                            type: 'text' as const,
-                            text: sanitizeMetaTemplateParam(text),
-                        })),
-                    },
                     {
                         type: 'body',
                         parameters: bodyParams.map((text) => ({
@@ -306,7 +300,7 @@ export async function runDeceasedAnniversaryReminders(
                         components,
                         {
                             expectedBodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT,
-                            expectedHeaderTextParamCount: 1,
+                            expectedHeaderTextParamCount: 0,
                         }
                     );
 
@@ -322,10 +316,7 @@ export async function runDeceasedAnniversaryReminders(
                         continue;
                     }
 
-                    const preview = [
-                        `Interstazione: ${headerTextParams[0] || ''}`,
-                        renderVeraTemplateBodyPreview('anniversary_gdm_reminder', bodyParams),
-                    ].join('\n\n');
+                    const preview = renderVeraTemplateBodyPreview('anniversary_gdm_reminder', bodyParams);
                     const anniversaryMeta = {
                         eventType: ANNIVERSARY_REMINDER_EVENT,
                         anniversaryKind: kind,

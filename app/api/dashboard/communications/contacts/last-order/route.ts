@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import type { MessagingContactType } from '@/lib/whatsapp/contactSearch';
-import { getLastOrderNumberForContact } from '@/lib/whatsapp/lastOrderForContact';
+import { getLastOrderTemplateSeedForContact } from '@/lib/whatsapp/lastOrderForContact';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,8 +27,12 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const orderNumber = await getLastOrderNumberForContact(type, id);
-        return NextResponse.json({ success: true, orderNumber });
+        const seed = await getLastOrderTemplateSeedForContact(type, id);
+        return NextResponse.json({
+            success: true,
+            orderNumber: seed?.orderNumber ?? null,
+            seed,
+        });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Recupero ordine non riuscito.';
         console.error('[communications/contacts/last-order GET]', message);

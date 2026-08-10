@@ -3,6 +3,13 @@ import {
     formatGentileSalutation,
     normalizeOrderCode,
 } from '@/lib/whatsapp/proactiveTemplateParams';
+import {
+    listVeraFloristLibraryTemplates,
+    listVeraUserLibraryTemplates,
+} from '@/lib/whatsapp/templateLibraries';
+
+/** Scenario A: librerie rigidamente separate. */
+export type TemplateLibrary = 'FLORIST' | 'UTENTE';
 
 export interface WhatsAppTemplateField {
     /** Chiave stabile usata nel payload dashboard. */
@@ -10,7 +17,10 @@ export interface WhatsAppTemplateField {
     label: string;
     placeholder?: string;
     required?: boolean;
-    /** Posizione Meta: header o body. */
+    /**
+     * Scenario A: solo `body` (nessuna interstazione/header Meta).
+     * `header` resta nel tipo solo per compatibilità di lettura legacy — non viene inviato.
+     */
     location: 'header' | 'body';
     /** Indice 0-based nello slot Meta di quella sezione ({{1}} = 0). */
     index: number;
@@ -18,6 +28,11 @@ export interface WhatsAppTemplateField {
     multiline?: boolean;
     /** Valore di default opzionale (es. link catalogo). */
     defaultValue?: string;
+    /**
+     * Se false, campo solo UI (non mappato su {{n}} Meta).
+     * Es. codice ordine nel messaggio personalizzato: finisce dentro body {{2}}.
+     */
+    metaBound?: boolean;
 }
 
 export interface WhatsAppTemplateDefinition {
@@ -26,12 +41,15 @@ export interface WhatsAppTemplateDefinition {
     label: string;
     description: string;
     language: string;
-    /** Etichette legacy (ordine header+body) per retrocompat UI. */
+    /** Etichette legacy (ordine body) per retrocompat UI. */
     parameterLabels: string[];
     /** Testo fisso approvato su Meta con {{1}}… per anteprima body. */
     bodyTemplate: string;
+    /** Scenario A: sempre 0 — nessun header Meta. */
     headerTextParamCount: number;
     bodyParamCount: number;
+    /** Libreria Fioristi o Utenti. */
+    library: TemplateLibrary;
     fields: WhatsAppTemplateField[];
 }
 
@@ -44,18 +62,18 @@ export const PROACTIVE_CONVERSATION_META_TEMPLATE_NAME = 'floremoria_messaggio_p
 export const ANNIVERSARY_GDM_TEMPLATE_ID = 'promemoria_anniversario_gdm';
 export const ANNIVERSARY_GDM_META_TEMPLATE_NAME = 'promemoria_anniversario_gdm';
 export const ANNIVERSARY_GDM_BODY_PARAM_COUNT = 3;
-export const ANNIVERSARY_GDM_HEADER_PARAM_COUNT = 1;
+/** @deprecated Scenario A: header rimossi — sempre 0. */
+export const ANNIVERSARY_GDM_HEADER_PARAM_COUNT = 0;
 
 /** Numero tassativo di variabili body sul template Meta approvato. */
 export const PROACTIVE_TEMPLATE_BODY_PARAM_COUNT = 2;
 
-/** Header testo (es. codice ordine) — variabile {{1}} nell'header Meta. */
-export const PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT = 1;
+/** @deprecated Scenario A: header rimossi — sempre 0. */
+export const PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT = 0;
 
 /**
- * Body template Meta approvato (2 variabili body).
- * Header Meta (separato): {{1}} = codice ordine.
- * Body {{1}} = nome di battesimo | Body {{2}} = note staff.
+ * Body template Meta approvato (2 variabili body, nessun header).
+ * Body {{1}} = nome di battesimo | Body {{2}} = note staff (con rif. ordine se presente).
  */
 export const PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL =
     "Gentile {{1}}, in merito al Suo ordine.\n\n{{2}}\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria";
@@ -86,23 +104,16 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
     return {
         id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
         metaName: envTemplateName('WHATSAPP_TEMPLATE_PROACTIVE', PROACTIVE_CONVERSATION_META_TEMPLATE_NAME),
-        label: 'Messaggio personalizzato (staff)',
+        label: 'Messaggio personalizzato fiorista (staff)',
         description:
-            'Template Meta: header ordine, body {{1}} nome, {{2}} note staff.',
+            'Scenario A body-only: {{1}} nome, {{2}} note staff (il codice ordine viene incluso nelle note).',
         language: process.env.WHATSAPP_TEMPLATE_PROACTIVE_LANGUAGE?.trim() || 'it',
-        parameterLabels: ['Codice ordine (header)', 'Nome destinatario', 'Note dello Staff'],
+        parameterLabels: ['Nome destinatario', 'Note dello Staff'],
         bodyTemplate: resolveProactiveBodyTemplate(),
-        headerTextParamCount: PROACTIVE_TEMPLATE_HEADER_TEXT_PARAM_COUNT,
+        headerTextParamCount: 0,
         bodyParamCount: PROACTIVE_TEMPLATE_BODY_PARAM_COUNT,
+        library: 'FLORIST',
         fields: [
-            {
-                key: 'orderCode',
-                label: 'Codice ordine (interstazione)',
-                placeholder: 'Es. FF-PN-26-004',
-                required: true,
-                location: 'header',
-                index: 0,
-            },
             {
                 key: 'recipientFirstName',
                 label: 'Nome destinatario',
@@ -110,6 +121,16 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
                 required: true,
                 location: 'body',
                 index: 0,
+                metaBound: true,
+            },
+            {
+                key: 'orderCode',
+                label: 'Codice ordine (in nota)',
+                placeholder: 'Es. FF-PN-26-004',
+                required: true,
+                location: 'body',
+                index: 0,
+                metaBound: false,
             },
             {
                 key: 'staffNotes',
@@ -119,6 +140,7 @@ export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
                 location: 'body',
                 index: 1,
                 multiline: true,
+                metaBound: true,
             },
         ],
     };
@@ -132,29 +154,16 @@ export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition 
             ANNIVERSARY_GDM_META_TEMPLATE_NAME
         ),
         label: 'Promemoria anniversario GdM',
-        description:
-            'Header {{1}} defunto · body {{1}} utente, {{2}} defunto, {{3}} link catalogo.',
+        description: 'Scenario A body-only: {{1}} utente, {{2}} defunto, {{3}} link catalogo.',
         language: process.env.WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_LANGUAGE?.trim() || 'it',
-        parameterLabels: [
-            'Nome defunto (interstazione)',
-            'Nome utente',
-            'Nome defunto',
-            'Link catalogo/GdM',
-        ],
+        parameterLabels: ['Nome utente', 'Nome defunto', 'Link catalogo/GdM'],
         bodyTemplate:
             'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
             'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
-        headerTextParamCount: ANNIVERSARY_GDM_HEADER_PARAM_COUNT,
+        headerTextParamCount: 0,
         bodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT,
+        library: 'UTENTE',
         fields: [
-            {
-                key: 'headerDeceasedName',
-                label: 'Nome del Defunto (interstazione)',
-                placeholder: 'Es. Maria Pullano',
-                required: true,
-                location: 'header',
-                index: 0,
-            },
             {
                 key: 'userFirstName',
                 label: 'Nome dell\'Utente',
@@ -162,6 +171,7 @@ export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition 
                 required: true,
                 location: 'body',
                 index: 0,
+                metaBound: true,
             },
             {
                 key: 'deceasedName',
@@ -170,6 +180,7 @@ export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition 
                 required: true,
                 location: 'body',
                 index: 1,
+                metaBound: true,
             },
             {
                 key: 'catalogUrl',
@@ -179,6 +190,7 @@ export function getAnniversaryGdmWhatsAppTemplate(): WhatsAppTemplateDefinition 
                 location: 'body',
                 index: 2,
                 defaultValue: 'https://www.floremoria.com/fiori-sulle-tombe',
+                metaBound: true,
             },
         ],
     };
@@ -199,6 +211,7 @@ export function getCustomerWaitingUpdateWhatsAppTemplate(): WhatsAppTemplateDefi
             'Gentile {{1}}, desideriamo rassicurarLa sul fatto che stiamo seguendo da vicino la preparazione del Suo omaggio nel ricordo di {{2}}.',
         headerTextParamCount: 0,
         bodyParamCount: 2,
+        library: 'UTENTE',
         fields: [
             {
                 key: 'buyerFirstName',
@@ -207,6 +220,7 @@ export function getCustomerWaitingUpdateWhatsAppTemplate(): WhatsAppTemplateDefi
                 required: true,
                 location: 'body',
                 index: 0,
+                metaBound: true,
             },
             {
                 key: 'deceasedName',
@@ -215,6 +229,7 @@ export function getCustomerWaitingUpdateWhatsAppTemplate(): WhatsAppTemplateDefi
                 required: true,
                 location: 'body',
                 index: 1,
+                metaBound: true,
             },
         ],
     };
@@ -235,6 +250,7 @@ export function getFloristReminderWhatsAppTemplate(): WhatsAppTemplateDefinition
             "Gentile {{1}}, Le ricordiamo di completare l'ordine {{2}} per il ricordo di {{3}}.",
         headerTextParamCount: 0,
         bodyParamCount: 3,
+        library: 'FLORIST',
         fields: [
             {
                 key: 'floristFirstName',
@@ -243,6 +259,7 @@ export function getFloristReminderWhatsAppTemplate(): WhatsAppTemplateDefinition
                 required: true,
                 location: 'body',
                 index: 0,
+                metaBound: true,
             },
             {
                 key: 'orderCode',
@@ -251,6 +268,7 @@ export function getFloristReminderWhatsAppTemplate(): WhatsAppTemplateDefinition
                 required: true,
                 location: 'body',
                 index: 1,
+                metaBound: true,
             },
             {
                 key: 'deceasedName',
@@ -259,41 +277,69 @@ export function getFloristReminderWhatsAppTemplate(): WhatsAppTemplateDefinition
                 required: true,
                 location: 'body',
                 index: 2,
+                metaBound: true,
             },
         ],
     };
 }
 
-export function listApprovedWhatsAppTemplates(): WhatsAppTemplateDefinition[] {
-    return [
+/**
+ * Catalogo Scenario A: Libreria Fioristi + Libreria Utenti (o filtro per ruolo).
+ */
+export function listApprovedWhatsAppTemplates(
+    library?: TemplateLibrary
+): WhatsAppTemplateDefinition[] {
+    const florist = [
         getProactiveWhatsAppTemplate(),
-        getAnniversaryGdmWhatsAppTemplate(),
-        getCustomerWaitingUpdateWhatsAppTemplate(),
+        ...listVeraFloristLibraryTemplates().filter((t) => t.id !== 'florist_reminder'),
         getFloristReminderWhatsAppTemplate(),
     ];
+    const users = listVeraUserLibraryTemplates().map((t) => {
+        if (t.id === 'customer_waiting_update') return getCustomerWaitingUpdateWhatsAppTemplate();
+        if (t.id === 'anniversary_gdm_reminder') {
+            return { ...getAnniversaryGdmWhatsAppTemplate(), id: 'anniversary_gdm_reminder' };
+        }
+        return t;
+    });
+
+    if (library === 'FLORIST') return florist;
+    if (library === 'UTENTE') return users;
+    return [...florist, ...users];
 }
 
 export function getApprovedWhatsAppTemplate(templateId?: string): WhatsAppTemplateDefinition | null {
     const templates = listApprovedWhatsAppTemplates();
     if (!templateId) return templates[0] ?? null;
+    if (templateId === ANNIVERSARY_GDM_TEMPLATE_ID) {
+        return (
+            templates.find((t) => t.id === 'anniversary_gdm_reminder') ||
+            templates.find((t) => t.id === ANNIVERSARY_GDM_TEMPLATE_ID) ||
+            null
+        );
+    }
     return templates.find((t) => t.id === templateId) ?? null;
 }
 
+/** Fold codice ordine nelle note body {{2}} (Scenario A: no header). */
+export function composeProactiveStaffNotes(orderCode: string, staffNotes: string): string {
+    const code = normalizeOrderCode(orderCode);
+    const notes = sanitizeMetaTemplateParam(staffNotes);
+    if (code && notes) return sanitizeMetaTemplateParam(`Rif. ordine ${code}. ${notes}`);
+    return notes || (code ? sanitizeMetaTemplateParam(`Rif. ordine ${code}.`) : '');
+}
+
 /**
- * Costruisce i componenti Meta da valori campo UI (header + body).
+ * Costruisce i componenti Meta da valori campo UI — Scenario A: solo body.
  */
 export function buildOperatorTemplateComponents(
     template: WhatsAppTemplateDefinition,
     fieldValues: Record<string, string>
 ): Array<{
-    type: 'header' | 'body';
+    type: 'body';
     parameters: Array<{ type: 'text'; text: string }>;
 }> {
-    const headerFields = template.fields
-        .filter((f) => f.location === 'header')
-        .sort((a, b) => a.index - b.index);
     const bodyFields = template.fields
-        .filter((f) => f.location === 'body')
+        .filter((f) => f.location === 'body' && f.metaBound !== false)
         .sort((a, b) => a.index - b.index);
 
     for (const field of template.fields) {
@@ -305,38 +351,36 @@ export function buildOperatorTemplateComponents(
     }
 
     const components: Array<{
-        type: 'header' | 'body';
+        type: 'body';
         parameters: Array<{ type: 'text'; text: string }>;
-    }> = [];
+    }> = [
+        {
+            type: 'body',
+            parameters: bodyFields.map((field) => {
+                let raw = fieldValues[field.key] ?? '';
+                if (
+                    field.key === 'recipientFirstName' ||
+                    field.key === 'userFirstName' ||
+                    field.key === 'buyerFirstName' ||
+                    field.key === 'floristFirstName'
+                ) {
+                    raw = extractFirstName(raw) || raw;
+                }
+                if (field.key === 'orderCode') {
+                    raw = normalizeOrderCode(raw);
+                }
+                if (field.key === 'staffNotes' && fieldValues.orderCode) {
+                    raw = composeProactiveStaffNotes(fieldValues.orderCode, raw);
+                }
+                return {
+                    type: 'text' as const,
+                    text: sanitizeMetaTemplateParam(raw),
+                };
+            }),
+        },
+    ];
 
-    if (headerFields.length > 0) {
-        components.push({
-            type: 'header',
-            parameters: headerFields.map((field) => ({
-                type: 'text' as const,
-                text: sanitizeMetaTemplateParam(fieldValues[field.key] ?? ''),
-            })),
-        });
-    }
-
-    components.push({
-        type: 'body',
-        parameters: bodyFields.map((field) => {
-            let raw = fieldValues[field.key] ?? '';
-            if (field.key === 'recipientFirstName' || field.key === 'userFirstName' || field.key === 'buyerFirstName' || field.key === 'floristFirstName') {
-                raw = extractFirstName(raw) || raw;
-            }
-            if (field.key === 'orderCode') {
-                raw = normalizeOrderCode(raw);
-            }
-            return {
-                type: 'text' as const,
-                text: sanitizeMetaTemplateParam(raw),
-            };
-        }),
-    });
-
-    if (components.find((c) => c.type === 'body')!.parameters.length !== template.bodyParamCount) {
+    if (components[0]!.parameters.length !== template.bodyParamCount) {
         throw new ProactiveTemplateValidationError(
             `Template richiede ${template.bodyParamCount} parametri body.`
         );
@@ -345,20 +389,14 @@ export function buildOperatorTemplateComponents(
     return components;
 }
 
-/** Anteprima testo da campi dinamici (header + body). */
+/** Anteprima testo body (Scenario A: nessuna interstazione). */
 export function renderOperatorTemplatePreview(
     template: WhatsAppTemplateDefinition,
     fieldValues: Record<string, string>
 ): string {
-    const header = template.fields
-        .filter((f) => f.location === 'header')
-        .sort((a, b) => a.index - b.index)
-        .map((f) => sanitizeMetaTemplateParam(fieldValues[f.key] ?? '') || '…')
-        .join(' · ');
-
     let body = template.bodyTemplate;
     const bodyFields = template.fields
-        .filter((f) => f.location === 'body')
+        .filter((f) => f.location === 'body' && f.metaBound !== false)
         .sort((a, b) => a.index - b.index);
     bodyFields.forEach((field, i) => {
         let raw = fieldValues[field.key] ?? '';
@@ -370,10 +408,16 @@ export function renderOperatorTemplatePreview(
         ) {
             raw = extractFirstName(raw) || raw;
         }
-        body = body.replace(new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'), sanitizeMetaTemplateParam(raw) || '…');
+        if (field.key === 'staffNotes' && fieldValues.orderCode) {
+            raw = composeProactiveStaffNotes(fieldValues.orderCode, raw);
+        }
+        body = body.replace(
+            new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'),
+            sanitizeMetaTemplateParam(raw) || '…'
+        );
     });
 
-    return header ? `Interstazione: ${header}\n\n${body}` : body;
+    return body;
 }
 
 export class ProactiveTemplateValidationError extends Error {
@@ -415,7 +459,7 @@ export function validateProactiveTemplateBodyValues(input: {
     }
     if (!orderCode) {
         throw new ProactiveTemplateValidationError(
-            'Inserisca il codice ordine (variabile header {{1}}), es. FF-PN-26-004.'
+            'Inserisca il codice ordine (es. FF-PN-26-004) — verrà incluso nelle note body.'
         );
     }
     if (!staffNotes) {
@@ -458,25 +502,14 @@ export function buildTemplateBodyParameters(
     return parameters;
 }
 
-/** Header + body pronti per sendWhatsAppTemplateMessage. */
+/** Solo body — Scenario A (nessun header Meta). */
 export function buildProactiveTemplateComponents(values: ProactiveTemplateBodyValues) {
     const validated = validateProactiveTemplateBodyValues(values);
+    const notes = composeProactiveStaffNotes(validated.orderCode, validated.staffNotes);
     return [
         {
-            type: 'header' as const,
-            parameters: [
-                {
-                    type: 'text' as const,
-                    text: sanitizeMetaTemplateParam(validated.orderCode),
-                },
-            ],
-        },
-        {
             type: 'body' as const,
-            parameters: buildTemplateBodyParameters(
-                validated.recipientFirstName,
-                validated.staffNotes
-            ),
+            parameters: buildTemplateBodyParameters(validated.recipientFirstName, notes),
         },
     ];
 }
@@ -489,7 +522,7 @@ export function buildProactiveTemplateBodyComponent(values: ProactiveTemplateBod
     return body;
 }
 
-/** Sostituisce {{1}}, {{2}}, {{3}} nel body template con i valori reali del messaggio. */
+/** Sostituisce {{1}}, {{2}} nel body template con i valori reali del messaggio. */
 export function renderProactiveTemplateBody(
     bodyTemplate: string,
     recipientFirstName: string,
@@ -497,28 +530,25 @@ export function renderProactiveTemplateBody(
     staffNotes: string
 ): string {
     const firstName = extractFirstName(recipientFirstName);
-    const code = normalizeOrderCode(orderCode);
-    const notes = staffNotes.trim();
+    const notes = composeProactiveStaffNotes(orderCode, staffNotes);
 
     return bodyTemplate
         .replace(/\{\{1\}\}/g, firstName || '…')
         .replace(/\{\{2\}\}/g, notes || '…');
 }
 
-/** Anteprima completa header + body per dashboard. */
+/** Anteprima body per dashboard (Scenario A: senza interstazione). */
 export function renderProactiveTemplateMessage(
     recipientFirstName: string,
     orderCode: string,
     staffNotes: string
 ): string {
-    const code = normalizeOrderCode(orderCode);
-    const body = renderProactiveTemplateBody(
+    return renderProactiveTemplateBody(
         PROACTIVE_CONVERSATION_BODY_TEMPLATE_CANONICAL,
         recipientFirstName,
         orderCode,
         staffNotes
     );
-    return code ? `Ordine ${code}\n\n${body}` : body;
 }
 
 export { extractFirstName, formatGentileSalutation, normalizeOrderCode };

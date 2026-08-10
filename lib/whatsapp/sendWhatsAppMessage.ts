@@ -168,23 +168,13 @@ export async function sendWhatsAppMessage(
         'Cliente';
     const recipientFirstName = extractFirstName(rawFirstName) || 'Cliente';
 
-    const headerTitle = sanitizeMetaTemplateParam(
-        options?.headerTitle?.trim() || orderCode,
-        60
-    );
-
     const staffNotes = sanitizeMetaTemplateParam(text, 900) || 'Aggiornamento sul Suo servizio.';
+    const notesWithOrder = orderCode
+        ? sanitizeMetaTemplateParam(`Rif. ordine ${orderCode}. ${staffNotes}`, 900)
+        : staffNotes;
 
+    // Scenario A: solo body — nessun componente header.
     const components = [
-        {
-            type: 'header' as const,
-            parameters: [
-                {
-                    type: 'text' as const,
-                    text: headerTitle,
-                },
-            ],
-        },
         {
             type: 'body' as const,
             parameters: [
@@ -194,7 +184,7 @@ export async function sendWhatsAppMessage(
                 },
                 {
                     type: 'text' as const,
-                    text: staffNotes,
+                    text: notesWithOrder,
                 },
             ],
         },
@@ -208,7 +198,7 @@ export async function sendWhatsAppMessage(
         components,
         {
             expectedBodyParamCount: 2,
-            expectedHeaderTextParamCount: 1,
+            expectedHeaderTextParamCount: 0,
         }
     );
 
@@ -238,7 +228,6 @@ export async function sendWhatsAppMessage(
             outboundMode: options?.forceTemplate ? 'template_forced' : 'template_fallback_24h',
             templateName: templateSpec.metaName,
             orderCode,
-            headerTitle,
             recipientFirstName,
             ...buildOutboundWamidMetadata(templateResult.messageId),
         });

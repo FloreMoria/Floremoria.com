@@ -11,3 +11,5 @@
 [2026-08-10 18:40] fix/social: TikTok parsing text→JSON (413), PULL_FROM_URL prioritario; Reel FB/IG/TikTok fallback automatico Pexels se Veo fallisce.
 
 [2026-08-10 18:46] fix/whatsapp: Punto A fiorista solo template Meta (no free-text 131047); log payload esatto + guard sendWhatsAppMessage.
+
+[2026-08-10 19:20] feat/whatsapp: Scenario A — template Meta body-only (no header), librerie Fioristi/Utenti separate, dropdown Command Center + auto-map ordine.

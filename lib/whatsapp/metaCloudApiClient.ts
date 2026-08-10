@@ -355,8 +355,20 @@ export async function sendWhatsAppTemplateMessage(
         return { ok: false, error: 'invalid_phone' };
     }
 
-    if (components.length > 0) {
-        const validationError = validateTemplateComponents(components, options);
+    // Scenario A: strip header components prima della validazione/invio.
+    const headerCount = components.filter((c) => c.type === 'header').length;
+    const bodyOnlyComponents = components.filter((c) => c.type !== 'header');
+    if (headerCount > 0) {
+        console.warn(
+            `[meta-cloud-api] Scenario A: rimossi ${headerCount} componenti header dal payload template "${templateName}".`
+        );
+    }
+
+    if (bodyOnlyComponents.length > 0) {
+        const validationError = validateTemplateComponents(bodyOnlyComponents, {
+            ...options,
+            expectedHeaderTextParamCount: 0,
+        });
         if (validationError) {
             console.warn(`[meta-cloud-api] Template validation: ${validationError}`);
             return { ok: false, error: validationError, errorCode: 132000 };
@@ -367,8 +379,8 @@ export async function sendWhatsAppTemplateMessage(
         name: templateName,
         language: { code: languageCode },
     };
-    if (components.length > 0) {
-        template.components = components;
+    if (bodyOnlyComponents.length > 0) {
+        template.components = bodyOnlyComponents;
     }
 
     const payload = {

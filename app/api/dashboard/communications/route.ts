@@ -3,7 +3,7 @@ import { after } from 'next/server';
 import { getChatStore, addMessage, setSessionStatus, getSession, markChatSessionAsTest } from '@/lib/chatStore';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
-import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates } from '@/lib/whatsapp/approvedTemplates';
+import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates, type TemplateLibrary } from '@/lib/whatsapp/approvedTemplates';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
@@ -80,9 +80,14 @@ export async function POST(req: Request) {
         } = body;
 
         if (action === 'getTemplates') {
-            const template = getProactiveWhatsAppTemplate();
+            const libraryRaw = typeof body.library === 'string' ? body.library : undefined;
+            const library: TemplateLibrary | undefined =
+                libraryRaw === 'FLORIST' || libraryRaw === 'UTENTE' ? libraryRaw : undefined;
+            const templates = listApprovedWhatsAppTemplates(library);
+            const template = templates[0] || getProactiveWhatsAppTemplate();
             return NextResponse.json({
                 success: true,
+                library: library ?? 'ALL',
                 template: {
                     id: template.id,
                     metaName: template.metaName,
@@ -91,11 +96,12 @@ export async function POST(req: Request) {
                     language: template.language,
                     parameterLabels: template.parameterLabels,
                     bodyTemplate: template.bodyTemplate,
-                    headerTextParamCount: template.headerTextParamCount,
+                    headerTextParamCount: 0,
                     bodyParamCount: template.bodyParamCount,
+                    library: template.library,
                     fields: template.fields,
                 },
-                templates: listApprovedWhatsAppTemplates().map((item) => ({
+                templates: templates.map((item) => ({
                     id: item.id,
                     metaName: item.metaName,
                     label: item.label,
@@ -103,10 +109,15 @@ export async function POST(req: Request) {
                     language: item.language,
                     parameterLabels: item.parameterLabels,
                     bodyTemplate: item.bodyTemplate,
-                    headerTextParamCount: item.headerTextParamCount,
+                    headerTextParamCount: 0,
                     bodyParamCount: item.bodyParamCount,
+                    library: item.library,
                     fields: item.fields,
                 })),
+                libraries: {
+                    FLORIST: listApprovedWhatsAppTemplates('FLORIST').map((t) => t.id),
+                    UTENTE: listApprovedWhatsAppTemplates('UTENTE').map((t) => t.id),
+                },
             });
         }
 
@@ -116,11 +127,15 @@ export async function POST(req: Request) {
                 return NextResponse.json({ success: false, error: 'Numero non valido.' }, { status: 400 });
             }
             const session = await getSession(sessionPhone);
+            const contactLibrary: TemplateLibrary | undefined =
+                userType === 'FLORIST' || userType === 'UTENTE' ? userType : undefined;
             return NextResponse.json({
                 success: true,
                 phone: sessionPhone,
                 requiresTemplate: requiresTemplateMessage(session),
                 session,
+                templates: listApprovedWhatsAppTemplates(contactLibrary),
+                library: contactLibrary ?? 'ALL',
             });
         }
 

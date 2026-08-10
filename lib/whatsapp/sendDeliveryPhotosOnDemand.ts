@@ -32,25 +32,38 @@ export interface SendDeliveryPhotosOnDemandResult {
  * (pulsante rapido / risposta a «Vuole ricevere qui la foto della posa?»).
  */
 export function isRequestingDeliveryPhotosInChat(message: string): boolean {
-    const t = (message || '').trim().toLowerCase();
-    if (!t) return false;
+    const raw = (message || '').trim();
+    if (!raw) return false;
 
     if (isDecliningDeliveryPhotosInChat(message)) return false;
 
-    // Affermativi corti (quick-reply / Sì alla domanda posa).
-    if (/^(s[iì]|si+|yes|ok|okay|va bene|certo|prego|volentieri)$/i.test(t)) {
+    // Sanitizza pulendo emoji (es. 🌹, 👍, 🙏, ❤️) e punteggiatura per il matching pulito
+    const clean = raw
+        .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '')
+        .trim()
+        .toLowerCase();
+
+    if (!clean) return false;
+
+    // Affermativi corti ed espressioni di consenso (es. "Sì", "Sì 🌹", "Si", "Si grazie", "Sì per favore", "Certo")
+    if (
+        /^(s[iì]|si+|yes|ok|okay|va\s+bene|certo|prego|volentieri|desidero|confermo)(\s+(grazie|mille|di\s+cuore|per\s+favore|per\s+piacere|le\s+foto))?$/i.test(
+            clean
+        )
+    ) {
         return true;
     }
 
     return (
-        /inviatemi\s+le\s+foto/i.test(t) ||
-        /inviami\s+le\s+foto/i.test(t) ||
-        /mandami\s+le\s+foto/i.test(t) ||
-        /mandatemi\s+le\s+foto/i.test(t) ||
-        /voglio\s+(vedere\s+)?le\s+foto/i.test(t) ||
-        /ricevere\s+(qui\s+)?(la\s+)?foto/i.test(t) ||
-        /le\s+foto\s+(per\s+)?(favore|piacere)/i.test(t) ||
-        /^(foto|le foto|foto per favore|foto please)$/i.test(t)
+        /inviatemi\s+le\s+foto/i.test(clean) ||
+        /inviami\s+le\s+foto/i.test(clean) ||
+        /mandami\s+le\s+foto/i.test(clean) ||
+        /mandatemi\s+le\s+foto/i.test(clean) ||
+        /voglio\s+(vedere\s+)?le\s+foto/i.test(clean) ||
+        /ricevere\s+(qui\s+)?(la\s+)?foto/i.test(clean) ||
+        /le\s+foto\s+(per\s+)?(favore|piacere)/i.test(clean) ||
+        /^(foto|le foto|foto per favore|foto please)$/i.test(clean)
     );
 }
 

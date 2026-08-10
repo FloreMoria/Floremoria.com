@@ -566,7 +566,6 @@ export async function generateVeraReply(
     if (
         session.userType !== 'FLORIST' &&
         isRequestingDeliveryPhotosInChat(message) &&
-        isOrderDeliveryCompleted(callerContext) &&
         callerContext.phoneE164
     ) {
         const photoSend = await sendDeliveryPhotosOnDemand({

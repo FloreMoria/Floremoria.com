@@ -39,51 +39,6 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
                 console.error('[order-status-filter] Errore in runPuntoEFDeliveryComplete:', err);
             });
         }
-
-        if (nextStatus === 'COMPLETED') {
-            const order = await prisma.order.findUnique({
-                where: { id: orderId },
-                include: { user: true },
-            });
-
-            if (order) {
-                const phoneE164 = normalizePhoneE164(order.customerPhone);
-                if (phoneE164) {
-                    const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
-
-                    const thanksText = `Gentile ${name || 'Cliente'},\nLa ringraziamo per aver scelto FloreMoria. Se serve altro, siamo qui. 🌹`;
-                    await sendWhatsAppTextMessage(phoneE164, thanksText).catch((err) => {
-                        console.error('[order-status-filter] Errore invio ringraziamento:', err);
-                    });
-
-                    const userId = order.userId;
-                    let isFirstOrder = true;
-
-                    if (userId) {
-                        const pastOrdersCount = await prisma.order.count({
-                            where: {
-                                userId,
-                                deletedAt: null,
-                                id: { not: orderId },
-                                deliveryProof: { status: 'COMPLETED' },
-                            },
-                        });
-                        if (pastOrdersCount > 0) {
-                            isFirstOrder = false;
-                        }
-                    }
-
-                    if (isFirstOrder) {
-                        const reviewText =
-                            `Se desidera, può lasciare una recensione sulla sua esperienza qui: ${GOOGLE_REVIEW_URL}\n\n` +
-                            `Il Suo feedback ci aiuta a prendere cura di ogni ricordo con ancora più dedizione. Grazie ancora da tutto lo Staff.`;
-                        await sendWhatsAppTextMessage(phoneE164, reviewText).catch((err) => {
-                            console.error('[order-status-filter] Errore invio richiesta recensione:', err);
-                        });
-                    }
-                }
-            }
-        }
     } catch (error) {
         console.error(`[order-status-filter] Errore durante l'elaborazione del cambio stato per ordine ${orderId}:`, error);
     }

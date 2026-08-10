@@ -189,20 +189,44 @@ async function tikTokApiPost<T>(
     throw new Error(message);
   }
 
+  const rawText = await res.text().catch(() => '');
   let payload: T & { data?: Record<string, unknown>; error?: TikTokErrorBody };
+
   try {
-    payload = (await res.json()) as typeof payload;
+    payload = (rawText ? JSON.parse(rawText) : {}) as typeof payload;
   } catch {
+    const preview = rawText.slice(0, 400).replace(/\s+/g, ' ');
+    const is413 =
+      res.status === 413 ||
+      /request entity too large|payload too large|413/i.test(rawText);
+    const isHtml = /<!doctype html|<html/i.test(rawText);
     logTikTokApiVerbal(`API_NON_JSON:${context}`, {
       httpStatus: res.status,
       path,
+      is413,
+      isHtml,
+      bodyPreview: preview,
     });
+    if (is413) {
+      throw new Error(
+        'Payload o file video troppo grande per il caricamento diretto (HTTP 413). ' +
+          'Usa un URL B-roll HTTPS pubblico (PULL_FROM_URL) più leggero o riduci la durata/risoluzione del Reel.'
+      );
+    }
     throw new Error(
-      `TikTok ha restituito una risposta non-JSON (HTTP ${res.status}) su ${path}. Possibile timeout gateway o token da rinnovare.`
+      `TikTok ha restituito una risposta non-JSON (HTTP ${res.status}) su ${path}` +
+        (preview ? `: ${preview}` : '') +
+        '. Possibile timeout gateway, HTML di errore o token da rinnovare.'
     );
   }
 
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error(
+        'Payload o file video troppo grande per il caricamento diretto (HTTP 413). ' +
+          'Verificare l\'URL B-roll HTTPS (PULL_FROM_URL) e non inviare buffer pesanti nel body.'
+      );
+    }
     throwTikTokApiError(context, payload, res.status);
   }
 
@@ -505,7 +529,7 @@ async function publishTikTokVideoPost(
   }
 
   if (capability.canDirectPost && postInfo) {
-    // Preferenza guidelines: PULL_FROM_URL se il media è già sul nostro storage HTTPS.
+    // Priorità Content Posting v2: solo URL HTTPS nel body (PULL_FROM_URL), mai Base64.
     try {
       const publishId = await initTikTokVideoPullFromUrl(
         accessToken,
@@ -519,45 +543,64 @@ async function publishTikTokVideoPost(
     } catch (pullErr) {
       const pullMsg = pullErr instanceof Error ? pullErr.message : String(pullErr);
       const pullClass = classifyTikTokApiFailure({ message: pullMsg });
-      logTikTokApiVerbal('PULL_FROM_URL_FALLBACK_FILE_UPLOAD', {
+      logTikTokApiVerbal('PULL_FROM_URL_FAILED', {
         reason: pullMsg,
         classification: pullClass,
-        publicVideoHost: (() => {
-          try {
-            return new URL(publicVideoUrl).host;
-          } catch {
-            return 'invalid-url';
-          }
-        })(),
+        publicVideoUrl: publicVideoUrl.slice(0, 220),
       });
-      // Auth / audit: non ritentare con FILE_UPLOAD.
+      // Auth / audit / 413: non ritentare con upload chunk pesante.
       if (
         pullClass === 'client_audit' ||
         pullClass === 'scope_permission' ||
         isTikTokUnauditedClientError(pullMsg) ||
-        isTikTokScopeAuthorizationError(pullMsg)
+        isTikTokScopeAuthorizationError(pullMsg) ||
+        /413|troppo grande|entity too large/i.test(pullMsg)
       ) {
         throw pullErr instanceof Error ? pullErr : new Error(pullMsg);
       }
-    }
 
-    const videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
-    const contentType = videoMimeTypeFromUrl(publicVideoUrl);
-    const publishId = await uploadTikTokVideoBytes(
-      videoBytes,
-      accessToken,
-      postInfo,
-      contentType,
-      'direct'
-    );
-    console.log(
-      `[POSTMAN] TikTok video Direct Post FILE_UPLOAD — publish_id ${publishId}`
-    );
-    return publishId;
+      // Fallback FILE_UPLOAD solo per clip piccole (evita body/memoria eccessivi).
+      const MAX_FILE_UPLOAD_BYTES = 32 * 1024 * 1024;
+      let videoBytes: Buffer;
+      try {
+        videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
+      } catch (dlErr) {
+        throw new Error(
+          `PULL_FROM_URL fallito (${pullMsg}) e download B-roll per FILE_UPLOAD non riuscito. ` +
+            `Verificare l'URL HTTPS pubblico: ${publicVideoUrl.slice(0, 160)}`
+        );
+      }
+      if (videoBytes.length > MAX_FILE_UPLOAD_BYTES) {
+        throw new Error(
+          'Payload o file video troppo grande per il caricamento diretto. ' +
+            'Verificare l\'URL B-roll HTTPS (PULL_FROM_URL) — evita upload chunk di file > 32MB.'
+        );
+      }
+      const contentType = videoMimeTypeFromUrl(publicVideoUrl);
+      const publishId = await uploadTikTokVideoBytes(
+        videoBytes,
+        accessToken,
+        postInfo,
+        contentType,
+        'direct'
+      );
+      console.log(
+        `[POSTMAN] TikTok video Direct Post FILE_UPLOAD (fallback piccolo) — publish_id ${publishId}`
+      );
+      return publishId;
+    }
   }
 
   if (capability.canInboxUpload) {
+    // Inbox richiede FILE_UPLOAD: limita dimensione per evitare 413 / OOM.
+    const MAX_INBOX_BYTES = 32 * 1024 * 1024;
     const videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
+    if (videoBytes.length > MAX_INBOX_BYTES) {
+      throw new Error(
+        'Payload o file video troppo grande per Inbox Upload. ' +
+          'Serve Direct Post con PULL_FROM_URL (scope video.publish) su URL B-roll HTTPS pubblico.'
+      );
+    }
     const contentType = videoMimeTypeFromUrl(publicVideoUrl);
     const publishId = await uploadTikTokVideoBytes(
       videoBytes,

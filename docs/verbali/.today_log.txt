@@ -7,3 +7,5 @@
 [2026-08-10 17:43] fix/tiktok: Content Posting v2 — post_info completo, PULL_FROM_URL+FILE_UPLOAD, log error.code/message/log_id, errori unaudited 40001/40004.
 
 [2026-08-10 18:07] fix/tiktok: errori connessione dettagliati, token freschi (requireFresh), pre-flight HEAD/GET video prima di video/init.
+
+[2026-08-10 18:40] fix/social: TikTok parsing text→JSON (413), PULL_FROM_URL prioritario; Reel FB/IG/TikTok fallback automatico Pexels se Veo fallisce.

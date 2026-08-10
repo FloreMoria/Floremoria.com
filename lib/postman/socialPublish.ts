@@ -23,7 +23,7 @@ import {
   pollInstagramMediaContainer,
   type MetaEnv,
 } from '@/lib/postman/metaStoriesReels';
-import { ensureCampaignReelVideoUrl } from '@/lib/postman/reelVideo';
+import { ensureCampaignReelVideo } from '@/lib/postman/reelVideo';
 import {
   resolveEffectiveContentFormat,
   resolvePublishVideoUrl,
@@ -67,6 +67,12 @@ export interface CampaignPublishResult {
   privatePost?: boolean;
   /** Formato effettivamente usato in pubblicazione (es. video forzato a REEL). */
   contentFormat?: ContentFormat;
+  /** Sorgente video Reel: veo | pexels | broll | … */
+  videoSource?: string;
+  /** True se il Reel è stato recuperato da Pexels perché Veo non era disponibile. */
+  usedPexelsFallback?: boolean;
+  /** Avviso UI (es. fallback Pexels). */
+  notice?: string | null;
 }
 
 interface SocialPublishEnv extends MetaEnv {
@@ -678,6 +684,9 @@ export async function publishCampaignToChannel(
       videoUrl: payload.videoUrl,
       imageUrl: payload.imageUrl,
     });
+    let videoSource: string | undefined;
+    let usedPexelsFallback = false;
+    let reelNotice: string | null = null;
     const contentFormat = resolveEffectiveContentFormat({
       contentFormat: payload.contentFormat,
       videoUrl,
@@ -685,15 +694,18 @@ export async function publishCampaignToChannel(
     });
 
     if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
-      videoUrl =
-        (await ensureCampaignReelVideoUrl({
-          campaignId: payload.id,
-          imageUrl: payload.imageUrl,
-          copy: payload.copy,
-          category: payload.category,
-          deceasedName: payload.deceasedName,
-          blobToken: env.blobToken,
-        })) ?? undefined;
+      const reel = await ensureCampaignReelVideo({
+        campaignId: payload.id,
+        imageUrl: payload.imageUrl,
+        copy: payload.copy,
+        category: payload.category,
+        deceasedName: payload.deceasedName,
+        blobToken: env.blobToken,
+      });
+      videoUrl = reel?.url;
+      videoSource = reel?.source;
+      usedPexelsFallback = Boolean(reel?.usedPexelsFallback);
+      reelNotice = reel?.notice ?? null;
     }
 
     if (
@@ -711,7 +723,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl) {
             throw new Error(
-              'Video reel mancante. Verifica GEMINI_API_KEY e accesso Veo (MARKETING_VEO_MODEL) su Google AI Studio.'
+              'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
             );
           }
           const fbReel = await publishToFacebookReel(
@@ -730,7 +742,7 @@ export async function publishCampaignToChannel(
         if (contentFormat === ContentFormat.REEL) {
           if (!videoUrl?.trim()) {
             throw new Error(
-              'Video reel mancante. Verifica GEMINI_API_KEY e accesso Veo (MARKETING_VEO_MODEL) su Google AI Studio.'
+              'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
             );
           }
           const igReel = await publishToInstagramReel(
@@ -749,6 +761,11 @@ export async function publishCampaignToChannel(
         }
         break;
       case MarketingChannel.TIKTOK: {
+        if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
+          throw new Error(
+            'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+          );
+        }
         const tiktokResult = await publishToTikTok({
           campaignId: payload.id,
           contentFormat,
@@ -770,6 +787,9 @@ export async function publishCampaignToChannel(
           videoUrl,
           contentFormat,
           privatePost: tiktokResult.privatePost,
+          videoSource,
+          usedPexelsFallback,
+          notice: reelNotice,
         };
       }
       case MarketingChannel.LINKEDIN:
@@ -816,6 +836,9 @@ export async function publishCampaignToChannel(
       permalink,
       videoUrl,
       contentFormat,
+      videoSource,
+      usedPexelsFallback,
+      notice: reelNotice,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

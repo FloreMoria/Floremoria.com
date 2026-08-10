@@ -408,6 +408,9 @@ export default function CampaignsDashboardClient() {
         privatePost?: boolean;
         error?: string;
         errorKind?: string;
+        usedPexelsFallback?: boolean;
+        notice?: string | null;
+        videoSource?: string | null;
       };
       try {
         data = await res.json();
@@ -421,17 +424,26 @@ export default function CampaignsDashboardClient() {
       }
 
       if (data.success) {
+        const pexelsNote =
+          data.usedPexelsFallback || data.videoSource === 'pexels'
+            ? data.notice ||
+              'Reel pubblicato con B-roll Pexels (fallback automatico: Veo non disponibile).'
+            : null;
         setSuccessMessage(
           data.simulated
             ? 'Pubblicazione simulata con successo (credenziali reali assenti).'
             : data.privatePost
-              ? 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
-              : 'Post pubblicato con successo sui canali ufficiali!'
+              ? pexelsNote
+                ? `${pexelsNote} Post TikTok in modalità privata (Solo io).`
+                : 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
+              : pexelsNote
+                ? `${pexelsNote} Pubblicato sui canali ufficiali.`
+                : 'Post pubblicato con successo sui canali ufficiali!'
         );
         setCampaigns(prev =>
           prev.map(c => (c.id === campaignId ? { ...c, status: 'PUBLISHED' as const } : c))
         );
-        setTimeout(() => setSuccessMessage(null), 6000);
+        setTimeout(() => setSuccessMessage(null), 7000);
       } else {
         setErrorMessage(data.error || 'Errore durante la pubblicazione.');
       }

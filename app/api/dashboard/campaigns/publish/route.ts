@@ -115,6 +115,10 @@ export async function POST(request: Request) {
         permalink: result.permalink,
         contentFormat: result.contentFormat,
         privatePost: result.privatePost,
+        videoUrl: result.videoUrl,
+        videoSource: result.videoSource ?? null,
+        usedPexelsFallback: Boolean(result.usedPexelsFallback),
+        notice: result.notice ?? null,
       });
     }
 

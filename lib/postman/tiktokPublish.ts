@@ -45,12 +45,39 @@ const TIKTOK_API_BASE = 'https://open.tiktokapis.com';
 const TIKTOK_MIN_CHUNK_BYTES = 5 * 1024 * 1024;
 const TIKTOK_DEFAULT_CHUNK_BYTES = 10 * 1024 * 1024;
 const TIKTOK_MAX_CHUNK_BYTES = 64 * 1024 * 1024;
+const TIKTOK_API_TIMEOUT_MS = 120_000;
+const TIKTOK_MEDIA_PREFLIGHT_TIMEOUT_MS = 25_000;
 
 type TikTokErrorBody = {
   code?: string;
   message?: string;
   log_id?: string;
 };
+
+function formatTikTokNetworkError(context: string, err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const name = err instanceof Error ? err.name : '';
+  if (/timeout|aborted|AbortError/i.test(raw) || name === 'TimeoutError' || name === 'AbortError') {
+    return (
+      `Timeout di rete verso TikTok (${context}). ` +
+      'Verifica che l\'URL del video B-roll sia HTTPS raggiungibile e che l\'Access Token non sia scaduto; poi riprova.'
+    );
+  }
+  if (/fetch failed|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket|network|Failed to fetch/i.test(raw)) {
+    return (
+      `Connessione a TikTok fallita (${context}): ${raw}. ` +
+      'Possibili cause: rete/DNS, URL video non raggiungibile da TikTok, oppure Access Token da rinnovare (Riautorizza TikTok).'
+    );
+  }
+  return `Errore di rete TikTok (${context}): ${raw}`;
+}
+
+function isLikelyNetworkFailure(err: unknown): boolean {
+  const raw = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  return /timeout|aborted|AbortError|fetch failed|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket|network|Failed to fetch/i.test(
+    raw
+  );
+}
 
 function videoMimeTypeFromUrl(url: string): string {
   const lower = url.toLowerCase();
@@ -141,14 +168,26 @@ async function tikTokApiPost<T>(
   body: Record<string, unknown> = {},
   context = path
 ): Promise<T & { data?: Record<string, unknown>; error?: TikTokErrorBody }> {
-  const res = await fetch(`${TIKTOK_API_BASE}${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${TIKTOK_API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIKTOK_API_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const message = formatTikTokNetworkError(context, err);
+    logTikTokApiVerbal(`API_NETWORK_FAIL:${context}`, {
+      path,
+      message,
+      detail: err instanceof Error ? err.message : String(err),
+    });
+    throw new Error(message);
+  }
 
   let payload: T & { data?: Record<string, unknown>; error?: TikTokErrorBody };
   try {
@@ -158,7 +197,9 @@ async function tikTokApiPost<T>(
       httpStatus: res.status,
       path,
     });
-    throw new Error(`TikTok API non-JSON (${res.status}) su ${path}`);
+    throw new Error(
+      `TikTok ha restituito una risposta non-JSON (HTTP ${res.status}) su ${path}. Possibile timeout gateway o token da rinnovare.`
+    );
   }
 
   if (!res.ok) {
@@ -328,16 +369,32 @@ async function publishTikTokPhotoPost(
   return publishId;
 }
 
-/** Verifica URL HTTPS pubblico raggiungibile (TikTok PULL_FROM_URL). */
+/** Pre-flight: URL HTTPS pubblico e scaricabile prima di /video/init/. */
 async function assertPublicHttpsVideoUrl(url: string): Promise<void> {
   if (!/^https:\/\//i.test(url)) {
-    throw new Error(`Video TikTok non HTTPS pubblico: ${url.slice(0, 120)}`);
+    throw new Error(
+      `Pre-flight video fallito: l'URL B-roll non è HTTPS pubblico (${url.slice(0, 120)}). ` +
+        'Rigenera il Reel Ziggy/Pexels o verifica lo staging Blob.'
+    );
   }
+
+  const host = (() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return 'invalid-host';
+    }
+  })();
+
   try {
-    const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+    const head = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: AbortSignal.timeout(TIKTOK_MEDIA_PREFLIGHT_TIMEOUT_MS),
+    });
     if (head.ok) {
-      logTikTokApiVerbal('MEDIA_URL_OK', {
-        urlHost: new URL(url).host,
+      logTikTokApiVerbal('MEDIA_PREFLIGHT_OK', {
+        urlHost: host,
         status: head.status,
         contentType: head.headers.get('content-type'),
         contentLength: head.headers.get('content-length'),
@@ -349,18 +406,31 @@ async function assertPublicHttpsVideoUrl(url: string): Promise<void> {
       method: 'GET',
       headers: { Range: 'bytes=0-1023' },
       redirect: 'follow',
+      signal: AbortSignal.timeout(TIKTOK_MEDIA_PREFLIGHT_TIMEOUT_MS),
     });
     if (!get.ok && get.status !== 206) {
-      throw new Error(`Video non scaricabile (${get.status}) da ${new URL(url).host}`);
+      throw new Error(
+        `Pre-flight video fallito: URL B-roll non scaricabile (HTTP ${get.status}) da ${host}. ` +
+          'TikTok non potrà recuperare il media — verifica staging HTTPS o rigenera il Reel.'
+      );
     }
-    logTikTokApiVerbal('MEDIA_URL_OK_RANGE', {
-      urlHost: new URL(url).host,
+    logTikTokApiVerbal('MEDIA_PREFLIGHT_OK_RANGE', {
+      urlHost: host,
       status: get.status,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    logTikTokApiVerbal('MEDIA_URL_FAIL', { urlPreview: url.slice(0, 180), message: msg });
-    throw e instanceof Error ? e : new Error(msg);
+    if (e instanceof Error && /Pre-flight video fallito/.test(e.message)) {
+      throw e;
+    }
+    const message = formatTikTokNetworkError('media_preflight', e);
+    logTikTokApiVerbal('MEDIA_PREFLIGHT_FAIL', {
+      urlPreview: url.slice(0, 180),
+      message,
+    });
+    throw new Error(
+      `Pre-flight video fallito su ${host}: ${message}. ` +
+        'L\'URL del B-roll non è raggiungibile prima della chiamata a /v2/post/publish/video/init/.'
+    );
   }
 }
 
@@ -506,7 +576,16 @@ async function publishTikTokVideoPost(
 }
 
 export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTokPublishResult> {
-  const env = await getOrRefreshTikTokToken();
+  const env = await getOrRefreshTikTokToken({ requireFresh: true });
+
+  if (env.tokenError && !env.accessToken) {
+    logTikTokApiVerbal('PUBLISH_BLOCKED_TOKEN', {
+      campaignId: input.campaignId,
+      tokenError: env.tokenError,
+      expiresAt: env.expiresAt ?? null,
+    });
+    return { success: false, error: env.tokenError };
+  }
 
   if (!env.accessToken) {
     console.warn(
@@ -519,6 +598,11 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     };
   }
 
+  if (env.tokenError) {
+    // Token ancora usabile ma refresh ha segnalato problemi: logga e prosegui.
+    console.warn(`[POSTMAN] TikTok token warning: ${env.tokenError}`);
+  }
+
   const grantedScopes = (await getStoredTikTokGrantedScopes()) || '';
   const capability = getTikTokPublishCapability(grantedScopes);
 
@@ -528,6 +612,7 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
     hasVideoUrl: Boolean(input.videoUrl?.trim()),
     grantedScopes: parseTikTokGrantedScopes(grantedScopes),
     capability,
+    tokenExpiresAt: env.expiresAt ?? null,
   });
 
   if (!hasTikTokPublishScopes(grantedScopes)) {
@@ -599,18 +684,23 @@ export async function publishToTikTok(input: TikTokPublishInput): Promise<TikTok
       campaignId: input.campaignId,
       classification,
       message: msg,
+      network: isLikelyNetworkFailure(e),
     });
-    const error = isTikTokUnauditedClientError(msg)
-      ? formatTikTokUnauditedClientError()
-      : isTikTokScopeAuthorizationError(msg)
-        ? formatTikTokScopeAuthorizationError()
-        : isTikTokUrlOwnershipError(msg)
-          ? formatTikTokUrlOwnershipError()
-          : isTikTokGuidelinesError(msg)
-            ? formatTikTokGuidelinesError(true)
-            : classification === 'client_audit'
-              ? formatTikTokUnauditedClientError()
-              : msg;
+    const error = isLikelyNetworkFailure(e)
+      ? msg.includes('Pre-flight') || msg.includes('TikTok')
+        ? msg
+        : formatTikTokNetworkError('publish', e)
+      : isTikTokUnauditedClientError(msg)
+        ? formatTikTokUnauditedClientError()
+        : isTikTokScopeAuthorizationError(msg)
+          ? formatTikTokScopeAuthorizationError()
+          : isTikTokUrlOwnershipError(msg)
+            ? formatTikTokUrlOwnershipError()
+            : isTikTokGuidelinesError(msg)
+              ? formatTikTokGuidelinesError(true)
+              : classification === 'client_audit'
+                ? formatTikTokUnauditedClientError()
+                : msg;
     console.error(`[POSTMAN] TikTok errore campagna ${input.campaignId}: ${msg}`);
     return { success: false, error };
   }

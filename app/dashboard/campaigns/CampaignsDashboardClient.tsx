@@ -401,7 +401,25 @@ export default function CampaignsDashboardClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId, tiktokUx }),
       });
-      const data = await res.json();
+
+      let data: {
+        success?: boolean;
+        simulated?: boolean;
+        privatePost?: boolean;
+        error?: string;
+        errorKind?: string;
+      };
+      try {
+        data = await res.json();
+      } catch {
+        setErrorMessage(
+          res.status === 504 || res.status === 502
+            ? 'Timeout/gateway durante la pubblicazione TikTok. Verifica URL video B-roll (HTTPS) e Access Token, poi riprova.'
+            : `Risposta non valida dal server di pubblicazione (HTTP ${res.status}).`
+        );
+        return;
+      }
+
       if (data.success) {
         setSuccessMessage(
           data.simulated
@@ -417,8 +435,13 @@ export default function CampaignsDashboardClient() {
       } else {
         setErrorMessage(data.error || 'Errore durante la pubblicazione.');
       }
-    } catch {
-      setErrorMessage('Errore di rete durante la chiamata di pubblicazione.');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : '';
+      setErrorMessage(
+        detail
+          ? `Errore di connessione in pubblicazione: ${detail}. Se è TikTok, controlla video HTTPS e rinnovo Access Token.`
+          : 'Errore di connessione in pubblicazione. Verifica rete, URL video B-roll e Access Token TikTok.'
+      );
     } finally {
       setPublishingId(null);
     }
@@ -807,7 +830,16 @@ export default function CampaignsDashboardClient() {
         setErrorMessage(data.error || 'Errore nel caricamento del post.');
       }
     } catch (err) {
-      setErrorMessage('Errore di connessione durante il caricamento del post.');
+      const detail = err instanceof Error ? err.message : '';
+      setErrorMessage(
+        manualChannel === 'TIKTOK'
+          ? detail
+            ? `Errore di connessione durante il caricamento del post TikTok: ${detail}. Verifica rete e riprova.`
+            : 'Errore di connessione durante il caricamento del post TikTok. Verifica rete, poi pubblica dal tab TikTok (video HTTPS + Access Token validi).'
+          : detail
+            ? `Errore di connessione durante il caricamento del post: ${detail}`
+            : 'Errore di connessione durante il caricamento del post.'
+      );
     } finally {
       setUploadProgress(false);
     }

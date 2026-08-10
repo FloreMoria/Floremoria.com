@@ -5,3 +5,5 @@
 [2026-08-10 17:31] fix/tiktok: OAuth scopes obbligatori (user.info.basic+video.publish+video.upload), Direct Post vs Inbox Content Posting v2, log verbale errori API.
 
 [2026-08-10 17:43] fix/tiktok: Content Posting v2 — post_info completo, PULL_FROM_URL+FILE_UPLOAD, log error.code/message/log_id, errori unaudited 40001/40004.
+
+[2026-08-10 18:07] fix/tiktok: errori connessione dettagliati, token freschi (requireFresh), pre-flight HEAD/GET video prima di video/init.

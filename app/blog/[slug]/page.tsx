@@ -21,6 +21,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return {
         title: `${article.title} | FloreMoria Blog`,
         description: article.excerpt,
+        keywords: article.keywords,
+        openGraph: {
+            title: article.title,
+            description: article.excerpt,
+            type: 'article',
+            publishedTime: article.date,
+            images: [{ url: article.coverImage }],
+        },
     };
 }
 

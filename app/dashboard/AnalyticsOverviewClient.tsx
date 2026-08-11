@@ -13,7 +13,6 @@ import type {
 
 import { useRouter } from 'next/navigation';
 import MissionControlHub from './MissionControlHub';
-import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 
 export default function AnalyticsOverviewClient({
     initialGa4Overview,
@@ -365,29 +364,26 @@ export default function AnalyticsOverviewClient({
                     </button>
                 </div>
 
-                {/* ABOVE THE FOLD WRAPPER */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* ABOVE THE FOLD WRAPPER (Zero Scroll Dashboard Engine) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 lg:h-[85vh] lg:max-h-[900px]">
 
                     {/* LEFT COL: Mission Control (65%) */}
-                    <div className="lg:col-span-2 flex flex-col min-h-0">
-                        <MissionControlHub orders={initialOrders} ga4ConsoleUrl={ga4ConsoleUrl} />
-                    </div>
-
-                    {/* RIGHT COL: Calendario Ordini + Verbali/Log (35%) */}
-                    <div className="lg:col-span-1 flex flex-col space-y-6 min-h-0">
-                        {/* Calendario Ordini */}
-                        <OrdersCalendar
+                    <div className="lg:col-span-2 h-full flex flex-col min-h-0">
+                        <MissionControlHub
                             orders={initialOrders}
+                            ga4ConsoleUrl={ga4ConsoleUrl}
                             florists={florists}
                             products={products}
                             users={users}
                             deceasedProfiles={deceasedProfiles}
-                            onRefresh={() => router.refresh()}
                             darkMode={darkMode}
                         />
+                    </div>
 
-                        {/* Log Activity Bar - Registro Verbali Operativi */}
-                        <div className="bg-slate-50 border-t-4 lg:border-t-0 lg:border-l-4 border-slate-800 rounded-2xl shadow-sm p-6 flex flex-col overflow-hidden">
+                    {/* RIGHT COL: Verbali/Log (35%) */}
+                    <div className="lg:col-span-1 h-full min-h-0">
+                        {/* Log Activity Bar - Full height card */}
+                        <div className="h-full bg-slate-50 border-t-4 lg:border-t-0 lg:border-l-4 border-slate-800 rounded-2xl shadow-sm p-6 flex flex-col overflow-hidden">
                             {logsLoading ? (
                                 <div className="animate-pulse flex flex-col h-full space-y-4">
                                     <div className="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>

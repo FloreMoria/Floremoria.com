@@ -39,4 +39,6 @@
 [2026-08-11 17:34] fix/tiktok: Route App Router per verifica dominio tiktok7q8… (non solo public/, non ignorato).
 [2026-08-11 17:48] chore/tiktok: Verifica dominio tiktokhn9zw4… in public/ + route App Router (whitelist gitignore).
 [2026-08-11 17:50] feat(dashboard+calendar): implementato il componente interattivo `OrdersCalendar` (`components/dashboard/OrdersCalendar.tsx`) nella pagina Overview (`app/dashboard/page.tsx` & `AnalyticsOverviewClient.tsx`) posizionato a fianco del Command Center e subito sopra il Registro Verbali Operativi; filtro automatico ordini per data consegna (`deliveryDate`), badge cromatici per categorie (FF, FT, FA, FP) e stati (Consegnato, In consegna, In attesa, Annullato), viste Mese ed Agenda, modale dettaglio rapido e integrazione con la pianificazione/creazione ordini.
+[2026-08-11 19:00] refactor(dashboard+overview): integrato il componente `OrdersCalendar` all'interno della card "Live Orders Stream" in `MissionControlHub.tsx` tramite selettore a schede (Tab "Stream Live" vs "Calendario Consegne"); ripristinato il "Registro Verbali Operativi" a fianco del Command Center a piena altezza (colonna 35% in layout a due colonne) per un'interfaccia pulita e bilanciata.
+
 

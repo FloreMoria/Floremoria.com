@@ -1,7 +1,6 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
-import { Activity, AlertCircle, CheckCircle2, LayoutGrid } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle2, LayoutGrid, Calendar as CalendarIcon, List } from 'lucide-react';
+import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 
 type HubButton = {
     id: string;
@@ -36,9 +35,19 @@ const ROW3 = [
 export default function MissionControlHub({
     orders,
     ga4ConsoleUrl = 'https://analytics.google.com',
+    florists = [],
+    products = [],
+    users = [],
+    deceasedProfiles = [],
+    darkMode = false,
 }: {
     orders: any[];
     ga4ConsoleUrl?: string;
+    florists?: any[];
+    products?: any[];
+    users?: any[];
+    deceasedProfiles?: any[];
+    darkMode?: boolean;
 }) {
     const ROW1: HubButton[] = ROW1_BASE.map((btn) =>
         btn.id === 'ga4' ? { ...btn, url: ga4ConsoleUrl } : btn,
@@ -55,7 +64,8 @@ export default function MissionControlHub({
               : btn,
     );
     const [states, setStates] = useState<Record<string, string>>({});
-    
+    const [ordersViewTab, setOrdersViewTab] = useState<'stream' | 'calendar'>('stream');
+
     useEffect(() => {
         const fetchStates = async () => {
             try {
@@ -149,61 +159,102 @@ export default function MissionControlHub({
                 </div>
             </div>
 
-            {/* REAL-TIME ORDER STREAM */}
+            {/* REAL-TIME ORDER STREAM & CALENDARIO CONSEGNE */}
             <div className="bg-white rounded-3xl p-4 md:p-6 border border-slate-200 shadow-sm relative overflow-hidden flex flex-col flex-1 min-h-0">
-                <div className="flex justify-between items-center mb-4 shrink-0">
+                <div className="flex justify-between items-center mb-4 shrink-0 flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                         <Activity className="text-blue-500" size={20} />
-                        <h3 className="font-bold text-lg text-slate-800 uppercase">Live Orders Stream</h3>
+                        <h3 className="font-bold text-lg text-slate-800 uppercase">
+                            {ordersViewTab === 'stream' ? 'Live Orders Stream' : 'Calendario Consegne'}
+                        </h3>
+                    </div>
+
+                    {/* Integrated Tab Switcher */}
+                    <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 text-xs font-bold shadow-inner">
+                        <button
+                            onClick={() => setOrdersViewTab('stream')}
+                            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                                ordersViewTab === 'stream'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            <List size={14} className="text-blue-500" />
+                            <span>Stream Live ({orders.length})</span>
+                        </button>
+                        <button
+                            onClick={() => setOrdersViewTab('calendar')}
+                            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                                ordersViewTab === 'calendar'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                        >
+                            <CalendarIcon size={14} className="text-fm-gold" />
+                            <span>Calendario</span>
+                        </button>
                     </div>
                 </div>
 
-                <div className="overflow-y-auto custom-scrollbar flex-1 min-h-[150px] -mx-4 px-4 md:-mx-6 md:px-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-white z-10">
-                            <tr className="border-b border-slate-100 text-[10px] uppercase tracking-widest text-slate-500">
-                                <th className="pb-3 px-4 font-bold">Stato / Alert</th>
-                                <th className="pb-3 px-4 font-bold">Data Ingresso</th>
-                                <th className="pb-3 px-4 font-bold">ID Ordine</th>
-                                <th className="pb-3 px-4 font-bold">Destinazione</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm">
-                            {orders.slice(0, 10).map((order) => {
-                                // Real-time issue logic
-                                const hasIssue = order.status === 'PENDING' || order.additionalInstructions?.toLowerCase().includes('urgent');
-                                
-                                return (
-                                    <tr key={order.id} className={`border-b border-slate-50 last:border-0 transition-colors ${hasIssue ? 'bg-red-50/20 hover:bg-red-50/50' : 'hover:bg-slate-50/50'}`}>
-                                        <td className="py-3 px-4">
-                                            {hasIssue ? (
-                                                <div className="flex items-center gap-1.5 text-red-600 bg-white border border-red-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
-                                                    <AlertCircle size={14} /> Critical / Pending
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-1.5 text-emerald-600 bg-white border border-emerald-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
-                                                    <CheckCircle2 size={14} /> Processed
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="py-3 px-4 text-slate-500 font-mono text-xs">
-                                            {new Date(order.createdAt).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
-                                        </td>
-                                        <td className="py-3 px-4 font-mono font-medium text-slate-800">{order.orderNumber}</td>
-                                        <td className="py-3 px-4 truncate max-w-[250px] text-slate-700 font-medium">
-                                            {order.cemeteryName} ({order.cemeteryCity})
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {orders.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} className="py-8 text-center text-gray-400 italic">Nessun ordine nel live stream.</td>
+                {ordersViewTab === 'stream' ? (
+                    <div className="overflow-y-auto custom-scrollbar flex-1 min-h-[150px] -mx-4 px-4 md:-mx-6 md:px-6">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 bg-white z-10">
+                                <tr className="border-b border-slate-100 text-[10px] uppercase tracking-widest text-slate-500">
+                                    <th className="pb-3 px-4 font-bold">Stato / Alert</th>
+                                    <th className="pb-3 px-4 font-bold">Data Ingresso</th>
+                                    <th className="pb-3 px-4 font-bold">ID Ordine</th>
+                                    <th className="pb-3 px-4 font-bold">Destinazione</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="text-sm">
+                                {orders.slice(0, 10).map((order) => {
+                                    // Real-time issue logic
+                                    const hasIssue = order.status === 'PENDING' || order.additionalInstructions?.toLowerCase().includes('urgent');
+                                    
+                                    return (
+                                        <tr key={order.id} className={`border-b border-slate-50 last:border-0 transition-colors ${hasIssue ? 'bg-red-50/20 hover:bg-red-50/50' : 'hover:bg-slate-50/50'}`}>
+                                            <td className="py-3 px-4">
+                                                {hasIssue ? (
+                                                    <div className="flex items-center gap-1.5 text-red-600 bg-white border border-red-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
+                                                        <AlertCircle size={14} /> Critical / Pending
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1.5 text-emerald-600 bg-white border border-emerald-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">
+                                                        <CheckCircle2 size={14} /> Processed
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4 text-slate-500 font-mono text-xs">
+                                                {new Date(order.createdAt).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}
+                                            </td>
+                                            <td className="py-3 px-4 font-mono font-medium text-slate-800">{order.orderNumber}</td>
+                                            <td className="py-3 px-4 truncate max-w-[250px] text-slate-700 font-medium">
+                                                {order.cemeteryName} ({order.cemeteryCity})
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {orders.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="py-8 text-center text-gray-400 italic">Nessun ordine nel live stream.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="overflow-y-auto custom-scrollbar flex-1 min-h-[300px]">
+                        <OrdersCalendar
+                            orders={orders}
+                            florists={florists}
+                            products={products}
+                            users={users}
+                            deceasedProfiles={deceasedProfiles}
+                            darkMode={darkMode}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

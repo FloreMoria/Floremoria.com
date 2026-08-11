@@ -307,9 +307,9 @@ export function listApprovedWhatsAppTemplates(
     library?: TemplateLibrary
 ): WhatsAppTemplateDefinition[] {
     const florist = [
-        getProactiveWhatsAppTemplate(),
         ...listVeraFloristLibraryTemplates().filter((t) => t.id !== 'florist_reminder'),
         getFloristReminderWhatsAppTemplate(),
+        getProactiveWhatsAppTemplate(),
     ];
     const users = listVeraUserLibraryTemplates().map((t) => {
         if (t.id === 'customer_waiting_update') return getCustomerWaitingUpdateWhatsAppTemplate();

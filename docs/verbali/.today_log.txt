@@ -25,3 +25,5 @@
 [2026-08-11 10:22] fix/whatsapp: dedup florist_repeat (FLORIST_NEW_ORDER_TEMPLATE) per Punto A a 11 variabili.
 [2026-08-11 10:25] feat(pinterest+agent): implementato Agente AI per la pubblicazione quotidiana dei Pin Pinterest `lib/social/pinterestAgent.ts` con rotazione ciclica dei 5 temi (Persone e ricordi affettuosi, Solo composizioni floreali e botanica, Funerali e cerimonie, Cura della tomba al cimitero, Pet Memorial) e tono gioioso/sereno/liturgico; schedulata rotta cron giornaliera `app/api/cron/pinterest-daily/route.ts` alle 09:00 UTC in `vercel.json` (protezione `CRON_SECRET`).
 
+
+[2026-08-11 10:35] feat/whatsapp: Pre-popolamento automatico 11 variabili floremoria_nuovo_ordine_fiorista nel Command Center (seed ordine + form editabile).

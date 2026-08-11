@@ -186,3 +186,27 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     // Guardia finale: mai undefined/null/empty verso Meta (#132000).
     return params.map((p) => (p && String(p).trim() ? String(p).trim() : '-'));
 }
+
+/**
+ * Mappa i 11 body params Meta → chiavi form dashboard (bodySlots florist_repeat).
+ */
+export function floristNuovoOrdineParamsToFieldValues(params: string[]): Record<string, string> {
+    const keys = [
+        'floristFirstName',
+        'orderCode',
+        'deceasedName',
+        'deliveryDeadline',
+        'deliveryCity',
+        'deliveryPlace',
+        'productLabel',
+        'accessories',
+        'ticketText',
+        'floristPrice',
+        'deliveryUrl',
+    ] as const;
+    const out: Record<string, string> = {};
+    keys.forEach((key, i) => {
+        out[key] = (params[i] && String(params[i]).trim()) || '-';
+    });
+    return out;
+}

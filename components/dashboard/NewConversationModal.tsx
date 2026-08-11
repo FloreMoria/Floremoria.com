@@ -76,11 +76,20 @@ function seedFieldValues(
             field.key === 'floristFirstName'
         ) {
             values[field.key] =
-                contact.recipientFirstName || extractFirstName(contact.name) || values[field.key];
+                contact.recipientFirstName ||
+                extractFirstName(contact.name) ||
+                values[field.key] ||
+                '-';
             continue;
         }
         if (field.key === 'orderCode') {
-            values[field.key] = orderCode || values[field.key];
+            values[field.key] = orderCode || values[field.key] || '-';
+            continue;
+        }
+
+        // Template Meta: ogni {{n}} obbligatorio — all'apertura mai campi vuoti.
+        if (!(values[field.key] || '').trim()) {
+            values[field.key] = '-';
         }
     }
     return values;
@@ -199,8 +208,12 @@ export default function NewConversationModal({
 
         const library = contact.type === 'FLORIST' ? 'FLORIST' : 'UTENTE';
         const libraryTemplates = allTemplates.filter((t) => t.library === library);
+        // Fiorista: default su floremoria_nuovo_ordine_fiorista (11 variabili precompilate).
         const preferred =
             templateOverride ||
+            (contact.type === 'FLORIST'
+                ? libraryTemplates.find((t) => t.id === 'florist_repeat')
+                : null) ||
             libraryTemplates[0] ||
             selectedTemplate ||
             null;

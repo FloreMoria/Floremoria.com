@@ -18,7 +18,6 @@ const SLOT_UI: Record<
     userFirstName: { label: "Nome dell'Utente", placeholder: 'Es. Valentina' },
     recipientFirstName: { label: 'Nome destinatario', placeholder: 'Es. Carlo' },
     orderCode: { label: 'Codice ordine', placeholder: 'Es. FT-ME-26-002' },
-    floristPrice: { label: 'Compenso fiorista', placeholder: 'Es. Compenso €45' },
     deceasedName: { label: 'Nome del Defunto', placeholder: 'Es. Maria Rossi' },
     rememberedPerson: { label: 'Nome del Defunto', placeholder: 'Es. Maria Rossi' },
     cemeteryLabel: { label: 'Cimitero / luogo', placeholder: 'Es. Cimitero di Padova' },
@@ -27,6 +26,27 @@ const SLOT_UI: Record<
     deliveryUrl: {
         label: 'Link mini-app fiorista',
         placeholder: 'https://www.floremoria.com/fiorista/consegna/…',
+    },
+    deliveryDeadline: {
+        label: 'Scadenza consegna',
+        placeholder: 'Es. Martedì 11 Agosto 2026 entro le ore 10:00',
+    },
+    deliveryCity: {
+        label: 'Comune di consegna',
+        placeholder: 'Es. Pordenone (PN)',
+    },
+    deliveryPlace: {
+        label: 'Luogo di consegna',
+        placeholder: 'Es. Casa Funeraria San Marco',
+    },
+    productLabel: {
+        label: 'Prodotto',
+        placeholder: 'Es. Bouquet',
+    },
+    accessories: {
+        label: 'Accessori',
+        placeholder: 'Es. Nessun accessorio extra',
+        multiline: true,
     },
     magicLink: { label: 'MagicLink foto', placeholder: 'https://www.floremoria.com/f/…' },
     partnerCity: { label: 'Comune / zona', placeholder: 'Es. Padova' },
@@ -37,7 +57,8 @@ const SLOT_UI: Record<
     },
     luminoYesNo: { label: 'Lumino (Sì/No)', placeholder: 'Sì' },
     ticketYesNo: { label: 'Bigliettino (Sì/No)', placeholder: 'No' },
-    ticketText: { label: 'Testo biglietto', placeholder: 'Nessuno', multiline: true },
+    ticketText: { label: 'Testo biglietto / nastro', placeholder: 'Nessuno', multiline: true },
+    floristPrice: { label: 'Compenso per il servizio', placeholder: 'Es. 40€' },
     catalogUrl: {
         label: 'Link catalogo / GdM',
         placeholder: 'https://www.floremoria.com/fiori-sulle-tombe',
@@ -46,13 +67,13 @@ const SLOT_UI: Record<
 };
 
 export const FLORIST_LIBRARY_IDS: VeraTemplateId[] = [
+    'florist_repeat',
+    'florist_reminder',
+    'florist_tomb_not_found',
     'florist_first_001',
     'florist_first_002',
     'florist_first_003',
     'florist_first_004',
-    'florist_repeat',
-    'florist_reminder',
-    'florist_tomb_not_found',
 ];
 
 export const USER_LIBRARY_IDS: VeraTemplateId[] = [

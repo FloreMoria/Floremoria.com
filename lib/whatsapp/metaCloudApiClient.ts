@@ -35,8 +35,14 @@ export interface WhatsAppTemplateComponent {
 export interface WhatsAppTemplateSendOptions {
     /** Se impostato, valida il conteggio parametri body prima dell'invio. */
     expectedBodyParamCount?: number;
-    /** Header testo (es. template con variabile in header). */
+    /**
+     * Header testo con variabili Meta.
+     * Se 0 / undefined e `allowImageHeader` non è true → nessun blocco `header` nel payload
+     * (header statici Meta non richiedono components; header spurii causano #132000).
+     */
     expectedHeaderTextParamCount?: number;
+    /** Consente un header immagine anche senza parametri testo. */
+    allowImageHeader?: boolean;
 }
 
 export interface WhatsAppConnectionState {
@@ -151,20 +157,59 @@ function parseMetaGraphError(body: string): {
     message: string;
     code?: number;
     subcode?: number;
+    errorData?: unknown;
+    raw?: unknown;
 } {
     try {
         const data = JSON.parse(body) as {
-            error?: { message?: string; code?: number; error_subcode?: number };
+            error?: {
+                message?: string;
+                code?: number;
+                error_subcode?: number;
+                error_data?: unknown;
+                error_user_title?: string;
+                error_user_msg?: string;
+                fbtrace_id?: string;
+                type?: string;
+            };
         };
         const err = data.error;
         return {
             message: err?.message || body.slice(0, 200),
             code: err?.code,
             subcode: err?.error_subcode,
+            errorData: err?.error_data,
+            raw: data,
         };
     } catch {
-        return { message: body.slice(0, 200) };
+        return { message: body.slice(0, 200), raw: body };
     }
+}
+
+/** Log strutturato del payload template (name / language / components.parameters). */
+function logTemplatePayloadExact(payload: Record<string, unknown>): void {
+    const template = (payload.template ?? {}) as {
+        name?: string;
+        language?: { code?: string };
+        components?: unknown[];
+    };
+    console.log('[meta-cloud-api] ===== PAYLOAD EXACT → Meta /messages =====');
+    console.log(
+        JSON.stringify(
+            {
+                to: payload.to,
+                type: payload.type,
+                template: {
+                    name: template.name,
+                    language: { code: template.language?.code },
+                    components: template.components ?? [],
+                },
+            },
+            null,
+            2
+        )
+    );
+    console.log('[meta-cloud-api] ===== END PAYLOAD =====');
 }
 
 async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
@@ -182,9 +227,16 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
 
     const url = graphApiUrl(`/${config.phoneNumberId}/messages`);
     const payloadType = String(payload.type ?? 'unknown');
-    console.info(
-        `[meta-cloud-api] POST messages type=${payloadType} to=${String(payload.to ?? '')} body=${JSON.stringify(payload).slice(0, 2500)}`
-    );
+
+    // Debug mirato #132000: JSON esatto subito prima del fetch (senza token).
+    if (payloadType === 'template') {
+        logTemplatePayloadExact(payload);
+    } else {
+        console.log(
+            `[meta-cloud-api] POST ${url} type=${payloadType} payload=`,
+            JSON.stringify(payload)
+        );
+    }
 
     try {
         const controller = new AbortController();
@@ -204,7 +256,30 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
         if (!res.ok) {
             const body = await res.text().catch(() => '');
             const parsed = parseMetaGraphError(body);
-            console.error(`[meta-cloud-api] HTTP ${res.status} messages:`, body.slice(0, 400));
+            console.error('[meta-cloud-api] ===== META ERROR RESPONSE (full) =====');
+            console.error(
+                JSON.stringify(
+                    {
+                        httpStatus: res.status,
+                        url,
+                        error: {
+                            message: parsed.message,
+                            code: parsed.code,
+                            error_subcode: parsed.subcode,
+                            error_data: parsed.errorData,
+                        },
+                        raw: parsed.raw ?? body,
+                        outboundPayloadType: payloadType,
+                        outboundTemplateName:
+                            payloadType === 'template'
+                                ? (payload.template as { name?: string } | undefined)?.name
+                                : undefined,
+                    },
+                    null,
+                    2
+                )
+            );
+            console.error('[meta-cloud-api] ===== END META ERROR =====');
             return {
                 ok: false,
                 error: parsed.message,
@@ -221,7 +296,19 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
         return { ok: true, messageId };
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error('[meta-cloud-api] Errore invio messaggio:', msg);
+        console.error('[meta-cloud-api] ===== META FETCH EXCEPTION =====');
+        console.error(
+            JSON.stringify(
+                {
+                    message: msg,
+                    stack: e instanceof Error ? e.stack : undefined,
+                    outboundPayload: payload,
+                },
+                null,
+                2
+            )
+        );
+        console.error('[meta-cloud-api] ===== END META EXCEPTION =====');
         return { ok: false, error: msg };
     }
 }
@@ -355,37 +442,39 @@ export async function sendWhatsAppTemplateMessage(
         return { ok: false, error: 'invalid_phone' };
     }
 
-    // Strip SOLO header vuoti (senza parameters). Mantieni header con variabili/media
-    // richiesti da Meta (altrimenti #132000 su HEADER).
-    const stripped: WhatsAppTemplateComponent[] = [];
-    let removedEmptyHeaders = 0;
+    const expectedHeaderText = options?.expectedHeaderTextParamCount ?? 0;
+    const allowImageHeader = Boolean(options?.allowImageHeader);
+    const headerAllowed = expectedHeaderText > 0 || allowImageHeader;
+
+    // Controllo rigido: se il template Meta NON ha header variabile/media,
+    // rimuovi QUALSIASI blocco { type: "header" } (anche con parameters).
+    const cleaned: WhatsAppTemplateComponent[] = [];
+    let removedHeaders = 0;
     for (const c of components) {
-        if (c.type === 'header' && (!c.parameters || c.parameters.length === 0)) {
-            removedEmptyHeaders += 1;
-            continue;
+        if (c.type === 'header') {
+            if (!headerAllowed) {
+                removedHeaders += 1;
+                continue;
+            }
+            // Header consentito ma vuoto → scarta (Meta non vuole header statici nel payload).
+            if (!c.parameters || c.parameters.length === 0) {
+                removedHeaders += 1;
+                continue;
+            }
         }
-        stripped.push(c);
+        cleaned.push(c);
     }
-    if (removedEmptyHeaders > 0) {
+    if (removedHeaders > 0) {
         console.warn(
-            `[meta-cloud-api] Rimossi ${removedEmptyHeaders} header vuoti dal payload template "${templateName}".`
+            `[meta-cloud-api] Template "${templateName}": rimossi ${removedHeaders} componenti header ` +
+                `(expectedHeaderText=${expectedHeaderText}, allowImageHeader=${allowImageHeader}).`
         );
     }
-    const bodyOnlyComponents = stripped;
 
-    if (bodyOnlyComponents.length > 0) {
-        const headerTextCount =
-            bodyOnlyComponents
-                .find((c) => c.type === 'header')
-                ?.parameters?.filter((p) => p.type === 'text').length ?? 0;
-        const validationError = validateTemplateComponents(bodyOnlyComponents, {
+    if (cleaned.length > 0) {
+        const validationError = validateTemplateComponents(cleaned, {
             ...options,
-            expectedHeaderTextParamCount:
-                options?.expectedHeaderTextParamCount !== undefined
-                    ? options.expectedHeaderTextParamCount
-                    : headerTextCount > 0
-                      ? headerTextCount
-                      : 0,
+            expectedHeaderTextParamCount: expectedHeaderText,
         });
         if (validationError) {
             console.warn(`[meta-cloud-api] Template validation: ${validationError}`);
@@ -397,8 +486,8 @@ export async function sendWhatsAppTemplateMessage(
         name: templateName,
         language: { code: languageCode },
     };
-    if (bodyOnlyComponents.length > 0) {
-        template.components = bodyOnlyComponents;
+    if (cleaned.length > 0) {
+        template.components = cleaned;
     }
 
     const payload = {
@@ -408,11 +497,6 @@ export async function sendWhatsAppTemplateMessage(
         type: 'template' as const,
         template,
     };
-
-    // Log payload esatto verso Meta (senza token) per audit re-engagement / param mismatch.
-    console.info(
-        `[meta-cloud-api] Template outbound exact payload: ${JSON.stringify(payload)}`
-    );
 
     return postWhatsAppMessage(payload);
 }

@@ -15,3 +15,5 @@
 [2026-08-10 19:20] feat/whatsapp: Scenario A — template Meta body-only (no header), librerie Fioristi/Utenti separate, dropdown Command Center + auto-map ordine.
 
 [2026-08-11 08:48] fix/whatsapp: Meta #132000 fioristi — nomi live ft_1/2/3/004, mapping params, fallback "-" su vuoti; sollecito/tomb allineati; proactive FT 3 body.
+
+[2026-08-11 09:14] debug/whatsapp: log payload Meta esatto + error JSON completo (#132000); strip rigido header se template senza header.

@@ -188,7 +188,7 @@ export async function startProactiveConversation(
             components,
             {
                 expectedBodyParamCount: template.bodyParamCount,
-                expectedHeaderTextParamCount: 0,
+                expectedHeaderTextParamCount: template.headerTextParamCount ?? 0,
             }
         );
 

@@ -14,6 +14,8 @@ import {
 } from '@/components/dashboard/UserBachecaOrderCard';
 import UserPersonalDataForm from '@/components/dashboard/UserPersonalDataForm';
 import UserDeceasedDatesForm from '@/components/dashboard/UserDeceasedDatesForm';
+import { getSiteBaseUrl } from '@/lib/site/config';
+import GardenSharePanel from '@/components/memorial/GardenSharePanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +79,9 @@ export default async function UserDashboardPage({
     });
 
     const deceasedGroups = groupOrdersByDeceased(orders);
+    const gardenSlug = user.uniqueCode?.trim() || user.id;
+    const gardenUrl = `${getSiteBaseUrl()}/giardino/${encodeURIComponent(gardenSlug)}`;
+    const senderName = user.name?.trim() || '';
     const totalSpentCents = showFinancialDetails
         ? orders.reduce((sum, order) => sum + order.totalPriceCents, 0)
         : 0;
@@ -195,6 +200,19 @@ export default async function UserDashboardPage({
                         <p className="text-sm text-slate-500 mt-1">
                             Storico delle consegne con data di posa e testimonianza fotografica, quando disponibile.
                         </p>
+                        {!showFinancialDetails ? (
+                            <div className="mt-4 max-w-md">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                    Condividi il Giardino
+                                </p>
+                                <GardenSharePanel
+                                    gardenUrl={gardenUrl}
+                                    deceasedName={deceasedGroups[0]?.deceasedName || 'un caro'}
+                                    senderName={senderName}
+                                    variant="garden"
+                                />
+                            </div>
+                        ) : null}
                     </div>
 
                     {orders.length === 0 ? (
@@ -262,6 +280,8 @@ export default async function UserDashboardPage({
                                             showFinancialDetails={showFinancialDetails}
                                             showGpsMap={showGpsMap}
                                             showAdminUpload={showAdminUpload}
+                                            gardenUrl={gardenUrl}
+                                            senderName={senderName}
                                         />
                                     ))}
                                 </div>

@@ -109,6 +109,8 @@ type OrderCardProps = {
     showFinancialDetails: boolean;
     showGpsMap: boolean;
     showAdminUpload: boolean;
+    gardenUrl?: string | null;
+    senderName?: string | null;
 };
 
 export function UserBachecaOrderCard({
@@ -117,6 +119,8 @@ export function UserBachecaOrderCard({
     showFinancialDetails,
     showGpsMap,
     showAdminUpload,
+    gardenUrl = null,
+    senderName = null,
 }: OrderCardProps) {
     const status = getStatusLabel(order.status);
     const isHighlighted = highlight === order.id || highlight === order.orderNumber;
@@ -247,6 +251,8 @@ export function UserBachecaOrderCard({
                         hasPreDeliveryPhotoOpt={order.items.some(
                             (item) => item.productId === 'florem-foto-stato-prima'
                         )}
+                        gardenUrl={gardenUrl}
+                        senderName={senderName}
                     />
 
                     {showAdminUpload ? (

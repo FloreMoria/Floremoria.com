@@ -9,10 +9,10 @@ import {
     MapPin,
     RefreshCw,
     RotateCw,
-    Share2,
     Trash2,
 } from 'lucide-react';
 import { downloadFilenameFromProofUrl } from '@/lib/deliveryProof/proofFilenames';
+import GardenSharePanel from '@/components/memorial/GardenSharePanel';
 
 type Props = {
     orderId: string;
@@ -26,6 +26,9 @@ type Props = {
     /** Layout compatto per modale scheda utente admin. */
     compact?: boolean;
     hasPreDeliveryPhotoOpt?: boolean;
+    /** Link Giardino della Memoria da condividere (WhatsApp / Email). */
+    gardenUrl?: string | null;
+    senderName?: string | null;
 };
 
 /** Download HD via proxy autenticato (evita CORS Blob) — Utente e Admin. */
@@ -247,6 +250,8 @@ export default function CustodiedProofGallery({
     showGpsMap,
     compact = false,
     hasPreDeliveryPhotoOpt = false,
+    gardenUrl = null,
+    senderName = null,
 }: Props) {
     const router = useRouter();
     const [beforeUrls, setBeforeUrls] = useState(hasPreDeliveryPhotoOpt ? initialBefore : []);
@@ -372,15 +377,25 @@ export default function CustodiedProofGallery({
                         Scarica testimonianza HD
                     </button>
                     {!isAdmin ? (
-                        <a
-                            href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${deceasedName}: ${primaryAfter}`)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-colors bg-white font-bold text-xs"
-                        >
-                            <Share2 size={13} />
-                            Condividi con i tuoi cari
-                        </a>
+                        gardenUrl?.trim() ? (
+                            <div className="flex-1">
+                                <GardenSharePanel
+                                    gardenUrl={gardenUrl.trim()}
+                                    deceasedName={deceasedName}
+                                    senderName={senderName || undefined}
+                                    variant="garden"
+                                />
+                            </div>
+                        ) : (
+                            <a
+                                href={`https://wa.me/?text=${encodeURIComponent(`Ecco la testimonianza fotografica del mio omaggio floreale FloreMoria per ${deceasedName}: ${primaryAfter}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-emerald-200 hover:bg-emerald-50 text-emerald-600 rounded-xl transition-colors bg-white font-bold text-xs"
+                            >
+                                WhatsApp
+                            </a>
+                        )
                     ) : (
                         <a
                             href={proofPhotoDownloadHref(orderId, primaryAfter)}

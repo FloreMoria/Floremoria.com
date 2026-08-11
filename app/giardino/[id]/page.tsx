@@ -12,6 +12,8 @@ import {
     formatCustomerFacingDeliveryDate,
     resolveCustomerFacingDeliveryDate,
 } from '@/lib/orders/displayDeliveryDate';
+import { getSiteBaseUrl } from '@/lib/site/config';
+import GardenHeaderShare from '@/components/memorial/GardenHeaderShare';
 
 const giardinoUserInclude = {
     orders: {
@@ -125,6 +127,11 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
         return tb - ta;
     });
 
+    const gardenSlug = user.uniqueCode?.trim() || user.id;
+    const gardenUrl = `${getSiteBaseUrl()}/giardino/${encodeURIComponent(gardenSlug)}`;
+    const primaryDeceased = timelineOrders[0]?.deceasedName || 'un caro';
+    const senderName = user.name?.trim() || '';
+
     return (
         <div className="min-h-screen bg-fm-bg pb-20 pt-28">
             <div className="max-w-4xl mx-auto px-4 lg:px-8">
@@ -139,6 +146,11 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                         Questo è il tuo spazio privato e sicuro. Qui custodiamo la cronologia di tutti i gesti
                         d&apos;affetto che hai dedicato ai tuoi cari nel tempo.
                     </p>
+                    <GardenHeaderShare
+                        gardenUrl={gardenUrl}
+                        deceasedName={primaryDeceased}
+                        senderName={senderName}
+                    />
                 </header>
 
                 <section className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-fm-rose-soft/30 mb-16">

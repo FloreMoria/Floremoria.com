@@ -432,6 +432,9 @@ export default function OrderDetailDrawer({
                                 hint="Accesso cliente alle foto nel Giardino della Memoria (24h)."
                                 whatsappPhone={localOrder.customerPhone}
                                 whatsappIntro={`Il tuo link FloreMoria per vedere le foto in memoria di ${localOrder.deceasedName}:`}
+                                enableEmailShare
+                                deceasedName={localOrder.deceasedName}
+                                senderName="FloreMoria"
                             />
                         ) : null}
                     </div>

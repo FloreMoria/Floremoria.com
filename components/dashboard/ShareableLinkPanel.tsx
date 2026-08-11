@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, MessageCircle, ExternalLink } from 'lucide-react';
+import { Check, Copy, MessageCircle, ExternalLink, Mail } from 'lucide-react';
+import GardenSharePanel from '@/components/memorial/GardenSharePanel';
 
 type Props = {
     label: string;
@@ -10,6 +11,10 @@ type Props = {
     /** Numero WhatsApp (es. +39…) per invio diretto del link. */
     whatsappPhone?: string | null;
     whatsappIntro?: string;
+    /** Abilita condivisione email del Giardino (staff / utenti). */
+    enableEmailShare?: boolean;
+    deceasedName?: string;
+    senderName?: string;
 };
 
 function normalizeWhatsAppPhone(phone: string): string {
@@ -22,8 +27,12 @@ export default function ShareableLinkPanel({
     hint,
     whatsappPhone,
     whatsappIntro,
+    enableEmailShare = false,
+    deceasedName = 'un caro',
+    senderName = '',
 }: Props) {
     const [copied, setCopied] = useState(false);
+    const [showEmail, setShowEmail] = useState(false);
 
     const copyUrl = async () => {
         try {
@@ -55,7 +64,7 @@ export default function ShareableLinkPanel({
                     className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-800 font-mono"
                     onFocus={(e) => e.target.select()}
                 />
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 gap-2 flex-wrap">
                     <button
                         type="button"
                         onClick={() => void copyUrl()}
@@ -75,6 +84,16 @@ export default function ShareableLinkPanel({
                             WhatsApp
                         </a>
                     ) : null}
+                    {enableEmailShare ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowEmail((v) => !v)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#c5a880]/50 bg-[#c5a880]/10 px-3 py-2 text-xs font-semibold text-[#8a7048] hover:bg-[#c5a880]/20"
+                        >
+                            <Mail size={14} />
+                            Email
+                        </button>
+                    ) : null}
                     <a
                         href={url}
                         target="_blank"
@@ -86,6 +105,17 @@ export default function ShareableLinkPanel({
                     </a>
                 </div>
             </div>
+            {enableEmailShare && showEmail ? (
+                <GardenSharePanel
+                    gardenUrl={url}
+                    deceasedName={deceasedName}
+                    senderName={senderName}
+                    variant="admin"
+                    layout="stack"
+                    showWhatsApp={false}
+                    openEmailOnMount
+                />
+            ) : null}
         </div>
     );
 }

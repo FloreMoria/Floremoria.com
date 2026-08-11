@@ -588,6 +588,9 @@ export default function ClientUsersTable({
                                                                     : order.customerPhone
                                                             }
                                                             whatsappIntro={`Gentile ${selectedUser.name || 'cliente'}, ecco il tuo link personale FloreMoria per vedere le foto della consegna in memoria di ${order.deceasedName}:`}
+                                                            enableEmailShare
+                                                            deceasedName={order.deceasedName}
+                                                            senderName="FloreMoria"
                                                         />
                                                     ) : null}
 

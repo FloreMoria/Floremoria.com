@@ -374,14 +374,14 @@ export function buildOperatorTemplateComponents(
     const mapField = (field: WhatsAppTemplateField) => {
         let raw = fieldValues[field.key] ?? '';
         if (
-            field.key === 'recipientFirstName' ||
-            field.key === 'userFirstName' ||
-            field.key === 'buyerFirstName' ||
-            field.key === 'floristFirstName'
+            (field.key === 'recipientFirstName' ||
+                field.key === 'userFirstName' ||
+                field.key === 'buyerFirstName') &&
+            !raw.startsWith('Ciao ')
         ) {
             raw = extractFirstName(raw) || raw;
         }
-        if (field.key === 'orderCode') {
+        if (field.key === 'orderCode' && !raw.includes('📦')) {
             raw = normalizeOrderCode(raw);
         }
         return {
@@ -435,10 +435,10 @@ export function renderOperatorTemplatePreview(
     bodyFields.forEach((field, i) => {
         let raw = fieldValues[field.key] ?? '';
         if (
-            field.key === 'recipientFirstName' ||
-            field.key === 'userFirstName' ||
-            field.key === 'buyerFirstName' ||
-            field.key === 'floristFirstName'
+            (field.key === 'recipientFirstName' ||
+                field.key === 'userFirstName' ||
+                field.key === 'buyerFirstName') &&
+            !raw.startsWith('Ciao ')
         ) {
             raw = extractFirstName(raw) || raw;
         }

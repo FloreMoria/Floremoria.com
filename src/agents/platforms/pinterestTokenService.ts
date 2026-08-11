@@ -14,7 +14,7 @@ import {
     type PinterestTokenResponse,
 } from '@/lib/pinterest/oauth';
 
-const REFRESH_SKEW_MS = 5 * 60 * 1000; // rinnova 5 minuti prima della scadenza
+const REFRESH_SKEW_MS = 24 * 60 * 60 * 1000; // rinnova se l'access_token è in scadenza entro 24 ore
 
 export type PinterestTokenBundle = {
     accessToken: string;

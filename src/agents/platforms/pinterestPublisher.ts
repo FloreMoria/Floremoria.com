@@ -89,58 +89,15 @@ export async function listPinterestBoards(): Promise<{
     return { boards };
 }
 
+import { createPin } from '@/lib/social/pinterest';
+
 /**
  * Crea un Pin su board_id (env PINTEREST_BOARD_ID o override).
  */
 export async function createPinterestPin(
     input: CreatePinterestPinInput
 ): Promise<CreatePinterestPinResult> {
-    const accessToken = await getValidPinterestAccessToken();
-    if (!accessToken) {
-        console.warn('[Pinterest] Token assente — pubblicazione simulata.');
-        return {
-            success: true,
-            simulated: true,
-            pinId: `simulated-pinterest-${Date.now()}`,
-        };
-    }
-
-    const boardId = input.boardId?.trim() || getPinterestDefaultBoardId();
-    if (!boardId) {
-        return {
-            success: false,
-            error: 'PINTEREST_BOARD_ID non configurato e boardId non passato.',
-        };
-    }
-
-    if (!input.imageUrl?.trim()) {
-        return { success: false, error: 'imageUrl obbligatorio per creare un Pin.' };
-    }
-
-    const body = {
-        board_id: boardId,
-        title: input.title.slice(0, 100),
-        description: input.description.slice(0, 800),
-        link: input.link?.trim() || 'https://www.floremoria.com',
-        alt_text: input.altText?.slice(0, 500) || input.title.slice(0, 500),
-        media_source: {
-            source_type: 'image_url',
-            url: input.imageUrl.trim(),
-        },
-    };
-
-    const result = await pinterestFetch<{ id?: string }>('/pins', accessToken, {
-        method: 'POST',
-        body: JSON.stringify(body),
-    });
-
-    if (!result.ok) {
-        return { success: false, error: result.error || 'Creazione Pin fallita.' };
-    }
-
-    const pinId = result.data?.id ? String(result.data.id) : undefined;
-    console.log(`[Pinterest] Pin creato: ${pinId || '(id assente)'}`);
-    return { success: true, pinId };
+    return createPin(input);
 }
 
 /** Pubblica una campagna marketing come Pin (Pinterest Agent). */

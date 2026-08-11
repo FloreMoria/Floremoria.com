@@ -37,3 +37,4 @@
 [2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.
 [2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.
 [2026-08-11 17:34] fix/tiktok: Route App Router per verifica dominio tiktok7q8… (non solo public/, non ignorato).
+[2026-08-11 17:48] chore/tiktok: Verifica dominio tiktokhn9zw4… in public/ + route App Router (whitelist gitignore).

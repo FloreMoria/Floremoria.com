@@ -61,10 +61,13 @@ env.host.docker.example
 !app/termini-condizioni/tiktok-developers-site-verification.txt/**
 !public/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt
 !public/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt
+!public/tiktokhn9zw4SN50YfX9FTNwvbXtKINd8Blpzm.txt
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/**
 !app/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt/
 !app/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt/**
+!app/tiktokhn9zw4SN50YfX9FTNwvbXtKINd8Blpzm.txt/
+!app/tiktokhn9zw4SN50YfX9FTNwvbXtKINd8Blpzm.txt/**
 
 # typescript
 *.tsbuildinfo

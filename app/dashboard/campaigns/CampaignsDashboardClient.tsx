@@ -416,9 +416,11 @@ export default function CampaignsDashboardClient() {
         data = await res.json();
       } catch {
         setErrorMessage(
-          res.status === 504 || res.status === 502
-            ? 'Timeout/gateway durante la pubblicazione TikTok. Verifica URL video B-roll (HTTPS) e Access Token, poi riprova.'
-            : `Risposta non valida dal server di pubblicazione (HTTP ${res.status}).`
+          res.status === 413
+            ? 'File/payload troppo grande (HTTP 413). I video TikTok devono usare URL HTTPS (PULL_FROM_URL), non il binario nel body.'
+            : res.status === 504 || res.status === 502
+              ? 'Timeout/gateway durante la pubblicazione TikTok. Verifica URL video B-roll (HTTPS) e Access Token, poi riprova.'
+              : `Risposta non valida dal server di pubblicazione (HTTP ${res.status}).`
         );
         return;
       }
@@ -795,6 +797,56 @@ export default function CampaignsDashboardClient() {
     }
   };
 
+  /** Parse sicuro: evita "Unexpected token 'R', 'Request Entity…'" su risposte 413 HTML/testo. */
+  const parseJsonSafe = async (
+    res: Response
+  ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> => {
+    const rawText = await res.text().catch(() => '');
+    if (!rawText) {
+      return {
+        ok: false,
+        error: `Risposta vuota dal server (HTTP ${res.status}).`,
+      };
+    }
+    try {
+      return { ok: true, data: JSON.parse(rawText) as Record<string, unknown> };
+    } catch {
+      const preview = rawText.slice(0, 180).replace(/\s+/g, ' ');
+      const is413 =
+        res.status === 413 || /request entity too large|payload too large/i.test(rawText);
+      console.error('[Campaigns] Non-JSON response', res.status, preview);
+      return {
+        ok: false,
+        error: is413
+          ? 'File troppo grande per il body della richiesta (HTTP 413). I video vanno caricati su Blob (URL HTTPS), non come FormData.'
+          : `Risposta non-JSON dal server (HTTP ${res.status}): ${preview}`,
+      };
+    }
+  };
+
+  /** Video / file grandi: upload diretto client → Vercel Blob (bypass limite body Next/Vercel). */
+  const uploadCampaignMediaToBlob = async (file: File): Promise<string> => {
+    const { upload } = await import('@vercel/blob/client');
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'media';
+    const pathname = `marketing/campagne/manual/${Date.now()}-${safeName}`;
+    const baseOpts = {
+      handleUploadUrl: '/api/dashboard/campaigns/blob-upload',
+      multipart: true as const,
+      contentType: file.type || undefined,
+    };
+    try {
+      const blob = await upload(pathname, file, { ...baseOpts, access: 'public' });
+      return blob.url;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/private access on a public store|public access on a private store/i.test(msg)) {
+        const blob = await upload(pathname, file, { ...baseOpts, access: 'private' });
+        return blob.url;
+      }
+      throw err;
+    }
+  };
+
   // Caricamento del Post Manuale (handlePublishNow sopra)
   const handleCreateManualPost = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -807,47 +859,82 @@ export default function CampaignsDashboardClient() {
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    const formData = new FormData();
-    formData.append('file', manualFile);
-    formData.append('channel', manualChannel);
-    formData.append('contentFormat', manualFormat);
-    formData.append('copy', manualCopy);
-    formData.append('hashtags', manualHashtags);
-    formData.append('category', manualCategory);
-    formData.append('shareAllChannels', shareAllChannels ? 'true' : 'false');
+    const isVideo = manualFile.type.startsWith('video/');
+    // Sotto ~4MB FormData ok; video/TikTok sempre via Blob URL (PULL_FROM_URL ready).
+    const useClientBlob = isVideo || manualFile.size > 4 * 1024 * 1024;
 
     try {
-      const res = await fetch('/api/dashboard/campaigns/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
+      let res: Response;
+      if (useClientBlob) {
+        const mediaUrl = await uploadCampaignMediaToBlob(manualFile);
+        res = await fetch('/api/dashboard/campaigns/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mediaUrl,
+            mimeType: manualFile.type,
+            filename: manualFile.name,
+            isVideo,
+            channel: manualChannel,
+            contentFormat: manualFormat,
+            copy: manualCopy,
+            hashtags: manualHashtags,
+            category: manualCategory,
+            shareAllChannels,
+          }),
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('file', manualFile);
+        formData.append('channel', manualChannel);
+        formData.append('contentFormat', manualFormat);
+        formData.append('copy', manualCopy);
+        formData.append('hashtags', manualHashtags);
+        formData.append('category', manualCategory);
+        formData.append('shareAllChannels', shareAllChannels ? 'true' : 'false');
+        res = await fetch('/api/dashboard/campaigns/upload', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      const parsed = await parseJsonSafe(res);
+      if (!parsed.ok) {
+        setErrorMessage(
+          manualChannel === 'TIKTOK'
+            ? `Caricamento TikTok non riuscito: ${parsed.error}`
+            : parsed.error
+        );
+        return;
+      }
+      const data = parsed.data;
       if (data.success) {
-        const sharedCount = Array.isArray(data.campaigns) ? data.campaigns.length : 1;
+        const campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+        const sharedCount = campaigns.length || 1;
         setSuccessMessage(
           sharedCount > 1
             ? `Contenuto creato su ${sharedCount} social (stesso media/testo). Pubblica da ogni tab.`
             : 'Nuovo post manuale creato ed approvato con successo!'
         );
-        if (Array.isArray(data.campaigns) && data.campaigns.length > 0) {
-          setCampaigns((prev) => [...data.campaigns, ...prev]);
+        if (campaigns.length > 0) {
+          setCampaigns((prev) => [...(campaigns as typeof prev), ...prev]);
         } else if (data.campaign) {
-          setCampaigns((prev) => [data.campaign, ...prev]);
+          setCampaigns((prev) => [data.campaign as (typeof prev)[number], ...prev]);
         }
         setShowModal(false);
         resetManualModal();
         handleTabChange(manualChannel);
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
-        setErrorMessage(data.error || 'Errore nel caricamento del post.');
+        setErrorMessage(String(data.error || 'Errore nel caricamento del post.'));
       }
     } catch (err) {
       const detail = err instanceof Error ? err.message : '';
       setErrorMessage(
         manualChannel === 'TIKTOK'
           ? detail
-            ? `Errore di connessione durante il caricamento del post TikTok: ${detail}. Verifica rete e riprova.`
-            : 'Errore di connessione durante il caricamento del post TikTok. Verifica rete, poi pubblica dal tab TikTok (video HTTPS + Access Token validi).'
+            ? `Errore durante il caricamento del post TikTok: ${detail}. Verifica rete/Blob e riprova.`
+            : 'Errore durante il caricamento del post TikTok. Verifica rete, poi pubblica dal tab TikTok (video HTTPS + Access Token validi).'
           : detail
             ? `Errore di connessione durante il caricamento del post: ${detail}`
             : 'Errore di connessione durante il caricamento del post.'

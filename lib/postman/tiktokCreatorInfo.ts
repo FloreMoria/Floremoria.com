@@ -60,9 +60,26 @@ async function tikTokApiPost<T>(
     body: JSON.stringify(body),
   });
 
-  const payload = (await res.json()) as T & {
-    error?: { code?: string; message?: string };
-  };
+  // Mai response.json() diretto: TikTok/gateway possono rispondere testo (es. 413 Request Entity Too Large).
+  const rawText = await res.text().catch(() => '');
+  let payload: T & { error?: { code?: string; message?: string } };
+  try {
+    payload = (rawText ? JSON.parse(rawText) : {}) as typeof payload;
+  } catch {
+    const preview = rawText.slice(0, 400).replace(/\s+/g, ' ');
+    console.error(
+      `[TikTok creator_info] Non-JSON HTTP ${res.status} su ${path}: ${preview}`
+    );
+    if (res.status === 413 || /request entity too large|payload too large/i.test(rawText)) {
+      throw new Error(
+        'Payload troppo grande verso TikTok (HTTP 413). Usa PULL_FROM_URL con URL video HTTPS pubblico.'
+      );
+    }
+    throw new Error(
+      `TikTok ha restituito una risposta non-JSON (HTTP ${res.status}) su ${path}` +
+        (preview ? `: ${preview}` : '')
+    );
+  }
 
   if (!res.ok) {
     throw new Error(payload.error?.message || `TikTok API error (${res.status})`);

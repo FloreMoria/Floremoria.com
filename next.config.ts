@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   transpilePackages: ["swagger-ui-react"],
   experimental: {
-    // Foto multi-foto da iPhone: evita 413 sul POST /api/partner/order/upload-proof
-    proxyClientMaxBodySize: '12mb',
+    // Upload media campagne / proof: proxy buffer (video grandi usano Blob client-side).
+    proxyClientMaxBodySize: '100mb',
   },
   async redirects() {
     return [

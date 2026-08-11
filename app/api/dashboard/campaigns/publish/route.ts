@@ -3,6 +3,10 @@ import prisma from '@/lib/prisma';
 import { publishCampaignToChannel } from '@/lib/postman/socialPublish';
 import { CampaignStatus, MarketingChannel } from '@prisma/client';
 
+export const runtime = 'nodejs';
+/** TikTok PULL_FROM_URL + preflight media: lascia margine al gateway. */
+export const maxDuration = 60;
+
 function classifyPublishRouteError(err: unknown, channel?: string): {
   error: string;
   status: number;
@@ -50,8 +54,24 @@ function classifyPublishRouteError(err: unknown, channel?: string): {
 export async function POST(request: Request) {
   let targetChannel: string | undefined;
   try {
-    const body = await request.json();
-    const { campaignId, tiktokUx } = body;
+    const rawText = await request.text();
+    let body: Record<string, unknown>;
+    try {
+      body = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+    } catch {
+      console.error('[Dashboard Publish] Body non-JSON:', rawText.slice(0, 200));
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Body della richiesta non valido (atteso JSON piccolo con campaignId). Non inviare il file video nel body.',
+          errorKind: 'bad_request',
+        },
+        { status: 400 }
+      );
+    }
+    const campaignId = typeof body.campaignId === 'string' ? body.campaignId.trim() : '';
+    const tiktokUx = body.tiktokUx;
     if (!campaignId) {
       return NextResponse.json({ success: false, error: 'campaignId is required' }, { status: 400 });
     }
@@ -77,7 +97,7 @@ export async function POST(request: Request) {
       hashtags: campaign.hashtags,
       imageUrl: campaign.imageUrl || '',
       videoUrl: campaign.videoUrl,
-      tiktokUx,
+      tiktokUx: tiktokUx as import('@/lib/postman/tiktokCreatorInfo').TikTokPublishUxOptions | undefined,
     });
 
     if (result.success) {

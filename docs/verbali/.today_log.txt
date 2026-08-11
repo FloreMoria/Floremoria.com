@@ -27,3 +27,4 @@
 
 
 [2026-08-11 10:35] feat/whatsapp: Pre-popolamento automatico 11 variabili floremoria_nuovo_ordine_fiorista nel Command Center (seed ordine + form editabile).
+[2026-08-11 10:55] fix/tiktok: Upload video via Blob client (no 413 FormData); parsing sicuro non-JSON; maxDuration publish; PULL_FROM_URL preferito.

@@ -559,12 +559,12 @@ async function publishTikTokVideoPost(
         throw pullErr instanceof Error ? pullErr : new Error(pullMsg);
       }
 
-      // Fallback FILE_UPLOAD solo per clip piccole (evita body/memoria eccessivi).
-      const MAX_FILE_UPLOAD_BYTES = 32 * 1024 * 1024;
+      // Fallback FILE_UPLOAD solo per clip piccole (mai Base64 nel body Next/TikTok init).
+      const MAX_FILE_UPLOAD_BYTES = 20 * 1024 * 1024;
       let videoBytes: Buffer;
       try {
         videoBytes = await fetchImageBytes(publicVideoUrl, blobToken);
-      } catch (dlErr) {
+      } catch {
         throw new Error(
           `PULL_FROM_URL fallito (${pullMsg}) e download B-roll per FILE_UPLOAD non riuscito. ` +
             `Verificare l'URL HTTPS pubblico: ${publicVideoUrl.slice(0, 160)}`
@@ -572,8 +572,8 @@ async function publishTikTokVideoPost(
       }
       if (videoBytes.length > MAX_FILE_UPLOAD_BYTES) {
         throw new Error(
-          'Payload o file video troppo grande per il caricamento diretto. ' +
-            'Verificare l\'URL B-roll HTTPS (PULL_FROM_URL) — evita upload chunk di file > 32MB.'
+          `PULL_FROM_URL fallito (${pullMsg}). Il video (${Math.round(videoBytes.length / (1024 * 1024))}MB) ` +
+            'è troppo grande per FILE_UPLOAD in funzione serverless — correggere URL B-roll HTTPS raggiungibile da TikTok.'
         );
       }
       const contentType = videoMimeTypeFromUrl(publicVideoUrl);

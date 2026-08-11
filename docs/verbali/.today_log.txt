@@ -19,3 +19,5 @@
 [2026-08-11 09:14] debug/whatsapp: log payload Meta esatto + error JSON completo (#132000); strip rigido header se template senza header.
 [2026-08-11 09:30] feat(pinterest+v5): implementato client di pubblicazione Pin `lib/social/pinterest.ts` (`createPin`) e rotta API `app/api/social/pinterest/publish/route.ts` su `POST https://api.pinterest.com/v5/pins` (payload V5: board_id, title, description, link, media_source con source_type=image_url); aggiornata gestione automatica refresh token in `pinterestTokenService.ts` con soglia a 24 ore prima dell'invio via `POST https://api.pinterest.com/v5/oauth/token`.
 
+
+[2026-08-11 10:19] feat/whatsapp: Punto A fiorista → floremoria_nuovo_ordine_fiorista a 11 variabili body (no header); builder con fallback "-".

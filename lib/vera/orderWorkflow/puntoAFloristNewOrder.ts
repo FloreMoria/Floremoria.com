@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { calculateFloristCompensation, formatFloristCompensationForTemplate } from '@/lib/pricing/calculateFloristCompensation';
+import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristCompensation';
 import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
@@ -19,25 +19,12 @@ import {
     isWorkflowStepDone,
     markWorkflowStep,
     parseWorkflowFlags,
-    sleep,
-    TEMPLATE_CASCADE_DELAY_MS,
     type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
-import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 import {
-    formatFloristCemeteryCityParam,
-    formatFloristCompensationParam,
-    formatFloristDeceasedParam,
-    formatFloristDeliveryPositionParam,
-    formatFloristDeliveryUrlParam,
-    formatFloristLocationParam,
-    formatFloristOrderCodeParam,
-    formatFloristPriceAmountParam,
-    formatFloristTicketTextParam,
-    formatFloristYesNoParam,
-    metaParamOrDash,
-} from '@/lib/whatsapp/floristTemplateCopy';
-import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
+    buildFloristNuovoOrdineBodyParams,
+    FLORIST_NUOVO_ORDINE_BODY_PARAM_COUNT,
+} from '@/lib/whatsapp/buildFloristNuovoOrdineParams';
 import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
@@ -59,10 +46,6 @@ export interface PuntoAOptions {
     force?: boolean;
 }
 
-function yesNo(value: boolean): string {
-    return formatFloristYesNoParam(value);
-}
-
 async function updateWorkflowFlags(orderId: string, flags: VeraWorkflowFlags): Promise<void> {
     await prisma.order.update({
         where: { id: orderId },
@@ -70,120 +53,10 @@ async function updateWorkflowFlags(orderId: string, flags: VeraWorkflowFlags): P
     });
 }
 
-async function logFloristTemplateToDashboard(input: {
-    phoneE164: string;
-    templateId: VeraTemplateId;
-    bodyParams: string[];
-    orderId: string;
-    orderNumber: string;
-    floristName: string;
-    messageId?: string;
-}): Promise<void> {
-    try {
-        await logVeraTemplateOutbound({
-            phoneE164: input.phoneE164,
-            templateId: input.templateId,
-            bodyParams: input.bodyParams,
-            eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-            messageId: input.messageId,
-            contactName: input.floristName,
-            userType: 'FLORIST',
-        });
-    } catch (logErr) {
-        console.error('[vera-workflow] Template fiorista inviato ma sessione dashboard non registrata:', {
-            orderId: input.orderId,
-            templateId: input.templateId,
-            error: logErr,
-        });
-    }
-}
-
-type FloristCascadeStep = {
-    template: 'florist_first_001' | 'florist_first_002' | 'florist_first_003' | 'florist_first_004';
-    params: string[];
-};
-
-async function sendFloristCascade(input: {
-    phoneE164: string;
-    steps: FloristCascadeStep[];
-    orderId: string;
-    orderNumber: string;
-    floristName: string;
-    isFirstOrder: boolean;
-    force?: boolean;
-}): Promise<PuntoAResult> {
-    let sentCount = 0;
-    let skippedDuplicates = 0;
-
-    for (let i = 0; i < input.steps.length; i += 1) {
-        const step = input.steps[i]!;
-
-        if (
-            !input.force &&
-            (await wasOrderTemplateSent(input.orderId, step.template, input.orderNumber))
-        ) {
-            skippedDuplicates += 1;
-            console.info(
-                `[vera-workflow] Punto A skip duplicato ${step.template} ordine ${input.orderNumber}`
-            );
-            continue;
-        }
-
-        const result = await sendVeraTemplate(input.phoneE164, step.template, step.params, {
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-        });
-        if (!result.ok) {
-            return {
-                ok: false,
-                isFirstOrder: input.isFirstOrder,
-                error: result.error ?? `cascade_step_${i + 1}_failed`,
-                sentCount,
-                skippedDuplicates,
-            };
-        }
-        sentCount += 1;
-        await logFloristTemplateToDashboard({
-            phoneE164: input.phoneE164,
-            templateId: step.template,
-            bodyParams: step.params,
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
-            floristName: input.floristName,
-            messageId: result.messageId,
-        });
-        if (i < input.steps.length - 1) await sleep(TEMPLATE_CASCADE_DELAY_MS);
-    }
-
-    if (sentCount === 0 && skippedDuplicates === input.steps.length) {
-        return {
-            ok: true,
-            skipped: 'duplicate_order_template',
-            isFirstOrder: input.isFirstOrder,
-            sentCount: 0,
-            skippedDuplicates,
-        };
-    }
-
-    return {
-        ok: true,
-        isFirstOrder: input.isFirstOrder,
-        sentCount,
-        skippedDuplicates,
-    };
-}
-
-function buildDeliveryPositionLabel(gravePosition: string, cemeteryLabel: string): string {
-    if (gravePosition) return gravePosition;
-    if (/casa funeraria|chiesa|sede/i.test(cemeteryLabel)) return 'Consegna in sede';
-    return 'Indicazioni in app';
-}
-
 /**
  * PUNTO A — Notifica fiorista nuovo ordine.
- * Solo template Meta approvati (type: template). Mai free-text (evita Meta 131047).
+ * Template unico Meta `floremoria_nuovo_ordine_fiorista` (11 variabili body, nessun header).
+ * Mai free-text: fuori finestra 24h Meta risponde 131047.
  */
 export async function runPuntoAFloristNewOrder(
     orderId: string,
@@ -218,11 +91,15 @@ export async function runPuntoAFloristNewOrder(
     }
 
     if (isWhatsAppAutoNotifyDisabledForOrder(order.isTest)) {
-        console.warn(`[vera-workflow] Punto A saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`);
+        console.warn(
+            `[vera-workflow] Punto A saltato (AUTO_NOTIFY disabled) ordine ${order.orderNumber || order.id}`
+        );
         return { ok: true, skipped: 'auto_notify_disabled' };
     }
     if (shouldSkipTestOrderMetaSend(order.isTest) && !options.force) {
-        console.warn(`[vera-workflow] Punto A saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`);
+        console.warn(
+            `[vera-workflow] Punto A saltato (ordine test, Meta bloccato) ordine ${order.orderNumber || order.id}`
+        );
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'punto_a_send_failed',
@@ -235,14 +112,10 @@ export async function runPuntoAFloristNewOrder(
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-    // Perché: il "rilascio orfano" re-inviava in loop: free-text / fallback 24h non loggavano
-    // templateId florist_first_001 → dedup falliva → release → nuovo send (Martina/Simone spam).
-    // Se il claim c'è, consideriamo inviato. Reinvio solo con force esplicito da staff.
     if (!options.force && isWorkflowStepDone(flags, 'puntoA_florist')) {
         return { ok: true, skipped: 'already_sent' };
     }
 
-    // Claim atomico: evita due cascate parallele sullo stesso ordine.
     let claimed = true;
     if (!options.force) {
         claimed = await tryClaimWorkflowStep(order.id, 'puntoA_florist');
@@ -273,27 +146,13 @@ export async function runPuntoAFloristNewOrder(
         return { ok: false, skipped: 'invalid_florist_phone' };
     }
 
-    const floristName = metaParamOrDash(
-        extractFirstName(order.partner.ownerName || order.partner.shopName) || 'Fiorista',
-        48
-    );
+    const floristName =
+        extractFirstName(order.partner.ownerName || order.partner.shopName) || 'Fiorista';
+    const orderCode = order.orderNumber || order.id;
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
     const compensation = calculateFloristCompensation(order.items, order.partner?.internalNotes);
-    const compensationLabel = formatFloristCompensationForTemplate(compensation);
-    const orderCode = order.orderNumber || order.id;
     const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
-    const cemeteryCity = order.cemeteryCity || order.cemeteryName || '';
     const gravePosition = order.gravePosition?.trim() || '';
-    const deliveryPosition = formatFloristDeliveryPositionParam(
-        buildDeliveryPositionLabel(gravePosition, cemeteryLabel)
-    );
-    const formattedOrderCode = formatFloristOrderCodeParam(orderCode);
-    const formattedCompensationFt1 = formatFloristCompensationParam(compensationLabel);
-    const formattedPriceAmount = formatFloristPriceAmountParam(compensationLabel);
-    const formattedDeceased = formatFloristDeceasedParam(order.deceasedName);
-    const formattedLocationRepeat = formatFloristLocationParam(cemeteryLabel);
-    const formattedCemeteryCity = formatFloristCemeteryCityParam(cemeteryCity);
-    const formattedDeliveryUrl = formatFloristDeliveryUrlParam(deliveryUrl);
 
     if (compensation.totalCents === 0 && compensation.unmappedProducts.length > 0) {
         await setVeraOperationalAlert({
@@ -310,18 +169,16 @@ export async function runPuntoAFloristNewOrder(
         (await detectIsFirstOrderForPartner(order.id, order.partnerId));
     await persistFirstOrderFlag(order.id, isFirst);
 
-    // Tomba mancante: solo avviso soft (non blocca). Si cancella se poi arriva la posizione.
     if (isFirst && !gravePosition && !/casa funeraria|chiesa/i.test(cemeteryLabel)) {
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'grave_position_missing',
             message:
-                'Indicazioni tomba mancanti sull’ordine: cascata fiorista inviata con “Indicazioni in app”. Completare la posizione in dashboard.',
+                'Indicazioni tomba mancanti sull’ordine: notifica fiorista inviata senza dettaglio posizione. Completare in dashboard.',
             priority: 'high',
             freezeOrder: false,
         }).catch(() => undefined);
     } else if (gravePosition) {
-        // Posizione presente: non lasciare alert stale "tomba mancante".
         const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
         const fresh = await prisma.order.findUnique({
             where: { id: order.id },
@@ -332,161 +189,126 @@ export async function runPuntoAFloristNewOrder(
         }
     }
 
-    // Punto A: SOLO template Meta approvati (type: template).
-    // Mai free-text verso il fiorista: fuori finestra 24h Meta risponde 131047 (re-engagement).
-    // Cascata florist_first_001…004; se i ft_* non esistono sul WABA → florist_repeat.
-    const lumino = hasLuminoOption(order.items);
-    const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
-    const ticketText = formatFloristTicketTextParam(order.ticketMessage);
-
-    // Mapping allineato ai template Meta live (WABA FloreMoria):
-    // ft_1: {{1}} nome, {{2}} codice, {{3}} importo
-    // ft_2: {{1}} lumino, {{2}} biglietto, {{3}} testo
-    // ft_3: {{1}} defunto, {{2}} città, {{3}} indicazioni
-    // ft_004: {{1}} link
-    const steps: FloristCascadeStep[] = isFirst
-        ? [
-              {
-                  template: 'florist_first_001',
-                  params: [floristName, formattedOrderCode, formattedCompensationFt1],
-              },
-              {
-                  template: 'florist_first_002',
-                  params: [yesNo(lumino), yesNo(bigliettino), ticketText],
-              },
-              {
-                  template: 'florist_first_003',
-                  params: [formattedDeceased, formattedCemeteryCity, deliveryPosition],
-              },
-              { template: 'florist_first_004', params: [formattedDeliveryUrl] },
-          ]
-        : (() => {
-              const repeatSteps: FloristCascadeStep[] = [
-                  {
-                      template: 'florist_first_001',
-                      params: [floristName, formattedOrderCode, formattedCompensationFt1],
-                  },
-                  {
-                      template: 'florist_first_003',
-                      params: [formattedDeceased, formattedCemeteryCity, deliveryPosition],
-                  },
-                  { template: 'florist_first_004', params: [formattedDeliveryUrl] },
-              ];
-              if (lumino || bigliettino) {
-                  repeatSteps.splice(1, 0, {
-                      template: 'florist_first_002',
-                      params: [yesNo(lumino), yesNo(bigliettino), ticketText],
-                  });
-              }
-              return repeatSteps;
-          })();
-
-    console.info(
-        `[vera-workflow] Punto A template-only ordine ${orderCode} first=${isFirst} steps=${steps.map((s) => s.template).join(',')}`
-    );
-
-    const cascadeResult = await sendFloristCascade({
-        phoneE164: floristPhoneE164,
-        orderId: order.id,
-        orderNumber: orderCode,
-        floristName,
-        isFirstOrder: isFirst,
-        force: options.force,
-        steps,
-    });
-
-    // Meta #132001: template ft_* assenti sul WABA → fallback template unico florist_repeat.
-    if (
-        !cascadeResult.ok &&
-        /132001|does not exist in the translation|template name does not exist/i.test(
-            cascadeResult.error || ''
-        )
-    ) {
-        console.warn(
-            `[vera-workflow] Cascata ft_* non disponibile su Meta (${cascadeResult.error}). Fallback florist_repeat ordine ${orderCode}`
+    if (!options.force && (await wasOrderTemplateSent(order.id, 'florist_repeat', orderCode))) {
+        console.info(
+            `[vera-workflow] Punto A skip duplicato florist_repeat ordine ${orderCode}`
         );
-        const fallback = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', [
-            floristName,
-            formattedDeceased,
-            formattedLocationRepeat,
-            formattedDeliveryUrl,
-            formattedOrderCode,
-            formattedPriceAmount,
-        ], {
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-        });
-        if (fallback.ok) {
-            await logFloristTemplateToDashboard({
-                phoneE164: floristPhoneE164,
-                templateId: 'florist_repeat',
-                bodyParams: [
-                    floristName,
-                    formattedDeceased,
-                    formattedLocationRepeat,
-                    formattedDeliveryUrl,
-                    formattedOrderCode,
-                    formattedPriceAmount,
-                ],
-                orderId: order.id,
-                orderNumber: orderCode,
-                floristName,
-                messageId: fallback.messageId,
-            });
-            const nextFlags = markWorkflowStep(
-                parseWorkflowFlags(
-                    (
-                        await prisma.order.findUnique({
-                            where: { id: order.id },
-                            select: { veraWorkflowFlags: true },
-                        })
-                    )?.veraWorkflowFlags
-                ),
-                'puntoA_florist'
-            );
-            delete nextFlags.puntoA_florist_deferred;
-            await updateWorkflowFlags(order.id, nextFlags);
-            const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
-            await clearVeraOperationalAlert(order.id).catch(() => undefined);
-            console.info(`[vera-workflow] Punto A OK via florist_repeat ordine ${orderCode}`);
-            return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
-        }
-        cascadeResult.error = `Template Meta fiorista non disponibili. Cascata: ${cascadeResult.error}; florist_repeat: ${fallback.error}`;
+        const nextFlags = markWorkflowStep(
+            parseWorkflowFlags(
+                (
+                    await prisma.order.findUnique({
+                        where: { id: order.id },
+                        select: { veraWorkflowFlags: true },
+                    })
+                )?.veraWorkflowFlags
+            ),
+            'puntoA_florist'
+        );
+        delete nextFlags.puntoA_florist_deferred;
+        await updateWorkflowFlags(order.id, nextFlags);
+        return {
+            ok: true,
+            skipped: 'duplicate_order_template',
+            isFirstOrder: isFirst,
+            sentCount: 0,
+            skippedDuplicates: 1,
+        };
     }
 
-    if (!cascadeResult.ok) {
-        if (!options.force && claimed) {
-            await releaseWorkflowStep(order.id, 'puntoA_florist');
-        }
+    // Template principale: floremoria_nuovo_ordine_fiorista — 11 body params, no header.
+    const bodyParams = buildFloristNuovoOrdineBodyParams({
+        floristFirstName: floristName,
+        orderCode,
+        deceasedName: order.deceasedName,
+        cemeteryName: order.cemeteryName,
+        cemeteryCity: order.cemeteryCity,
+        province: order.deliveryProvince,
+        ticketMessage: order.ticketMessage,
+        items: order.items,
+        partnerNotes: order.partner?.internalNotes,
+        deliveryDate: order.deliveryDate,
+        createdAt: order.createdAt,
+        orderId: order.id,
+        deliveryUrl,
+    });
+
+    console.info(
+        `[vera-workflow] Punto A florist_repeat (11 params) ordine ${orderCode} first=${isFirst} params=${JSON.stringify(bodyParams)}`
+    );
+
+    if (bodyParams.length !== FLORIST_NUOVO_ORDINE_BODY_PARAM_COUNT) {
+        if (!options.force && claimed) await releaseWorkflowStep(order.id, 'puntoA_florist');
+        const err = `florist_repeat: attesi ${FLORIST_NUOVO_ORDINE_BODY_PARAM_COUNT} params, costruiti ${bodyParams.length}`;
         await setVeraOperationalAlert({
             orderId: order.id,
             type: 'punto_a_send_failed',
-            message: `Punto A fallito per ordine ${orderCode}: ${cascadeResult.error || 'errore Meta template'}.`,
+            message: `Punto A fallito per ordine ${orderCode}: ${err}.`,
             priority: 'urgent',
             freezeOrder: false,
         }).catch(() => undefined);
-        return cascadeResult;
+        return { ok: false, error: err, isFirstOrder: isFirst };
     }
 
-    if (options.force) {
-        const nextFlags = markWorkflowStep(flags, 'puntoA_florist');
-        delete nextFlags.puntoA_florist_deferred;
-        await updateWorkflowFlags(order.id, nextFlags);
-    } else {
-        const current = parseWorkflowFlags(
+    const send = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', bodyParams, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+    });
+
+    if (!send.ok) {
+        if (!options.force && claimed) await releaseWorkflowStep(order.id, 'puntoA_florist');
+        await setVeraOperationalAlert({
+            orderId: order.id,
+            type: 'punto_a_send_failed',
+            message: `Punto A fallito per ordine ${orderCode}: ${send.error || 'errore Meta template'}.`,
+            priority: 'urgent',
+            freezeOrder: false,
+        }).catch(() => undefined);
+        return {
+            ok: false,
+            error: send.error || 'template_send_failed',
+            isFirstOrder: isFirst,
+            sentCount: 0,
+        };
+    }
+
+    try {
+        await logVeraTemplateOutbound({
+            phoneE164: floristPhoneE164,
+            templateId: 'florist_repeat',
+            bodyParams,
+            eventType: 'FLORIST_NEW_ORDER_TEMPLATE',
+            orderId: order.id,
+            orderNumber: orderCode,
+            messageId: send.messageId,
+            contactName: floristName,
+            userType: 'FLORIST',
+        });
+    } catch (logErr) {
+        console.error('[vera-workflow] Template fiorista inviato ma sessione dashboard non registrata:', {
+            orderId: order.id,
+            error: logErr,
+        });
+    }
+
+    const nextFlags = markWorkflowStep(
+        parseWorkflowFlags(
             (
                 await prisma.order.findUnique({
                     where: { id: order.id },
                     select: { veraWorkflowFlags: true },
                 })
             )?.veraWorkflowFlags
-        );
-        const nextFlags = { ...current };
-        delete nextFlags.puntoA_florist_deferred;
-        await updateWorkflowFlags(order.id, nextFlags);
-    }
-    console.info(
-        `[vera-workflow] Punto A OK (template) ordine ${orderCode} first=${isFirst} sent=${cascadeResult.sentCount ?? 0} dup=${cascadeResult.skippedDuplicates ?? 0}`
+        ),
+        'puntoA_florist'
     );
-    return cascadeResult;
+    delete nextFlags.puntoA_florist_deferred;
+    await updateWorkflowFlags(order.id, nextFlags);
+
+    const { clearVeraOperationalAlert } = await import('@/lib/vera/operationalAlerts');
+    await clearVeraOperationalAlert(order.id).catch(() => undefined);
+
+    console.info(
+        `[vera-workflow] Punto A OK florist_repeat ordine ${orderCode} first=${isFirst} wamid=${send.messageId ?? 'N/A'}`
+    );
+    return { ok: true, isFirstOrder: isFirst, sentCount: 1, skippedDuplicates: 0 };
 }

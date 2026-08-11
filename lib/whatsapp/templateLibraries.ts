@@ -68,7 +68,7 @@ const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
     florist_first_002: 'Nuovo ordine fiorista · parte 2 (lumino/biglietto)',
     florist_first_003: 'Nuovo ordine fiorista · parte 3 (defunto/luogo)',
     florist_first_004: 'Nuovo ordine fiorista · parte 4 (link consegna)',
-    florist_repeat: 'Nuovo ordine fiorista (template unico)',
+    florist_repeat: 'Nuovo ordine fiorista (11 variabili)',
     florist_reminder: 'Sollecito accettazione / completamento',
     florist_tomb_not_found: 'Tomba non trovata',
 };

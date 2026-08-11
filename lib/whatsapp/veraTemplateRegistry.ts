@@ -123,21 +123,26 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floremoria_nuovo_ordine_fiorista'
         ),
         language: 'it',
-        bodyParamCount: 6,
-        // Ordine tassativo Meta: {{1}} nome, {{2}} defunto, {{3}} luogo, {{4}} link, {{5}} codice, {{6}} importo numerico.
+        bodyParamCount: 11,
+        // Meta live (ago 2026): 11 variabili body, header statico (non inviare header).
         bodySlots: [
-            'floristFirstName',
-            'deceasedName',
-            'cemeteryLabel',
-            'deliveryUrl',
-            'orderCode',
-            'floristPrice',
+            'floristFirstName', // {{1}}
+            'orderCode', // {{2}}
+            'deceasedName', // {{3}}
+            'deliveryDeadline', // {{4}}
+            'deliveryCity', // {{5}}
+            'deliveryPlace', // {{6}}
+            'productLabel', // {{7}}
+            'accessories', // {{8}}
+            'ticketText', // {{9}}
+            'floristPrice', // {{10}}
+            'deliveryUrl', // {{11}}
         ],
         library: 'FLORIST',
         bodyCanonical:
-            'Gentile {{1}} · codice {{5}} · ricordo di {{2}} presso {{3}} · importo {{6}}€ · mini-app {{4}}',
+            'Ciao {{1}}! Ordine {{2}} · {{3}} · consegna {{4}} · {{5}}, {{6}} · {{7}} · {{8}} · {{9}} · {{10}} · {{11}}',
         description:
-            '{{1}} nome, {{2}} defunto, {{3}} cimitero, {{4}} link, {{5}} codice, {{6}} importo (solo numero)',
+            '{{1}} nome, {{2}} codice, {{3}} defunto, {{4}} scadenza, {{5}} comune, {{6}} luogo, {{7}} prodotto, {{8}} accessori, {{9}} testo, {{10}} compenso, {{11}} link',
     },
     customer_order_confirm: {
         id: 'customer_order_confirm',

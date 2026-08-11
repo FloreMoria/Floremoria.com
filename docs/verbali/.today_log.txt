@@ -34,3 +34,5 @@
 [2026-08-11 16:10] feat(checkout+phone): implementato componente `PhoneInput` (`components/ui/PhoneInput.tsx`) con selettore del prefisso internazionale Paesi (default `+39` Italia 🇮🇹, supporto Svizzera `+41`, Francia `+33`, Germania `+49`, UK `+44`, USA `+1`, etc.); integrata la normalizzazione automatica E.164 (`+393401234567`) in tutti i form del sito (Checkout acquirente/destinatario, Profilo Utente, Anagrafica Defunti, Modali Creazione Ordine/Utente Command Center e Gestione Ruoli Staff).
 
 [2026-08-11 16:12] polish/giardino: ShareableLinkPanel email-only modal (no bottoni duplicati).
+[2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.
+[2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.

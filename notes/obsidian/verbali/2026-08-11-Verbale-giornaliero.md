@@ -1,0 +1,87 @@
+---
+date: 11-08-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale Operativo Giornaliero — 11 Agosto 2026"
+sync_source: docs/verbali/11-08-2026.md
+synced_at: 2026-08-11T19:00:44.836Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/11-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+---
+title: "Verbale Operativo — 11 Agosto 2026"
+date: 2026-08-11
+tags: [floremoria, verbale, dashboard, calendario, tiktok, whatsapp, giardino]
+author: Dott. Marsiglione & Team Sviluppo (Regia + Cursor)
+---
+
+# Verbale Operativo Giornaliero — 11 Agosto 2026
+
+**Società:** FloreMoria S.r.l. (Startup Innovativa)  
+**Progetto:** FloreMoria Platform (`floremoria.com`)  
+**Operatore:** Dott. Marsiglione & Team Sviluppo  
+**Ambiente:** Dashboard Next.js / IDE Cursor / Production Vercel (`floremoria-dashboard`)  
+**Giornata di riferimento:** 2026-08-11
+
+---
+
+## 1. Integrativo Calendario Ordini (Overview Dashboard)
+
+- Creato e integrato `OrdersCalendar` (`components/dashboard/OrdersCalendar.tsx`) in Overview (`app/dashboard/page.tsx` & `AnalyticsOverviewClient.tsx`).
+- Posizionamento evoluto in giornata: affianco al Command Center / poi tab in `MissionControlHub` (Stream Live vs Calendario Consegne); Registro Verbali a fianco a piena altezza.
+- Funzionalità:
+  - Filtro/raggruppamento per `deliveryDate`
+  - Switcher Griglia Mensile / Agenda
+  - Badge cromatici FF / FT / FA / FP e stati (Consegnato, In consegna, In attesa, Annullato)
+  - Modale dettaglio rapido + integrazione `CreateOrderModal`
+  - Integrazione ricorrenze GdM (`plannedDeliveryDates`, nascita/commemorazione)
+- Sync API `/api/dashboard/orders`
+- `npx tsc --noEmit` → 0 errori
+
+## 2. Configurazione e sottomissione App TikTok Developers
+
+- Verifica dominio: record DNS TXT Aruba su `floremoria.com` + file di verifica in `public/` e route App Router (whitelist `.gitignore`).
+- Content Posting API / Direct Post + Login Kit.
+- Scopes: `user.info.basic`, `video.publish`, `video.upload`.
+- Redirect URI OAuth registrata in console: `https://www.floremoria.com/api/social/tiktok/callback` (nota operativa console TikTok).
+- Documentazione giustificativa, video demo end-to-end, **Submit for Review** in produzione.
+
+## 3. Altri interventi della giornata (sintesi)
+
+- WhatsApp fiorista: template 11 variabili `floremoria_nuovo_ordine_fiorista`, pre-popolamento Command Center, fix Meta #132000.
+- TikTok publish: upload Blob client-side (no 413), PULL_FROM_URL, parsing non-JSON sicuro.
+- Giardino della Memoria: condivisione via Email (`/api/memorial/share-email`).
+- Checkout: `PhoneInput` con prefissi internazionali / E.164.
+- Pinterest: Pin V5 + agente giornaliero temi.
+
+## 4. Verifiche e deployment
+
+- TypeScript check ok.
+- Commit e `git push origin main` con deploy Vercel.
+
+---
+
+## Registro operativo automatico (.today_log)
+
+Fonte: `docs/verbali/.today_log.txt` (righe 2026-08-11).
+
+- [2026-08-11 08:48] fix/whatsapp: Meta #132000 fioristi — nomi live ft_1/2/3/004, mapping params, fallback "-" su vuoti; sollecito/tomb allineati; proactive FT 3 body.
+- [2026-08-11 09:14] debug/whatsapp: log payload Meta esatto + error JSON completo (#132000); strip rigido header se template senza header.
+- [2026-08-11 09:30] feat(pinterest+v5): client pubblicazione Pin + route `/api/social/pinterest/publish` + refresh token 24h.
+- [2026-08-11 10:19] feat/whatsapp: Punto A fiorista → floremoria_nuovo_ordine_fiorista a 11 variabili body.
+- [2026-08-11 10:22] fix/whatsapp: dedup florist_repeat per Punto A a 11 variabili.
+- [2026-08-11 10:25] feat(pinterest+agent): agente AI Pin quotidiani + cron 09:00 UTC.
+- [2026-08-11 10:35] feat/whatsapp: Pre-popolamento automatico 11 variabili nel Command Center.
+- [2026-08-11 10:55] fix/tiktok: Upload video via Blob client (no 413 FormData); parsing sicuro non-JSON; PULL_FROM_URL.
+- [2026-08-11 11:00] feat(whatsapp+florist): etichette/icone 11 variabili notifica fiorista + UI Command Center.
+- [2026-08-11 16:06] feat/giardino: Condivisione Email Giardino della Memoria.
+- [2026-08-11 16:10] feat(checkout+phone): PhoneInput prefissi internazionali + E.164.
+- [2026-08-11 16:12] polish/giardino: ShareableLinkPanel email-only modal.
+- [2026-08-11 17:32] chore/tiktok: file verifica dominio TikTok in public/.
+- [2026-08-11 17:34] fix/tiktok: Route App Router verifica dominio tiktok7q8….
+- [2026-08-11 17:48] chore/tiktok: verifica dominio tiktokhn9zw4… public + route.
+- [2026-08-11 17:50] feat(dashboard+calendar): OrdersCalendar in Overview.
+- [2026-08-11 19:00] refactor(dashboard+overview): Calendario in tab MissionControlHub; Verbali a fianco.
+- [2026-08-11 19:25] feat(dashboard+gdm): ricorrenze GdM nel calendario OrdersCalendar.
+- [2026-08-11 20:59] docs(verbali): consolidato verbale integrale Regia 11 Agosto 2026.

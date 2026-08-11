@@ -21,3 +21,5 @@
 
 
 [2026-08-11 10:19] feat/whatsapp: Punto A fiorista → floremoria_nuovo_ordine_fiorista a 11 variabili body (no header); builder con fallback "-".
+
+[2026-08-11 10:22] fix/whatsapp: dedup florist_repeat (FLORIST_NEW_ORDER_TEMPLATE) per Punto A a 11 variabili.

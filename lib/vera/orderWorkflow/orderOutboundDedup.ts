@@ -3,6 +3,7 @@ import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 
 const EVENT_TYPE_BY_TEMPLATE: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'ORDER_CONFIRM_TEMPLATE',
+    florist_repeat: 'FLORIST_NEW_ORDER_TEMPLATE',
     florist_first_001: 'FLORIST_NEW_ORDER_TEMPLATE',
     florist_first_002: 'FLORIST_NEW_ORDER_TEMPLATE',
     florist_first_003: 'FLORIST_NEW_ORDER_TEMPLATE',

@@ -36,3 +36,4 @@
 [2026-08-11 16:12] polish/giardino: ShareableLinkPanel email-only modal (no bottoni duplicati).
 [2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.
 [2026-08-11 17:32] chore/tiktok: Aggiunto file verifica dominio TikTok in public/.
+[2026-08-11 17:34] fix/tiktok: Route App Router per verifica dominio tiktok7q8… (non solo public/, non ignorato).

@@ -63,6 +63,8 @@ env.host.docker.example
 !public/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/**
+!app/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt/
+!app/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt/**
 
 # typescript
 *.tsbuildinfo

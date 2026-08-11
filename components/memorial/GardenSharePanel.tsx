@@ -18,6 +18,8 @@ export type GardenSharePanelProps = {
     showWhatsApp?: boolean;
     /** Apre subito il modale email (es. da ShareableLinkPanel). */
     openEmailOnMount?: boolean;
+    /** Nasconde i pulsanti trigger (solo modale, utile da ShareableLinkPanel). */
+    hideActionButtons?: boolean;
 };
 
 /**
@@ -32,6 +34,7 @@ export default function GardenSharePanel({
     variant = 'garden',
     showWhatsApp = true,
     openEmailOnMount = false,
+    hideActionButtons = false,
 }: GardenSharePanelProps) {
     const [emailOpen, setEmailOpen] = useState(openEmailOnMount);
     const [recipientEmail, setRecipientEmail] = useState('');
@@ -130,6 +133,7 @@ export default function GardenSharePanel({
 
     return (
         <>
+            {!hideActionButtons ? (
             <div
                 className={`flex ${layout === 'stack' ? 'flex-col' : 'flex-col sm:flex-row'} gap-2 ${className}`}
             >
@@ -149,6 +153,7 @@ export default function GardenSharePanel({
                     Invia via Email
                 </button>
             </div>
+            ) : null}
 
             {emailOpen ? (
                 <div

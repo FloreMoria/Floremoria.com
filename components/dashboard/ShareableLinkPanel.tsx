@@ -111,9 +111,9 @@ export default function ShareableLinkPanel({
                     deceasedName={deceasedName}
                     senderName={senderName}
                     variant="admin"
-                    layout="stack"
                     showWhatsApp={false}
                     openEmailOnMount
+                    hideActionButtons
                 />
             ) : null}
         </div>

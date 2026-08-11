@@ -77,6 +77,9 @@ export default async function AdminOverview() {
                 fullName: true,
                 cemeteryCity: true,
                 cemeteryName: true,
+                birthDate: true,
+                deathDate: true,
+                plannedDeliveryDates: true,
             },
         })
     );

@@ -8,7 +8,6 @@ import {
     Plus,
     Clock,
     MapPin,
-    User,
     Flower2,
     X,
     Eye,
@@ -45,6 +44,12 @@ export interface CalendarOrder {
         shopName?: string | null;
         ownerName?: string | null;
     } | null;
+
+    // Nuovi campi per Ricorrenze / Date GdM (Giardino della Memoria)
+    isGdm?: boolean;
+    gdmType?: 'PLANNED' | 'BIRTH' | 'DEATH';
+    gdmTitle?: string;
+    deceasedProfileId?: string;
 }
 
 export interface OrdersCalendarProps {
@@ -74,7 +79,26 @@ const MONTH_NAMES_IT = [
 
 const WEEKDAY_NAMES_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
-export function getCategoryBadge(orderNumber?: string | null) {
+export function getCategoryBadge(
+    orderNumber?: string | null,
+    isGdm?: boolean,
+    gdmType?: string
+) {
+    if (isGdm || orderNumber?.startsWith('GdM')) {
+        const label =
+            gdmType === 'BIRTH'
+                ? 'GdM Nascita 🎂'
+                : gdmType === 'DEATH'
+                ? 'GdM Commemorativo 🕊️'
+                : 'GdM Pianificato 🌹';
+        return {
+            prefix: 'GdM',
+            label,
+            badgeClass:
+                'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700 font-bold',
+            dotClass: 'bg-amber-500',
+        };
+    }
     const prefix = (orderNumber || 'FT').substring(0, 2).toUpperCase();
     switch (prefix) {
         case 'FF':
@@ -113,7 +137,25 @@ export function getCategoryBadge(orderNumber?: string | null) {
     }
 }
 
-export function getStatusBadge(status?: string | null) {
+export function getStatusBadge(
+    status?: string | null,
+    isGdm?: boolean,
+    gdmType?: string
+) {
+    if (isGdm || status?.startsWith('GDM')) {
+        return {
+            label:
+                gdmType === 'BIRTH'
+                    ? 'Nascita GdM 🎂'
+                    : gdmType === 'DEATH'
+                    ? 'Ricorrenza GdM 🕊️'
+                    : 'Data Pianificata GdM 🌹',
+            colorClass: 'bg-amber-500 text-white',
+            textClass:
+                'text-amber-800 bg-amber-50 border-amber-300 dark:text-amber-200 dark:bg-amber-950 dark:border-amber-700 font-semibold',
+            icon: Flower2,
+        };
+    }
     const s = (status || 'PENDING').toUpperCase();
     if (s === 'DELIVERED' || s === 'COMPLETED') {
         return {
@@ -123,7 +165,13 @@ export function getStatusBadge(status?: string | null) {
             icon: CheckCircle2,
         };
     }
-    if (s === 'DELIVERING' || s === 'ACCEPTED' || s === 'IN_PROGRESS' || s === 'PROCESSING' || s === 'CONFIRMED') {
+    if (
+        s === 'DELIVERING' ||
+        s === 'ACCEPTED' ||
+        s === 'IN_PROGRESS' ||
+        s === 'PROCESSING' ||
+        s === 'CONFIRMED'
+    ) {
         return {
             label: 'In consegna',
             colorClass: 'bg-blue-500 text-white',
@@ -156,6 +204,96 @@ function toDateKey(date: Date | string | null | undefined): string | null {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+/**
+ * Converte le anagrafiche GdM (DeceasedProfile) con birthDate, deathDate e plannedDeliveryDates
+ * in oggetti CalendarOrder visualizzabili sul calendario come date/ricorrenze GdM.
+ */
+function buildGdmCalendarItems(
+    deceasedProfiles: any[],
+    displayYear: number
+): CalendarOrder[] {
+    const items: CalendarOrder[] = [];
+
+    deceasedProfiles.forEach((profile) => {
+        if (!profile || !profile.fullName) return;
+
+        const name = profile.fullName;
+        const cemetery = profile.cemeteryName || '';
+        const city = profile.cemeteryCity || '';
+
+        // 1. Date Pianificate dall'utente nel GdM (plannedDeliveryDates: string[])
+        if (Array.isArray(profile.plannedDeliveryDates)) {
+            profile.plannedDeliveryDates.forEach((dStr: string) => {
+                if (!dStr || typeof dStr !== 'string') return;
+                items.push({
+                    id: `gdm-planned-${profile.id}-${dStr}`,
+                    orderNumber: 'GdM-Data',
+                    status: 'GDM_PLANNED',
+                    deceasedName: name,
+                    buyerFullName: 'Utente GdM',
+                    cemeteryName: cemetery,
+                    cemeteryCity: city,
+                    deliveryDate: dStr,
+                    isGdm: true,
+                    gdmType: 'PLANNED',
+                    gdmTitle: 'Data Commemorativa Pianificata sul GdM 🌹',
+                    deceasedProfileId: profile.id,
+                });
+            });
+        }
+
+        // 2. Anniversario Nascita GdM (birthDate)
+        if (profile.birthDate) {
+            const bDate = new Date(profile.birthDate);
+            if (!isNaN(bDate.getTime())) {
+                const month = String(bDate.getMonth() + 1).padStart(2, '0');
+                const day = String(bDate.getDate()).padStart(2, '0');
+                const birthAnniversaryDate = `${displayYear}-${month}-${day}`;
+                items.push({
+                    id: `gdm-birth-${profile.id}-${displayYear}`,
+                    orderNumber: 'GdM-Nascita',
+                    status: 'GDM_ANNIVERSARY',
+                    deceasedName: name,
+                    buyerFullName: 'Utente GdM',
+                    cemeteryName: cemetery,
+                    cemeteryCity: city,
+                    deliveryDate: birthAnniversaryDate,
+                    isGdm: true,
+                    gdmType: 'BIRTH',
+                    gdmTitle: 'Anniversario di Nascita GdM 🎂',
+                    deceasedProfileId: profile.id,
+                });
+            }
+        }
+
+        // 3. Anniversario Morte/Ricorrenza GdM (deathDate)
+        if (profile.deathDate) {
+            const dDate = new Date(profile.deathDate);
+            if (!isNaN(dDate.getTime())) {
+                const month = String(dDate.getMonth() + 1).padStart(2, '0');
+                const day = String(dDate.getDate()).padStart(2, '0');
+                const deathAnniversaryDate = `${displayYear}-${month}-${day}`;
+                items.push({
+                    id: `gdm-death-${profile.id}-${displayYear}`,
+                    orderNumber: 'GdM-Ricorrenza',
+                    status: 'GDM_ANNIVERSARY',
+                    deceasedName: name,
+                    buyerFullName: 'Utente GdM',
+                    cemeteryName: cemetery,
+                    cemeteryCity: city,
+                    deliveryDate: deathAnniversaryDate,
+                    isGdm: true,
+                    gdmType: 'DEATH',
+                    gdmTitle: 'Anniversario Commemorativo GdM 🕊️',
+                    deceasedProfileId: profile.id,
+                });
+            }
+        }
+    });
+
+    return items;
 }
 
 export default function OrdersCalendar({
@@ -221,18 +359,24 @@ export default function OrdersCalendar({
         setCurrentMonth(today.getMonth());
     };
 
-    // Mappa degli ordini indicizzati per YYYY-MM-DD (usando deliveryDate o createdAt come fallback)
+    // Genera lista unificata Ordini Reali + Ricorrenze / Date GdM degli Utenti
+    const allCalendarItems = useMemo(() => {
+        const gdmItems = buildGdmCalendarItems(deceasedProfiles, currentYear);
+        return [...liveOrders, ...gdmItems];
+    }, [liveOrders, deceasedProfiles, currentYear]);
+
+    // Mappa degli ordini ed eventi GdM indicizzati per YYYY-MM-DD
     const ordersByDateKey = useMemo(() => {
         const map = new Map<string, CalendarOrder[]>();
-        liveOrders.forEach((order) => {
-            const key = toDateKey(order.deliveryDate) || toDateKey(order.createdAt);
+        allCalendarItems.forEach((item) => {
+            const key = toDateKey(item.deliveryDate) || toDateKey(item.createdAt);
             if (!key) return;
             const list = map.get(key) || [];
-            list.push(order);
+            list.push(item);
             map.set(key, list);
         });
         return map;
-    }, [liveOrders]);
+    }, [allCalendarItems]);
 
     // Genera la griglia dei giorni per il mese corrente (incluso offset Lun-Dom)
     const calendarDays = useMemo(() => {
@@ -296,7 +440,7 @@ export default function OrdersCalendar({
         return days;
     }, [currentYear, currentMonth, today, ordersByDateKey]);
 
-    // Lista per vista Agenda (ordini del mese corrente ordinati per data consegna)
+    // Lista per vista Agenda (ordini ed eventi GdM del mese corrente ordinati per data)
     const agendaOrders = useMemo(() => {
         const list: Array<{ dateKey: string; date: Date; order: CalendarOrder }> = [];
         calendarDays.forEach((day) => {
@@ -331,7 +475,7 @@ export default function OrdersCalendar({
                             <span>{MONTH_NAMES_IT[currentMonth]} {currentYear}</span>
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Pianificazione consegne ordini
+                            Ordini di Consegna e Date Commemorative GdM
                         </p>
                     </div>
                 </div>
@@ -461,11 +605,11 @@ export default function OrdersCalendar({
                                         </button>
                                     </div>
 
-                                    {/* Mini Badge Ordini previsti per il giorno */}
+                                    {/* Mini Badge Ordini ed Eventi GdM previsti per il giorno */}
                                     <div className="mt-1 space-y-1 overflow-hidden flex-1">
                                         {day.orders.slice(0, 2).map((ord) => {
-                                            const cat = getCategoryBadge(ord.orderNumber);
-                                            const statusInfo = getStatusBadge(ord.status);
+                                            const cat = getCategoryBadge(ord.orderNumber, ord.isGdm, ord.gdmType);
+                                            const statusInfo = getStatusBadge(ord.status, ord.isGdm, ord.gdmType);
 
                                             return (
                                                 <div
@@ -475,10 +619,10 @@ export default function OrdersCalendar({
                                                         setSelectedOrder(ord);
                                                     }}
                                                     className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold border flex items-center justify-between gap-1 truncate transition-transform hover:scale-[1.02] ${cat.badgeClass}`}
-                                                    title={`${ord.orderNumber || 'Ordine'} - ${ord.deceasedName || 'Defunto'}`}
+                                                    title={`${ord.orderNumber || 'GdM'} - ${ord.deceasedName || 'Defunto'}`}
                                                 >
                                                     <span className="font-mono font-bold truncate">
-                                                        {ord.orderNumber || 'ORD'}
+                                                        {ord.orderNumber || 'GdM'}
                                                     </span>
                                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.colorClass}`} />
                                                 </div>
@@ -503,13 +647,13 @@ export default function OrdersCalendar({
                 <div className="p-4 max-h-[420px] overflow-y-auto custom-scrollbar">
                     {agendaOrders.length === 0 ? (
                         <div className="py-12 text-center text-slate-400 text-sm italic">
-                            Nessun ordine schedulato per il mese di {MONTH_NAMES_IT[currentMonth]} {currentYear}.
+                            Nessun ordine o ricorrenza GdM per il mese di {MONTH_NAMES_IT[currentMonth]} {currentYear}.
                         </div>
                     ) : (
                         <div className="space-y-2.5">
                             {agendaOrders.map(({ date, order }) => {
-                                const cat = getCategoryBadge(order.orderNumber);
-                                const statusInfo = getStatusBadge(order.status);
+                                const cat = getCategoryBadge(order.orderNumber, order.isGdm, order.gdmType);
+                                const statusInfo = getStatusBadge(order.status, order.isGdm, order.gdmType);
                                 const StatusIcon = statusInfo.icon;
 
                                 return (
@@ -529,11 +673,11 @@ export default function OrdersCalendar({
                                                 </span>
                                             </div>
 
-                                            {/* Dettagli Ordine */}
+                                            {/* Dettagli Ordine / GdM */}
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${cat.badgeClass}`}>
-                                                        {order.orderNumber || 'ORD'}
+                                                        {order.orderNumber || 'GdM'}
                                                     </span>
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border ${statusInfo.textClass}`}>
                                                         <StatusIcon size={10} />
@@ -567,7 +711,7 @@ export default function OrdersCalendar({
                 </div>
             )}
 
-            {/* QUICK ORDER DETAIL MODAL */}
+            {/* QUICK ORDER / GDM DETAIL MODAL */}
             {selectedOrder && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in"
@@ -580,11 +724,11 @@ export default function OrdersCalendar({
                         {/* Modal Header */}
                         <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
                             <div className="flex items-center gap-2.5">
-                                <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${getCategoryBadge(selectedOrder.orderNumber).badgeClass}`}>
-                                    {selectedOrder.orderNumber || 'Ordine'}
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${getCategoryBadge(selectedOrder.orderNumber, selectedOrder.isGdm, selectedOrder.gdmType).badgeClass}`}>
+                                    {selectedOrder.orderNumber || 'GdM'}
                                 </span>
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 border ${getStatusBadge(selectedOrder.status).textClass}`}>
-                                    {getStatusBadge(selectedOrder.status).label}
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 border ${getStatusBadge(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).textClass}`}>
+                                    {getStatusBadge(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).label}
                                 </span>
                             </div>
                             <button
@@ -607,24 +751,36 @@ export default function OrdersCalendar({
                                 </p>
                             </div>
 
+                            {selectedOrder.isGdm && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200">
+                                    <p className="font-bold flex items-center gap-1.5">
+                                        <Flower2 size={16} className="text-amber-600 dark:text-amber-400" />
+                                        <span>{selectedOrder.gdmTitle || 'Ricorrenza nel Giardino della Memoria (GdM)'}</span>
+                                    </p>
+                                    <p className="mt-1 text-[11px] opacity-80 leading-relaxed">
+                                        Questa data fa parte del Giardino della Memoria inserito dall&apos;utente per il defunto. È possibile pianificare un ordine floreale programmato per questa ricorrenza.
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl text-xs border border-gray-100 dark:border-slate-800">
                                 <div>
-                                    <span className="text-slate-400 uppercase font-bold block text-[10px]">Data Consegna</span>
+                                    <span className="text-slate-400 uppercase font-bold block text-[10px]">Data Consegna / Commemorazione</span>
                                     <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
                                         {selectedOrder.deliveryDate
                                             ? new Date(selectedOrder.deliveryDate).toLocaleDateString('it-IT', { dateStyle: 'full' })
-                                            : 'Entro 48h (Standard)'}
+                                            : 'Non specificata'}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-400 uppercase font-bold block text-[10px]">Cliente Acquirente</span>
+                                    <span className="text-slate-400 uppercase font-bold block text-[10px]">Utente / Referente</span>
                                     <span className="font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block truncate">
-                                        {selectedOrder.buyerFullName || selectedOrder.customerPhone || 'Cliente Anonimo'}
+                                        {selectedOrder.buyerFullName || selectedOrder.customerPhone || 'Utente GdM'}
                                     </span>
                                 </div>
                             </div>
 
-                            {/* Prodotti */}
+                            {/* Prodotti Ordinati (se ordine reale) */}
                             {selectedOrder.items && selectedOrder.items.length > 0 && (
                                 <div className="space-y-1.5">
                                     <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Prodotti Ordinati</span>
@@ -654,16 +810,30 @@ export default function OrdersCalendar({
                             >
                                 Chiudi
                             </button>
-                            <button
-                                onClick={() => {
-                                    setDrawerOrder(selectedOrder);
-                                    setSelectedOrder(null);
-                                }}
-                                className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                            >
-                                <Eye size={14} />
-                                <span>Vedi Dossier Completo</span>
-                            </button>
+                            {selectedOrder.isGdm ? (
+                                <button
+                                    onClick={() => {
+                                        const dDate = selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate) : new Date();
+                                        openNewOrderModalForDate(dDate);
+                                        setSelectedOrder(null);
+                                    }}
+                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                                >
+                                    <Plus size={14} />
+                                    <span>Pianifica Ordine per questo GdM</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        setDrawerOrder(selectedOrder);
+                                        setSelectedOrder(null);
+                                    }}
+                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                                >
+                                    <Eye size={14} />
+                                    <span>Vedi Dossier Completo</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -700,7 +870,18 @@ export default function OrdersCalendar({
                     users={users}
                     deceasedProfiles={deceasedProfiles}
                     duplicateFrom={
-                        selectedDateForNewOrder
+                        selectedOrder?.isGdm
+                            ? ({
+                                  deceasedName: selectedOrder.deceasedName,
+                                  cemeteryCity: selectedOrder.cemeteryCity,
+                                  cemeteryName: selectedOrder.cemeteryName,
+                                  deliveryDate: selectedDateForNewOrder
+                                      ? selectedDateForNewOrder.toISOString()
+                                      : selectedOrder.deliveryDate,
+                                  deceasedProfileId: selectedOrder.deceasedProfileId,
+                                  orderCategory: 'FA',
+                              } as any)
+                            : selectedDateForNewOrder
                             ? ({
                                   deliveryDate: selectedDateForNewOrder.toISOString(),
                               } as any)

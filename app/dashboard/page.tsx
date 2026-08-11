@@ -44,6 +44,43 @@ export default async function AdminOverview() {
         })
     );
 
+    const floristsResult = await runDashboardQuery('overview/florists', [], () =>
+        prisma.partner.findMany({
+            where: { deletedAt: null, isB2B: false },
+            orderBy: { shopName: 'asc' },
+            select: { id: true, shopName: true, ownerName: true },
+        })
+    );
+
+    const productsResult = await runDashboardQuery('overview/products', [], () =>
+        prisma.product.findMany({
+            where: { deletedAt: null, isActive: true },
+            orderBy: { name: 'asc' },
+            include: { category: true },
+        })
+    );
+
+    const usersResult = await runDashboardQuery('overview/users', [], () =>
+        prisma.user.findMany({
+            where: { deletedAt: null, systemRole: 'USER', isTest: testModeActive },
+            take: 300,
+            select: { id: true, name: true, email: true, phone: true },
+        })
+    );
+
+    const deceasedResult = await runDashboardQuery('overview/deceased', [], () =>
+        prisma.deceasedProfile.findMany({
+            orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+            take: 300,
+            select: {
+                id: true,
+                fullName: true,
+                cemeteryCity: true,
+                cemeteryName: true,
+            },
+        })
+    );
+
     const logsResult = await runDashboardQuery('overview/logs', [], () =>
         prisma.floremoriaLog.findMany({
             where: floremoriaLogPublicWhere(),
@@ -72,6 +109,10 @@ export default async function AdminOverview() {
                 initialOrders={ordersResult.data as any[]}
                 csvData={csvData}
                 latestLogs={logsResult.data}
+                florists={floristsResult.data}
+                products={productsResult.data}
+                users={usersResult.data}
+                deceasedProfiles={deceasedResult.data}
                 testModeActive={testModeActive}
             />
         </>

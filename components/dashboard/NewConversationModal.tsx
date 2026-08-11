@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Loader2, MessageSquarePlus, Phone, Search, Send, X } from 'lucide-react';
 import { toE164 } from '@/lib/auth/phone';
+import PhoneInput from '@/components/ui/PhoneInput';
 import {
     PROACTIVE_CONVERSATION_TEMPLATE_ID,
     renderOperatorTemplatePreview,
@@ -449,13 +450,13 @@ export default function NewConversationModal({
                                     Oppure numero manuale
                                 </label>
                                 <div className="flex gap-2">
-                                    <input
-                                        type="tel"
-                                        value={manualPhone}
-                                        onChange={(e) => setManualPhone(e.target.value)}
-                                        placeholder="+393331112222"
-                                        className="flex-1 rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
-                                    />
+                                    <div className="flex-1">
+                                        <PhoneInput
+                                            value={manualPhone}
+                                            onChange={setManualPhone}
+                                            placeholder="+393331112222"
+                                        />
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={handleManualPhoneContinue}

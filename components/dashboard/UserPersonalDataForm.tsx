@@ -5,6 +5,8 @@ import { User, Mail, Phone, MapPin, Check, AlertCircle } from 'lucide-react';
 import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
 import { sanitizePlannedDeliveryDates } from '@/lib/users/profileUserType';
 
+import PhoneInput from '@/components/ui/PhoneInput';
+
 export interface UserPersonalDataFormProps {
     initialName: string;
     initialEmail: string;
@@ -174,17 +176,12 @@ export default function UserPersonalDataForm({
                         >
                             Numero di telefono
                         </label>
-                        <div className="relative">
-                            <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                id="garden-profile-phone"
-                                type="tel"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className={inputClass}
-                                placeholder="Es. +39 333 1234567"
-                            />
-                        </div>
+                        <PhoneInput
+                            id="garden-profile-phone"
+                            value={phone}
+                            onChange={setPhone}
+                            placeholder="Numero di telefono"
+                        />
                     </div>
 
                     <div className="space-y-1.5">

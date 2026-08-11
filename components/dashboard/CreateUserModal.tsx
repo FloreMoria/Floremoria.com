@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 type FloristOption = { id: string; shopName: string; ownerName: string | null };
 
@@ -145,11 +146,10 @@ export default function CreateUserModal({ open, onClose, onCreated, florists }: 
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
                             />
-                            <input
+                            <PhoneInput
                                 placeholder="Telefono"
                                 value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                                onChange={setPhone}
                             />
                         </div>
                         <p className="text-xs text-gray-500 mt-2">Almeno email o telefono. Solo telefono → email placeholder interna.</p>

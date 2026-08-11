@@ -12,6 +12,7 @@ import {
 import type { PartnerExternalOrderPayload } from '@/lib/partnerExternalOrderData';
 import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 interface OrderItem {
     productId: string;
@@ -593,7 +594,7 @@ export default function CheckoutPage() {
         if (!emailRegex.test(buyerEmail)) return false;
         
         const cleanPhone = buyerPhone.replace(/[\+\s]/g, '');
-        if (cleanPhone.length < 10 || cleanPhone.length > 13) return false;
+        if (cleanPhone.length < 8 || cleanPhone.length > 16) return false;
         
         return true;
     };
@@ -834,10 +835,13 @@ export default function CheckoutPage() {
                                         <p className="text-[11px] text-gray-400 mt-1.5 ml-2">Necessario per ricevere la ricevuta fiscale.</p>
                                     </div>
                                     <div>
-                                        <input type="tel" placeholder="Cellulare *" value={buyerPhone} onChange={e => {
-                                            const val = e.target.value;
-                                            if (/^\+?[0-9]*$/.test(val)) setBuyerPhone(val);
-                                        }} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="tel" />
+                                        <PhoneInput
+                                            value={buyerPhone}
+                                            onChange={setBuyerPhone}
+                                            placeholder="Cellulare *"
+                                            required
+                                            autoComplete="tel"
+                                        />
                                         <p className="text-[11px] text-gray-400 mt-1.5 ml-2">
                                             {orderCategory === 'FA'
                                                 ? 'Per aggiornamenti sulla consegna del tuo omaggio.'

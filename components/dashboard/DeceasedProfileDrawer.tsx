@@ -23,6 +23,7 @@ import {
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
+import PhoneInput from '@/components/ui/PhoneInput';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
@@ -489,18 +490,18 @@ export default function DeceasedProfileDrawer({
                                                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                                             />
                                         </label>
-                                        <label className="block text-xs font-semibold text-gray-500">
-                                            Numero di telefono
-                                            <input
-                                                type="tel"
-                                                value={form.phone}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, phone: e.target.value } : f))
-                                                }
-                                                placeholder="Es. +39 333 1234567"
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
-                                            />
-                                        </label>
+                                        <div className="block text-xs font-semibold text-gray-500">
+                                            <span>Numero di telefono</span>
+                                            <div className="mt-1">
+                                                <PhoneInput
+                                                    value={form.phone}
+                                                    onChange={(val) =>
+                                                        setForm((f) => (f ? { ...f, phone: val } : f))
+                                                    }
+                                                    placeholder="Numero di telefono"
+                                                />
+                                            </div>
+                                        </div>
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Città / Comune
                                             <input

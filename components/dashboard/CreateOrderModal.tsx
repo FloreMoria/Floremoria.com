@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, X } from 'lucide-react';
+import PhoneInput from '@/components/ui/PhoneInput';
 import {
     buildEmptyOrderDraft,
     joinDeliveryDatetime,
@@ -498,12 +499,13 @@ function CreateOrderFormPanel({
                                 onChange={(e) => setBuyerEmail(e.target.value)}
                                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
                             />
-                            <input
-                                placeholder="Telefono"
-                                value={buyerPhone}
-                                onChange={(e) => setBuyerPhone(e.target.value)}
-                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm md:col-span-2"
-                            />
+                            <div className="md:col-span-2">
+                                <PhoneInput
+                                    placeholder="Telefono"
+                                    value={buyerPhone}
+                                    onChange={setBuyerPhone}
+                                />
+                            </div>
                         </div>
                     </section>
 

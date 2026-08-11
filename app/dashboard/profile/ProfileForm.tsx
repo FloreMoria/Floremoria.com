@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { User, Mail, Building, Phone, Check, AlertCircle } from 'lucide-react';
 
+import PhoneInput from '@/components/ui/PhoneInput';
+
 export interface ProfileData {
     id: string;
     name: string;
@@ -161,17 +163,12 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
                     <label className="text-xs font-semibold uppercase tracking-wider text-gray-400" htmlFor="profile-phone">
                         Telefono
                     </label>
-                    <div className="relative">
-                        <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            id="profile-phone"
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            className={inputClass}
-                            placeholder="+39 320 000 0000"
-                        />
-                    </div>
+                    <PhoneInput
+                        id="profile-phone"
+                        value={phone}
+                        onChange={setPhone}
+                        placeholder="Cellulare / Telefono"
+                    />
                 </div>
             </div>
 

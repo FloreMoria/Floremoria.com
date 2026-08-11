@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PERMISSION_MATRIX } from '@/lib/rbac';
 import { Shield, Lock, Users, Save, Check, Trash2, UserPlus, Mail, Send, AlertTriangle } from 'lucide-react';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 interface Role {
     id: string;
@@ -456,13 +457,11 @@ export default function RolesMatrixClient() {
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2" htmlFor="invite-phone">
                                 Telefono (opzionale)
                             </label>
-                            <input
+                            <PhoneInput
                                 id="invite-phone"
-                                type="tel"
                                 value={invitePhone}
-                                onChange={(e) => setInvitePhone(e.target.value)}
-                                placeholder="Es: +39 345 6789012"
-                                className="w-full bg-white border border-gray-200 text-gray-800 font-body text-sm rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold block p-3 outline-none transition-all shadow-sm"
+                                onChange={setInvitePhone}
+                                placeholder="Telefono"
                             />
                         </div>
                     </div>

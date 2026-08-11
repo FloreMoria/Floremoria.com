@@ -25,12 +25,17 @@ import {
 } from '@/lib/vera/orderWorkflow/types';
 import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 import {
+    formatFloristCemeteryCityParam,
     formatFloristCompensationParam,
     formatFloristDeceasedParam,
     formatFloristDeliveryPositionParam,
     formatFloristDeliveryUrlParam,
     formatFloristLocationParam,
     formatFloristOrderCodeParam,
+    formatFloristPriceAmountParam,
+    formatFloristTicketTextParam,
+    formatFloristYesNoParam,
+    metaParamOrDash,
 } from '@/lib/whatsapp/floristTemplateCopy';
 import { hasLuminoOption, orderHasBigliettinoOrRibbon } from '@/lib/orders/orderOptionals';
 import {
@@ -55,7 +60,7 @@ export interface PuntoAOptions {
 }
 
 function yesNo(value: boolean): string {
-    return value ? 'Sì' : 'No';
+    return formatFloristYesNoParam(value);
 }
 
 async function updateWorkflowFlags(orderId: string, flags: VeraWorkflowFlags): Promise<void> {
@@ -268,20 +273,26 @@ export async function runPuntoAFloristNewOrder(
         return { ok: false, skipped: 'invalid_florist_phone' };
     }
 
-    const floristName = extractFirstName(order.partner.ownerName || order.partner.shopName);
+    const floristName = metaParamOrDash(
+        extractFirstName(order.partner.ownerName || order.partner.shopName) || 'Fiorista',
+        48
+    );
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
     const compensation = calculateFloristCompensation(order.items, order.partner?.internalNotes);
     const compensationLabel = formatFloristCompensationForTemplate(compensation);
     const orderCode = order.orderNumber || order.id;
     const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
+    const cemeteryCity = order.cemeteryCity || order.cemeteryName || '';
     const gravePosition = order.gravePosition?.trim() || '';
     const deliveryPosition = formatFloristDeliveryPositionParam(
         buildDeliveryPositionLabel(gravePosition, cemeteryLabel)
     );
     const formattedOrderCode = formatFloristOrderCodeParam(orderCode);
-    const formattedCompensation = formatFloristCompensationParam(compensationLabel);
+    const formattedCompensationFt1 = formatFloristCompensationParam(compensationLabel);
+    const formattedPriceAmount = formatFloristPriceAmountParam(compensationLabel);
     const formattedDeceased = formatFloristDeceasedParam(order.deceasedName);
-    const formattedLocation = formatFloristLocationParam(cemeteryLabel);
+    const formattedLocationRepeat = formatFloristLocationParam(cemeteryLabel);
+    const formattedCemeteryCity = formatFloristCemeteryCityParam(cemeteryCity);
     const formattedDeliveryUrl = formatFloristDeliveryUrlParam(deliveryUrl);
 
     if (compensation.totalCents === 0 && compensation.unmappedProducts.length > 0) {
@@ -326,19 +337,39 @@ export async function runPuntoAFloristNewOrder(
     // Cascata florist_first_001…004; se i ft_* non esistono sul WABA → florist_repeat.
     const lumino = hasLuminoOption(order.items);
     const bigliettino = orderHasBigliettinoOrRibbon(order.items, order.ticketMessage);
-    const ticketText = order.ticketMessage?.trim() || 'Nessuno';
+    const ticketText = formatFloristTicketTextParam(order.ticketMessage);
 
+    // Mapping allineato ai template Meta live (WABA FloreMoria):
+    // ft_1: {{1}} nome, {{2}} codice, {{3}} importo
+    // ft_2: {{1}} lumino, {{2}} biglietto, {{3}} testo
+    // ft_3: {{1}} defunto, {{2}} città, {{3}} indicazioni
+    // ft_004: {{1}} link
     const steps: FloristCascadeStep[] = isFirst
         ? [
-              { template: 'florist_first_001', params: [floristName, formattedOrderCode, formattedCompensation] },
-              { template: 'florist_first_002', params: [yesNo(lumino), yesNo(bigliettino), ticketText] },
-              { template: 'florist_first_003', params: [formattedDeceased, formattedLocation, deliveryPosition] },
+              {
+                  template: 'florist_first_001',
+                  params: [floristName, formattedOrderCode, formattedCompensationFt1],
+              },
+              {
+                  template: 'florist_first_002',
+                  params: [yesNo(lumino), yesNo(bigliettino), ticketText],
+              },
+              {
+                  template: 'florist_first_003',
+                  params: [formattedDeceased, formattedCemeteryCity, deliveryPosition],
+              },
               { template: 'florist_first_004', params: [formattedDeliveryUrl] },
           ]
         : (() => {
               const repeatSteps: FloristCascadeStep[] = [
-                  { template: 'florist_first_001', params: [floristName, formattedOrderCode, formattedCompensation] },
-                  { template: 'florist_first_003', params: [formattedDeceased, formattedLocation, deliveryPosition] },
+                  {
+                      template: 'florist_first_001',
+                      params: [floristName, formattedOrderCode, formattedCompensationFt1],
+                  },
+                  {
+                      template: 'florist_first_003',
+                      params: [formattedDeceased, formattedCemeteryCity, deliveryPosition],
+                  },
                   { template: 'florist_first_004', params: [formattedDeliveryUrl] },
               ];
               if (lumino || bigliettino) {
@@ -377,10 +408,10 @@ export async function runPuntoAFloristNewOrder(
         const fallback = await sendVeraTemplate(floristPhoneE164, 'florist_repeat', [
             floristName,
             formattedDeceased,
-            formattedLocation,
+            formattedLocationRepeat,
             formattedDeliveryUrl,
             formattedOrderCode,
-            formattedCompensation,
+            formattedPriceAmount,
         ], {
             orderId: order.id,
             orderNumber: order.orderNumber,
@@ -392,10 +423,10 @@ export async function runPuntoAFloristNewOrder(
                 bodyParams: [
                     floristName,
                     formattedDeceased,
-                    formattedLocation,
+                    formattedLocationRepeat,
                     formattedDeliveryUrl,
                     formattedOrderCode,
-                    formattedCompensation,
+                    formattedPriceAmount,
                 ],
                 orderId: order.id,
                 orderNumber: orderCode,

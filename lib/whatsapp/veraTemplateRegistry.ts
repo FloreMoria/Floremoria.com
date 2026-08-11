@@ -48,51 +48,67 @@ function envTemplateName(key: string, fallback: string): string {
 export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
     proactive_staff: {
         id: 'proactive_staff',
+        // Meta live Scenario A: body-only FT ({{1}} nome, {{2}} ordine, {{3}} note).
+        // Evita #132000 sul vecchio template con HEADER {{1}}.
         metaName: envTemplateName(
             'WHATSAPP_TEMPLATE_PROACTIVE',
-            'floremoria_messaggio_personalizzato_fiorista'
+            'floremoria_messaggio_personalizzato_fiorista_ft'
         ),
         language: process.env.WHATSAPP_TEMPLATE_PROACTIVE_LANGUAGE?.trim() || 'it',
-        bodyParamCount: 2,
-        bodySlots: ['floristFirstName', 'staffNotes'],
+        bodyParamCount: 3,
+        bodySlots: ['floristFirstName', 'orderCode', 'staffNotes'],
         library: 'FLORIST',
         bodyCanonical:
-            'Gentile {{1}}, in merito al Suo ordine.\n\n{{2}}\n\nRestiamo a Sua completa disposizione.\nLo Staff di FloreMoria',
-        description: 'Body-only: {{1}} nome fiorista, {{2}} note staff (con rif. ordine)',
+            "Gentile {{1}}, in merito all'ordine {{2}}: {{3}}\nGrazie.\nTutto lo Staff di FloreMoria la saluta cordialmente🌹",
+        description: 'Body-only FT: {{1}} nome, {{2}} codice ordine, {{3}} note staff',
     },
     florist_first_001: {
         id: 'florist_first_001',
-        metaName: 'floremoria_nuovo_ordine_fioristi_ft_001',
+        // Meta live (ago 2026): floremoria_nuovo_ordine_fiorista_ft_1 (non fioristi_ft_001).
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_FIRST_001',
+            'floremoria_nuovo_ordine_fiorista_ft_1'
+        ),
         language: 'it',
         bodyParamCount: 3,
         bodySlots: ['floristFirstName', 'orderCode', 'floristPrice'],
         library: 'FLORIST',
-        bodyCanonical: '{{1}} | ordine {{2}} | compenso {{3}}',
-        description: '{{1}} nome, {{2}} codice ordine, {{3}} prezzo listino fiorista',
+        bodyCanonical: 'Gentile {{1}} … ordine {{2}} … importo {{3}}',
+        description: '{{1}} nome, {{2}} codice ordine, {{3}} importo (es. 20€)',
     },
     florist_first_002: {
         id: 'florist_first_002',
-        metaName: 'floremoria_nuovo_ordine_fioristi_ft_002',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_FIRST_002',
+            'floremoria_nuovo_ordine_fiorista_ft_2'
+        ),
         language: 'it',
         bodyParamCount: 3,
         bodySlots: ['luminoYesNo', 'ticketYesNo', 'ticketText'],
         library: 'FLORIST',
-        bodyCanonical: 'Lumino {{1}} | Bigliettino {{2}} | Testo {{3}}',
+        bodyCanonical: 'Lumino [{{1}}] · Bigliettino [{{2}}] · Testo [{{3}}]',
         description: '{{1}} lumino Sì/No, {{2}} bigliettino Sì/No, {{3}} testo biglietto',
     },
     florist_first_003: {
         id: 'florist_first_003',
-        metaName: 'floremoria_nuovo_ordine_fioristi_ft_003',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_FIRST_003',
+            'floremoria_nuovo_ordine_fiorista_ft_3'
+        ),
         language: 'it',
         bodyParamCount: 3,
         bodySlots: ['deceasedName', 'cemeteryLabel', 'gravePosition'],
         library: 'FLORIST',
-        bodyCanonical: '{{1}} | {{2}} | {{3}}',
-        description: '{{1}} defunto, {{2}} cimitero/città, {{3}} indicazioni tomba',
+        bodyCanonical: 'Tomba di {{1}} · cimitero di {{2}} · indicazioni {{3}}',
+        description: '{{1}} defunto, {{2}} città/cimitero, {{3}} indicazioni tomba',
     },
     florist_first_004: {
         id: 'florist_first_004',
-        metaName: 'floremoria_nuovo_ordine_fioristi_ft_004',
+        // Meta live: plurale "fioristi" + suffisso 004 (diverso da ft_1/2/3).
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_FIRST_004',
+            'floremoria_nuovo_ordine_fioristi_ft_004'
+        ),
         language: 'it',
         bodyParamCount: 1,
         bodySlots: ['deliveryUrl'],
@@ -102,9 +118,13 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
     },
     florist_repeat: {
         id: 'florist_repeat',
-        metaName: 'floremoria_nuovo_ordine_fiorista',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_REPEAT',
+            'floremoria_nuovo_ordine_fiorista'
+        ),
         language: 'it',
         bodyParamCount: 6,
+        // Ordine tassativo Meta: {{1}} nome, {{2}} defunto, {{3}} luogo, {{4}} link, {{5}} codice, {{6}} importo numerico.
         bodySlots: [
             'floristFirstName',
             'deceasedName',
@@ -114,8 +134,10 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floristPrice',
         ],
         library: 'FLORIST',
-        bodyCanonical: '{{1}} | {{2}} | {{3}} | {{4}} | {{5}} | {{6}}',
-        description: '{{1}} nome, {{2}} defunto, {{3}} cimitero, {{4}} link, {{5}} codice, {{6}} prezzo',
+        bodyCanonical:
+            'Gentile {{1}} · codice {{5}} · ricordo di {{2}} presso {{3}} · importo {{6}}€ · mini-app {{4}}',
+        description:
+            '{{1}} nome, {{2}} defunto, {{3}} cimitero, {{4}} link, {{5}} codice, {{6}} importo (solo numero)',
     },
     customer_order_confirm: {
         id: 'customer_order_confirm',
@@ -194,21 +216,23 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         ),
         language: 'it',
         bodyParamCount: 3,
-        bodySlots: ['floristFirstName', 'orderCode', 'deceasedName'],
+        // Meta live: {{1}} nome, {{2}} codice, {{3}} MagicLink mini-app (non defunto).
+        bodySlots: ['floristFirstName', 'orderCode', 'deliveryUrl'],
         library: 'FLORIST',
         bodyCanonical:
-            'Gentile {{1}}, Le ricordiamo di completare l\'ordine {{2}} per il ricordo di {{3}}.',
-        description: '{{1}} nome fiorista, {{2}} codice ordine, {{3}} defunto',
+            'Gentile {{1}}, in merito all\'ordine {{2}} … mini-app {{3}}.',
+        description: '{{1}} nome fiorista, {{2}} codice ordine, {{3}} link mini-app',
     },
     florist_tomb_not_found: {
         id: 'florist_tomb_not_found',
         metaName: 'floremoria_tomba_non_trovata_fiorista',
         language: 'it',
         bodyParamCount: 2,
-        bodySlots: ['orderCode', 'deceasedName'],
+        // Meta live: {{1}} nome fiorista, {{2}} codice ordine.
+        bodySlots: ['floristFirstName', 'orderCode'],
         library: 'FLORIST',
-        bodyCanonical: 'Ordine {{1}} | defunto {{2}}',
-        description: '{{1}} codice ordine, {{2}} defunto',
+        bodyCanonical: 'Gentile {{1}} … ordine {{2}} …',
+        description: '{{1}} nome fiorista, {{2}} codice ordine',
     },
     customer_cemetery_closed: {
         id: 'customer_cemetery_closed',
@@ -230,10 +254,12 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodyParamCount: 3,
         bodySlots: ['userFirstName', 'rememberedPerson', 'catalogUrl'],
         library: 'UTENTE',
+        headerTextParamCount: 1,
+        headerSlots: ['rememberedPerson'],
         bodyCanonical:
             'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
             'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
-        description: 'Body-only: {{1}} utente, {{2}} defunto, {{3}} link catalogo/GdM',
+        description: 'Header {{1}} defunto · body {{1}} utente, {{2}} defunto, {{3}} link catalogo/GdM',
     },
 };
 

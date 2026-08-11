@@ -55,10 +55,12 @@ export function buildVeraTemplateBodyParams(
     const spec = getVeraTemplate(templateId);
     const params = spec.bodySlots.map((slot) => {
         const raw = values[slot];
-        if (raw === undefined || raw === null) {
-            throw new VeraTemplateParamError(
-                `Template ${spec.metaName}: manca il valore per lo slot "${slot}" (${spec.bodySlots.join(', ')}).`
+        if (raw === undefined || raw === null || !String(raw).trim()) {
+            // Meta #132000 / vuoti: fallback '-' invece di far fallire l'intero invio.
+            console.warn(
+                `[vera-template-params] ${templateId}: slot "${slot}" mancante → fallback "-"`
             );
+            return '-';
         }
         if (NAME_SLOT_PATTERN.test(slot)) {
             return assertShortName(raw, slot);
@@ -163,12 +165,20 @@ export function buildOrdineCompletatoParams(input: {
 export function buildFloristReminderParams(input: {
     floristFirstName?: string | null;
     orderCode?: string | null;
+    /** Link mini-app / MagicLink — Meta {{3}} su floremoria_sollecito_fiorista. */
+    deliveryUrl?: string | null;
+    /** @deprecated Meta non usa più il defunto su questo template. */
     deceasedName?: string | null;
 }): string[] {
+    void input.deceasedName;
     return buildVeraTemplateBodyParams('florist_reminder', {
         floristFirstName: extractFirstName(input.floristFirstName || 'Fiorista') || 'Fiorista',
-        orderCode: requireText(normalizeOrderCode(input.orderCode || ''), 'orderCode', 40),
-        deceasedName: requireText(input.deceasedName || 'defunto', 'deceasedName', 120),
+        orderCode: requireText(normalizeOrderCode(input.orderCode || '') || '-', 'orderCode', 40),
+        deliveryUrl: requireText(
+            input.deliveryUrl || 'https://www.floremoria.com',
+            'deliveryUrl',
+            META_TEMPLATE_LIMITS.url
+        ),
     });
 }
 
@@ -177,18 +187,13 @@ export function buildProactiveStaffParams(input: {
     orderCode?: string | null;
     staffNotes: string;
 }): { bodyParams: string[]; headerTextParams: string[] } {
-    const code = normalizeOrderCode(input.orderCode || '');
-    const notesRaw = requireText(input.staffNotes, 'staffNotes');
-    const notes =
-        code && notesRaw
-            ? requireText(`Rif. ordine ${code}. ${notesRaw}`, 'staffNotes')
-            : notesRaw;
     return {
-        // Scenario A: nessun header Meta.
+        // Template FT body-only: nessun header.
         headerTextParams: [],
         bodyParams: buildVeraTemplateBodyParams('proactive_staff', {
             floristFirstName: extractFirstName(input.floristFirstName || 'Fiorista') || 'Fiorista',
-            staffNotes: notes,
+            orderCode: requireText(normalizeOrderCode(input.orderCode || '') || '-', 'orderCode', 40),
+            staffNotes: requireText(input.staffNotes, 'staffNotes'),
         }),
     };
 }
@@ -215,7 +220,7 @@ export function buildAnniversaryGdmReminderParams(input: {
     });
     logBuiltTemplateParams('anniversary_gdm_reminder', bodyParams);
     return {
-        headerTextParams: [],
+        headerTextParams: [rememberedPerson],
         bodyParams,
     };
 }

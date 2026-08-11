@@ -355,19 +355,37 @@ export async function sendWhatsAppTemplateMessage(
         return { ok: false, error: 'invalid_phone' };
     }
 
-    // Scenario A: strip header components prima della validazione/invio.
-    const headerCount = components.filter((c) => c.type === 'header').length;
-    const bodyOnlyComponents = components.filter((c) => c.type !== 'header');
-    if (headerCount > 0) {
+    // Strip SOLO header vuoti (senza parameters). Mantieni header con variabili/media
+    // richiesti da Meta (altrimenti #132000 su HEADER).
+    const stripped: WhatsAppTemplateComponent[] = [];
+    let removedEmptyHeaders = 0;
+    for (const c of components) {
+        if (c.type === 'header' && (!c.parameters || c.parameters.length === 0)) {
+            removedEmptyHeaders += 1;
+            continue;
+        }
+        stripped.push(c);
+    }
+    if (removedEmptyHeaders > 0) {
         console.warn(
-            `[meta-cloud-api] Scenario A: rimossi ${headerCount} componenti header dal payload template "${templateName}".`
+            `[meta-cloud-api] Rimossi ${removedEmptyHeaders} header vuoti dal payload template "${templateName}".`
         );
     }
+    const bodyOnlyComponents = stripped;
 
     if (bodyOnlyComponents.length > 0) {
+        const headerTextCount =
+            bodyOnlyComponents
+                .find((c) => c.type === 'header')
+                ?.parameters?.filter((p) => p.type === 'text').length ?? 0;
         const validationError = validateTemplateComponents(bodyOnlyComponents, {
             ...options,
-            expectedHeaderTextParamCount: 0,
+            expectedHeaderTextParamCount:
+                options?.expectedHeaderTextParamCount !== undefined
+                    ? options.expectedHeaderTextParamCount
+                    : headerTextCount > 0
+                      ? headerTextCount
+                      : 0,
         });
         if (validationError) {
             console.warn(`[meta-cloud-api] Template validation: ${validationError}`);

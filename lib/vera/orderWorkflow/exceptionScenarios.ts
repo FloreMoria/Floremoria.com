@@ -74,9 +74,13 @@ export async function handleFloristException(input: {
         }
 
         if (order.partner?.whatsappNumber) {
+            const floristName =
+                extractFirstNameFromProfile(
+                    order.partner.ownerName || order.partner.shopName || 'Fiorista'
+                ) || 'Fiorista';
             await sendVeraTemplate(order.partner.whatsappNumber, 'florist_tomb_not_found', [
+                floristName,
                 orderCode,
-                order.deceasedName,
             ], { orderId: order.id, orderNumber: orderCode });
         }
 

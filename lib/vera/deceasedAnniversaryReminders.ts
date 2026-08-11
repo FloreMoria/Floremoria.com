@@ -12,7 +12,7 @@ import {
     type WhatsAppTemplateComponent,
 } from '@/lib/whatsapp/metaCloudApiClient';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
-import { sanitizeMetaTemplateParam, ANNIVERSARY_GDM_BODY_PARAM_COUNT } from '@/lib/whatsapp/approvedTemplates';
+import { sanitizeMetaTemplateParam, ANNIVERSARY_GDM_BODY_PARAM_COUNT, ANNIVERSARY_GDM_HEADER_PARAM_COUNT } from '@/lib/whatsapp/approvedTemplates';
 import { getVeraTemplate } from '@/lib/whatsapp/veraTemplateRegistry';
 import { buildAnniversaryGdmReminderParams } from '@/lib/whatsapp/veraTemplateParams';
 import { resolveAnniversaryGdmTemplateParams } from '@/lib/whatsapp/proactiveTemplateParams';
@@ -273,19 +273,30 @@ export async function runDeceasedAnniversaryReminders(
                     deceasedFullName: profile.fullName,
                     catalogUrl: catalogProposalsUrl(),
                 });
-                const { bodyParams } = buildAnniversaryGdmReminderParams({
+                const { bodyParams, headerTextParams } = buildAnniversaryGdmReminderParams({
                     userFirstName: resolved.userFirstName,
                     deceasedName: resolved.deceasedFullName,
                     catalogUrl: resolved.catalogUrl,
                 });
 
-                // Scenario A: solo body (nessuna interstazione/header).
+                // Meta live: HEADER {{1}} defunto + BODY {{1}}/{{2}}/{{3}}.
                 const components: WhatsAppTemplateComponent[] = [
+                    {
+                        type: 'header',
+                        parameters: [
+                            {
+                                type: 'text' as const,
+                                text: sanitizeMetaTemplateParam(
+                                    headerTextParams[0] || resolved.deceasedFullName || '-'
+                                ),
+                            },
+                        ],
+                    },
                     {
                         type: 'body',
                         parameters: bodyParams.map((text) => ({
                             type: 'text' as const,
-                            text: sanitizeMetaTemplateParam(text),
+                            text: sanitizeMetaTemplateParam(text) || '-',
                         })),
                     },
                 ];
@@ -300,7 +311,7 @@ export async function runDeceasedAnniversaryReminders(
                         components,
                         {
                             expectedBodyParamCount: ANNIVERSARY_GDM_BODY_PARAM_COUNT,
-                            expectedHeaderTextParamCount: 0,
+                            expectedHeaderTextParamCount: ANNIVERSARY_GDM_HEADER_PARAM_COUNT,
                         }
                     );
 
@@ -316,7 +327,12 @@ export async function runDeceasedAnniversaryReminders(
                         continue;
                     }
 
-                    const preview = renderVeraTemplateBodyPreview('anniversary_gdm_reminder', bodyParams);
+                    const preview = [
+                        headerTextParams[0] || '',
+                        renderVeraTemplateBodyPreview('anniversary_gdm_reminder', bodyParams),
+                    ]
+                        .filter(Boolean)
+                        .join('\n\n');
                     const anniversaryMeta = {
                         eventType: ANNIVERSARY_REMINDER_EVENT,
                         anniversaryKind: kind,

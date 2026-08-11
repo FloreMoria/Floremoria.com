@@ -87,11 +87,20 @@ export async function sendVeraTemplate(
 
     for (const text of bodyParams) {
         if (!sanitizeMetaTemplateParam(text)) {
-            return { ok: false, error: 'Parametro template vuoto.', errorCode: 132000 };
+            console.warn(
+                `[vera-template] ${spec.id}: parametro vuoto coercizzato a "-" (prevenzione Meta #132000)`
+            );
         }
     }
 
-    const components: WhatsAppTemplateComponent[] = [buildBodyComponent(bodyParams)];
+    const safeParams = bodyParams.map((text) => sanitizeMetaTemplateParam(text) || '-');
+    if (safeParams.length !== spec.bodyParamCount) {
+        const msg = `Template ${spec.metaName}: attesi ${spec.bodyParamCount} parametri body, ricevuti ${safeParams.length}.`;
+        console.warn(`[vera-template] ${msg}`);
+        return { ok: false, error: msg, errorCode: 132000 };
+    }
+
+    const components: WhatsAppTemplateComponent[] = [buildBodyComponent(safeParams)];
 
     const metaPayloadPreview = {
         type: 'template' as const,
@@ -100,9 +109,9 @@ export async function sendVeraTemplate(
             language: { code: spec.language },
             components,
         },
-        bodyParamCount: bodyParams.length,
+        bodyParamCount: safeParams.length,
         mapping: describeTemplateParamMapping(spec),
-        paramsPreview: bodyParams.map((p) => p.slice(0, 80)),
+        paramsPreview: safeParams.map((p) => p.slice(0, 80)),
     };
     console.info(`[vera-template] ${spec.id} → Meta payload: ${JSON.stringify(metaPayloadPreview)}`);
 

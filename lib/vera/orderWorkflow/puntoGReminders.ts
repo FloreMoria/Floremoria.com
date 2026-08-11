@@ -139,10 +139,15 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
                 const floristName = extractFirstName(
                     order.partner?.ownerName || order.partner?.shopName || 'Fiorista'
                 );
+                const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
+                const deliveryUrl = buildFloristDeliveryUrl({
+                    id: order.id,
+                    orderNumber: order.orderNumber,
+                });
                 const bodyParams = buildFloristReminderParams({
                     floristFirstName: floristName,
                     orderCode: order.orderNumber || order.id,
-                    deceasedName: order.deceasedName,
+                    deliveryUrl,
                 });
                 const send = await sendVeraTemplate(floristPhoneE164, 'florist_reminder', bodyParams, {
                     orderId: order.id,

@@ -1,11 +1,9 @@
 /**
  * Alias operativo: /api/cron/social/pinterest-daily → stesso job di /api/cron/pinterest-daily.
- * Mantiene compatibilità con path documentati nel prompt operativo.
+ * Config segment (runtime/dynamic/maxDuration) dichiarata in loco: Next.js non ammette re-export.
  */
-export {
-    GET,
-    POST,
-    runtime,
-    dynamic,
-    maxDuration,
-} from '@/app/api/cron/pinterest-daily/route';
+export { GET, POST } from '@/app/api/cron/pinterest-daily/route';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 120;

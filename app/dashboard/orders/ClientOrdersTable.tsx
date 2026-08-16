@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
@@ -27,6 +28,8 @@ interface ClientOrdersTableProps {
 }
 
 export default function ClientOrdersTable({ orders, florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [currentFilter, setCurrentFilter] = useState('TUTTI');
@@ -39,6 +42,17 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const [localOrders, setLocalOrders] = useState<any[]>(orders);
     React.useEffect(() => { setLocalOrders(orders); }, [orders]);
+
+    // Deep-link da Overview Live Stream: /dashboard/orders?open=<orderId>
+    React.useEffect(() => {
+        const openId = searchParams.get('open')?.trim();
+        if (!openId || localOrders.length === 0) return;
+        const order = localOrders.find((o) => o.id === openId);
+        if (!order) return;
+        setSelectedOrder(order);
+        // Pulisce il query param senza ricaricare (stesso drawer della lista Ordini).
+        router.replace('/dashboard/orders', { scroll: false });
+    }, [searchParams, localOrders, router]);
 
     const [isSaving, setIsSaving] = useState(false);
     const [toast, setToast] = useState<string | null>(null);

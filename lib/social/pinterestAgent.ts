@@ -1,6 +1,6 @@
 /**
- * Agente AI Pinterest — Generazione e pubblicazione quotidiana con rotazione tematica.
- * Tono di Voce: gioioso, sereno, profondo e liturgico, leggero e mai cupo.
+ * Agente AI Pinterest — Generazione e pubblicazione quotidiana automatica (senza approvazione manuale).
+ * Tono: sereno, profondo, luminoso — mai cupo (SOFIA + ALMA).
  */
 import prisma from '@/lib/prisma';
 import { createPin, type CreatePinResult } from '@/lib/social/pinterest';
@@ -9,6 +9,7 @@ export interface PinterestThemeConfig {
     id: string;
     name: string;
     description: string;
+    /** Path o URL completo; se path relativo, verrà prefissato con floremoria.com. */
     defaultLink: string;
     titles: string[];
     descriptions: string[];
@@ -16,93 +17,40 @@ export interface PinterestThemeConfig {
     images: string[];
 }
 
+const SITE_HOME = 'https://www.floremoria.com';
+
+/**
+ * Rotazione ciclica dei temi richiesti per la pubblicazione giornaliera automatica.
+ * 1) Fiori tombe / cimitero
+ * 2) Funerale / cordoglio
+ * 3) Pet Memorial
+ * 4) Piante in vaso / cura continuativa
+ */
 export const PINTEREST_THEMES: PinterestThemeConfig[] = [
     {
-        id: 'REMEMBRANCE_PEOPLE',
-        name: 'Persone e ricordi affettuosi',
-        description: 'Pezzi dedicati al ricordo affettuoso dei cari con delicatezza e luce.',
-        defaultLink: 'https://www.floremoria.com/fiori-per-defunti',
+        id: 'TOMB_CEMETERY',
+        name: 'Fiori sulle tombe / cimitero',
+        description: 'Omaggi floreali per tombe e cimiteri, con conferma fotografica.',
+        defaultLink: SITE_HOME,
         titles: [
-            'Ricordi che Scaldano il Cuore | Omaggio Floreale ai Nostri Cari 🌹',
-            'Un Fiore per Non Dimenticare | Consegna Cimitero FloreMoria',
-            'Nel Ricordo dei Nostri Cari | Eleganza e Devozione Floreale',
-            'Luce e Amore che Restano | Omaggio Floreale Personalizzato',
+            'Fiori freschi sulla tomba | Consegna al cimitero FloreMoria',
+            'Un omaggio discreto al cimitero | Foto di conferma su WhatsApp',
+            'Presenza affidata, memoria custodita | Fiori sulle tombe',
+            'Consegna floreale al cimitero | Cura locale FloreMoria',
         ],
         descriptions: [
-            'Ogni fiore posato è un ponte d’amore verso chi continua a vivere nei nostri ricordi più cari. Con FloreMoria la cura del ricordo è semplice, serena e sempre confermata con foto in tempo reale.',
-            'Un gesto di affetto profondo che attraversa il tempo. Scegli le composizioni floreali dedicate al ricordo dei tuoi cari con consegna gratuita al cimitero.',
-            'Custodire la memoria con bellezza e serenità. I nostri fioristi partner locali confezionano ogni omaggio con profonda dedizione liturgica e cura dei dettagli.',
+            'Un gesto di presenza quando non si può essere lì. Fioristi partner locali posano l’omaggio sulla tomba e inviamo la foto di conferma su WhatsApp.',
+            'Fiori freschi, consegna al cimitero e serenità operativa: FloreMoria accompagna il ricordo con discrezione e trasparenza.',
+            'Scopri il servizio di consegna floreale sulle tombe in Italia: cura botanica, partner locali e testimonianza fotografica della posa.',
         ],
-        hashtags: ['#RicordoEterno', '#FloreMoria', '#FioriPerDefunti', '#InMemoria', '#PensieroAffettuoso', '#AmoreInfinito'],
-        images: [
-            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1508615039623-a25605d2b022?q=80&w=1200&auto=format&fit=crop',
+        hashtags: [
+            '#FioriSulleTombe',
+            '#FloreMoria',
+            '#ConsegnaCimitero',
+            '#OmaggioFloreale',
+            '#FotoDiConferma',
+            '#RicordoSereno',
         ],
-    },
-    {
-        id: 'FLORAL_BOTANICAL',
-        name: 'Solo composizioni floreali e botanica',
-        description: 'Focus sulla bellezza delle specie botaniche, composizioni e cura floreale.',
-        defaultLink: 'https://www.floremoria.com/catalogo',
-        titles: [
-            'L’Eleganza del Cuore | Composizioni Floreali e Botanica Sacra 🌿',
-            'Fiori Freschi e Piante Commemorative | Arte Floreale FloreMoria',
-            'Armonia Botanica per la Memoria | Composizioni d’Autore',
-            'Fiori che Parlano d’Amore | Selezione Botanica FloreMoria',
-        ],
-        descriptions: [
-            'Rose, gigli e piante sempreverdi selezionate con cura dai migliori fioristi locali per portare freschezza, colore ed armonia solenne.',
-            'L’arte floreale al servizio del ricordo: composizioni create con fiori di altissima qualità, pensate per durare ed esprimere gratitudine serena.',
-            'Scopri la nostra collezione botanica di omaggi floreali per cimitero. Dettagli curati con stile ed eleganza per ogni ricorrenza.',
-        ],
-        hashtags: ['#ArteFloreale', '#ComposizioniFloreali', '#FioriFreschi', '#BotanicaSacra', '#FloreMoria', '#FioriCimitero'],
-        images: [
-            'https://images.unsplash.com/photo-1561181286-d3fee7d55364?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1527061011665-3652c757a4d4?q=80&w=1200&auto=format&fit=crop',
-        ],
-    },
-    {
-        id: 'FUNERAL_CEREMONIES',
-        name: 'Funerali e cerimonie',
-        description: 'Addobbi e presenze floreali solenni per cerimonie e momenti del commiato.',
-        defaultLink: 'https://www.floremoria.com/cerimonie-funebri',
-        titles: [
-            'Omaggio ai Cari | Addobbi Floreali per Cerimonie Funebri 🕊️',
-            'Vicinanza Solenne | Corone e Cuscini Floreali FloreMoria',
-            'Un Ultimo Saluto di Luce | Omaggi per Cerimonie e Commiati',
-            'Eleganza Liturgica e Rispetto | Fiori per Funerali',
-        ],
-        descriptions: [
-            'Garantisci una presenza decorosa e solenne nelle cerimonie di commiato. Consegna puntuale direttamente al luogo della cerimonia o al cimitero.',
-            'Corone, cuscini e copricassa realizzati con maestria ed empatia per manifestare vicinanza sincera nel rispetto della tradizione.',
-            'Servizio professionale di consegna fiori per cerimonie funebri in tutta Italia con conferma fotografica della composizione.',
-        ],
-        hashtags: ['#CerimoniaFunebre', '#AddobbiFunebri', '#FioriFunerali', '#OmaggioSolenne', '#FloreMoria', '#Vicinanza'],
-        images: [
-            'https://images.unsplash.com/photo-1508615039623-a25605d2b022?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1527061011665-3652c757a4d4?q=80&w=1200&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
-        ],
-    },
-    {
-        id: 'GRAVE_CARE',
-        name: 'Cura della tomba al cimitero',
-        description: 'Servizio di consegna continua, decoro della tomba e rassicurazione fotografica.',
-        defaultLink: 'https://www.floremoria.com/abbonamento',
-        titles: [
-            'Una Presenza Costante | Consegna e Cura della Tomba al Cimitero 🌸',
-            'La Tomba Sempre Fiorita | Abbonamento Ricorrenze FloreMoria',
-            'Trasparenza e Serenità | Foto di Conferma Posa su WhatsApp',
-            'Mantieni Vivo il Ricordo | Omaggi Floreali Periodici',
-        ],
-        descriptions: [
-            'Anche a distanza, la tomba dei tuoi cari resta sempre curata e fiorita. Ricevi la fotografia del fiore posato direttamente su WhatsApp.',
-            'Servizio di abbonamento e ricorrenze speciali: consegniamo fiori freschi nelle date per te importanti con la massima precisione e delicatezza.',
-            'Zero pensieri, totale serenità. Con FloreMoria la memoria dei tuoi affetti è custodita giorno dopo giorno da fioristi locali di fiducia.',
-        ],
-        hashtags: ['#CuraDellaTomba', '#ServizioCimitero', '#AbbonamentoFloreale', '#FotoPosa', '#FloreMoria', '#PresenzaCostante'],
         images: [
             'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?q=80&w=1200&auto=format&fit=crop',
             'https://images.unsplash.com/photo-1507746309198-ac242370861e?q=80&w=1200&auto=format&fit=crop',
@@ -110,36 +58,105 @@ export const PINTEREST_THEMES: PinterestThemeConfig[] = [
         ],
     },
     {
-        id: 'PET_MEMORIAL',
-        name: 'Memorial per animali domestici (Pet Memorial)',
-        description: 'Omaggio affettuoso e solare ai piccoli amici a quattro zampe.',
-        defaultLink: 'https://www.floremoria.com/pet-memorial',
+        id: 'FUNERAL_CORDOGLIO',
+        name: 'Funerale / cordoglio',
+        description: 'Composizioni solenni per cerimonie e momenti di cordoglio.',
+        defaultLink: SITE_HOME,
         titles: [
-            'Un Amore Indimenticabile | Pet Memorial FloreMoria 🐾🌹',
-            'Per Sempre nel Cuore | Omaggi Floreali Amici a Quattro Zampe',
-            'Ponte dell’Arcobaleno | Ricordo Indelebile per i Nostri Animali',
-            'Gratitudine Infinta | Fiori e Ricordi per Cani e Gatti',
+            'Omaggio di cordoglio | Composizioni per cerimonie FloreMoria',
+            'Vicinanza discreta | Corone e composizioni funebri',
+            'Un saluto luminoso | Fiori per funerali e cerimonie',
+            'Eleganza e rispetto | Addobbi floreali FloreMoria',
         ],
         descriptions: [
-            'I nostri amici a quattro zampe donano un amore puro che resta per sempre. Dedica loro un omaggio floreale luminoso ed affettuoso.',
-            'Un pensiero speciale per ricordare i compagni di vita più fedeli. Con FloreMoria portiamo la carezza dei fiori nel loro luogo di riposo.',
-            'Ricordare con gioia e gratitudine i momenti felici trascorsi insieme. Scopri la nostra linea dedicata al Pet Memorial.',
+            'Composizioni curate per cerimonie e momenti di cordoglio: presenza floreale sobria, puntuale e rispettosa della famiglia.',
+            'Corone, cuscini e omaggi solenni realizzati da fioristi locali, con consegna al luogo della cerimonia o al cimitero.',
+            'FloreMoria accompagna il commiato con fiori freschi e un tono quiet luxury: dignità, empatia, nessuna urgenza artificiale.',
         ],
-        hashtags: ['#PetMemorial', '#AmiciAQuattroZampe', '#PonteDellArcobaleno', '#FloreMoria', '#RicordoPet', '#AmorePuro'],
+        hashtags: [
+            '#FioriFunerali',
+            '#CerimoniaFunebre',
+            '#OmaggioDiCordoglio',
+            '#FloreMoria',
+            '#AddobbiFunebri',
+            '#VicinanzaDiscreta',
+        ],
+        images: [
+            'https://images.unsplash.com/photo-1508615039623-a25605d2b022?q=80&w=1200&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1527061011665-3652c757a4d4?q=80&w=1200&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
+        ],
+    },
+    {
+        id: 'PET_MEMORIAL',
+        name: 'Pet Memorial / animali domestici',
+        description: 'Omaggio affettuoso e luminoso ai compagni a quattro zampe.',
+        defaultLink: SITE_HOME,
+        titles: [
+            'Pet Memorial | Un ricordo luminoso per i nostri animali',
+            'Amore fedele, sempre | Omaggio floreale Pet Memorial',
+            'Per chi ha condiviso la casa e il cuore | FloreMoria Pet',
+            'Un pensiero sereno | Fiori in memoria degli amici animali',
+        ],
+        descriptions: [
+            'Un omaggio floreale per ricordare i compagni a quattro zampe con gratitudine e luce, senza toni cupi.',
+            'Pet Memorial FloreMoria: un gesto semplice e affettuoso per onorare chi ha reso più calda ogni giornata.',
+            'Ricordare con serenità. Scopri gli omaggi dedicati agli animali domestici su floremoria.com.',
+        ],
+        hashtags: [
+            '#PetMemorial',
+            '#AmiciAQuattroZampe',
+            '#FloreMoria',
+            '#RicordoPet',
+            '#AmoreFedele',
+            '#OmaggioSereno',
+        ],
         images: [
             'https://images.unsplash.com/photo-1544568100-847a948585b9?q=80&w=1200&auto=format&fit=crop',
             'https://images.unsplash.com/photo-1534361960057-19889db9621e?q=80&w=1200&auto=format&fit=crop',
             'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop',
         ],
     },
+    {
+        id: 'PLANTS_ONGOING_CARE',
+        name: 'Piante in vaso / cura continuativa',
+        description: 'Piante e cura nel tempo: presenza vegetale duratura e ricorrenze.',
+        defaultLink: SITE_HOME,
+        titles: [
+            'Piante in vaso per la memoria | Cura che resta nel tempo',
+            'Una presenza verde e continua | FloreMoria piante commemorative',
+            'Cura continuativa del ricordo | Piante e ricorrenze',
+            'Verde sereno sulla tomba | Piante in vaso FloreMoria',
+        ],
+        descriptions: [
+            'Le piante in vaso offrono una presenza più duratura: cura botanica, consegna al cimitero e aggiornamenti fotografici quando previsti.',
+            'Per chi desidera un gesto che resta nel tempo. FloreMoria propone piante commemorative e percorsi di cura continuativa.',
+            'Serenità operativa e memoria viva: scopri piante in vaso e servizi di ricorrenza su floremoria.com.',
+        ],
+        hashtags: [
+            '#PianteInVaso',
+            '#CuraContinuativa',
+            '#FloreMoria',
+            '#MemoriaVerde',
+            '#PianteCommemorative',
+            '#Ricorrenze',
+        ],
+        images: [
+            'https://images.unsplash.com/photo-1485955900006-10f4d324d411?q=80&w=1200&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1459411552884-841db9b3aa2f?q=80&w=1200&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=1200&auto=format&fit=crop',
+        ],
+    },
 ];
 
 const THEME_INDEX_STATE_KEY = 'pinterest_last_theme_index';
 const LAST_DAILY_PIN_KEY = 'pinterest_last_daily_pin_at';
+const LAST_DAILY_PIN_META_KEY = 'pinterest_last_daily_pin_meta';
 
 export interface GenerateDailyPinResult {
     success: boolean;
     simulated?: boolean;
+    skipped?: boolean;
     themeId: string;
     themeName: string;
     title: string;
@@ -150,11 +167,64 @@ export interface GenerateDailyPinResult {
     error?: string;
 }
 
+function europeRomeDayKey(d = new Date()): string {
+    // Chiave giorno Europe/Rome per idempotenza cron (no doppio Pin nello stesso giorno).
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Rome',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(d);
+}
+
 /**
- * Genera e pubblica il Pin quotidiano seguendo la rotazione ciclica dei 5 temi.
+ * Genera e pubblica il Pin quotidiano in automatico (nessuna approvazione umana).
  */
-export async function generateDailyPinterestPin(): Promise<GenerateDailyPinResult> {
-    // 1. Recupera o calcola l'indice del tema nella rotazione ciclica (0..4)
+export async function generateDailyPinterestPin(options?: {
+    force?: boolean;
+}): Promise<GenerateDailyPinResult> {
+    const dayKey = europeRomeDayKey();
+
+    if (!options?.force) {
+        try {
+            const lastAt = await prisma.systemState.findUnique({
+                where: { key: LAST_DAILY_PIN_KEY },
+            });
+            if (lastAt?.value) {
+                const lastDay = europeRomeDayKey(new Date(lastAt.value));
+                if (lastDay === dayKey) {
+                    const meta = await prisma.systemState.findUnique({
+                        where: { key: LAST_DAILY_PIN_META_KEY },
+                    });
+                    let parsed: Partial<GenerateDailyPinResult> = {};
+                    try {
+                        parsed = meta?.value ? (JSON.parse(meta.value) as Partial<GenerateDailyPinResult>) : {};
+                    } catch {
+                        parsed = {};
+                    }
+                    console.info(
+                        `[Pinterest Agent] Skip: Pin già pubblicato oggi (${dayKey}) — pinId=${parsed.pinId || 'n/a'}`
+                    );
+                    return {
+                        success: true,
+                        skipped: true,
+                        simulated: Boolean(parsed.simulated),
+                        themeId: String(parsed.themeId || 'SKIP'),
+                        themeName: String(parsed.themeName || 'già pubblicato oggi'),
+                        title: String(parsed.title || ''),
+                        description: String(parsed.description || ''),
+                        link: String(parsed.link || SITE_HOME),
+                        imageUrl: String(parsed.imageUrl || ''),
+                        pinId: parsed.pinId ? String(parsed.pinId) : undefined,
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('[Pinterest Agent] Check idempotenza giornaliera non riuscito:', e);
+        }
+    }
+
+    // 1. Indice rotazione ciclica (0..N-1)
     let themeIndex = 0;
     try {
         const lastState = await prisma.systemState.findUnique({
@@ -174,18 +244,20 @@ export async function generateDailyPinterestPin(): Promise<GenerateDailyPinResul
 
     const theme = PINTEREST_THEMES[themeIndex] || PINTEREST_THEMES[0]!;
 
-    // 2. Seleziona varianti di contenuto in base a giorno/random deterministico
+    // 2. Varianti contenuto (deterministiche per giorno)
     const variantSeed = Math.floor(Date.now() / (24 * 3600 * 1000));
     const title = theme.titles[variantSeed % theme.titles.length]!;
     const baseDesc = theme.descriptions[variantSeed % theme.descriptions.length]!;
     const imageUrl = theme.images[variantSeed % theme.images.length]!;
-    const link = theme.defaultLink;
+    const link = SITE_HOME;
     const hashtagLine = theme.hashtags.join(' ');
-    const description = `${baseDesc}\n\n${hashtagLine}`;
+    const description = `${baseDesc}\n\n${hashtagLine}\n\n${SITE_HOME}`;
 
-    console.log(`[Pinterest Agent] Generazione Pin quotidiano — Tema: ${theme.name} (${theme.id})`);
+    console.log(
+        `[Pinterest Agent] Pubblicazione automatica Pin — tema=${theme.name} (${theme.id}) day=${dayKey}`
+    );
 
-    // 3. Invia il Pin su Pinterest API v5 tramite client createPin (con refresh 24h automatico)
+    // 3. Chiamata diretta API Pinterest v5 (board da env PINTEREST_BOARD_ID)
     const publishResult: CreatePinResult = await createPin({
         title,
         description,
@@ -195,7 +267,10 @@ export async function generateDailyPinterestPin(): Promise<GenerateDailyPinResul
     });
 
     if (!publishResult.success) {
-        console.error(`[Pinterest Agent] Errore pubblicazione Pin per tema ${theme.id}:`, publishResult.error);
+        console.error(
+            `[Pinterest Agent] Errore pubblicazione Pin per tema ${theme.id}:`,
+            publishResult.error
+        );
         return {
             success: false,
             themeId: theme.id,
@@ -208,7 +283,19 @@ export async function generateDailyPinterestPin(): Promise<GenerateDailyPinResul
         };
     }
 
-    // 4. Aggiorna l'indice per la rotazione del giorno successivo
+    const result: GenerateDailyPinResult = {
+        success: true,
+        simulated: publishResult.simulated ?? false,
+        themeId: theme.id,
+        themeName: theme.name,
+        title,
+        description,
+        link,
+        imageUrl,
+        pinId: publishResult.pinId,
+    };
+
+    // 4. Persisti rotazione + meta ultimo Pin (log operativo)
     try {
         await Promise.all([
             prisma.systemState.upsert({
@@ -221,20 +308,19 @@ export async function generateDailyPinterestPin(): Promise<GenerateDailyPinResul
                 update: { value: new Date().toISOString() },
                 create: { key: LAST_DAILY_PIN_KEY, value: new Date().toISOString() },
             }),
+            prisma.systemState.upsert({
+                where: { key: LAST_DAILY_PIN_META_KEY },
+                update: { value: JSON.stringify(result) },
+                create: { key: LAST_DAILY_PIN_META_KEY, value: JSON.stringify(result) },
+            }),
         ]);
     } catch (e) {
         console.warn('[Pinterest Agent] Impossibile aggiornare SystemState per tema Pinterest:', e);
     }
 
-    return {
-        success: true,
-        simulated: publishResult.simulated ?? false,
-        themeId: theme.id,
-        themeName: theme.name,
-        title,
-        description,
-        link,
-        imageUrl,
-        pinId: publishResult.pinId,
-    };
+    console.info(
+        `[Pinterest Agent] OK pinId=${result.pinId || 'n/a'} simulated=${Boolean(result.simulated)} theme=${result.themeId}`
+    );
+
+    return result;
 }

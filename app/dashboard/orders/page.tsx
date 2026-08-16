@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
@@ -137,15 +137,17 @@ export default async function OrdersPage() {
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <DashboardDbAlert page="Ordini" errors={dbErrors} />
-            <ClientOrdersTable
-                orders={displayOrders}
-                florists={florists}
-                products={products}
-                users={dashboardUsers}
-                deceasedProfiles={deceasedProfiles}
-                canChangeStatus={canChangeStatus}
-                isGlobalAdmin={isGlobalAdmin}
-            />
+            <Suspense fallback={<div className="p-8 text-sm text-slate-500">Caricamento ordini…</div>}>
+                <ClientOrdersTable
+                    orders={displayOrders}
+                    florists={florists}
+                    products={products}
+                    users={dashboardUsers}
+                    deceasedProfiles={deceasedProfiles}
+                    canChangeStatus={canChangeStatus}
+                    isGlobalAdmin={isGlobalAdmin}
+                />
+            </Suspense>
         </div>
     );
 }

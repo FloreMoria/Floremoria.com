@@ -1,13 +1,9 @@
 /**
- * GET /api/cron/pinterest-daily
+ * GET|POST /api/cron/pinterest-daily
  *
- * Cron Job Giornaliero Pinterest Agent (09:00 UTC):
- * Genera e pubblica un Pin quotidiano seguendo la rotazione ciclica dei 5 temi:
- * 1. Persone e ricordi affettuosi
- * 2. Solo composizioni floreali e botanica
- * 3. Funerali e cerimonie
- * 4. Cura della tomba al cimitero
- * 5. Memorial per animali domestici (Pet Memorial)
+ * Pubblicazione giornaliera automatica Pin Pinterest (09:00 UTC / cron Vercel):
+ * nessuna approvazione manuale — genera contenuto (rotazione temi) e pubblica via API v5.
+ * Auth: Authorization Bearer CRON_SECRET oppure header x-cron-key.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDailyPinterestPin } from '@/lib/social/pinterestAgent';
@@ -27,15 +23,19 @@ function isAuthorized(request: NextRequest): boolean {
     return cronKey === secret;
 }
 
-export async function GET(request: NextRequest) {
+async function runDailyPin(request: NextRequest) {
     if (!isAuthorized(request)) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    try {
-        console.log('[Pinterest Cron] Trigger giornaliero ricevuto — avvio Pinterest Agent…');
+    const force = request.nextUrl.searchParams.get('force') === '1';
 
-        const result = await generateDailyPinterestPin();
+    try {
+        console.log(
+            `[Pinterest Cron] Trigger automatico ricevuto — avvio Pinterest Agent (force=${force})…`
+        );
+
+        const result = await generateDailyPinterestPin({ force });
 
         if (!result.success) {
             console.error('[Pinterest Cron] Fallimento generazione/invio Pin:', result.error);
@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
             {
                 success: true,
-                message: 'Pin quotidiano Pinterest generato e pubblicato con successo',
+                message: result.skipped
+                    ? 'Pin quotidiano già pubblicato oggi — skip idempotente'
+                    : 'Pin quotidiano Pinterest generato e pubblicato automaticamente',
                 timestamp: new Date().toISOString(),
                 result,
             },
@@ -63,4 +65,13 @@ export async function GET(request: NextRequest) {
         console.error('❌ Errore nel cron job pinterest-daily:', msg);
         return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
+}
+
+export async function GET(request: NextRequest) {
+    return runDailyPin(request);
+}
+
+/** Alias POST: alcuni scheduler / worker interni invocano POST. */
+export async function POST(request: NextRequest) {
+    return runDailyPin(request);
 }

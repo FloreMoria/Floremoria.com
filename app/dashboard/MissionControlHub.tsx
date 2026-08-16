@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Activity, AlertCircle, CheckCircle2, LayoutGrid, Calendar as CalendarIcon, List } from 'lucide-react';
 import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 
@@ -49,6 +52,7 @@ export default function MissionControlHub({
     deceasedProfiles?: any[];
     darkMode?: boolean;
 }) {
+    const router = useRouter();
     const ROW1: HubButton[] = ROW1_BASE.map((btn) =>
         btn.id === 'ga4' ? { ...btn, url: ga4ConsoleUrl } : btn,
     );
@@ -211,9 +215,31 @@ export default function MissionControlHub({
                                 {orders.slice(0, 10).map((order) => {
                                     // Real-time issue logic
                                     const hasIssue = order.status === 'PENDING' || order.additionalInstructions?.toLowerCase().includes('urgent');
+                                    const openOrderHref = `/dashboard/orders?open=${encodeURIComponent(order.id)}`;
+
+                                    const goToOrder = () => {
+                                        router.push(openOrderHref);
+                                    };
                                     
                                     return (
-                                        <tr key={order.id} className={`border-b border-slate-50 last:border-0 transition-colors ${hasIssue ? 'bg-red-50/20 hover:bg-red-50/50' : 'hover:bg-slate-50/50'}`}>
+                                        <tr
+                                            key={order.id}
+                                            role="link"
+                                            tabIndex={0}
+                                            onClick={goToOrder}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    goToOrder();
+                                                }
+                                            }}
+                                            title="Apri dettaglio ordine"
+                                            className={`border-b border-slate-50 last:border-0 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-fm-gold/40 focus-visible:ring-inset ${
+                                                hasIssue
+                                                    ? 'bg-red-50/20 hover:bg-red-50/60'
+                                                    : 'hover:bg-slate-100/80'
+                                            }`}
+                                        >
                                             <td className="py-3 px-4">
                                                 {hasIssue ? (
                                                     <div className="flex items-center gap-1.5 text-red-600 bg-white border border-red-200 rounded-lg px-2.5 py-1 w-max text-xs font-bold uppercase">

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo Giornaliero — 16 Agosto 2026"
 sync_source: docs/verbali/16-08-2026.md
-synced_at: 2026-08-16T16:36:40.572Z
+synced_at: 2026-08-16T21:55:41.375Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/16-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -54,11 +54,10 @@ author: Dott. Marsiglione & Team Sviluppo (Cursor)
 
 ---
 
+---
+
 ## Registro operativo automatico (.today_log)
 
-Registro accumulato da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
+Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
 
-- [2026-08-16 18:09] feat/dashboard+pinterest: Live Orders Stream cliccabile → `/dashboard/orders?open=`; cron Pin giornaliero automatico (4 temi, idempotenza, no approval).
-- [2026-08-16 18:34] feat/vera: Sistema operativo AI (dispatcher OPERATIVE/CONFIDENTIAL/ALERT, `updateOrderFromConversation`, notifyFlorist filtrato, `createAdminAlert`, prompt conferme).
-
-> Nota: una riga residua del 2026-08-11 (articolo PWA blog) era ancora nel buffer `.today_log` ed è già consolidata nei verbali precedenti; non rientra nel perimetro operativo del 16 agosto.
+- [2026-08-16 18:56] fix/deploy: Alias cron Pinterest — config segment locale (no re-export runtime/dynamic; fix Turbopack build).

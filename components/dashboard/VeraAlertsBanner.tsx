@@ -12,7 +12,11 @@ export type VeraAlertType =
     | 'listino_missing'
     | 'florist_whatsapp_missing'
     | 'punto_a_send_failed'
-    | 'economic_discrepancy';
+    | 'economic_discrepancy'
+    | 'cancellation_request'
+    | 'complaint'
+    | 'last_minute_change'
+    | 'confidential_request';
 
 export interface VeraOperationalAlert {
     id: string;
@@ -43,6 +47,8 @@ const CRITICAL_TYPES = new Set<VeraAlertType>([
     'workflow_blocked',
     'florist_whatsapp_missing',
     'punto_a_send_failed',
+    'cancellation_request',
+    'complaint',
 ]);
 const OPERATIONAL_TYPES = new Set<VeraAlertType>([
     'grave_position_missing',
@@ -51,6 +57,8 @@ const OPERATIONAL_TYPES = new Set<VeraAlertType>([
     'user_modification_request',
     'listino_missing',
     'economic_discrepancy',
+    'last_minute_change',
+    'confidential_request',
 ]);
 
 export default function VeraAlertsBanner({

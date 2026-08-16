@@ -12,6 +12,12 @@ export interface OrderItemLike {
 /** Delimitatore metadati B2B Stripe salvati dentro additionalInstructions. */
 export const B2B_METADATA_DELIMITER = '---B2B_STRIPE_METADATA---';
 
+/** Note riservate VERA (fatture, pagamenti) — mai esposte al fiorista. */
+export const VERA_INTERNAL_DELIMITER = '---VERA_INTERNAL---';
+
+/** Log cronologico "Aggiornato da Vera" — solo staff. */
+export const VERA_AUDIT_DELIMITER = '---VERA_AUDIT---';
+
 const PHOTO_BEFORE_IDS = new Set(['florem-foto-stato-prima']);
 const PHOTO_BEFORE_SLUGS = new Set(['foto-stato-prima-consegna']);
 const LUMINO_PATTERN = /lumino|set-ceri|\bceri\b|candel/i;
@@ -72,9 +78,12 @@ export function orderHasBigliettinoOrRibbon(
     return items.some(isMessageItem);
 }
 
-/** Rimuove il blocco metadati B2B e restituisce solo la nota utente/fiorista leggibile. */
+/** Rimuove blocchi B2B / VERA internal / audit e restituisce solo la nota operativa leggibile. */
 export function stripInternalNotes(notes?: string | null): string | null {
     if (!notes) return null;
-    const clean = notes.split(B2B_METADATA_DELIMITER)[0].trim();
+    let clean = notes.split(B2B_METADATA_DELIMITER)[0];
+    clean = clean.split(VERA_AUDIT_DELIMITER)[0];
+    clean = clean.split(VERA_INTERNAL_DELIMITER)[0];
+    clean = clean.trim();
     return clean || null;
 }

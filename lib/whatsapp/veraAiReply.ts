@@ -702,14 +702,48 @@ export async function generateVeraReply(
     if (session.userType !== 'FLORIST' && callerContext.phoneE164) {
         const activeOrder = await lookupActiveOrderByPhone(callerContext.phoneE164);
         const orderForMod = activeOrder || (await lookupLastOrderByPhone(callerContext.phoneE164));
-        if (orderForMod && isUserModificationRequest(message) && orderForMod.status !== 'COMPLETED' && orderForMod.status !== 'CANCELLED') {
-            await handleUserModificationRequest({ orderId: orderForMod.id, message });
-            return {
-                text:
-                    'La ringrazio per la Sua segnalazione. Ho preso in carico la richiesta di modifica e l\'ho trasmessa subito al nostro Staff, che La ricontatterà qui con un aggiornamento preciso — senza anticipare conferme finché non è verificata.',
-                source: 'deterministic',
-                shouldEscalate: true,
-            };
+        if (orderForMod && orderForMod.status !== 'COMPLETED' && orderForMod.status !== 'CANCELLED') {
+            const { processVeraConversationActions, classifyAndExtractVeraMessage } = await import(
+                '@/lib/ai/vera-actions'
+            );
+            const classified = classifyAndExtractVeraMessage(message);
+            const hasActionable =
+                classified.classes.length > 0 ||
+                Boolean(
+                    classified.extracted.cardText ||
+                        classified.extracted.gravePosition ||
+                        classified.extracted.notes ||
+                        classified.extracted.internalNotes ||
+                        classified.extracted.deliveryPreference ||
+                        classified.extracted.productDetail
+                );
+
+            if (hasActionable) {
+                const dispatch = await processVeraConversationActions({
+                    orderId: orderForMod.id,
+                    message,
+                    source: 'client',
+                    firstName: callerContext.firstName,
+                });
+
+                if (dispatch.confirmationHints.length > 0) {
+                    return {
+                        text: dispatch.confirmationHints.slice(0, 2).join(' '),
+                        source: 'deterministic',
+                        shouldEscalate: dispatch.alertCreated || dispatch.classes.includes('ALERT_REQUIRED'),
+                    };
+                }
+            }
+
+            if (isUserModificationRequest(message)) {
+                await handleUserModificationRequest({ orderId: orderForMod.id, message });
+                return {
+                    text:
+                        'La ringrazio per la Sua segnalazione. Ho preso in carico la richiesta di modifica e l\'ho trasmessa subito al nostro Staff, che La ricontatterà qui con un aggiornamento preciso — senza anticipare conferme finché non è verificata.',
+                    source: 'deterministic',
+                    shouldEscalate: true,
+                };
+            }
         }
 
         const recentOrder = await lookupLastOrderByPhone(callerContext.phoneE164);

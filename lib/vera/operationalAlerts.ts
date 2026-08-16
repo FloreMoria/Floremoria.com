@@ -9,7 +9,11 @@ export type VeraAlertType =
     | 'listino_missing'
     | 'florist_whatsapp_missing'
     | 'punto_a_send_failed'
-    | 'economic_discrepancy';
+    | 'economic_discrepancy'
+    | 'cancellation_request'
+    | 'complaint'
+    | 'last_minute_change'
+    | 'confidential_request';
 
 export type VeraAlertPriority = 'normal' | 'high' | 'urgent';
 

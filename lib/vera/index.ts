@@ -43,4 +43,15 @@ export {
 } from '@/lib/vera/deliveryContextGate';
 export { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
 export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
+export {
+    classifyAndExtractVeraMessage,
+    updateOrderFromConversation,
+    notifyFloristIfApplicable,
+    createAdminAlert,
+    processVeraConversationActions,
+    buildVeraRegistrationConfirmations,
+    type VeraInfoClass,
+    type VeraExtractedOrderData,
+    type VeraDispatchResult,
+} from '@/lib/ai/vera-actions';
 export * from '@/lib/vera/orderWorkflow';

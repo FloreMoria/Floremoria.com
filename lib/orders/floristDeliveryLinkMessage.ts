@@ -201,19 +201,17 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     // Scadenza subito sopra il luogo (cimitero / loculo) per massima visibilità operativa.
     const body =
         `Ciao ${floristName}! 🌸\n` +
-        `Abbiamo una nuova consegna da affidarti per l'ordine ${orderCode} a ${cityLabel} - ${cemetery}.\n` +
+        `Abbiamo un nuovo ordine per te con il codice: ${orderCode}\n` +
         `🕊️ In memoria di: ${deceased}\n` +
-        `${deadline.messageLine}\n` +
-        `📍 Luogo: ${luogo}\n` +
+        `📅 CONSEGNA : ${deadline.label}\n` +
+        `📍 Luogo: ${cityLabel}, ${cemetery}\n` +
         `💐 Prodotto: ${prodotto}\n` +
         `➕ Optional / Accessori: ${accessori}\n` +
         `📝 Testo: ${ticket}\n` +
-        `📌 Note di Consegna: ${note}\n` +
-        `💶 Compenso per il servizio: ${compenso}\n` +
-        `Inviaci fattura che effettuiamo subito il bonifico istantaneo.\n` +
-        `🔗 Completa l'ordine dalla tua mini-app:\n` +
+        `💶 Compenso per il servizio: ${compenso}\n\n` +
+        `🔗 Per favore, completa l'ordine con la mini-app:\n` +
         `${deliveryUrl}\n\n` +
-        `Per qualsiasi dubbio o necessità fammi sapere qui in chat. Mi confermi?\n` +
+        `Mi confermi?\n` +
         `Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;
 

@@ -7,3 +7,4 @@
 
 [2026-08-17 16:24] fix/vera: Rimossa parola "entro le ore" dalla scadenza, inclusione di cimitero e comune nel campo destinazione, e aggiornata call to action mini-app fiorista.
 
+[2026-08-17 16:45] fix/vera: Allineati registro e fallback al nuovo testo del template Meta (bodyCanonical, Luogo, Consegna, CTA mini-app e firma Vera).

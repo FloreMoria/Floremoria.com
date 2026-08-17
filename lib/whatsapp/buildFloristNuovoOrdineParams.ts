@@ -119,34 +119,26 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const deceased = rawDeceased && rawDeceased !== '-' ? rawDeceased : 'il caro defunto';
     const var3 = metaParamOrDash(deceased, 120);
 
-    // Var 4: Data Consegna (etichetta gestita da template "📅 Consegna entro: {{4}}")
+    // Var 4: Data Consegna (etichetta gestita da template "📅 CONSEGNA : {{4}}")
     const deadline = resolveFloristDeliveryDeadline({
         deliveryDate: input.deliveryDate,
         requestedDeliveryDate: input.requestedDeliveryDate,
         createdAt: input.createdAt,
     });
     let rawDeadline = stripNoise(deadline.label);
-    rawDeadline = rawDeadline.replace(/^📅\s*Consegna\s+entro:\s*/i, '').replace(/^📅\s*CONSEGNA\s+ENTRO:\s*/i, '').trim();
+    rawDeadline = rawDeadline.replace(/^📅\s*Consegna\s+entro:\s*/i, '').replace(/^📅\s*CONSEGNA\s*:\s*/i, '').trim();
     const deliveryWhen = rawDeadline && rawDeadline !== '-' ? rawDeadline : '-';
     const var4 = metaParamOrDash(deliveryWhen, 150);
 
-    // Var 5 & Var 6: Destinazione (etichetta gestita da template "📍 Destinazione: {{5}}, {{6}}")
+    // Var 5 & Var 6: Luogo (etichetta gestita da template "📍 Luogo: {{5}}, {{6}}")
     const cimitero = input.cemeteryName ? stripNoise(input.cemeteryName).trim() : '';
     const comune = input.cemeteryCity ? stripNoise(input.cemeteryCity).trim() : '';
     const prov = input.province ? stripNoise(input.province).replace(/[()]/g, '').trim() : '';
     const provSuffix = prov ? `(${prov})` : '';
+    const comuneProv = provSuffix ? `${comune} ${provSuffix}` : comune;
 
-    let var5 = '';
-    let var6 = '';
-
-    if (cimitero && cimitero !== '-') {
-        var5 = metaParamOrDash(cimitero, 150);
-        var6 = metaParamOrDash(provSuffix ? `${comune} ${provSuffix}` : comune, 150);
-    } else {
-        // Se il cimitero non è specificato, usiamo Comune per {{5}} e (Provincia) per {{6}} per rendere "Comune, (Provincia)"
-        var5 = metaParamOrDash(comune || '-', 150);
-        var6 = metaParamOrDash(provSuffix || ' ', 150);
-    }
+    const var5 = metaParamOrDash(comuneProv || '-', 150);
+    const var6 = metaParamOrDash(cimitero || ' ', 150);
 
     // Var 7: Prodotto (etichetta gestita da template "💐 Prodotto: {{7}}")
     let rawProdotto = stripNoise(formatFloristOrderProductsLabel(input.items));
@@ -154,31 +146,32 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const prodotto = rawProdotto && rawProdotto !== '-' ? rawProdotto : '-';
     const var7 = metaParamOrDash(prodotto, 150);
 
-    // Var 8: Accessori (etichetta gestita da template "➕ Accessori: {{8}}")
+    // Var 8: Accessori (etichetta gestita da template "➕ Optional / Accessori: {{8}}")
     let rawAccessori = stripNoise(formatFloristAccessoriParam(input.items));
-    rawAccessori = rawAccessori.replace(/^➕\s*Accessori:\s*/i, '').trim();
-    const accessori = rawAccessori && rawAccessori !== '-' ? rawAccessori : 'Nessun accessorio extra';
+    rawAccessori = rawAccessori.replace(/^➕\s*Accessori:\s*/i, '').replace(/^➕\s*Optional\s*\/\s*Accessori:\s*/i, '').trim();
+    const accessori = rawAccessori && rawAccessori !== '-' ? rawAccessori : 'Nessuno';
     const var8 = metaParamOrDash(accessori, 220);
 
-    // Var 9: Testo (etichetta gestita da template "📝 Testo nastro/biglietto: {{9}}")
+    // Var 9: Testo (etichetta gestita da template "📝 Testo: {{9}}")
     let rawTicket = stripNoise(input.ticketMessage);
-    rawTicket = rawTicket.replace(/^📝\s*Testo\s+nastro\/biglietto:\s*/i, '').trim();
+    rawTicket = rawTicket.replace(/^📝\s*Testo\s*:\s*/i, '').replace(/^📝\s*Testo\s+nastro\/biglietto:\s*/i, '').trim();
     if (!rawTicket || /non specificato/i.test(rawTicket) || rawTicket === '-') {
         rawTicket = 'Nessuno';
     }
     const var9 = metaParamOrDash(rawTicket, META_TEMPLATE_LIMITS.ticketText);
 
-    // Var 10: Compenso (etichetta gestita da template "💶 Compenso per il servizio: {{10}}€")
+    // Var 10: Compenso (etichetta gestita da template "💶 Compenso per il servizio: {{10}}")
     const compensation = calculateFloristCompensation(
         input.items as Parameters<typeof calculateFloristCompensation>[0],
         input.partnerNotes
     );
     const rawCompenso = stripNoise(formatFloristCompensationForTemplate(compensation));
-    // Estraiamo solo il numero (es. "20") usando la funzione dedicata
     const cleanCompenso = formatFloristPriceAmountParam(rawCompenso);
-    const var10 = metaParamOrDash(cleanCompenso, 100);
+    // Poiché il template Meta non ha il simbolo € hardcoded, lo aggiungiamo se il valore è numerico
+    const compensoVal = /^\d+$/.test(cleanCompenso) ? `${cleanCompenso}€` : cleanCompenso;
+    const var10 = metaParamOrDash(compensoVal, 100);
 
-    // Var 11: Link (etichetta gestita da template "🔗 Completa l'ordine dalla tua mini-app:\n{{11}}")
+    // Var 11: Link (etichetta gestita da template "🔗 Per favore, completa l'ordine con la mini-app:\n{{11}}")
     const rawDeliveryUrl =
         stripNoise(input.deliveryUrl) ||
         buildFloristDeliveryUrl({

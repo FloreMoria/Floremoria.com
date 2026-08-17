@@ -172,7 +172,8 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
     },
     /**
      * Template Meta `floremoria_consegna_foto_utente` — notifica post-posa PRIMARIA.
-     * 4 variabili body, nessun header (Scenario A).
+     * Copy ufficiale Meta (ago 2026): 4 variabili body, nessun header (Scenario A).
+     * {{1}} nome cliente · {{2}} città/cimitero · {{3}} defunto · {{4}} MagicLink GdM
      */
     customer_delivery_photo: {
         id: 'customer_delivery_photo',
@@ -185,16 +186,18 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
         library: 'UTENTE',
         bodyCanonical:
-            'Gentile {{1}}, con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}. ' +
-            'Può vedere tutte le foto qui: {{4}}\n\n' +
-            'Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n' +
+            'Gentile {{1}},\n' +
+            'con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}.\n\n' +
+            'Può rivedere tutte le foto nel Suo Giardino della Memoria:\n' +
+            '{{4}}\n\n' +
+            'Vuole ricevere anche qui le foto della posa? 🌹\n\n' +
             'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹',
         description:
-            '{{1}} nome utente, {{2}} comune/cimitero, {{3}} defunto, {{4}} MagicLink — body-only',
+            '{{1}} nome cliente, {{2}} città/cimitero (es. Roma (RM)), {{3}} defunto, {{4}} URL Giardino della Memoria',
     },
     /**
      * @deprecated Preferire customer_delivery_photo (floremoria_consegna_foto_utente).
-     * Mantenuto per env legacy WHATSAPP_TEMPLATE_ORDINE_COMPLETATO.
+     * Stesso Meta name e stesso mapping variabili del template ufficiale.
      */
     ordine_completato: {
         id: 'ordine_completato',
@@ -204,12 +207,16 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         ),
         language: process.env.WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_LANGUAGE?.trim() || 'it',
         bodyParamCount: 4,
-        bodySlots: ['buyerFirstName', 'deceasedName', 'partnerCity', 'magicLink'],
+        bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
         library: 'UTENTE',
         bodyCanonical:
-            'Gentile {{1}}, abbiamo completato la consegna dei Suoi fiori nel ricordo di {{2}} a {{3}}. ' +
-            'Può vedere tutte le foto al link: {{4}}',
-        description: 'Legacy alias — stesso Meta name di floremoria_consegna_foto_utente se non override',
+            'Gentile {{1}},\n' +
+            'con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}.\n\n' +
+            'Può rivedere tutte le foto nel Suo Giardino della Memoria:\n' +
+            '{{4}}\n\n' +
+            'Vuole ricevere anche qui le foto della posa? 🌹\n\n' +
+            'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹',
+        description: 'Legacy alias — stesso Meta name e copy di floremoria_consegna_foto_utente',
     },
     customer_waiting_update: {
         id: 'customer_waiting_update',

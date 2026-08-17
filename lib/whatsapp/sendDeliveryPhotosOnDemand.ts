@@ -29,7 +29,7 @@ export interface SendDeliveryPhotosOnDemandResult {
 
 /**
  * Rileva richieste esplicite di ricevere le foto in chat
- * (pulsante rapido / risposta a «Vuole ricevere qui la foto della posa?»).
+ * (risposta a «Vuole ricevere anche qui le foto della posa? 🌹»).
  */
 export function isRequestingDeliveryPhotosInChat(message: string): boolean {
     const raw = (message || '').trim();
@@ -67,7 +67,7 @@ export function isRequestingDeliveryPhotosInChat(message: string): boolean {
     );
 }
 
-/** Risposta negativa alla domanda «Vuole ricevere qui la foto della posa?». */
+/** Risposta negativa alla domanda «Vuole ricevere anche qui le foto della posa?». */
 export function isDecliningDeliveryPhotosInChat(message: string): boolean {
     const t = (message || '').trim().toLowerCase();
     if (!t) return false;

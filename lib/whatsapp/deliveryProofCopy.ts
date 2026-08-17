@@ -1,14 +1,29 @@
-/** Città/luogo per messaggi post-consegna (es. Reggio Calabria). */
+/** Città/luogo per messaggi post-consegna (es. «Roma (RM)»). */
 export function resolvePartnerCity(order: {
     cemeteryCity?: string | null;
     cemeteryName?: string | null;
     deliveryProvince?: string | null;
 }): string {
     const city = order.cemeteryCity?.trim();
-    if (city && city.toLowerCase() !== 'non specificato') return city;
+    const provRaw = order.deliveryProvince?.trim().toUpperCase() || '';
+    const prov = /^[A-Z]{2}$/.test(provRaw) ? provRaw : '';
+
+    if (city && city.toLowerCase() !== 'non specificato') {
+        if (prov && !/\([A-Z]{2}\)\s*$/i.test(city) && !city.toUpperCase().includes(`(${prov})`)) {
+            return `${city} (${prov})`;
+        }
+        return city;
+    }
+
     const cemetery = order.cemeteryName?.trim();
-    if (cemetery) return cemetery;
-    return order.deliveryProvince?.trim() || 'Italia';
+    if (cemetery) {
+        if (prov && !/\([A-Z]{2}\)\s*$/i.test(cemetery) && !cemetery.toUpperCase().includes(`(${prov})`)) {
+            return `${cemetery} (${prov})`;
+        }
+        return cemetery;
+    }
+
+    return prov || 'Italia';
 }
 
 export function extractBuyerFirstName(fullName?: string | null): string {
@@ -39,7 +54,7 @@ export function extractBuyerLastName(fullName?: string | null): string {
     if (!trimmed) return '';
     const parts = trimmed.split(/\s+/).filter(Boolean);
     if (parts.length === 1) return parts[0]!;
-    
+
     let lastIdx = parts.length - 1;
     while (lastIdx > 0) {
         const word = parts[lastIdx]!.toLowerCase();
@@ -59,7 +74,7 @@ export function formatDeliverySalutation(buyerFullName?: string | null): string 
 }
 
 /**
- * Testo caldo post-consegna (CAPITOLO 1 chat storiche).
+ * Testo caldo post-consegna allineato al template Meta `floremoria_consegna_foto_utente`.
  */
 export function renderDeliveryProofCaption(params: {
     buyerFullName?: string | null;
@@ -67,26 +82,31 @@ export function renderDeliveryProofCaption(params: {
     deceasedName: string;
 }): string {
     const firstName = extractBuyerFirstName(params.buyerFullName);
-    const saluto = `Gentile ${firstName},`;
     const defunto = (params.deceasedName || 'chi ama').trim();
     const city = params.partnerCity.trim() || 'zona';
 
-    return `${saluto} con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}.`;
+    return (
+        `Gentile ${firstName},\n` +
+        `con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}.`
+    );
 }
 
-/** Chiusura ufficiale messaggi post-consegna (SOFIA + ALMA). */
+/** Chiusura ufficiale messaggi post-consegna (SOFIA + ALMA / Meta). */
 export const DELIVERY_CONFIRMATION_CLOSING =
     'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹';
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
     return (
         `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\n` +
-        `Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n` +
+        `Vuole ricevere anche qui le foto della posa? 🌹\n\n` +
         DELIVERY_CONFIRMATION_CLOSING
     );
 }
 
-/** Fallback free-text (finestra 24h) — un solo messaggio, tono caldo, chiusura ufficiale. */
+/**
+ * Fallback free-text (finestra 24h) — stesso copy ufficiale Meta, un solo messaggio.
+ * Variabili: {{1}} nome · {{2}} città · {{3}} defunto · {{4}} URL GdM.
+ */
 export function renderDeliveryConfirmationFreeText(params: {
     buyerFullName?: string | null;
     partnerCity: string;
@@ -100,8 +120,9 @@ export function renderDeliveryConfirmationFreeText(params: {
     });
     return (
         `${caption}\n\n` +
-        `Può vedere tutte le foto qui: ${params.giardinoUrl}\n\n` +
-        `Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n` +
+        `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n` +
+        `${params.giardinoUrl}\n\n` +
+        `Vuole ricevere anche qui le foto della posa? 🌹\n\n` +
         DELIVERY_CONFIRMATION_CLOSING
     );
 }

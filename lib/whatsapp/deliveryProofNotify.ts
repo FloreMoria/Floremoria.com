@@ -57,6 +57,7 @@ function isBusinessWhatsAppLine(phoneE164: string): boolean {
 /**
  * Punto E — un solo messaggio WhatsApp al cliente:
  * template Meta `floremoria_consegna_foto_utente` (o fallback free-text nella finestra 24h).
+ * Mapping ufficiale: {{1}} nome · {{2}} città/cimitero · {{3}} defunto · {{4}} URL GdM.
  * Nessun secondo outbound, nessun prefisso debug in chat.
  */
 export async function sendDeliveryProofWhatsApp(

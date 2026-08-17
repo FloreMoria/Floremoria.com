@@ -384,9 +384,14 @@ export function buildOperatorTemplateComponents(
         if (field.key === 'orderCode' && !raw.includes('📦')) {
             raw = normalizeOrderCode(raw);
         }
+        const sanitized = sanitizeMetaTemplateParam(raw);
+        // Slot opzionali (es. staffMessage {{3}} conferma ordine): Meta richiede un valore non vuoto.
+        if (!sanitized && !field.required) {
+            return { type: 'text' as const, text: ' ' };
+        }
         return {
             type: 'text' as const,
-            text: sanitizeMetaTemplateParam(raw) || '-',
+            text: sanitized || '-',
         };
     };
 
@@ -444,7 +449,7 @@ export function renderOperatorTemplatePreview(
         }
         body = body.replace(
             new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'),
-            sanitizeMetaTemplateParam(raw) || '…'
+            sanitizeMetaTemplateParam(raw) || (field.required ? '…' : '')
         );
     });
 

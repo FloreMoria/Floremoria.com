@@ -31,9 +31,12 @@ export default function OrderDetailDrawer({
 }: OrderDetailDrawerProps) {
     const [localOrder, setLocalOrder] = useState<any | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [customerConfirmMessage, setCustomerConfirmMessage] = useState('');
+    const [isSendingCustomerConfirm, setIsSendingCustomerConfirm] = useState(false);
 
     useEffect(() => {
         setLocalOrder(order);
+        setCustomerConfirmMessage('');
     }, [order]);
 
     if (!localOrder) return null;
@@ -109,6 +112,51 @@ export default function OrderDetailDrawer({
             alert('Errore di rete durante il salvataggio.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const sendCustomerOrderConfirm = async () => {
+        if (!localOrder?.id || isSendingCustomerConfirm) return;
+        if (
+            !window.confirm(
+                'Inviare (o reinviare) la conferma ordine WhatsApp al cliente con il template Meta aggiornato?'
+            )
+        ) {
+            return;
+        }
+
+        setIsSendingCustomerConfirm(true);
+        try {
+            const res = await fetch(
+                `/api/dashboard/orders/${localOrder.id}/customer-confirm`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        force: true,
+                        staffMessage: customerConfirmMessage,
+                    }),
+                }
+            );
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.success === false) {
+                alert(
+                    data.error ||
+                        data.skipped ||
+                        'Invio conferma ordine non riuscito.'
+                );
+                return;
+            }
+            if (data.skipped) {
+                alert(`Conferma non inviata: ${data.skipped}`);
+                return;
+            }
+            alert('Conferma ordine WhatsApp inviata al cliente.');
+            setCustomerConfirmMessage('');
+        } catch {
+            alert('Errore di rete durante l’invio della conferma.');
+        } finally {
+            setIsSendingCustomerConfirm(false);
         }
     };
 
@@ -542,9 +590,40 @@ export default function OrderDetailDrawer({
                         />
                     </div>
 
-                    {/* CONTATTO RAPIDO */}
+                    {/* CONTATTO RAPIDO + CONFERMA ORDINE WHATSAPP */}
                     {localOrder.customerPhone && (
-                        <div className="pt-4 border-t border-gray-100">
+                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                            <div className="space-y-2">
+                                <label
+                                    htmlFor={`customer-confirm-msg-${localOrder.id}`}
+                                    className="block text-sm font-medium text-gray-800"
+                                >
+                                    Messaggio/Domanda personalizzata per il cliente (opzionale)
+                                </label>
+                                <textarea
+                                    id={`customer-confirm-msg-${localOrder.id}`}
+                                    value={customerConfirmMessage}
+                                    onChange={(e) => setCustomerConfirmMessage(e.target.value)}
+                                    rows={3}
+                                    placeholder="Es. Possiamo chiamarla per confermare l’orario di posa?"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                                />
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                    Valorizza la variabile {'{{3}}'} del template di conferma. Se lasciato
+                                    vuoto, Meta riceve uno spazio (parametro obbligatorio).
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={sendCustomerOrderConfirm}
+                                    disabled={isSendingCustomerConfirm}
+                                    className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white p-3 rounded-xl shadow-sm transition-colors font-medium text-sm"
+                                >
+                                    <MessageSquare size={16} />
+                                    {isSendingCustomerConfirm
+                                        ? 'Invio in corso…'
+                                        : 'Invia conferma ordine WhatsApp'}
+                                </button>
+                            </div>
                             <a
                                 href={`https://wa.me/${localOrder.customerPhone.replace(/\D/g, '')}`}
                                 target="_blank"

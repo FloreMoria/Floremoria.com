@@ -13,7 +13,13 @@ export interface ResendVeraOrderNotificationsResult {
 
 export async function resendVeraOrderNotifications(
     orderNumber: string,
-    options: { customer?: boolean; florist?: boolean; force?: boolean } = {}
+    options: {
+        customer?: boolean;
+        florist?: boolean;
+        force?: boolean;
+        /** {{3}} conferma cliente — se passato (anche vuoto), non genera warm auto. */
+        staffMessage?: string;
+    } = {}
 ): Promise<ResendVeraOrderNotificationsResult> {
     const normalized = orderNumber.trim();
     const sendCustomer = options.customer !== false;
@@ -36,7 +42,12 @@ export async function resendVeraOrderNotifications(
     };
 
     if (sendCustomer) {
-        result.customer = await runPuntoBCustomerOrderConfirm(order.id, { force });
+        result.customer = await runPuntoBCustomerOrderConfirm(order.id, {
+            force,
+            ...(options.staffMessage !== undefined
+                ? { staffMessage: options.staffMessage }
+                : {}),
+        });
         if (!result.customer.ok && !result.customer.skipped) {
             result.ok = false;
         }

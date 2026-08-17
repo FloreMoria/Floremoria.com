@@ -20,13 +20,11 @@ import { enqueuePuntoBWake } from '@/lib/vera/orderWorkflow/schedulePuntoBWake';
 import { buildCustomerOrderConfirmParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
-import { normalizePhoneE164, sendWhatsAppTextMessage } from '@/lib/whatsapp/metaCloudApiClient';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
-import { finalizeCustomerConfirmWarmSlot } from '@/lib/vera/customerOrderConfirmCopy';
-import { addMessage } from '@/lib/chatStore';
 import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export interface PuntoBResult {
@@ -42,6 +40,12 @@ export interface PuntoBOptions {
     force?: boolean;
     /** Ignora scheduling (es. flush cron quando l'orario è già dovuto). */
     bypassSchedule?: boolean;
+    /**
+     * Messaggio/domanda personalizzata per {{3}}.
+     * Se `undefined` (auto workflow): genera warm thought Vera.
+     * Se stringa (anche vuota, da UI staff): usa quel testo; vuoto → spazio Meta.
+     */
+    staffMessage?: string;
 }
 
 async function markPuntoBScheduled(
@@ -172,20 +176,29 @@ export async function runPuntoBCustomerOrderConfirm(
     }
 
     const buyerName = resolveSafeBuyerFirstName(order.user?.name || order.buyerFullName);
-    const warmThought = await generateWarmOrderThought({
-        buyerName,
-        deceasedName: order.deceasedName,
-    });
+
+    // {{3}}: messaggio staff esplicito (UI) oppure warm thought auto; mai follow-up free-text separato.
+    let slot3Message: string;
+    if (options.staffMessage !== undefined) {
+        slot3Message = options.staffMessage;
+    } else {
+        slot3Message = await generateWarmOrderThought({
+            buyerName,
+            deceasedName: order.deceasedName,
+        });
+    }
 
     const bodyParams = buildCustomerOrderConfirmParams({
         buyerFirstName: buyerName,
         deceasedName: order.deceasedName,
-        warmThought,
+        staffMessage: slot3Message,
     });
 
     const send = await sendVeraTemplate(phoneE164, 'customer_order_confirm', bodyParams, {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        // Reinvio staff esplicito: bypass dedup 24h.
+        skipOrderDedup: Boolean(options.force),
     });
 
     if (!send.ok) {
@@ -207,26 +220,6 @@ export async function runPuntoBCustomerOrderConfirm(
         });
     } catch (logErr) {
         console.error('[vera-workflow] Punto B inviato ma sessione dashboard non registrata:', logErr);
-    }
-
-    // Warm + CTA fuori dal template (Meta live ha solo {{1}}/{{2}}).
-    const warmFollowUp = finalizeCustomerConfirmWarmSlot(warmThought);
-    if (warmFollowUp) {
-        const follow = await sendWhatsAppTextMessage(phoneE164, warmFollowUp).catch((err) => {
-            console.error('[vera-workflow] Punto B follow-up warm fallito:', err);
-            return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
-        });
-        if (follow.ok) {
-            try {
-                await addMessage(phoneE164, 'OUTBOUND', warmFollowUp, undefined, {
-                    eventType: 'ORDER_CONFIRM_WARM_FOLLOWUP',
-                    orderId: order.id,
-                    orderNumber: order.orderNumber || '',
-                });
-            } catch (logErr) {
-                console.error('[vera-workflow] Follow-up warm non loggato in chat:', logErr);
-            }
-        }
     }
 
     // Assicura flag puntoB_customer anche con force (che salta tryClaim).

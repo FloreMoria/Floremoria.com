@@ -1,24 +1,26 @@
+import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 
 /**
  * Invito a rispondere per aprire la finestra conversazione Meta (24h).
- * Mantenerlo corto: con warm lead deve stare nello slot {{3}} (~92 caratteri Meta).
+ * Usato solo nel warm thought auto-generato (slot {{3}}), non nel body canonico.
  */
 export const CUSTOMER_CONFIRM_CTA = 'Scriva qui per qualsiasi richiesta.';
 
-/** Slot {{3}} nel template Meta approvato — limite conservativo (Meta tronca prima di 115). */
+/** Slot {{3}} warm auto — limite conservativo (Meta tronca prima di ~115). */
 export const MAX_CUSTOMER_CONFIRM_SLOT3_CHARS = META_TEMPLATE_LIMITS.warmThought;
 
+/** Messaggio staff opzionale in {{3}} — più largo del warm auto. */
+export const MAX_CUSTOMER_CONFIRM_STAFF_MESSAGE_CHARS = META_TEMPLATE_LIMITS.staffNotes;
+
 /**
- * Testo di riferimento conferma ordine — allineato al template Meta live a 2 variabili.
- * Warm thought + CTA partono subito dopo in free-text (finestra 24h aperta dal template).
+ * Testo di riferimento conferma ordine — allineato al template Meta live a 3 variabili.
+ * {{1}} cliente · {{2}} defunto · {{3}} messaggio staff/Vera (o spazio se assente).
  */
 export const CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL = `Gentile {{1}},
-La ringraziamo per aver scelto FloreMoria.
-Le confermiamo che abbiamo preso in carico il Suo omaggio nel ricordo di {{2}}.
-
-Seguiremo ogni passo con la massima cura e restiamo a sua disposizione.
-
+La ringraziamo per aver scelto FloreMoria. Le confermiamo abbiamo preso in carico il Suo omaggio floreale nel ricordo di {{2}}.
+Seguiremo e l'avviseremo ad ogni passo con la massima cura e restiamo a sua disposizione.
+{{3}}
 FloreMoria Staff 🌹`;
 
 const DEFAULT_WARM_LEAD = 'Le invieremo la foto della posa appena completata.';
@@ -49,8 +51,8 @@ function looksCompleteWarmLead(lead: string): boolean {
 }
 
 /**
- * Compone {{3}}: frase completa + CTA corta.
- * Perché: con CTA lunga restavano ~30 caratteri → Gemini veniva tagliato in "foto della."
+ * Compone il warm thought auto (frase + CTA corta) per lo slot {{3}}.
+ * Perché: Gemini può troncare; CTA corta lascia spazio a una frase completa.
  */
 export function composeCustomerConfirmSlot3(warmLead?: string | null): string {
     const cta = CUSTOMER_CONFIRM_CTA;
@@ -89,6 +91,44 @@ export function finalizeCustomerConfirmWarmSlot(raw: string): string {
 }
 
 export const MAX_CUSTOMER_CONFIRM_WARM_CHARS = META_TEMPLATE_LIMITS.warmThought;
+
+/**
+ * {{3}} per Meta: messaggio staff/Vera, oppure un singolo spazio se assente.
+ * Meta rifiuta parametri body vuoti (#132000); lo spazio evita errori senza creare una riga vuota anomala.
+ * Nota: i newline nei parametri Meta non sono ammessi — la riga vuota strutturale è già nel body template intorno a {{3}}.
+ */
+export function resolveCustomerConfirmSlot3(raw?: string | null): string {
+    const cleaned = sanitizeMetaTemplateParam(
+        raw ?? '',
+        MAX_CUSTOMER_CONFIRM_STAFF_MESSAGE_CHARS
+    );
+    return cleaned || ' ';
+}
+
+/**
+ * Fallback free-text (finestra 24h) — stesso copy ufficiale Meta, un solo messaggio.
+ * Se {{3}} è solo spazio, collassa la riga vuota.
+ */
+export function renderCustomerOrderConfirmFreeText(input: {
+    buyerFirstName?: string | null;
+    deceasedName?: string | null;
+    staffMessage?: string | null;
+}): string {
+    const buyer = resolveSafeBuyerFirstName(input.buyerFirstName);
+    const deceased = (input.deceasedName || 'chi ama').trim() || 'chi ama';
+    const slot3 = resolveCustomerConfirmSlot3(input.staffMessage);
+    const slot3Visible = slot3.trim();
+
+    let text = CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL.replace(/\{\{1\}\}/g, buyer)
+        .replace(/\{\{2\}\}/g, deceased)
+        .replace(/\{\{3\}\}/g, slot3Visible);
+
+    if (!slot3Visible) {
+        text = text.replace(/\n{3,}/g, '\n\n');
+    }
+
+    return text.replace(/[ \t]+\n/g, '\n').trim();
+}
 
 export function resolveSafeBuyerFirstName(raw?: string | null): string {
     const trimmed = (raw || '').trim();

@@ -19,12 +19,24 @@ export interface SendVeraTemplateResult {
     errorCode?: number;
 }
 
+/**
+ * Meta #132000 rifiuta parametri body vuoti.
+ * Per slot opzionali (es. {{3}} conferma ordine) preserviamo un singolo spazio
+ * invece di coercizzare a "-" (che apparirebbe nel messaggio).
+ */
+function coerceMetaBodyParam(text: string): string {
+    const sanitized = sanitizeMetaTemplateParam(text);
+    if (sanitized) return sanitized;
+    if (typeof text === 'string' && text.length > 0 && !text.trim()) return ' ';
+    return '-';
+}
+
 function buildBodyComponent(params: string[]): WhatsAppTemplateComponent {
     return {
         type: 'body',
         parameters: params.map((text) => ({
             type: 'text' as const,
-            text: sanitizeMetaTemplateParam(text),
+            text: coerceMetaBodyParam(text),
         })),
     };
 }
@@ -85,15 +97,15 @@ export async function sendVeraTemplate(
         return { ok: false, error: msg, errorCode: 132000 };
     }
 
-    for (const text of bodyParams) {
-        if (!sanitizeMetaTemplateParam(text)) {
+    const safeParams = bodyParams.map((text) => coerceMetaBodyParam(text));
+    for (let i = 0; i < bodyParams.length; i++) {
+        const raw = bodyParams[i] ?? '';
+        if (!sanitizeMetaTemplateParam(raw) && coerceMetaBodyParam(raw) === '-') {
             console.warn(
-                `[vera-template] ${spec.id}: parametro vuoto coercizzato a "-" (prevenzione Meta #132000)`
+                `[vera-template] ${spec.id}: parametro ${i + 1} vuoto coercizzato a "-" (prevenzione Meta #132000)`
             );
         }
     }
-
-    const safeParams = bodyParams.map((text) => sanitizeMetaTemplateParam(text) || '-');
     if (safeParams.length !== spec.bodyParamCount) {
         const msg = `Template ${spec.metaName}: attesi ${spec.bodyParamCount} parametri body, ricevuti ${safeParams.length}.`;
         console.warn(`[vera-template] ${msg}`);

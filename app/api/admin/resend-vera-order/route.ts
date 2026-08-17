@@ -22,6 +22,9 @@ export async function POST(request: Request) {
             customer: body.customer !== false,
             florist: body.florist !== false,
             force: body.force === true,
+            ...(typeof body.staffMessage === 'string'
+                ? { staffMessage: body.staffMessage }
+                : {}),
         });
 
         return NextResponse.json(

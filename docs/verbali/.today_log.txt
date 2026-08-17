@@ -10,3 +10,5 @@
 [2026-08-17 16:45] fix/vera: Allineati registro e fallback al nuovo testo del template Meta (bodyCanonical, Luogo, Consegna, CTA mini-app e firma Vera).
 
 [2026-08-17 16:50] fix/whatsapp: Allineato copy floremoria_consegna_foto_utente al template Meta ufficiale (GdM + «anche qui le foto» + chiusura Staff); mapping {{1}}-{{4}} verificato; fallback free-text sync.
+
+[2026-08-17 17:54] feat/whatsapp: Conferma ordine cliente Meta a 3 var ({{3}} messaggio opzionale + spazio Meta); UI drawer + API dashboard.

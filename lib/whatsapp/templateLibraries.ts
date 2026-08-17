@@ -55,6 +55,11 @@ const SLOT_UI: Record<
         placeholder: 'Testo libero del messaggio…',
         multiline: true,
     },
+    staffMessage: {
+        label: 'Messaggio/Domanda personalizzata per il cliente (opzionale)',
+        placeholder: 'Es. Possiamo chiamarla per confermare l’orario di posa?',
+        multiline: true,
+    },
     luminoYesNo: { label: 'Lumino (Sì/No)', placeholder: 'Sì' },
     ticketYesNo: { label: 'Bigliettino (Sì/No)', placeholder: 'No' },
     ticketText: { label: 'Testo biglietto / nastro', placeholder: 'Nessuno', multiline: true },
@@ -105,11 +110,12 @@ const USER_LABELS: Partial<Record<VeraTemplateId, string>> = {
 function fieldsFromBodySlots(slots: readonly string[]): WhatsAppTemplateField[] {
     return slots.map((slot, index) => {
         const ui = SLOT_UI[slot] ?? { label: slot, placeholder: slot };
+        const optional = slot === 'staffMessage';
         return {
             key: slot,
             label: ui.label,
             placeholder: ui.placeholder,
-            required: true,
+            required: !optional,
             location: 'body' as const,
             index,
             multiline: ui.multiline,

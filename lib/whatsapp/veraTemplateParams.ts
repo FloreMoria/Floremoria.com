@@ -1,4 +1,7 @@
-import { resolveSafeBuyerFirstName } from '@/lib/vera/customerOrderConfirmCopy';
+import {
+    resolveCustomerConfirmSlot3,
+    resolveSafeBuyerFirstName,
+} from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
@@ -81,7 +84,8 @@ function logBuiltTemplateParams(templateId: VeraTemplateId, params: string[]): v
     const spec = getVeraTemplate(templateId);
     params.forEach((value, index) => {
         const slot = spec.bodySlots[index] ?? `body_${index + 1}`;
-        if (!value.trim()) {
+        // " " è valido per slot opzionali Meta (es. staffMessage).
+        if (!value.trim() && value !== ' ') {
             console.error(`[vera-template-params] ${templateId} slot "${slot}" vuoto.`);
         }
         if (value.length > META_TEMPLATE_LIMITS.general) {
@@ -95,18 +99,28 @@ function logBuiltTemplateParams(templateId: VeraTemplateId, params: string[]): v
 export function buildCustomerOrderConfirmParams(input: {
     buyerFirstName?: string | null;
     deceasedName?: string | null;
-    /** Ignorato nel template Meta a 2 params; usato dal free-text post-conferma. */
-    warmThought?: string;
+    /** Messaggio/domanda staff o Vera per {{3}}; se assente → " " (Meta #132000). */
+    staffMessage?: string | null;
+    /** Alias storico di staffMessage (warm thought auto). */
+    warmThought?: string | null;
 }): string[] {
-    void input.warmThought;
-    const params = buildVeraTemplateBodyParams('customer_order_confirm', {
-        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
-        deceasedName: requireText(
+    const slot3 = resolveCustomerConfirmSlot3(input.staffMessage ?? input.warmThought);
+    // Costruzione esplicita: buildVeraTemplateBodyParams trasformerebbe " " in "-".
+    const params = [
+        resolveSafeBuyerFirstName(input.buyerFirstName),
+        requireText(
             input.deceasedName || 'chi ama',
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
         ),
-    });
+        slot3,
+    ];
+    const spec = getVeraTemplate('customer_order_confirm');
+    if (params.length !== spec.bodyParamCount) {
+        throw new VeraTemplateParamError(
+            `Template ${spec.metaName}: attesi ${spec.bodyParamCount} parametri, costruiti ${params.length}.`
+        );
+    }
     logBuiltTemplateParams('customer_order_confirm', params);
     return params;
 }

@@ -130,34 +130,22 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const deliveryWhen = rawDeadline && rawDeadline !== '-' ? rawDeadline : '-';
     const var4 = metaParamOrDash(deliveryWhen, 150);
 
-    // Var 5 & Var 6: Comune e Luogo (etichetta gestita da template "📍 Destinazione: {{5}}, {{6}}")
-    let rawComune = stripNoise(
-        formatFloristComuneParam({
-            city: input.cemeteryCity,
-            province: input.province,
-        })
-    );
-    rawComune = rawComune.replace(/^📍\s*Comune:\s*/i, '').trim();
-    if (rawComune === '-') rawComune = '';
-
-    let rawLuogo = stripNoise(
-        formatFloristLuogoParam({
-            cemeteryName: input.cemeteryName,
-            cemeteryCity: input.cemeteryCity,
-        })
-    );
-    rawLuogo = rawLuogo.replace(/^🏛️\s*Luogo:\s*/i, '').trim();
-    if (rawLuogo === '-') rawLuogo = '';
+    // Var 5 & Var 6: Destinazione (etichetta gestita da template "📍 Destinazione: {{5}}, {{6}}")
+    const cimitero = input.cemeteryName ? stripNoise(input.cemeteryName).trim() : '';
+    const comune = input.cemeteryCity ? stripNoise(input.cemeteryCity).trim() : '';
+    const prov = input.province ? stripNoise(input.province).replace(/[()]/g, '').trim() : '';
+    const provSuffix = prov ? `(${prov})` : '';
 
     let var5 = '';
     let var6 = '';
-    if (!rawComune) {
-        // Se il comune è vuoto, mostriamo solo il luogo
-        var5 = metaParamOrDash(rawLuogo || '-', 150);
-        var6 = ' '; // Spazio per soddisfare la convalida non-vuoto di Meta
+
+    if (cimitero && cimitero !== '-') {
+        var5 = metaParamOrDash(cimitero, 150);
+        var6 = metaParamOrDash(provSuffix ? `${comune} ${provSuffix}` : comune, 150);
     } else {
-        var5 = metaParamOrDash(rawComune, 150);
-        var6 = metaParamOrDash(rawLuogo || '-', 150);
+        // Se il cimitero non è specificato, usiamo Comune per {{5}} e (Provincia) per {{6}} per rendere "Comune, (Provincia)"
+        var5 = metaParamOrDash(comune || '-', 150);
+        var6 = metaParamOrDash(provSuffix || ' ', 150);
     }
 
     // Var 7: Prodotto (etichetta gestita da template "💐 Prodotto: {{7}}")
@@ -190,7 +178,7 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const cleanCompenso = formatFloristPriceAmountParam(rawCompenso);
     const var10 = metaParamOrDash(cleanCompenso, 100);
 
-    // Var 11: Link (etichetta gestita da template "🔗 Link mini-app fiorista: {{11}}" o testo libero)
+    // Var 11: Link (etichetta gestita da template "🔗 Completa l'ordine dalla tua mini-app:\n{{11}}")
     const rawDeliveryUrl =
         stripNoise(input.deliveryUrl) ||
         buildFloristDeliveryUrl({

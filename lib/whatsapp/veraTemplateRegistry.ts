@@ -149,7 +149,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             "➕ Accessori: {{8}}\n" +
             "📝 Testo nastro/biglietto: {{9}}\n" +
             "💶 Compenso per il servizio: {{10}}€\n\n" +
-            "🔗 Gestisci l'ordine dalla tua mini-app:\n{{11}}",
+            "🔗 Completa l'ordine dalla tua mini-app:\n{{11}}",
         description:
             '{{1}} nome fiorista, {{2}} codice ordine, {{3}} defunto, {{4}} scadenza, {{5}} comune, {{6}} luogo, {{7}} prodotto, {{8}} accessori, {{9}} testo biglietto, {{10}} compenso, {{11}} link mini-app',
     },

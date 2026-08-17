@@ -4,3 +4,6 @@
 [2026-08-17 16:02] fix/comms: Anti-doppio WhatsApp consegna (claim+dedup, no prefisso Template Meta); chiusura Staff empatica; anti-loop Resend (self/auto-submitted + 1 reply/ora).
 
 [2026-08-17 16:09] fix/vera: Risolte duplicazioni saluto/codice/consegna e pulizia comune/luogo nel template di notifica ordine fiorista.
+
+[2026-08-17 16:24] fix/vera: Rimossa parola "entro le ore" dalla scadenza, inclusione di cimitero e comune nel campo destinazione, e aggiornata call to action mini-app fiorista.
+

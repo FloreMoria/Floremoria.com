@@ -112,7 +112,7 @@ export function formatFloristDeliveryDeadlineIt(
     const mm = String(minute).padStart(2, '0');
     const weekday = WEEKDAYS_IT[p.weekday] || 'Giorno';
     const month = MONTHS_IT[p.month - 1] || 'Mese';
-    return `${weekday} ${day} ${month} ${p.year} entro le ore ${hh}:${mm}`;
+    return `${weekday} ${day} ${month} ${p.year} alle ore ${hh}:${mm}`;
 }
 
 export function resolveFloristDeliveryDeadline(input: {

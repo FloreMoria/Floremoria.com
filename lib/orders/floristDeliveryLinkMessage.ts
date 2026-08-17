@@ -211,8 +211,8 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         `📌 Note di Consegna: ${note}\n` +
         `💶 Compenso per il servizio: ${compenso}\n` +
         `Inviaci fattura che effettuiamo subito il bonifico istantaneo.\n` +
-        `Per caricare le foto mentre effettui la consegna dovresti usare il link alla mini-app dedicata a questo ordine:\n` +
-        `🔗 ${deliveryUrl}\n\n` +
+        `🔗 Completa l'ordine dalla tua mini-app:\n` +
+        `${deliveryUrl}\n\n` +
         `Per qualsiasi dubbio o necessità fammi sapere qui in chat. Mi confermi?\n` +
         `Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;

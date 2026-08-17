@@ -140,9 +140,18 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         ],
         library: 'FLORIST',
         bodyCanonical:
-            'Ciao {{1}}! Ordine {{2}} · {{3}} · consegna {{4}} · {{5}}, {{6}} · {{7}} · {{8}} · {{9}} · {{10}} · {{11}}',
+            "Ciao {{1}}! 🌸\n\n" +
+            "📦 Nuovo ordine: {{2}}\n" +
+            "🕊️ In memoria di: {{3}}\n" +
+            "📅 Consegna entro: {{4}}\n" +
+            "📍 Destinazione: {{5}}, {{6}}\n" +
+            "💐 Prodotto: {{7}}\n" +
+            "➕ Accessori: {{8}}\n" +
+            "📝 Testo nastro/biglietto: {{9}}\n" +
+            "💶 Compenso per il servizio: {{10}}€\n\n" +
+            "🔗 Gestisci l'ordine dalla tua mini-app:\n{{11}}",
         description:
-            '{{1}} nome, {{2}} codice, {{3}} defunto, {{4}} scadenza, {{5}} comune, {{6}} luogo, {{7}} prodotto, {{8}} accessori, {{9}} testo, {{10}} compenso, {{11}} link',
+            '{{1}} nome fiorista, {{2}} codice ordine, {{3}} defunto, {{4}} scadenza, {{5}} comune, {{6}} luogo, {{7}} prodotto, {{8}} accessori, {{9}} testo biglietto, {{10}} compenso, {{11}} link mini-app',
     },
     customer_order_confirm: {
         id: 'customer_order_confirm',

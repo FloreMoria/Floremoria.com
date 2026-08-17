@@ -2,3 +2,5 @@
 [2026-08-17 15:31] fix/checkout: PayPal esplicito su Stripe Checkout (payment_method_types card+paypal) — fine sparizioni da Dynamic PM; fallback carta + alert staff.
 
 [2026-08-17 16:02] fix/comms: Anti-doppio WhatsApp consegna (claim+dedup, no prefisso Template Meta); chiusura Staff empatica; anti-loop Resend (self/auto-submitted + 1 reply/ora).
+
+[2026-08-17 16:09] fix/vera: Risolte duplicazioni saluto/codice/consegna e pulizia comune/luogo nel template di notifica ordine fiorista.

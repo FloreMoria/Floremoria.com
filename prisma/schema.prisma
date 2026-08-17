@@ -217,6 +217,10 @@ model Order {
   offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
   memoryGardenOpens      MemoryGardenOpen[]
+  grossAmount            Float?            @map("gross_amount")
+  stripeFee              Float?            @map("stripe_fee")
+  netAmount              Float?            @map("net_amount")
+  stripeTransactionId    String?           @map("stripe_transaction_id") @db.VarChar(255)
   /** Record creati in Modalità Test (sandbox admin). */
   isTest                 Boolean           @default(false) @map("is_test")
 }

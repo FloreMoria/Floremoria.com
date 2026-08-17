@@ -1167,6 +1167,61 @@ export default function FinanceDashboardPage() {
                                         </table>
                                     </div>
                                 </div>
+
+                                {/* Movimenti Reali Stripe (Contabilità Centesimi) */}
+                                <div className="border border-slate-100 rounded-2xl shadow-sm overflow-hidden space-y-4 p-5">
+                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                        <h4 className="text-lg font-bold text-slate-900">
+                                            Movimenti Reali Stripe Registrati (Contabilità al Centesimo)
+                                        </h4>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse min-w-[800px]">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    <th className="px-5 py-3">Transazione ID</th>
+                                                    <th className="px-5 py-3">Codice Ordine</th>
+                                                    <th className="px-5 py-3">Data</th>
+                                                    <th className="px-5 py-3 text-right">Lordo (Ricavo)</th>
+                                                    <th className="px-5 py-3 text-right">Commissione Stripe (Fee)</th>
+                                                    <th className="px-5 py-3 text-right">Netto Incassato</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 text-sm">
+                                                {!gatewayData.stripe.realTransactions || gatewayData.stripe.realTransactions.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic">Nessun movimento Stripe reale registrato.</td>
+                                                    </tr>
+                                                ) : (
+                                                    gatewayData.stripe.realTransactions.map((tx: any) => {
+                                                        return (
+                                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-5 py-3.5 font-mono text-xs text-slate-500">
+                                                                    {tx.stripeTransactionId}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">
+                                                                    {tx.orderNumber}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-xs text-slate-500">
+                                                                    {formatDateTime(tx.createdAt)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-right font-mono text-slate-800">
+                                                                    €{(tx.grossAmount || 0).toFixed(2)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-right font-mono text-rose-600">
+                                                                    -€{(tx.stripeFee || 0).toFixed(2)}
+                                                                </td>
+                                                                <td className="px-5 py-3.5 text-right font-mono text-emerald-700 font-semibold">
+                                                                    €{(tx.netAmount || 0).toFixed(2)}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { cookies } from 'next/headers';
 import { hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,12 +88,39 @@ export async function GET() {
             }
         }
 
+        // 2b. Recupero Movimenti Reali Stripe dal DB Locale (Contabilità al Centesimo)
+        let dbTransactions: any[] = [];
+        try {
+            dbTransactions = await prisma.order.findMany({
+                where: {
+                    stripeTransactionId: { not: null },
+                    deletedAt: null
+                },
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    createdAt: true,
+                    grossAmount: true,
+                    stripeFee: true,
+                    netAmount: true,
+                    stripeTransactionId: true,
+                    buyerFullName: true,
+                    buyerEmail: true
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            });
+        } catch (dbErr) {
+            console.error('[gateways-api] Errore recupero movimenti Stripe da DB:', dbErr);
+        }
+
         return NextResponse.json({
             ok: true,
             stripe: {
                 configured: true,
                 balance: stripeBalance,
-                transactions: stripeTransactions
+                transactions: stripeTransactions,
+                realTransactions: dbTransactions
             },
             paypal: {
                 configured: isPaypalConfigured,

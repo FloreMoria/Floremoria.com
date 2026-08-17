@@ -75,9 +75,49 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
+    let grossAmountVal: number | undefined = undefined;
+    let stripeFeeVal: number | undefined = undefined;
+    let netAmountVal: number | undefined = undefined;
+    let stripeTransactionIdVal: string | undefined = undefined;
+    let balanceDate = new Date();
+
+    const paymentIntentId = session.payment_intent as string;
+    if (paymentIntentId) {
+        try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                expand: ['latest_charge.balance_transaction'],
+            });
+            const charge = paymentIntent.latest_charge as Stripe.Charge | null;
+            const balanceTransaction = charge?.balance_transaction as Stripe.BalanceTransaction | null;
+            if (balanceTransaction) {
+                grossAmountVal = balanceTransaction.amount / 100;
+                stripeFeeVal = balanceTransaction.fee / 100;
+                netAmountVal = balanceTransaction.net / 100;
+                stripeTransactionIdVal = balanceTransaction.id;
+                balanceDate = new Date(balanceTransaction.created * 1000);
+                console.info('[stripe-webhook] Recuperata transazione contabile reale Stripe:', {
+                    grossAmountVal,
+                    stripeFeeVal,
+                    netAmountVal,
+                    stripeTransactionIdVal,
+                });
+            }
+        } catch (err) {
+            console.error('[stripe-webhook] Errore nel recupero balance_transaction:', err);
+        }
+    }
+
     const markPaid = await prisma.order.updateMany({
         where: { id: orderId, partnerPaymentStatus: { not: 'PAID' } },
-        data: { partnerPaymentStatus: 'PAID', status: 'ACCEPTED', deletedAt: null },
+        data: {
+            partnerPaymentStatus: 'PAID',
+            status: 'ACCEPTED',
+            deletedAt: null,
+            grossAmount: grossAmountVal,
+            stripeFee: stripeFeeVal,
+            netAmount: netAmountVal,
+            stripeTransactionId: stripeTransactionIdVal,
+        },
     });
 
     const isFirstPaidTransition = markPaid.count > 0;
@@ -108,6 +148,56 @@ export async function POST(request: Request) {
         await autoAssignKnownTombOrder(orderId).catch((autoErr) => {
             console.error('[stripe-webhook] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
         });
+
+        // Scrittura Prima Nota contabile (Finance / Contabilità)
+        if (grossAmountVal && grossAmountVal > 0) {
+            try {
+                const { addAccountingEntries } = await import('@/lib/financial/ledgerStore');
+                const orderNumber = order.orderNumber || order.id;
+                const dateStr = balanceDate.toISOString().split('T')[0];
+                const grossCents = Math.round(grossAmountVal * 100);
+                const feeCents = Math.round((stripeFeeVal || 0) * 100);
+
+                const entryGrossId = `entry_stripe_gross_webhook_${order.id}`;
+                const entryFeesId = `entry_stripe_fees_webhook_${order.id}`;
+
+                const calculateVatCents = (totalCents: number, rate = 0.22): number => {
+                    const net = totalCents / (1 + rate);
+                    return Math.round(totalCents - net);
+                };
+
+                const entryGross = {
+                    id: entryGrossId,
+                    date: dateStr,
+                    description: `Incasso lordo clienti tramite Stripe - Ordine ${orderNumber}`,
+                    dareAccount: '50100 - Banca Qonto',
+                    avereAccount: '60100 - Ricavi da Vendite',
+                    amountCents: grossCents,
+                    vatAmountCents: calculateVatCents(grossCents, 0.22),
+                    isForeignService: false,
+                    invoiceReference: orderNumber,
+                    status: 'CONFIRMED' as const,
+                };
+
+                const entryFees = {
+                    id: entryFeesId,
+                    date: dateStr,
+                    description: `Trattenuta commissioni Stripe su ordine ${orderNumber}`,
+                    dareAccount: '70200 - Commissioni Stripe',
+                    avereAccount: '50100 - Banca Qonto',
+                    amountCents: feeCents,
+                    vatAmountCents: 0,
+                    isForeignService: true,
+                    invoiceReference: `FEE-${orderNumber}`,
+                    status: 'CONFIRMED' as const,
+                };
+
+                addAccountingEntries([entryGross, entryFees]);
+                console.info('[stripe-webhook] Registrata Prima Nota per ordine pagato:', orderNumber);
+            } catch (ledgerErr) {
+                console.error('[stripe-webhook] Scrittura contabile fallita:', ledgerErr);
+            }
+        }
     }
 
     const staffTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || 'ordini@floremoria.com';

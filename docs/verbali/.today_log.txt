@@ -12,3 +12,5 @@
 [2026-08-17 16:50] fix/whatsapp: Allineato copy floremoria_consegna_foto_utente al template Meta ufficiale (GdM + «anche qui le foto» + chiusura Staff); mapping {{1}}-{{4}} verificato; fallback free-text sync.
 
 [2026-08-17 17:54] feat/whatsapp: Conferma ordine cliente Meta a 3 var ({{3}} messaggio opzionale + spazio Meta); UI drawer + API dashboard.
+
+[2026-08-17 18:30] feat/finance: Tracciamento contabile al centesimo per Stripe. Estrazione balance_transaction nel webhook, salvataggio campi gross/fee/net in DB, scrittura Prima Nota in ledger e visualizzazione tab Gateways.

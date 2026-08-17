@@ -89,6 +89,9 @@ export default function OrderDetailDrawer({
                     specialNotes: localOrder.specialNotes || '',
                     gravePosition: localOrder.gravePosition || '',
                     deliveryDate: localOrder.deliveryDate || null,
+                    ticketMessage: localOrder.ticketMessage?.trim()
+                        ? String(localOrder.ticketMessage).trim()
+                        : null,
                 })
             });
 
@@ -425,15 +428,30 @@ export default function OrderDetailDrawer({
                         </div>
                     </div>
 
-                    {/* MESSAGGIO BIGLIETTO */}
+                    {/* MESSAGGIO BIGLIETTO / NASTRO */}
                     <div className="space-y-2">
                         <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                            <MessageSquare size={16} className="text-gray-400" /> Messaggio per il biglietto
+                            <MessageSquare size={16} className="text-gray-400" /> Messaggio biglietto / nastro
                         </h4>
-                        {localOrder.ticketMessage ? (
+                        {canChangeStatus ? (
+                            <>
+                                <textarea
+                                    className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm min-h-[88px] resize-y"
+                                    placeholder="Testo del messaggio / dedica per il biglietto (o nastro). Se entrambi: Bigliettino: … / Nastro: …"
+                                    value={localOrder.ticketMessage || ''}
+                                    onChange={(e) =>
+                                        setLocalOrder({ ...localOrder, ticketMessage: e.target.value })
+                                    }
+                                />
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                    Valorizzato in WhatsApp fiorista come {'{{9}}'} (Testo nastro/biglietto) e
+                                    mostrato in mini-app di consegna. Salva con il pulsante in basso.
+                                </p>
+                            </>
+                        ) : localOrder.ticketMessage ? (
                             <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl relative">
-                                <p className="text-orange-800 text-sm italic font-serif leading-relaxed">
-                                    "{localOrder.ticketMessage}"
+                                <p className="text-orange-800 text-sm italic font-serif leading-relaxed whitespace-pre-wrap">
+                                    &ldquo;{localOrder.ticketMessage}&rdquo;
                                 </p>
                             </div>
                         ) : (

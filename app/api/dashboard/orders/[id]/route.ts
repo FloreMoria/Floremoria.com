@@ -28,7 +28,7 @@ export async function PUT(request: Request, context: any) {
             'partnerPaymentStatus', 'cemeteryName', 'cemeteryCity', 
             'gravePosition', 'deliveryDate', 'deceasedName', 
             'deceasedBirthDate', 'deceasedDeathDate', 'additionalInstructions', 'status',
-            'buyerFullName', 'customerPhone', 'totalPriceCents'
+            'buyerFullName', 'customerPhone', 'totalPriceCents',
         ];
 
         validKeys.forEach(k => {
@@ -50,6 +50,12 @@ export async function PUT(request: Request, context: any) {
                 }
             }
         });
+
+        if (body.ticketMessage !== undefined) {
+            const raw =
+                typeof body.ticketMessage === 'string' ? body.ticketMessage.trim() : body.ticketMessage;
+            safeData.ticketMessage = raw ? String(raw) : null;
+        }
 
         // Gestione note / istruzioni aggiuntive (specialNotes nel frontend mappato su additionalInstructions nel DB)
         if (body.specialNotes !== undefined || body.additionalInstructions !== undefined) {

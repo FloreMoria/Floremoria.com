@@ -14,3 +14,4 @@
 [2026-08-17 17:54] feat/whatsapp: Conferma ordine cliente Meta a 3 var ({{3}} messaggio opzionale + spazio Meta); UI drawer + API dashboard.
 
 [2026-08-17 18:30] feat/finance: Tracciamento contabile al centesimo per Stripe. Estrazione balance_transaction nel webhook, salvataggio campi gross/fee/net in DB, scrittura Prima Nota in ledger e visualizzazione tab Gateways.
+[2026-08-17 22:34] feat/orders: Bigliettino/nastro — campi testo distinti in CreateOrderModal, ticketMessage editabile in drawer, mini-app fiorista + {{9}} WhatsApp.

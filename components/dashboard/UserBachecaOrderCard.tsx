@@ -8,6 +8,7 @@ import {
     formatCustomerFacingDeliveryDate,
     resolveCustomerFacingDeliveryDate,
 } from '@/lib/orders/displayDeliveryDate';
+import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
 
 export type BachecaOrder = Order & {
     items: (OrderItem & { product: Product })[];
@@ -262,6 +263,8 @@ export function UserBachecaOrderCard({
                             deceasedName={order.deceasedName}
                             cemeteryName={order.cemeteryName}
                             cemeteryCity={order.cemeteryCity}
+                            ticketMessage={order.ticketMessage}
+                            accessories={buildOrderOptionalsList(order.items || [])}
                         />
                     ) : null}
                 </div>

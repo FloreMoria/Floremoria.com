@@ -11,6 +11,8 @@ type Props = {
     deceasedName: string;
     cemeteryName: string;
     cemeteryCity: string;
+    ticketMessage?: string | null;
+    accessories?: string[];
 };
 
 /** Pannello admin collassabile per upload manuale foto consegna dalla bacheca. */
@@ -20,6 +22,8 @@ export default function AdminManualProofUploadPanel({
     deceasedName,
     cemeteryName,
     cemeteryCity,
+    ticketMessage = null,
+    accessories = [],
 }: Props) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -62,6 +66,8 @@ export default function AdminManualProofUploadPanel({
                         deceasedName={deceasedName}
                         cemeteryName={cemeteryName}
                         cemeteryCity={cemeteryCity}
+                        ticketMessage={ticketMessage}
+                        accessories={accessories}
                         onUploadComplete={handleComplete}
                     />
                 </div>

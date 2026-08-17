@@ -1,5 +1,6 @@
 import { evaluateFloristDeliveryAccess, isFloristTestOrder, isFloristTestOrderRef } from '@/lib/deliveryProof/floristAccess';
 import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
+import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
 import Link from 'next/link';
 
@@ -35,7 +36,14 @@ const orderSelect = {
     updatedAt: true,
     deletedAt: true,
     partnerPaymentStatus: true,
+    ticketMessage: true,
     deliveryProof: { select: { status: true } },
+    items: {
+        select: {
+            quantity: true,
+            product: { select: { slug: true, name: true, isBouquet: true } },
+        },
+    },
 } as const;
 
 export default async function FloristConsegnaPage({
@@ -99,6 +107,8 @@ export default async function FloristConsegnaPage({
             deceasedName={order!.deceasedName}
             cemeteryName={order!.cemeteryName}
             cemeteryCity={order!.cemeteryCity}
+            ticketMessage={order!.ticketMessage}
+            accessories={buildOrderOptionalsList(order!.items || [])}
         />
     );
 }

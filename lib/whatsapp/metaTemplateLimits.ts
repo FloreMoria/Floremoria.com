@@ -11,7 +11,7 @@ export const META_TEMPLATE_LIMITS = {
     orderCode: 32,
     locationLabel: 120,
     priceLabel: 28,
-    ticketText: 200,
+    ticketText: 400,
     url: 256,
     staffNotes: 900,
     general: 1024,

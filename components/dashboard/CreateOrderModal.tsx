@@ -11,8 +11,11 @@ import {
     type DuplicateOrderDraft,
 } from '@/lib/orders/duplicateOrderDraft';
 import {
+    composeTicketMessageParts,
+    isCardMessageAccessory,
+    isRibbonAccessory,
     orderCategoryToCatalogSlug,
-    productRequiresCustomMessage,
+    parseTicketMessageParts,
 } from '@/lib/orders/productCustomText';
 import {
     filterDashboardAccessories,
@@ -193,7 +196,21 @@ function CreateOrderFormPanel({
     const [isRecurring, setIsRecurring] = useState(draft.isRecurring);
     const [additionalInstructions, setAdditionalInstructions] = useState(draft.additionalInstructions);
     const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>(draft.selectedAccessoryIds);
-    const [ticketMessage, setTicketMessage] = useState(draft.ticketMessage);
+    const initialTicketParts = (() => {
+        const parts = parseTicketMessageParts(draft.ticketMessage);
+        const selected = draft.selectedAccessoryIds
+            .map((id) => products.find((p) => p.id === id))
+            .filter(Boolean) as ProductOption[];
+        const hasCard = selected.some((p) => isCardMessageAccessory(p.slug, p.name));
+        const hasRibbon = selected.some((p) => isRibbonAccessory(p.slug, p.name));
+        // Legacy: testo unico + solo nastro → sposta nel campo nastro.
+        if (!hasCard && hasRibbon && parts.cardText && !parts.ribbonText) {
+            return { cardText: '', ribbonText: parts.cardText };
+        }
+        return parts;
+    })();
+    const [cardMessageText, setCardMessageText] = useState(initialTicketParts.cardText);
+    const [ribbonMessageText, setRibbonMessageText] = useState(initialTicketParts.ribbonText);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -203,10 +220,17 @@ function CreateOrderFormPanel({
 
     const sortedUsers = [...users].sort((a, b) => compareBySurname(a.name, b.name));
     const sortedDeceasedProfiles = [...deceasedProfiles].sort(compareByRecentActivity);
-    const showCustomTextField = selectedAccessoryIds.some((id) => {
-        const p = products.find((x) => x.id === id);
-        return productRequiresCustomMessage(p?.slug);
-    });
+
+    const selectedAccessoryProducts = selectedAccessoryIds
+        .map((id) => products.find((p) => p.id === id))
+        .filter(Boolean) as ProductOption[];
+    const hasCardMessageAccessory = selectedAccessoryProducts.some((p) =>
+        isCardMessageAccessory(p.slug, p.name)
+    );
+    const hasRibbonAccessory = selectedAccessoryProducts.some((p) =>
+        isRibbonAccessory(p.slug, p.name)
+    );
+    const showCustomTextField = hasCardMessageAccessory || hasRibbonAccessory;
 
     const estimatedTotalCents =
         (priceCents === '' ? 0 : Number(priceCents) || 0) * quantity +
@@ -214,6 +238,22 @@ function CreateOrderFormPanel({
             const p = products.find((x) => x.id === id);
             return sum + (p?.basePriceCents ?? 0);
         }, 0);
+
+    const accessoryUiLabel = (acc: ProductOption): { title: string; hint?: string } => {
+        if (isCardMessageAccessory(acc.slug, acc.name)) {
+            return {
+                title: 'Includi Bigliettino con messaggio',
+                hint: acc.name !== 'Messaggio' ? acc.name : 'Accessorio Messaggio / Bigliettino',
+            };
+        }
+        if (isRibbonAccessory(acc.slug, acc.name)) {
+            return {
+                title: 'Includi Nastro commemorativo',
+                hint: 'Testo impresso sul nastro (campo dedicato sotto)',
+            };
+        }
+        return { title: acc.name };
+    };
 
     const refreshCodePreview = useCallback(async () => {
         const prov = deliveryProvince.trim().toUpperCase().slice(0, 2) || 'XX';
@@ -298,9 +338,17 @@ function CreateOrderFormPanel({
         const deliveryDate = joinDeliveryDatetime(deliveryDatePart, deliveryTimePart);
 
         try {
-            if (showCustomTextField && !ticketMessage.trim()) {
-                throw new Error('Inserisci il testo per Messaggio o Nastro commemorativo.');
+            if (hasCardMessageAccessory && !cardMessageText.trim()) {
+                throw new Error('Inserisci il testo del messaggio / dedica per il biglietto.');
             }
+            if (hasRibbonAccessory && !ribbonMessageText.trim()) {
+                throw new Error('Inserisci il testo per il nastro commemorativo.');
+            }
+
+            const ticketMessage = composeTicketMessageParts(
+                hasCardMessageAccessory ? cardMessageText : null,
+                hasRibbonAccessory ? ribbonMessageText : null
+            );
 
             // Pagato + Ricevuto → In Lavorazione: altrimenti Punto B (cliente) resta in attesa.
             const effectiveStatus =
@@ -336,7 +384,7 @@ function CreateOrderFormPanel({
                     isRecurring,
                     additionalInstructions: additionalInstructions || null,
                     accessories: selectedAccessoryIds.map((accId) => ({ productId: accId, quantity: 1 })),
-                    ticketMessage: ticketMessage.trim() || null,
+                    ticketMessage,
                 }),
             });
 
@@ -653,50 +701,88 @@ function CreateOrderFormPanel({
 
                         {availableAccessories.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
-                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                                    Accessori
+                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                    Accessori / optional
                                 </h4>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Seleziona il bigliettino o il nastro per abilitare i campi testo dedicati.
+                                </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {availableAccessories.map((acc) => (
-                                        <label
-                                            key={acc.id}
-                                            className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                                                selectedAccessoryIds.includes(acc.id)
-                                                    ? 'border-amber-300 bg-amber-50/60'
-                                                    : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedAccessoryIds.includes(acc.id)}
-                                                onChange={() => toggleAccessory(acc.id)}
-                                                className="mt-0.5"
-                                            />
-                                            <span className="text-sm text-gray-800">
-                                                <span className="font-medium block">{acc.name}</span>
-                                                <span className="text-gray-500 text-xs">
-                                                    €{(acc.basePriceCents / 100).toFixed(2)}
+                                    {availableAccessories.map((acc) => {
+                                        const ui = accessoryUiLabel(acc);
+                                        const checked = selectedAccessoryIds.includes(acc.id);
+                                        return (
+                                            <label
+                                                key={acc.id}
+                                                className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                                                    checked
+                                                        ? 'border-amber-300 bg-amber-50/60'
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleAccessory(acc.id)}
+                                                    className="mt-0.5"
+                                                />
+                                                <span className="text-sm text-gray-800">
+                                                    <span className="font-medium block">{ui.title}</span>
+                                                    {ui.hint ? (
+                                                        <span className="text-gray-500 text-xs block">{ui.hint}</span>
+                                                    ) : null}
+                                                    <span className="text-gray-500 text-xs">
+                                                        €{(acc.basePriceCents / 100).toFixed(2)}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                        </label>
-                                    ))}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
 
                         {showCustomTextField && (
-                            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-1">
-                                <label className="block text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1.5">
-                                    Testo messaggio / nastro <span className="text-red-600">*</span>
-                                </label>
-                                <textarea
-                                    required
-                                    placeholder="Scrivi qui il pensiero da stampare sul biglietto o sul nastro..."
-                                    value={ticketMessage}
-                                    onChange={(e) => setTicketMessage(e.target.value)}
-                                    rows={3}
-                                    className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                                />
+                            <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-1">
+                                {hasCardMessageAccessory && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1.5">
+                                            Testo del messaggio / dedica per il biglietto{' '}
+                                            <span className="text-red-600">*</span>
+                                        </label>
+                                        <textarea
+                                            required
+                                            placeholder="Scrivi qui il pensiero da stampare sul bigliettino…"
+                                            value={cardMessageText}
+                                            onChange={(e) => setCardMessageText(e.target.value)}
+                                            rows={3}
+                                            className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                                        />
+                                    </div>
+                                )}
+                                {hasRibbonAccessory && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1.5">
+                                            Testo per il nastro commemorativo{' '}
+                                            <span className="text-red-600">*</span>
+                                        </label>
+                                        <textarea
+                                            required
+                                            placeholder="Scrivi qui il testo da impressare sul nastro…"
+                                            value={ribbonMessageText}
+                                            onChange={(e) => setRibbonMessageText(e.target.value)}
+                                            rows={3}
+                                            className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                                        />
+                                    </div>
+                                )}
+                                {hasCardMessageAccessory && hasRibbonAccessory ? (
+                                    <p className="text-xs text-gray-500">
+                                        I due testi restano distinti in dashboard e vengono uniti in{' '}
+                                        <code className="text-[11px]">ticketMessage</code> per WhatsApp
+                                        fiorista (variabile {'{{9}}'}) e mini-app.
+                                    </p>
+                                ) : null}
                             </div>
                         )}
 

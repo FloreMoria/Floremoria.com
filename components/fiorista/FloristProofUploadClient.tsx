@@ -13,6 +13,10 @@ type Props = {
     deceasedName: string;
     cemeteryName: string;
     cemeteryCity: string;
+    /** Testo bigliettino / nastro da stampare in posa. */
+    ticketMessage?: string | null;
+    /** Accessori leggibili (bigliettino, lumino, …). */
+    accessories?: string[];
     /** Layout compatto per bacheca admin (no header full-page). */
     embedded?: boolean;
     /** Bypass restrizioni fiorista lato API (solo admin autenticato). */
@@ -121,6 +125,8 @@ export default function FloristProofUploadClient({
     deceasedName,
     cemeteryName,
     cemeteryCity,
+    ticketMessage = null,
+    accessories = [],
     embedded = false,
     adminUpload = false,
     onUploadComplete,
@@ -237,8 +243,36 @@ export default function FloristProofUploadClient({
         );
     }
 
+    const orderBrief = (
+        (accessories.length > 0 || Boolean(ticketMessage?.trim())) && (
+            <section className="rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4 shadow-sm">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-amber-900/80">
+                    Optional / testo da posare
+                </h2>
+                {accessories.length > 0 ? (
+                    <ul className="mt-2 list-disc space-y-0.5 pl-4 text-sm text-slate-700">
+                        {accessories.map((label) => (
+                            <li key={label}>{label}</li>
+                        ))}
+                    </ul>
+                ) : null}
+                {ticketMessage?.trim() ? (
+                    <div className="mt-3 rounded-xl border border-amber-100 bg-white/80 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800/70">
+                            Testo nastro / biglietto
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm italic leading-relaxed text-slate-800">
+                            {ticketMessage.trim()}
+                        </p>
+                    </div>
+                ) : null}
+            </section>
+        )
+    );
+
     const uploadFields = (
         <>
+            {orderBrief}
             <PhotoSlot
                 title="Prima (obbligatoria)"
                 subtitle="Almeno 1 foto prima della posa (max 3)"

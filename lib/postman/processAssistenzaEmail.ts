@@ -1,12 +1,12 @@
 import prisma from '@/lib/prisma';
 import { classifyAndDraft, PostmanConfigError } from '@/lib/postman/agent';
 import { isEmailBlacklisted } from '@/lib/postman/emailBlacklist';
+import { evaluateInboundEmailGuards } from '@/lib/postman/inboundEmailGuards';
 import {
     tryGetMailboxConfigFromEnv,
     sendDirectReply,
     type MailboxConfig,
 } from '@/lib/postman/mailbox';
-import { isSystemEmailSender } from '@/lib/postman/systemSenders';
 
 export interface AssistenzaEmailInput {
     fromName?: string;
@@ -15,6 +15,8 @@ export interface AssistenzaEmailInput {
     text?: string;
     messageId?: string | null;
     references?: string | null;
+    /** Header MIME (Auto-Submitted, X-Autoreply, …) per anti-loop. */
+    headers?: Record<string, string | string[] | undefined> | null;
 }
 
 export type AssistenzaEmailProcessStatus =
@@ -23,6 +25,9 @@ export type AssistenzaEmailProcessStatus =
     | 'skipped_duplicate'
     | 'skipped_invalid'
     | 'skipped_system_sender'
+    | 'skipped_self_mailbox'
+    | 'skipped_auto_submitted'
+    | 'skipped_rate_limited'
     | 'error';
 
 export interface AssistenzaEmailProcessResult {
@@ -56,8 +61,30 @@ export async function processAssistenzaInboundEmail(
         return { status: 'skipped_invalid', error: 'missing_from_email' };
     }
 
-    if (isSystemEmailSender(fromEmail)) {
-        return { status: 'skipped_system_sender' };
+    // Anche con force: mai rispondere a se stessi o ad auto-reply (rompe i loop).
+    if (!options?.forceReProcess) {
+        const guard = await evaluateInboundEmailGuards({
+            fromEmail,
+            subject: email.subject,
+            headers: email.headers,
+        });
+        if (!guard.allow) {
+            console.info('[postman] Inbound saltato (anti-loop):', { fromEmail, reason: guard.reason });
+            if (guard.reason === 'self_mailbox') return { status: 'skipped_self_mailbox' };
+            if (guard.reason === 'auto_submitted') return { status: 'skipped_auto_submitted' };
+            if (guard.reason === 'rate_limited') return { status: 'skipped_rate_limited' };
+            return { status: 'skipped_system_sender' };
+        }
+    } else {
+        const { isAssistenzaSelfAddress, isAutoSubmittedEmail } = await import(
+            '@/lib/postman/inboundEmailGuards'
+        );
+        if (isAssistenzaSelfAddress(fromEmail)) {
+            return { status: 'skipped_self_mailbox' };
+        }
+        if (isAutoSubmittedEmail(email.headers, email.subject)) {
+            return { status: 'skipped_auto_submitted' };
+        }
     }
 
     if (await isEmailBlacklisted(fromEmail)) {

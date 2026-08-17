@@ -1,11 +1,10 @@
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
 import { getSession } from '@/lib/chatStore';
 import {
-    renderGiardinoDellaMemoriaLinkMessage,
+    renderDeliveryConfirmationFreeText,
     resolvePartnerCity,
     extractBuyerFirstName,
 } from '@/lib/whatsapp/deliveryProofCopy';
-import { logProofToDashboard } from '@/lib/whatsapp/deliveryProofDashboardLog';
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
@@ -28,6 +27,11 @@ export interface DeliveryProofWhatsAppInput {
     /** Non inviato a freddo: solo MagicLink nel template (evita Meta 131047). */
     photoAfterUrl?: string | null;
     photoAfterUrls?: string[] | null;
+    /**
+     * Solo reinvio esplicito staff: bypass dedup 24h.
+     * Il flusso normale usa dedup + claim workflow (anti doppio messaggio).
+     */
+    forceResend?: boolean;
 }
 
 export interface DeliveryProofWhatsAppResult {
@@ -51,9 +55,9 @@ function isBusinessWhatsAppLine(phoneE164: string): boolean {
 }
 
 /**
- * Punto E — template primario Meta `floremoria_consegna_foto_utente`:
- * {{1}} nome · {{2}} comune/cimitero · {{3}} defunto · {{4}} MagicLink
- * Nessuna foto WhatsApp immediata (anti-131047 fuori finestra 24h).
+ * Punto E — un solo messaggio WhatsApp al cliente:
+ * template Meta `floremoria_consegna_foto_utente` (o fallback free-text nella finestra 24h).
+ * Nessun secondo outbound, nessun prefisso debug in chat.
  */
 export async function sendDeliveryProofWhatsApp(
     input: DeliveryProofWhatsAppInput
@@ -81,7 +85,6 @@ export async function sendDeliveryProofWhatsApp(
     const buyerName = (input.buyerFullName || 'Utente').trim();
     const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
     const giardinoUrl = await buildProofFotoAccessUrl(input.orderId, input.orderNumber);
-    const linkMessage = renderGiardinoDellaMemoriaLinkMessage(giardinoUrl);
     const sessionPhone = `whatsapp:${phoneE164}`;
 
     try {
@@ -99,11 +102,25 @@ export async function sendDeliveryProofWhatsApp(
             {
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
-                skipOrderDedup: true,
+                // Dedup attivo di default: un solo template per ordine / 24h.
+                skipOrderDedup: Boolean(input.forceResend),
             }
         );
 
         if (!templateSend.ok) {
+            if (templateSend.errorCode === 409 || templateSend.error?.startsWith('duplicate_prevented')) {
+                console.info(
+                    '[delivery-proof-whatsapp] Template già inviato (dedup): nessun secondo messaggio.',
+                    { orderId: input.orderId }
+                );
+                return {
+                    ok: true,
+                    skipped: 'duplicate_prevented',
+                    giardinoUrl,
+                    photosSent: 0,
+                };
+            }
+
             const session = await getSession(sessionPhone);
             if (!isWithinCustomerServiceWindow(session)) {
                 console.error(
@@ -123,9 +140,12 @@ export async function sendDeliveryProofWhatsApp(
                 '[delivery-proof-whatsapp] Template fallito — fallback free-text MagicLink:',
                 templateSend.error
             );
-            const fallbackText =
-                `Gentile ${buyerFirstName}, abbiamo completato la consegna dei Suoi fiori a ${partnerCity} ` +
-                `nel ricordo di ${deceasedName}.\n\n${linkMessage}`;
+            const fallbackText = renderDeliveryConfirmationFreeText({
+                buyerFullName: buyerName,
+                partnerCity,
+                deceasedName,
+                giardinoUrl,
+            });
             const linkSend = await sendWhatsAppMessage(phoneE164, fallbackText, {
                 recipientName: buyerName,
                 orderCode: input.orderNumber || undefined,
@@ -142,11 +162,7 @@ export async function sendDeliveryProofWhatsApp(
                     photosSent: 0,
                 };
             }
-            await logProofToDashboard(phoneE164, buyerName, fallbackText, {
-                orderId: input.orderId,
-                orderNumber: input.orderNumber,
-                buyerFullName: input.buyerFullName,
-            });
+            // sendWhatsAppMessage già registra in chat: nessun secondo log.
             return {
                 ok: true,
                 giardinoUrl,
@@ -155,6 +171,7 @@ export async function sendDeliveryProofWhatsApp(
             };
         }
 
+        // Un solo outbound in dashboard = anteprima template pulita (no prefisso debug).
         await logVeraTemplateOutbound({
             phoneE164,
             templateId: 'customer_delivery_photo',
@@ -166,17 +183,6 @@ export async function sendDeliveryProofWhatsApp(
             contactName: buyerName,
             userType: 'UTENTE',
         });
-
-        await logProofToDashboard(
-            phoneE164,
-            buyerName,
-            `[Template Meta floremoria_consegna_foto_utente]\n\n${linkMessage}`,
-            {
-                orderId: input.orderId,
-                orderNumber: input.orderNumber,
-                buyerFullName: input.buyerFullName,
-            }
-        );
 
         console.info(
             `[delivery-proof-whatsapp] floremoria_consegna_foto_utente OK ${input.orderNumber || input.orderId} photosSent=0 (on-demand)`

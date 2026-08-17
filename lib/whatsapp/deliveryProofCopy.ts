@@ -71,9 +71,37 @@ export function renderDeliveryProofCaption(params: {
     const defunto = (params.deceasedName || 'chi ama').trim();
     const city = params.partnerCity.trim() || 'zona';
 
-    return `${saluto} con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}. In allegato la foto della consegna 🌹`;
+    return `${saluto} con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}.`;
 }
 
+/** Chiusura ufficiale messaggi post-consegna (SOFIA + ALMA). */
+export const DELIVERY_CONFIRMATION_CLOSING =
+    'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹';
+
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
-    return `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\nVuole ricevere qui la foto della posa? Risponda Sì oppure No 🌹\n\nRestiamo a Sua completa disposizione.\nTutto lo Staff di FloreMoria`;
+    return (
+        `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\n` +
+        `Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n` +
+        DELIVERY_CONFIRMATION_CLOSING
+    );
+}
+
+/** Fallback free-text (finestra 24h) — un solo messaggio, tono caldo, chiusura ufficiale. */
+export function renderDeliveryConfirmationFreeText(params: {
+    buyerFullName?: string | null;
+    partnerCity: string;
+    deceasedName: string;
+    giardinoUrl: string;
+}): string {
+    const caption = renderDeliveryProofCaption({
+        buyerFullName: params.buyerFullName,
+        partnerCity: params.partnerCity,
+        deceasedName: params.deceasedName,
+    });
+    return (
+        `${caption}\n\n` +
+        `Può vedere tutte le foto qui: ${params.giardinoUrl}\n\n` +
+        `Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n` +
+        DELIVERY_CONFIRMATION_CLOSING
+    );
 }

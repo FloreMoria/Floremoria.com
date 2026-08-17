@@ -84,6 +84,7 @@ async function runSync(): Promise<{
                         text: email.text,
                         messageId: email.messageId,
                         references: email.references,
+                        headers: email.headers,
                     },
                     config
                 );
@@ -94,7 +95,10 @@ async function runSync(): Promise<{
                         ? 'reply_sent'
                         : outcome.status === 'skipped_duplicate'
                           ? 'skipped_duplicate'
-                          : outcome.status === 'skipped_system_sender'
+                          : outcome.status === 'skipped_system_sender' ||
+                              outcome.status === 'skipped_self_mailbox' ||
+                              outcome.status === 'skipped_auto_submitted' ||
+                              outcome.status === 'skipped_rate_limited'
                             ? 'skipped_system_sender'
                           : outcome.status === 'skipped_blacklist'
                             ? 'skipped_blacklist'

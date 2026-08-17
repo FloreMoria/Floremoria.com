@@ -22,6 +22,8 @@ export interface IncomingEmail {
     subject: string;
     text: string;
     date: Date | null;
+    /** Header MIME per guard anti-loop POSTMAN. */
+    headers: Record<string, string>;
 }
 
 export interface MailboxConfig {
@@ -118,6 +120,15 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
                         : String(parsed.references);
                 }
 
+                const headers: Record<string, string> = {};
+                if (parsed.headers && typeof parsed.headers.forEach === 'function') {
+                    parsed.headers.forEach((value, key) => {
+                        headers[String(key)] = Array.isArray(value)
+                            ? value.map(String).join(' ')
+                            : String(value ?? '');
+                    });
+                }
+
                 out.push({
                     uid: message.uid,
                     messageId,
@@ -127,6 +138,7 @@ export async function fetchUnseenEmails(client: ImapFlow, limit: number): Promis
                     subject: (parsed.subject || message.envelope?.subject || '').trim(),
                     text,
                     date: parsed.date || message.envelope?.date || null,
+                    headers,
                 });
             } catch (e) {
                 console.error(`[postman] Parsing fallito per uid=${message.uid}:`, e);
@@ -228,6 +240,12 @@ export async function sendDirectReply(
                 text: params.body,
                 inReplyTo: params.inReplyToMessageId || undefined,
                 references,
+                // Previene loop: i peer non devono auto-rispondere a questa risposta.
+                headers: {
+                    'Auto-Submitted': 'auto-replied',
+                    'X-Auto-Response-Suppress': 'All',
+                    Precedence: 'auto_reply',
+                },
             });
             console.log(`[postman] Risposta SMTP Aruba inviata a ${params.toAddress}`);
             return { ok: true, provider: 'aruba_smtp' };

@@ -175,7 +175,8 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodyCanonical:
             'Gentile {{1}}, con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}. ' +
             'Può vedere tutte le foto qui: {{4}}\n\n' +
-            'Vuole ricevere qui la foto della posa? Risponda Sì oppure No.',
+            'Vuole ricevere qui la foto della posa? Risponda Sì oppure No.\n\n' +
+            'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹',
         description:
             '{{1}} nome utente, {{2}} comune/cimitero, {{3}} defunto, {{4}} MagicLink — body-only',
     },

@@ -119,6 +119,7 @@ async function handleResendInbound(event: ResendEmailReceivedEvent) {
         text,
         messageId,
         references,
+        headers: full.headers || null,
     });
 
     return { ok: true, provider: 'resend' as const, emailId: data.email_id, ...result };

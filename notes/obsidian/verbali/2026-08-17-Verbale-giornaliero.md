@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo Giornaliero — 17 Agosto 2026"
 sync_source: docs/verbali/17-08-2026.md
-synced_at: 2026-08-17T20:40:26.856Z
+synced_at: 2026-08-17T21:50:25.964Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/17-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -141,25 +141,10 @@ author: Amministratore Unico, Barbara (Coordinamento), Antigravity AI / Cursor
 
 ---
 
-## Registro operativo automatico (.today_log)
-
-Fonte: `docs/verbali/.today_log.txt` (accumulo Cursor in giornata).
-
-- [2026-08-17 15:31] fix/checkout: PayPal esplicito su Stripe Checkout (payment_method_types card+paypal) — fine sparizioni da Dynamic PM; fallback carta + alert staff.
-- [2026-08-17 16:02] fix/comms: Anti-doppio WhatsApp consegna (claim+dedup, no prefisso Template Meta); chiusura Staff empatica; anti-loop Resend (self/auto-submitted + 1 reply/ora).
-- [2026-08-17 16:09] fix/vera: Risolte duplicazioni saluto/codice/consegna e pulizia comune/luogo nel template di notifica ordine fiorista.
-- [2026-08-17 16:24] fix/vera: Rimossa parola "entro le ore" dalla scadenza, inclusione di cimitero e comune nel campo destinazione, e aggiornata call to action mini-app fiorista.
-- [2026-08-17 16:45] fix/vera: Allineati registro e fallback al nuovo testo del template Meta (bodyCanonical, Luogo, Consegna, CTA mini-app e firma Vera).
-- [2026-08-17 16:50] fix/whatsapp: Allineato copy floremoria_consegna_foto_utente al template Meta ufficiale (GdM + «anche qui le foto» + chiusura Staff); mapping {{1}}-{{4}} verificato; fallback free-text sync.
-- [2026-08-17 17:54] feat/whatsapp: Conferma ordine cliente Meta a 3 var ({{3}} messaggio opzionale + spazio Meta); UI drawer + API dashboard.
-- [2026-08-17 18:30] feat/finance: Tracciamento contabile al centesimo per Stripe. Estrazione balance_transaction nel webhook, salvataggio campi gross/fee/net in DB, scrittura Prima Nota in ledger e visualizzazione tab Gateways.
-- [2026-08-17 22:34] feat/orders: Bigliettino/nastro — campi testo distinti in CreateOrderModal, ticketMessage editabile in drawer, mini-app fiorista + {{9}} WhatsApp.
-- [2026-08-17 22:40] chore/verbali: redazione verbale operativo completo sessione 17-08-2026 (TikTok ticket 0203026106f216e4 incluso).
-
 ---
 
-## Prossimi passi suggeriti
+## Registro operativo automatico (.today_log)
 
-1. Monitorare esito ticket TikTok Content Posting API (`0203026106f216e4`).
-2. Pacchetto trimestrale commercialista: export Excel/CSV corrispettivi + liquidazioni partner (dopo gap analysis già avviata).
-3. Smoke test produzione: checkout PayPal, conferma ordine 3-var, bigliettino → WhatsApp `{{9}}` + mini-app.
+Registro accumulato automaticamente da Cursor durante la giornata (fonte: `docs/verbali/.today_log.txt`).
+
+- [2026-08-17 22:50] fix/db: Migration Order Stripe finance (gross/fee/net/tx) applicata su Neon — risolto alert «Database non allineato» pagina Ordini.

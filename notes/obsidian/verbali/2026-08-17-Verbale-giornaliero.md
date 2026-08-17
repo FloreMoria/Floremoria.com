@@ -1,0 +1,165 @@
+---
+date: 17-08-2026
+tipo: verbale_sviluppo
+tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
+sommario: "Verbale Operativo Giornaliero — 17 Agosto 2026"
+sync_source: docs/verbali/17-08-2026.md
+synced_at: 2026-08-17T20:40:26.856Z
+---
+
+> Copia sincronizzata automaticamente da `docs/verbali/17-08-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+---
+title: "Verbale Operativo — 17 Agosto 2026"
+date: 2026-08-17
+tags: [floremoria, verbale, checkout, paypal, whatsapp, meta, resend, postman, finance, stripe, bigliettino, tiktok]
+author: Amministratore Unico, Barbara (Coordinamento), Antigravity AI / Cursor
+---
+
+# Verbale Operativo Giornaliero — 17 Agosto 2026
+
+**Società:** FloreMoria S.r.l. (Startup Innovativa)  
+**Progetto:** FloreMoria Platform (`floremoria.com`)  
+**Ambiente:** Dashboard Next.js / IDE Cursor / Production Vercel (`floremoria-dashboard`)  
+**Giornata di riferimento:** 2026-08-17 (Lunedì)
+
+---
+
+## DATA & PARTECIPANTI
+
+| Campo | Dettaglio |
+|-------|-----------|
+| **Data** | Lunedì 17 Agosto 2026 |
+| **Partecipanti** | Amministratore Unico · Barbara (Coordinamento) · Antigravity AI / Cursor |
+| **Branch** | `main` (allineato e sincronizzato con `origin/main`) |
+
+---
+
+## INTERVENTI E RISOLUZIONI OPERATIVE
+
+### 1. Ripristino Checkout PayPal
+
+- Anomalia: con Stripe **Dynamic Payment Methods** PayPal spariva silenziosamente in fase di checkout.
+- Intervento: forzatura esplicita di `payment_method_types: ['card', 'paypal']` via `lib/stripe/checkoutPaymentMethods.ts`, con fallback carta e alert staff se PayPal non è disponibile.
+- Commit: `be6b256`.
+
+### 2. Protezione Email & Anti-Loop (Resend / POSTMAN)
+
+- Blocco anti-loop verso caselle inbound/assistenza (`lib/postman/inboundEmailGuards.ts`).
+- Gestione header di autoreply (`Auto-Submitted` e simili) + rate-limit **max 1 auto-risposta/ora per mittente**.
+- Chiarita l’origine **esterna** dello spam osservato sul client locale (non generato dal loop interno FloreMoria).
+- Contestuale anti-doppio WhatsApp consegna (claim + dedup, rimozione prefisso dashboard `[Template Meta…]`, chiusura Staff empatica).
+- Commit: `442da81`.
+
+### 3. TikTok for Developers Console
+
+- Formalizzato e inviato ticket di appello/chiarimento per approvazione **Content Posting API**.
+- **Ticket Ref:** `0203026106f216e4`.
+- Contesto: adeguamento nome app a **FloreMoria**.
+- Nota: attività operativa/console (nessun commit codice dedicato in giornata).
+
+### 4. Messaggistica WhatsApp & Allineamento Meta Business Suite
+
+#### 4.1 Template Fiorista — `floremoria_nuovo_ordine_fiorista`
+
+- Rimozione prefissi duplicati («Ciao Ciao», «Ordine 📦», «consegna 📅»).
+- Pulizia gestione comune/cimitero (destinazione coerente).
+- Aggiornamento CTA mini-app e allineamento registry/fallback al testo Meta ufficiale.
+- Commit: `2ca5ba6`, `e842331`, `0bf65b5`.
+
+#### 4.2 Template Consegna Cliente — `floremoria_consegna_foto_utente`
+
+- Aggiornata formula di chiusura Staff e supporto opt-in «Vuole ricevere anche qui le foto della posa?».
+- Mapping variabili `{{1}}`–`{{4}}` verificato; fallback free-text sincronizzato.
+- Commit: `e5bfe7e`, `93f6429`.
+
+#### 4.3 Template Conferma Ordine Cliente — `floremoria_conferma_ordine_utente`
+
+- Struttura a **3 variabili**:
+  - `{{1}}` Cliente
+  - `{{2}}` Defunto / memoria
+  - `{{3}}` Messaggio staff / Vera (opzionale)
+- Fallback spazio bianco (`" "`) anti-errore Meta **#132000** su parametro vuoto.
+- Campo editabile nel drawer ordini + API `POST /api/dashboard/orders/[id]/customer-confirm`.
+- Eliminato follow-up free-text separato: `{{3}}` resta nello stesso template Meta.
+- Commit: `8bb0da1`.
+
+### 5. Supporto Bigliettino e Nastro Commemorativo
+
+- Selezione esplicita accessori + textarea dedicate nel form creazione manuale (`CreateOrderModal`).
+- Campi distinti bigliettino / nastro; unificazione in `ticketMessage` (formato `Bigliettino: …` / `Nastro: …` se entrambi).
+- Drawer: `ticketMessage` editabile e persistito via PUT.
+- Propagazione a parametro fiorista **`{{9}}`** (limite Meta conservativo portato a **400** caratteri) e visibilità in mini-app consegna (`FloristProofUploadClient`).
+- Commit: `f756c29`.
+
+### 6. Contabilità & Finanza (Stripe & Architettura Fiscale)
+
+- Schema Prisma esteso: `grossAmount`, `stripeFee`, `netAmount`, `stripeTransactionId`.
+- Webhook Stripe: estrazione `BalanceTransaction` → tracciamento lordo/fee/netto al centesimo + scrittura automatica in **Prima Nota** (Dare/Avere).
+- Tab **Gateways** in `/dashboard/finance` aggiornata con movimenti reali registrati.
+- Ispezione architetturale della sezione Contabilità per la futura predisposizione del **pacchetto trimestrale commercialista** (corrispettivi, export Excel/CSV, liquidazioni partner) — analisi/gap analysis; roadmap non ancora implementata end-to-end.
+- Commit: `128e96a`.
+
+### 7. Altro registrato in giornata (completamenti)
+
+- Sync automatico verbale giorno precedente (`7a322f1` — chore verbali Europe/Rome).
+- Continuazione allineamento Meta Business Suite su template live già approvati (registry + copy canonico + free-text fallback).
+
+---
+
+## STATO DEL SISTEMA & COMMIT ESEGUITI
+
+### Commit principali (17/08/2026, cronologia `main`)
+
+| Hash | Sintesi |
+|------|---------|
+| `7a322f1` | chore(verbali): sync automatico verbale giorno precedente |
+| `be6b256` | fix(checkout): forza PayPal su Stripe Checkout |
+| `442da81` | fix(comms): stop doppio WhatsApp consegna + anti-loop Resend |
+| `2ca5ba6` | fix(vera): pulizia duplicazioni template fiorista |
+| `e842331` | fix(vera): layout data/destinazione/CTA mini-app fiorista |
+| `0bf65b5` | fix(vera): allineamento template fiorista a Meta ufficiale |
+| `e5bfe7e` | fix(whatsapp): copy consegna foto utente = Meta ufficiale |
+| `93f6429` | docs(whatsapp): mapping variabili template consegna |
+| `8bb0da1` | feat(whatsapp): conferma ordine cliente a 3 variabili |
+| `128e96a` | feat(finance): tracciamento Stripe al centesimo + Prima Nota + Gateways |
+| `f756c29` | feat(orders): bigliettino/nastro in ordine manuale + mini-app |
+
+### Verifiche qualità
+
+- `npx tsc --noEmit` → **0 errori** TypeScript (eseguito sugli interventi della giornata).
+- Branch `main` allineato e sincronizzato con `origin/main`.
+- Deploy produzione: progetto Vercel `floremoria-dashboard` → `www.floremoria.com`.
+
+### Agenti FLOREM_NET coinvolti (riferimento)
+
+- **DEVIN / PETRA / POSTMAN / VITO** — checkout, WhatsApp, Resend, webhook Stripe  
+- **VERA / NINA** — copy template e UI drawer  
+- **ALBERTO / DANTE** — contabilità e tracciamento fee  
+- **SOFIA + ALMA** — tono chiusura Staff e messaggistica cliente  
+- **BARBARA** — coordinamento operativo e verbale
+
+---
+
+## Registro operativo automatico (.today_log)
+
+Fonte: `docs/verbali/.today_log.txt` (accumulo Cursor in giornata).
+
+- [2026-08-17 15:31] fix/checkout: PayPal esplicito su Stripe Checkout (payment_method_types card+paypal) — fine sparizioni da Dynamic PM; fallback carta + alert staff.
+- [2026-08-17 16:02] fix/comms: Anti-doppio WhatsApp consegna (claim+dedup, no prefisso Template Meta); chiusura Staff empatica; anti-loop Resend (self/auto-submitted + 1 reply/ora).
+- [2026-08-17 16:09] fix/vera: Risolte duplicazioni saluto/codice/consegna e pulizia comune/luogo nel template di notifica ordine fiorista.
+- [2026-08-17 16:24] fix/vera: Rimossa parola "entro le ore" dalla scadenza, inclusione di cimitero e comune nel campo destinazione, e aggiornata call to action mini-app fiorista.
+- [2026-08-17 16:45] fix/vera: Allineati registro e fallback al nuovo testo del template Meta (bodyCanonical, Luogo, Consegna, CTA mini-app e firma Vera).
+- [2026-08-17 16:50] fix/whatsapp: Allineato copy floremoria_consegna_foto_utente al template Meta ufficiale (GdM + «anche qui le foto» + chiusura Staff); mapping {{1}}-{{4}} verificato; fallback free-text sync.
+- [2026-08-17 17:54] feat/whatsapp: Conferma ordine cliente Meta a 3 var ({{3}} messaggio opzionale + spazio Meta); UI drawer + API dashboard.
+- [2026-08-17 18:30] feat/finance: Tracciamento contabile al centesimo per Stripe. Estrazione balance_transaction nel webhook, salvataggio campi gross/fee/net in DB, scrittura Prima Nota in ledger e visualizzazione tab Gateways.
+- [2026-08-17 22:34] feat/orders: Bigliettino/nastro — campi testo distinti in CreateOrderModal, ticketMessage editabile in drawer, mini-app fiorista + {{9}} WhatsApp.
+- [2026-08-17 22:40] chore/verbali: redazione verbale operativo completo sessione 17-08-2026 (TikTok ticket 0203026106f216e4 incluso).
+
+---
+
+## Prossimi passi suggeriti
+
+1. Monitorare esito ticket TikTok Content Posting API (`0203026106f216e4`).
+2. Pacchetto trimestrale commercialista: export Excel/CSV corrispettivi + liquidazioni partner (dopo gap analysis già avviata).
+3. Smoke test produzione: checkout PayPal, conferma ordine 3-var, bigliettino → WhatsApp `{{9}}` + mini-app.

@@ -1,2 +1,2 @@
 
-[2026-08-16 18:56] fix/deploy: Alias cron Pinterest — config segment locale (no re-export runtime/dynamic; fix Turbopack build).
+[2026-08-17 15:31] fix/checkout: PayPal esplicito su Stripe Checkout (payment_method_types card+paypal) — fine sparizioni da Dynamic PM; fallback carta + alert staff.

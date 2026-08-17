@@ -485,7 +485,7 @@ export async function POST(request: Request) {
 
         console.log(`[Notification] Auto-assegnazione effettuata per ordine ${order.orderNumber} al Partner ${partner?.shopName || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
 
-        // Create Stripe Session
+        // Create Stripe Session — PayPal esplicito (non Dynamic PM Dashboard: evita sparizioni silenziose).
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51MockKey', {
             apiVersion: '2023-10-16' as any,
         });
@@ -497,7 +497,8 @@ export async function POST(request: Request) {
         const validCustomerEmail =
             buyerEmailTrimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmailTrimmed) ? buyerEmailTrimmed : undefined;
 
-        const session = await stripe.checkout.sessions.create({
+        const { createGuaranteedCheckoutSession } = await import('@/lib/stripe/checkoutPaymentMethods');
+        const { session, paypalIncluded, usedCardOnlyFallback } = await createGuaranteedCheckoutSession(stripe, {
             ...(validCustomerEmail ? { customer_email: validCustomerEmail } : {}),
             line_items: [
                 {
@@ -532,7 +533,24 @@ export async function POST(request: Request) {
             cancel_url: `${baseUrl}/checkout`,
         });
 
-        return NextResponse.json({ success: true, url: session.url }, { status: 201 });
+        if (!paypalIncluded) {
+            console.warn('[checkout] Session senza PayPal', {
+                orderNumber: order.orderNumber,
+                sessionId: session.id,
+                usedCardOnlyFallback,
+                methods: session.payment_method_types,
+            });
+        }
+
+        return NextResponse.json(
+            {
+                success: true,
+                url: session.url,
+                paymentMethodTypes: session.payment_method_types,
+                paypalIncluded,
+            },
+            { status: 201 }
+        );
     } catch (error) {
         console.error('Checkout execution error:', error);
         const err = error instanceof Error ? error : new Error(String(error));

@@ -11,12 +11,10 @@ export async function GET(request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const q = request.nextUrl.searchParams.get('q')?.trim() ?? '';
-    if (q.length < 2) {
-        return NextResponse.json({ success: true, results: [] });
-    }
+    const type = (request.nextUrl.searchParams.get('type')?.toUpperCase() || 'ALL') as 'ALL' | 'FLORIST' | 'UTENTE';
 
     try {
-        const results = await searchMessagingContacts(q, 20);
+        const results = await searchMessagingContacts(q, 30, type);
         return NextResponse.json({ success: true, results });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Ricerca contatti non riuscita.';

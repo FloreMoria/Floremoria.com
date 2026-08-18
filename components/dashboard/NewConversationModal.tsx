@@ -102,6 +102,7 @@ export default function NewConversationModal({
     onClose,
     onConversationStarted,
 }: NewConversationModalProps) {
+    const [contactTypeFilter, setContactTypeFilter] = useState<'ALL' | 'FLORIST' | 'UTENTE'>('ALL');
     const [query, setQuery] = useState('');
     const [manualPhone, setManualPhone] = useState('');
     const [results, setResults] = useState<MessagingContact[]>([]);
@@ -136,6 +137,7 @@ export default function NewConversationModal({
     useEffect(() => {
         if (!open) return;
 
+        setContactTypeFilter('ALL');
         setQuery('');
         setManualPhone('');
         setResults([]);
@@ -181,15 +183,13 @@ export default function NewConversationModal({
     useEffect(() => {
         if (!open) return;
         const q = query.trim();
-        if (q.length < 2) {
-            setResults([]);
-            return;
-        }
 
         const timer = window.setTimeout(async () => {
             setSearching(true);
             try {
-                const res = await fetch(`/api/dashboard/communications/contacts?q=${encodeURIComponent(q)}`);
+                const res = await fetch(
+                    `/api/dashboard/communications/contacts?q=${encodeURIComponent(q)}&type=${contactTypeFilter}`
+                );
                 const data = await res.json();
                 setResults(data.success ? data.results || [] : []);
             } catch {
@@ -197,10 +197,10 @@ export default function NewConversationModal({
             } finally {
                 setSearching(false);
             }
-        }, 280);
+        }, 180);
 
         return () => window.clearTimeout(timer);
-    }, [open, query]);
+    }, [open, query, contactTypeFilter]);
 
     const applyContactSelection = async (
         contact: MessagingContact,
@@ -419,6 +419,43 @@ export default function NewConversationModal({
                                 />
                             </div>
 
+                            {/* Filtro Tipologia Contatti */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setContactTypeFilter('ALL')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                        contactTypeFilter === 'ALL'
+                                            ? 'bg-[#2B2B2B] text-white border-[#2B2B2B]'
+                                            : 'bg-white text-gray-600 border-[#EAE3D9] hover:bg-[#FAF8F5]'
+                                    }`}
+                                >
+                                    Tutti
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setContactTypeFilter('FLORIST')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
+                                        contactTypeFilter === 'FLORIST'
+                                            ? 'bg-emerald-700 text-white border-emerald-700'
+                                            : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+                                    }`}
+                                >
+                                    <span>Fioristi 🌸</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setContactTypeFilter('UTENTE')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
+                                        contactTypeFilter === 'UTENTE'
+                                            ? 'bg-blue-700 text-white border-blue-700'
+                                            : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    <span>Clienti 👤</span>
+                                </button>
+                            </div>
+
                             <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
                                 {searching && (
                                     <div className="text-sm text-gray-500 flex items-center gap-2 px-2 py-3">
@@ -426,8 +463,12 @@ export default function NewConversationModal({
                                         Ricerca in corso...
                                     </div>
                                 )}
-                                {!searching && results.length === 0 && query.trim().length >= 2 && (
-                                    <p className="text-sm text-gray-400 px-2 py-3">Nessun contatto trovato nel database.</p>
+                                {!searching && results.length === 0 && (
+                                    <p className="text-sm text-gray-400 px-2 py-3">
+                                        {query.trim()
+                                            ? 'Nessun contatto trovato per i criteri inseriti.'
+                                            : 'Nessun contatto registrato in questa categoria.'}
+                                    </p>
                                 )}
                                 {results.map((contact) => (
                                     <button

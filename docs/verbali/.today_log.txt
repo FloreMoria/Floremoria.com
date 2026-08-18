@@ -2,3 +2,4 @@
 [2026-08-18 17:38] fix/ci: Corretto errore di sintassi YAML nel workflow GitHub Actions .github/workflows/verbale-pipeline.yml (conversione run a blocco multiriga run: |).
 
 [2026-08-18 17:53] feat/whatsapp: supporto difensivo BSUID + waUsername (schema, webhook inbound, Meta client recipient).
+[2026-08-18 17:54] fix/communications: Risolta ricerca contatti e fioristi nella modale Nuova Conversazione (carica iniziale automatica, tab Tutti/Fioristi/Clienti, ricerca per nome/ragione sociale/telefono/comune/provincia).

@@ -27,101 +27,140 @@ function looksLikePhoneQuery(query: string): boolean {
 }
 
 export async function searchMessagingContacts(
-    query: string,
-    limit = 20
+    query: string = '',
+    limit = 30,
+    filterType: 'ALL' | 'FLORIST' | 'UTENTE' = 'ALL'
 ): Promise<MessagingContactResult[]> {
     const q = normalizeSearchQuery(query);
-    if (q.length < 2) return [];
-
-    const take = Math.min(Math.max(limit, 1), 30);
+    const take = Math.min(Math.max(limit, 1), 50);
     const results: MessagingContactResult[] = [];
     const seenPhones = new Set<string>();
 
     const pushResult = (entry: MessagingContactResult) => {
-        if (seenPhones.has(entry.sessionPhone)) return;
+        if (!entry.phone || seenPhones.has(entry.sessionPhone)) return;
         seenPhones.add(entry.sessionPhone);
         results.push(entry);
     };
 
-    const users = await prisma.user.findMany({
-        where: {
+    // Helper per cercare i partner/fioristi
+    const searchPartners = async () => {
+        const partnerWhere: any = {
             deletedAt: null,
-            phone: { not: null },
-            OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { email: { contains: q, mode: 'insensitive' } },
-                { phone: { contains: q.replace(/\s+/g, '') } },
-                { uniqueCode: { contains: q, mode: 'insensitive' } },
-            ],
-        },
-        select: {
-            id: true,
-            name: true,
-            phone: true,
-            email: true,
-            uniqueCode: true,
-        },
-        orderBy: { updatedAt: 'desc' },
-        take,
-    });
+        };
 
-    for (const user of users) {
-        const sessionPhone = toWhatsAppSessionPhone(user.phone);
-        if (!sessionPhone) continue;
-        const displayName = user.name?.trim() || user.email;
-        pushResult({
-            type: 'UTENTE',
-            id: user.id,
-            name: displayName,
-            phone: toE164(user.phone || '') || user.phone || '',
-            sessionPhone,
-            subtitle: [user.uniqueCode, user.email].filter(Boolean).join(' · '),
-            initials: buildContactInitials(displayName),
-            recipientFirstName: extractFirstName(displayName),
-        });
-    }
-
-    const partners = await prisma.partner.findMany({
-        where: {
-            deletedAt: null,
-            isActive: true,
-            whatsappNumber: { not: null },
-            OR: [
+        if (q.length > 0) {
+            const cleanPhone = q.replace(/\s+/g, '');
+            partnerWhere.OR = [
                 { shopName: { contains: q, mode: 'insensitive' } },
                 { ownerName: { contains: q, mode: 'insensitive' } },
-                { whatsappNumber: { contains: q.replace(/\s+/g, '') } },
+                { whatsappNumber: { contains: cleanPhone } },
                 { uniqueCode: { contains: q, mode: 'insensitive' } },
-            ],
-        },
-        select: {
-            id: true,
-            shopName: true,
-            ownerName: true,
-            whatsappNumber: true,
-            uniqueCode: true,
-            province: true,
-        },
-        orderBy: { updatedAt: 'desc' },
-        take,
-    });
+                { coverageArea: { contains: q, mode: 'insensitive' } },
+                { address: { contains: q, mode: 'insensitive' } },
+                { province: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+                { user: { name: { contains: q, mode: 'insensitive' } } },
+                { user: { phone: { contains: cleanPhone } } },
+            ];
+        }
 
-    for (const partner of partners) {
-        const sessionPhone = toWhatsAppSessionPhone(partner.whatsappNumber);
-        if (!sessionPhone) continue;
-        const ownerName = partner.ownerName?.trim() || partner.shopName;
-        pushResult({
-            type: 'FLORIST',
-            id: partner.id,
-            name: partner.shopName,
-            phone: toE164(partner.whatsappNumber || '') || partner.whatsappNumber || '',
-            sessionPhone,
-            subtitle: [partner.ownerName, partner.uniqueCode, partner.province].filter(Boolean).join(' · '),
-            initials: buildContactInitials(partner.shopName),
-            recipientFirstName: extractFirstName(ownerName),
+        const partners = await prisma.partner.findMany({
+            where: partnerWhere,
+            select: {
+                id: true,
+                shopName: true,
+                ownerName: true,
+                whatsappNumber: true,
+                uniqueCode: true,
+                province: true,
+                coverageArea: true,
+                address: true,
+                user: {
+                    select: { phone: true, name: true }
+                }
+            },
+            orderBy: { updatedAt: 'desc' },
+            take,
         });
+
+        for (const partner of partners) {
+            const phoneRaw = partner.whatsappNumber || partner.user?.phone || '';
+            const sessionPhone = toWhatsAppSessionPhone(phoneRaw);
+            if (!sessionPhone) continue;
+            const ownerName = partner.ownerName?.trim() || partner.user?.name?.trim() || partner.shopName;
+            const location = partner.province || partner.coverageArea || partner.address || '';
+
+            pushResult({
+                type: 'FLORIST',
+                id: partner.id,
+                name: partner.shopName || partner.ownerName || 'Fiorista Partner',
+                phone: toE164(phoneRaw) || phoneRaw,
+                sessionPhone,
+                subtitle: [ownerName !== partner.shopName ? ownerName : null, location, partner.uniqueCode].filter(Boolean).join(' · '),
+                initials: buildContactInitials(partner.shopName || ownerName),
+                recipientFirstName: extractFirstName(ownerName),
+            });
+        }
+    };
+
+    // Helper per cercare gli utenti (clienti)
+    const searchUsers = async () => {
+        const userWhere: any = {
+            deletedAt: null,
+            phone: { not: null },
+        };
+
+        if (q.length > 0) {
+            const cleanPhone = q.replace(/\s+/g, '');
+            userWhere.OR = [
+                { name: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+                { phone: { contains: cleanPhone } },
+                { uniqueCode: { contains: q, mode: 'insensitive' } },
+            ];
+        }
+
+        const users = await prisma.user.findMany({
+            where: userWhere,
+            select: {
+                id: true,
+                name: true,
+                phone: true,
+                email: true,
+                uniqueCode: true,
+            },
+            orderBy: { updatedAt: 'desc' },
+            take,
+        });
+
+        for (const user of users) {
+            const sessionPhone = toWhatsAppSessionPhone(user.phone);
+            if (!sessionPhone) continue;
+            const displayName = user.name?.trim() || user.email;
+            pushResult({
+                type: 'UTENTE',
+                id: user.id,
+                name: displayName,
+                phone: toE164(user.phone || '') || user.phone || '',
+                sessionPhone,
+                subtitle: [user.uniqueCode, user.email].filter(Boolean).join(' · '),
+                initials: buildContactInitials(displayName),
+                recipientFirstName: extractFirstName(displayName),
+            });
+        }
+    };
+
+    if (filterType === 'FLORIST') {
+        await searchPartners();
+    } else if (filterType === 'UTENTE') {
+        await searchUsers();
+    } else {
+        // ALL: fioristi prima, poi clienti
+        await searchPartners();
+        await searchUsers();
     }
 
-    if (looksLikePhoneQuery(q) && results.length < take) {
+    if (q && looksLikePhoneQuery(q) && results.length < take) {
         const sessionPhone = toWhatsAppSessionPhone(q);
         if (sessionPhone && !seenPhones.has(sessionPhone)) {
             const e164 = toE164(q);

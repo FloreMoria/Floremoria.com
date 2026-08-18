@@ -89,8 +89,9 @@ function seedFieldValues(
         }
 
         // Template Meta: ogni {{n}} obbligatorio — all'apertura mai campi vuoti.
+        // Slot opzionali (note staff): lasciati vuoti → Meta riceve " " in build.
         if (!(values[field.key] || '').trim()) {
-            values[field.key] = '-';
+            values[field.key] = field.required ? '-' : '';
         }
     }
     return values;
@@ -107,6 +108,8 @@ export default function NewConversationModal({
     const [searching, setSearching] = useState(false);
     const [selected, setSelected] = useState<MessagingContact | null>(null);
     const [requiresTemplate, setRequiresTemplate] = useState<boolean | null>(null);
+    /** Dentro finestra 24h: permette comunque l'invio di un template Meta (es. bonifico). */
+    const [preferTemplate, setPreferTemplate] = useState(false);
     const [allTemplates, setAllTemplates] = useState<WhatsAppTemplateDefinition[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState(PROACTIVE_CONVERSATION_TEMPLATE_ID);
     const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -115,6 +118,8 @@ export default function NewConversationModal({
     const [loadingOrderCode, setLoadingOrderCode] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const useTemplateMode = requiresTemplate === true || preferTemplate;
 
     const templates = useMemo(() => {
         if (!selected) return allTemplates;
@@ -136,6 +141,7 @@ export default function NewConversationModal({
         setResults([]);
         setSelected(null);
         setRequiresTemplate(null);
+        setPreferTemplate(false);
         setFieldValues({});
         setOrderSeed(null);
         setMessageText('');
@@ -233,6 +239,16 @@ export default function NewConversationModal({
         }
     };
 
+    useEffect(() => {
+        if (!preferTemplate || !selected || !selectedTemplate) return;
+        const hasAny = Object.values(fieldValues).some((v) => (v || '').trim());
+        if (hasAny) return;
+        const orderCode = orderSeed?.orderNumber ? normalizeOrderCode(orderSeed.orderNumber) : '';
+        setFieldValues(seedFieldValues(selectedTemplate, selected, orderCode, orderSeed));
+        // Solo quando si attiva il toggle template a campi vuoti.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- seed one-shot
+    }, [preferTemplate]);
+
     const resolveSelection = async (contact: MessagingContact | null, rawPhone?: string) => {
         setError(null);
         const phoneRaw = contact?.phone || rawPhone || '';
@@ -316,13 +332,14 @@ export default function NewConversationModal({
                 userType: selected.type,
             };
 
-            if (requiresTemplate) {
+            if (useTemplateMode) {
                 payload.templateId = selectedTemplate?.id || PROACTIVE_CONVERSATION_TEMPLATE_ID;
                 payload.templateFieldValues = fieldValues;
+                payload.forceTemplate = !requiresTemplate;
                 // Retrocompat campi legacy
                 payload.recipientFirstName = fieldValues.recipientFirstName || fieldValues.userFirstName;
                 payload.orderCode = fieldValues.orderCode;
-                payload.staffNotes = fieldValues.staffNotes;
+                payload.staffNotes = fieldValues.staffNotes || fieldValues.optionalStaffNotes;
             } else {
                 payload.messageText = messageText.trim();
             }
@@ -358,7 +375,7 @@ export default function NewConversationModal({
     };
 
     const previewText =
-        requiresTemplate && selectedTemplate
+        useTemplateMode && selectedTemplate
             ? renderOperatorTemplatePreview(selectedTemplate, fieldValues)
             : '';
 
@@ -479,6 +496,7 @@ export default function NewConversationModal({
                                     onClick={() => {
                                         setSelected(null);
                                         setRequiresTemplate(null);
+                                        setPreferTemplate(false);
                                         setFieldValues({});
                                         setError(null);
                                     }}
@@ -493,128 +511,151 @@ export default function NewConversationModal({
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                     Verifica finestra WhatsApp 24h...
                                 </div>
-                            ) : requiresTemplate ? (
+                            ) : (
                                 <div className="space-y-4">
-                                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                        Fuori finestra 24h (o primo contatto): selezioni un Template Meta della{' '}
-                                        <strong>
-                                            Libreria {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
-                                        </strong>{' '}
-                                        (Scenario A, solo testo body — senza intestazione).
-                                    </div>
-
-                                    <div>
-                                        <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                            Template Meta · {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
-                                        </label>
-                                        <select
-                                            value={selectedTemplateId}
-                                            onChange={(e) => handleTemplateChange(e.target.value)}
-                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm bg-white focus:outline-none focus:border-[#C0A062]"
-                                        >
-                                            {(templates.length
-                                                ? templates
-                                                : [
-                                                      {
-                                                          id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
-                                                          label: 'Messaggio personalizzato fiorista (staff)',
-                                                      },
-                                                  ]
-                                            ).map((t) => (
-                                                <option key={t.id} value={t.id}>
-                                                    {t.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {selectedTemplate?.description ? (
-                                            <p className="text-[11px] text-gray-400 mt-1">
-                                                {selectedTemplate.description}
-                                            </p>
-                                        ) : null}
-                                    </div>
-
-                                    {selectedTemplate?.fields.map((field) => (
-                                        <div key={field.key}>
-                                            <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
-                                                {field.label}
-                                                {field.metaBound === false ? (
-                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
-                                                        In nota
-                                                    </span>
-                                                ) : (
-                                                    <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
-                                                        {`Body {{${field.index + 1}}}`}
-                                                    </span>
-                                                )}
-                                            </label>
-                                            {field.multiline ? (
-                                                <textarea
-                                                    value={fieldValues[field.key] || ''}
-                                                    onChange={(e) =>
-                                                        setFieldValues((prev) => ({
-                                                            ...prev,
-                                                            [field.key]: e.target.value,
-                                                        }))
-                                                    }
-                                                    rows={5}
-                                                    placeholder={field.placeholder}
-                                                    className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884] resize-y min-h-[120px]"
+                                    {requiresTemplate ? (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                            Fuori finestra 24h (o primo contatto): selezioni un Template Meta della{' '}
+                                            <strong>
+                                                Libreria {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
+                                            </strong>{' '}
+                                            (Scenario A, solo testo body — senza intestazione).
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                                                Finestra 24h attiva: messaggio libero oppure template Meta (es. conferma
+                                                bonifico).
+                                            </div>
+                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={preferTemplate}
+                                                    onChange={(e) => setPreferTemplate(e.target.checked)}
+                                                    className="rounded border-gray-300"
                                                 />
-                                            ) : (
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        value={fieldValues[field.key] || ''}
-                                                        onChange={(e) =>
-                                                            setFieldValues((prev) => ({
-                                                                ...prev,
-                                                                [field.key]: e.target.value,
-                                                            }))
-                                                        }
-                                                        onBlur={() => {
-                                                            if (field.key === 'orderCode') {
+                                                Invia come Template Meta (utile per bonifico / notifiche ufficiali)
+                                            </label>
+                                        </div>
+                                    )}
+
+                                    {useTemplateMode ? (
+                                        <>
+                                            <div>
+                                                <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
+                                                    Template Meta ·{' '}
+                                                    {selected.type === 'FLORIST' ? 'Fioristi' : 'Utenti'}
+                                                </label>
+                                                <select
+                                                    value={selectedTemplateId}
+                                                    onChange={(e) => handleTemplateChange(e.target.value)}
+                                                    className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm bg-white focus:outline-none focus:border-[#C0A062]"
+                                                >
+                                                    {(templates.length
+                                                        ? templates
+                                                        : [
+                                                              {
+                                                                  id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
+                                                                  label: 'Messaggio personalizzato fiorista (staff)',
+                                                              },
+                                                          ]
+                                                    ).map((t) => (
+                                                        <option key={t.id} value={t.id}>
+                                                            {t.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {selectedTemplate?.description ? (
+                                                    <p className="text-[11px] text-gray-400 mt-1">
+                                                        {selectedTemplate.description}
+                                                    </p>
+                                                ) : null}
+                                            </div>
+
+                                            {selectedTemplate?.fields.map((field) => (
+                                                <div key={field.key}>
+                                                    <label className="text-sm font-semibold text-[#2B2B2B] mb-1.5 block">
+                                                        {field.label}
+                                                        {!field.required ? (
+                                                            <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                                Opzionale
+                                                            </span>
+                                                        ) : null}
+                                                        {field.metaBound === false ? (
+                                                            <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                                In nota
+                                                            </span>
+                                                        ) : (
+                                                            <span className="ml-2 text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                                {`Body {{${field.index + 1}}}`}
+                                                            </span>
+                                                        )}
+                                                    </label>
+                                                    {field.multiline ? (
+                                                        <textarea
+                                                            value={fieldValues[field.key] || ''}
+                                                            onChange={(e) =>
                                                                 setFieldValues((prev) => ({
                                                                     ...prev,
-                                                                    orderCode: normalizeOrderCode(
-                                                                        prev.orderCode || ''
-                                                                    ),
-                                                                }));
+                                                                    [field.key]: e.target.value,
+                                                                }))
                                                             }
-                                                        }}
-                                                        placeholder={field.placeholder}
-                                                        className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
-                                                    />
-                                                    {loadingOrderCode && field.key === 'orderCode' ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
-                                                    ) : null}
+                                                            rows={5}
+                                                            placeholder={field.placeholder}
+                                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884] resize-y min-h-[120px]"
+                                                        />
+                                                    ) : (
+                                                        <div className="relative">
+                                                            <input
+                                                                type="text"
+                                                                value={fieldValues[field.key] || ''}
+                                                                onChange={(e) =>
+                                                                    setFieldValues((prev) => ({
+                                                                        ...prev,
+                                                                        [field.key]: e.target.value,
+                                                                    }))
+                                                                }
+                                                                onBlur={() => {
+                                                                    if (field.key === 'orderCode') {
+                                                                        setFieldValues((prev) => ({
+                                                                            ...prev,
+                                                                            orderCode: normalizeOrderCode(
+                                                                                prev.orderCode || ''
+                                                                            ),
+                                                                        }));
+                                                                    }
+                                                                }}
+                                                                placeholder={field.placeholder}
+                                                                className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#C0A062]"
+                                                            />
+                                                            {loadingOrderCode && field.key === 'orderCode' ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
+                                                            ) : null}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                            ))}
 
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
-                                            Anteprima messaggio WhatsApp
-                                        </p>
-                                        <div className="rounded-2xl border border-[#D1D7DB] bg-[#E5DDD5] p-4">
-                                            <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
-                                                {previewText}
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                                                    Anteprima messaggio WhatsApp
+                                                </p>
+                                                <div className="rounded-2xl border border-[#D1D7DB] bg-[#E5DDD5] p-4">
+                                                    <div className="max-w-[92%] rounded-lg rounded-tl-none bg-white shadow-sm px-3 py-2.5 text-[15px] text-[#111B21] whitespace-pre-wrap leading-relaxed">
+                                                        {previewText}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                                        Finestra 24h attiva: può inviare un messaggio libero dallo staff (senza template).
-                                    </div>
-                                    <textarea
-                                        value={messageText}
-                                        onChange={(e) => setMessageText(e.target.value)}
-                                        rows={4}
-                                        placeholder="Scriva il messaggio da inviare su WhatsApp..."
-                                        className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884]"
-                                    />
+                                        </>
+                                    ) : (
+                                        <textarea
+                                            value={messageText}
+                                            onChange={(e) => setMessageText(e.target.value)}
+                                            rows={4}
+                                            placeholder="Scriva il messaggio da inviare su WhatsApp..."
+                                            className="w-full rounded-xl border border-[#EAE3D9] px-4 py-3 text-sm focus:outline-none focus:border-[#00A884]"
+                                        />
+                                    )}
                                 </div>
                             )}
                         </>
@@ -640,7 +681,7 @@ export default function NewConversationModal({
                                 type="submit"
                                 disabled={
                                     submitting ||
-                                    (requiresTemplate ? !templateFieldsValid : !messageText.trim())
+                                    (useTemplateMode ? !templateFieldsValid : !messageText.trim())
                                 }
                                 className="px-5 py-2.5 rounded-xl bg-[#00A884] text-white text-sm font-semibold hover:bg-[#008f6f] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
                             >

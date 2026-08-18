@@ -60,10 +60,15 @@ const SLOT_UI: Record<
         placeholder: 'Es. Possiamo chiamarla per confermare l’orario di posa?',
         multiline: true,
     },
+    optionalStaffNotes: {
+        label: 'Note opzionali (staff)',
+        placeholder: 'Es. Ricevuta allegata a breve · IBAN verificato',
+        multiline: true,
+    },
     luminoYesNo: { label: 'Lumino (Sì/No)', placeholder: 'Sì' },
     ticketYesNo: { label: 'Bigliettino (Sì/No)', placeholder: 'No' },
     ticketText: { label: 'Testo biglietto / nastro', placeholder: 'Nessuno', multiline: true },
-    floristPrice: { label: 'Compenso per il servizio', placeholder: 'Es. 40€' },
+    floristPrice: { label: 'Importo / Compenso', placeholder: 'Es. 20€' },
     catalogUrl: {
         label: 'Link catalogo / GdM',
         placeholder: 'https://www.floremoria.com/fiori-sulle-tombe',
@@ -72,6 +77,7 @@ const SLOT_UI: Record<
 };
 
 export const FLORIST_LIBRARY_IDS: VeraTemplateId[] = [
+    'florist_bonifico_ricevuta',
     'florist_repeat',
     'florist_reminder',
     'florist_tomb_not_found',
@@ -90,6 +96,7 @@ export const USER_LIBRARY_IDS: VeraTemplateId[] = [
 ];
 
 const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
+    florist_bonifico_ricevuta: 'Conferma Bonifico Fiorista',
     florist_first_001: 'Nuovo ordine fiorista · parte 1 (nome/codice/compenso)',
     florist_first_002: 'Nuovo ordine fiorista · parte 2 (lumino/biglietto)',
     florist_first_003: 'Nuovo ordine fiorista · parte 3 (defunto/luogo)',
@@ -110,7 +117,7 @@ const USER_LABELS: Partial<Record<VeraTemplateId, string>> = {
 function fieldsFromBodySlots(slots: readonly string[]): WhatsAppTemplateField[] {
     return slots.map((slot, index) => {
         const ui = SLOT_UI[slot] ?? { label: slot, placeholder: slot };
-        const optional = slot === 'staffMessage';
+        const optional = slot === 'staffMessage' || slot === 'optionalStaffNotes';
         return {
             key: slot,
             label: ui.label,

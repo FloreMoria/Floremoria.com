@@ -11,6 +11,14 @@ import {
     type VeraTemplateSpec,
 } from '@/lib/whatsapp/veraTemplateRegistry';
 
+/** Slot opzionale Meta: testo sanitizzato oppure singolo spazio (#132000). */
+function resolveOptionalMetaBodyParam(
+    raw?: string | null,
+    maxLen: number = META_TEMPLATE_LIMITS.staffNotes
+): string {
+    return sanitizeMetaTemplateParam(raw ?? '', maxLen) || ' ';
+}
+
 export class VeraTemplateParamError extends Error {
     constructor(message: string) {
         super(message);
@@ -84,7 +92,7 @@ function logBuiltTemplateParams(templateId: VeraTemplateId, params: string[]): v
     const spec = getVeraTemplate(templateId);
     params.forEach((value, index) => {
         const slot = spec.bodySlots[index] ?? `body_${index + 1}`;
-        // " " è valido per slot opzionali Meta (es. staffMessage).
+        // " " è valido per slot opzionali Meta (es. optionalStaffNotes / staffMessage).
         if (!value.trim() && value !== ' ') {
             console.error(`[vera-template-params] ${templateId} slot "${slot}" vuoto.`);
         }
@@ -214,6 +222,40 @@ export function buildProactiveStaffParams(input: {
             staffNotes: requireText(input.staffNotes, 'staffNotes'),
         }),
     };
+}
+
+/**
+ * Template Meta `floremoria_bonifico_ricevuta` — 4 body params.
+ * {{4}} note opzionali: se vuote → " " (Meta #132000).
+ */
+export function buildFloristBonificoRicevutaParams(input: {
+    floristFirstName?: string | null;
+    amountLabel?: string | null;
+    orderCode?: string | null;
+    optionalNotes?: string | null;
+}): string[] {
+    const amountRaw = (input.amountLabel || '').trim() || '-';
+    const params = [
+        assertShortName(
+            extractFirstName(input.floristFirstName || 'Fiorista') || 'Fiorista',
+            'floristFirstName'
+        ),
+        requireText(amountRaw, 'floristPrice', META_TEMPLATE_LIMITS.priceLabel),
+        requireText(
+            normalizeOrderCode(input.orderCode || '') || '-',
+            'orderCode',
+            META_TEMPLATE_LIMITS.orderCode
+        ),
+        resolveOptionalMetaBodyParam(input.optionalNotes),
+    ];
+    const spec = getVeraTemplate('florist_bonifico_ricevuta');
+    if (params.length !== spec.bodyParamCount) {
+        throw new VeraTemplateParamError(
+            `Template ${spec.metaName}: attesi ${spec.bodyParamCount} parametri, costruiti ${params.length}.`
+        );
+    }
+    logBuiltTemplateParams('florist_bonifico_ricevuta', params);
+    return params;
 }
 
 /** Template Meta promemoria_anniversario_gdm — Scenario A body-only. */

@@ -18,6 +18,7 @@ export type VeraTemplateId =
     | 'customer_waiting_update'
     | 'florist_reminder'
     | 'florist_tomb_not_found'
+    | 'florist_bonifico_ricevuta'
     | 'customer_cemetery_closed'
     | 'anniversary_gdm_reminder';
 
@@ -261,6 +262,30 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         library: 'FLORIST',
         bodyCanonical: 'Gentile {{1}} … ordine {{2}} …',
         description: '{{1}} nome fiorista, {{2}} codice ordine',
+    },
+    /**
+     * Template Meta `floremoria_bonifico_ricevuta` — conferma bonifico al fiorista (invio manuale staff).
+     * {{1}} nome · {{2}} importo · {{3}} codice ordine · {{4}} note opzionali (spazio se vuote).
+     */
+    florist_bonifico_ricevuta: {
+        id: 'florist_bonifico_ricevuta',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_BONIFICO_RICEVUTA',
+            'floremoria_bonifico_ricevuta'
+        ),
+        language: 'it',
+        bodyParamCount: 4,
+        bodySlots: ['floristFirstName', 'floristPrice', 'orderCode', 'optionalStaffNotes'],
+        library: 'FLORIST',
+        bodyCanonical:
+            'Ciao {{1}},\n' +
+            "abbiamo effettuato il bonifico di {{2}} per l'ordine {{3}}, puoi verificare sul tuo home-banking.\n" +
+            'Preferisci la ricevuta qui in chat?\n' +
+            '{{4}}\n' +
+            'Attendiamo fattura come sempre e ti ringraziamo del supporto.\n' +
+            'Buon lavoro da tutto lo Staff di FloreMoria🌹',
+        description:
+            '{{1}} nome fiorista, {{2}} importo/compenso, {{3}} codice ordine, {{4}} note staff (opz. → spazio)',
     },
     customer_cemetery_closed: {
         id: 'customer_cemetery_closed',

@@ -43,6 +43,11 @@ export interface StartConversationInput {
     /** Valori dinamici per i campi del template selezionato. */
     templateFieldValues?: Record<string, string>;
     messageText?: string;
+    /**
+     * Forza invio template Meta anche dentro la finestra 24h
+     * (es. conferma bonifico fiorista da chat già aperta).
+     */
+    forceTemplate?: boolean;
 }
 
 export interface StartConversationResult {
@@ -121,8 +126,9 @@ export async function startProactiveConversation(
     if (blacklistError) return { ok: false, error: blacklistError };
 
     const { session, requiresTemplate } = await evaluateConversationOutbound(sessionPhone);
+    const useTemplate = requiresTemplate || input.forceTemplate === true;
 
-    if (requiresTemplate) {
+    if (useTemplate) {
         const templateId = input.templateId?.trim() || PROACTIVE_CONVERSATION_TEMPLATE_ID;
         const template = getApprovedWhatsAppTemplate(templateId);
         const libraryFilter =

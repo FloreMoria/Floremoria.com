@@ -77,6 +77,7 @@ export async function POST(req: Request) {
             orderCode,
             staffNotes,
             phoneRaw,
+            forceTemplate,
         } = body;
 
         if (action === 'getTemplates') {
@@ -156,6 +157,7 @@ export async function POST(req: Request) {
                         ? (templateFieldValues as Record<string, string>)
                         : undefined,
                 messageText,
+                forceTemplate: forceTemplate === true,
             });
 
             if (!result.ok) {

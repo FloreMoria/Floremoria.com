@@ -124,11 +124,13 @@ export async function notifyStaffOfWhatsAppInbound(input: {
         : `📱 WhatsApp — ${typeLabel}`;
 
     const body = `${input.senderName || input.phoneE164}: ${preview}`;
+    // Tag stabile anche per BSUID (non solo cifre E.164).
+    const tagId = input.phoneE164.replace(/[^\w.]/g, '').slice(-32) || 'unknown';
 
     await sendStaffPushNotification({
         title,
         body,
         url: '/dashboard/communications',
-        tag: `wa-${input.phoneE164.replace(/\D/g, '')}`,
+        tag: `wa-${tagId}`,
     });
 }

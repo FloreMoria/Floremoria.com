@@ -22,6 +22,10 @@ import {
     normalizePhoneE164,
     sendWhatsAppTextMessage,
 } from '@/lib/whatsapp/metaCloudApiClient';
+import {
+    resolveInboundWhatsAppSender,
+    toWhatsAppSessionIdentityKey,
+} from '@/lib/whatsapp/bsuid';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { groupIncomingByPhone } from '@/lib/whatsapp/replyCoalesce';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
@@ -52,6 +56,7 @@ export const maxDuration = 60;
 
 interface MetaWebhookMessage extends MetaInboundMediaMessage {
     from?: string;
+    from_user_id?: string;
     id?: string;
     timestamp?: string;
 }
@@ -63,14 +68,19 @@ interface MetaWebhookPayload {
             field?: string;
             value?: {
                 messages?: MetaWebhookMessage[];
-                contacts?: Array<{ profile?: { name?: string }; wa_id?: string }>;
+                contacts?: Array<{
+                    profile?: { name?: string; username?: string };
+                    wa_id?: string;
+                    user_id?: string;
+                }>;
             };
         }>;
     }>;
 }
 
 interface ParsedIncomingMessage {
-    phoneE164: string;
+    /** E.164 se disponibile; null se solo BSUID (username senza numero). */
+    phoneE164: string | null;
     phoneKey: string;
     messageText: string;
     mediaUrl?: string;
@@ -80,6 +90,8 @@ interface ParsedIncomingMessage {
     unsupportedMedia?: boolean;
     /** Meta WhatsApp message id (wamid.*) — usato per dedup retry webhook. */
     inboundMessageId?: string;
+    bsuid?: string | null;
+    waUsername?: string | null;
 }
 
 function verifyMetaSignature(rawBody: string, signatureHeader: string, appSecret: string): boolean {
@@ -127,15 +139,51 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
             const messages = value?.messages;
             if (!messages?.length) continue;
 
-            const contactName = value?.contacts?.find((c) => c.profile?.name)?.profile?.name?.trim();
+            const contacts = value?.contacts ?? [];
 
             for (const msg of messages) {
-                const from = msg.from?.trim();
-                if (!from) continue;
+                // Match contatto per wa_id / user_id / from senza NPE se campi omessi.
+                const contact =
+                    contacts.find((c) => {
+                        const candidates = [msg.from, msg.from_user_id, c.wa_id, c.user_id]
+                            .map((v) => (typeof v === 'string' ? v.trim() : ''))
+                            .filter(Boolean);
+                        const contactIds = [c.wa_id, c.user_id]
+                            .map((v) => (typeof v === 'string' ? v.trim() : ''))
+                            .filter(Boolean);
+                        return candidates.some((id) => contactIds.includes(id));
+                    }) ?? contacts[0] ?? null;
 
-                const phoneE164 = normalizePhoneE164(from);
-                if (!phoneE164) {
-                    console.warn('[wa-webhook] from non convertibile in E.164:', from);
+                const resolved = resolveInboundWhatsAppSender(msg, contact);
+                if (!resolved.senderId && !resolved.bsuid && !resolved.phoneCandidate) {
+                    console.warn('[wa-webhook] Messaggio senza mittente (from/from_user_id/wa_id/user_id): skip');
+                    continue;
+                }
+
+                const phoneE164 = resolved.phoneCandidate
+                    ? normalizePhoneE164(resolved.phoneCandidate)
+                    : null;
+
+                const phoneKey = toWhatsAppSessionIdentityKey({
+                    phoneE164,
+                    bsuid: resolved.bsuid,
+                });
+
+                if (!phoneKey) {
+                    console.warn('[wa-webhook] Impossibile costruire session key da mittente:', {
+                        senderId: resolved.senderId,
+                        phoneCandidate: resolved.phoneCandidate,
+                        bsuid: resolved.bsuid,
+                    });
+                    continue;
+                }
+
+                // Telefono grezzo che non è E.164 e non è BSUID → skip difensivo.
+                if (resolved.phoneCandidate && !phoneE164 && !resolved.bsuid) {
+                    console.warn(
+                        '[wa-webhook] from non convertibile in E.164 né BSUID:',
+                        resolved.phoneCandidate
+                    );
                     continue;
                 }
 
@@ -143,15 +191,18 @@ function parseMetaIncomingMessages(payload: MetaWebhookPayload): ParsedIncomingM
                 // Inclusi anche allegati “vuoti” non supportati (serve guida al fiorista).
                 if (!text && !mediaUrl && !unsupportedMedia) continue;
 
+                const displayId = phoneE164 || resolved.bsuid || resolved.senderId || phoneKey;
                 results.push({
                     phoneE164,
-                    phoneKey: `whatsapp:${phoneE164}`,
+                    phoneKey,
                     messageText: text,
                     mediaUrl,
-                    senderName: contactName || phoneE164,
+                    senderName: resolved.contactName || resolved.waUsername || displayId,
                     silenceVera,
                     unsupportedMedia,
                     inboundMessageId: msg.id?.trim() || undefined,
+                    bsuid: resolved.bsuid,
+                    waUsername: resolved.waUsername,
                 });
             }
         }
@@ -180,46 +231,72 @@ async function processIncomingWhatsAppMessage(
         silenceVera,
         unsupportedMedia,
         inboundMessageId,
+        bsuid,
+        waUsername,
     } = incoming;
+    // Destinatario outbound: E.164 se c'è, altrimenti BSUID (username senza numero).
+    const outboundAddress = phoneE164 || bsuid || null;
+    const identityLabel = phoneE164 || bsuid || phoneKey;
+
     // Mai loggare testi tecnici OTP/"Tipo sconosciuto" — placeholder neutro per staff.
     const inboundBody =
         messageText ||
         (mediaUrl ? '[media]' : unsupportedMedia ? '[allegato non leggibile via API]' : '');
 
-    console.info(`[wa-webhook] Messaggio da ${phoneE164} (${senderName}): "${inboundBody.slice(0, 80)}"`);
+    console.info(`[wa-webhook] Messaggio da ${identityLabel} (${senderName}): "${inboundBody.slice(0, 80)}"`);
 
     // Retry Meta/Twilio: stesso wamid → non ri-processare (né reply, né doppio log inbound).
     if (inboundMessageId) {
-        const claimed = await tryClaimInboundWhatsAppMessageId(inboundMessageId, phoneE164);
+        const claimed = await tryClaimInboundWhatsAppMessageId(inboundMessageId, identityLabel);
         if (!claimed) {
             return { ok: true, skipped: 'duplicate_inbound_message_id' };
         }
     }
 
-    const blacklisted = await prisma.phoneBlacklist.findUnique({ where: { phone: phoneE164 } });
-    if (blacklisted) {
-        console.info(`[wa-webhook] Blacklist: ${phoneE164}`);
-        return { ok: true, skipped: 'blacklisted' };
+    // Blacklist solo su E.164 (BSUID-only non è in phone_blacklist).
+    if (phoneE164) {
+        const blacklisted = await prisma.phoneBlacklist.findUnique({ where: { phone: phoneE164 } });
+        if (blacklisted) {
+            console.info(`[wa-webhook] Blacklist: ${phoneE164}`);
+            return { ok: true, skipped: 'blacklisted' };
+        }
     }
 
     const session = await getSession(phoneKey);
 
-    if (
-        senderName &&
-        !senderName.startsWith('+') &&
-        (session.name === phoneE164 || session.name === phoneKey)
-    ) {
+    {
         const { updateSessionProfile } = await import('@/lib/chatStore');
-        const initials = senderName
-            .split(' ')
-            .filter(Boolean)
-            .map((w: string) => w[0]?.toUpperCase() ?? '')
-            .slice(0, 2)
-            .join('');
-        await updateSessionProfile(phoneKey, {
-            name: senderName,
-            ...(initials ? { initials } : {}),
-        });
+        const profileUpdates: {
+            name?: string;
+            initials?: string;
+            bsuid?: string | null;
+            waUsername?: string | null;
+        } = {};
+
+        if (bsuid && session.bsuid !== bsuid) profileUpdates.bsuid = bsuid;
+        if (waUsername && session.waUsername !== waUsername) profileUpdates.waUsername = waUsername;
+
+        if (
+            senderName &&
+            !senderName.startsWith('+') &&
+            (session.name === phoneE164 ||
+                session.name === phoneKey ||
+                session.name === bsuid ||
+                session.name === phoneKey.replace(/^whatsapp:(bsuid:)?/, ''))
+        ) {
+            profileUpdates.name = senderName;
+            const initials = senderName
+                .split(' ')
+                .filter(Boolean)
+                .map((w: string) => w[0]?.toUpperCase() ?? '')
+                .slice(0, 2)
+                .join('');
+            if (initials) profileUpdates.initials = initials;
+        }
+
+        if (Object.keys(profileUpdates).length > 0) {
+            await updateSessionProfile(phoneKey, profileUpdates);
+        }
     }
 
     const inboundMeta = inboundMessageId
@@ -235,19 +312,21 @@ async function processIncomingWhatsAppMessage(
             }).catch((err) => {
                 console.warn('[chat-media] persist async failed:', err);
             });
-            void runFloristDeliveryAutomation({
-                floristPhoneE164: phoneE164,
-                mediaUrl,
-                caption: messageText,
-                sessionUserType: session.userType,
-            }).catch((err) => {
-                console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
-            });
+            if (phoneE164) {
+                void runFloristDeliveryAutomation({
+                    floristPhoneE164: phoneE164,
+                    mediaUrl,
+                    caption: messageText,
+                    sessionUserType: session.userType,
+                }).catch((err) => {
+                    console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
+                });
+            }
         }
-        console.info(`[wa-webhook] HUMAN_INTERVENTION attivo per ${phoneE164}: messaggio registrato, nessuna risposta AI.`);
+        console.info(`[wa-webhook] HUMAN_INTERVENTION attivo per ${identityLabel}: messaggio registrato, nessuna risposta AI.`);
         void notifyStaffOfWhatsAppInbound({
             senderName,
-            phoneE164,
+            phoneE164: identityLabel,
             messagePreview: inboundBody,
             userType: session.userType,
             escalated: true,
@@ -264,26 +343,33 @@ async function processIncomingWhatsAppMessage(
         }).catch((err) => {
             console.warn('[chat-media] persist async failed:', err);
         });
-        void runFloristDeliveryAutomation({
-            floristPhoneE164: phoneE164,
-            mediaUrl,
-            caption: messageText,
-            sessionUserType: session.userType,
-        }).catch((err) => {
-            console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
-        });
+        if (phoneE164) {
+            void runFloristDeliveryAutomation({
+                floristPhoneE164: phoneE164,
+                mediaUrl,
+                caption: messageText,
+                sessionUserType: session.userType,
+            }).catch((err) => {
+                console.error('[delivery-automation] Errore pipeline foto fiorista:', err);
+            });
+        }
     }
 
     if (options?.deferReply) {
         return { ok: true, skipped: 'defer_reply' };
     }
 
+    if (!outboundAddress) {
+        console.warn(`[wa-webhook] Nessun destinatario outbound per ${phoneKey}: skip reply`);
+        return { ok: true, skipped: 'no_outbound_address' };
+    }
+
     // Reaction / system: registra in chat, niente risposta VERA.
     if (silenceVera) {
-        console.info(`[wa-webhook] VERA silenzio (tipo non conversazionale) per ${phoneE164}`);
+        console.info(`[wa-webhook] VERA silenzio (tipo non conversazionale) per ${identityLabel}`);
         void notifyStaffOfWhatsAppInbound({
             senderName,
-            phoneE164,
+            phoneE164: identityLabel,
             messagePreview: inboundBody,
             userType: session.userType,
             escalated: false,
@@ -295,7 +381,7 @@ async function processIncomingWhatsAppMessage(
     if (unsupportedMedia && session.userType === 'FLORIST' && !mediaUrl) {
         return sendFloristUnsupportedMediaGuidance({
             phoneKey,
-            phoneE164,
+            outboundAddress,
             senderName,
             inboundMessageId,
             userType: session.userType,
@@ -306,7 +392,7 @@ async function processIncomingWhatsAppMessage(
     if (unsupportedMedia && session.userType === 'FLORIST' && mediaUrl) {
         return finalizeVeraOutboundReply({
             phoneKey,
-            phoneE164,
+            outboundAddress,
             senderName,
             inboundBody,
             mediaUrl,
@@ -317,10 +403,10 @@ async function processIncomingWhatsAppMessage(
 
     // Utente finale con allegato non leggibile: silenzio (niente testo tecnico).
     if (unsupportedMedia && session.userType !== 'FLORIST' && !mediaUrl) {
-        console.info(`[wa-webhook] Allegato non leggibile da utente ${phoneE164}: silenzio`);
+        console.info(`[wa-webhook] Allegato non leggibile da utente ${identityLabel}: silenzio`);
         void notifyStaffOfWhatsAppInbound({
             senderName,
-            phoneE164,
+            phoneE164: identityLabel,
             messagePreview: inboundBody,
             userType: session.userType,
             escalated: false,
@@ -330,7 +416,7 @@ async function processIncomingWhatsAppMessage(
 
     return finalizeVeraOutboundReply({
         phoneKey,
-        phoneE164,
+        outboundAddress,
         senderName,
         inboundBody,
         mediaUrl,
@@ -340,7 +426,8 @@ async function processIncomingWhatsAppMessage(
 
 async function sendFloristUnsupportedMediaGuidance(params: {
     phoneKey: string;
-    phoneE164: string;
+    /** E.164 o BSUID per Meta Cloud API. */
+    outboundAddress: string;
     senderName: string;
     inboundMessageId?: string;
     userType: string;
@@ -351,7 +438,7 @@ async function sendFloristUnsupportedMediaGuidance(params: {
     escalated?: boolean;
     sent?: boolean;
 }> {
-    const { phoneKey, phoneE164, senderName, inboundMessageId, userType } = params;
+    const { phoneKey, outboundAddress, senderName, inboundMessageId, userType } = params;
     const reply = FLORIST_UNSUPPORTED_MEDIA_REPLY;
 
     if (inboundMessageId) {
@@ -362,7 +449,7 @@ async function sendFloristUnsupportedMediaGuidance(params: {
     }
 
     const lock = await tryClaimVeraOutboundReplyLock({
-        phoneE164,
+        phoneE164: outboundAddress,
         inboundMessageId,
         hasMedia: false,
     });
@@ -370,9 +457,9 @@ async function sendFloristUnsupportedMediaGuidance(params: {
         return { ok: true, skipped: `outbound_lock_${lock.reason}`, sent: false };
     }
 
-    const sendResult = await sendWhatsAppTextMessage(phoneE164, reply);
+    const sendResult = await sendWhatsAppTextMessage(outboundAddress, reply);
     if (!sendResult.ok) {
-        await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
+        await releaseVeraOutboundReplyLock({ phoneE164: outboundAddress, inboundMessageId });
         console.error('[wa-webhook] Guida media fiorista fallita:', sendResult.error);
         return { ok: true, source: 'deterministic', sent: false, skipped: 'send_failed' };
     }
@@ -386,19 +473,20 @@ async function sendFloristUnsupportedMediaGuidance(params: {
 
     void notifyStaffOfWhatsAppInbound({
         senderName,
-        phoneE164,
+        phoneE164: outboundAddress,
         messagePreview: '[allegato non leggibile]',
         userType,
         escalated: false,
     }).catch((err) => console.warn('[staff-push] notify failed:', err));
 
-    console.info(`[wa-webhook] Guida media non supportato → fiorista ${phoneE164}`);
+    console.info(`[wa-webhook] Guida media non supportato → fiorista ${outboundAddress}`);
     return { ok: true, source: 'deterministic', sent: true };
 }
 
 async function finalizeVeraOutboundReply(params: {
     phoneKey: string;
-    phoneE164: string;
+    /** E.164 o BSUID per Meta Cloud API. */
+    outboundAddress: string;
     senderName: string;
     inboundBody: string;
     mediaUrl?: string | null;
@@ -414,7 +502,7 @@ async function finalizeVeraOutboundReply(params: {
 }> {
     const {
         phoneKey,
-        phoneE164,
+        outboundAddress,
         senderName,
         inboundBody,
         mediaUrl,
@@ -436,7 +524,7 @@ async function finalizeVeraOutboundReply(params: {
     const seedMedia = lastInbound?.mediaUrl || mediaUrl;
 
     const outboundLock = await tryClaimVeraOutboundReplyLock({
-        phoneE164,
+        phoneE164: outboundAddress,
         inboundMessageId,
         // Foto inbound: no phone-burst — consente ack su foto posa sequenziali.
         hasMedia: Boolean(seedMedia),
@@ -446,20 +534,20 @@ async function finalizeVeraOutboundReply(params: {
     }
 
     if (shouldSilenceVeraReply(replySeed, updatedSession) && !seedMedia) {
-        console.info(`[wa-webhook] VERA silenzio (post-burst) per ${phoneE164}`);
+        console.info(`[wa-webhook] VERA silenzio (post-burst) per ${outboundAddress}`);
         return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence' };
     }
 
     // Documento/PDF o video: guida foto galleria (senza passare da Gemini).
     if (forceFloristUnsupportedMediaReply && updatedSession.userType === 'FLORIST') {
         const reply = FLORIST_UNSUPPORTED_MEDIA_REPLY;
-        const sendResult = await sendWhatsAppMessage(phoneE164, reply, {
+        const sendResult = await sendWhatsAppMessage(outboundAddress, reply, {
             recipientName: senderName,
             sessionPhone: phoneKey,
             source: 'deterministic',
         });
         if (!sendResult.ok) {
-            await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
+            await releaseVeraOutboundReplyLock({ phoneE164: outboundAddress, inboundMessageId });
         } else if (!sendResult.fallbackExecuted) {
             await addMessage(phoneKey, 'OUTBOUND', reply, undefined, {
                 source: 'deterministic',
@@ -484,18 +572,18 @@ async function finalizeVeraOutboundReply(params: {
 
     void notifyStaffOfWhatsAppInbound({
         senderName,
-        phoneE164,
+        phoneE164: outboundAddress,
         messagePreview: replySeed,
         userType: updatedSession.userType,
         escalated: veraResult.shouldEscalate,
     }).catch((err) => console.warn('[staff-push] notify failed:', err));
 
     if (veraResult.source === 'silence' || !veraResult.text.trim()) {
-        console.info(`[wa-webhook] VERA silenzio per ${phoneE164} (source: ${veraResult.source})`);
+        console.info(`[wa-webhook] VERA silenzio per ${outboundAddress} (source: ${veraResult.source})`);
         return { ok: true, source: veraResult.source, escalated: false, sent: false, skipped: 'silence' };
     }
 
-    const sendResult = await sendWhatsAppMessage(phoneE164, veraResult.text, {
+    const sendResult = await sendWhatsAppMessage(outboundAddress, veraResult.text, {
         recipientName: senderName,
         sessionPhone: phoneKey,
         source: veraResult.source,
@@ -503,10 +591,10 @@ async function finalizeVeraOutboundReply(params: {
 
     if (!sendResult.ok) {
         console.error(
-            `[wa-webhook] Invio risposta fallito per ${phoneE164} (source: ${veraResult.source}):`,
+            `[wa-webhook] Invio risposta fallito per ${outboundAddress} (source: ${veraResult.source}):`,
             sendResult.error
         );
-        await releaseVeraOutboundReplyLock({ phoneE164, inboundMessageId });
+        await releaseVeraOutboundReplyLock({ phoneE164: outboundAddress, inboundMessageId });
     }
 
     if (!sendResult.fallbackExecuted) {
@@ -520,7 +608,7 @@ async function finalizeVeraOutboundReply(params: {
     }
 
     console.info(
-        `[wa-webhook] VERA → ${phoneE164} (source: ${veraResult.source}, escalated: ${veraResult.shouldEscalate}, sent: ${sendResult.ok})`
+        `[wa-webhook] VERA → ${outboundAddress} (source: ${veraResult.source}, escalated: ${veraResult.shouldEscalate}, sent: ${sendResult.ok})`
     );
 
     return {

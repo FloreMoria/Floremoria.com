@@ -1,2 +1,4 @@
 [2026-08-18 16:58] feat/whatsapp+orders: Allineato template Meta floremoria_consegna_foto_utente (Header + 4 body params + fallback free-text) e aggiunta Vista Calendario nella pagina Ordini (/dashboard/orders).[2026-08-18 17:37] feat/whatsapp: Template floremoria_bonifico_ricevuta (4 var) in registry + Communications (anche in finestra 24h); {{4}} note opzionali → spazio Meta.
 [2026-08-18 17:38] fix/ci: Corretto errore di sintassi YAML nel workflow GitHub Actions .github/workflows/verbale-pipeline.yml (conversione run a blocco multiriga run: |).
+
+[2026-08-18 17:53] feat/whatsapp: supporto difensivo BSUID + waUsername (schema, webhook inbound, Meta client recipient).

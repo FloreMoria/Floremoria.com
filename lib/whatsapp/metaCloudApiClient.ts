@@ -11,6 +11,7 @@
  */
 
 import { normalizeWamid } from '@/lib/whatsapp/normalizeWamid';
+import { isWhatsAppBsuid, normalizeWhatsAppBsuid } from '@/lib/whatsapp/bsuid';
 
 const META_GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || 'v21.0';
 
@@ -104,9 +105,39 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
 
 /** Formato destinatario Meta Graph API: cifre internazionali senza + (es. 393204105305). */
 export function toMetaRecipientPhone(phone: string): string | null {
+    // BSUID non è un telefono: gestito da resolveMetaOutboundAddress → campo `recipient`.
+    if (isWhatsAppBsuid(phone) || phone.toLowerCase().includes('bsuid:')) {
+        return null;
+    }
     const e164 = normalizePhoneE164(phone);
     if (!e164) return null;
     return e164.replace(/^\+/, '');
+}
+
+/**
+ * Destinatario outbound Meta: `to` (telefono) e/o `recipient` (BSUID).
+ * Se entrambi presenti, Meta dà precedenza a `to`.
+ */
+export function resolveMetaOutboundAddress(phoneOrBsuid: string): {
+    to?: string;
+    recipient?: string;
+} | null {
+    const raw = phoneOrBsuid.trim();
+    if (!raw) return null;
+
+    const bsuidFromKey = raw.toLowerCase().startsWith('whatsapp:bsuid:')
+        ? normalizeWhatsAppBsuid(raw.slice('whatsapp:bsuid:'.length))
+        : isWhatsAppBsuid(raw)
+          ? normalizeWhatsAppBsuid(raw)
+          : null;
+
+    if (bsuidFromKey) {
+        return { recipient: bsuidFromKey };
+    }
+
+    const to = toMetaRecipientPhone(raw);
+    if (to) return { to };
+    return null;
 }
 
 /** Tronca in sicurezza su codepoint Unicode senza spezzare emoji / coppie surrogate. */
@@ -198,6 +229,7 @@ function logTemplatePayloadExact(payload: Record<string, unknown>): void {
         JSON.stringify(
             {
                 to: payload.to,
+                recipient: payload.recipient,
                 type: payload.type,
                 template: {
                     name: template.name,
@@ -291,8 +323,8 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
         const data = (await res.json()) as { messages?: Array<{ id?: string }> };
         // Normalizza subito: stesso wamid. canonico usato in DB e nei callback statuses.
         const messageId = normalizeWamid(data?.messages?.[0]?.id) || data?.messages?.[0]?.id;
-        const recipient = String(payload.to ?? '');
-        console.info(`[meta-cloud-api] Messaggio inviato a +${recipient} (id: ${messageId ?? 'N/A'})`);
+        const recipient = String(payload.to ?? payload.recipient ?? '');
+        console.info(`[meta-cloud-api] Messaggio inviato a ${recipient} (id: ${messageId ?? 'N/A'})`);
         return { ok: true, messageId };
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -320,10 +352,13 @@ export async function sendWhatsAppTextMessage(
     phone: string,
     text: string
 ): Promise<WhatsAppSendResult> {
-    const recipient = toMetaRecipientPhone(phone);
-    if (!recipient) {
-        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
-        return { ok: false, error: 'invalid_phone: Numero di telefono non valido o privo di prefisso internazionale.' };
+    const address = resolveMetaOutboundAddress(phone);
+    if (!address) {
+        console.warn(`[meta-cloud-api] Destinatario non valido: "${phone}"`);
+        return {
+            ok: false,
+            error: 'invalid_phone: Numero di telefono o BSUID non valido.',
+        };
     }
 
     const safeBody = safeTruncateUtf8(text, 4000);
@@ -331,7 +366,8 @@ export async function sendWhatsAppTextMessage(
     return postWhatsAppMessage({
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to: recipient,
+        ...(address.to ? { to: address.to } : {}),
+        ...(address.recipient ? { recipient: address.recipient } : {}),
         type: 'text',
         text: { preview_url: true, body: safeBody },
     });
@@ -345,9 +381,9 @@ export async function sendWhatsAppImageMessage(
     imageUrl: string,
     caption?: string
 ): Promise<WhatsAppSendResult> {
-    const recipient = toMetaRecipientPhone(phone);
-    if (!recipient) {
-        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
+    const address = resolveMetaOutboundAddress(phone);
+    if (!address) {
+        console.warn(`[meta-cloud-api] Destinatario non valido: "${phone}"`);
         return { ok: false, error: 'invalid_phone' };
     }
 
@@ -369,7 +405,8 @@ export async function sendWhatsAppImageMessage(
     }
 
     console.info('[meta-cloud-api] Invio immagine', {
-        to: recipient,
+        to: address.to ?? null,
+        recipient: address.recipient ?? null,
         host: cleanLink.replace(/^https?:\/\/([^/]+).*/, '$1'),
         pathTail: cleanLink.slice(-48),
     });
@@ -377,7 +414,8 @@ export async function sendWhatsAppImageMessage(
     return postWhatsAppMessage({
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to: recipient,
+        ...(address.to ? { to: address.to } : {}),
+        ...(address.recipient ? { recipient: address.recipient } : {}),
         type: 'image',
         image,
     });
@@ -436,9 +474,9 @@ export async function sendWhatsAppTemplateMessage(
     components: WhatsAppTemplateComponent[] = [],
     options?: WhatsAppTemplateSendOptions
 ): Promise<WhatsAppSendResult> {
-    const recipient = toMetaRecipientPhone(phone);
-    if (!recipient) {
-        console.warn(`[meta-cloud-api] Numero non valido: "${phone}"`);
+    const address = resolveMetaOutboundAddress(phone);
+    if (!address) {
+        console.warn(`[meta-cloud-api] Destinatario non valido: "${phone}"`);
         return { ok: false, error: 'invalid_phone' };
     }
 
@@ -493,7 +531,8 @@ export async function sendWhatsAppTemplateMessage(
     const payload = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to: recipient,
+        ...(address.to ? { to: address.to } : {}),
+        ...(address.recipient ? { recipient: address.recipient } : {}),
         type: 'template' as const,
         template,
     };

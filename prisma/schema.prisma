@@ -542,6 +542,10 @@ model WhatsAppChatSession {
   dateLabel  String               @default("oggi") @map("date_label")
   timeLabel  String               @default("") @map("time_label")
   initials   String               @default("UT")
+  /** Business-Scoped User ID Meta (es. IT.1349…). */
+  bsuid      String?              @db.VarChar(128)
+  /** Username WhatsApp pubblico (senza @), se adottato dall'utente. */
+  waUsername String?              @map("wa_username") @db.VarChar(100)
   createdAt  DateTime             @default(now()) @map("created_at")
   updatedAt  DateTime             @updatedAt @map("updated_at")
   messages   WhatsAppChatMessage[]
@@ -549,6 +553,7 @@ model WhatsAppChatSession {
   isTest     Boolean               @default(false) @map("is_test")
 
   @@index([isTest])
+  @@index([bsuid])
   @@map("whatsapp_chat_sessions")
 }
 

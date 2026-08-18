@@ -4,6 +4,7 @@ import prisma from './prisma';
 import { formatItalyTime } from '@/lib/datetime/italyTimezone';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { sessionKeyToBsuid } from '@/lib/whatsapp/bsuid';
 
 export interface ChatMessage {
     id: string;
@@ -29,6 +30,10 @@ export interface ChatSession {
     messages: ChatMessage[];
     updatedAt: string;
     isTest?: boolean;
+    /** Business-Scoped User ID Meta (es. IT.1349…). */
+    bsuid?: string | null;
+    /** Username WhatsApp (senza @). */
+    waUsername?: string | null;
 }
 
 const dbPath = path.join(process.cwd(), 'chats_database.json');
@@ -128,6 +133,8 @@ function mapDbSessionToChatSession(session: {
     initials: string;
     updatedAt: Date;
     isTest: boolean;
+    bsuid?: string | null;
+    waUsername?: string | null;
     messages: Array<{
         id: string;
         direction: string;
@@ -160,6 +167,8 @@ function mapDbSessionToChatSession(session: {
         })),
         updatedAt: session.updatedAt.toISOString(),
         isTest: session.isTest,
+        bsuid: session.bsuid ?? null,
+        waUsername: session.waUsername ?? null,
     };
 }
 
@@ -220,10 +229,11 @@ async function ensureDbSession(phone: string, isTest = false): Promise<ChatSessi
     }
 
     const initials = canonicalPhone.replace(/[^\d]/g, '').slice(-2) || 'UT';
+    const sessionBsuid = sessionKeyToBsuid(canonicalPhone);
     const created = await prisma.whatsAppChatSession.create({
         data: {
             phone: canonicalPhone,
-            name: canonicalPhone.replace('whatsapp:', ''),
+            name: canonicalPhone.replace(/^whatsapp:(bsuid:)?/i, ''),
             userType: 'UNKNOWN',
             status: 'AI_ACTIVE',
             welcomeSent: false,
@@ -232,6 +242,7 @@ async function ensureDbSession(phone: string, isTest = false): Promise<ChatSessi
             dateLabel: 'oggi',
             timeLabel: nowTimeLabel(),
             initials,
+            ...(sessionBsuid ? { bsuid: sessionBsuid } : {}),
             isTest,
         },
         include: { messages: { orderBy: { createdAt: 'asc' } } },
@@ -497,7 +508,18 @@ export async function setSessionStatus(phone: string, status: 'AI_ACTIVE' | 'HUM
 export async function updateSessionProfile(
     phone: string,
     updates: Partial<
-        Pick<ChatSession, 'name' | 'userType' | 'status' | 'initials' | 'lastMessage' | 'hasPhoto' | 'welcomeSent'>
+        Pick<
+            ChatSession,
+            | 'name'
+            | 'userType'
+            | 'status'
+            | 'initials'
+            | 'lastMessage'
+            | 'hasPhoto'
+            | 'welcomeSent'
+            | 'bsuid'
+            | 'waUsername'
+        >
     >
 ): Promise<ChatSession> {
     const canonicalPhone = toWhatsAppSessionPhone(phone) || phone;
@@ -513,6 +535,8 @@ export async function updateSessionProfile(
                 ...(updates.lastMessage !== undefined ? { lastMessage: updates.lastMessage } : {}),
                 ...(updates.hasPhoto !== undefined ? { hasPhoto: updates.hasPhoto } : {}),
                 ...(updates.welcomeSent !== undefined ? { welcomeSent: updates.welcomeSent } : {}),
+                ...(updates.bsuid !== undefined ? { bsuid: updates.bsuid } : {}),
+                ...(updates.waUsername !== undefined ? { waUsername: updates.waUsername } : {}),
             },
             include: { messages: { orderBy: { createdAt: 'asc' } } },
         });

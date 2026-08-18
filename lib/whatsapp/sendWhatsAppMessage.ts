@@ -10,6 +10,7 @@ import {
     normalizePhoneE164,
     type WhatsAppSendResult,
 } from '@/lib/whatsapp/metaCloudApiClient';
+import { isWhatsAppBsuid, normalizeWhatsAppBsuid } from '@/lib/whatsapp/bsuid';
 import {
     getProactiveWhatsAppTemplate,
     sanitizeMetaTemplateParam,
@@ -95,9 +96,16 @@ export async function sendWhatsAppMessage(
     }
 
     // Dedup SOLO testo identico entro pochi secondi (mai per media/image API).
+    // Chiave: E.164 oppure BSUID (sessioni username senza numero).
     const phoneE164 = normalizePhoneE164(phone);
-    if (phoneE164) {
-        const textOk = await tryClaimIdenticalTextOutbound({ phoneE164, text });
+    const bsuidKey = phone.toLowerCase().includes('bsuid:')
+        ? normalizeWhatsAppBsuid(phone.replace(/^whatsapp:bsuid:/i, ''))
+        : isWhatsAppBsuid(phone)
+          ? normalizeWhatsAppBsuid(phone)
+          : null;
+    const dedupIdentity = phoneE164 || bsuidKey;
+    if (dedupIdentity) {
+        const textOk = await tryClaimIdenticalTextOutbound({ phoneE164: dedupIdentity, text });
         if (!textOk) {
             return {
                 ok: false,

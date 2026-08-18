@@ -55,13 +55,17 @@ export function enqueueVeraReplyCoalesce<T extends { coalesced?: boolean }>(
     });
 }
 
-/** Raggruppa messaggi dello stesso POST webhook per telefono (ordine preservato). */
-export function groupIncomingByPhone<T extends { phoneE164: string }>(items: T[]): Map<string, T[]> {
+/** Raggruppa messaggi dello stesso POST webhook per identità sessione (E.164 o BSUID). */
+export function groupIncomingByPhone<T extends { phoneKey?: string; phoneE164?: string | null }>(
+    items: T[]
+): Map<string, T[]> {
     const map = new Map<string, T[]>();
     for (const item of items) {
-        const list = map.get(item.phoneE164) || [];
+        const key = item.phoneKey || item.phoneE164 || '';
+        if (!key) continue;
+        const list = map.get(key) || [];
         list.push(item);
-        map.set(item.phoneE164, list);
+        map.set(key, list);
     }
     return map;
 }

@@ -93,12 +93,12 @@ export function renderDeliveryProofCaption(params: {
 
 /** Chiusura ufficiale messaggi post-consegna (SOFIA + ALMA / Meta). */
 export const DELIVERY_CONFIRMATION_CLOSING =
-    'Tutto lo Staff di FloreMoria è a sua completa disposizione. 🌹';
+    'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹';
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
     return (
-        `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n${giardinoUrl}\n\n` +
-        `Vuole ricevere anche qui le foto della posa? 🌹\n\n` +
+        `Le alleghiamo il MagicLink per rivedere tutte le foto nel Suo Giardino della Memoria: ${giardinoUrl}\n\n` +
+        `Vuole ricevere qui la foto della posa?\n` +
         DELIVERY_CONFIRMATION_CLOSING
     );
 }
@@ -119,10 +119,9 @@ export function renderDeliveryConfirmationFreeText(params: {
         deceasedName: params.deceasedName,
     });
     return (
-        `${caption}\n\n` +
-        `Può rivedere tutte le foto nel Suo Giardino della Memoria:\n` +
-        `${params.giardinoUrl}\n\n` +
-        `Vuole ricevere anche qui le foto della posa? 🌹\n\n` +
+        `${caption}\n` +
+        `Le alleghiamo il MagicLink per rivedere tutte le foto nel Suo Giardino della Memoria: ${params.giardinoUrl}\n\n` +
+        `Vuole ricevere qui la foto della posa?\n` +
         DELIVERY_CONFIRMATION_CLOSING
     );
 }

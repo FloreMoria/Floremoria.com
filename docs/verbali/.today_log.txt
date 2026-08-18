@@ -1,1 +1,1 @@
-[2026-08-17 22:50] fix/db: Migration Order Stripe finance (gross/fee/net/tx) applicata su Neon — risolto alert «Database non allineato» pagina Ordini.
+[2026-08-18 16:58] feat/whatsapp+orders: Allineato template Meta floremoria_consegna_foto_utente (Header + 4 body params + fallback free-text) e aggiunta Vista Calendario nella pagina Ordini (/dashboard/orders).

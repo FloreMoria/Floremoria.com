@@ -52,9 +52,9 @@ export async function sendVeraTemplate(
     templateId: VeraTemplateId,
     bodyParams: string[],
     options?: {
-        /** @deprecated Scenario A — ignorato (no header immagine). */
+        /** Header immagine facoltativo se consentito dal template. */
         headerImageUrl?: string;
-        /** @deprecated Scenario A — ignorato (no header testo). */
+        /** Parametri testo per l'header del template (es. {{1}} comune in floremoria_consegna_foto_utente). */
         headerTextParams?: string[];
         orderId?: string;
         orderNumber?: string | null;
@@ -63,13 +63,6 @@ export async function sendVeraTemplate(
     }
 ): Promise<SendVeraTemplateResult> {
     const spec = getVeraTemplate(templateId);
-
-    if (options?.headerImageUrl?.trim() || (options?.headerTextParams?.length ?? 0) > 0) {
-        console.warn(
-            `[vera-template] ${spec.id}: header ignorato (Scenario A body-only). ` +
-                `headerImage=${Boolean(options?.headerImageUrl)} headerTextParams=${options?.headerTextParams?.length ?? 0}`
-        );
-    }
 
     const skipDedup = Boolean(options?.skipOrderDedup);
 
@@ -112,7 +105,21 @@ export async function sendVeraTemplate(
         return { ok: false, error: msg, errorCode: 132000 };
     }
 
-    const components: WhatsAppTemplateComponent[] = [buildBodyComponent(safeParams)];
+    const components: WhatsAppTemplateComponent[] = [];
+
+    // Header testo se specificato nelle opzioni o nel registro del template
+    const headerParams = options?.headerTextParams || [];
+    if (headerParams.length > 0) {
+        components.push({
+            type: 'header',
+            parameters: headerParams.map((text) => ({
+                type: 'text' as const,
+                text: coerceMetaBodyParam(text),
+            })),
+        });
+    }
+
+    components.push(buildBodyComponent(safeParams));
 
     const metaPayloadPreview = {
         type: 'template' as const,
@@ -121,6 +128,7 @@ export async function sendVeraTemplate(
             language: { code: spec.language },
             components,
         },
+        headerParamCount: headerParams.length,
         bodyParamCount: safeParams.length,
         mapping: describeTemplateParamMapping(spec),
         paramsPreview: safeParams.map((p) => p.slice(0, 80)),
@@ -129,6 +137,6 @@ export async function sendVeraTemplate(
 
     return sendWhatsAppTemplateMessage(phone, spec.metaName, spec.language, components, {
         expectedBodyParamCount: spec.bodyParamCount,
-        expectedHeaderTextParamCount: 0,
+        expectedHeaderTextParamCount: spec.headerTextParamCount ?? (headerParams.length > 0 ? headerParams.length : 0),
     });
 }

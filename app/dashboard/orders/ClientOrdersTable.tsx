@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy } from 'lucide-react';
+import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy, Calendar as CalendarIcon, Table } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
@@ -14,6 +14,7 @@ import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
+import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
 import type { ProfileUserType } from '@prisma/client';
 
@@ -33,6 +34,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [currentFilter, setCurrentFilter] = useState('TUTTI');
+    const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
     // Filri & Sort State
     const [sortField, setSortField] = useState<'date' | 'alpha' | 'price'>('date');
@@ -399,11 +401,53 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
                         <Download size={15} className="text-gray-500" /> Scarica CSV
                     </button>
+                    {/* Switcher Vista Tabella / Vista Calendario */}
+                    <div className="flex items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm text-xs font-semibold">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('table')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
+                                viewMode === 'table'
+                                    ? 'bg-black text-white shadow-sm'
+                                    : 'text-gray-600 hover:text-black'
+                            }`}
+                            title="Vista Tabella"
+                        >
+                            <Table size={14} />
+                            <span>Vista Tabella</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('calendar')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
+                                viewMode === 'calendar'
+                                    ? 'bg-black text-white shadow-sm'
+                                    : 'text-gray-600 hover:text-black'
+                            }`}
+                            title="Vista Calendario"
+                        >
+                            <CalendarIcon size={14} />
+                            <span>Vista Calendario</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Pannello Filtri Expandibile */}
-            {filterMenuOpen && (
+            {viewMode === 'calendar' ? (
+                <div className="mt-6">
+                    <OrdersCalendar
+                        orders={localOrders}
+                        florists={florists}
+                        products={products}
+                        users={users}
+                        deceasedProfiles={deceasedProfiles}
+                        onRefresh={() => router.refresh()}
+                    />
+                </div>
+            ) : (
+                <>
+                    {/* Pannello Filtri Expandibile */}
+                    {filterMenuOpen && (
                 <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 mb-6 animate-in fade-in slide-in-from-top-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
@@ -816,6 +860,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     openDuplicateModal={openDuplicateModal}
                 />
             </div>
+            </>
+            )}
 
             <CreateOrderModal
                 open={createModalOpen}

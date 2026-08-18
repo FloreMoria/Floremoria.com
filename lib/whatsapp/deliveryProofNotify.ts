@@ -8,7 +8,10 @@ import {
 import { isWithinCustomerServiceWindow } from '@/lib/whatsapp/messagingWindow';
 import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
-import { buildCustomerDeliveryPhotoParams } from '@/lib/whatsapp/veraTemplateParams';
+import {
+    buildCustomerDeliveryPhotoParams,
+    buildCustomerDeliveryPhotoHeaderParams,
+} from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
 import {
     isMetaCloudConfigured,
@@ -89,6 +92,7 @@ export async function sendDeliveryProofWhatsApp(
     const sessionPhone = `whatsapp:${phoneE164}`;
 
     try {
+        const headerParams = buildCustomerDeliveryPhotoHeaderParams(partnerCity);
         const bodyParams = buildCustomerDeliveryPhotoParams({
             buyerFirstName,
             partnerCity,
@@ -101,6 +105,7 @@ export async function sendDeliveryProofWhatsApp(
             'customer_delivery_photo',
             bodyParams,
             {
+                headerTextParams: headerParams,
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
                 // Dedup attivo di default: un solo template per ordine / 24h.

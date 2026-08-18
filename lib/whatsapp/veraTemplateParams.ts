@@ -141,6 +141,10 @@ export function buildCustomerWaitingUpdateParams(input: {
     return params;
 }
 
+export function buildCustomerDeliveryPhotoHeaderParams(partnerCity?: string | null): string[] {
+    return [requireText(partnerCity || 'zona', 'partnerCity', 80)];
+}
+
 export function buildCustomerDeliveryPhotoParams(input: {
     buyerFirstName?: string | null;
     partnerCity?: string | null;

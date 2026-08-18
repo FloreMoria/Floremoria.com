@@ -161,10 +161,8 @@ export async function POST(request: Request) {
                 const entryGrossId = `entry_stripe_gross_webhook_${order.id}`;
                 const entryFeesId = `entry_stripe_fees_webhook_${order.id}`;
 
-                const calculateVatCents = (totalCents: number, rate = 0.22): number => {
-                    const net = totalCents / (1 + rate);
-                    return Math.round(totalCents - net);
-                };
+                const { scorporaIvaFloreale } = await import('@/lib/financial/vat');
+                const floralVat = scorporaIvaFloreale(grossCents);
 
                 const entryGross = {
                     id: entryGrossId,
@@ -173,7 +171,7 @@ export async function POST(request: Request) {
                     dareAccount: '50100 - Banca Qonto',
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: grossCents,
-                    vatAmountCents: calculateVatCents(grossCents, 0.22),
+                    vatAmountCents: floralVat.ivaCents,
                     isForeignService: false,
                     invoiceReference: orderNumber,
                     status: 'CONFIRMED' as const,

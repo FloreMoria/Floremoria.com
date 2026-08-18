@@ -4,3 +4,5 @@
 [2026-08-18 17:53] feat/whatsapp: supporto difensivo BSUID + waUsername (schema, webhook inbound, Meta client recipient).
 [2026-08-18 17:54] fix/communications: Risolta ricerca contatti e fioristi nella modale Nuova Conversazione (carica iniziale automatica, tab Tutti/Fioristi/Clienti, ricerca per nome/ragione sociale/telefono/comune/provincia).
 [2026-08-18 18:11] feat/analytics: Implementata retention a 7 giorni per il Registro Mancata Consegna & Errori Webhook Meta (filtro visivo <= 7gg e routine auto-purge DELETE record vecchi).
+
+[2026-08-18 18:11] feat/finance: Contabilità fiscale trimestrale IVA 10%, sync Stripe movimenti/fatture, prospetto CSV commercialista.

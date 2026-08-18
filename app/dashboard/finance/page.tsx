@@ -23,11 +23,12 @@ import {
 } from 'lucide-react';
 import type { FinancialLedger, BankTransaction, AccountingEntry } from '@/lib/financial/types';
 import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
+import TaxQuarterlyPanel from './TaxQuarterlyPanel';
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements' | 'gateways'>('transactions');
+    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements' | 'gateways' | 'tax'>('transactions');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -718,9 +719,15 @@ export default function FinanceDashboardPage() {
                     >
                         Stato Stripe &amp; PayPal
                     </button>
+                    <button
+                        onClick={() => setActiveTab('tax')}
+                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'tax' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Chiusura Trimestrale &amp; Fisco
+                    </button>
                 </div>
 
-                {activeTab !== 'statements' && activeTab !== 'gateways' && (
+                {activeTab !== 'statements' && activeTab !== 'gateways' && activeTab !== 'tax' && (
                     <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
                         <input
                             type="text"
@@ -1226,6 +1233,8 @@ export default function FinanceDashboardPage() {
                         )}
                     </div>
                 )}
+
+                {activeTab === 'tax' && <TaxQuarterlyPanel />}
             </div>
         </div>
     );

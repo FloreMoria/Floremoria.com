@@ -1,13 +1,14 @@
 import prisma from '@/lib/prisma';
 import { BankTransaction, ReconciliationResult, AccountingEntry } from './types';
 import { addAccountingEntries, updateTransactionCategory } from './ledgerStore';
+import { scorporaIvaFloreale, scorporaIvaOrdinaria } from '@/lib/financial/vat';
 
 /**
- * Calcola l'IVA scorporata (22% per i fiori e servizi standard)
+ * IVA scorporata: 10% fiori (default), 22% solo se esplicitamente richiesto (fornitori/accessori).
  */
-function calculateVatCents(totalCents: number, rate = 0.22): number {
-    const net = totalCents / (1 + rate);
-    return Math.round(totalCents - net);
+function calculateVatCents(totalCents: number, rate = 0.1): number {
+    if (rate === 0.22) return scorporaIvaOrdinaria(totalCents).ivaCents;
+    return scorporaIvaFloreale(totalCents).ivaCents;
 }
 
 /**
@@ -235,7 +236,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     dareAccount: '50100 - Banca Qonto',
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: grossAmount,
-                    vatAmountCents: calculateVatCents(grossAmount, 0.22),
+                    vatAmountCents: calculateVatCents(grossAmount, 0.1),
                     isForeignService: false,
                     invoiceReference: matchedOrder.orderNumber,
                     status: 'CONFIRMED'
@@ -287,7 +288,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     dareAccount: '50100 - Banca Qonto',
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: transaction.amountCents,
-                    vatAmountCents: calculateVatCents(transaction.amountCents, 0.22),
+                    vatAmountCents: calculateVatCents(transaction.amountCents, 0.1),
                     isForeignService: false,
                     invoiceReference: orderCode,
                     status: 'CONFIRMED'
@@ -328,7 +329,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                 dareAccount: '50100 - Banca Qonto',
                 avereAccount: '60100 - Ricavi da Vendite',
                 amountCents: transaction.amountCents,
-                vatAmountCents: calculateVatCents(transaction.amountCents, 0.22),
+                vatAmountCents: calculateVatCents(transaction.amountCents, 0.1),
                 isForeignService: false,
                 invoiceReference: possibleOrder.orderNumber,
                 status: 'CONFIRMED'
@@ -387,7 +388,7 @@ export async function processManualOrders(): Promise<number> {
             dareAccount: '50100 - Banca Qonto',
             avereAccount: '60100 - Ricavi da Vendite',
             amountCents: order.totalPriceCents,
-            vatAmountCents: calculateVatCents(order.totalPriceCents, 0.22),
+            vatAmountCents: calculateVatCents(order.totalPriceCents, 0.1),
             isForeignService: false,
             invoiceReference: orderNumber,
             status: 'CONFIRMED'

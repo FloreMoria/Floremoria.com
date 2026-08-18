@@ -696,3 +696,63 @@ model MarketingCampaign {
   @@index([externalId])
   @@map("marketing_campaigns")
 }
+
+/// Movimento Stripe sincronizzato (balance_transaction / payout / refund).
+model StripeFinanceMovement {
+  id                    String   @id @default(cuid())
+  stripeId              String   @unique @map("stripe_id") @db.VarChar(128)
+  type                  String   @db.VarChar(64)
+  reportingCategory     String?  @map("reporting_category") @db.VarChar(64)
+  description           String?  @db.Text
+  amountCents           Int      @map("amount_cents")
+  feeCents              Int      @default(0) @map("fee_cents")
+  netCents              Int      @map("net_cents")
+  currency              String   @default("eur") @db.VarChar(8)
+  status                String?  @db.VarChar(32)
+  createdAtStripe       DateTime @map("created_at_stripe")
+  availableOn           DateTime? @map("available_on")
+  sourceId              String?  @map("source_id") @db.VarChar(128)
+  payoutId              String?  @map("payout_id") @db.VarChar(128)
+  orderId               String?  @map("order_id")
+  metadataJson          Json?    @map("metadata_json")
+  syncedAt              DateTime @default(now()) @map("synced_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([type, createdAtStripe])
+  @@index([createdAtStripe])
+  @@index([payoutId])
+  @@map("stripe_finance_movements")
+}
+
+/// Fattura mensile commissioni Stripe (Stripe Payments Europe Ltd) + reverse charge.
+model StripeServiceInvoice {
+  id                    String   @id @default(cuid())
+  stripeInvoiceId       String?  @unique @map("stripe_invoice_id") @db.VarChar(128)
+  /** Chiave stabile mensile se non esiste invoice Stripe formale (es. 2026-08). */
+  periodKey             String   @unique @map("period_key") @db.VarChar(16)
+  number                String?  @db.VarChar(64)
+  status                String?  @db.VarChar(32)
+  issuedAt              DateTime @map("issued_at")
+  periodStart           DateTime @map("period_start")
+  periodEnd             DateTime @map("period_end")
+  currency              String   @default("eur") @db.VarChar(8)
+  /** Totale fee lorda in centesimi (commissioni gateway del periodo). */
+  totalFeeCents         Int      @map("total_fee_cents")
+  /** Imponibile fee (reverse charge UE — IVA non addebitata da Stripe). */
+  taxableFeeCents       Int      @default(0) @map("taxable_fee_cents")
+  vatReverseChargeCents Int      @default(0) @map("vat_reverse_charge_cents")
+  vendorName            String   @default("Stripe Payments Europe Ltd") @map("vendor_name") @db.VarChar(128)
+  invoicePdfUrl         String?  @map("invoice_pdf_url") @db.Text
+  hostedInvoiceUrl      String?  @map("hosted_invoice_url") @db.Text
+  /** Copia locale su Blob / path file, se scaricata. */
+  localPdfPath          String?  @map("local_pdf_path") @db.Text
+  metadataJson          Json?    @map("metadata_json")
+  syncedAt              DateTime @default(now()) @map("synced_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([issuedAt])
+  @@index([periodStart, periodEnd])
+  @@map("stripe_service_invoices")
+}

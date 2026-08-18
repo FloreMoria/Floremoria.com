@@ -1041,7 +1041,7 @@ function ControlloTab() {
             <AlertTriangle className="w-5 h-5 text-red-600" />
             <div>
               <h4 className="font-display font-semibold text-base text-[#111B21]">Registro Mancata Consegna & Errori Webhook Meta</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Messaggi con status FAILED o deliveryError (numero errato, rifiuto Meta, ecc.).</p>
+              <p className="text-xs text-gray-500 mt-0.5">Messaggi con status FAILED o deliveryError degli ultimi 7 giorni (Retention 7 giorni · Auto-purge attivo).</p>
             </div>
           </div>
           {audit.failedCount > 0 && (

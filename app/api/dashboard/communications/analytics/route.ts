@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { purgeOldWebhookDeliveryErrors } from '@/lib/whatsapp/purgeDeliveryLogs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Finestra analytics WhatsApp (giorni). */
-const ANALYTICS_WINDOW_DAYS = 30;
+/** Finestra analytics WhatsApp & Retention Registro Mancata Consegna (giorni). */
+const ANALYTICS_WINDOW_DAYS = 7;
 /** Campione outbound per ripartizione status Meta (webhook). */
 const STATUS_SAMPLE_SIZE = 500;
 
@@ -68,6 +69,9 @@ function pct(part: number, whole: number): number {
 
 export async function GET() {
     try {
+        // Auto-Purge dei log errori webhook piu vecchi di 7 giorni
+        await purgeOldWebhookDeliveryErrors(ANALYTICS_WINDOW_DAYS);
+
         const since = new Date();
         since.setDate(since.getDate() - ANALYTICS_WINDOW_DAYS);
 

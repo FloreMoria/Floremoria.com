@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 
+import { purgeOldWebhookDeliveryErrors } from '@/lib/whatsapp/purgeDeliveryLogs';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -10,8 +12,12 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     try {
+        await purgeOldWebhookDeliveryErrors(7);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
         const outboundMessages = await prisma.whatsAppChatMessage.findMany({
-            where: { direction: 'OUTBOUND' },
+            where: { direction: 'OUTBOUND', createdAt: { gte: sevenDaysAgo } },
             orderBy: { createdAt: 'desc' },
             take: 250,
             include: {

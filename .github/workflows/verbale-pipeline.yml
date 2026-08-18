@@ -54,7 +54,8 @@ jobs:
       - name: Pipeline BARBARA + docs → Obsidian
         env:
           BARBARA_VERBALI_REPO_DIR: .barbara-sync
-        run: npm run log:verbale:pipeline || echo "⚠️ Warning: log:verbale:pipeline completato con avviso (skip parziale)."
+        run: |
+          npm run log:verbale:pipeline || echo "Warning: log:verbale:pipeline completato con avviso (skip parziale)."
 
       - name: Sync dashboard floremoria_logs (Neon produzione)
         env:
@@ -90,7 +91,7 @@ jobs:
               fi
             fi
           fi
-          npm run log:verbale:daily || echo "⚠️ Warning: log:verbale:daily completato con avviso."
+          npm run log:verbale:daily || echo "Warning: log:verbale:daily completato con avviso."
 
       - name: Commit e push (Obsidian + docs se modificati)
         run: |
@@ -101,5 +102,5 @@ jobs:
             echo "Verbali già allineati."
           else
             git commit -m "chore(verbali): pipeline BARBARA + DEVIN → Obsidian"
-            git push || echo "⚠️ Warning: Push su GitHub saltato (nessuna modifica o permessi limitati)."
+            git push || echo "Warning: Push su GitHub saltato (nessuna modifica o permessi limitati)."
           fi

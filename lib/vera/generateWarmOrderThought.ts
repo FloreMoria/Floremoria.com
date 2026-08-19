@@ -5,7 +5,9 @@ import {
 } from '@/lib/vera/customerOrderConfirmCopy';
 import { clampWarmThoughtForTemplate } from '@/lib/vera/clampWarmThought';
 
-const FALLBACK_THOUGHT = buildDefaultCustomerConfirmWarmSlot();
+function getFallbackThought(): string {
+    return buildDefaultCustomerConfirmWarmSlot();
+}
 
 /**
  * Genera il pensiero caloroso {{3}} per floremoria_conferma_ordine_utente.
@@ -19,7 +21,7 @@ export async function generateWarmOrderThought(input: {
     const deceased = (input.deceasedName || 'chi ama').trim();
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
-    if (!apiKey) return FALLBACK_THOUGHT;
+    if (!apiKey) return getFallbackThought();
 
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const prompt = `Scrivi UNA frase breve in italiano (massimo 48 caratteri), completa di senso, con punto finale.
@@ -46,7 +48,7 @@ Vietato lasciare frasi incomplete (es. "foto della.").`;
         });
         clearTimeout(timeout);
 
-        if (!res.ok) return FALLBACK_THOUGHT;
+        if (!res.ok) return getFallbackThought();
 
         const data = (await res.json()) as {
             candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -55,9 +57,9 @@ Vietato lasciare frasi incomplete (es. "foto della.").`;
             ?.replace(/[\r\n]+/g, ' ')
             .trim();
 
-        if (!text || text.length < 12) return FALLBACK_THOUGHT;
+        if (!text || text.length < 12) return getFallbackThought();
         return finalizeCustomerConfirmWarmSlot(text);
     } catch {
-        return FALLBACK_THOUGHT;
+        return getFallbackThought();
     }
 }

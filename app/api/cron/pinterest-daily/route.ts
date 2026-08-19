@@ -1,8 +1,8 @@
 /**
  * GET|POST /api/cron/pinterest-daily
  *
- * Pubblicazione giornaliera automatica Pin Pinterest (09:00 UTC / cron Vercel):
- * nessuna approvazione manuale — genera contenuto (rotazione temi) e pubblica via API v5.
+ * Pubblicazione automatica ogni 2 giorni Pin Pinterest (09:00 UTC / cron Vercel 48h):
+ * nessuna approvazione manuale — genera contenuto con watermark FloreMoria, applica link www.floremoria.com e pubblica via API v5.
  * Auth: Authorization Bearer CRON_SECRET oppure header x-cron-key.
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -32,7 +32,7 @@ async function runDailyPin(request: NextRequest) {
 
     try {
         console.log(
-            `[Pinterest Cron] Trigger automatico ricevuto — avvio Pinterest Agent (force=${force})…`
+            `[Pinterest Cron] Trigger automatico ricevuto (cadenza 48h) — avvio Pinterest Agent (force=${force})…`
         );
 
         const result = await generateDailyPinterestPin({ force });
@@ -42,7 +42,7 @@ async function runDailyPin(request: NextRequest) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: result.error || 'Creazione Pin giornaliero fallita',
+                    error: result.error || 'Creazione Pin automatica fallita',
                     result,
                 },
                 { status: 500 }
@@ -53,8 +53,8 @@ async function runDailyPin(request: NextRequest) {
             {
                 success: true,
                 message: result.skipped
-                    ? 'Pin quotidiano già pubblicato oggi — skip idempotente'
-                    : 'Pin quotidiano Pinterest generato e pubblicato automaticamente',
+                    ? 'Pin Pinterest già pubblicato per la finestra attuale — skip'
+                    : 'Pin Pinterest generato, filigranato FloreMoria e pubblicato automaticamente',
                 timestamp: new Date().toISOString(),
                 result,
             },

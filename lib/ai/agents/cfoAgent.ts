@@ -1,11 +1,14 @@
 /**
  * Agent CFO Alberto — System Prompt Master operativo.
  * Allineato a docs/architecture/ai_cfo_team_specification.md (Master Skill).
- * Skill pack: lib/ai/agents/cfoSkills.ts — Tool dati reali: lib/ai/agents/cfoTools.ts
+ * Skill pack: lib/ai/agents/cfo/skills/ — Tool dati reali: lib/ai/agents/cfoTools.ts
  * L'LLM non è fonte di verità normativa: obbligatorio Tier 1–3 + disclaimer professionista.
  */
 
-import { describeAlbertoCfoSkillsForPrompt } from '@/lib/ai/agents/cfoSkills';
+import {
+    CFO_SKILL_PACK,
+    describeCfoSkillPackForPrompt,
+} from '@/lib/ai/agents/cfo/skills';
 import {
     describeAlbertoCfoToolsForPrompt,
     loadAlbertoCfoLiveSnapshot,
@@ -46,6 +49,7 @@ export type AlbertoCfoRuntimeContext = {
     prompt: string;
     liveSnapshotText?: string;
     tools: typeof import('@/lib/ai/agents/cfoTools').ALBERTO_CFO_TOOLS;
+    skillPackVersion?: string;
 };
 
 /** Metadati aziendali default FloreMoria (sovrascrivibili via getAlbertoCfoContext). */
@@ -152,8 +156,12 @@ Se non puoi verificare una norma o un numero: dichiaralo, classifica come stima/
 
 export { ALBERTO_CFO_TOOLS } from '@/lib/ai/agents/cfoTools';
 export {
+    CFO_SKILL_PACK,
     ALBERTO_CFO_SKILL_CATALOG,
     describeAlbertoCfoSkillsForPrompt,
+    describeCfoSkillPackForPrompt,
+} from '@/lib/ai/agents/cfo/skills';
+export {
     calculateWacc,
     evaluateStartupInnovativaCompliance,
     analyzeSaleVat,
@@ -221,7 +229,7 @@ export async function getAlbertoCfoContext(
     const prompt = [
         ALBERTO_CFO_SYSTEM_PROMPT,
         companyBlock,
-        describeAlbertoCfoSkillsForPrompt(),
+        describeCfoSkillPackForPrompt(),
         describeAlbertoCfoToolsForPrompt(),
         liveSnapshotText || null,
     ]
@@ -233,6 +241,7 @@ export async function getAlbertoCfoContext(
         prompt,
         liveSnapshotText,
         tools,
+        skillPackVersion: CFO_SKILL_PACK.version,
     };
 }
 
@@ -285,10 +294,11 @@ export function getAlbertoCfoContextSync(
         prompt: [
             ALBERTO_CFO_SYSTEM_PROMPT,
             companyBlock,
-            describeAlbertoCfoSkillsForPrompt(),
+            describeCfoSkillPackForPrompt(),
             describeAlbertoCfoToolsForPrompt(),
         ].join('\n\n'),
         toolsDescribed: true,
+        skillPackVersion: CFO_SKILL_PACK.version,
     };
 }
 

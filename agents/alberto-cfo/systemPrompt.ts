@@ -1,6 +1,7 @@
 /**
  * Re-export comodo del System Prompt Master Alberto (percorso agents/).
  * Implementazione canonica: lib/ai/agents/cfoAgent.ts
+ * Skill pack: lib/ai/agents/cfo/skills/
  */
 export {
     ALBERTO_CFO_SYSTEM_PROMPT,
@@ -8,6 +9,7 @@ export {
     getAlbertoCfoContext,
     getAlbertoCfoContextSync,
     ALBERTO_CFO_TOOLS,
+    CFO_SKILL_PACK,
     type AlbertoCfoCompanyMeta,
     type AlbertoCfoRuntimeContext,
 } from '@/lib/ai/agents/cfoAgent';

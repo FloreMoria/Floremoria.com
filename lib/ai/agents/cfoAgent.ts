@@ -1,8 +1,16 @@
 /**
  * Agent CFO Alberto — System Prompt Master operativo.
  * Allineato a docs/architecture/ai_cfo_team_specification.md (Master Skill).
+ * Skill pack: lib/ai/agents/cfoSkills.ts — Tool dati reali: lib/ai/agents/cfoTools.ts
  * L'LLM non è fonte di verità normativa: obbligatorio Tier 1–3 + disclaimer professionista.
  */
+
+import { describeAlbertoCfoSkillsForPrompt } from '@/lib/ai/agents/cfoSkills';
+import {
+    describeAlbertoCfoToolsForPrompt,
+    loadAlbertoCfoLiveSnapshot,
+} from '@/lib/ai/agents/cfoTools';
+import type { TaxQuarter } from '@/lib/financial/taxQuarterly';
 
 export type AlbertoCfoCompanyMeta = {
     legalName?: string;
@@ -15,6 +23,10 @@ export type AlbertoCfoCompanyMeta = {
     notes?: string;
     /** ISO date della verifica fonti / contesto (Europe/Rome consigliata). */
     asOfDate?: string;
+    /** Se true, carica snapshot DB read-only (trimestrale/Stripe/fioristi/health). */
+    includeLiveData?: boolean;
+    liveYear?: number;
+    liveQuarter?: TaxQuarter;
 };
 
 export type AlbertoCfoRuntimeContext = {
@@ -32,6 +44,8 @@ export type AlbertoCfoRuntimeContext = {
     > &
         Pick<AlbertoCfoCompanyMeta, 'notes' | 'asOfDate'>;
     prompt: string;
+    liveSnapshotText?: string;
+    tools: typeof import('@/lib/ai/agents/cfoTools').ALBERTO_CFO_TOOLS;
 };
 
 /** Metadati aziendali default FloreMoria (sovrascrivibili via getAlbertoCfoContext). */
@@ -105,7 +119,7 @@ Se non puoi verificare una norma o un numero: dichiaralo, classifica come stima/
 ## Metodo operativo obbligatorio (6 step)
 1. Understand — perimetro societario, periodo, domanda, dati disponibili/mancanti.
 2. Verify — fonti Tier 1→2→3; nessun inventare.
-3. Calculate — numeri espliciti (centesimi/EUR, aliquote, runway, diluizione).
+3. Calculate — numeri espliciti (centesimi/EUR, aliquote, runway, diluizione). Preferisci tool/skill pack.
 4. Diagnose — cause, scostamenti, rischi.
 5. Recommend — azioni prioritarie, trade-off, impatto su cassa e conformità.
 6. Escalate — conferma professionista abilitato, dato mancante, o rischio 🔴/🟠 non chiudibile in autonomia.
@@ -133,15 +147,28 @@ Se non puoi verificare una norma o un numero: dichiaralo, classifica come stima/
 ## Limiti
 - Non firmare dichiarazioni, F24, bilanci o istanze in nome della società.
 - Non promettere ammissione a bandi o esiti fiscali certi.
-- Non esporre secret, chiavi API o dati bancari completi nei log di conversazione.`;
+- Non esporre secret, chiavi API o dati bancari completi nei log di conversazione.
+- I tool CFO sono READ-ONLY: mai proporre scritture DB non mediate da workflow approvati.`;
+
+export { ALBERTO_CFO_TOOLS } from '@/lib/ai/agents/cfoTools';
+export {
+    ALBERTO_CFO_SKILL_CATALOG,
+    describeAlbertoCfoSkillsForPrompt,
+    calculateWacc,
+    evaluateStartupInnovativaCompliance,
+    analyzeSaleVat,
+    calculateRunwayMonths,
+} from '@/lib/ai/agents/cfoSkills';
 
 /**
  * Costruisce il contesto runtime Alberto + prompt pronto all'iniezione LLM
- * (system prompt + blocco metadati aziendali FloreMoria).
+ * (system prompt + metadati + skill/tool catalog + opzionale snapshot live).
  */
-export function getAlbertoCfoContext(
+export async function getAlbertoCfoContext(
     overrides?: AlbertoCfoCompanyMeta
-): AlbertoCfoRuntimeContext {
+): Promise<AlbertoCfoRuntimeContext> {
+    const { ALBERTO_CFO_TOOLS: tools } = await import('@/lib/ai/agents/cfoTools');
+
     const asOfDate =
         overrides?.asOfDate?.trim() ||
         new Intl.DateTimeFormat('en-CA', {
@@ -182,9 +209,86 @@ export function getAlbertoCfoContext(
         .filter((line) => line !== null)
         .join('\n');
 
+    let liveSnapshotText: string | undefined;
+    if (overrides?.includeLiveData) {
+        const snap = await loadAlbertoCfoLiveSnapshot({
+            year: overrides.liveYear,
+            quarter: overrides.liveQuarter,
+        });
+        liveSnapshotText = snap.text;
+    }
+
+    const prompt = [
+        ALBERTO_CFO_SYSTEM_PROMPT,
+        companyBlock,
+        describeAlbertoCfoSkillsForPrompt(),
+        describeAlbertoCfoToolsForPrompt(),
+        liveSnapshotText || null,
+    ]
+        .filter(Boolean)
+        .join('\n\n');
+
     return {
         company,
-        prompt: `${ALBERTO_CFO_SYSTEM_PROMPT}\n\n${companyBlock}`,
+        prompt,
+        liveSnapshotText,
+        tools,
+    };
+}
+
+/** Variante sync: prompt senza query DB (skill/tool descritti, nessun snapshot live). */
+export function getAlbertoCfoContextSync(
+    overrides?: Omit<AlbertoCfoCompanyMeta, 'includeLiveData' | 'liveYear' | 'liveQuarter'>
+): Omit<AlbertoCfoRuntimeContext, 'tools' | 'liveSnapshotText'> & {
+    toolsDescribed: true;
+} {
+    const asOfDate =
+        overrides?.asOfDate?.trim() ||
+        new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Europe/Rome',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).format(new Date());
+
+    const company = {
+        legalName: overrides?.legalName?.trim() || FLOREMORIA_CFO_DEFAULT_META.legalName,
+        vatNumber: overrides?.vatNumber?.trim() || FLOREMORIA_CFO_DEFAULT_META.vatNumber,
+        taxCode: overrides?.taxCode?.trim() || FLOREMORIA_CFO_DEFAULT_META.taxCode,
+        companyType: overrides?.companyType?.trim() || FLOREMORIA_CFO_DEFAULT_META.companyType,
+        innovationStatus:
+            overrides?.innovationStatus?.trim() || FLOREMORIA_CFO_DEFAULT_META.innovationStatus,
+        fiscalYear: overrides?.fiscalYear ?? FLOREMORIA_CFO_DEFAULT_META.fiscalYear,
+        reportingCurrency:
+            overrides?.reportingCurrency?.trim() || FLOREMORIA_CFO_DEFAULT_META.reportingCurrency,
+        notes: overrides?.notes?.trim() || FLOREMORIA_CFO_DEFAULT_META.notes,
+        asOfDate,
+    };
+
+    const companyBlock = [
+        '## Contesto aziendale FloreMoria (metadati iniettati)',
+        `- Ragione sociale: ${company.legalName}`,
+        `- P.IVA: ${company.vatNumber}`,
+        `- Codice fiscale: ${company.taxCode}`,
+        `- Forma: ${company.companyType}`,
+        `- Status innovazione: ${company.innovationStatus}`,
+        `- Anno fiscale di riferimento: ${company.fiscalYear}`,
+        `- Valuta: ${company.reportingCurrency}`,
+        `- As-of (Europe/Rome): ${company.asOfDate}`,
+        company.notes ? `- Note operative: ${company.notes}` : null,
+    ]
+        .filter((line) => line !== null)
+        .join('\n');
+
+    return {
+        company,
+        prompt: [
+            ALBERTO_CFO_SYSTEM_PROMPT,
+            companyBlock,
+            describeAlbertoCfoSkillsForPrompt(),
+            describeAlbertoCfoToolsForPrompt(),
+        ].join('\n\n'),
+        toolsDescribed: true,
     };
 }
 
@@ -192,4 +296,5 @@ export default {
     ALBERTO_CFO_SYSTEM_PROMPT,
     FLOREMORIA_CFO_DEFAULT_META,
     getAlbertoCfoContext,
+    getAlbertoCfoContextSync,
 };

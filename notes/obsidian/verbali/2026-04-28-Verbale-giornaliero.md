@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Definizione Modello Commerciale PA."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-08-19T15:37:58.696Z
+synced_at: 2026-08-19T15:47:28.300Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

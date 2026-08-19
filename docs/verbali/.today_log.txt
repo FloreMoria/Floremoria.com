@@ -13,3 +13,4 @@
 [2026-08-19 17:31] fix/whatsapp: notifica fiorista — spazio dopo ":" sul link mini-app (anteprima WA) e Luogo senza "Non specificato".
 [2026-08-19 17:37] feat(cfo): skill pack fiscale xNunc + tool read-only Prisma per Alberto (WACC, startup L.193/2024, IVA, runway, tax/Stripe/fioristi/health).
 [2026-08-19 17:46] feat(cfo): Skill Pack a 8 moduli in lib/ai/agents/cfo/skills/ (Tax, Accounting, CFO, Startup, Equity, Agevolata, Controlling, Risk) + registry CFO_SKILL_PACK.
+[2026-08-19 17:54] fix/build: Risolto ciclo di dipendenze circolari in lib/whatsapp/ (creato lib/whatsapp/sanitizeMetaParam.ts) che causava TDZ ReferenceError al deploy Vercel.

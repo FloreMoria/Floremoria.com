@@ -1,4 +1,4 @@
-import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
+import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 
 /**

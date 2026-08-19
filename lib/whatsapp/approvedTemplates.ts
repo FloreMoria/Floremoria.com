@@ -3,6 +3,10 @@ import {
     formatGentileSalutation,
     normalizeOrderCode,
 } from '@/lib/whatsapp/proactiveTemplateParams';
+import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
+export { sanitizeMetaTemplateParam };
+
+
 import {
     listVeraFloristLibraryTemplates,
     listVeraUserLibraryTemplates,
@@ -461,15 +465,6 @@ export class ProactiveTemplateValidationError extends Error {
         super(message);
         this.name = 'ProactiveTemplateValidationError';
     }
-}
-
-/** Meta rifiuta newline/tab nei parametri body (errori #132000 / #132018). */
-export function sanitizeMetaTemplateParam(value: string, maxLen = 900): string {
-    return value
-        .replace(/[\r\n\t]+/g, ' ')
-        .replace(/\s{2,}/g, ' ')
-        .trim()
-        .slice(0, maxLen);
 }
 
 export interface ProactiveTemplateBodyValues {

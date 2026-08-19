@@ -3,7 +3,7 @@ import {
     resolveSafeBuyerFirstName,
 } from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
-import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
+import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 import {
     getVeraTemplate,

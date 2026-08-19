@@ -1,5 +1,5 @@
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
-import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/approvedTemplates';
+import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 
 /**
  * Meta rifiuta parametri vuoti / null (#132000 / #132018).

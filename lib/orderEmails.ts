@@ -177,8 +177,12 @@ export function buildOrderCustomerHtml(params: { order: OrderWithItems }): strin
 <body style="font-family: Georgia, serif; line-height: 1.6; color: #222; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #fafafa;">
   <div style="background-color: #fff; padding: 24px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.01);">
     <p style="margin: 0 0 8px;">Gentile ${esc(order.buyerFullName)},</p>
-    <p style="margin: 0 0 16px;">abbiamo ricevuto il pagamento e preso in carico il tuo ordine <strong>${esc(order.orderNumber)}</strong>.</p>
-    <p style="margin: 0 0 20px;">Ti contatteremo se serviranno chiarimenti sulla consegna. Riceverai le foto promesse sul numero che ci hai indicato in fase d’ordine.</p>
+    <p style="margin: 0 0 16px;">abbiamo ricevuto il pagamento e preso in carico il tuo ordine <strong>${esc(order.orderNumber)}</strong> (conferma d'ordine / ricevuta di pagamento di cortesia).</p>
+    <p style="margin: 0 0 12px;">Ti contatteremo se serviranno chiarimenti. Riceverai le foto promesse sul numero che ci hai indicato in fase d’ordine.</p>
+
+    <div style="margin: 0 0 16px; padding: 10px 12px; background: #f3f8f1; border-left: 4px solid #5a8f4a; border-radius: 4px; font-size: 14px;">
+      <strong>Consegna: Sempre gratuita</strong>
+    </div>
     
     <table cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 16px;">
       <thead>
@@ -193,6 +197,8 @@ export function buildOrderCustomerHtml(params: { order: OrderWithItems }): strin
         ${rows}
       </tbody>
     </table>
+
+    <p style="margin: 0 0 8px; font-size: 13px; color: #555;">Scorporo di cortesia: prodotti floreali IVA 10%; eventuali accessori IVA 22%.</p>
     
     <div style="text-align: right; margin-top: 12px; margin-bottom: 24px; padding: 10px; background-color: #fdfdfd; border: 1px solid #eee; border-radius: 4px;">
       <span style="font-size: 15px; color: #333;"><strong>Totale pagato:</strong></span>

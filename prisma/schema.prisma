@@ -221,8 +221,23 @@ model Order {
   stripeFee              Float?            @map("stripe_fee")
   netAmount              Float?            @map("net_amount")
   stripeTransactionId    String?           @map("stripe_transaction_id") @db.VarChar(255)
+  /**
+   * Compenso fiorista concordato (centesimi) — stessa fonte di Vera WhatsApp.
+   * Se null, si calcola da listino/note e si può congelare al primo invio.
+   */
+  floristCompensationCents Int?            @map("florist_compensation_cents")
+  /** Aliquota IVA applicabile al compenso fiorista (es. 0 forfettario, 0.10, 0.22). */
+  floristVatRate         Float?            @map("florist_vat_rate")
+  /** Stato liquidazione partner (indipendente da partnerPaymentStatus checkout). */
+  floristSettlementStatus FloristSettlementStatus @default(PENDING) @map("florist_settlement_status")
+  /** Override imponibile accessori IVA 22% (centesimi lordi accessori); null = da righe ordine. */
+  accessoryAmountCents   Int?              @map("accessory_amount_cents")
+  /** Metodo pagamento / gateway (card, apple_pay, google_pay, paypal, …). */
+  paymentMethodLabel     String?           @map("payment_method_label") @db.VarChar(64)
+  financeNotes           String?           @map("finance_notes") @db.Text
   /** Record creati in Modalità Test (sandbox admin). */
   isTest                 Boolean           @default(false) @map("is_test")
+  customerReceipts       CustomerOrderReceipt[]
 }
 
 model OrderItem {
@@ -587,6 +602,13 @@ enum PaymentStatus {
   PAID
 }
 
+/** Liquidazione fiorista nel registro fiscale (distinto dal pagamento cliente). */
+enum FloristSettlementStatus {
+  PENDING
+  BONIFICATO
+  RICEVUTA
+}
+
 enum OfferType {
   PERCENT
   FIXED
@@ -756,3 +778,31 @@ model StripeServiceInvoice {
   @@index([periodStart, periodEnd])
   @@map("stripe_service_invoices")
 }
+
+/// Ricevuta di cortesia / conferma ordine archiviata (HTML su Blob).
+model CustomerOrderReceipt {
+  id              String   @id @default(cuid())
+  orderId         String   @map("order_id")
+  orderNumber     String?  @map("order_number") @db.VarChar(64)
+  issuedAt        DateTime @map("issued_at")
+  /** Periodo fiscale YYYY-QN o YYYY-QM (quadrimestre). */
+  periodKey       String   @map("period_key") @db.VarChar(16)
+  blobPath        String   @map("blob_path") @db.Text
+  blobUrl         String?  @map("blob_url") @db.Text
+  contentType     String   @default("text/html; charset=utf-8") @map("content_type") @db.VarChar(128)
+  grossCents      Int      @map("gross_cents")
+  floralImponibileCents Int @map("floral_imponibile_cents")
+  accessoryImponibileCents Int @default(0) @map("accessory_imponibile_cents")
+  ivaDebitoCents  Int      @map("iva_debito_cents")
+  metadataJson    Json?    @map("metadata_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId])
+  @@index([issuedAt])
+  @@index([periodKey])
+  @@index([orderNumber])
+  @@map("customer_order_receipts")
+}
+

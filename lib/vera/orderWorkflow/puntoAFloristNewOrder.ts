@@ -150,7 +150,28 @@ export async function runPuntoAFloristNewOrder(
         extractFirstName(order.partner.ownerName || order.partner.shopName) || 'Fiorista';
     const orderCode = order.orderNumber || order.id;
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
-    const compensation = calculateFloristCompensation(order.items, order.partner?.internalNotes);
+    const compensation =
+        order.floristCompensationCents != null && order.floristCompensationCents >= 0
+            ? {
+                  totalCents: order.floristCompensationCents,
+                  totalLabel: `${(order.floristCompensationCents / 100).toFixed(0)}€`,
+                  lines: [],
+                  unmappedProducts: [] as string[],
+              }
+            : calculateFloristCompensation(order.items, order.partner?.internalNotes);
+
+    // Congela su ordine la stessa cifra usata da Vera (fonte unica per registro fiscale).
+    if (order.floristCompensationCents == null && compensation.totalCents > 0) {
+        await prisma.order
+            .update({
+                where: { id: order.id },
+                data: { floristCompensationCents: compensation.totalCents },
+            })
+            .catch((err) =>
+                console.warn('[vera-workflow] Persistenza floristCompensationCents fallita:', err)
+            );
+    }
+
     const { formatFloristLuogoDisplayLine, isUnspecifiedPlaceValue } = await import(
         '@/lib/whatsapp/buildFloristNuovoOrdineParams'
     );

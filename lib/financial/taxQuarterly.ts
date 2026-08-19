@@ -9,6 +9,7 @@ import {
     scorporaVenditaFloreale,
     VAT_RATE_FLORAL,
 } from '@/lib/financial/vat';
+import { resolveOrderFloristCompensationCents } from '@/lib/financial/taxRegister';
 
 export type TaxQuarter = 1 | 2 | 3 | 4;
 
@@ -91,8 +92,6 @@ export type TaxQuarterlyReport = {
     floristLiquidazioni: FloristLiquidazioneRow[];
 };
 
-const FLORIST_SHARE = 0.65;
-
 export async function buildTaxQuarterlyReport(
     year: number,
     quarter: TaxQuarter
@@ -118,6 +117,7 @@ export async function buildTaxQuarterlyReport(
                     ownerName: true,
                     vatNumber: true,
                     paymentStatus: true,
+                    internalNotes: true,
                 },
             },
             items: {
@@ -138,11 +138,14 @@ export async function buildTaxQuarterlyReport(
                 ? Math.round(order.grossAmount * 100)
                 : order.totalPriceCents;
 
-        let accessoryCents = 0;
-        for (const item of order.items) {
-            const cat = item.product?.category;
-            if (isAccessoryCategory(cat?.slug) || isAccessoryCategory(cat?.name)) {
-                accessoryCents += item.priceCents * item.quantity;
+        let accessoryCents =
+            order.accessoryAmountCents != null ? order.accessoryAmountCents : 0;
+        if (order.accessoryAmountCents == null) {
+            for (const item of order.items) {
+                const cat = item.product?.category;
+                if (isAccessoryCategory(cat?.slug) || isAccessoryCategory(cat?.name)) {
+                    accessoryCents += item.priceCents * item.quantity;
+                }
             }
         }
 
@@ -202,8 +205,10 @@ export async function buildTaxQuarterlyReport(
                 order.grossAmount != null
                     ? Math.round(order.grossAmount * 100)
                     : order.totalPriceCents;
-            const compenso = Math.round(gross * FLORIST_SHARE);
-            const paid = order.partnerPaymentStatus === 'PAID';
+            const compenso = resolveOrderFloristCompensationCents(order);
+            const settled =
+                order.floristSettlementStatus === 'BONIFICATO' ||
+                order.floristSettlementStatus === 'RICEVUTA';
             return {
                 orderId: order.id,
                 orderNumber: order.orderNumber || order.id.slice(0, 8),
@@ -215,13 +220,14 @@ export async function buildTaxQuarterlyReport(
                 partnerVat: order.partner?.vatNumber || null,
                 grossOrderCents: gross,
                 compensoConcordatoCents: compenso,
-                paymentStatus: order.partnerPaymentStatus,
-                bonificoInviato: paid,
-                fatturaPassivaStato: paid
-                    ? 'SALDATA / BONIFICO INVIATO'
-                    : order.partnerPaymentStatus === 'PROCESSING'
-                      ? 'IN ELABORAZIONE'
-                      : 'DA LIQUIDARE',
+                paymentStatus: order.floristSettlementStatus,
+                bonificoInviato: settled,
+                fatturaPassivaStato:
+                    order.floristSettlementStatus === 'RICEVUTA'
+                        ? 'RICEVUTA / FATTURA PASSIVA'
+                        : order.floristSettlementStatus === 'BONIFICATO'
+                          ? 'BONIFICATO'
+                          : 'PENDING',
             };
         });
 

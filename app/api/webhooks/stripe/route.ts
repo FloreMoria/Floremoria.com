@@ -79,6 +79,7 @@ export async function POST(request: Request) {
     let stripeFeeVal: number | undefined = undefined;
     let netAmountVal: number | undefined = undefined;
     let stripeTransactionIdVal: string | undefined = undefined;
+    let paymentMethodLabel: string | undefined = undefined;
     let balanceDate = new Date();
 
     const paymentIntentId = session.payment_intent as string;
@@ -102,6 +103,16 @@ export async function POST(request: Request) {
                     stripeTransactionIdVal,
                 });
             }
+            const pmd = charge?.payment_method_details;
+            if (pmd) {
+                const wallet = (pmd as { card?: { wallet?: { type?: string | null } | null } }).card
+                    ?.wallet?.type;
+                if (wallet === 'apple_pay') paymentMethodLabel = 'Apple Pay (Stripe)';
+                else if (wallet === 'google_pay') paymentMethodLabel = 'Google Pay (Stripe)';
+                else if (pmd.type === 'paypal') paymentMethodLabel = 'PayPal (Stripe)';
+                else if (pmd.type === 'card') paymentMethodLabel = 'Carta (Stripe)';
+                else paymentMethodLabel = `Stripe · ${pmd.type}`;
+            }
         } catch (err) {
             console.error('[stripe-webhook] Errore nel recupero balance_transaction:', err);
         }
@@ -117,6 +128,7 @@ export async function POST(request: Request) {
             stripeFee: stripeFeeVal,
             netAmount: netAmountVal,
             stripeTransactionId: stripeTransactionIdVal,
+            ...(paymentMethodLabel ? { paymentMethodLabel } : {}),
         },
     });
 
@@ -234,6 +246,14 @@ export async function POST(request: Request) {
         if (!custResult.ok) {
             console.error('[stripe-webhook] Invio email cliente fallito:', custResult.error);
         }
+    }
+
+    // Archivia ricevuta di cortesia (HTML + Blob) per export ZIP fiscale — non bloccante.
+    if (isFirstPaidTransition) {
+        const { archiveCustomerOrderReceipt } = await import('@/lib/financial/customerReceipt');
+        await archiveCustomerOrderReceipt(orderId).catch((archiveErr) => {
+            console.error('[stripe-webhook] Archiviazione ricevuta fallita:', archiveErr);
+        });
     }
 
     return NextResponse.json({ received: true, duplicate: !isFirstPaidTransition });

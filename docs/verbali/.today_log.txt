@@ -15,3 +15,5 @@
 [2026-08-19 17:46] feat(cfo): Skill Pack a 8 moduli in lib/ai/agents/cfo/skills/ (Tax, Accounting, CFO, Startup, Equity, Agevolata, Controlling, Risk) + registry CFO_SKILL_PACK.
 [2026-08-19 17:54] fix/build: Risolto ciclo di dipendenze circolari in lib/whatsapp/ (creato lib/whatsapp/sanitizeMetaParam.ts) che causava TDZ ReferenceError al deploy Vercel.
 [2026-08-19 17:55] fix/route: Convertita la costante top-level in generateWarmOrderThought in funzione lazy getFallbackThought() ed assicurata la direttiva export const dynamic = 'force-dynamic' su /api/admin/backfill-order-chat.
+
+[2026-08-19 18:51] feat/finance: registro contabile unificato editabile, ZIP ricevute cortesia (consegna gratuita + scorporo IVA 10/22), settlement fiorista.

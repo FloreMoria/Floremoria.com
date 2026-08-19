@@ -10,3 +10,4 @@
 [2026-08-18 18:37] docs(cfo): aggiornamento Master Skill Alberto AI CFO (L.193/2024, 8 moduli, gerarchia fonti Tier 1-3, metodo 6 step).
 [2026-08-18 18:38] feat/ai: System Prompt Master operativo Agent CFO Alberto (lib/ai/agents/cfoAgent.ts + re-export agents/alberto-cfo).
 [2026-08-19 17:14] feat/pinterest: Aggiornata pubblicazione automatica Pinterest (cadenza a 48 ore in vercel.json, watermark FloreMoria su immagini, link esplicito www.floremoria.com e 5 temi inclusi affetti e persone).
+[2026-08-19 17:31] fix/whatsapp: notifica fiorista — spazio dopo ":" sul link mini-app (anteprima WA) e Luogo senza "Non specificato".

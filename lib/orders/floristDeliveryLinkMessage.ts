@@ -16,6 +16,11 @@ import {
     withBoldWhatsAppTitle,
 } from '@/lib/whatsapp/firstOutboundTitle';
 import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
+import {
+    formatFloristLuogoDisplayLine,
+    formatFloristMiniAppInstructionLine,
+    isUnspecifiedPlaceValue,
+} from '@/lib/whatsapp/buildFloristNuovoOrdineParams';
 
 /**
  * Testo WhatsApp Punto A — nuovo incarico fiorista.
@@ -76,14 +81,6 @@ function sanitizeLine(value: string | null | undefined, fallback: string): strin
     return cleaned || fallback;
 }
 
-/** Luogo = cimitero + comune (senza coordinate tomba: restano in app / note solo se reali). */
-function buildLuogoConsegna(input: FloristNewOrderMessageInput): string {
-    const parts = [input.cemeteryName?.trim(), input.cemeteryCity?.trim()]
-        .filter(Boolean)
-        .map((p) => stripGramatoArtifact(p!));
-    return parts.length ? parts.join(', ') : 'Da confermare in app';
-}
-
 /**
  * Note di consegna: solo istruzioni vere. Niente coordinate tomba come fallback.
  */
@@ -122,42 +119,19 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     const floristName = sanitizeLine(input.floristFirstName, 'Partner');
     const orderCode = input.orderCode.trim() || '—';
 
-    let rawCity = (input.city?.trim() || input.cemeteryCity?.trim() || '').trim();
-    if (!rawCity || /non specificato/i.test(rawCity)) {
-        rawCity = '';
-    }
-    let rawProvince = (input.province || '').trim();
-    if (rawProvince && !/non specificato/i.test(rawProvince)) {
-        rawProvince = rawProvince.replace(/[()]/g, '');
-    } else {
-        rawProvince = '';
-    }
-
-    let cityLabel = stripGramatoArtifact(rawCity);
-    if (cityLabel && rawProvince) {
-        cityLabel = `${cityLabel} (${rawProvince.toUpperCase()})`;
-    } else if (!cityLabel) {
-        cityLabel = 'zona da confermare';
-    }
-
-    let rawCemetery = (input.cemeteryName?.trim() || '').trim();
-    if (!rawCemetery || /non specificato/i.test(rawCemetery)) {
-        rawCemetery = '';
-    }
-
-    let cemetery = stripGramatoArtifact(rawCemetery);
-    if (!cemetery) {
-        const pureCity = stripGramatoArtifact(rawCity) || '';
-        cemetery = pureCity ? `Cimitero Comunale di ${pureCity}` : 'Cimitero Comunale';
-    }
+    const cityRaw = input.city?.trim() || input.cemeteryCity?.trim() || '';
+    const luogo = formatFloristLuogoDisplayLine({
+        cemeteryName: input.cemeteryName,
+        cemeteryCity: cityRaw,
+        province: input.province,
+    });
 
     let rawDeceased = (input.deceasedName || '').trim();
-    if (!rawDeceased || /non specificato/i.test(rawDeceased)) {
+    if (isUnspecifiedPlaceValue(rawDeceased)) {
         rawDeceased = '';
     }
     const deceased = sanitizeLine(rawDeceased, 'il caro defunto');
 
-    const luogo = `${cityLabel}, ${cemetery}`;
     const deadline = resolveFloristDeliveryDeadline({
         deliveryDate: input.deliveryDate,
         requestedDeliveryDate: input.requestedDeliveryDate,
@@ -166,7 +140,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     const prodotto = stripGramatoArtifact(formatFloristOrderProductsLabel(input.items));
 
     let rawTicket = (input.ticketMessage || '').trim();
-    if (!rawTicket || /non specificato/i.test(rawTicket)) {
+    if (isUnspecifiedPlaceValue(rawTicket)) {
         rawTicket = '';
     }
     const ticket = sanitizeLine(rawTicket, 'Nessuno');
@@ -178,12 +152,6 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     const accessori = optionals.length
         ? optionals.join(', ')
         : 'Nessun accessorio extra';
-
-    let rawNote = (input.additionalInstructions || '').trim();
-    if (!rawNote || /non specificato/i.test(rawNote)) {
-        rawNote = '';
-    }
-    const note = sanitizeFloristDeliveryNotes(rawNote, input.gravePosition);
 
     const compensation = calculateFloristCompensation(
         input.items as Parameters<typeof calculateFloristCompensation>[0],
@@ -198,19 +166,21 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
             orderNumber: orderCode,
         });
 
+    // Spazio obbligatorio dopo ":" prima dell'URL → link blu + card anteprima WhatsApp.
+    const miniAppLine = formatFloristMiniAppInstructionLine(deliveryUrl);
+
     // Scadenza subito sopra il luogo (cimitero / loculo) per massima visibilità operativa.
     const body =
         `Ciao ${floristName}! 🌸\n` +
         `Abbiamo un nuovo ordine per te con il codice: ${orderCode}\n` +
         `🕊️ In memoria di: ${deceased}\n` +
         `📅 CONSEGNA : ${deadline.label}\n` +
-        `📍 Luogo: ${cityLabel}, ${cemetery}\n` +
+        `📍 Luogo: ${luogo}\n` +
         `💐 Prodotto: ${prodotto}\n` +
         `➕ Optional / Accessori: ${accessori}\n` +
         `📝 Testo: ${ticket}\n` +
         `💶 Compenso per il servizio: ${compenso}\n\n` +
-        `🔗 Per favore, completa l'ordine con la mini-app:\n` +
-        `${deliveryUrl}\n\n` +
+        `${miniAppLine}\n\n` +
         `Mi confermi?\n` +
         `Grazie mille per il tuo supporto!\n` +
         `Vera | Staff FloreMoria 🌹`;

@@ -36,6 +36,8 @@ export interface FloristNuovoOrdineInput {
     cemeteryName?: string | null;
     cemeteryCity?: string | null;
     province?: string | null;
+    /** Indirizzo consegna alternativo se non c'è nome cimitero. */
+    deliveryAddress?: string | null;
     ticketMessage?: string | null;
     items: FloristNuovoOrdineItem[];
     partnerNotes?: string | null;
@@ -55,35 +57,109 @@ function stripNoise(value: string | null | undefined): string {
         .trim();
 }
 
-/** {{5}} Comune — es. «Pordenone (PN)». */
+/** True se il valore è assente o placeholder inutile (mai stampare "Non specificato"). */
+export function isUnspecifiedPlaceValue(value: string | null | undefined): boolean {
+    const v = stripNoise(value);
+    if (!v || v === '-' || v === '—') return true;
+    return /^(non\s*specificato|n\/?d|n\.?\s*d\.?|da\s+definire|undefined|null)$/i.test(v);
+}
+
+function formatProvinceSuffix(province?: string | null): string {
+    let prov = stripNoise(province).replace(/[()]/g, '');
+    if (isUnspecifiedPlaceValue(prov)) return '';
+    return ` (${prov.toUpperCase()})`;
+}
+
+/** {{5}} Comune — es. «Pordenone (PN)». Mai "Non specificato". */
 export function formatFloristComuneParam(input: {
     city?: string | null;
     province?: string | null;
 }): string {
     let city = stripNoise(input.city);
-    if (!city || /non specificato/i.test(city)) city = '';
-    let province = stripNoise(input.province).replace(/[()]/g, '');
-    if (!province || /non specificato/i.test(province)) province = '';
-
-    if (city && province) return `${city} (${province.toUpperCase()})`;
+    if (isUnspecifiedPlaceValue(city)) city = '';
+    const provSuffix = formatProvinceSuffix(input.province);
+    if (city && provSuffix) return `${city}${provSuffix}`;
     if (city) return city;
     return '-';
 }
 
-/** {{6}} Luogo — es. «Casa Funeraria San Marco» / nome cimitero. */
+/**
+ * {{6}} Luogo (slot Meta accanto a {{5}} comune) — solo toponimo cimitero/indirizzo.
+ * Mai "Non specificato". Fallback: «Cimitero Comunale di ${city}».
+ */
 export function formatFloristLuogoParam(input: {
     cemeteryName?: string | null;
     cemeteryCity?: string | null;
+    province?: string | null;
+    deliveryAddress?: string | null;
 }): string {
-    let cemetery = stripNoise(input.cemeteryName);
-    if (!cemetery || /non specificato/i.test(cemetery)) cemetery = '';
-    if (cemetery) return cemetery;
+    const city = isUnspecifiedPlaceValue(input.cemeteryCity) ? '' : stripNoise(input.cemeteryCity);
 
-    const city = stripNoise(input.cemeteryCity);
-    if (city && !/non specificato/i.test(city)) {
-        return `Cimitero Comunale di ${city}`;
+    let place = '';
+    if (!isUnspecifiedPlaceValue(input.cemeteryName)) {
+        place = stripNoise(input.cemeteryName);
+    } else if (!isUnspecifiedPlaceValue(input.deliveryAddress)) {
+        place = stripNoise(input.deliveryAddress);
     }
+
+    if (place) {
+        if (/^(cimitero|casa funeraria|chiesa|area)\b/i.test(place)) return place;
+        return `Cimitero di ${place}`;
+    }
+
+    if (city) return `Cimitero Comunale di ${city}`;
     return '-';
+}
+
+/**
+ * Riga Luogo unica (free-text / anteprima): cimitero + comune + provincia.
+ * Es. «Cimitero di Monumentale - Pordenone (PN)» oppure «Cimitero Comunale di Pordenone (PN)».
+ */
+export function formatFloristLuogoDisplayLine(input: {
+    cemeteryName?: string | null;
+    cemeteryCity?: string | null;
+    province?: string | null;
+    deliveryAddress?: string | null;
+}): string {
+    const city = isUnspecifiedPlaceValue(input.cemeteryCity) ? '' : stripNoise(input.cemeteryCity);
+    const provSuffix = formatProvinceSuffix(input.province);
+    const placeCore = formatFloristLuogoParam(input);
+
+    if (placeCore !== '-' && city && !placeCore.includes(city)) {
+        return `${placeCore} - ${city}${provSuffix}`;
+    }
+    if (placeCore !== '-' && city && /cimitero comunale di/i.test(placeCore)) {
+        // «Cimitero Comunale di City» + eventuale provincia
+        return `${placeCore}${provSuffix}`;
+    }
+    if (placeCore !== '-') {
+        return `${placeCore}${provSuffix}`;
+    }
+    if (city) return `Area di ${city}${provSuffix}`;
+    return 'Area da confermare in app';
+}
+
+/**
+ * URL mini-app pulito (solo https…), senza etichette.
+ * Perché: WhatsApp evidenzia l'URL solo se non è attaccato ai due punti senza spazio.
+ */
+export function formatFloristMiniAppUrlParam(url: string | null | undefined): string {
+    let raw = stripNoise(url);
+    raw = raw
+        .replace(/^🔗\s*Per favore,\s*completa l'ordine con la mini-app:\s*/i, '')
+        .replace(/^🔗\s*Link\s+mini-app\s+fiorista:\s*/i, '')
+        .trim();
+    if (!raw || raw === '-') return '-';
+    // Garantisce schema https per anteprima card.
+    if (/^www\./i.test(raw)) raw = `https://${raw}`;
+    return metaParamOrDash(raw, META_TEMPLATE_LIMITS.url);
+}
+
+/** Riga completa con spazio obbligatorio dopo i due punti (link blu + anteprima). */
+export function formatFloristMiniAppInstructionLine(url: string): string {
+    const clean = formatFloristMiniAppUrlParam(url);
+    const href = clean === '-' ? 'https://www.floremoria.com/fiorista' : clean;
+    return `🔗 Per favore, completa l'ordine con la mini-app: ${href}`;
 }
 
 /** {{8}} Accessori. */
@@ -130,15 +206,23 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const deliveryWhen = rawDeadline && rawDeadline !== '-' ? rawDeadline : '-';
     const var4 = metaParamOrDash(deliveryWhen, 150);
 
-    // Var 5 & Var 6: Luogo (etichetta gestita da template "📍 Luogo: {{5}}, {{6}}")
-    const cimitero = input.cemeteryName ? stripNoise(input.cemeteryName).trim() : '';
-    const comune = input.cemeteryCity ? stripNoise(input.cemeteryCity).trim() : '';
-    const prov = input.province ? stripNoise(input.province).replace(/[()]/g, '').trim() : '';
-    const provSuffix = prov ? `(${prov})` : '';
-    const comuneProv = provSuffix ? `${comune} ${provSuffix}` : comune;
-
-    const var5 = metaParamOrDash(comuneProv || '-', 150);
-    const var6 = metaParamOrDash(cimitero || ' ', 150);
+    // Var 5 & Var 6: Luogo (template "📍 Luogo: {{5}}, {{6}}") — mai "Non specificato".
+    const var5 = metaParamOrDash(
+        formatFloristComuneParam({
+            city: input.cemeteryCity,
+            province: input.province,
+        }),
+        150
+    );
+    const var6 = metaParamOrDash(
+        formatFloristLuogoParam({
+            cemeteryName: input.cemeteryName,
+            cemeteryCity: input.cemeteryCity,
+            province: input.province,
+            deliveryAddress: input.deliveryAddress,
+        }),
+        150
+    );
 
     // Var 7: Prodotto (etichetta gestita da template "💐 Prodotto: {{7}}")
     let rawProdotto = stripNoise(formatFloristOrderProductsLabel(input.items));
@@ -171,16 +255,14 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const compensoVal = /^\d+$/.test(cleanCompenso) ? `${cleanCompenso}€` : cleanCompenso;
     const var10 = metaParamOrDash(compensoVal, 100);
 
-    // Var 11: Link (etichetta gestita da template "🔗 Per favore, completa l'ordine con la mini-app:\n{{11}}")
+    // Var 11: Link mini-app — solo URL https (spazio dopo ":" è nel body Meta / free-text).
     const rawDeliveryUrl =
         stripNoise(input.deliveryUrl) ||
         buildFloristDeliveryUrl({
             id: input.orderId || orderCode,
             orderNumber: orderCode === '-' ? null : orderCode,
         });
-    let rawLink = rawDeliveryUrl.replace(/^🔗\s*Link\s+mini-app\s+fiorista:\s*/i, '').trim();
-    const link = rawLink && rawLink !== '-' ? rawLink : '-';
-    const var11 = metaParamOrDash(link, META_TEMPLATE_LIMITS.url);
+    const var11 = formatFloristMiniAppUrlParam(rawDeliveryUrl);
 
     const params = [
         var1,  // {{1}}

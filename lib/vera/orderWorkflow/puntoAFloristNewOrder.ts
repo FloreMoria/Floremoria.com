@@ -151,7 +151,14 @@ export async function runPuntoAFloristNewOrder(
     const orderCode = order.orderNumber || order.id;
     const deliveryUrl = buildFloristDeliveryUrl({ id: order.id, orderNumber: order.orderNumber });
     const compensation = calculateFloristCompensation(order.items, order.partner?.internalNotes);
-    const cemeteryLabel = [order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ');
+    const { formatFloristLuogoDisplayLine, isUnspecifiedPlaceValue } = await import(
+        '@/lib/whatsapp/buildFloristNuovoOrdineParams'
+    );
+    const cemeteryLabel = formatFloristLuogoDisplayLine({
+        cemeteryName: isUnspecifiedPlaceValue(order.cemeteryName) ? null : order.cemeteryName,
+        cemeteryCity: order.cemeteryCity,
+        province: order.deliveryProvince,
+    });
     const gravePosition = order.gravePosition?.trim() || '';
 
     if (compensation.totalCents === 0 && compensation.unmappedProducts.length > 0) {

@@ -150,7 +150,8 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             "➕ Optional / Accessori: {{8}}\n" +
             "📝 Testo: {{9}}\n" +
             "💶 Compenso per il servizio: {{10}}\n\n" +
-            "🔗 Per favore, completa l'ordine con la mini-app:\n{{11}}\n\n" +
+            // Spazio dopo ":" obbligatorio: WhatsApp linkifica l'URL e genera l'anteprima.
+            "🔗 Per favore, completa l'ordine con la mini-app: {{11}}\n\n" +
             "Mi confermi?\n" +
             "Grazie mille per il tuo supporto!\n" +
             "Vera | Staff FloreMoria 🌹",

@@ -5,6 +5,10 @@
 
 import Papa from 'papaparse';
 import type { ParseFatturaBatchResult, ParsedFatturaPa } from '@/lib/financial/parseFatturaPaXml';
+import {
+    buildInvoiceDedupeKey,
+    normalizeVendorVat,
+} from '@/lib/financial/invoiceDedupe';
 
 function normKey(k: string): string {
     return k
@@ -15,15 +19,28 @@ function normKey(k: string): string {
         .trim();
 }
 
+/**
+ * Match colonne: prima esatte (YouDoox snake_case), poi includes su candidati lunghi.
+ * Evita match troppo larghi tipo "cf" / "data" / "numero" isolati.
+ */
 function findCol(row: Record<string, unknown>, candidates: string[]): string {
     const keys = Object.keys(row);
+    const normKeys = keys.map((k) => ({ k, n: normKey(k).replace(/_/g, ' ') }));
+
     for (const cand of candidates) {
-        const hit = keys.find((k) => {
-            const n = normKey(k);
-            return n === cand || n.includes(cand);
-        });
-        if (hit && row[hit] != null && String(row[hit]).trim() !== '') {
-            return String(row[hit]).trim();
+        const c = normKey(cand).replace(/_/g, ' ');
+        const exact = normKeys.find((x) => x.n === c);
+        if (exact && row[exact.k] != null && String(row[exact.k]).trim() !== '') {
+            return String(row[exact.k]).trim();
+        }
+    }
+    // includes solo se il candidato ha almeno 5 caratteri (evita "cf","iva","data")
+    for (const cand of candidates) {
+        const c = normKey(cand).replace(/_/g, ' ');
+        if (c.length < 5) continue;
+        const hit = normKeys.find((x) => x.n.includes(c) || c.includes(x.n));
+        if (hit && row[hit.k] != null && String(row[hit.k]).trim() !== '') {
+            return String(row[hit.k]).trim();
         }
     }
     return '';
@@ -72,63 +89,71 @@ function eurosToCents(euros: number): number {
     return Math.round(euros * 100);
 }
 
-function buildDedupeKey(vat: string | null, number: string, date: string): string {
-    const v = (vat || 'NOVAT').replace(/\s+/g, '').toUpperCase();
-    const n = number.replace(/\s+/g, '').toUpperCase();
-    return `${v}|${n}|${date}`;
-}
-
 const VENDOR_KEYS = [
+    'fornitore',
     'fornitore / denominazione',
     'fornitore/denominazione',
-    'fornitore',
     'denominazione',
     'ragione sociale',
     'cedente',
     'vendor',
+    // anagrafica YouDoox = cessionario (FloreMoria), non il fornitore — ultimo resort
     'anagrafica',
 ];
 const VAT_KEYS = [
+    'piva',
+    'p.iva',
     'partita iva / cf',
     'partita iva/cf',
     'partita iva',
-    'p.iva',
-    'piva',
     'id fiscale',
     'codice fiscale',
-    'cf',
     'vat',
 ];
 const DATE_KEYS = [
+    'documento data',
+    'documento_data',
     'data documento',
     'data fattura',
     'data emissione',
-    'data',
 ];
 const NUMBER_KEYS = [
+    'documento numero',
+    'documento_numero',
     'numero fattura',
     'n. fattura',
     'numero documento',
     'n. documento',
-    'numero',
     'n doc',
 ];
-const NET_KEYS = ['imponibile', 'imponibileimporto', 'netto', 'imponibile €'];
-const VAT_AMT_KEYS = ['iva / imposta', 'iva/imposta', 'imposta', 'iva', 'imposta iva'];
+const NET_KEYS = [
+    'tot imponibile',
+    'tot_imponibile',
+    'imponibile',
+    'imponibileimporto',
+    'netto',
+    'imponibile €',
+];
+const VAT_AMT_KEYS = [
+    'tot imposta',
+    'tot_imposta',
+    'iva / imposta',
+    'iva/imposta',
+    'imposta',
+    'imposta iva',
+];
 const TOTAL_KEYS = [
     'totale documento',
     'importo totale',
     'totale',
-    'importo',
     'importototaledocumento',
 ];
 
 const TYPE_KEYS = [
     'tipo documento',
-    'tipo',
+    'tipo_documento',
     'tipodocumento',
     'tipo doc',
-    'documento',
 ];
 const RELATED_KEYS = [
     'fattura collegata',
@@ -143,8 +168,7 @@ function rowToInvoice(
     sourceFileName: string
 ): ParsedFatturaPa | { error: string } {
     const vendorName = findCol(row, VENDOR_KEYS) || 'Fornitore SDI';
-    const vendorVatRaw = findCol(row, VAT_KEYS);
-    const vendorVat = vendorVatRaw ? vendorVatRaw.replace(/\s+/g, '').toUpperCase() : null;
+    const vendorVat = normalizeVendorVat(findCol(row, VAT_KEYS) || null);
     const invoiceNumber = findCol(row, NUMBER_KEYS);
     const invoiceDate = parseDate(findCol(row, DATE_KEYS) || findCol(row, ['data']));
     const totalEuros = parseAmount(findCol(row, TOTAL_KEYS));
@@ -193,7 +217,7 @@ function rowToInvoice(
         causale: `${label} n. ${invoiceNumber} — ${vendorName}`.slice(0, 2000),
         lineDescriptions: [],
         sourceFileName: `${sourceFileName}#${idx + 1}`,
-        dedupeKey: buildDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
         docKind,
         relatedInvoiceNumber,
     };

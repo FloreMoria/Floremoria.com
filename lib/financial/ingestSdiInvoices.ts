@@ -14,6 +14,7 @@ import {
     parseInvoiceUpload,
     type ParsedFatturaPa,
 } from '@/lib/financial/parseFatturaPaXml';
+import { dedupeKeysMatch } from '@/lib/financial/invoiceDedupe';
 import type { Prisma } from '@prisma/client';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'sdi-invoices');
@@ -78,7 +79,7 @@ async function storeArchive(
 }
 
 async function findExistingByDedupeKey(dedupeKey: string) {
-    // Preferenza: filtro JSON Prisma (Postgres)
+    // Preferenza: filtro JSON Prisma (Postgres) — match esatto
     try {
         const hit = await prisma.manualFinanceExpense.findFirst({
             where: {
@@ -92,15 +93,22 @@ async function findExistingByDedupeKey(dedupeKey: string) {
     } catch {
         // fallback sotto
     }
+
+    // Legacy: P.IVA senza prefisso IT vs con IT (stesso documento da ZIP XML e report XLSX)
     const recent = await prisma.manualFinanceExpense.findMany({
         where: { docType: { in: ['FATTURA', 'NOTA_CREDITO'] } },
         orderBy: { createdAt: 'desc' },
-        take: 400,
+        take: 800,
     });
     return (
         recent.find((r) => {
             const meta = r.metadataJson as { dedupeKey?: string } | null;
-            return meta?.dedupeKey === dedupeKey || (r.notes || '').includes(dedupeKey);
+            if (meta?.dedupeKey && dedupeKeysMatch(meta.dedupeKey, dedupeKey)) return true;
+            // notes: "SDI_XML IT…|num|date" — confronto esatto sulla chiave, non substring
+            const notes = r.notes || '';
+            const m = notes.match(/(?:SDI_XML|SDI_XLSX)\s+(\S+)/);
+            if (m?.[1] && dedupeKeysMatch(m[1], dedupeKey)) return true;
+            return false;
         }) || null
     );
 }
@@ -463,6 +471,7 @@ export async function ingestParsedPassiveInvoices(input: {
     let cancelledByCreditNote = 0;
     let totalCents = 0;
     const sampleVendors: string[] = [];
+    const seenInBatch = new Set<string>();
 
     let archive = {
         blobPath: null as string | null,
@@ -495,6 +504,17 @@ export async function ingestParsedPassiveInvoices(input: {
         try {
             if (inv.docKind === 'NOTA_CREDITO') creditNotes += 1;
 
+            // Dedup interno al file (stessa fattura ripetuta nel report)
+            const alreadyInBatch = [...seenInBatch].some((k) => dedupeKeysMatch(k, inv.dedupeKey));
+            if (alreadyInBatch) {
+                skippedDuplicates += 1;
+                skippedDetails.push({
+                    fileName: inv.sourceFileName,
+                    reason: `Duplicato nel file ${inv.dedupeKey}`,
+                });
+                continue;
+            }
+
             const existing = await findExistingByDedupeKey(inv.dedupeKey);
             if (existing) {
                 const same =
@@ -517,9 +537,10 @@ export async function ingestParsedPassiveInvoices(input: {
 
                 if (same) {
                     skippedDuplicates += 1;
+                    seenInBatch.add(inv.dedupeKey);
                     skippedDetails.push({
                         fileName: inv.sourceFileName,
-                        reason: `Duplicato invariato ${inv.dedupeKey}`,
+                        reason: `Già presente ${inv.dedupeKey}`,
                     });
                     continue;
                 }
@@ -552,11 +573,13 @@ export async function ingestParsedPassiveInvoices(input: {
                     });
                     if (matched) matchedFineco += 1;
                 }
+                seenInBatch.add(inv.dedupeKey);
                 continue;
             }
 
             const row = await persistInvoice(inv, archive, input.source);
             imported += 1;
+            seenInBatch.add(inv.dedupeKey);
             totalCents += inv.totalCents;
             if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
                 sampleVendors.push(inv.vendorName);

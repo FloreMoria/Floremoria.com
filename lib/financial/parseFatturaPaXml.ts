@@ -7,6 +7,10 @@
 
 import JSZip from 'jszip';
 import Papa from 'papaparse';
+import {
+    buildInvoiceDedupeKey,
+    normalizeVendorVat,
+} from '@/lib/financial/invoiceDedupe';
 
 export type ParsedFatturaPa = {
     vendorName: string;
@@ -113,12 +117,6 @@ function normalizeDate(raw: string | null): string | null {
     return null;
 }
 
-function buildDedupeKey(vat: string | null, number: string, date: string): string {
-    const v = (vat || 'NOVAT').replace(/\s+/g, '').toUpperCase();
-    const n = number.replace(/\s+/g, '').toUpperCase();
-    return `${v}|${n}|${date}`;
-}
-
 /**
  * Parsa un singolo XML FatturaPA in record normalizzato.
  */
@@ -134,9 +132,11 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         textOf(extractXmlTag(cedente, 'IdCodice')) ||
         textOf(extractXmlTag(xml, 'IdCodice'));
     const idPaese = textOf(extractXmlTag(cedente, 'IdPaese')) || 'IT';
-    const vendorVat = idCodice
-        ? `${idPaese}${idCodice}`.replace(/\s+/g, '').toUpperCase()
-        : textOf(extractXmlTag(cedente, 'CodiceFiscale')) || null;
+    const vendorVat = normalizeVendorVat(
+        idCodice
+            ? `${idPaese}${idCodice}`
+            : textOf(extractXmlTag(cedente, 'CodiceFiscale')) || null
+    );
 
     const denominazione = textOf(extractXmlTag(cedente, 'Denominazione'));
     const nome = textOf(extractXmlTag(cedente, 'Nome'));
@@ -244,7 +244,7 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         causale: descriptionParts.join(' — ').slice(0, 2000),
         lineDescriptions,
         sourceFileName,
-        dedupeKey: buildDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
         docKind,
         relatedInvoiceNumber,
         rawPreview: xml.slice(0, 240),
@@ -401,7 +401,7 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
 
             invoices.push({
                 vendorName: vendorName.slice(0, 160),
-                vendorVat: vendorVat ? vendorVat.replace(/\s+/g, '').toUpperCase() : null,
+                vendorVat: normalizeVendorVat(vendorVat),
                 invoiceNumber,
                 invoiceDate,
                 totalCents: sign * totalAbs,
@@ -411,11 +411,7 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
                 causale: `${label} n. ${invoiceNumber} — ${causale}`.slice(0, 2000),
                 lineDescriptions: [causale],
                 sourceFileName: `csv-row-${idx + 1}`,
-                dedupeKey: buildDedupeKey(
-                    vendorVat ? vendorVat.replace(/\s+/g, '').toUpperCase() : null,
-                    invoiceNumber,
-                    invoiceDate
-                ),
+                dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
                 docKind,
                 relatedInvoiceNumber,
             });

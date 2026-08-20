@@ -67,7 +67,7 @@ export async function POST(request: Request) {
                       ? ` • ${summary.skippedDuplicates} duplicati invariati saltati`
                       : '')
                 : summary.skippedDuplicates > 0
-                  ? `Nessuna nuova fattura: ${summary.skippedDuplicates} già presenti (identiche).`
+                  ? `Nessuna nuova fattura: ${summary.skippedDuplicates} già presenti in Contabilità (stesso documento da ZIP XML o report precedente).`
                   : 'Nessuna fattura importata. Verifica le colonne del report (Fornitore, P.IVA, Data, Numero, Totale).';
 
         return NextResponse.json({

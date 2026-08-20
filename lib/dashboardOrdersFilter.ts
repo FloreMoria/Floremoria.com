@@ -23,8 +23,11 @@ function excludedBuyerEmailWhere(): Prisma.OrderWhereInput | undefined {
 const abandonedCartWhere: Prisma.OrderWhereInput = {
     status: 'PENDING',
     partnerPaymentStatus: 'UNPAID',
+    deliveryDate: null,
+    deceasedProfileId: null,
     deletedAt: null,
 };
+
 
 export function isOrderCancelled(order: {
     status?: string | null;

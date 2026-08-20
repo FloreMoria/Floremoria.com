@@ -63,8 +63,9 @@ export default async function OrdersPage() {
         const ordersResult = await runDashboardQuery('orders/list', [], () =>
             prisma.order.findMany({
                 ...ordersQuery,
-                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+                orderBy: [{ deliveryDate: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
                 include: {
+
                     user: true,
                     partner: true,
                     deliveryProof: true,

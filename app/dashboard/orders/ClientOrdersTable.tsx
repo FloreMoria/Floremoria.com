@@ -41,7 +41,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
     // Filri & Sort State
-    const [sortField, setSortField] = useState<'date' | 'deliveryDate' | 'alpha' | 'price'>('date');
+    const [sortField, setSortField] = useState<'date' | 'deliveryDate' | 'alpha' | 'price'>('deliveryDate');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [filterSearch, setFilterSearch] = useState('');
     const [filterDate, setFilterDate] = useState('tutti');
@@ -80,11 +80,14 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const statusMap = {
         'ACCEPTED': { label: 'Ricevuto', color: 'bg-yellow-100 text-yellow-800' },
         'IN_PROGRESS': { label: 'In Lavorazione', color: 'bg-blue-100 text-blue-800' },
-        'PENDING': { label: 'In Attesa', color: 'bg-orange-100 text-orange-800' },
+        'PENDING': { label: 'Prenotato (da pagare)', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold' },
         'DELIVERING': { label: 'In Consegna', color: 'bg-purple-100 text-purple-800' },
         'COMPLETED': { label: 'Completato', color: 'bg-green-100 text-green-800' },
-        'CANCELLED': { label: 'Annullato', color: 'bg-red-100 text-red-800' }
+        'CANCELLED': { label: 'Annullato', color: 'bg-red-100 text-red-800' },
+        'GDM_PLANNED': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
+        'GDM_ANNIVERSARY': { label: 'Anniversario GdM', color: 'bg-purple-100 text-purple-900 border border-purple-300 font-bold' },
     };
+
 
     const statusTabOrder = ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
 

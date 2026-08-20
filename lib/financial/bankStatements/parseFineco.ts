@@ -223,13 +223,8 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
         const { extractText, getDocumentProxy } = await import('unpdf');
         const pdf = await getDocumentProxy(new Uint8Array(buffer));
         const extracted = await extractText(pdf, { mergePages: true });
-        if (typeof extracted.text === 'string') {
-            text = extracted.text;
-        } else if (Array.isArray(extracted.text)) {
-            text = extracted.text.join('\n');
-        } else {
-            text = String(extracted.text ?? '');
-        }
+        // Con mergePages: true unpdf tipizza `text` come stringa
+        text = String(extracted.text ?? '');
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[parseFinecoPdf]', msg);

@@ -811,6 +811,68 @@ model CustomerOrderReceipt {
   @@map("customer_order_receipts")
 }
 
+/// Estratto conto / rendiconto bancario FinecoBank caricato in Contabilità.
+model BankStatementDocument {
+  id                String   @id @default(cuid())
+  fileName          String   @map("file_name") @db.VarChar(255)
+  contentType       String   @map("content_type") @db.VarChar(128)
+  sizeBytes         Int      @map("size_bytes")
+  blobPath          String   @map("blob_path") @db.Text
+  blobUrl           String?  @map("blob_url") @db.Text
+  storageKind       String   @default("blob") @map("storage_kind") @db.VarChar(16)
+  periodStart       DateTime? @map("period_start")
+  periodEnd         DateTime? @map("period_end")
+  /** UPLOADED | PARSING | PARSED | RECONCILED | FAILED */
+  status            String   @default("UPLOADED") @db.VarChar(24)
+  parseError        String?  @map("parse_error") @db.Text
+  /** Saldo progressivo finale estratto dal rendiconto (centesimi). */
+  closingBalanceCents Int?   @map("closing_balance_cents")
+  matchedCount      Int      @default(0) @map("matched_count")
+  unmatchedCount    Int      @default(0) @map("unmatched_count")
+  metadataJson      Json?    @map("metadata_json")
+  uploadedAt        DateTime @default(now()) @map("uploaded_at")
+  processedAt       DateTime? @map("processed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  lines             BankStatementLine[]
+
+  @@index([uploadedAt])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@map("bank_statement_documents")
+}
+
+/// Riga movimento estratta da un rendiconto Fineco (parsing CSV/XLSX/PDF).
+model BankStatementLine {
+  id                String   @id @default(cuid())
+  documentId        String   @map("document_id")
+  lineIndex         Int      @map("line_index")
+  valueDate         DateTime? @map("value_date")
+  accountingDate    DateTime? @map("accounting_date")
+  description       String   @db.Text
+  /** Importo firmato: +avere / -dare (centesimi). */
+  amountCents       Int      @map("amount_cents")
+  debitCents        Int?     @map("debit_cents")
+  creditCents       Int?     @map("credit_cents")
+  balanceCents      Int?     @map("balance_cents")
+  /** MATCHED | UNMATCHED | PARTIAL */
+  matchStatus       String   @default("UNMATCHED") @map("match_status") @db.VarChar(24)
+  matchType         String?  @map("match_type") @db.VarChar(48)
+  matchScore        Int?     @map("match_score")
+  matchedTxId       String?  @map("matched_tx_id") @db.VarChar(128)
+  matchedOrderId    String?  @map("matched_order_id")
+  matchNotes        String?  @map("match_notes") @db.Text
+  rawJson           Json?    @map("raw_json")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  document          BankStatementDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, lineIndex])
+  @@index([matchStatus])
+  @@index([accountingDate])
+  @@map("bank_statement_lines")
+}
+
 /**
  * Batch debounce inbound WhatsApp: accumula messaggi/foto e flush dopo 60s di quiete.
  * Perché: Meta consegna burst spezzati → senza buffer Vera risponde a raffica (caso Matilde).

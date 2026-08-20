@@ -13,6 +13,8 @@ import {
     estimateMonthlyBurnCents,
     operatingCashFlowSimple,
 } from '@/lib/ai/agents/cfoSkills';
+import { buildBankReconciliationReport } from '@/lib/financial/bankStatements/store';
+import type { BankReconciliationReport } from '@/lib/financial/bankStatements/types';
 
 const FLORIST_SHARE = 0.65;
 
@@ -338,12 +340,20 @@ export async function getCompanyFinancialHealth(): Promise<CompanyFinancialHealt
     };
 }
 
+/** Report riconciliazione cassa: saldo bancario (ultimo estratto) vs ledger / Stripe. */
+export async function getBankReconciliationReport(
+    documentId?: string
+): Promise<BankReconciliationReport> {
+    return buildBankReconciliationReport(documentId);
+}
+
 /** Registro tool invocabili da Alberto (nome → handler). */
 export const ALBERTO_CFO_TOOLS = {
     getCfoQuarterlyTaxSummary,
     getStripeCashOverview,
     getFloristPayoutStatus,
     getCompanyFinancialHealth,
+    getBankReconciliationReport,
 } as const;
 
 export type AlbertoCfoToolName = keyof typeof ALBERTO_CFO_TOOLS;
@@ -355,6 +365,7 @@ export function describeAlbertoCfoToolsForPrompt(): string {
         '- getStripeCashOverview() → movimenti Stripe, fee, rimborsi, payout Fineco (mese)',
         '- getFloristPayoutStatus() → pendenti vs liquidati',
         '- getCompanyFinancialHealth() → cassa stimata, 30gg in/out, burn, runway',
+        '- getBankReconciliationReport(documentId?) → saldo estratto Fineco vs ledger/Stripe, unmatched sample',
         'Tutti i tool sono sola lettura. Non inventare totali se il tool fallisce.',
     ].join('\n');
 }
@@ -375,6 +386,7 @@ export async function loadAlbertoCfoLiveSnapshot(params?: {
         paidSample: FloristPayoutRow[];
     };
     health?: CompanyFinancialHealth;
+    bankRecon?: BankReconciliationReport;
     errors: string[];
 }> {
     const errors: string[] = [];
@@ -387,6 +399,7 @@ export async function loadAlbertoCfoLiveSnapshot(params?: {
     let stripe: StripeCashOverview | undefined;
     let floristsFull: FloristPayoutStatus | undefined;
     let health: CompanyFinancialHealth | undefined;
+    let bankRecon: BankReconciliationReport | undefined;
 
     try {
         quarterly = await getCfoQuarterlyTaxSummary(year, quarter);
@@ -407,6 +420,11 @@ export async function loadAlbertoCfoLiveSnapshot(params?: {
         health = await getCompanyFinancialHealth();
     } catch (e) {
         errors.push(`health: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    try {
+        bankRecon = await getBankReconciliationReport();
+    } catch (e) {
+        errors.push(`bankRecon: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     const euro = (c: number) => (c / 100).toFixed(2);
@@ -448,6 +466,23 @@ export async function loadAlbertoCfoLiveSnapshot(params?: {
                   } (${health.runwayStatus})`,
               ].join('\n')
             : '- Health: non disponibile',
+        bankRecon
+            ? [
+                  '### Riconciliazione cassa Fineco (estratto vs ledger)',
+                  bankRecon.fileName
+                      ? `- Ultimo rendiconto: ${bankRecon.fileName} (${bankRecon.periodStart || '?'} → ${bankRecon.periodEnd || '?'})`
+                      : '- Nessun estratto conto elaborato in archivio',
+                  `- Saldo bancario (estratto): ${
+                      bankRecon.bankClosingBalanceCents == null
+                          ? 'n/d'
+                          : `€${euro(bankRecon.bankClosingBalanceCents)}`
+                  }`,
+                  `- Saldo contabile ledger: €${euro(bankRecon.ledgerBalanceCents)}`,
+                  `- Proxy cassa Stripe: €${euro(bankRecon.stripeProxyCashCents)}`,
+                  `- Delta banca−ledger: €${euro(bankRecon.deltaBankVsLedgerCents)}`,
+                  `- Match: ${bankRecon.matchedCount} abbinati / ${bankRecon.unmatchedCount} da revisionare`,
+              ].join('\n')
+            : '- Riconciliazione bancaria: non disponibile',
         errors.length ? `Errori tool: ${errors.join(' | ')}` : null,
         'Valutazione preliminare soggetta a conferma del professionista abilitato.',
     ].filter(Boolean) as string[];
@@ -469,6 +504,7 @@ export async function loadAlbertoCfoLiveSnapshot(params?: {
               }
             : undefined,
         health,
+        bankRecon,
         errors,
     };
 }

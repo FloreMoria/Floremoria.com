@@ -34,3 +34,4 @@
 [2026-08-20 11:56] refactor/finance: Conto Corrente Operativo in cima con SDI K0ROACV; simulatore/AI engine sotto tab operativi, prima dello Scadenziario.
 
 [2026-08-20 12:10] chore(db): rimozione definitiva ordini annullati e di test con pulizia relazioni a cascata.
+[2026-08-20 13:03] feat/finance: upload rendiconti Fineco (PDF/CSV/XLSX) con parsing, riconciliazione automatica e tool Alberto getBankReconciliationReport.

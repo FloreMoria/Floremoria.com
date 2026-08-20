@@ -24,6 +24,7 @@ import {
 import type { FinancialLedger, BankTransaction, AccountingEntry } from '@/lib/financial/types';
 import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 import TaxQuarterlyPanel from './TaxQuarterlyPanel';
+import BankStatementsPanel from '@/components/dashboard/BankStatementsPanel';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
@@ -411,6 +412,7 @@ export default function FinanceDashboardPage() {
                         <div className="pt-1"><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">BIC / SWIFT</span><div className="text-slate-800">{FLOREMORIA_FINECO_BANK.bicSepa} <span className="text-slate-400">(SEPA)</span> · {FLOREMORIA_FINECO_BANK.bicSwift} <span className="text-slate-400">(SWIFT)</span></div></div>
                     </div>
                 </div>
+                <BankStatementsPanel />
             </div>
 
             {/* Metrics cards grid */}

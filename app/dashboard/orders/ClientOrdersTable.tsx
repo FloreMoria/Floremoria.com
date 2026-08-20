@@ -13,6 +13,10 @@ import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
+import {
+    buildOrderSearchHaystack,
+    normalizeOrderSearchQuery,
+} from '@/lib/dashboard/orderSearchHaystack';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
@@ -247,14 +251,13 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     }
 
     if (filterSearch.trim() !== '') {
-        const q = filterSearch.toLowerCase();
-        filteredOrders = filteredOrders.filter(o =>
-            (o.buyerFullName || '').toLowerCase().includes(q) ||
-            (o.cemeteryCity || '').toLowerCase().includes(q) ||
-            (o.items?.[0]?.product?.name || '').toLowerCase().includes(q) ||
-            (statusMap[o.status as keyof typeof statusMap]?.label || '').toLowerCase().includes(q) ||
-            ((o.totalPriceCents / 100).toFixed(2)).includes(q)
-        );
+        const tokens = normalizeOrderSearchQuery(filterSearch)
+            .split(/\s+/)
+            .filter(Boolean);
+        filteredOrders = filteredOrders.filter((o) => {
+            const haystack = buildOrderSearchHaystack(o, statusMap);
+            return tokens.every((token) => haystack.includes(token));
+        });
     }
 
     // Sort Logic
@@ -466,7 +469,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ricerca Generica</label>
-                            <input type="text" placeholder="Es. Nome, Città, Prezzo..." value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black" />
+                            <input type="text" placeholder="Defunto, cimitero, comune, fiorista, bouquet, stato, data…" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black" />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data</label>

@@ -27,3 +27,4 @@
 [2026-08-20 10:31] feat/orders: Ordina Per «Data consegna» nei filtri Coda Ordini.
 
 [2026-08-20 11:03] fix(dashboard): scheda defunto sotto il menu, storico ordini, maps link e download reale foto.
+[2026-08-20 11:10] fix/orders: ricerca generica Coda Ordini su defunto, date, luogo, bouquet, fiorista, stato (multi-token).

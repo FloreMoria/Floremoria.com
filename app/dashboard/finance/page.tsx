@@ -395,6 +395,24 @@ export default function FinanceDashboardPage() {
                 </div>
             </div>
 
+            {/* Coordinate bancarie FinecoBank */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Conto Corrente Operativo (FinecoBank)</h3>
+                        <p className="mt-1 text-lg font-display font-bold text-slate-900">{FLOREMORIA_FINECO_BANK.institute}</p>
+                        <p className="text-sm text-slate-600 mt-1">{FLOREMORIA_FINECO_BANK.accountHolder}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{FLOREMORIA_LEGAL_ENTITY.registeredOffice}</p>
+                        <p className="text-xs text-slate-500">P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber}</p>
+                        <p className="text-xs text-slate-500">Codice SDI: <span className="font-mono font-semibold text-slate-800">{FLOREMORIA_LEGAL_ENTITY.sdiCode}</span></p>
+                    </div>
+                    <div className="font-mono text-sm space-y-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
+                        <div><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">IBAN</span><div className="font-semibold text-slate-900 tracking-wide">{FLOREMORIA_FINECO_BANK.ibanDisplay}</div></div>
+                        <div className="pt-1"><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">BIC / SWIFT</span><div className="text-slate-800">{FLOREMORIA_FINECO_BANK.bicSepa} <span className="text-slate-400">(SEPA)</span> · {FLOREMORIA_FINECO_BANK.bicSwift} <span className="text-slate-400">(SWIFT)</span></div></div>
+                    </div>
+                </div>
+            </div>
+
             {/* Metrics cards grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
@@ -440,125 +458,6 @@ export default function FinanceDashboardPage() {
                     </div>
                     <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
                         <CheckCircle2 size={24} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Coordinate bancarie FinecoBank */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div>
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Conto corrente operativo</h3>
-                        <p className="mt-1 text-lg font-display font-bold text-slate-900">{FLOREMORIA_FINECO_BANK.institute}</p>
-                        <p className="text-sm text-slate-600 mt-1">{FLOREMORIA_FINECO_BANK.accountHolder}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{FLOREMORIA_LEGAL_ENTITY.registeredOffice}</p>
-                        <p className="text-xs text-slate-500">P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber}</p>
-                    </div>
-                    <div className="font-mono text-sm space-y-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
-                        <div><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">IBAN</span><div className="font-semibold text-slate-900 tracking-wide">{FLOREMORIA_FINECO_BANK.ibanDisplay}</div></div>
-                        <div className="pt-1"><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">BIC / SWIFT</span><div className="text-slate-800">{FLOREMORIA_FINECO_BANK.bicSepa} <span className="text-slate-400">(SEPA)</span> · {FLOREMORIA_FINECO_BANK.bicSwift} <span className="text-slate-400">(SWIFT)</span></div></div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Ingestion simulator & last result */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Simulator form */}
-                <div className="lg:col-span-2 bg-[#FAF9F6] border border-[#c5a880]/30 rounded-3xl p-6 shadow-sm">
-                    <h3 className="text-lg font-display font-bold text-slate-800 uppercase tracking-wide mb-4 flex items-center gap-2">
-                        <Plus size={20} className="text-[#c5a880]" />
-                        Simulatore Webhook Ingestione Movimento Bancario
-                    </h3>
-                    <form onSubmit={handleSimulate} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="sm:col-span-2">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tipo Transazione Bancaria</label>
-                            <select 
-                                value={simType} 
-                                onChange={(e) => setSimType(e.target.value as any)}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
-                            >
-                                <option value="income_stripe">Entrata: Payout Stripe (Riconciliazione Lordo + Trattenuta Fees)</option>
-                                <option value="income_b2b">Entrata: Bonifico B2B Partner (Match con codice ordine)</option>
-                                <option value="expense_saas">Uscita: Addebito Carta SaaS Estero (Reverse Charge)</option>
-                                <option value="expense_partner">Uscita: Bonifico Posa Fiorista Partner (Costo operativo)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Importo Effettivo Bancario (€)</label>
-                            <input 
-                                type="number" 
-                                step="0.01" 
-                                value={simAmount}
-                                onChange={(e) => setSimAmount(e.target.value)}
-                                required 
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-mono"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Emittente / Controparte</label>
-                            <input 
-                                type="text" 
-                                value={simCounterparty} 
-                                onChange={(e) => setSimCounterparty(e.target.value)}
-                                required 
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
-                            />
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Causale / Riferimento (Concept/Reference)</label>
-                            <input 
-                                type="text" 
-                                value={simReference} 
-                                onChange={(e) => setSimReference(e.target.value)}
-                                required 
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-mono"
-                            />
-                        </div>
-                        <div className="sm:col-span-2">
-                            <button
-                                type="submit"
-                                disabled={simulating}
-                                className="w-full py-3 bg-[#0f172a] hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
-                            >
-                                {simulating ? 'Ingestione in corso...' : 'Invia Webhook Simulato (Ingestione FinecoBank)'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                {/* Simulation result */}
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <h3 className="text-lg font-display font-bold text-slate-800 uppercase tracking-wide mb-4">
-                            Esito Elaborazione AI Engine
-                        </h3>
-                        {lastSimResult ? (
-                            <div className="space-y-4">
-                                <div className={`p-4 rounded-2xl border ${lastSimResult.isReconciled ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                                    <div className="flex items-center gap-2">
-                                        {lastSimResult.isReconciled ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-                                        <span className="font-bold text-sm">
-                                            {lastSimResult.isReconciled ? 'Transazione Riconciliata' : 'Transazione Non Abbinata'}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs mt-1.5 font-medium leading-relaxed">{lastSimResult.notes}</p>
-                                </div>
-                                <div className="text-xs space-y-2 bg-slate-50 p-4 rounded-2xl font-mono">
-                                    <p><strong>Tipo Match:</strong> {lastSimResult.type}</p>
-                                    <p><strong>Punteggio Score:</strong> {lastSimResult.matchingScore}%</p>
-                                    {lastSimResult.orderId && <p><strong>ID Ordine Collegato:</strong> {lastSimResult.orderId.slice(0, 12)}...</p>}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
-                                <Cpu size={40} className="stroke-[1.5] mb-3 text-slate-300" />
-                                <p className="text-sm font-medium">Invia una transazione simulata per visualizzare l&apos;esito e la scomposizione contabile in tempo reale.</p>
-                            </div>
-                        )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 leading-normal flex items-start gap-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                        <ShieldAlert size={14} className="shrink-0 text-slate-400 mt-0.5" />
-                        <span>Gli ordini di TEST (isTest: true) sono rigorosamente protetti ed esclusi da tutti i conteggi per evitare inquinamento fiscale.</span>
                     </div>
                 </div>
             </div>
@@ -1106,6 +1005,108 @@ export default function FinanceDashboardPage() {
                 )}
 
                 {activeTab === 'tax' && <TaxQuarterlyPanel />}
+            </div>
+
+            {/* Ingestion simulator & last result */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Simulator form */}
+                <div className="lg:col-span-2 bg-[#FAF9F6] border border-[#c5a880]/30 rounded-3xl p-6 shadow-sm">
+                    <h3 className="text-lg font-display font-bold text-slate-800 uppercase tracking-wide mb-4 flex items-center gap-2">
+                        <Plus size={20} className="text-[#c5a880]" />
+                        Simulatore Webhook Ingestione Movimento Bancario
+                    </h3>
+                    <form onSubmit={handleSimulate} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tipo Transazione Bancaria</label>
+                            <select 
+                                value={simType} 
+                                onChange={(e) => setSimType(e.target.value as any)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                            >
+                                <option value="income_stripe">Entrata: Payout Stripe (Riconciliazione Lordo + Trattenuta Fees)</option>
+                                <option value="income_b2b">Entrata: Bonifico B2B Partner (Match con codice ordine)</option>
+                                <option value="expense_saas">Uscita: Addebito Carta SaaS Estero (Reverse Charge)</option>
+                                <option value="expense_partner">Uscita: Bonifico Posa Fiorista Partner (Costo operativo)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Importo Effettivo Bancario (€)</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                value={simAmount}
+                                onChange={(e) => setSimAmount(e.target.value)}
+                                required 
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Emittente / Controparte</label>
+                            <input 
+                                type="text" 
+                                value={simCounterparty} 
+                                onChange={(e) => setSimCounterparty(e.target.value)}
+                                required 
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                            />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Causale / Riferimento (Concept/Reference)</label>
+                            <input 
+                                type="text" 
+                                value={simReference} 
+                                onChange={(e) => setSimReference(e.target.value)}
+                                required 
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-mono"
+                            />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <button
+                                type="submit"
+                                disabled={simulating}
+                                className="w-full py-3 bg-[#0f172a] hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                            >
+                                {simulating ? 'Ingestione in corso...' : 'Invia Webhook Simulato (Ingestione FinecoBank)'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Simulation result */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 className="text-lg font-display font-bold text-slate-800 uppercase tracking-wide mb-4">
+                            Esito Elaborazione AI Engine
+                        </h3>
+                        {lastSimResult ? (
+                            <div className="space-y-4">
+                                <div className={`p-4 rounded-2xl border ${lastSimResult.isReconciled ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                                    <div className="flex items-center gap-2">
+                                        {lastSimResult.isReconciled ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+                                        <span className="font-bold text-sm">
+                                            {lastSimResult.isReconciled ? 'Transazione Riconciliata' : 'Transazione Non Abbinata'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs mt-1.5 font-medium leading-relaxed">{lastSimResult.notes}</p>
+                                </div>
+                                <div className="text-xs space-y-2 bg-slate-50 p-4 rounded-2xl font-mono">
+                                    <p><strong>Tipo Match:</strong> {lastSimResult.type}</p>
+                                    <p><strong>Punteggio Score:</strong> {lastSimResult.matchingScore}%</p>
+                                    {lastSimResult.orderId && <p><strong>ID Ordine Collegato:</strong> {lastSimResult.orderId.slice(0, 12)}...</p>}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
+                                <Cpu size={40} className="stroke-[1.5] mb-3 text-slate-300" />
+                                <p className="text-sm font-medium">Invia una transazione simulata per visualizzare l&apos;esito e la scomposizione contabile in tempo reale.</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="text-[10px] text-slate-400 leading-normal flex items-start gap-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                        <ShieldAlert size={14} className="shrink-0 text-slate-400 mt-0.5" />
+                        <span>Gli ordini di TEST (isTest: true) sono rigorosamente protetti ed esclusi da tutti i conteggi per evitare inquinamento fiscale.</span>
+                    </div>
+                </div>
             </div>
 
             {/* Scadenziario & Adempimenti S.r.l. Widget */}

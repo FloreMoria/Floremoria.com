@@ -8,6 +8,8 @@ export const FLOREMORIA_LEGAL_ENTITY = {
     registeredOffice: 'VIA BELLINZONA 82/B, 22100 COMO (CO)',
     vatNumber: '04188260139',
     taxCode: '04188260139',
+    /** Codice Destinatario SDI (fatturazione elettronica). */
+    sdiCode: 'K0ROACV',
 } as const;
 
 export const FLOREMORIA_FINECO_BANK = {
@@ -29,6 +31,7 @@ export function formatFloremoriaBankBlock(): string {
         `Intestatario: ${FLOREMORIA_FINECO_BANK.accountHolder}`,
         `Sede Legale: ${FLOREMORIA_LEGAL_ENTITY.registeredOffice}`,
         `P.IVA / C.F.: ${FLOREMORIA_LEGAL_ENTITY.vatNumber}`,
+        `Codice SDI: ${FLOREMORIA_LEGAL_ENTITY.sdiCode}`,
         `Istituto: ${FLOREMORIA_FINECO_BANK.institute}`,
         `IBAN: ${FLOREMORIA_FINECO_BANK.ibanDisplay}`,
         `BIC/SWIFT: ${FLOREMORIA_FINECO_BANK.bicSepa} (SEPA) / ${FLOREMORIA_FINECO_BANK.bicSwift} (SWIFT)`,

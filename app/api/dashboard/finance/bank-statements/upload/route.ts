@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { ensurePdfDomPolyfills } from '@/lib/financial/bankStatements/pdfDomPolyfill';
 import { uploadAndProcessBankStatement } from '@/lib/financial/bankStatements/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
+
+// Polyfill DOMMatrix/DOMPoint prima di qualsiasi parsing PDF (Node/Vercel serverless)
+ensurePdfDomPolyfills();
 
 const MAX_BYTES = 15 * 1024 * 1024;
 const ALLOWED_EXT = /\.(pdf|csv|xlsx|xls)$/i;

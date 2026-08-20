@@ -41,3 +41,6 @@
 
 [2026-08-20 13:40] fix(chat): download universale foto con supporto galleria mobile (Web Share API) e download folder desktop.
 [2026-08-20 13:42] fix/finance: parsing PDF estratti Fineco con unpdf (elimina DOMMatrix/pdf-parse su Node/Vercel).
+[2026-08-20 14:20] fix/finance: polyfill DOMMatrix server-side + casting sicuro extractText (join never) per build Vercel.
+
+[2026-08-20 14:30] feat(chat): collegamento foto chat ad ordini con sync automatica su GdM, scheda defunto e fiorista.

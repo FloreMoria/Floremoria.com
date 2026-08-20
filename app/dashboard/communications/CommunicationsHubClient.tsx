@@ -670,7 +670,13 @@ function VisioneTab({
                             <ChatMessageMedia
                               mediaUrl={m.mediaUrl}
                               caption={m.body ? renderLinkedMessage(m.body) : null}
+                              orderId={activeChat?.orderId || m.orderId}
+                              orderNumber={activeChat?.orderNumber || m.orderNumber}
+                              onOrderLinked={() => {
+                                router.refresh();
+                              }}
                             />
+
                             <button
                               type="button"
                               onClick={() => { setForwardSource({ mediaUrl: m.mediaUrl, fromPhone: activeChat.phone }); setForwardSearch(''); }}

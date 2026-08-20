@@ -211,7 +211,7 @@ export async function parseFinecoXlsx(buffer: Buffer): Promise<ParseBankStatemen
 }
 
 /**
- * PDF Fineco: estrae testo via unpdf (serverless-safe, no DOMMatrix/canvas).
+ * PDF Fineco: estrazione testo server-side (unpdf + polyfill DOMMatrix).
  * Limitazione: PDF scansionati (immagine) non producono testo utile.
  */
 export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatementResult> {
@@ -219,12 +219,25 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
     let text = '';
 
     try {
-        // unpdf: runtime Node/Vercel senza DOM browser (evita "DOMMatrix is not defined" di pdf-parse/pdf.js)
+        // Polyfill prima di caricare il parser PDF (Node/Vercel non ha DOM browser)
+        const { ensurePdfDomPolyfills } = await import('./pdfDomPolyfill');
+        ensurePdfDomPolyfills();
+
         const { extractText, getDocumentProxy } = await import('unpdf');
         const pdf = await getDocumentProxy(new Uint8Array(buffer));
         const extracted = await extractText(pdf, { mergePages: true });
-        // Con mergePages: true unpdf tipizza `text` come stringa
-        text = String(extracted.text ?? '');
+
+        // Deduzione sicura: evita "Property 'join' does not exist on type 'never'" in build Vercel
+        const rawText: unknown = (extracted as { text?: unknown })?.text;
+        if (typeof rawText === 'string') {
+            text = rawText;
+        } else if (Array.isArray(rawText)) {
+            text = (rawText as unknown[]).map((item) => String(item ?? '')).join('\n');
+        } else if (rawText != null) {
+            text = String(rawText);
+        } else {
+            text = '';
+        }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[parseFinecoPdf]', msg);

@@ -54,3 +54,5 @@
 
 [2026-08-20 15:07] feat(defunti): unione profili duplicati e deduplicazione ordini intelligente senza perdita dati.
 
+
+[2026-08-20 15:22] fix(db): campi deletedAt/mergedIntoId su DeceasedProfile e Order — sblocca build Vercel merge defunti

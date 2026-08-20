@@ -123,11 +123,21 @@ model DeceasedProfile {
    * Fonte primaria lato scheda defunto; sincronizzate con gli Utenti collegati in salvataggio.
    */
   plannedDeliveryDates String[] @default([]) @map("planned_delivery_dates")
+  /**
+   * Soft-delete per merge duplicati: profilo archiviato, non hard-delete.
+   * Perché: unione schede senza perdere storico ordini/foto (mergeDeceasedProfiles).
+   */
+  deletedAt     DateTime? @map("deleted_at")
+  /** Profilo master verso cui è stato unito questo duplicato (null se attivo). */
+  mergedIntoId  String?   @map("merged_into_id")
   orders        Order[]
   userLinks     UserDeceasedLink[]
   partnerLinks  PartnerDeceasedAssignment[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([deletedAt])
+  @@index([mergedIntoId])
 }
 
 /// Pivot User ↔ Defunto (DeceasedProfile): più utenti possono seguire lo stesso defunto.
@@ -184,6 +194,8 @@ model Order {
   buyerEmail             String?
   isRecurring            Boolean           @default(false)
   deletedAt              DateTime?
+  /** Ordine master verso cui questo duplicato è stato unito (soft merge). */
+  mergedIntoId           String?           @map("merged_into_id") @db.VarChar(255)
   additionalInstructions String?
   funeralDate            DateTime?
   latitude               Float?

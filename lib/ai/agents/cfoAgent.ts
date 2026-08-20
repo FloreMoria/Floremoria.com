@@ -10,6 +10,10 @@ import {
     describeCfoSkillPackForPrompt,
 } from '@/lib/ai/agents/cfo/skills';
 import {
+    FLOREMORIA_LEGAL_ENTITY,
+    buildAlbertoBankContextPrompt,
+} from '@/lib/financial/companyBankDetails';
+import {
     describeAlbertoCfoToolsForPrompt,
     loadAlbertoCfoLiveSnapshot,
 } from '@/lib/ai/agents/cfoTools';
@@ -65,16 +69,16 @@ export const FLOREMORIA_CFO_DEFAULT_META: Required<
         | 'reportingCurrency'
     >
 > & { notes: string } = {
-    legalName: 'FloreMoria S.r.l.',
-    vatNumber: process.env.FLOREMORIA_VAT_NUMBER?.trim() || 'DA_COMPLETARE',
-    taxCode: process.env.FLOREMORIA_TAX_CODE?.trim() || 'DA_COMPLETARE',
+    legalName: FLOREMORIA_LEGAL_ENTITY.legalName,
+    vatNumber: FLOREMORIA_LEGAL_ENTITY.vatNumber,
+    taxCode: FLOREMORIA_LEGAL_ENTITY.taxCode,
     companyType: 'S.r.l. — società di capitali italiana',
     innovationStatus:
         'Startup Innovativa (riferimenti: DL 179/2012 art. 25; L. 193/2024) — verificare permanenza in sezione speciale su Registro Imprese',
     fiscalYear: new Date().getFullYear(),
     reportingCurrency: 'EUR',
     notes:
-        'Prodotto: omaggi floreali su tombe con foto di conferma. Contabilità operativa: IVA floreale 10%, accessori/servizi 22%, sync Stripe e prospetto trimestrale in /dashboard/finance.',
+        'Prodotto: omaggi floreali su tombe con foto di conferma. Contabilità operativa: IVA floreale 10%, accessori/servizi 22%, sync Stripe e prospetto trimestrale in /dashboard/finance. Conto corrente operativo: FinecoBank (vedi blocco coordinate bancarie).',
 };
 
 /**
@@ -229,6 +233,7 @@ export async function getAlbertoCfoContext(
     const prompt = [
         ALBERTO_CFO_SYSTEM_PROMPT,
         companyBlock,
+        buildAlbertoBankContextPrompt(),
         describeCfoSkillPackForPrompt(),
         describeAlbertoCfoToolsForPrompt(),
         liveSnapshotText || null,
@@ -294,6 +299,7 @@ export function getAlbertoCfoContextSync(
         prompt: [
             ALBERTO_CFO_SYSTEM_PROMPT,
             companyBlock,
+            buildAlbertoBankContextPrompt(),
             describeCfoSkillPackForPrompt(),
             describeAlbertoCfoToolsForPrompt(),
         ].join('\n\n'),

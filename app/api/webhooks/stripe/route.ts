@@ -173,6 +173,7 @@ export async function POST(request: Request) {
                 const entryGrossId = `entry_stripe_gross_webhook_${order.id}`;
                 const entryFeesId = `entry_stripe_fees_webhook_${order.id}`;
 
+                const { LEDGER_BANK_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
                 const { scorporaIvaFloreale } = await import('@/lib/financial/vat');
                 const floralVat = scorporaIvaFloreale(grossCents);
 
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
                     id: entryGrossId,
                     date: dateStr,
                     description: `Incasso lordo clienti tramite Stripe - Ordine ${orderNumber}`,
-                    dareAccount: '50100 - Banca Qonto',
+                    dareAccount: LEDGER_BANK_ACCOUNT,
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: grossCents,
                     vatAmountCents: floralVat.ivaCents,
@@ -194,7 +195,7 @@ export async function POST(request: Request) {
                     date: dateStr,
                     description: `Trattenuta commissioni Stripe su ordine ${orderNumber}`,
                     dareAccount: '70200 - Commissioni Stripe',
-                    avereAccount: '50100 - Banca Qonto',
+                    avereAccount: LEDGER_BANK_ACCOUNT,
                     amountCents: feeCents,
                     vatAmountCents: 0,
                     isForeignService: true,

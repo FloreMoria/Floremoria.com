@@ -28,3 +28,6 @@
 
 [2026-08-20 11:03] fix(dashboard): scheda defunto sotto il menu, storico ordini, maps link e download reale foto.
 [2026-08-20 11:10] fix/orders: ricerca generica Coda Ordini su defunto, date, luogo, bouquet, fiorista, stato (multi-token).
+
+[2026-08-20 11:43] feat(fioristi): resa modificabile ogni voce d'ordine nel Registro Consegne con sync DB e ricalcolo totali.
+[2026-08-20 11:44] refactor/finance: sezioni Contabilità riordinate (operativo in alto, Scadenziario in fondo) + coordinate FinecoBank al posto di Qonto.

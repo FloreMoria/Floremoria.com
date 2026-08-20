@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma';
 import { BankTransaction, ReconciliationResult, AccountingEntry } from './types';
 import { addAccountingEntries, updateTransactionCategory } from './ledgerStore';
 import { scorporaIvaFloreale, scorporaIvaOrdinaria } from '@/lib/financial/vat';
-
+import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
 /**
  * IVA scorporata: 10% fiori (default), 22% solo se esplicitamente richiesto (fornitori/accessori).
  */
@@ -50,7 +50,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                 date: emittedDate.toISOString().split('T')[0],
                 description,
                 dareAccount,
-                avereAccount: '50100 - Banca Qonto',
+                avereAccount: LEDGER_BANK_ACCOUNT,
                 amountCents: absAmountCents,
                 vatAmountCents: 0, // Reverse charge / esente IVA alla fonte
                 isForeignService: true,
@@ -90,7 +90,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     date: emittedDate.toISOString().split('T')[0],
                     description: `Posa e competenze fiorista partner per ordine ${orderCode}`,
                     dareAccount: '70100 - Costi di Produzione (Fioristi Partner)',
-                    avereAccount: '50100 - Banca Qonto',
+                    avereAccount: LEDGER_BANK_ACCOUNT,
                     amountCents: absAmountCents,
                     vatAmountCents: calculateVatCents(absAmountCents, 0.22),
                     isForeignService: false,
@@ -134,7 +134,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                 date: emittedDate.toISOString().split('T')[0],
                 description: `Pagamento fattura n. ${matchedInvoice.invoiceNumber} a fornitore ${matchedInvoice.supplier.companyName}`,
                 dareAccount: '70100 - Costi di Produzione (Fioristi Partner)', // Categoria default per fioristi/fornitori
-                avereAccount: '50100 - Banca Qonto',
+                avereAccount: LEDGER_BANK_ACCOUNT,
                 amountCents: absAmountCents,
                 vatAmountCents: calculateVatCents(absAmountCents, 0.22),
                 isForeignService: false,
@@ -170,7 +170,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                 date: emittedDate.toISOString().split('T')[0],
                 description: `Pagamento diretto a fornitore registrato: ${matchedSupplier.companyName}`,
                 dareAccount: '70100 - Costi di Produzione (Fioristi Partner)',
-                avereAccount: '50100 - Banca Qonto',
+                avereAccount: LEDGER_BANK_ACCOUNT,
                 amountCents: absAmountCents,
                 vatAmountCents: calculateVatCents(absAmountCents, 0.22),
                 isForeignService: false,
@@ -233,7 +233,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     id: entryGrossId,
                     date: emittedDate.toISOString().split('T')[0],
                     description: `Incasso lordo clienti tramite Stripe - Ordine ${matchedOrder.orderNumber}`,
-                    dareAccount: '50100 - Banca Qonto',
+                    dareAccount: LEDGER_BANK_ACCOUNT,
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: grossAmount,
                     vatAmountCents: calculateVatCents(grossAmount, 0.1),
@@ -247,7 +247,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     date: emittedDate.toISOString().split('T')[0],
                     description: `Trattenuta commissioni Stripe su ordine ${matchedOrder.orderNumber}`,
                     dareAccount: '70200 - Commissioni Stripe',
-                    avereAccount: '50100 - Banca Qonto',
+                    avereAccount: LEDGER_BANK_ACCOUNT,
                     amountCents: feeAmount,
                     vatAmountCents: 0,
                     isForeignService: true,
@@ -285,7 +285,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                     id: entryId,
                     date: emittedDate.toISOString().split('T')[0],
                     description: `Incasso bonifico B2B partner per ordine ${orderCode}`,
-                    dareAccount: '50100 - Banca Qonto',
+                    dareAccount: LEDGER_BANK_ACCOUNT,
                     avereAccount: '60100 - Ricavi da Vendite',
                     amountCents: transaction.amountCents,
                     vatAmountCents: calculateVatCents(transaction.amountCents, 0.1),
@@ -326,7 +326,7 @@ export async function reconcileTransaction(transaction: BankTransaction): Promis
                 id: entryId,
                 date: emittedDate.toISOString().split('T')[0],
                 description: `Incasso bonifico diretto per ordine ${possibleOrder.orderNumber} (Match importo/data)`,
-                dareAccount: '50100 - Banca Qonto',
+                dareAccount: LEDGER_BANK_ACCOUNT,
                 avereAccount: '60100 - Ricavi da Vendite',
                 amountCents: transaction.amountCents,
                 vatAmountCents: calculateVatCents(transaction.amountCents, 0.1),
@@ -385,7 +385,7 @@ export async function processManualOrders(): Promise<number> {
             id: entryGrossId,
             date: new Date(order.createdAt).toISOString().split('T')[0],
             description: `Incasso ordine manuale confermato/pagato - Ordine ${orderNumber}`,
-            dareAccount: '50100 - Banca Qonto',
+            dareAccount: LEDGER_BANK_ACCOUNT,
             avereAccount: '60100 - Ricavi da Vendite',
             amountCents: order.totalPriceCents,
             vatAmountCents: calculateVatCents(order.totalPriceCents, 0.1),

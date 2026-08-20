@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { QontoProvider } from '@/lib/financial/providers/qonto';
+import { FinecoBankProvider } from '@/lib/financial/providers/fineco';
 import { MockBankProvider } from '@/lib/financial/providers/mock';
 import { addTransaction } from '@/lib/financial/ledgerStore';
 import { reconcileTransaction } from '@/lib/financial/reconciler';
@@ -14,13 +14,13 @@ export async function POST(request: Request) {
             headers[key] = value;
         });
 
-        // Controlla se la firma indica un mock o se Qonto non è configurato
+        // Controlla se la firma indica un mock o se FinecoBank non è configurato
         const isMock = 
             headers['x-mock-provider'] === 'true' || 
-            !process.env.QONTO_WEBHOOK_SECRET || 
+            !(process.env.FINECO_WEBHOOK_SECRET || process.env.BANK_WEBHOOK_SECRET) || 
             process.env.NODE_ENV !== 'production';
 
-        const provider = isMock ? new MockBankProvider() : new QontoProvider();
+        const provider = isMock ? new MockBankProvider() : new FinecoBankProvider();
 
         // Esegui il parsing e il mapping della transazione
         const transaction = provider.parseWebhookPayload(bodyText, headers);

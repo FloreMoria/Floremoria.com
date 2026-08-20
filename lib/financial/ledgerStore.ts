@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BankTransaction, AccountingEntry, FinancialLedger } from './types';
+import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
 
 const IS_VERCEL = process.env.VERCEL === '1';
 const LEDGER_PATH = IS_VERCEL 
@@ -10,7 +11,7 @@ const LEDGER_PATH = IS_VERCEL
 const DEFAULT_LEDGER: FinancialLedger = {
     transactions: [
         {
-            id: 'tx_qonto_001',
+            id: 'tx_fineco_001',
             amountCents: 45000, // +450.00 EUR
             currency: 'EUR',
             side: 'iban',
@@ -22,7 +23,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             category: 'B2B_PARTNER',
         },
         {
-            id: 'tx_qonto_002',
+            id: 'tx_fineco_002',
             amountCents: 9800, // +98.00 EUR (Stripe payout)
             currency: 'EUR',
             side: 'sepa',
@@ -34,7 +35,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             category: 'STRIPE',
         },
         {
-            id: 'tx_qonto_003',
+            id: 'tx_fineco_003',
             amountCents: -2000, // -20.00 EUR
             currency: 'EUR',
             side: 'card',
@@ -45,7 +46,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             category: 'EXPENSE_SAAS',
         },
         {
-            id: 'tx_qonto_004',
+            id: 'tx_fineco_004',
             amountCents: -5000, // -50.00 EUR
             currency: 'EUR',
             side: 'card',
@@ -56,7 +57,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             category: 'EXPENSE_SAAS',
         },
         {
-            id: 'tx_qonto_005',
+            id: 'tx_fineco_005',
             amountCents: -1250, // -12.50 EUR
             currency: 'EUR',
             side: 'card',
@@ -67,7 +68,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             category: 'EXPENSE_SAAS',
         },
         {
-            id: 'tx_qonto_006',
+            id: 'tx_fineco_006',
             amountCents: -12000, // -120.00 EUR
             currency: 'EUR',
             side: 'iban',
@@ -85,7 +86,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             id: 'entry_001_gross',
             date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: 'Incasso bonifico Milano Fioriti B2B - Riferimento PT-MI-26-001',
-            dareAccount: '50100 - Banca Qonto',
+            dareAccount: LEDGER_BANK_ACCOUNT,
             avereAccount: '60100 - Ricavi da Vendite',
             amountCents: 45000,
             vatAmountCents: 8115, // 22% VAT scorporata su fiori (es. €368.85 imponibile, €81.15 iva)
@@ -97,7 +98,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             id: 'entry_002_gross',
             date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: 'Stripe Payout po_12345 - Incasso Lordo Clienti',
-            dareAccount: '50100 - Banca Qonto',
+            dareAccount: LEDGER_BANK_ACCOUNT,
             avereAccount: '60100 - Ricavi da Vendite',
             amountCents: 10000,
             vatAmountCents: 1802,
@@ -110,7 +111,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: 'Trattenuta commissioni Stripe su payout po_12345',
             dareAccount: '70200 - Commissioni Stripe',
-            avereAccount: '50100 - Banca Qonto',
+            avereAccount: LEDGER_BANK_ACCOUNT,
             amountCents: 200,
             vatAmountCents: 0, // Senza IVA (esente art. 10 o reverse charge registrato a parte)
             isForeignService: true,
@@ -122,7 +123,7 @@ const DEFAULT_LEDGER: FinancialLedger = {
             date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             description: 'Spesa abbonamento Cursor SaaS - Anysphere Inc. (Reverse Charge)',
             dareAccount: '70300 - Software SaaS (Estero)',
-            avereAccount: '50100 - Banca Qonto',
+            avereAccount: LEDGER_BANK_ACCOUNT,
             amountCents: 2000,
             vatAmountCents: 0,
             isForeignService: true,

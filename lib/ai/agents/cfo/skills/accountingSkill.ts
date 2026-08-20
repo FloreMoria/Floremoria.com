@@ -21,7 +21,7 @@ export type DoubleEntryDraft = {
 
 /** Piano conti sintetico CEE / e-commerce FloreMoria. */
 export const CEE_CHART_OF_ACCOUNTS = [
-    { code: '50100', name: 'Banca / Cassa operativa', nature: 'attivo' },
+    { code: '50100', name: 'Banca FinecoBank (cassa operativa)', nature: 'attivo' },
     { code: '60100', name: 'Ricavi da vendite (corrispettivi)', nature: 'ricavo' },
     { code: '70100', name: 'Costi produzione fioristi partner', nature: 'costo' },
     { code: '70200', name: 'Commissioni gateway (Stripe/PayPal)', nature: 'costo' },

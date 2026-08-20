@@ -85,7 +85,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
         'COMPLETED': { label: 'Completato', color: 'bg-green-100 text-green-800' },
         'CANCELLED': { label: 'Annullato', color: 'bg-red-100 text-red-800' },
         'GDM_PLANNED': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
-        'GDM_ANNIVERSARY': { label: 'Anniversario GdM', color: 'bg-purple-100 text-purple-900 border border-purple-300 font-bold' },
+        'GDM_ANNIVERSARY': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
+
     };
 
 

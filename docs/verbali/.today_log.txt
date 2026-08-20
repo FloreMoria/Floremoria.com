@@ -45,3 +45,4 @@
 
 [2026-08-20 14:30] feat(chat): collegamento foto chat ad ordini con sync automatica su GdM, scheda defunto e fiorista.
 [2026-08-20 14:35] fix(chat): risoluzione errore salvataggio associazione foto ad ordine con fallback orderCode/id e upsert prova.
+[2026-08-20 14:40] fix(orders): unificazione stato e badge ricorrenze su singola dicitura 'Ricorrenza GdM'.

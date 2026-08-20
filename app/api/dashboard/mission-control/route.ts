@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getGa4HealthState } from '@/lib/ga4/status';
+import { computeHistoricalPnl } from '@/lib/financial/historicalLedgerQuery';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,24 @@ export async function GET() {
         if (rand < probGreen + 0.1) return 'yellow';
         return 'red';
     };
+
+    let financeKpi: {
+        ricaviLordiCents: number;
+        ebitdaCents: number;
+        risultatoAnteImposteCents: number;
+        entriesCount: number;
+    } | null = null;
+    try {
+        const pnl = await computeHistoricalPnl({ fiscalYear: new Date().getFullYear() });
+        financeKpi = {
+            ricaviLordiCents: pnl.ricaviLordiCents,
+            ebitdaCents: pnl.ebitdaCents,
+            risultatoAnteImposteCents: pnl.risultatoAnteImposteCents,
+            entriesCount: pnl.entriesCount,
+        };
+    } catch {
+        financeKpi = null;
+    }
 
     const data = {
         ga4: await getGa4HealthState(),
@@ -23,6 +42,7 @@ export async function GET() {
         openreply: getRandState(0.9),
         github: getRandState(0.9),
         social: getRandState(0.9),
+        financeKpi,
     };
 
     return NextResponse.json(data);

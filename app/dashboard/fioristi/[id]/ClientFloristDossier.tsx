@@ -14,6 +14,7 @@ import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 import { PaymentStatus, OrderStatus } from '@prisma/client';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
+import PartnerHistoricalLedgerSnippet from '@/components/dashboard/PartnerHistoricalLedgerSnippet';
 
 const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
     { value: 'ACCEPTED', label: 'Ricevuto' },
@@ -183,6 +184,8 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                             </span>
                         </div>
                     </div>
+
+                    <PartnerHistoricalLedgerSnippet partnerId={partner.id} />
 
                     <div className="bg-white border text-left border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                         <div className="overflow-x-auto w-full custom-scrollbar">

@@ -33,6 +33,7 @@ import ManualExpenseModal, {
 import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
 import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoicesXlsxUploadBox';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
+import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
@@ -43,7 +44,13 @@ export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<
-        'transactions' | 'accounting' | 'statements' | 'gateways' | 'tax' | 'florist-invoices'
+        | 'transactions'
+        | 'accounting'
+        | 'statements'
+        | 'gateways'
+        | 'tax'
+        | 'florist-invoices'
+        | 'historical'
     >('transactions');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -593,10 +600,16 @@ export default function FinanceDashboardPage() {
                         Fioristi in attesa di Fattura
                     </button>
                     <button
+                        onClick={() => setActiveTab('historical')}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'historical' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Archivio Storico Fiscale
+                    </button>
+                    <button
                         onClick={() => setActiveTab('statements')}
                         className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'statements' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Simulazione Bilancio &amp; Imposte
+                        Bilancio &amp; Conto Economico
                     </button>
                     <button
                         onClick={() => setActiveTab('gateways')}
@@ -615,7 +628,8 @@ export default function FinanceDashboardPage() {
                 {activeTab !== 'statements' &&
                     activeTab !== 'gateways' &&
                     activeTab !== 'tax' &&
-                    activeTab !== 'florist-invoices' && (
+                    activeTab !== 'florist-invoices' &&
+                    activeTab !== 'historical' && (
                     <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
                         <input
                             type="text"
@@ -767,6 +781,12 @@ export default function FinanceDashboardPage() {
 
                 {activeTab === 'statements' && (
                     <div className="p-6 space-y-8 bg-white">
+                        {statements?.contoEconomico?.source === 'historical_ledger' && (
+                            <div className="rounded-2xl border border-teal-100 bg-teal-50/60 px-4 py-3 text-xs text-teal-900">
+                                Bilancio alimentato dal <strong>Registro Storico Permanente</strong> (Neon).
+                                Usa il tab «Archivio Storico Fiscale» per filtri, IVA periodica ed export commercialista.
+                            </div>
+                        )}
                         {!statements ? (
                             <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center">
                                 <RefreshCw className="animate-spin mb-3 text-[#c5a880]" size={36} />
@@ -1132,6 +1152,8 @@ export default function FinanceDashboardPage() {
                         )}
                     </div>
                 )}
+
+                {activeTab === 'historical' && <HistoricalFiscalArchivePanel />}
 
                 {activeTab === 'florist-invoices' && (
                     <div className="p-4">

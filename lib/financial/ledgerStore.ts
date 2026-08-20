@@ -183,6 +183,12 @@ export function addAccountingEntries(entries: AccountingEntry[]): void {
         }
     }
     saveLedger(ledger);
+    // Dual-write permanente Neon (best-effort, non blocca UX)
+    void import('@/lib/financial/historicalLedgerSync')
+        .then(({ persistJsonAccountingEntry }) =>
+            Promise.all(entries.map((e) => persistJsonAccountingEntry(e)))
+        )
+        .catch((err) => console.warn('[ledgerStore] dual-write PG fallito', err));
 }
 
 /** Upsert scritture (usato quando una fattura SDI già importata viene corretta/aggiornata). */
@@ -194,6 +200,19 @@ export function upsertAccountingEntries(entries: AccountingEntry[]): void {
         else ledger.accountingEntries.push(entry);
     }
     saveLedger(ledger);
+    // Immutabilità PG: nuova chiave di versione, non overwrite
+    void import('@/lib/financial/historicalLedgerSync')
+        .then(({ persistJsonAccountingEntry }) =>
+            Promise.all(
+                entries.map((e) =>
+                    persistJsonAccountingEntry({
+                        ...e,
+                        id: `${e.id}:v${Date.now()}`,
+                    })
+                )
+            )
+        )
+        .catch((err) => console.warn('[ledgerStore] dual-write upsert PG fallito', err));
 }
 
 // Riconciliare un movimento esistente aggiornandone lo stato o le note

@@ -79,3 +79,4 @@
 [2026-08-20 20:22] feat/finance: upload report fatture xlsx/csv (SDI_XLSX), riconciliazione Fineco e alert Fioristi in attesa di Fattura.
 [2026-08-20 20:34] feat/finance: update fatture duplicate/NC su re-import + alert YouDoox giorno 1 nello scadenziario.
 [2026-08-20 20:48] fix(finance): dedupe P.IVA IT su report YouDoox XLSX (falso 24 duplicati) + colonne documento_*/tot_*.
+[2026-08-20 21:37] feat/finance: registro contabile storico permanente Neon (bilancio, IVA, export libro giornale, sync fonti).

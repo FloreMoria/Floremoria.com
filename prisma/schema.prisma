@@ -951,6 +951,62 @@ model ManualFinanceExpense {
 }
 
 /**
+ * Registro Storico Permanente — scrittura immutabile per bilancio / IVA / export fiscalista.
+ * Regola: mai DELETE; correzioni = nuova riga (eventuale reversesEntryId) o reversedAt.
+ */
+model FinancialLedgerEntry {
+  id                     String    @id @default(cuid())
+  /** Chiave naturale univoca: ORDER:id | BANK_LINE:id | MANUAL_EXPENSE:id | … */
+  sourceKey              String    @unique @map("source_key") @db.VarChar(180)
+  sourceType             String    @map("source_type") @db.VarChar(32)
+  sourceId               String    @map("source_id") @db.VarChar(128)
+  /** ENTRATA | USCITA */
+  direction              String    @db.VarChar(16)
+  /**
+   * RICAVI_VENDITE | ALTRI_RICAVI | RIMBORSI |
+   * COSTI_FIORISTI | SPESE_SAAS | SPESE_OPERATIVE | ONERI_BANCARI | CONSULENZE | IMPOSTE | ALTRI_COSTI
+   */
+  category               String    @db.VarChar(48)
+  fiscalYear             Int       @map("fiscal_year")
+  fiscalQuarter          Int       @map("fiscal_quarter")
+  periodKey              String    @map("period_key") @db.VarChar(7)
+  accountingDate         DateTime  @map("accounting_date")
+  valueDate              DateTime? @map("value_date")
+  description            String    @db.Text
+  counterpartyName       String?   @map("counterparty_name") @db.VarChar(160)
+  counterpartyVat        String?   @map("counterparty_vat") @db.VarChar(32)
+  netCents               Int       @map("net_cents")
+  vatRate                Float     @default(0) @map("vat_rate")
+  vatCents               Int       @default(0) @map("vat_cents")
+  /** Firmato: + entrate, − uscite (centesimi). */
+  totalCents             Int       @map("total_cents")
+  currency               String    @default("EUR") @db.VarChar(8)
+  /** MATCHED | UNMATCHED | PARTIAL | N/A */
+  reconciliationStatus   String    @default("UNMATCHED") @map("reconciliation_status") @db.VarChar(24)
+  documentRef            String?   @map("document_ref") @db.VarChar(160)
+  attachmentUrl          String?   @map("attachment_url") @db.Text
+  attachmentPath         String?   @map("attachment_path") @db.Text
+  attachmentKind         String?   @map("attachment_kind") @db.VarChar(32)
+  bankLineId             String?   @map("bank_line_id")
+  orderId                String?   @map("order_id")
+  partnerId              String?   @map("partner_id")
+  metadataJson           Json?     @map("metadata_json")
+  reversedAt             DateTime? @map("reversed_at")
+  reversesEntryId        String?   @map("reverses_entry_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  @@index([fiscalYear, fiscalQuarter])
+  @@index([periodKey])
+  @@index([category])
+  @@index([direction])
+  @@index([accountingDate])
+  @@index([partnerId])
+  @@index([orderId])
+  @@index([sourceType, sourceId])
+  @@map("financial_ledger_entries")
+}
+
+/**
  * Batch debounce inbound WhatsApp: accumula messaggi/foto e flush dopo 60s di quiete.
  * Perché: Meta consegna burst spezzati → senza buffer Vera risponde a raffica (caso Matilde).
  */

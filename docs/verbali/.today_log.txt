@@ -73,3 +73,4 @@
 
 
 [2026-08-20 17:31] fix(finance): calibrazione anomalie Fineco — layout USCITE/ENTRATE, oneri bancari, note a margine silenziose + UI badge
+[2026-08-20 17:59] feat(finance): auto-riconciliazione payout Stripe/PayPal, spese ricorrenti, compensi fioristi + tabella movimenti Contabilità

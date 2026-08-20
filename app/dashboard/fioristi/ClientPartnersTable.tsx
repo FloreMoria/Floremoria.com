@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Partner, PaymentStatus } from '@prisma/client';
-import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2, Search } from 'lucide-react';
+import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2, Search, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
 import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
+import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
+
 
 export type ExtendedPartner = Partner & {
     orders?: any[];
@@ -86,6 +88,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+    const [editingDeliveryOrder, setEditingDeliveryOrder] = useState<any | null>(null);
 
     // Filters state
     const [showFilters, setShowFilters] = useState(false);
@@ -887,14 +890,23 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                          </button>
                                                          <button
                                                              type="button"
+                                                             onClick={() => setEditingDeliveryOrder(order)}
+                                                             className="inline-flex items-center justify-center gap-1 bg-[#c5a880]/10 hover:bg-[#c5a880]/20 text-[#8a7048] font-bold px-3 py-2 rounded-lg text-xs border border-[#c5a880]/30 transition duration-200"
+                                                         >
+                                                             <Pencil size={13} />
+                                                             Modifica Completa
+                                                         </button>
+                                                         <button
+                                                             type="button"
                                                              onClick={() => void handleCancelAssignedOrder(order)}
                                                              disabled={savingOrderId === order.id || order.status === 'CANCELLED' || order.deletedAt}
                                                              className="inline-flex items-center justify-center gap-1.5 px-4 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2 rounded-lg text-xs border border-red-200 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                                          >
                                                              <Trash2 size={14} />
-                                                             Elimina / Dissocia Ordine
+                                                             Elimina / Dissocia
                                                          </button>
                                                      </div>
+
                                                  </form>
                                              </div>
 
@@ -1015,6 +1027,34 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
                 </div>
             </div>
+
+            {editingDeliveryOrder ? (
+                <FloristDeliveryEditModal
+                    order={editingDeliveryOrder}
+                    onClose={() => setEditingDeliveryOrder(null)}
+                    onOrderUpdated={(updatedOrder) => {
+                        setPartners((prevPartners) =>
+                            prevPartners.map((p) => {
+                                if (!p.orders) return p;
+                                const hasOrder = p.orders.some((o) => o.id === updatedOrder.id);
+                                if (!hasOrder) return p;
+                                return {
+                                    ...p,
+                                    orders: p.orders.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)),
+                                };
+                            })
+                        );
+                        if (formData.orders) {
+                            setFormData((prev) => ({
+                                ...prev,
+                                orders: (prev.orders || []).map((o) => (o.id === updatedOrder.id ? updatedOrder : o)),
+                            }));
+                        }
+                        router.refresh();
+                    }}
+                />
+            ) : null}
         </div>
     );
 }
+

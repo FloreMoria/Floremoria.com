@@ -13,6 +13,7 @@ import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 
 import { PaymentStatus, OrderStatus } from '@prisma/client';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
+import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
 
 const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
     { value: 'ACCEPTED', label: 'Ricevuto' },
@@ -43,12 +44,30 @@ interface DossierProps {
 export default function ClientFloristDossier({ partner, orders: initialOrders, florists }: DossierProps) {
     const [orders, setOrders] = useState(initialOrders);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [editingOrder, setEditingOrder] = useState<any | null>(null);
     const [toast, setToast] = useState<string | null>(null);
 
     // Lightbox State
     const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
     const selectedOrder = orders.find((o) => o.id === selectedOrderId) ?? null;
+
+    // RICALCOLO METRICHE IN TEMPO REALE
+    const activeOrders = orders.filter((o) => !isOrderCancelled(o));
+    const totalEarnedCents = activeOrders.reduce((sum, o) => {
+        const fee = o.floristCompensationCents != null ? o.floristCompensationCents : Math.round((o.totalPriceCents || 0) * 0.65);
+        return sum + fee;
+    }, 0);
+
+    const totalPaidCents = activeOrders
+        .filter((o) => o.partnerPaymentStatus === 'PAID' || o.floristSettlementStatus === 'BONIFICATO' || o.floristSettlementStatus === 'RICEVUTA')
+        .reduce((sum, o) => {
+            const fee = o.floristCompensationCents != null ? o.floristCompensationCents : Math.round((o.totalPriceCents || 0) * 0.65);
+            return sum + fee;
+        }, 0);
+
+    const pendingCents = totalEarnedCents - totalPaidCents;
+
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -121,10 +140,49 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
 
                 {/* ---------------- STORICO ORDINI ---------------- */}
                 <div className="space-y-4">
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <Package size={20} className="text-blue-500" />
-                        Registro Consegne
-                    </h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Package size={20} className="text-blue-500" />
+                            Registro Consegne
+                        </h2>
+                    </div>
+
+                    {/* KPI CARDS RICALCOLATE IN TEMPO REALE */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="bg-white border border-gray-200 p-4 rounded-2xl shadow-xs">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-1">
+                                Totale Compensi Maturati
+                            </span>
+                            <span className="text-xl font-extrabold text-gray-900">
+                                {(totalEarnedCents / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                            </span>
+                            <span className="text-[11px] text-gray-500 block mt-0.5">
+                                {activeOrders.length} ordini attivi
+                            </span>
+                        </div>
+                        <div className="bg-emerald-50/60 border border-emerald-200 p-4 rounded-2xl shadow-xs">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 block mb-1">
+                                Totale Liquidato (Pagato)
+                            </span>
+                            <span className="text-xl font-extrabold text-emerald-900">
+                                {(totalPaidCents / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                            </span>
+                            <span className="text-[11px] text-emerald-700 block mt-0.5">
+                                Bonificato / Ricevuta allegata
+                            </span>
+                        </div>
+                        <div className="bg-amber-50/60 border border-amber-200 p-4 rounded-2xl shadow-xs">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 block mb-1">
+                                Residuo da Bonificare
+                            </span>
+                            <span className="text-xl font-extrabold text-amber-900">
+                                {(pendingCents / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                            </span>
+                            <span className="text-[11px] text-amber-700 block mt-0.5">
+                                In attesa di saldo
+                            </span>
+                        </div>
+                    </div>
 
                     <div className="bg-white border text-left border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                         <div className="overflow-x-auto w-full custom-scrollbar">
@@ -139,14 +197,17 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Foto Consegna (WA Ready)</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Stato Ordine</th>
                                         <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Pagamento</th>
+                                        <th className="font-semibold py-3 px-4 uppercase text-[10px] tracking-wider whitespace-nowrap text-center">Azioni</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {orders.length === 0 ? (
-                                        <tr><td colSpan={8} className="p-8 text-center text-gray-500">Nessun ordine assegnato a questo fiorista.</td></tr>
+                                        <tr><td colSpan={9} className="p-8 text-center text-gray-500">Nessun ordine assegnato a questo fiorista.</td></tr>
                                     ) : (
                                         orders.map((order) => {
-                                            const netEarned = Math.floor((order.totalPriceCents / 100) * 0.65);
+                                            const netEarned = order.floristCompensationCents != null
+                                                ? order.floristCompensationCents / 100
+                                                : Math.floor((order.totalPriceCents / 100) * 0.65);
                                             const productList = order.items?.map((i: any) => i.product?.name).join(', ') || '-';
                                             const proofUrls = getFlatProofPhotoUrls(order);
                                             const hasPhoto = proofUrls.length > 0;
@@ -182,7 +243,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                                     <td className="py-3 px-4 font-medium text-gray-800 text-xs truncate max-w-[200px]" title={productList}>{productList}</td>
                                                     <td className="py-3 px-4 text-right font-semibold text-gray-900 whitespace-nowrap">
                                                         <span className="flex items-center justify-end gap-0.5 text-sm">
-                                                            <Euro size={14} className="text-fm-gold" />{netEarned.toFixed(2)}
+                                                            <Euro size={14} className="text-fm-gold" />{Number(netEarned).toFixed(2)}
                                                         </span>
                                                     </td>
                                                     <td className="py-3 px-4 text-center align-middle">
@@ -215,10 +276,21 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                                                 order.partnerPaymentStatus === 'PROCESSING' ? 'In Pagamento' : 'Pagato'}
                                                         </button>
                                                     </td>
+                                                    <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingOrder(order)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#8a7048] bg-[#c5a880]/10 hover:bg-[#c5a880]/20 border border-[#c5a880]/30 rounded-lg transition-all"
+                                                            title="Modifica voce ordine e dati consegna"
+                                                        >
+                                                            <Pencil size={12} /> Modifica
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })
                                     )}
+
                                 </tbody>
                             </table>
                         </div>
@@ -230,12 +302,25 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                         onOrderUpdated={(updatedOrder) => {
                             setOrders((prev) => prev.map((o) => o.id === updatedOrder.id ? updatedOrder : o));
                             setSelectedOrderId(null);
+                            showToast("Ordine aggiornato con successo");
                         }}
                         florists={florists}
                         canChangeStatus={true}
                         isGlobalAdmin={true}
                     />
+
+                    {editingOrder ? (
+                        <FloristDeliveryEditModal
+                            order={editingOrder}
+                            onClose={() => setEditingOrder(null)}
+                            onOrderUpdated={(updatedOrder) => {
+                                setOrders((prev) => prev.map((o) => o.id === updatedOrder.id ? updatedOrder : o));
+                                showToast("Ordine aggiornato con successo");
+                            }}
+                        />
+                    ) : null}
                 </div>
+
 
             </div>
 

@@ -87,7 +87,28 @@ const HEADER_HINT =
  * Footer / servizio / trasparenza: esclusi in silenzio (contati come note a margine).
  */
 const SERVICE_MARGIN_RE =
-    /^(pagina(\s+\d+(\s+di\s+\d+)?)?|estratto\s+conto|segue\s+a\s+pagina|finecobank|www\.|cliente\s+al\s+dettaglio|trovi\s+tutti\s+i\s+dettagli|classificazione\s+intestatari|coordinate\s+bancarie|conto\s+corrente\s+in\s+euro|conto\s+deposito|deposito\s+titoli|cashpark|trasparenza|tasso\s+(creditore|debitore)|tan\b|taeg\b|foglio\s+informativo|saldo\s+(iniziale|finale)\s+euro|differenza\s+euro|valuta\s*$|data\s+documento|delegati|numero\s+conto|bic\s+(sepa|swift)|intestatario|periodo\s+dal|tot\.?\s*(entrate|uscite)|operazion[ei]|valuta|contabile|descrizione(\s+operazione)?|entrate|uscite|dare|avere|saldo)$/i;
+    /^(pagina(\s+\d+(\s+di\s+\d+)?)?|estratto\s+conto|segue\s+a\s+pagina|finecobank|www\.|cliente\s+al\s+dettaglio|trovi\s+tutti\s+i\s+dettagli|classificazione\s+intestatari|coordinate\s+bancarie|conto\s+corrente\s+in\s+euro|conto\s+deposito|deposito\s+titoli|cashpark|trasparenza|tasso\s+(creditore|debitore)|tan\b|taeg\b|foglio\s+informativo|saldo\s+(iniziale|finale)(\s+in\s+euro)?|differenza\s+euro|valuta\s*$|data\s+documento|delegati|numero\s+conto|bic\s+(sepa|swift)|intestatario|periodo\s+dal|tot\.?\s*(entrate|uscite)|operazion[ei]|valuta|contabile|descrizione(\s+operazione)?|entrate|uscite|dare|avere|saldo|pec\s*:|capitale\s+sociale|albo\s+d(elle|ei)\s+banch|aderente\s+al\s+fondo|gruppo\s+bancario\s+fineco|interamente\s+sottoscritto|codice\s+fiscale|contrattuali\s+che\s+regolano|sede\s+legale|direzione\s+generale)/i;
+
+function isServiceMarginRow(text: string): boolean {
+    const t = text.trim();
+    if (!t) return true;
+    if (SERVICE_MARGIN_RE.test(t)) return true;
+    if (/^pagina\s+\d+/i.test(t)) return true;
+    if (/^segue\s+a\s+pagina/i.test(t)) return true;
+    if (/finecobank\s+s\.?p\.?a/i.test(t)) return true;
+    if (/saldo\s+iniziale/i.test(t) && !FEE_HINT.test(t)) return true;
+    if (/^\+?\d{1,3}([.\s]\d{3})*[.,]\d{2}\s+saldo/i.test(t)) return true;
+    if (/^estratto\s+conto\b/i.test(t) && !FEE_HINT.test(t)) return true;
+    // Seconda riga header «OPERAZIONE / VALUTA»
+    if (
+        /^(data\s+)?(operazione|valuta|contabile)(\s+(data\s+)?(operazione|valuta|contabile))*$/i.test(
+            t
+        )
+    ) {
+        return true;
+    }
+    return false;
+}
 
 const FEE_HINT =
     /(imposta\s+di\s+bollo|imposte\s+di\s+bollo|canone\s+mensile|canone\s+annuale|spese\s+(di\s+)?tenuta(\s+conto)?|competenze(\s+e\s+spese)?|ritenute\s+fiscali|commissioni|spese\s+bancarie|oneri\s+bancari)/i;
@@ -312,26 +333,6 @@ function findTableStartIndex(rows: RowCluster[]): number {
 
 function joinCell(parts: string[]): string {
     return parts.join(' ').replace(/\s+/g, ' ').trim();
-}
-
-function isServiceMarginRow(text: string): boolean {
-    const t = text.trim();
-    if (!t) return true;
-    if (SERVICE_MARGIN_RE.test(t)) return true;
-    if (/^pagina\s+\d+/i.test(t)) return true;
-    if (/^segue\s+a\s+pagina/i.test(t)) return true;
-    if (/^estratto\s+conto\b/i.test(t) && !FEE_HINT.test(t) && !isAmountToken(t.split(/\s+/).pop() || '')) {
-        return true;
-    }
-    // Seconda riga header «OPERAZIONE / VALUTA»
-    if (
-        /^(data\s+)?(operazione|valuta|contabile)(\s+(data\s+)?(operazione|valuta|contabile))*$/i.test(
-            t
-        )
-    ) {
-        return true;
-    }
-    return false;
 }
 
 function isContinuationRow(text: string, cells: CellBag, hasLeftDate: boolean): boolean {
@@ -567,6 +568,10 @@ export function convertPositionedItemsToVirtualRows(
                     .replace(/\b(DARE|AVERE|ENTRATE|USCITE|SALDO)\b/gi, ' ')
                     .replace(/\s+/g, ' ')
                     .trim();
+                // Rimuovi importo già classificato se ripetuto in testa alla descrizione
+                if (cleanDesc && isAmountToken(cleanDesc.split(/\s+/)[0] || '')) {
+                    cleanDesc = cleanDesc.split(/\s+/).slice(1).join(' ').trim();
+                }
 
                 // Se descrizione vuota ma credit/debit hanno testo non-importo
                 if (!cleanDesc) {
@@ -634,22 +639,11 @@ export function convertPositionedItemsToVirtualRows(
                 continue;
             }
 
-            // Riga non classificata: se sembra servizio → silenzio; altrimenti warn
+            // Riga non classificata → nota a margine silenziosa (mai allarme)
             if (row.text.length > 8) {
-                if (isServiceMarginRow(row.text) || CONTINUATION_HINT.test(row.text) || TIME_START_RE.test(row.text)) {
-                    if (open && (CONTINUATION_HINT.test(row.text) || TIME_START_RE.test(row.text))) {
-                        open.description = `${open.description} ${row.text}`.replace(/\s+/g, ' ').trim();
-                    } else {
-                        ignored += 1;
-                    }
+                if (open && (CONTINUATION_HINT.test(row.text) || TIME_START_RE.test(row.text))) {
+                    open.description = `${open.description} ${row.text}`.replace(/\s+/g, ' ').trim();
                 } else {
-                    pushAnomaly(anomalies, {
-                        code: 'UNPARSED_ROW',
-                        severity: 'info',
-                        message: `Nota a margine esclusa (pag. ${page}): ${row.text.slice(0, 100)}`,
-                        page,
-                        raw: row.text,
-                    });
                     ignored += 1;
                 }
             }
@@ -743,8 +737,7 @@ function buildSummaryWarning(
     anomalies: FinecoPdfAnomaly[]
 ): string | null {
     const warnCount = anomalies.filter((a) => a.severity === 'warn' || a.severity === 'error').length;
-    const infoOnly = anomalies.filter((a) => a.severity === 'info').length;
-    const margin = ignoredMarginNotes + infoOnly;
+    const margin = ignoredMarginNotes;
 
     if (movements === 0) return null;
     if (warnCount === 0 && margin > 0) {
@@ -755,6 +748,9 @@ function buildSummaryWarning(
     }
     if (warnCount > 0) {
         return `${movements} movimenti estratti • ${warnCount} da verificare`;
+    }
+    if (movements > 0) {
+        return `${movements} movimenti estratti con successo`;
     }
     return null;
 }

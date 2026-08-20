@@ -4,8 +4,6 @@
  */
 
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
-import { PDFParse } from 'pdf-parse';
 import type { ParseBankStatementResult, ParsedBankMovement } from './types';
 
 const DATE_KEYS = [
@@ -70,7 +68,9 @@ function parseFinecoDate(raw: unknown): string | null {
         return raw.toISOString().slice(0, 10);
     }
     if (typeof raw === 'number' && Number.isFinite(raw)) {
-        // Excel serial date
+        // Excel serial date — lazy import evita crash di bundling a cold start
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const XLSX = require('xlsx') as typeof import('xlsx');
         const parsed = XLSX.SSF.parse_date_code(raw);
         if (parsed) {
             const mm = String(parsed.m).padStart(2, '0');
@@ -198,7 +198,8 @@ export function parseFinecoCsv(buffer: Buffer): ParseBankStatementResult {
     return parseTabularRows(parsed.data || []);
 }
 
-export function parseFinecoXlsx(buffer: Buffer): ParseBankStatementResult {
+export async function parseFinecoXlsx(buffer: Buffer): Promise<ParseBankStatementResult> {
+    const XLSX = await import('xlsx');
     const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
     const sheetName = wb.SheetNames[0];
     if (!sheetName) {
@@ -215,6 +216,7 @@ export function parseFinecoXlsx(buffer: Buffer): ParseBankStatementResult {
  */
 export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatementResult> {
     const warnings: string[] = [];
+    const { PDFParse } = await import('pdf-parse');
     const parser = new PDFParse({ data: new Uint8Array(buffer) });
     let text = '';
     try {
@@ -255,8 +257,6 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
         const amount = parseItalianNumber(m[4]);
         const balance = m[5] ? parseItalianNumber(m[5]) : null;
         if (amount == null) continue;
-        // Heuristica: se non c'è segno e la descrizione suggerisce addebito, resta positivo e
-        // l'admin rivede; preferiamo importo come stampato.
         movements.push({
             lineIndex: idx++,
             valueDate,
@@ -298,6 +298,5 @@ export async function parseBankStatementFile(
     if (lower.endsWith('.pdf') || ct.includes('pdf')) {
         return parseFinecoPdf(buffer);
     }
-    // Fallback: prova CSV
     return parseFinecoCsv(buffer);
 }

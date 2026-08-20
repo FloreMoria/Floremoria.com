@@ -171,6 +171,15 @@ function getHostContext(request: NextRequest): DashboardHostContext {
 
         if (roleExpiresAt) {
             if (new Date() > new Date(roleExpiresAt)) {
+                // API devono ricevere JSON, non redirect HTML alla login (rompe FormData/fetch JSON).
+                if (isApiRoute) {
+                    const response = NextResponse.json(
+                        { ok: false, error: 'Sessione scaduta. Accedi di nuovo.' },
+                        { status: 401 }
+                    );
+                    clearAuthCookies(response);
+                    return response;
+                }
                 const response = NextResponse.redirect(loginUrl, 307);
                 clearAuthCookies(response);
                 return applyDashboardSecurityHeaders(request, response);

@@ -873,6 +873,38 @@ model BankStatementLine {
   @@map("bank_statement_lines")
 }
 
+/// Fattura passiva SaaS / estere (reverse charge TD17/TD18) archiviata in Contabilità.
+model SaasForeignInvoice {
+  id                    String   @id @default(cuid())
+  invoiceDate           DateTime @map("invoice_date")
+  vendorName            String   @map("vendor_name") @db.VarChar(160)
+  originalCurrency      String   @default("EUR") @map("original_currency") @db.VarChar(8)
+  originalAmountCents   Int      @map("original_amount_cents")
+  eurAmountCents        Int      @map("eur_amount_cents")
+  countryCode           String?  @map("country_code") @db.VarChar(8)
+  /** UE | EXTRA_UE */
+  jurisdiction          String   @default("EXTRA_UE") @db.VarChar(16)
+  /** NONE | TD17 | TD18 */
+  autofatturaType       String   @default("TD17") @map("autofattura_type") @db.VarChar(16)
+  fileName              String   @map("file_name") @db.VarChar(255)
+  contentType           String   @map("content_type") @db.VarChar(128)
+  sizeBytes             Int      @map("size_bytes")
+  blobPath              String   @map("blob_path") @db.Text
+  blobUrl               String?  @map("blob_url") @db.Text
+  storageKind           String   @default("blob") @map("storage_kind") @db.VarChar(16)
+  /** YYYY-MM per export ZIP mensile */
+  periodKey             String   @map("period_key") @db.VarChar(7)
+  notes                 String?  @db.Text
+  metadataJson          Json?    @map("metadata_json")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([periodKey])
+  @@index([invoiceDate])
+  @@index([vendorName])
+  @@map("saas_foreign_invoices")
+}
+
 /**
  * Batch debounce inbound WhatsApp: accumula messaggi/foto e flush dopo 60s di quiete.
  * Perché: Meta consegna burst spezzati → senza buffer Vera risponde a raffica (caso Matilde).

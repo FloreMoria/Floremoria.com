@@ -3,51 +3,63 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { uploadAndProcessBankStatement } from '@/lib/financial/bankStatements/store';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const MAX_BYTES = 15 * 1024 * 1024;
 const ALLOWED_EXT = /\.(pdf|csv|xlsx|xls)$/i;
 
+function jsonError(error: string, status: number) {
+    return NextResponse.json({ ok: false, error }, { status });
+}
+
 export async function POST(request: Request) {
-    const auth = await requireDashboardAdmin();
-    if (!auth.ok) return auth.response;
-
     try {
-        const form = await request.formData();
+        const auth = await requireDashboardAdmin();
+        if (!auth.ok) return auth.response;
+
+        let form: FormData;
+        try {
+            form = await request.formData();
+        } catch (err) {
+            console.error('[bank-statements upload] formData parse failed', err);
+            return jsonError(
+                'Impossibile leggere il multipart/form-data. Riprova con un file più piccolo o un formato supportato.',
+                400
+            );
+        }
+
         const file = form.get('file');
-        if (!(file instanceof File)) {
-            return NextResponse.json({ ok: false, error: 'File mancante (campo file)' }, { status: 400 });
+        // In Node runtime il campo può essere File o Blob con name.
+        const isBlob = typeof Blob !== 'undefined' && file instanceof Blob;
+        if (!isBlob) {
+            return jsonError('File mancante (campo file)', 400);
         }
 
-        if (!ALLOWED_EXT.test(file.name)) {
-            return NextResponse.json(
-                { ok: false, error: 'Formato non supportato. Usa PDF, CSV o Excel (.xlsx/.xls).' },
-                { status: 400 }
-            );
+        const blob = file as Blob & { name?: string };
+        const fileName = (typeof blob.name === 'string' && blob.name) || String(form.get('fileName') || 'estratto.csv');
+
+        if (!ALLOWED_EXT.test(fileName)) {
+            return jsonError('Formato non supportato. Usa PDF, CSV o Excel (.xlsx/.xls).', 400);
         }
 
-        if (file.size > MAX_BYTES) {
-            return NextResponse.json(
-                { ok: false, error: 'File troppo grande (max 15 MB).' },
-                { status: 400 }
-            );
+        if (blob.size > MAX_BYTES) {
+            return jsonError('File troppo grande (max 15 MB).', 400);
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
+        const buffer = Buffer.from(await blob.arrayBuffer());
         const document = await uploadAndProcessBankStatement({
-            fileName: file.name,
-            contentType: file.type || 'application/octet-stream',
+            fileName,
+            contentType: blob.type || 'application/octet-stream',
             buffer,
         });
 
         return NextResponse.json({ ok: true, document });
     } catch (error) {
         console.error('[bank-statements upload]', error);
-        return NextResponse.json(
-            {
-                ok: false,
-                error: error instanceof Error ? error.message : 'Elaborazione rendiconto fallita',
-            },
-            { status: 500 }
+        return jsonError(
+            error instanceof Error ? error.message : 'Elaborazione rendiconto fallita',
+            500
         );
     }
 }

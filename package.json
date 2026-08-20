@@ -68,7 +68,6 @@
     "next": "16.1.6",
     "nodemailer": "^8.0.7",
     "papaparse": "^5.5.3",
-    "pdf-parse": "^2.4.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-google-autocomplete": "^2.7.5",
@@ -77,6 +76,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.32.6",
     "twilio": "^6.0.0",
+    "unpdf": "^1.8.1",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
@@ -88,7 +88,6 @@
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/papaparse": "^5.5.2",
-    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/swagger-jsdoc": "^6.0.4",

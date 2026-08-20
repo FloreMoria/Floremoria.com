@@ -54,6 +54,17 @@ export async function POST(request: Request) {
             buffer,
         });
 
+        // File archiviato anche se il parsing non ha estratto movimenti (es. PDF scan)
+        if (document?.status === 'FAILED') {
+            return NextResponse.json({
+                ok: false,
+                error:
+                    document.parseError ||
+                    'File salvato ma elaborazione fallita. Preferisci CSV/Excel Fineco.',
+                document,
+            }, { status: 422 });
+        }
+
         return NextResponse.json({ ok: true, document });
     } catch (error) {
         console.error('[bank-statements upload]', error);

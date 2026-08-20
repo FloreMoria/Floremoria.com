@@ -40,3 +40,4 @@
 [2026-08-20 13:28] fix/finance: upload estratti JSON-safe + proxy API 401; saldo Fineco editabile; SaaS drawer con upload e ZIP mensile.
 
 [2026-08-20 13:40] fix(chat): download universale foto con supporto galleria mobile (Web Share API) e download folder desktop.
+[2026-08-20 13:42] fix/finance: parsing PDF estratti Fineco con unpdf (elimina DOMMatrix/pdf-parse su Node/Vercel).

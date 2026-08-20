@@ -211,19 +211,37 @@ export async function parseFinecoXlsx(buffer: Buffer): Promise<ParseBankStatemen
 }
 
 /**
- * PDF Fineco: estrae testo e ricostruisce righe con pattern data + importi.
+ * PDF Fineco: estrae testo via unpdf (serverless-safe, no DOMMatrix/canvas).
  * Limitazione: PDF scansionati (immagine) non producono testo utile.
  */
 export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatementResult> {
     const warnings: string[] = [];
-    const { PDFParse } = await import('pdf-parse');
-    const parser = new PDFParse({ data: new Uint8Array(buffer) });
     let text = '';
+
     try {
-        const result = await parser.getText();
-        text = result?.text || '';
-    } finally {
-        await parser.destroy().catch(() => undefined);
+        // unpdf: runtime Node/Vercel senza DOM browser (evita "DOMMatrix is not defined" di pdf-parse/pdf.js)
+        const { extractText, getDocumentProxy } = await import('unpdf');
+        const pdf = await getDocumentProxy(new Uint8Array(buffer));
+        const extracted = await extractText(pdf, { mergePages: true });
+        if (typeof extracted.text === 'string') {
+            text = extracted.text;
+        } else if (Array.isArray(extracted.text)) {
+            text = extracted.text.join('\n');
+        } else {
+            text = String(extracted.text ?? '');
+        }
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[parseFinecoPdf]', msg);
+        return {
+            movements: [],
+            periodStart: null,
+            periodEnd: null,
+            closingBalanceCents: null,
+            warnings: [
+                `Estrazione PDF non riuscita (${msg}). Esporta l'estratto da Fineco in CSV o Excel e ricaricalo.`,
+            ],
+        };
     }
 
     if (!text.trim()) {

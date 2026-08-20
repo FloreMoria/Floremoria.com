@@ -45,7 +45,12 @@ export default function LinkPhotoToOrderModal({
                 const data = await res.json();
                 if (data.success && Array.isArray(data.orders)) {
                     setOrders(data.orders);
-                    if (!defaultOrderId && data.orders.length > 0) {
+                    if (defaultOrderId) {
+                        const match = data.orders.find((o: any) => o.id === defaultOrderId || o.orderNumber === defaultOrderId);
+                        if (match) {
+                            setSelectedOrderId(match.id);
+                        }
+                    } else if (data.orders.length > 0) {
                         setSelectedOrderId(data.orders[0].id);
                     }
                 }
@@ -59,6 +64,7 @@ export default function LinkPhotoToOrderModal({
 
         fetchRecentOrders();
     }, [isOpen, defaultOrderId]);
+
 
     if (!isOpen) return null;
 

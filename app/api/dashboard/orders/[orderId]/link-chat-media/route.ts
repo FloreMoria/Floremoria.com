@@ -25,7 +25,7 @@ export async function POST(
         const cleanOrderId = orderId?.trim();
 
         if (!cleanOrderId) {
-            return NextResponse.json({ ok: false, error: 'orderId mancante' }, { status: 400 });
+            return NextResponse.json({ ok: false, error: 'Parametro orderId mancante.' }, { status: 400 });
         }
 
         const body = await request.json().catch(() => ({}));
@@ -38,8 +38,15 @@ export async function POST(
             return NextResponse.json({ ok: false, error: 'Parametro mediaUrl obbligatorio.' }, { status: 400 });
         }
 
+        // 1. Cerca l'ordine sia per ID Prisma (cuid/uuid) sia per codice ordine (es. FT-CO-26-001)
         const order = await prisma.order.findFirst({
-            where: { id: cleanOrderId, deletedAt: null },
+            where: {
+                OR: [
+                    { id: cleanOrderId },
+                    { orderNumber: cleanOrderId },
+                ],
+                deletedAt: null,
+            },
             include: {
                 deliveryProof: true,
                 deceasedProfile: true,
@@ -47,48 +54,75 @@ export async function POST(
         });
 
         if (!order) {
-            return NextResponse.json({ ok: false, error: 'Ordine non trovato.' }, { status: 404 });
+            return NextResponse.json(
+                { ok: false, error: `Ordine non trovato per ID/Codice: "${cleanOrderId}".` },
+                { status: 404 }
+            );
         }
 
-        const partnerId = order.partnerId || 'mock-florist-id';
-
-        // 1. Aggiorna o crea il record DeliveryProof
-        let proof = order.deliveryProof;
-        if (proof) {
-            const existingBefore = proof.photosBeforeUrls || (proof.photoBeforeUrl ? [proof.photoBeforeUrl] : []);
-            const existingAfter = proof.photosAfterUrls || (proof.photoAfterUrl ? [proof.photoAfterUrl] : []);
-
-            const updatedBefore = kind === 'before' ? uniqueAppendPhotoUrls(existingBefore, [mediaUrl]) : existingBefore;
-            const updatedAfter = kind === 'after' ? uniqueAppendPhotoUrls(existingAfter, [mediaUrl]) : existingAfter;
-
-            proof = await prisma.deliveryProof.update({
-                where: { id: proof.id },
-                data: {
-                    status: 'COMPLETED',
-                    photoBeforeUrl: updatedBefore[0] || proof.photoBeforeUrl,
-                    photoAfterUrl: updatedAfter[0] || proof.photoAfterUrl || mediaUrl,
-                    photosBeforeUrls: updatedBefore,
-                    photosAfterUrls: updatedAfter,
-                    ...(kind === 'before' ? { timestampBefore: takenAt } : { timestampAfter: takenAt }),
-                },
+        // 2. Determina un partnerId valido per rispettare il vincolo FK della tabella DeliveryProof
+        let partnerId = order.partnerId;
+        if (!partnerId) {
+            const defaultPartner = await prisma.partner.findFirst({
+                where: { deletedAt: null },
+                select: { id: true },
             });
-        } else {
-            proof = await prisma.deliveryProof.create({
-                data: {
-                    orderId: order.id,
-                    partnerId,
-                    userId: order.userId || null,
-                    status: 'COMPLETED',
-                    photoAfterUrl: kind === 'after' ? mediaUrl : null,
-                    photoBeforeUrl: kind === 'before' ? mediaUrl : null,
-                    photosAfterUrls: kind === 'after' ? [mediaUrl] : [],
-                    photosBeforeUrls: kind === 'before' ? [mediaUrl] : [],
-                    ...(kind === 'before' ? { timestampBefore: takenAt } : { timestampAfter: takenAt }),
-                },
-            });
+            partnerId = defaultPartner?.id || null;
         }
 
-        // 2. Aggiorna lo stato dell'Ordine a COMPLETED e aggiungi la foto a Order.photos
+        if (!partnerId) {
+            const existingAnyPartner = await prisma.partner.findFirst({
+                select: { id: true },
+            });
+            if (existingAnyPartner) {
+                partnerId = existingAnyPartner.id;
+            } else {
+                const createdSystemPartner = await prisma.partner.create({
+                    data: {
+                        ownerName: 'Fiorista di Sistema',
+                        shopName: 'FloreMoria Partner',
+                        email: 'sistema@floremoria.com',
+                        address: 'Via FloreMoria 1',
+                    },
+                    select: { id: true },
+                });
+                partnerId = createdSystemPartner.id;
+            }
+        }
+
+
+        // 3. Upsert atomico del record DeliveryProof
+        const existingBefore = order.deliveryProof?.photosBeforeUrls || (order.deliveryProof?.photoBeforeUrl ? [order.deliveryProof.photoBeforeUrl] : []);
+        const existingAfter = order.deliveryProof?.photosAfterUrls || (order.deliveryProof?.photoAfterUrl ? [order.deliveryProof.photoAfterUrl] : []);
+
+        const updatedBefore = kind === 'before' ? uniqueAppendPhotoUrls(existingBefore, [mediaUrl]) : existingBefore;
+        const updatedAfter = kind === 'after' ? uniqueAppendPhotoUrls(existingAfter, [mediaUrl]) : existingAfter;
+
+        const proof = await prisma.deliveryProof.upsert({
+            where: { orderId: order.id },
+            create: {
+                orderId: order.id,
+                partnerId,
+                userId: order.userId || null,
+                status: 'COMPLETED',
+                photoAfterUrl: kind === 'after' ? mediaUrl : null,
+                photoBeforeUrl: kind === 'before' ? mediaUrl : null,
+                photosAfterUrls: kind === 'after' ? [mediaUrl] : [],
+                photosBeforeUrls: kind === 'before' ? [mediaUrl] : [],
+                ...(kind === 'before' ? { timestampBefore: takenAt } : { timestampAfter: takenAt }),
+            },
+            update: {
+                partnerId,
+                status: 'COMPLETED',
+                photoBeforeUrl: updatedBefore[0] || order.deliveryProof?.photoBeforeUrl || null,
+                photoAfterUrl: updatedAfter[0] || order.deliveryProof?.photoAfterUrl || mediaUrl,
+                photosBeforeUrls: updatedBefore,
+                photosAfterUrls: updatedAfter,
+                ...(kind === 'before' ? { timestampBefore: takenAt } : { timestampAfter: takenAt }),
+            },
+        });
+
+        // 4. Aggiorna l'Ordine (Order.photos e stato COMPLETED se non annullato)
         const updatedOrderPhotos = uniqueAppendPhotoUrls(order.photos || [], [mediaUrl]);
         const shouldCompleteOrder = order.status !== 'COMPLETED' && order.status !== 'CANCELLED';
 
@@ -101,10 +135,10 @@ export async function POST(
             },
         });
 
-        // 3. Propaga a cascata su Scheda Defunto (DeceasedProfile.deliveryPhotoUrls e coverUrl)
+        // 5. Propaga a cascata su Scheda Defunto (se collegato)
         const propagateResult = await propagateDeliveryPhotosToLinkedProfiles(order.id, [mediaUrl]);
 
-        // 4. Revalida le rotte interessate
+        // 6. Revalida le viste della Dashboard e Bacheca Utente
         revalidatePath('/dashboard/orders');
         revalidatePath('/dashboard/defunti');
         revalidatePath('/dashboard/fioristi');
@@ -126,9 +160,10 @@ export async function POST(
             deceasedProfileId: propagateResult.deceasedProfileId,
         });
     } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Errore sconosciuto durante l\'associazione della foto.';
         console.error('[link-chat-media] Error linking media:', err);
         return NextResponse.json(
-            { ok: false, error: err instanceof Error ? err.message : 'Errore salvataggio foto su ordine.' },
+            { ok: false, success: false, error: errorMsg },
             { status: 500 }
         );
     }

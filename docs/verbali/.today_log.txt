@@ -44,3 +44,4 @@
 [2026-08-20 14:20] fix/finance: polyfill DOMMatrix server-side + casting sicuro extractText (join never) per build Vercel.
 
 [2026-08-20 14:30] feat(chat): collegamento foto chat ad ordini con sync automatica su GdM, scheda defunto e fiorista.
+[2026-08-20 14:35] fix(chat): risoluzione errore salvataggio associazione foto ad ordine con fallback orderCode/id e upsert prova.

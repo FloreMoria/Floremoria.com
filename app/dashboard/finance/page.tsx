@@ -27,8 +27,12 @@ import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 import TaxQuarterlyPanel from './TaxQuarterlyPanel';
 import BankStatementsPanel from '@/components/dashboard/BankStatementsPanel';
 import SaasForeignExpensesPanel from '@/components/dashboard/SaasForeignExpensesPanel';
-import ManualExpenseModal from '@/components/dashboard/ManualExpenseModal';
+import ManualExpenseModal, {
+    type ManualExpensePrefill,
+} from '@/components/dashboard/ManualExpenseModal';
 import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
+import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoicesXlsxUploadBox';
+import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
@@ -38,7 +42,9 @@ import { readJsonResponse } from '@/lib/http/readJsonResponse';
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'transactions' | 'accounting' | 'statements' | 'gateways' | 'tax'>('transactions');
+    const [activeTab, setActiveTab] = useState<
+        'transactions' | 'accounting' | 'statements' | 'gateways' | 'tax' | 'florist-invoices'
+    >('transactions');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -59,6 +65,7 @@ export default function FinanceDashboardPage() {
     const [saasDrawerOpen, setSaasDrawerOpen] = useState(false);
     const [saasTotalCents, setSaasTotalCents] = useState(0);
     const [manualExpenseOpen, setManualExpenseOpen] = useState(false);
+    const [manualExpensePrefill, setManualExpensePrefill] = useState<ManualExpensePrefill | null>(null);
 
     // Caricamento dati
     const loadLedger = async () => {
@@ -351,7 +358,10 @@ export default function FinanceDashboardPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => setManualExpenseOpen(true)}
+                        onClick={() => {
+                            setManualExpensePrefill(null);
+                            setManualExpenseOpen(true);
+                        }}
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#c5a880] hover:bg-[#b8976c] text-white rounded-xl transition-colors text-sm font-semibold"
                     >
                         <Plus size={16} />
@@ -542,48 +552,64 @@ export default function FinanceDashboardPage() {
             />
             <ManualExpenseModal
                 open={manualExpenseOpen}
-                onClose={() => setManualExpenseOpen(false)}
+                prefill={manualExpensePrefill}
+                onClose={() => {
+                    setManualExpenseOpen(false);
+                    setManualExpensePrefill(null);
+                }}
                 onSaved={() => void loadLedger()}
             />
 
-            <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
+                <ReceivedInvoicesXlsxUploadBox onImported={() => void loadLedger()} />
+            </div>
 
             {/* Tabs content tables */}
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-                <div className="flex border-b border-slate-200 bg-slate-50/50">
+                <div className="flex flex-wrap border-b border-slate-200 bg-slate-50/50">
                     <button
                         onClick={() => setActiveTab('transactions')}
-                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'transactions' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'transactions' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         Movimenti Bancari Estratto Conto ({(ledger?.transactions || []).length})
                     </button>
                     <button
                         onClick={() => setActiveTab('accounting')}
-                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'accounting' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'accounting' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         Scritture di Prima Nota ({(ledger?.accountingEntries || []).length})
                     </button>
                     <button
+                        onClick={() => setActiveTab('florist-invoices')}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'florist-invoices' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Fioristi in attesa di Fattura
+                    </button>
+                    <button
                         onClick={() => setActiveTab('statements')}
-                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'statements' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'statements' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         Simulazione Bilancio &amp; Imposte
                     </button>
                     <button
                         onClick={() => setActiveTab('gateways')}
-                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'gateways' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'gateways' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         Stato Stripe &amp; PayPal
                     </button>
                     <button
                         onClick={() => setActiveTab('tax')}
-                        className={`flex-1 py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'tax' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'tax' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         Chiusura Trimestrale &amp; Fisco
                     </button>
                 </div>
 
-                {activeTab !== 'statements' && activeTab !== 'gateways' && activeTab !== 'tax' && (
+                {activeTab !== 'statements' &&
+                    activeTab !== 'gateways' &&
+                    activeTab !== 'tax' &&
+                    activeTab !== 'florist-invoices' && (
                     <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
                         <input
                             type="text"
@@ -1098,6 +1124,22 @@ export default function FinanceDashboardPage() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'florist-invoices' && (
+                    <div className="p-4">
+                        <FloristMissingInvoicesPanel
+                            onLinkInvoice={(prefill) => {
+                                setManualExpensePrefill({
+                                    vendorName: prefill.vendorName,
+                                    totalEuro: prefill.totalEuro,
+                                    expenseDate: prefill.expenseDate,
+                                    notes: prefill.notes,
+                                });
+                                setManualExpenseOpen(true);
+                            }}
+                        />
                     </div>
                 )}
 

@@ -75,3 +75,5 @@
 [2026-08-20 17:31] fix(finance): calibrazione anomalie Fineco — layout USCITE/ENTRATE, oneri bancari, note a margine silenziose + UI badge
 [2026-08-20 17:59] feat(finance): auto-riconciliazione payout Stripe/PayPal, spese ricorrenti, compensi fioristi + tabella movimenti Contabilità
 [2026-08-20 18:20] feat(finance): upload massivo ZIP/XML/CSV fatture elettroniche SDI/YouDoox + match Fineco
+
+[2026-08-20 20:22] feat/finance: upload report fatture xlsx/csv (SDI_XLSX), riconciliazione Fineco e alert Fioristi in attesa di Fattura.

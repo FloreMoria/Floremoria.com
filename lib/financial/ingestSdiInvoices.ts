@@ -122,10 +122,12 @@ async function reconcileInvoiceWithFineco(expense: {
     vendorName: string;
     totalCents: number;
     expenseDate: Date;
+    vendorVat?: string | null;
 }): Promise<boolean> {
     const abs = Math.abs(expense.totalCents);
     const from = new Date(expense.expenseDate.getTime() - 45 * 24 * 60 * 60 * 1000);
     const to = new Date(expense.expenseDate.getTime() + 20 * 24 * 60 * 60 * 1000);
+    const vatDigits = (expense.vendorVat || '').replace(/\D/g, '');
 
     const candidates = await prisma.bankStatementLine.findMany({
         where: {
@@ -141,9 +143,12 @@ async function reconcileInvoiceWithFineco(expense: {
         take: 40,
     });
 
-    const hit = candidates.find(
-        (c) => c.amountCents < 0 && vendorCompatible(expense.vendorName, c.description)
-    );
+    const hit = candidates.find((c) => {
+        if (c.amountCents >= 0) return false;
+        if (vendorCompatible(expense.vendorName, c.description)) return true;
+        if (vatDigits.length >= 8 && c.description.replace(/\D/g, '').includes(vatDigits)) return true;
+        return false;
+    });
     if (!hit) return false;
 
     await prisma.$transaction([
@@ -154,7 +159,7 @@ async function reconcileInvoiceWithFineco(expense: {
                 matchType: 'SDI_INVOICE',
                 matchScore: 94,
                 matchedTxId: expense.id,
-                matchNotes: `Abbinato a fattura SDI ${expense.vendorName} (€${(abs / 100).toFixed(2)})`,
+                matchNotes: `Riconciliato — fattura ${expense.vendorName} (€${(abs / 100).toFixed(2)})`,
             },
         }),
         prisma.manualFinanceExpense.update({
@@ -187,11 +192,12 @@ async function reconcileInvoiceWithFineco(expense: {
 
 async function persistInvoice(
     inv: ParsedFatturaPa,
-    archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string }
+    archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
+    source: 'SDI_XML' | 'SDI_XLSX'
 ) {
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
     const metadata: Prisma.InputJsonValue = {
-        source: 'SDI_XML',
+        source,
         isDeductible: true,
         dedupeKey: inv.dedupeKey,
         vendorVat: inv.vendorVat,
@@ -200,6 +206,13 @@ async function persistInvoice(
         sourceFileName: inv.sourceFileName,
         archiveFileName: archive.fileName,
     };
+
+    const contentType =
+        source === 'SDI_XLSX'
+            ? archive.fileName.toLowerCase().endsWith('.csv')
+                ? 'text/csv'
+                : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'application/xml';
 
     const row = await prisma.manualFinanceExpense.create({
         data: {
@@ -212,13 +225,13 @@ async function persistInvoice(
             vatCents: inv.vatCents,
             netCents: inv.netCents,
             fileName: archive.fileName,
-            contentType: 'application/xml',
+            contentType,
             sizeBytes: null,
             blobPath: archive.blobPath,
             blobUrl: archive.blobUrl,
             storageKind: archive.storageKind,
             periodKey: periodKeyFromDate(expenseDate),
-            notes: `SDI_XML ${inv.dedupeKey}`,
+            notes: `${source} ${inv.dedupeKey}`,
             metadataJson: metadata,
             reconciled: false,
         },
@@ -227,7 +240,10 @@ async function persistInvoice(
     const entry: AccountingEntry = {
         id: `entry_sdi_${row.id}`,
         date: inv.invoiceDate,
-        description: `Fattura SDI ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(0, 240),
+        description: `Fattura ${source === 'SDI_XLSX' ? 'report' : 'SDI'} ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(
+            0,
+            240
+        ),
         dareAccount: '70900 - Spese Generali / Fatture Passive',
         avereAccount: LEDGER_BANK_ACCOUNT,
         amountCents: inv.totalCents,
@@ -242,16 +258,19 @@ async function persistInvoice(
 }
 
 /**
- * Upload ZIP/XML/CSV → parsing → insert deduplicato → riconciliazione Fineco.
+ * Ingestione generica fatture passive già parsate.
  */
-export async function ingestSdiInvoiceUpload(input: {
+export async function ingestParsedPassiveInvoices(input: {
+    invoices: ParsedFatturaPa[];
+    skipped: Array<{ fileName: string; reason: string }>;
+    warnings: string[];
     buffer: Buffer;
     fileName: string;
     contentType?: string;
+    source: 'SDI_XML' | 'SDI_XLSX';
 }): Promise<SdiIngestSummary> {
-    const parsed = await parseInvoiceUpload(input.buffer, input.fileName, input.contentType);
-    const warnings = [...parsed.warnings];
-    const skippedDetails = [...parsed.skipped];
+    const warnings = [...input.warnings];
+    const skippedDetails = [...input.skipped];
 
     let imported = 0;
     let skippedDuplicates = 0;
@@ -266,7 +285,7 @@ export async function ingestSdiInvoiceUpload(input: {
         fileName: input.fileName,
     };
 
-    if (parsed.invoices.length > 0) {
+    if (input.invoices.length > 0) {
         try {
             const stored = await storeArchive(
                 input.buffer,
@@ -286,7 +305,7 @@ export async function ingestSdiInvoiceUpload(input: {
         }
     }
 
-    for (const inv of parsed.invoices) {
+    for (const inv of input.invoices) {
         try {
             const existing = await findExistingByDedupeKey(inv.dedupeKey);
             if (existing) {
@@ -298,7 +317,7 @@ export async function ingestSdiInvoiceUpload(input: {
                 continue;
             }
 
-            const row = await persistInvoice(inv, archive);
+            const row = await persistInvoice(inv, archive, input.source);
             imported += 1;
             totalCents += inv.totalCents;
             if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
@@ -310,6 +329,7 @@ export async function ingestSdiInvoiceUpload(input: {
                 vendorName: inv.vendorName,
                 totalCents: inv.totalCents,
                 expenseDate: row.expenseDate,
+                vendorVat: inv.vendorVat,
             });
             if (matched) matchedFineco += 1;
         } catch (err) {
@@ -320,7 +340,6 @@ export async function ingestSdiInvoiceUpload(input: {
         }
     }
 
-    // Cleanup archivio se zero import
     if (imported === 0 && archive.storageKind === 'blob' && (archive.blobUrl || archive.blobPath)) {
         const token = getBlobToken();
         if (token) {
@@ -335,11 +354,56 @@ export async function ingestSdiInvoiceUpload(input: {
     return {
         imported,
         skippedDuplicates,
-        skippedErrors: skippedDetails.length - skippedDuplicates,
+        skippedErrors: Math.max(0, skippedDetails.length - skippedDuplicates),
         matchedFineco,
         totalCents,
         warnings,
         skippedDetails: skippedDetails.slice(0, 40),
         sampleVendors,
     };
+}
+
+/**
+ * Upload ZIP/XML/CSV → parsing → insert deduplicato → riconciliazione Fineco.
+ */
+export async function ingestSdiInvoiceUpload(input: {
+    buffer: Buffer;
+    fileName: string;
+    contentType?: string;
+}): Promise<SdiIngestSummary> {
+    const parsed = await parseInvoiceUpload(input.buffer, input.fileName, input.contentType);
+    return ingestParsedPassiveInvoices({
+        invoices: parsed.invoices,
+        skipped: parsed.skipped,
+        warnings: parsed.warnings,
+        buffer: input.buffer,
+        fileName: input.fileName,
+        contentType: input.contentType,
+        source: 'SDI_XML',
+    });
+}
+
+/**
+ * Upload report .xlsx/.csv fatture ricevute.
+ */
+export async function ingestReceivedInvoicesXlsxUpload(input: {
+    buffer: Buffer;
+    fileName: string;
+    contentType?: string;
+}): Promise<SdiIngestSummary> {
+    const { parseReceivedInvoicesReport } = await import('@/lib/financial/parseReceivedInvoicesXlsx');
+    const parsed = await parseReceivedInvoicesReport(
+        input.buffer,
+        input.fileName,
+        input.contentType
+    );
+    return ingestParsedPassiveInvoices({
+        invoices: parsed.invoices,
+        skipped: parsed.skipped,
+        warnings: parsed.warnings,
+        buffer: input.buffer,
+        fileName: input.fileName,
+        contentType: input.contentType,
+        source: 'SDI_XLSX',
+    });
 }

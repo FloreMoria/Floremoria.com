@@ -1,16 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+
+export type ManualExpensePrefill = {
+    vendorName?: string;
+    totalEuro?: string;
+    expenseDate?: string;
+    description?: string;
+    notes?: string;
+};
 
 type Props = {
     open: boolean;
     onClose: () => void;
     onSaved?: () => void;
+    prefill?: ManualExpensePrefill | null;
 };
 
-export default function ManualExpenseModal({ open, onClose, onSaved }: Props) {
+export default function ManualExpenseModal({ open, onClose, onSaved, prefill }: Props) {
     const now = new Date().toISOString().slice(0, 10);
     const [expenseDate, setExpenseDate] = useState(now);
     const [docType, setDocType] = useState('FATTURA');
@@ -21,6 +30,23 @@ export default function ManualExpenseModal({ open, onClose, onSaved }: Props) {
     const [file, setFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        setExpenseDate(prefill?.expenseDate || now);
+        setVendorName(prefill?.vendorName || '');
+        setTotalAmount(prefill?.totalEuro || '');
+        setDescription(
+            prefill?.description ||
+                (prefill?.vendorName
+                    ? `Fattura ricevuta — ${prefill.vendorName}${prefill.notes ? ` (${prefill.notes})` : ''}`
+                    : '')
+        );
+        setDocType('FATTURA');
+        setError(null);
+        setFile(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when modal opens / prefill identity changes
+    }, [open, prefill?.vendorName, prefill?.totalEuro, prefill?.expenseDate, prefill?.description, prefill?.notes]);
 
     if (!open) return null;
 

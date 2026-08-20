@@ -33,6 +33,7 @@ export default async function UsersPage() {
         ),
         runDashboardQuery('users/registered', [], () =>
             prisma.user.findMany({
+                where: { deletedAt: null },
                 orderBy: { createdAt: 'desc' },
                 include: {
                     role: true,
@@ -40,6 +41,7 @@ export default async function UsersPage() {
                 },
             })
         ),
+
     ]);
 
     const orders = ordersResult.data || [];

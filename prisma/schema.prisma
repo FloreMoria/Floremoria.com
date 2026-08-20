@@ -128,10 +128,7 @@ model DeceasedProfile {
   partnerLinks  PartnerDeceasedAssignment[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  deletedAt     DateTime? @map("deleted_at")
-  mergedIntoId  String?   @map("merged_into_id")
 }
-
 
 /// Pivot User ↔ Defunto (DeceasedProfile): più utenti possono seguire lo stesso defunto.
 model UserDeceasedLink {
@@ -187,8 +184,6 @@ model Order {
   buyerEmail             String?
   isRecurring            Boolean           @default(false)
   deletedAt              DateTime?
-  mergedIntoId           String?           @map("merged_into_id")
-
   additionalInstructions String?
   funeralDate            DateTime?
   latitude               Float?

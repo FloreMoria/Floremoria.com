@@ -49,6 +49,5 @@
 [2026-08-20 14:42] fix/finance: parser PDF Fineco multiformato (regex tolleranti, multilinea, textPreview debug).
 
 [2026-08-20 14:45] feat(users): ricerca globale, filtri per ruolo/stato e ordinamento su URL in pagina Utenti.
-[2026-08-20 15:04] feat(defunti): unione profili duplicati e deduplicazione ordini intelligente senza perdita dati.
 
-
+[2026-08-20 15:05] feat/finance: rimossi simulatore/AI engine; flusso Stripe/PayPal + fioristi; spese manuali; matching estratto Fineco.

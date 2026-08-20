@@ -20,11 +20,16 @@ import {
     Save,
     X,
     ImageIcon,
+    Download,
+    ExternalLink,
+    ZoomIn,
 } from 'lucide-react';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
+import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
 import PhoneInput from '@/components/ui/PhoneInput';
+
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
@@ -125,8 +130,36 @@ export default function DeceasedProfileDrawer({
     const [deleting, setDeleting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+    const [zoomPhotoUrl, setZoomPhotoUrl] = useState<string | null>(null);
+
+    const triggerDirectImageDownload = async (url: string, filename?: string) => {
+        try {
+            const cleanUrl = url.split('?')[0];
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) throw new Error('Fetch failed');
+            const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = filename || cleanUrl.split('/').pop() || 'foto-garanzia.jpg';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+        } catch {
+            const proxyUrl = `/api/delivery-proof/download?url=${encodeURIComponent(url)}`;
+            const link = document.createElement('a');
+            link.href = proxyUrl;
+            link.download = filename || 'foto-garanzia.jpg';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+    };
 
     const showToast = (message: string) => {
+
         setToast(message);
         window.setTimeout(() => setToast(null), 3200);
     };
@@ -368,8 +401,9 @@ export default function DeceasedProfileDrawer({
     const displayName = detail?.fullName || row.fullName;
 
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 flex justify-end">
+        <div className="fixed top-14 left-0 right-0 bottom-0 z-40 overflow-hidden bg-black/40 flex justify-end">
             <div className="w-full max-w-2xl bg-white h-full shadow-2xl overflow-y-auto flex flex-col custom-scrollbar">
+
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
                     <div className="flex items-center gap-3">
@@ -539,18 +573,36 @@ export default function DeceasedProfileDrawer({
                             ) : (
                                 <>
                                     <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                                                Ubicazione Sepoltura
-                                            </p>
-                                            <p className="text-xs text-gray-700 flex items-start gap-1.5">
-                                                <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
-                                                <span>
-                                                    <strong>{detail.cemeteryName || 'Cimitero'}</strong> — {detail.cemeteryCity}
-                                                    <br />
-                                                    Posizione: {detail.gravePosition || 'Non specificata'}
-                                                </span>
-                                            </p>
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 flex flex-col justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                                                    Ubicazione Sepoltura
+                                                </p>
+                                                <p className="text-xs text-gray-700 flex items-start gap-1.5">
+                                                    <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
+                                                    <span>
+                                                        <strong>{detail.cemeteryName || 'Cimitero'}</strong> — {detail.cemeteryCity}
+                                                        <br />
+                                                        Posizione: {detail.gravePosition || 'Non specificata'}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            {(() => {
+                                                const mapsQuery = [detail.cemeteryName, detail.cemeteryCity || detail.city].filter(Boolean).join(', ');
+                                                const mapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}` : null;
+                                                return mapsUrl ? (
+                                                    <div className="mt-2 pt-2 border-t border-gray-200/50">
+                                                        <a
+                                                            href={mapsUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8a7048] bg-[#c5a880]/10 hover:bg-[#c5a880]/20 border border-[#c5a880]/30 px-2.5 py-1 rounded-lg transition-colors"
+                                                        >
+                                                            📍 Apri su Google Maps
+                                                        </a>
+                                                    </div>
+                                                ) : null;
+                                            })()}
                                         </div>
                                         <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
@@ -686,102 +738,189 @@ export default function DeceasedProfileDrawer({
                                 </>
                             ) : null}
 
-                            {detail.deliveryPhotoUrls && detail.deliveryPhotoUrls.length > 0 ? (
-                                <section className="space-y-3">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <Camera size={14} /> Prove di posa custodite
-                                    </h3>
-                                    <div className="flex gap-2 overflow-x-auto pb-1">
-                                        {detail.deliveryPhotoUrls.map((url, idx) => (
-                                            <a
-                                                key={`${url}-${idx}`}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="shrink-0 block w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-[#c5a880]"
-                                            >
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img
-                                                    src={url}
-                                                    alt={`Prova posa ${idx + 1}`}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </a>
-                                        ))}
-                                    </div>
-                                </section>
-                            ) : null}
+                             {detail.deliveryPhotoUrls && detail.deliveryPhotoUrls.length > 0 ? (
+                                 <section className="space-y-3">
+                                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                         <Camera size={14} className="text-[#c5a880]" /> Prove di Posa Custodite ({detail.deliveryPhotoUrls.length})
+                                     </h3>
+                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                         {detail.deliveryPhotoUrls.map((url, idx) => (
+                                             <div
+                                                 key={`${url}-${idx}`}
+                                                 className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-100 aspect-square shadow-sm"
+                                             >
+                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                 <img
+                                                     src={url}
+                                                     alt={`Prova posa ${idx + 1}`}
+                                                     className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                                                     onClick={() => setZoomPhotoUrl(url)}
+                                                 />
+                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                     <button
+                                                         type="button"
+                                                         onClick={() => setZoomPhotoUrl(url)}
+                                                         className="p-1.5 bg-white text-gray-800 rounded-full hover:bg-gray-100 shadow"
+                                                         title="Ingrandisci anteprima"
+                                                     >
+                                                         <ZoomIn size={14} />
+                                                     </button>
+                                                     <button
+                                                         type="button"
+                                                         onClick={() => triggerDirectImageDownload(url, `foto-defunto-${idx + 1}.jpg`)}
+                                                         className="p-1.5 bg-[#c5a880] text-white rounded-full hover:bg-[#8a7048] shadow"
+                                                         title="Scarica foto reale sul dispositivo"
+                                                     >
+                                                         <Download size={14} />
+                                                     </button>
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </section>
+                             ) : null}
 
-                            <section className="space-y-3">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                    <Calendar size={14} /> Cronologia ordini e prove visive
-                                </h3>
-                                <div className="space-y-4">
-                                    {detail.orders.map((order) => {
-                                        const proof = getOrderProofPhotos(order);
-                                        const lat = order.latitude ?? order.deliveryProof?.gpsLatitude;
-                                        const lng = order.longitude ?? order.deliveryProof?.gpsLongitude;
+                             {/* CRONOLOGIA ORDINI ASSOCIATI */}
+                             <section className="space-y-3">
+                                 <div className="flex items-center justify-between">
+                                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                         <Calendar size={14} className="text-[#c5a880]" /> Cronologia Ordini ({detail.orders.length})
+                                     </h3>
+                                 </div>
+                                 {detail.orders.length === 0 ? (
+                                     <p className="text-xs text-gray-400 italic">Nessun ordine registrato a favore di questa scheda defunto.</p>
+                                 ) : (
+                                     <div className="space-y-3">
+                                         {detail.orders.map((order) => {
+                                             const proof = getOrderProofPhotos(order);
+                                             const lat = order.latitude ?? order.deliveryProof?.gpsLatitude;
+                                             const lng = order.longitude ?? order.deliveryProof?.gpsLongitude;
+                                             const productSummary = order.items.map((i) => `${i.quantity}x ${i.product.name}`).join(', ') || 'Omaggio Floreale';
+                                             const totalPrice = (order.totalPriceCents / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
 
-                                        return (
-                                            <div
-                                                key={order.id}
-                                                className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white"
-                                            >
-                                                <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-                                                    <div>
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-0.5">
-                                                            ORDINE #{order.orderNumber || order.id.slice(0, 8)}
-                                                        </span>
-                                                        <span className="font-semibold text-gray-900 text-xs">
-                                                            {orderStatusLabel(order.status)} · {formatDisplayDate(order.createdAt)}
-                                                        </span>
-                                                    </div>
-                                                    {order.partner ? (
-                                                        <span className="text-xs font-medium text-gray-600">
-                                                            Fiorista: {order.partner.shopName}
-                                                        </span>
-                                                    ) : null}
-                                                </div>
+                                             return (
+                                                 <div
+                                                     key={order.id}
+                                                     onClick={() => setSelectedOrder(order)}
+                                                     className="group border border-gray-200 hover:border-[#c5a880] rounded-xl overflow-hidden shadow-sm hover:shadow-md bg-white transition-all cursor-pointer"
+                                                 >
+                                                     <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 group-hover:bg-[#c5a880]/5 transition-colors">
+                                                         <div>
+                                                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-0.5">
+                                                                 ORDINE #{order.orderNumber || order.id.slice(0, 8)}
+                                                             </span>
+                                                             <span className="font-bold text-gray-900 text-xs">
+                                                                 {productSummary}
+                                                             </span>
+                                                         </div>
+                                                         <div className="flex items-center gap-2">
+                                                             <span
+                                                                 className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                     order.status === 'COMPLETED'
+                                                                         ? 'bg-emerald-100 text-emerald-800'
+                                                                         : order.status === 'CANCELLED'
+                                                                         ? 'bg-red-100 text-red-800'
+                                                                         : 'bg-amber-100 text-amber-800'
+                                                                 }`}
+                                                             >
+                                                                 {orderStatusLabel(order.status)}
+                                                             </span>
+                                                             <span className="font-extrabold text-xs text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-xs">
+                                                                 {totalPrice}
+                                                             </span>
+                                                         </div>
+                                                     </div>
 
-                                                <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                                    <div className="space-y-2 text-xs text-gray-600">
-                                                        <p>
-                                                            <strong>Consegna prevista:</strong> {formatDisplayDate(order.deliveryDate)}
-                                                        </p>
-                                                        <p className="flex items-start gap-1">
-                                                            <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
-                                                            <span>
-                                                                {order.cemeteryName}, {order.cemeteryCity}
-                                                            </span>
-                                                        </p>
-                                                    </div>
+                                                     <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-600">
+                                                         <div>
+                                                             <p className="flex items-center gap-1.5 font-medium text-gray-800 mb-1">
+                                                                 <Calendar size={13} className="text-[#c5a880] shrink-0" />
+                                                                 <span>Consegna: <strong>{formatDisplayDate(order.deliveryDate || order.createdAt)}</strong></span>
+                                                             </p>
+                                                             <p className="flex items-start gap-1.5 text-gray-600">
+                                                                 <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
+                                                                 <span>{order.cemeteryName}, {order.cemeteryCity}</span>
+                                                             </p>
+                                                         </div>
+                                                         <div>
+                                                             <p className="flex items-center gap-1.5 font-medium text-gray-800 mb-1">
+                                                                 <Flower2 size={13} className="text-[#c5a880] shrink-0" />
+                                                                 <span>Fiorista: <strong>{order.partner?.shopName || 'Non ancora assegnato'}</strong></span>
+                                                             </p>
+                                                             <p className="text-[11px] text-[#8a7048] font-bold flex items-center gap-1 mt-1 group-hover:underline">
+                                                                 <span>Visualizza dettagli e foto consegna</span>
+                                                                 <ExternalLink size={12} />
+                                                             </p>
+                                                         </div>
+                                                     </div>
 
-                                                    {(proof.before.length > 0 || proof.after.length > 0) && (
-                                                        <CustodiedProofGallery
-                                                            orderId={order.id}
-                                                            deceasedName={order.deceasedName}
-                                                            initialBefore={proof.before}
-                                                            initialAfter={proof.after}
-                                                            lat={lat}
-                                                            lng={lng}
-                                                            isAdmin
-                                                            showGpsMap
-                                                            compact
-                                                            hasPreDeliveryPhotoOpt={order.items.some(
-                                                                (item) => item.productId === 'florem-foto-stato-prima'
-                                                            )}
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </section>
+                                                     {(proof.before.length > 0 || proof.after.length > 0) && (
+                                                         <div className="px-3.5 pb-3.5 pt-0" onClick={(e) => e.stopPropagation()}>
+                                                             <CustodiedProofGallery
+                                                                 orderId={order.id}
+                                                                 deceasedName={order.deceasedName}
+                                                                 initialBefore={proof.before}
+                                                                 initialAfter={proof.after}
+                                                                 lat={lat}
+                                                                 lng={lng}
+                                                                 isAdmin
+                                                                 showGpsMap={false}
+                                                                 compact
+                                                                 hasPreDeliveryPhotoOpt={order.items.some(
+                                                                     (item) => item.productId === 'florem-foto-stato-prima'
+                                                                 )}
+                                                             />
+                                                         </div>
+                                                     )}
+                                                 </div>
+                                             );
+                                         })}
+                                     </div>
+                                 )}
+                             </section>
                         </>
                     ) : null}
                 </div>
             </div>
+
+            {/* MODALE ZOOM ANTEPRIMA HD */}
+            {zoomPhotoUrl ? (
+                <div
+                    className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setZoomPhotoUrl(null)}
+                >
+                    <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-black">
+                        <button
+                            type="button"
+                            onClick={() => setZoomPhotoUrl(null)}
+                            className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-full hover:bg-black transition-colors z-10"
+                        >
+                            <X size={20} />
+                        </button>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={zoomPhotoUrl}
+                            alt="Anteprima ingrandita"
+                            className="max-h-[85vh] max-w-full object-contain mx-auto"
+                        />
+                    </div>
+                </div>
+            ) : null}
+
+            {/* MODALE DETTAGLIO ORDINE APRIBILE AL CLICK DALLO STORICO */}
+            {selectedOrder ? (
+                <OrderDetailDrawer
+                    order={selectedOrder}
+                    onClose={() => setSelectedOrder(null)}
+                    onOrderUpdated={(updated) => {
+                        setSelectedOrder(updated);
+                        router.refresh();
+                    }}
+                    florists={partners}
+                    canChangeStatus={true}
+                    isGlobalAdmin={true}
+                />
+            ) : null}
 
             {confirmDelete ? (
                 <div
@@ -825,4 +964,5 @@ export default function DeceasedProfileDrawer({
         </div>
     );
 }
+
 

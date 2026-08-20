@@ -52,6 +52,20 @@ function parseItalianNumber(raw: unknown): number | null {
     let s = String(raw).trim();
     if (!s || s === '-' || s === '—') return null;
     s = s.replace(/\s/g, '').replace(/€/g, '').replace(/EUR/gi, '');
+    // Fineco a volte usa segno trailing: 34,50-
+    let negative = false;
+    if (s.endsWith('-')) {
+        negative = true;
+        s = s.slice(0, -1);
+    } else if (s.startsWith('+')) {
+        s = s.slice(1);
+    } else if (s.startsWith('-')) {
+        negative = true;
+        s = s.slice(1);
+    } else if (s.startsWith('(') && s.endsWith(')')) {
+        negative = true;
+        s = s.slice(1, -1);
+    }
     // 1.234,56 → 1234.56 ; 1234.56 resta
     if (s.includes(',') && s.includes('.')) {
         s = s.replace(/\./g, '').replace(',', '.');
@@ -59,7 +73,8 @@ function parseItalianNumber(raw: unknown): number | null {
         s = s.replace(',', '.');
     }
     const n = Number(s);
-    return Number.isFinite(n) ? n : null;
+    if (!Number.isFinite(n)) return null;
+    return negative ? -Math.abs(n) : n;
 }
 
 function parseFinecoDate(raw: unknown): string | null {
@@ -144,7 +159,11 @@ function rowToMovement(
     };
 }
 
-function finalize(movements: ParsedBankMovement[], warnings: string[]): ParseBankStatementResult {
+function finalize(
+    movements: ParsedBankMovement[],
+    warnings: string[],
+    textPreview?: string[]
+): ParseBankStatementResult {
     const dates = movements
         .map((m) => m.accountingDate || m.valueDate)
         .filter((d): d is string => Boolean(d))
@@ -156,6 +175,7 @@ function finalize(movements: ParsedBankMovement[], warnings: string[]): ParseBan
         periodEnd: dates[dates.length - 1] || null,
         closingBalanceCents: withBalance?.balanceCents ?? null,
         warnings,
+        ...(textPreview && textPreview.length ? { textPreview } : {}),
     };
 }
 
@@ -210,12 +230,240 @@ export async function parseFinecoXlsx(buffer: Buffer): Promise<ParseBankStatemen
     return parseTabularRows(rows);
 }
 
+/** Token data Fineco: DD/MM/YYYY | DD.MM.YYYY | DD-MM-YYYY | YY a 2 cifre. */
+const DATE_TOKEN = '(\\d{1,2}[./\\-]\\d{1,2}[./\\-]\\d{2,4})';
+/** Importo IT: 1.250,00 | -34,50 | 34,50- | 1250,00 | 34.50 */
+const AMOUNT_TOKEN =
+    '([+-]?\\d{1,3}(?:[.\\s]\\d{3})*[.,]\\d{2}|[+-]?\\d+[.,]\\d{2}|\\d{1,3}(?:[.\\s]\\d{3})*[.,]\\d{2}-|\\d+[.,]\\d{2}-)';
+
+const NOISE_LINE =
+    /^(pagina\s+\d+|estratto\s+conto|lista\s+movimenti|finecobank|iban\s*:|saldo\s+(iniziale|contabile|disponibile)|tot\.?\s*(entrate|uscite)|data\s+contabile|data\s+valuta|descrizione|entrate|uscite|avere|dare)/i;
+
+function isNoiseLine(line: string): boolean {
+    const t = line.trim();
+    if (!t || t.length < 3) return true;
+    if (NOISE_LINE.test(t)) return true;
+    if (/^[=_\-]{3,}$/.test(t)) return true;
+    return false;
+}
+
+function looksLikeDateStart(line: string): boolean {
+    return new RegExp(`^${DATE_TOKEN}`).test(line.trim());
+}
+
+function extractTrailingAmounts(line: string): { amounts: number[]; descriptionPart: string } {
+    const amounts: number[] = [];
+    let rest = line.trim();
+    // Estrae fino a 3 importi dalla coda (movimento + saldo, o dare/avere + saldo)
+    for (let i = 0; i < 3; i++) {
+        const m = rest.match(new RegExp(`^(.*?)\\s+${AMOUNT_TOKEN}\\s*$`));
+        if (!m) break;
+        const val = parseItalianNumber(m[2]);
+        if (val == null) break;
+        amounts.unshift(val);
+        rest = m[1].trim();
+    }
+    return { amounts, descriptionPart: rest };
+}
+
+function classifyFinecoAmounts(amounts: number[]): {
+    amountEuros: number | null;
+    debit: number | null;
+    credit: number | null;
+    balance: number | null;
+} {
+    if (amounts.length === 0) {
+        return { amountEuros: null, debit: null, credit: null, balance: null };
+    }
+    if (amounts.length === 1) {
+        const a = amounts[0];
+        return {
+            amountEuros: a,
+            debit: a < 0 ? Math.abs(a) : null,
+            credit: a > 0 ? a : null,
+            balance: null,
+        };
+    }
+    if (amounts.length === 2) {
+        const [a, b] = amounts;
+        // Colonne Entrate|Uscite (una a zero)
+        if (Math.abs(a) < 0.005 && Math.abs(b) >= 0.005) {
+            return {
+                amountEuros: -Math.abs(b),
+                debit: Math.abs(b),
+                credit: null,
+                balance: null,
+            };
+        }
+        if (Math.abs(b) < 0.005 && Math.abs(a) >= 0.005) {
+            return {
+                amountEuros: Math.abs(a),
+                debit: null,
+                credit: Math.abs(a),
+                balance: null,
+            };
+        }
+        // Default Fineco: [importo firmato, saldo progressivo]
+        return {
+            amountEuros: a,
+            debit: a < 0 ? Math.abs(a) : null,
+            credit: a > 0 ? a : null,
+            balance: b,
+        };
+    }
+    // 3 importi Fineco tipici: Entrate | Uscite | Saldo
+    const [entrate, uscite, saldo] = amounts;
+    if (Math.abs(uscite) >= 0.005 && Math.abs(entrate) < 0.005) {
+        return {
+            amountEuros: -Math.abs(uscite),
+            debit: Math.abs(uscite),
+            credit: null,
+            balance: saldo,
+        };
+    }
+    if (Math.abs(entrate) >= 0.005 && Math.abs(uscite) < 0.005) {
+        return {
+            amountEuros: Math.abs(entrate),
+            debit: null,
+            credit: Math.abs(entrate),
+            balance: saldo,
+        };
+    }
+    const net = Math.abs(entrate) - Math.abs(uscite);
+    return {
+        amountEuros: net,
+        debit: Math.abs(uscite) >= 0.005 ? Math.abs(uscite) : null,
+        credit: Math.abs(entrate) >= 0.005 ? Math.abs(entrate) : null,
+        balance: saldo,
+    };
+}
+
+/**
+ * Parser multiformato testo PDF Fineco (scalare ufficiale + lista movimenti home banking).
+ */
+export function extractMovementsFromPdfText(text: string): {
+    movements: ParsedBankMovement[];
+    warnings: string[];
+    textPreview: string[];
+} {
+    const warnings: string[] = [];
+    const rawLines = text
+        .split(/\r?\n/)
+        .map((l) => l.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').trim())
+        .filter(Boolean);
+
+    const textPreview = rawLines.slice(0, 10);
+
+    // Unisce continuazioni: righe senza data all'inizio appendono alla precedente con data
+    const logical: string[] = [];
+    for (const line of rawLines) {
+        if (isNoiseLine(line) && !looksLikeDateStart(line)) {
+            continue;
+        }
+        if (looksLikeDateStart(line) || logical.length === 0) {
+            logical.push(line);
+        } else if (!looksLikeDateStart(line) && logical.length > 0) {
+            // Continuazione descrizione multilinea (fino a prossima data)
+            const last = logical[logical.length - 1];
+            if (!isNoiseLine(line) || new RegExp(AMOUNT_TOKEN).test(line)) {
+                logical[logical.length - 1] = `${last} ${line}`.replace(/\s+/g, ' ').trim();
+            }
+        }
+    }
+
+    const movements: ParsedBankMovement[] = [];
+    let idx = 0;
+
+    // Pattern A: data [data valuta] descrizione importo [importo...] [saldo]
+    const patternA = new RegExp(
+        `^${DATE_TOKEN}(?:\\s+${DATE_TOKEN})?\\s+(.+?)\\s+${AMOUNT_TOKEN}(?:\\s+${AMOUNT_TOKEN})?(?:\\s+${AMOUNT_TOKEN})?\\s*$`
+    );
+    // Pattern B: data descrizione ... importo in coda (fallback più lasco)
+    const patternB = new RegExp(`^${DATE_TOKEN}(?:\\s+${DATE_TOKEN})?\\s+(.+)$`);
+
+    for (const line of logical) {
+        if (!looksLikeDateStart(line)) continue;
+
+        let accountingDate: string | null = null;
+        let valueDate: string | null = null;
+        let description = '';
+        let amountEuros: number | null = null;
+        let debit: number | null = null;
+        let credit: number | null = null;
+        let balance: number | null = null;
+
+        const mA = line.match(patternA);
+        if (mA) {
+            accountingDate = parseFinecoDate(mA[1]);
+            valueDate = mA[2] ? parseFinecoDate(mA[2]) : accountingDate;
+            description = (mA[3] || '').trim();
+            const nums = [mA[4], mA[5], mA[6]]
+                .filter(Boolean)
+                .map((x) => parseItalianNumber(x))
+                .filter((n): n is number => n != null);
+            const classified = classifyFinecoAmounts(nums);
+            amountEuros = classified.amountEuros;
+            debit = classified.debit;
+            credit = classified.credit;
+            balance = classified.balance;
+        } else {
+            const mB = line.match(patternB);
+            if (!mB) continue;
+            accountingDate = parseFinecoDate(mB[1]);
+            valueDate = mB[2] ? parseFinecoDate(mB[2]) : accountingDate;
+            const { amounts, descriptionPart } = extractTrailingAmounts(mB[3] || '');
+            if (amounts.length === 0) continue;
+            description = descriptionPart
+                .replace(new RegExp(`^${DATE_TOKEN}\\s*`), '')
+                .trim();
+            // Se descriptionPart inizia ancora con data valuta già consumata in mB[2]
+            if (mB[2] && description.startsWith(mB[2])) {
+                description = description.slice(mB[2].length).trim();
+            }
+            const classified = classifyFinecoAmounts(amounts);
+            amountEuros = classified.amountEuros;
+            debit = classified.debit;
+            credit = classified.credit;
+            balance = classified.balance;
+        }
+
+        if (amountEuros == null || amountEuros === 0) continue;
+        if (!accountingDate && !valueDate) continue;
+
+        // Pulisce residui di colonne "D/A" o header leak
+        description = description
+            .replace(/\b(DARE|AVERE|ENTRATE|USCITE)\b/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!description) description = 'Movimento Fineco';
+
+        movements.push({
+            lineIndex: idx++,
+            valueDate: valueDate || accountingDate,
+            accountingDate: accountingDate || valueDate,
+            description,
+            amountCents: eurosToCents(amountEuros),
+            debitCents: debit != null ? eurosToCents(debit) : amountEuros < 0 ? eurosToCents(Math.abs(amountEuros)) : null,
+            creditCents: credit != null ? eurosToCents(credit) : amountEuros > 0 ? eurosToCents(amountEuros) : null,
+            balanceCents: balance != null ? eurosToCents(balance) : null,
+            raw: { line },
+        });
+    }
+
+    if (movements.length === 0) {
+        warnings.push(
+            'Testo PDF estratto ma nessuna riga movimento riconosciuta. Preferisci export CSV Fineco. Vedi textPreview (prime 10 righe) per calibrazione.'
+        );
+    }
+
+    return { movements, warnings, textPreview };
+}
+
 /**
  * PDF Fineco: estrazione testo server-side (unpdf + polyfill DOMMatrix).
  * Limitazione: PDF scansionati (immagine) non producono testo utile.
  */
 export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatementResult> {
-    const warnings: string[] = [];
     let text = '';
 
     try {
@@ -268,38 +516,8 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
         if (asCsv.movements.length > 0) return asCsv;
     }
 
-    const movements: ParsedBankMovement[] = [];
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const rowRe =
-        /^(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\s+(?:(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\s+)?(.+?)\s+(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|-?\d+[.,]\d{2})\s*(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|-?\d+[.,]\d{2})?$/;
-
-    let idx = 0;
-    for (const line of lines) {
-        const m = line.match(rowRe);
-        if (!m) continue;
-        const accountingDate = parseFinecoDate(m[1]);
-        const valueDate = m[2] ? parseFinecoDate(m[2]) : accountingDate;
-        const description = (m[3] || '').trim();
-        const amount = parseItalianNumber(m[4]);
-        const balance = m[5] ? parseItalianNumber(m[5]) : null;
-        if (amount == null) continue;
-        movements.push({
-            lineIndex: idx++,
-            valueDate,
-            accountingDate,
-            description: description || 'Movimento PDF',
-            amountCents: eurosToCents(amount),
-            debitCents: amount < 0 ? eurosToCents(Math.abs(amount)) : null,
-            creditCents: amount > 0 ? eurosToCents(amount) : null,
-            balanceCents: balance != null ? eurosToCents(balance) : null,
-            raw: { line },
-        });
-    }
-
-    if (movements.length === 0) {
-        warnings.push('Testo PDF estratto ma nessuna riga movimento riconosciuta. Preferisci export CSV Fineco.');
-    }
-    return finalize(movements, warnings);
+    const extracted = extractMovementsFromPdfText(text);
+    return finalize(extracted.movements, extracted.warnings, extracted.textPreview);
 }
 
 export async function parseBankStatementFile(

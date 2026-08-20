@@ -52,6 +52,7 @@ export default function BankStatementsPanel() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [textPreview, setTextPreview] = useState<string[] | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -83,6 +84,7 @@ export default function BankStatementsPanel() {
     const uploadFile = async (file: File) => {
         setUploading(true);
         setError(null);
+        setTextPreview(null);
         try {
             const form = new FormData();
             form.append('file', file);
@@ -90,8 +92,19 @@ export default function BankStatementsPanel() {
                 method: 'POST',
                 body: form,
             });
-            const parsed = await readJsonResponse<{ ok?: boolean; error?: string }>(res);
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                error?: string;
+                textPreview?: string[];
+                document?: { metadataJson?: { textPreview?: string[] } };
+            }>(res);
             if (!parsed.ok) {
+                const preview =
+                    parsed.data?.textPreview ||
+                    parsed.data?.document?.metadataJson?.textPreview ||
+                    null;
+                if (preview?.length) setTextPreview(preview);
+                await load();
                 throw new Error(parsed.error || 'Upload fallito');
             }
             await load();
@@ -186,9 +199,21 @@ export default function BankStatementsPanel() {
             </div>
 
             {error && (
-                <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-                    {error}
-                </p>
+                <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 space-y-2">
+                    <p>{error}</p>
+                    {textPreview && textPreview.length > 0 && (
+                        <div className="bg-white/70 border border-rose-100 rounded-lg p-2 font-mono text-[10px] text-slate-700 space-y-0.5">
+                            <p className="font-bold uppercase tracking-wider text-slate-500 mb-1">
+                                Preview testo PDF (prime {textPreview.length} righe)
+                            </p>
+                            {textPreview.map((line, i) => (
+                                <div key={i} className="truncate">
+                                    {i + 1}. {line}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
 
             <div className="overflow-x-auto rounded-2xl border border-slate-100">

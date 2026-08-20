@@ -31,6 +31,8 @@ export type ParseBankStatementResult = {
     periodEnd: string | null;
     closingBalanceCents: number | null;
     warnings: string[];
+    /** Prime N righe di testo PDF per calibrazione pattern (solo se parsing debole/fallito). */
+    textPreview?: string[];
 };
 
 export type StatementMatchResult = {

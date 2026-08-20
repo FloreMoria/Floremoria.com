@@ -200,6 +200,9 @@ export async function uploadAndProcessBankStatement(input: {
                     metadataJson: {
                         warnings: parsed.warnings,
                         movementCount: parsed.movements.length,
+                        ...(parsed.textPreview?.length
+                            ? { textPreview: parsed.textPreview }
+                            : {}),
                     },
                 },
             }),
@@ -213,11 +216,24 @@ export async function uploadAndProcessBankStatement(input: {
                     parseError:
                         parsed.warnings.join(' | ') ||
                         'Nessun movimento estratto dal file caricato.',
+                    metadataJson: {
+                        warnings: parsed.warnings,
+                        movementCount: 0,
+                        ...(parsed.textPreview?.length
+                            ? { textPreview: parsed.textPreview }
+                            : {}),
+                    },
                 },
             });
         }
 
-        return getBankStatementDetail(doc.id);
+        const detail = await getBankStatementDetail(doc.id);
+        return detail
+            ? {
+                  ...detail,
+                  textPreview: parsed.textPreview,
+              }
+            : detail;
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         await prisma.bankStatementDocument.update({

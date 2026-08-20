@@ -6,6 +6,7 @@ import { Partner, PaymentStatus } from '@prisma/client';
 import { Edit2, Building2, UserCircle2, X, Check, MapPin, Phone, MessageCircle, Mail, Globe, Clock, FileText, CreditCard, Filter, Download, Star, Camera, Image as ImageIcon, Calendar, Trash2, Search } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
+import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 
 export type ExtendedPartner = Partner & {
     orders?: any[];
@@ -897,17 +898,21 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                  </form>
                                              </div>
 
-                                             {/* Preview Foto Assegnate (Grandi) */}
-                                              {order.photos && order.photos.length > 0 ? (
+                                             {/* Preview Foto Assegnate (Grandi) — Order + DeliveryProof */}
+                                              {(() => {
+                                                  const proofUrls = getFlatProofPhotoUrls(order);
+                                                  if (!proofUrls.length) return null;
+                                                  return (
                                                   <div className="md:w-[320px] shrink-0 bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
-                                                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Prove Visive (S3)</div>
+                                                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Prove Visive</div>
                                                       <div className="flex gap-3 w-full overflow-x-auto pb-2 custom-scrollbar snap-x">
-                                                          {order.photos.map((photo: string, idx: number) => (
+                                                          {proofUrls.map((photo: string, idx: number) => (
                                                               <img key={idx} src={photo} alt="Prova visiva fiorista" className="w-[140px] h-[140px] object-cover rounded-xl border border-gray-200 shadow-sm shrink-0 snap-center transition transform hover:scale-105" />
                                                           ))}
                                                       </div>
                                                   </div>
-                                              ) : null}
+                                                  );
+                                              })()}
                                         </div>
                                     </div>
                                     );

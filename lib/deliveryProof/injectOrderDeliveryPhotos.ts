@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
+import { uniqueAppendPhotoUrls } from '@/lib/deliveryProof/uniqueAppendPhotoUrls';
 
 /**
  * Inietta esplicitamente le URL foto sul record Order (oltre a DeliveryProof / Giardino / defunto).
@@ -30,24 +31,107 @@ export async function injectDeliveryPhotosOnOrder(
 }
 
 /**
- * Aggiorna la copertina della scheda Defunto con l'ultima foto di posa.
- * Il dossier utente (GdM) legge le foto dagli Order collegati via UserDeceasedLink.
+ * Propaga le foto di consegna su:
+ * - scheda Defunto (cover + gallery deliveryPhotoUrls)
+ * - collegamenti User/Partner (sync relazioni → scheda fiorista + GdM via ordini)
+ *
+ * Il dossier utente (GdM) e la scheda fiorista leggono le prove dagli Order / DeliveryProof.
  */
 export async function injectDeceasedCoverFromDelivery(
     orderId: string,
     photosAfterUrls: string[]
 ): Promise<void> {
-    const coverUrl = photosAfterUrls.map((u) => u.trim()).filter(Boolean).at(-1);
-    if (!coverUrl) return;
+    await propagateDeliveryPhotosToLinkedProfiles(orderId, photosAfterUrls);
+}
+
+export async function propagateDeliveryPhotosToLinkedProfiles(
+    orderId: string,
+    newPhotoUrls: string[]
+): Promise<{
+    deceasedProfileId: string | null;
+    deliveryPhotoCount: number;
+    orderPhotoCount: number;
+}> {
+    const incoming = (newPhotoUrls || []).map((u) => u.trim()).filter(Boolean);
+    if (!incoming.length) {
+        return { deceasedProfileId: null, deliveryPhotoCount: 0, orderPhotoCount: 0 };
+    }
 
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
-        select: { deceasedProfileId: true },
+        select: {
+            id: true,
+            photos: true,
+            deceasedProfileId: true,
+            partnerId: true,
+            userId: true,
+            deliveryProof: {
+                select: {
+                    photosBeforeUrls: true,
+                    photosAfterUrls: true,
+                    photoBeforeUrl: true,
+                    photoAfterUrl: true,
+                },
+            },
+            deceasedProfile: {
+                select: { id: true, deliveryPhotoUrls: true, coverUrl: true },
+            },
+        },
     });
-    if (!order?.deceasedProfileId) return;
+    if (!order) {
+        return { deceasedProfileId: null, deliveryPhotoCount: 0, orderPhotoCount: 0 };
+    }
 
-    await prisma.deceasedProfile.update({
-        where: { id: order.deceasedProfileId },
-        data: { coverUrl },
+    // Order.photos: unione completa (prima + dopo + nuove).
+    const proofBefore =
+        order.deliveryProof?.photosBeforeUrls?.length
+            ? order.deliveryProof.photosBeforeUrls
+            : order.deliveryProof?.photoBeforeUrl
+              ? [order.deliveryProof.photoBeforeUrl]
+              : [];
+    const proofAfter =
+        order.deliveryProof?.photosAfterUrls?.length
+            ? order.deliveryProof.photosAfterUrls
+            : order.deliveryProof?.photoAfterUrl
+              ? [order.deliveryProof.photoAfterUrl]
+              : [];
+    const mergedOrderPhotos = uniqueAppendPhotoUrls(
+        [...proofBefore, ...proofAfter, ...(order.photos || [])],
+        incoming
+    );
+
+    await prisma.order.update({
+        where: { id: order.id },
+        data: { photos: mergedOrderPhotos },
     });
+
+    let deceasedProfileId = order.deceasedProfileId;
+    let deliveryPhotoCount = 0;
+
+    if (deceasedProfileId) {
+        const existingGallery = order.deceasedProfile?.deliveryPhotoUrls || [];
+        const mergedGallery = uniqueAppendPhotoUrls(existingGallery, incoming);
+        const coverUrl = mergedGallery.at(-1) || order.deceasedProfile?.coverUrl || null;
+
+        await prisma.deceasedProfile.update({
+            where: { id: deceasedProfileId },
+            data: {
+                deliveryPhotoUrls: mergedGallery,
+                ...(coverUrl ? { coverUrl } : {}),
+            },
+        });
+        deliveryPhotoCount = mergedGallery.length;
+    }
+
+    console.info(
+        `[delivery-photos] Propagate order=${order.id} deceased=${deceasedProfileId || 'none'} ` +
+            `orderPhotos=${mergedOrderPhotos.length} deceasedGallery=${deliveryPhotoCount} ` +
+            `partner=${order.partnerId || 'none'} user=${order.userId || 'none'}`
+    );
+
+    return {
+        deceasedProfileId,
+        deliveryPhotoCount,
+        orderPhotoCount: mergedOrderPhotos.length,
+    };
 }

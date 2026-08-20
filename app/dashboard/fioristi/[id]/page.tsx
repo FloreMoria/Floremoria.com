@@ -20,6 +20,7 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                             product: true,
                         },
                     },
+                    deliveryProof: true,
                 },
                 orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
             },

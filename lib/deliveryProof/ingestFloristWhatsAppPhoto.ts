@@ -2,12 +2,13 @@ import prisma from '@/lib/prisma';
 import { ensureUserForOrder } from '@/lib/auth/ensureOrderUser';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import {
-    injectDeceasedCoverFromDelivery,
     injectDeliveryPhotosOnOrder,
+    propagateDeliveryPhotosToLinkedProfiles,
 } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { processProofImageBuffer } from '@/lib/deliveryProof/processProofImage';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
+import { uniqueAppendPhotoUrls } from '@/lib/deliveryProof/uniqueAppendPhotoUrls';
 import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
 import { resolveActiveFloristOrder } from '@/lib/vera/orderWorkflow/exceptionScenarios';
 import { fetchWhatsAppMediaFromMeta } from '@/lib/whatsapp/proxyWhatsAppMedia';
@@ -164,8 +165,17 @@ export async function ingestFloristWhatsAppPhoto(
             : order.deliveryProof?.photoBeforeUrl
               ? [order.deliveryProof.photoBeforeUrl]
               : [];
-    const photosBeforeUrls = existingBefore.length ? existingBefore : [photoAfterUrl];
-    const photosAfterUrls = [photoAfterUrl];
+    const existingAfter =
+        order.deliveryProof?.photosAfterUrls?.length
+            ? order.deliveryProof.photosAfterUrls
+            : order.deliveryProof?.photoAfterUrl
+              ? [order.deliveryProof.photoAfterUrl]
+              : [];
+
+    // WhatsApp: ogni scatto si aggiunge alla gallery "dopo" (niente overwrite a raffica).
+    // Non inventare uno slot "prima" uguale alla nuova foto.
+    const photosBeforeUrls = existingBefore;
+    const photosAfterUrls = uniqueAppendPhotoUrls(existingAfter, photoAfterUrl);
     const now = new Date();
 
     await prisma.$transaction(async (tx) => {
@@ -176,9 +186,12 @@ export async function ingestFloristWhatsAppPhoto(
                 photosBeforeUrls,
                 photosAfterUrls,
                 photoBeforeUrl: photosBeforeUrls[0] ?? null,
-                photoAfterUrl,
+                photoAfterUrl: photosAfterUrls.at(-1) ?? photoAfterUrl,
                 timestampAfter: now,
-                timestampBefore: order.deliveryProof?.photoBeforeUrl ? undefined : now,
+                timestampBefore:
+                    photosBeforeUrls.length > 0 && !order.deliveryProof?.photoBeforeUrl
+                        ? now
+                        : undefined,
                 status: 'COMPLETED',
             },
             create: {
@@ -187,8 +200,8 @@ export async function ingestFloristWhatsAppPhoto(
                 photosBeforeUrls,
                 photosAfterUrls,
                 photoBeforeUrl: photosBeforeUrls[0] ?? null,
-                photoAfterUrl,
-                timestampBefore: now,
+                photoAfterUrl: photosAfterUrls.at(-1) ?? photoAfterUrl,
+                timestampBefore: photosBeforeUrls.length ? now : null,
                 timestampAfter: now,
                 status: 'COMPLETED',
             },
@@ -220,8 +233,10 @@ export async function ingestFloristWhatsAppPhoto(
                 data: { userId: linkedUser.id },
             });
         }
+        // Collegamenti User↔Defunto e Partner↔Defunto (scheda fiorista + GdM).
         await syncDeceasedRelationsForOrder(order.id);
-        await injectDeceasedCoverFromDelivery(order.id, photosAfterUrls);
+        // Gallery defunto + order.photos (scheda defunto / fiorista / GdM).
+        await propagateDeliveryPhotosToLinkedProfiles(order.id, [photoAfterUrl]);
         void triggerSocialSanitizationForOrder(order.id, photosAfterUrls);
 
         try {
@@ -234,7 +249,7 @@ export async function ingestFloristWhatsAppPhoto(
     const shouldNotify = !wasAlreadyCompleted || previousAfterUrl !== photoAfterUrl;
 
     console.info(
-        `[delivery-automation] Foto WhatsApp registrata ordine=${order.orderNumber || order.id} partner=${partner.shopName} notify=${shouldNotify}`
+        `[delivery-automation] Foto WhatsApp registrata ordine=${order.orderNumber || order.id} partner=${partner.shopName} afterCount=${photosAfterUrls.length} notify=${shouldNotify}`
     );
 
     return {

@@ -114,6 +114,11 @@ model DeceasedProfile {
   /** Immagine di copertina scheda commemorativa (Vercel Blob). */
   coverUrl      String?  @map("cover_url")
   /**
+   * Gallery prove di posa / consegna (URL Blob), denormalizzata dagli ordini.
+   * Perché: scheda defunto e GdM devono mostrare tutte le foto anche se arrivate a raffica via WhatsApp.
+   */
+  deliveryPhotoUrls String[] @default([]) @map("delivery_photo_urls")
+  /**
    * Date future commemorative/consegna (max 10, YYYY-MM-DD) — senza impegno d'acquisto.
    * Fonte primaria lato scheda defunto; sincronizzate con gli Utenti collegati in salvataggio.
    */

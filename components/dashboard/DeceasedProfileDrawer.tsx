@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
     Calendar,
+    Camera,
     Heart,
     Loader2,
     MapPin,
@@ -683,6 +684,32 @@ export default function DeceasedProfileDrawer({
                                         </div>
                                     </section>
                                 </>
+                            ) : null}
+
+                            {detail.deliveryPhotoUrls && detail.deliveryPhotoUrls.length > 0 ? (
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                        <Camera size={14} /> Prove di posa custodite
+                                    </h3>
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {detail.deliveryPhotoUrls.map((url, idx) => (
+                                            <a
+                                                key={`${url}-${idx}`}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="shrink-0 block w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-[#c5a880]"
+                                            >
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={url}
+                                                    alt={`Prova posa ${idx + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </section>
                             ) : null}
 
                             <section className="space-y-3">

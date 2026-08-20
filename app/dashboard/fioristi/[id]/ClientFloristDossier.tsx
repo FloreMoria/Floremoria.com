@@ -9,6 +9,7 @@ import {
 import Image from 'next/image';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
+import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 
 import { PaymentStatus, OrderStatus } from '@prisma/client';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
@@ -147,7 +148,8 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                         orders.map((order) => {
                                             const netEarned = Math.floor((order.totalPriceCents / 100) * 0.65);
                                             const productList = order.items?.map((i: any) => i.product?.name).join(', ') || '-';
-                                            const hasPhoto = order.photos && order.photos.length > 0;
+                                            const proofUrls = getFlatProofPhotoUrls(order);
+                                            const hasPhoto = proofUrls.length > 0;
                                             const cancelled = isOrderCancelled(order);
 
                                             return (
@@ -185,8 +187,8 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                                     </td>
                                                     <td className="py-3 px-4 text-center align-middle">
                                                         {hasPhoto ? (
-                                                            <button onClick={(e) => { e.stopPropagation(); setSelectedPhoto(order.photos[0]); }} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-fm-gold transition-all mx-auto group block">
-                                                                <Image src={order.photos[0]} alt="Foto Consegna" fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
+                                                            <button onClick={(e) => { e.stopPropagation(); setSelectedPhoto(proofUrls[0]); }} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-fm-gold transition-all mx-auto group block">
+                                                                <Image src={proofUrls[0]} alt="Foto Consegna" fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
                                                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                                                     <Maximize2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                                                 </div>

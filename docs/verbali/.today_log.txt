@@ -21,3 +21,6 @@
 [2026-08-20 07:05] feat/dashboard: rimozione telefono defunto, galleria foto multipla dinamica senza placeholder vuoti, sync GdM automatica e associazione utente per nome/cognome editabile (senza email).
 
 [2026-08-20 09:33] feat/vera: debounce 60s aggregazione inbound WhatsApp + anti-ripetizione (caso Matilde Assumma foto a raffica).
+[2026-08-20 09:55] fix/delivery: foto WhatsApp fiorista in append su DeliveryProof/Order + gallery defunto + UI fiorista/GdM.
+
+[2026-08-20 10:12] feat(dashboard): tasto Aggiungi + in Sincronizzazione Foto Garanzia e upload multi-foto dinamico senza slot vuoti.

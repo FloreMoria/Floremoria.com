@@ -233,6 +233,30 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                                                             className="object-cover transition-transform hover:scale-105 duration-700"
                                                         />
                                                     </div>
+                                                    {proofPhotos.after.length > 1 ||
+                                                    proofPhotos.before.length > 0 ? (
+                                                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
+                                                            {[
+                                                                ...proofPhotos.before,
+                                                                ...proofPhotos.after,
+                                                            ].map((url, i) => (
+                                                                <a
+                                                                    key={`${url}-${i}`}
+                                                                    href={url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-fm-rose-soft/40"
+                                                                >
+                                                                    <Image
+                                                                        src={url}
+                                                                        alt={`Prova ${i + 1}`}
+                                                                        fill
+                                                                        className="object-cover"
+                                                                    />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
                                                     <div className="flex flex-wrap items-center gap-3">
                                                         <p className="text-[13px] text-green-700 font-medium flex items-center gap-1">
                                                             <svg

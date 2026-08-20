@@ -16,6 +16,7 @@ export default async function PartnersPage() {
                     include: {
                         user: true,
                         items: { include: { product: true } },
+                        deliveryProof: true,
                     },
                 },
                 deceasedAssignments: {

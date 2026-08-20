@@ -255,15 +255,10 @@ export async function uploadProofPhoto(
         };
 
         const existingUrls = getSlotUrls(arrays, slot);
-        for (const oldUrl of existingUrls) {
-            try {
-                await deleteProofBlob(oldUrl);
-            } catch (err) {
-                console.warn('[uploadProofPhoto] Blob delete skipped:', err);
-            }
-        }
+        // Aggiungiamo la nuova foto all'array esistente senza sovrascrivere o eliminare i file storici
+        const updatedUrls = existingUrls.includes(newUrl) ? existingUrls : [...existingUrls, newUrl];
 
-        arrays = setSlotUrls(arrays, slot, [newUrl]);
+        arrays = setSlotUrls(arrays, slot, updatedUrls);
         await persistProofUpdate(order.id, order.orderNumber, proof.id, arrays);
 
         if (slot === 'after') {
@@ -271,6 +266,7 @@ export async function uploadProofPhoto(
         }
 
         return { ok: true, url: `${newUrl}?v=${Date.now()}` };
+
     } catch (err) {
         console.error('[uploadProofPhoto]', err);
         return { ok: false, error: err instanceof Error ? err.message : 'Caricamento non riuscito.' };

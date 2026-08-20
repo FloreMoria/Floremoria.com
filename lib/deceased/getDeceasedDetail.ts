@@ -14,6 +14,8 @@ export type DeceasedDetailPayload = {
     fullName: string;
     photoUrl: string | null;
     coverUrl: string | null;
+    /** Gallery prove di posa denormalizzata (WhatsApp / mini-app). */
+    deliveryPhotoUrls: string[];
     cemeteryCity: string;
     city: string;
     phone: string | null;
@@ -147,6 +149,7 @@ export async function getDeceasedProfileDetail(deceasedProfileId: string): Promi
         fullName: profile.fullName,
         photoUrl: profile.photoUrl ?? null,
         coverUrl: profile.coverUrl ?? null,
+        deliveryPhotoUrls: Array.isArray(profile.deliveryPhotoUrls) ? profile.deliveryPhotoUrls : [],
         cemeteryCity: profile.cemeteryCity,
         city: profile.cemeteryCity,
         phone: profile.phone ?? latest?.user?.phone ?? null,
@@ -208,6 +211,7 @@ export async function getOrphanDeceasedDetail(seedOrderId: string): Promise<Dece
         fullName: seed.deceasedName,
         photoUrl: null,
         coverUrl: null,
+        deliveryPhotoUrls: [],
         cemeteryCity: seed.cemeteryCity,
         city: seed.cemeteryCity,
         phone: latest?.user?.phone ?? null,

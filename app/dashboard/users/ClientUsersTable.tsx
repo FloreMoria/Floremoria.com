@@ -629,22 +629,24 @@ export default function ClientUsersTable({
                                                     </form>
                                                 </div>
                                                 
-                                                <div className="lg:w-[420px] shrink-0 bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col items-stretch">
-                                                    <CustodiedProofGallery
-                                                        orderId={order.id}
-                                                        deceasedName={order.deceasedName}
-                                                        initialBefore={getOrderProofPhotos(order).before}
-                                                        initialAfter={getOrderProofPhotos(order).after}
-                                                        lat={order.latitude ?? order.deliveryProof?.gpsLatitude}
-                                                        lng={order.longitude ?? order.deliveryProof?.gpsLongitude}
-                                                        isAdmin
-                                                        showGpsMap
-                                                        compact
-                                                        hasPreDeliveryPhotoOpt={order.items?.some(
-                                                            (item: any) => item.productId === 'florem-foto-stato-prima'
-                                                        )}
-                                                    />
-                                                </div>
+                                                {(getOrderProofPhotos(order).before.length > 0 || getOrderProofPhotos(order).after.length > 0) && (
+                                                    <div className="lg:w-[420px] shrink-0 bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col items-stretch">
+                                                        <CustodiedProofGallery
+                                                            orderId={order.id}
+                                                            deceasedName={order.deceasedName}
+                                                            initialBefore={getOrderProofPhotos(order).before}
+                                                            initialAfter={getOrderProofPhotos(order).after}
+                                                            lat={order.latitude ?? order.deliveryProof?.gpsLatitude}
+                                                            lng={order.longitude ?? order.deliveryProof?.gpsLongitude}
+                                                            isAdmin
+                                                            showGpsMap
+                                                            compact
+                                                            hasPreDeliveryPhotoOpt={order.items?.some(
+                                                                (item: any) => item.productId === 'florem-foto-stato-prima'
+                                                            )}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

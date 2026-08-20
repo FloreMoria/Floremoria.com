@@ -23,11 +23,14 @@ import {
     Download,
     ExternalLink,
     ZoomIn,
+    GitMerge,
 } from 'lucide-react';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import PlannedDeliveryDatesEditor from '@/components/dashboard/PlannedDeliveryDatesEditor';
+import MergeDeceasedModal from '@/components/dashboard/MergeDeceasedModal';
+
 import PhoneInput from '@/components/ui/PhoneInput';
 
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
@@ -134,6 +137,9 @@ export default function DeceasedProfileDrawer({
     const [toast, setToast] = useState<string | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [zoomPhotoUrl, setZoomPhotoUrl] = useState<string | null>(null);
+    const [mergeModalOpen, setMergeModalOpen] = useState(false);
+    const [allProfilesList, setAllProfilesList] = useState<any[]>([]);
+
 
     const triggerDirectImageDownload = async (url: string, filename?: string) => {
         const res = await downloadMedia({
@@ -418,13 +424,34 @@ export default function DeceasedProfileDrawer({
                     </div>
                     <div className="flex items-center gap-2">
                         {detail?.kind === 'profile' && !editMode ? (
-                            <button
-                                type="button"
-                                onClick={beginEdit}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                            >
-                                <Pencil size={13} /> Modifica
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        setMergeModalOpen(true);
+                                        try {
+                                            const res = await fetch('/api/dashboard/defunti');
+                                            const data = await res.json();
+                                            if (data.ok && data.rows) {
+                                                setAllProfilesList(data.rows);
+                                            }
+                                        } catch (e) {
+                                            console.error('Errore caricamento lista profili:', e);
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800 hover:bg-purple-100 transition-colors"
+                                    title="Unisci questo profilo con profili omonimi duplicati"
+                                >
+                                    <GitMerge size={13} /> Unisci
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={beginEdit}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                >
+                                    <Pencil size={13} /> Modifica
+                                </button>
+                            </>
                         ) : null}
                         <button
                             type="button"
@@ -435,6 +462,30 @@ export default function DeceasedProfileDrawer({
                         </button>
                     </div>
                 </div>
+
+                {mergeModalOpen && detail?.deceasedProfileId && (
+                    <MergeDeceasedModal
+                        isOpen={mergeModalOpen}
+                        masterProfile={{
+                            id: detail.deceasedProfileId,
+                            fullName: displayName,
+                            cemeteryCity: detail.cemeteryCity || detail.city || '',
+                        }}
+                        allProfiles={allProfilesList.map((p) => ({
+                            id: p.deceasedProfileId || p.id,
+                            fullName: p.fullName,
+                            cemeteryCity: p.cemeteryCity,
+                            orders: p.orders || [],
+                        }))}
+                        onClose={() => setMergeModalOpen(false)}
+                        onSuccess={() => {
+                            showToast('Profili uniti con successo!');
+                            router.refresh();
+                            onClose();
+                        }}
+                    />
+                )}
+
 
                 {/* Body Content */}
                 <div className="flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar">

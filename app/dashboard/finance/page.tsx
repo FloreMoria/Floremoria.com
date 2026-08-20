@@ -171,17 +171,23 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    // Calcolo scadenze e scadenze urgenti
+    // Calcolo scadenze: mai mostrare adempimenti scaduti da >90 giorni
     const allDeadlines = React.useMemo(() => {
-        return getUpcomingDeadlines(ledger?.completedDeadlineIds || []);
+        return getUpcomingDeadlines(ledger?.completedDeadlineIds || []).filter(
+            (item) => item.daysRemaining >= -90
+        );
     }, [ledger?.completedDeadlineIds]);
 
     const urgentDeadlines = React.useMemo(() => {
-        return allDeadlines.filter(item => item.status === 'URGENT');
+        // Solo imminenti (0–10 gg), non le già scadute
+        return allDeadlines
+            .filter((item) => item.status === 'URGENT' && item.daysRemaining >= 0 && item.daysRemaining <= 10)
+            .sort((a, b) => a.daysRemaining - b.daysRemaining);
     }, [allDeadlines]);
 
     const filteredDeadlines = React.useMemo(() => {
         return allDeadlines.filter(item => {
+            if (item.daysRemaining < -90) return false;
             if (complianceFilter === 'ALL') return true;
             if (complianceFilter === 'FISC') {
                 return (

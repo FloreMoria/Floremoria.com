@@ -81,3 +81,4 @@
 [2026-08-20 20:48] fix(finance): dedupe P.IVA IT su report YouDoox XLSX (falso 24 duplicati) + colonne documento_*/tot_*.
 [2026-08-20 21:37] feat/finance: registro contabile storico permanente Neon (bilancio, IVA, export libro giornale, sync fonti).
 [2026-08-20 21:43] feat/finance: scadenziario solo da 2026-04-01; auto-match potenziato Fineco + modale Abbina guidata + ri-analisi non abbinati.
+[2026-08-20 21:51] fix/finance: scadenziario — esclusione definitiva adempimenti scaduti da >90 giorni; alert urgenti solo su imminenti 0–10gg.

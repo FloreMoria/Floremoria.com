@@ -1,18 +1,32 @@
 import { TaxDeadline } from './types';
 
+/** Avvio contabilità operativa FloreMoria (Q2 2026). */
+const OPERATIONAL_START = '2026-04-01';
+/** Scadenze scadute da più di N giorni non devono mai comparire nello scadenziario. */
+const MAX_OVERDUE_DAYS = 90;
+
+/** Parsa YYYY-MM-DD come mezzanotte locale (evita offset UTC che sposta il giorno). */
+function parseLocalDate(isoDate: string): Date {
+    const m = String(isoDate).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) {
+        const d = new Date(isoDate);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+}
+
 /**
- * Genera l'elenco completo degli adempimenti fiscali e societari per FloreMoria S.r.l.
- * per l'anno in corso (e successivo) impostando i relativi stati di urgenza.
+ * Genera l'elenco degli adempimenti fiscali e societari per FloreMoria S.r.l.
+ * Esclude sempre: pre-Q2 2026 e scadenze scadute da oltre 90 giorni.
  */
 export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[] {
     const today = new Date();
-    // Imposta ore a zero per il calcolo preciso dei giorni rimanenti
     today.setHours(0, 0, 0, 0);
-    
+
     const currentYear = today.getFullYear();
     const deadlines: TaxDeadline[] = [];
 
-    // Helper per aggiungere una scadenza e calcolarne lo stato di urgenza
     const addDeadline = (
         id: string,
         title: string,
@@ -22,20 +36,25 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
         description: string,
         externalRef?: string
     ) => {
-        const dueDate = new Date(dueDateStr);
-        dueDate.setHours(0, 0, 0, 0);
+        // Mai generare adempimenti precedenti all'avvio contabilità operativa
+        if (dueDateStr < OPERATIONAL_START) return;
 
+        const dueDate = parseLocalDate(dueDateStr);
         const diffTime = dueDate.getTime() - today.getTime();
-        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        // Cancella dalla vista qualsiasi scadenza più vecchia di 90 giorni
+        if (daysRemaining < -MAX_OVERDUE_DAYS) return;
 
         const isCompleted = completedIds.includes(id);
-        
+
         let status: TaxDeadline['status'] = 'PENDING';
         let isUrgent = false;
 
         if (isCompleted) {
             status = 'COMPLETED';
-        } else if (daysRemaining <= 10) {
+        } else if (daysRemaining >= 0 && daysRemaining <= 10) {
+            // Urgente solo se ancora da scadere entro 10 giorni (non le già scadute)
             status = 'URGENT';
             isUrgent = true;
         }
@@ -50,7 +69,7 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
             status,
             isUrgent,
             daysRemaining,
-            externalRef
+            externalRef,
         });
     };
 
@@ -220,20 +239,11 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
         'Trasmissione telematica del modello 770 contenente i dati delle ritenute operate su compensi, dividendi e previdenza.'
     );
 
-    // Ordina le scadenze: prima quelle urgenti/imminenti (date più vicine), poi le altre
-    // Contabilità operativa FloreMoria: solo da Q2 2026 (1° aprile 2026) in avanti.
-    // Esclude anche scadenze scadute da oltre 90 giorni (rumore pregresso).
-    const OPERATIONAL_START = '2026-04-01';
-    const staleCutoff = new Date(today);
-    staleCutoff.setDate(staleCutoff.getDate() - 90);
-
+    // Cintura di sicurezza: niente pre-Q2 né overdue > 90 giorni, anche se addDeadline cambia.
     return deadlines
-        .filter((d) => {
-            if (d.dueDate < OPERATIONAL_START) return false;
-            const due = new Date(d.dueDate);
-            due.setHours(0, 0, 0, 0);
-            if (due < staleCutoff) return false;
-            return true;
-        })
-        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        .filter(
+            (d) =>
+                d.dueDate >= OPERATIONAL_START && d.daysRemaining >= -MAX_OVERDUE_DAYS
+        )
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 }

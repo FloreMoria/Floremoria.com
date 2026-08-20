@@ -9,6 +9,8 @@ import {
     resolveCustomerFacingDeliveryDate,
 } from '@/lib/orders/displayDeliveryDate';
 import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
+import { downloadMedia } from '@/lib/utils/downloadMedia';
+
 
 export type BachecaOrder = Order & {
     items: (OrderItem & { product: Product })[];
@@ -218,6 +220,7 @@ export function UserBachecaOrderCard({
                     </div>
 
                     {isDelivered && primaryPhotoUrl ? (
+
                         <div className="border-t border-slate-100 pt-4 flex flex-wrap gap-2">
                             <a
                                 href={primaryPhotoUrl}
@@ -228,15 +231,20 @@ export function UserBachecaOrderCard({
                                 <ExternalLink size={14} />
                                 Vedi foto della posa
                             </a>
-                            <a
-                                href={`/api/delivery-proof/download?orderId=${encodeURIComponent(order.id)}&url=${encodeURIComponent(primaryPhotoUrl)}`}
-                                download
+                            <button
+                                type="button"
+                                onClick={() => void downloadMedia({
+                                    url: `/api/delivery-proof/download?orderId=${encodeURIComponent(order.id)}&url=${encodeURIComponent(primaryPhotoUrl)}`,
+                                    filename: `foto-posa-${order.orderNumber || order.id}.jpg`,
+                                    title: 'Foto Posa FloreMoria',
+                                })}
                                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold uppercase tracking-wider hover:border-[#c5a880] hover:text-[#8a7048] transition-colors"
                             >
                                 Scarica HD
-                            </a>
+                            </button>
                         </div>
                     ) : null}
+
                 </div>
 
                 <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8 flex flex-col justify-center">

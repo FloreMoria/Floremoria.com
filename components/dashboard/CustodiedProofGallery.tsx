@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { downloadFilenameFromProofUrl } from '@/lib/deliveryProof/proofFilenames';
 import GardenSharePanel from '@/components/memorial/GardenSharePanel';
+import { downloadMedia } from '@/lib/utils/downloadMedia';
 
 type Props = {
     orderId: string;
@@ -31,35 +32,27 @@ type Props = {
     senderName?: string | null;
 };
 
-/** Download HD via proxy autenticato (evita CORS Blob) — Utente e Admin. */
+/** Download HD via proxy autenticato e helper universale downloadMedia. */
 async function forceDownload(orderId: string, url: string, filename: string) {
-    const endpoint = `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;
-    const res = await fetch(endpoint, { cache: 'no-store', credentials: 'same-origin' });
-    if (!res.ok) {
-        // Fallback diretto se il proxy fallisce ma l'URL è pubblico.
-        const direct = await fetch(url, { cache: 'no-store' }).catch(() => null);
-        if (!direct?.ok) throw new Error('Download non riuscito.');
-        const blob = await direct.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(objectUrl);
-        return;
+    const proxyEndpoint = `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;
+    const res = await downloadMedia({
+        url: proxyEndpoint,
+        filename,
+        title: 'Foto Garanzia Consegna FloreMoria',
+    });
+    if (!res.success) {
+        // Fallback sull'URL diretto se il proxy restituisce errore
+        const fallbackRes = await downloadMedia({
+            url,
+            filename,
+            title: 'Foto Garanzia Consegna FloreMoria',
+        });
+        if (!fallbackRes.success) {
+            throw new Error(fallbackRes.error || 'Download non riuscito.');
+        }
     }
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
 }
+
 
 export function proofPhotoDownloadHref(orderId: string, url: string): string {
     return `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;

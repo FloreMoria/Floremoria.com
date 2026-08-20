@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Download, Share2, X } from 'lucide-react';
+import { ArrowLeft, Download, Share2, X, Loader2 } from 'lucide-react';
 import {
     setDashboardOverlayOpen,
     useEdgeSwipeBack,
 } from '@/lib/dashboard/useEdgeSwipeBack';
+import { downloadMedia } from '@/lib/utils/downloadMedia';
 
 interface MediaLightboxProps {
     imageUrl: string;
@@ -24,6 +25,8 @@ export default function MediaLightbox({
     const [mounted, setMounted] = useState(false);
     const [dragX, setDragX] = useState(0);
     const [sharing, setSharing] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
     const touchStartRef = useRef({ x: 0, y: 0 });
 
     const handleClose = useCallback(() => {
@@ -50,6 +53,29 @@ export default function MediaLightbox({
             setDashboardOverlayOpen(false);
         };
     }, [handleClose]);
+
+    const handleDownload = useCallback(async () => {
+        if (downloading) return;
+        setDownloading(true);
+        setDownloadError(null);
+        try {
+            const targetUrl = downloadUrl || imageUrl;
+            const res = await downloadMedia({
+                url: targetUrl,
+                filename: `floremoria-foto-${Date.now()}.jpg`,
+                title: 'Foto FloreMoria',
+            });
+            if (!res.success) {
+                setDownloadError(res.error || 'Download fallito.');
+                setTimeout(() => setDownloadError(null), 4000);
+            }
+        } catch {
+            setDownloadError('Errore durante il download.');
+            setTimeout(() => setDownloadError(null), 4000);
+        } finally {
+            setDownloading(false);
+        }
+    }, [downloadUrl, imageUrl, downloading]);
 
     const handleShare = useCallback(async () => {
         if (sharing) return;
@@ -122,22 +148,26 @@ export default function MediaLightbox({
                         <Share2 className="w-4 h-4" />
                         Condividi
                     </button>
-                    {downloadUrl ? (
-                        <a
-                            href={downloadUrl}
-                            download
-                            className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/25 active:scale-[0.98]"
-                        >
+                    <button
+                        type="button"
+                        onClick={() => void handleDownload()}
+                        disabled={downloading}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/25 active:scale-[0.98] disabled:opacity-60"
+                    >
+                        {downloading ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        ) : (
                             <Download className="w-4 h-4" />
-                            Scarica
-                        </a>
-                    ) : null}
+                        )}
+                        <span>{downloading ? 'Download…' : 'Scarica'}</span>
+                    </button>
                     <button
                         type="button"
                         onClick={handleClose}
                         aria-label="Chiudi"
                         className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-[0.98]"
                     >
+
                         <X className="w-5 h-5" />
                     </button>
                 </div>

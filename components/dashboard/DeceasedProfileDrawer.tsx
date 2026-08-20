@@ -32,6 +32,8 @@ import PhoneInput from '@/components/ui/PhoneInput';
 
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
+import { downloadMedia } from '@/lib/utils/downloadMedia';
+
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
 import {
     parseGravePosition,
@@ -134,29 +136,16 @@ export default function DeceasedProfileDrawer({
     const [zoomPhotoUrl, setZoomPhotoUrl] = useState<string | null>(null);
 
     const triggerDirectImageDownload = async (url: string, filename?: string) => {
-        try {
-            const cleanUrl = url.split('?')[0];
-            const res = await fetch(url, { cache: 'no-store' });
-            if (!res.ok) throw new Error('Fetch failed');
-            const blob = await res.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = objectUrl;
-            link.download = filename || cleanUrl.split('/').pop() || 'foto-garanzia.jpg';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(objectUrl);
-        } catch {
-            const proxyUrl = `/api/delivery-proof/download?url=${encodeURIComponent(url)}`;
-            const link = document.createElement('a');
-            link.href = proxyUrl;
-            link.download = filename || 'foto-garanzia.jpg';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+        const res = await downloadMedia({
+            url,
+            filename: filename || 'foto-garanzia.jpg',
+            title: 'Foto Defunto FloreMoria',
+        });
+        if (!res.success) {
+            showToast(res.error || 'Errore durante il download della foto.');
         }
     };
+
 
     const showToast = (message: string) => {
 

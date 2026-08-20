@@ -176,7 +176,13 @@ export default function FinanceDashboardPage() {
     const filteredDeadlines = React.useMemo(() => {
         return allDeadlines.filter(item => {
             if (complianceFilter === 'ALL') return true;
-            if (complianceFilter === 'FISC') return item.category === 'IVA' || item.category === 'F24';
+            if (complianceFilter === 'FISC') {
+                return (
+                    item.category === 'IVA' ||
+                    item.category === 'F24' ||
+                    item.category === 'CONTABILITA'
+                );
+            }
             if (complianceFilter === 'ESTER') return item.category === 'ESTEROMETRO';
             if (complianceFilter === 'CORP') return item.category === 'BILANCIO' || item.category === 'STARTUP_INNOVATIVA' || item.category === 'DICHIARATIVI';
             return true;
@@ -1236,17 +1242,32 @@ export default function FinanceDashboardPage() {
                                             <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
                                                 item.category === 'IVA' ? 'bg-amber-50 border-amber-200 text-amber-700' :
                                                 item.category === 'F24' ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                                                item.category === 'CONTABILITA' ? 'bg-teal-50 border-teal-200 text-teal-700' :
                                                 item.category === 'ESTEROMETRO' ? 'bg-blue-50 border-blue-200 text-blue-700' :
                                                 item.category === 'BILANCIO' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
                                                 item.category === 'STARTUP_INNOVATIVA' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
                                                 'bg-purple-50 border-purple-200 text-purple-700'
                                             }`}>
-                                                {item.category}
+                                                {item.category === 'CONTABILITA' ? 'CONTABILITÀ' : item.category}
                                             </span>
                                         </td>
                                         <td className="px-5 py-3.5 text-xs text-slate-500 font-bold uppercase">{item.frequency}</td>
                                         <td className="px-5 py-3.5 text-xs text-slate-600 max-w-[280px] truncate" title={item.description}>
                                             {item.description}
+                                            {item.externalRef ? (
+                                                <>
+                                                    {' '}
+                                                    <a
+                                                        href={item.externalRef}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-teal-700 underline font-semibold"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        Apri YouDoox
+                                                    </a>
+                                                </>
+                                            ) : null}
                                         </td>
                                         <td className="px-5 py-3.5 text-xs font-mono font-semibold text-slate-700" suppressHydrationWarning>
                                             {formatDate(item.dueDate)}

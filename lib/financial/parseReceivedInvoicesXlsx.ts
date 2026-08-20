@@ -123,6 +123,20 @@ const TOTAL_KEYS = [
     'importototaledocumento',
 ];
 
+const TYPE_KEYS = [
+    'tipo documento',
+    'tipo',
+    'tipodocumento',
+    'tipo doc',
+    'documento',
+];
+const RELATED_KEYS = [
+    'fattura collegata',
+    'riferimento fattura',
+    'n. fattura collegata',
+    'documento collegato',
+];
+
 function rowToInvoice(
     row: Record<string, unknown>,
     idx: number,
@@ -136,40 +150,52 @@ function rowToInvoice(
     const totalEuros = parseAmount(findCol(row, TOTAL_KEYS));
     const netEuros = parseAmount(findCol(row, NET_KEYS)) || 0;
     const vatEuros = parseAmount(findCol(row, VAT_AMT_KEYS)) || 0;
+    const tipoRaw = findCol(row, TYPE_KEYS);
+    const relatedInvoiceNumber = findCol(row, RELATED_KEYS) || null;
 
     if (!invoiceNumber || !invoiceDate) {
         return { error: `Riga ${idx + 1}: numero/data documento mancanti` };
     }
     let total = totalEuros;
-    if (total == null || total <= 0) {
-        if (netEuros > 0 || vatEuros > 0) total = netEuros + vatEuros;
+    if (total == null || total === 0) {
+        if (netEuros !== 0 || vatEuros !== 0) total = netEuros + vatEuros;
     }
-    if (total == null || total <= 0) {
+    if (total == null || total === 0) {
         return { error: `Riga ${idx + 1}: totale documento assente` };
     }
 
-    const totalCents = eurosToCents(total);
+    const isCreditNote =
+        /TD04|NOTA\s*DI\s*CREDITO|CREDITO|NC\b/i.test(tipoRaw) ||
+        total < 0;
+    const sign = isCreditNote ? -1 : 1;
+    const totalAbs = eurosToCents(Math.abs(total));
     const vatRate =
-        netEuros > 0 && vatEuros > 0 ? Math.round((vatEuros / netEuros) * 10000) / 100 : 22;
-    const vatCents =
-        vatEuros > 0
-            ? eurosToCents(vatEuros)
-            : Math.round(totalCents - totalCents / (1 + vatRate / 100));
-    const netCents = netEuros > 0 ? eurosToCents(netEuros) : totalCents - vatCents;
+        Math.abs(netEuros) > 0 && Math.abs(vatEuros) > 0
+            ? Math.round((Math.abs(vatEuros) / Math.abs(netEuros)) * 10000) / 100
+            : 22;
+    const vatAbs =
+        vatEuros !== 0
+            ? eurosToCents(Math.abs(vatEuros))
+            : Math.round(totalAbs - totalAbs / (1 + vatRate / 100));
+    const netAbs = netEuros !== 0 ? eurosToCents(Math.abs(netEuros)) : totalAbs - vatAbs;
+    const docKind: ParsedFatturaPa['docKind'] = sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
+    const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
 
     return {
         vendorName: vendorName.slice(0, 160),
         vendorVat,
         invoiceNumber: invoiceNumber.slice(0, 64),
         invoiceDate,
-        totalCents,
-        netCents: Math.max(0, netCents),
-        vatCents: Math.max(0, vatCents),
+        totalCents: sign * totalAbs,
+        netCents: sign * Math.max(0, netAbs),
+        vatCents: sign * Math.max(0, vatAbs),
         vatRate,
-        causale: `Fattura n. ${invoiceNumber} — ${vendorName}`.slice(0, 2000),
+        causale: `${label} n. ${invoiceNumber} — ${vendorName}`.slice(0, 2000),
         lineDescriptions: [],
         sourceFileName: `${sourceFileName}#${idx + 1}`,
         dedupeKey: buildDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        docKind,
+        relatedInvoiceNumber,
     };
 }
 

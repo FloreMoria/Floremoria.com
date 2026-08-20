@@ -22,6 +22,10 @@ export type ParsedFatturaPa = {
     sourceFileName: string;
     /** Chiave dedupe: P.IVA|Numero|Data */
     dedupeKey: string;
+    /** FATTURA ordinaria oppure NOTA_CREDITO (TD04 / importo negativo). */
+    docKind: 'FATTURA' | 'NOTA_CREDITO';
+    /** Eventuale numero fattura collegata (per NC che annullano un documento). */
+    relatedInvoiceNumber?: string | null;
     rawPreview?: string;
 };
 
@@ -143,6 +147,11 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         'Fornitore SDI';
 
     const datiDoc = extractXmlTag(xml, 'DatiGeneraliDocumento') || '';
+    const tipoDocumento = textOf(extractXmlTag(datiDoc, 'TipoDocumento')).toUpperCase();
+    const isCreditNote =
+        tipoDocumento === 'TD04' ||
+        /NOTA\s*DI\s*CREDITO|CREDIT\s*NOTE/i.test(tipoDocumento) ||
+        /NOTA\s*DI\s*CREDITO/i.test(textOf(extractXmlTag(datiDoc, 'Causale')));
     const invoiceNumber = textOf(extractXmlTag(datiDoc, 'Numero')) || textOf(extractXmlTag(xml, 'Numero'));
     const invoiceDate =
         normalizeDate(textOf(extractXmlTag(datiDoc, 'Data'))) ||
@@ -151,6 +160,19 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         textOf(extractXmlTag(datiDoc, 'ImportoTotaleDocumento')) ||
             textOf(extractXmlTag(xml, 'ImportoTotaleDocumento'))
     );
+
+    const relatedBlocks =
+        extractAllXmlTags(xml, 'DatiFattureCollegate').concat(
+            extractAllXmlTags(xml, 'DatiFatturaPrecedente')
+        );
+    let relatedInvoiceNumber: string | null = null;
+    for (const block of relatedBlocks) {
+        const n = textOf(extractXmlTag(block, 'Numero'));
+        if (n) {
+            relatedInvoiceNumber = n.slice(0, 64);
+            break;
+        }
+    }
 
     const causali = extractAllXmlTags(datiDoc || xml, 'Causale').map(textOf).filter(Boolean);
     const causale = causali.join(' — ') || '';
@@ -180,25 +202,32 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         throw new Error(`Data fattura assente in ${sourceFileName}`);
     }
 
-    let totalCents =
+    let totalAbs =
         totaleDoc != null
-            ? eurosToCents(totaleDoc)
-            : eurosToCents(netEuros + vatEuros);
-    if (!Number.isFinite(totalCents) || totalCents <= 0) {
+            ? eurosToCents(Math.abs(totaleDoc))
+            : eurosToCents(Math.abs(netEuros + vatEuros));
+    if (!Number.isFinite(totalAbs) || totalAbs <= 0) {
         throw new Error(`Importo non valido in ${sourceFileName}`);
     }
 
-    let netCents = eurosToCents(netEuros);
-    let vatCents = eurosToCents(vatEuros);
+    // Nota di credito: importi negativi in Contabilità (storno).
+    const sign = isCreditNote || (totaleDoc != null && totaleDoc < 0) ? -1 : 1;
+    const docKind: ParsedFatturaPa['docKind'] =
+        sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
+
+    let netCents = eurosToCents(Math.abs(netEuros));
+    let vatCents = eurosToCents(Math.abs(vatEuros));
     if (netCents <= 0 && vatCents <= 0 && vatRate > 0) {
-        vatCents = Math.round(totalCents - totalCents / (1 + vatRate / 100));
-        netCents = totalCents - vatCents;
+        vatCents = Math.round(totalAbs - totalAbs / (1 + vatRate / 100));
+        netCents = totalAbs - vatCents;
     } else if (netCents <= 0) {
-        netCents = totalCents - vatCents;
+        netCents = totalAbs - vatCents;
     }
 
+    const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
     const descriptionParts = [
-        `Fattura n. ${invoiceNumber}`,
+        `${label} n. ${invoiceNumber}`,
+        relatedInvoiceNumber ? `rif. ${relatedInvoiceNumber}` : '',
         causale,
         lineDescriptions.slice(0, 3).join('; '),
     ].filter(Boolean);
@@ -208,14 +237,16 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         vendorVat,
         invoiceNumber: invoiceNumber.slice(0, 64),
         invoiceDate,
-        totalCents,
-        netCents: Math.max(0, netCents),
-        vatCents: Math.max(0, vatCents),
+        totalCents: sign * totalAbs,
+        netCents: sign * Math.max(0, netCents),
+        vatCents: sign * Math.max(0, vatCents),
         vatRate,
         causale: descriptionParts.join(' — ').slice(0, 2000),
         lineDescriptions,
         sourceFileName,
         dedupeKey: buildDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        docKind,
+        relatedInvoiceNumber,
         rawPreview: xml.slice(0, 240),
     };
 }
@@ -325,11 +356,23 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
             const vatRate =
                 parseItalianOrIsoAmount(findCsv(row, ['aliquota', 'aliquotaiva', '% iva'])) ||
                 (netEuros > 0 && vatEuros > 0 ? (vatEuros / netEuros) * 100 : 22);
+            const tipoRaw =
+                findCsv(row, [
+                    'tipo documento',
+                    'tipo',
+                    'tipodocumento',
+                    'tipo doc',
+                    'documento',
+                ]) || '';
             const causale =
                 findCsv(row, ['causale', 'descrizione', 'oggetto', 'bene', 'servizio']) ||
                 `Fattura n. ${invoiceNumber}`;
+            const isCreditNote =
+                /TD04|NOTA\s*DI\s*CREDITO|CREDITO|NC\b/i.test(tipoRaw) ||
+                /NOTA\s*DI\s*CREDITO/i.test(causale) ||
+                (totalEuros != null && totalEuros < 0);
 
-            if (!invoiceNumber || !invoiceDate || totalEuros == null || totalEuros <= 0) {
+            if (!invoiceNumber || !invoiceDate || totalEuros == null || totalEuros === 0) {
                 skipped.push({
                     fileName: `csv-row-${idx + 1}`,
                     reason: 'Riga CSV incompleta (numero/data/importo)',
@@ -337,20 +380,35 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
                 return;
             }
 
-            const totalCents = eurosToCents(totalEuros);
-            const vatCents = vatEuros > 0 ? eurosToCents(vatEuros) : Math.round(totalCents - totalCents / (1 + vatRate / 100));
-            const netCents = netEuros > 0 ? eurosToCents(netEuros) : totalCents - vatCents;
+            const sign = isCreditNote ? -1 : 1;
+            const totalAbs = eurosToCents(Math.abs(totalEuros));
+            const vatAbs =
+                vatEuros !== 0
+                    ? eurosToCents(Math.abs(vatEuros))
+                    : Math.round(totalAbs - totalAbs / (1 + Math.abs(vatRate) / 100));
+            const netAbs =
+                netEuros !== 0 ? eurosToCents(Math.abs(netEuros)) : totalAbs - vatAbs;
+            const relatedInvoiceNumber =
+                findCsv(row, [
+                    'fattura collegata',
+                    'riferimento fattura',
+                    'n. fattura collegata',
+                    'documento collegato',
+                ]) || null;
+            const docKind: ParsedFatturaPa['docKind'] =
+                sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
+            const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
 
             invoices.push({
                 vendorName: vendorName.slice(0, 160),
                 vendorVat: vendorVat ? vendorVat.replace(/\s+/g, '').toUpperCase() : null,
                 invoiceNumber,
                 invoiceDate,
-                totalCents,
-                netCents,
-                vatCents,
-                vatRate,
-                causale: `Fattura n. ${invoiceNumber} — ${causale}`.slice(0, 2000),
+                totalCents: sign * totalAbs,
+                netCents: sign * netAbs,
+                vatCents: sign * vatAbs,
+                vatRate: Math.abs(vatRate),
+                causale: `${label} n. ${invoiceNumber} — ${causale}`.slice(0, 2000),
                 lineDescriptions: [causale],
                 sourceFileName: `csv-row-${idx + 1}`,
                 dedupeKey: buildDedupeKey(
@@ -358,6 +416,8 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
                     invoiceNumber,
                     invoiceDate
                 ),
+                docKind,
+                relatedInvoiceNumber,
             });
         } catch (err) {
             skipped.push({

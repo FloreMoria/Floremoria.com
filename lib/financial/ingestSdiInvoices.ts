@@ -7,7 +7,7 @@ import * as path from 'path';
 import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
-import { addAccountingEntries } from '@/lib/financial/ledgerStore';
+import { addAccountingEntries, upsertAccountingEntries } from '@/lib/financial/ledgerStore';
 import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
 import type { AccountingEntry } from '@/lib/financial/types';
 import {
@@ -21,9 +21,12 @@ const BLOB_PREFIX = 'floremoria-finance/sdi-invoices';
 
 export type SdiIngestSummary = {
     imported: number;
+    updated: number;
     skippedDuplicates: number;
     skippedErrors: number;
     matchedFineco: number;
+    creditNotes: number;
+    cancelledByCreditNote: number;
     totalCents: number;
     warnings: string[];
     skippedDetails: Array<{ fileName: string; reason: string }>;
@@ -84,17 +87,15 @@ async function findExistingByDedupeKey(dedupeKey: string) {
                     equals: dedupeKey,
                 },
             },
-            select: { id: true },
         });
         if (hit) return hit;
     } catch {
         // fallback sotto
     }
     const recent = await prisma.manualFinanceExpense.findMany({
-        where: { docType: 'FATTURA' },
+        where: { docType: { in: ['FATTURA', 'NOTA_CREDITO'] } },
         orderBy: { createdAt: 'desc' },
         take: 400,
-        select: { id: true, metadataJson: true, notes: true },
     });
     return (
         recent.find((r) => {
@@ -102,6 +103,155 @@ async function findExistingByDedupeKey(dedupeKey: string) {
             return meta?.dedupeKey === dedupeKey || (r.notes || '').includes(dedupeKey);
         }) || null
     );
+}
+
+function fingerprint(inv: {
+    totalCents: number;
+    netCents: number;
+    vatCents: number;
+    vendorName: string;
+    description?: string;
+    docType?: string;
+}): string {
+    return [
+        inv.docType || 'FATTURA',
+        inv.totalCents,
+        inv.netCents,
+        inv.vatCents,
+        normalizeVendor(inv.vendorName),
+        (inv.description || '').slice(0, 120),
+    ].join('|');
+}
+
+function buildInvoiceMetadata(
+    inv: ParsedFatturaPa,
+    archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
+    source: 'SDI_XML' | 'SDI_XLSX',
+    extra?: Record<string, unknown>
+): Prisma.InputJsonValue {
+    return {
+        source,
+        isDeductible: inv.docKind !== 'NOTA_CREDITO',
+        dedupeKey: inv.dedupeKey,
+        vendorVat: inv.vendorVat,
+        invoiceNumber: inv.invoiceNumber,
+        docKind: inv.docKind,
+        relatedInvoiceNumber: inv.relatedInvoiceNumber || null,
+        lineDescriptions: inv.lineDescriptions,
+        sourceFileName: inv.sourceFileName,
+        archiveFileName: archive.fileName,
+        ...(extra || {}),
+    };
+}
+
+function toLedgerEntry(
+    rowId: string,
+    inv: ParsedFatturaPa,
+    source: 'SDI_XML' | 'SDI_XLSX'
+): AccountingEntry {
+    const isNc = inv.docKind === 'NOTA_CREDITO';
+    return {
+        id: `entry_sdi_${rowId}`,
+        date: inv.invoiceDate,
+        description: `${isNc ? 'Nota credito' : 'Fattura'} ${source === 'SDI_XLSX' ? 'report' : 'SDI'} ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(
+            0,
+            240
+        ),
+        dareAccount: isNc
+            ? LEDGER_BANK_ACCOUNT
+            : '70900 - Spese Generali / Fatture Passive',
+        avereAccount: isNc
+            ? '70900 - Spese Generali / Fatture Passive'
+            : LEDGER_BANK_ACCOUNT,
+        amountCents: Math.abs(inv.totalCents),
+        vatAmountCents: Math.abs(inv.vatCents),
+        isForeignService: false,
+        invoiceReference: inv.invoiceNumber,
+        status: 'CONFIRMED',
+    };
+}
+
+/**
+ * Se arriva una NC con fattura collegata, marca la fattura originale come stornata.
+ */
+async function markRelatedInvoiceCancelledByCreditNote(inv: ParsedFatturaPa): Promise<number> {
+    if (inv.docKind !== 'NOTA_CREDITO' || !inv.relatedInvoiceNumber || !inv.vendorVat) {
+        return 0;
+    }
+    const vat = inv.vendorVat.replace(/\s+/g, '').toUpperCase();
+    const relatedNum = inv.relatedInvoiceNumber.replace(/\s+/g, '').toUpperCase();
+    const candidates = await prisma.manualFinanceExpense.findMany({
+        where: {
+            docType: 'FATTURA',
+            vendorName: { contains: inv.vendorName.slice(0, 40), mode: 'insensitive' },
+        },
+        orderBy: { expenseDate: 'desc' },
+        take: 40,
+    });
+    let cancelled = 0;
+    for (const row of candidates) {
+        const meta = (row.metadataJson || {}) as Record<string, unknown>;
+        const invNo = String(meta.invoiceNumber || row.notes || '')
+            .replace(/\s+/g, '')
+            .toUpperCase();
+        const invVat = String(meta.vendorVat || '')
+            .replace(/\s+/g, '')
+            .toUpperCase();
+        if (!invNo.includes(relatedNum) && invNo !== relatedNum) continue;
+        if (invVat && vat && !invVat.includes(vat.slice(-11)) && !vat.includes(invVat.slice(-11))) {
+            continue;
+        }
+        if (meta.cancelledByCreditNote) continue;
+        await prisma.manualFinanceExpense.update({
+            where: { id: row.id },
+            data: {
+                notes: `${row.notes || ''} | STORNATA da NC ${inv.invoiceNumber}`.slice(0, 500),
+                metadataJson: {
+                    ...meta,
+                    cancelledByCreditNote: true,
+                    cancelledByInvoiceNumber: inv.invoiceNumber,
+                    cancelledAt: new Date().toISOString(),
+                    isDeductible: false,
+                } as Prisma.InputJsonValue,
+            },
+        });
+        cancelled += 1;
+    }
+    return cancelled;
+}
+
+async function unlinkFinecoMatch(expenseId: string, lineId: string | null) {
+    if (!lineId) return;
+    try {
+        const line = await prisma.bankStatementLine.findUnique({ where: { id: lineId } });
+        if (!line) return;
+        await prisma.bankStatementLine.update({
+            where: { id: lineId },
+            data: {
+                matchStatus: 'UNMATCHED',
+                matchType: null,
+                matchScore: null,
+                matchedTxId: null,
+                matchNotes: `Scollegato: fattura ${expenseId} aggiornata`,
+            },
+        });
+        if (line.documentId) {
+            const [matchedCount, unmatchedCount] = await Promise.all([
+                prisma.bankStatementLine.count({
+                    where: { documentId: line.documentId, matchStatus: 'MATCHED' },
+                }),
+                prisma.bankStatementLine.count({
+                    where: { documentId: line.documentId, matchStatus: { not: 'MATCHED' } },
+                }),
+            ]);
+            await prisma.bankStatementDocument.update({
+                where: { id: line.documentId },
+                data: { matchedCount, unmatchedCount },
+            });
+        }
+    } catch {
+        /* best-effort */
+    }
 }
 
 function vendorCompatible(invoiceVendor: string, bankDescription: string): boolean {
@@ -196,17 +346,6 @@ async function persistInvoice(
     source: 'SDI_XML' | 'SDI_XLSX'
 ) {
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
-    const metadata: Prisma.InputJsonValue = {
-        source,
-        isDeductible: true,
-        dedupeKey: inv.dedupeKey,
-        vendorVat: inv.vendorVat,
-        invoiceNumber: inv.invoiceNumber,
-        lineDescriptions: inv.lineDescriptions,
-        sourceFileName: inv.sourceFileName,
-        archiveFileName: archive.fileName,
-    };
-
     const contentType =
         source === 'SDI_XLSX'
             ? archive.fileName.toLowerCase().endsWith('.csv')
@@ -217,9 +356,9 @@ async function persistInvoice(
     const row = await prisma.manualFinanceExpense.create({
         data: {
             expenseDate,
-            docType: 'FATTURA',
+            docType: inv.docKind,
             vendorName: inv.vendorName,
-            description: inv.causale || `Fattura n. ${inv.invoiceNumber}`,
+            description: inv.causale || `${inv.docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura'} n. ${inv.invoiceNumber}`,
             totalCents: inv.totalCents,
             vatRate: inv.vatRate,
             vatCents: inv.vatCents,
@@ -232,29 +371,73 @@ async function persistInvoice(
             storageKind: archive.storageKind,
             periodKey: periodKeyFromDate(expenseDate),
             notes: `${source} ${inv.dedupeKey}`,
-            metadataJson: metadata,
+            metadataJson: buildInvoiceMetadata(inv, archive, source),
             reconciled: false,
         },
     });
 
-    const entry: AccountingEntry = {
-        id: `entry_sdi_${row.id}`,
-        date: inv.invoiceDate,
-        description: `Fattura ${source === 'SDI_XLSX' ? 'report' : 'SDI'} ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(
-            0,
-            240
-        ),
-        dareAccount: '70900 - Spese Generali / Fatture Passive',
-        avereAccount: LEDGER_BANK_ACCOUNT,
-        amountCents: inv.totalCents,
-        vatAmountCents: inv.vatCents,
-        isForeignService: false,
-        invoiceReference: inv.invoiceNumber,
-        status: 'CONFIRMED',
-    };
-    addAccountingEntries([entry]);
-
+    addAccountingEntries([toLedgerEntry(row.id, inv, source)]);
     return row;
+}
+
+/**
+ * Aggiorna fattura già presente (stessa chiave) con dati nuovi dal report completo / NC corretta.
+ */
+async function updateExistingInvoice(
+    existing: {
+        id: string;
+        totalCents: number;
+        netCents: number;
+        vatCents: number;
+        vendorName: string;
+        description: string;
+        docType: string;
+        reconciled: boolean;
+        matchedStatementLineId: string | null;
+        metadataJson: Prisma.JsonValue | null;
+        notes: string | null;
+    },
+    inv: ParsedFatturaPa,
+    archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
+    source: 'SDI_XML' | 'SDI_XLSX'
+) {
+    const amountChanged = existing.totalCents !== inv.totalCents;
+    if (amountChanged && existing.matchedStatementLineId) {
+        await unlinkFinecoMatch(existing.id, existing.matchedStatementLineId);
+    }
+
+    const prevMeta = (existing.metadataJson || {}) as Record<string, unknown>;
+    const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
+    const row = await prisma.manualFinanceExpense.update({
+        where: { id: existing.id },
+        data: {
+            expenseDate,
+            docType: inv.docKind,
+            vendorName: inv.vendorName,
+            description: inv.causale || existing.description,
+            totalCents: inv.totalCents,
+            vatRate: inv.vatRate,
+            vatCents: inv.vatCents,
+            netCents: inv.netCents,
+            fileName: archive.fileName || undefined,
+            blobPath: archive.blobPath || undefined,
+            blobUrl: archive.blobUrl || undefined,
+            storageKind: archive.storageKind !== 'none' ? archive.storageKind : undefined,
+            periodKey: periodKeyFromDate(expenseDate),
+            notes: `${source} ${inv.dedupeKey} | aggiornata ${new Date().toISOString().slice(0, 10)}`,
+            metadataJson: buildInvoiceMetadata(inv, archive, source, {
+                previousTotalCents: existing.totalCents,
+                updatedFromImport: true,
+                updatedAt: new Date().toISOString(),
+                cancelledByCreditNote: prevMeta.cancelledByCreditNote || false,
+            }),
+            reconciled: amountChanged ? false : existing.reconciled,
+            matchedStatementLineId: amountChanged ? null : existing.matchedStatementLineId,
+        },
+    });
+
+    upsertAccountingEntries([toLedgerEntry(row.id, inv, source)]);
+    return { row, amountChanged };
 }
 
 /**
@@ -273,8 +456,11 @@ export async function ingestParsedPassiveInvoices(input: {
     const skippedDetails = [...input.skipped];
 
     let imported = 0;
+    let updated = 0;
     let skippedDuplicates = 0;
     let matchedFineco = 0;
+    let creditNotes = 0;
+    let cancelledByCreditNote = 0;
     let totalCents = 0;
     const sampleVendors: string[] = [];
 
@@ -307,13 +493,65 @@ export async function ingestParsedPassiveInvoices(input: {
 
     for (const inv of input.invoices) {
         try {
+            if (inv.docKind === 'NOTA_CREDITO') creditNotes += 1;
+
             const existing = await findExistingByDedupeKey(inv.dedupeKey);
             if (existing) {
-                skippedDuplicates += 1;
-                skippedDetails.push({
-                    fileName: inv.sourceFileName,
-                    reason: `Duplicato ${inv.dedupeKey}`,
-                });
+                const same =
+                    fingerprint({
+                        totalCents: existing.totalCents,
+                        netCents: existing.netCents,
+                        vatCents: existing.vatCents,
+                        vendorName: existing.vendorName,
+                        description: existing.description,
+                        docType: existing.docType,
+                    }) ===
+                    fingerprint({
+                        totalCents: inv.totalCents,
+                        netCents: inv.netCents,
+                        vatCents: inv.vatCents,
+                        vendorName: inv.vendorName,
+                        description: inv.causale,
+                        docType: inv.docKind,
+                    });
+
+                if (same) {
+                    skippedDuplicates += 1;
+                    skippedDetails.push({
+                        fileName: inv.sourceFileName,
+                        reason: `Duplicato invariato ${inv.dedupeKey}`,
+                    });
+                    continue;
+                }
+
+                // Stessa chiave ma dati diversi (correzione / report aggiornato) → update
+                const { row, amountChanged } = await updateExistingInvoice(
+                    existing,
+                    inv,
+                    archive,
+                    input.source
+                );
+                updated += 1;
+                totalCents += inv.totalCents;
+                if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
+                    sampleVendors.push(inv.vendorName);
+                }
+                warnings.push(
+                    `Aggiornata ${inv.dedupeKey}: ${existing.totalCents / 100} € → ${inv.totalCents / 100} €`
+                );
+
+                cancelledByCreditNote += await markRelatedInvoiceCancelledByCreditNote(inv);
+
+                if (inv.docKind !== 'NOTA_CREDITO' && (!row.reconciled || amountChanged)) {
+                    const matched = await reconcileInvoiceWithFineco({
+                        id: row.id,
+                        vendorName: inv.vendorName,
+                        totalCents: inv.totalCents,
+                        expenseDate: row.expenseDate,
+                        vendorVat: inv.vendorVat,
+                    });
+                    if (matched) matchedFineco += 1;
+                }
                 continue;
             }
 
@@ -324,14 +562,18 @@ export async function ingestParsedPassiveInvoices(input: {
                 sampleVendors.push(inv.vendorName);
             }
 
-            const matched = await reconcileInvoiceWithFineco({
-                id: row.id,
-                vendorName: inv.vendorName,
-                totalCents: inv.totalCents,
-                expenseDate: row.expenseDate,
-                vendorVat: inv.vendorVat,
-            });
-            if (matched) matchedFineco += 1;
+            cancelledByCreditNote += await markRelatedInvoiceCancelledByCreditNote(inv);
+
+            if (inv.docKind !== 'NOTA_CREDITO') {
+                const matched = await reconcileInvoiceWithFineco({
+                    id: row.id,
+                    vendorName: inv.vendorName,
+                    totalCents: inv.totalCents,
+                    expenseDate: row.expenseDate,
+                    vendorVat: inv.vendorVat,
+                });
+                if (matched) matchedFineco += 1;
+            }
         } catch (err) {
             skippedDetails.push({
                 fileName: inv.sourceFileName,
@@ -340,7 +582,7 @@ export async function ingestParsedPassiveInvoices(input: {
         }
     }
 
-    if (imported === 0 && archive.storageKind === 'blob' && (archive.blobUrl || archive.blobPath)) {
+    if (imported === 0 && updated === 0 && archive.storageKind === 'blob' && (archive.blobUrl || archive.blobPath)) {
         const token = getBlobToken();
         if (token) {
             try {
@@ -353,11 +595,14 @@ export async function ingestParsedPassiveInvoices(input: {
 
     return {
         imported,
+        updated,
         skippedDuplicates,
         skippedErrors: Math.max(0, skippedDetails.length - skippedDuplicates),
         matchedFineco,
+        creditNotes,
+        cancelledByCreditNote,
         totalCents,
-        warnings,
+        warnings: warnings.slice(0, 40),
         skippedDetails: skippedDetails.slice(0, 40),
         sampleVendors,
     };

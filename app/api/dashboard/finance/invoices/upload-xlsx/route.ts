@@ -54,20 +54,24 @@ export async function POST(request: Request) {
             maximumFractionDigits: 2,
         });
         const message =
-            summary.imported > 0
-                ? `Importate ${summary.imported} fatture dal report per un totale di ${totalEuro} €` +
+            summary.imported > 0 || summary.updated > 0
+                ? `Importate ${summary.imported} · aggiornate ${summary.updated} fatture dal report per un totale di ${totalEuro} €` +
                   (summary.matchedFineco > 0
                       ? ` • ${summary.matchedFineco} riconciliate con uscite Fineco`
                       : '') +
+                  (summary.creditNotes > 0 ? ` • ${summary.creditNotes} note di credito` : '') +
+                  (summary.cancelledByCreditNote > 0
+                      ? ` • ${summary.cancelledByCreditNote} fatture stornate da NC`
+                      : '') +
                   (summary.skippedDuplicates > 0
-                      ? ` • ${summary.skippedDuplicates} duplicati saltati`
+                      ? ` • ${summary.skippedDuplicates} duplicati invariati saltati`
                       : '')
                 : summary.skippedDuplicates > 0
-                  ? `Nessuna nuova fattura: ${summary.skippedDuplicates} già presenti (duplicati).`
+                  ? `Nessuna nuova fattura: ${summary.skippedDuplicates} già presenti (identiche).`
                   : 'Nessuna fattura importata. Verifica le colonne del report (Fornitore, P.IVA, Data, Numero, Totale).';
 
         return NextResponse.json({
-            ok: summary.imported > 0 || summary.skippedDuplicates > 0,
+            ok: summary.imported > 0 || summary.updated > 0 || summary.skippedDuplicates > 0,
             message,
             summary,
         });

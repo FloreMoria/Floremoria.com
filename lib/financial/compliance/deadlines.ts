@@ -75,6 +75,32 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
         );
     }
 
+    // 1b. REPORT YOUDOOX FATTURE RICEVUTE — giorno 1 di ogni mese
+    for (let m = 0; m < 12; m++) {
+        const monthNum = String(m + 1).padStart(2, '0');
+        const prevMonthIdx = m === 0 ? 11 : m - 1;
+        const prevMonthLabel = mesiNomi[prevMonthIdx];
+        addDeadline(
+            `youdox_report_${currentYear}_${monthNum}`,
+            `Scarica report Fatture Ricevute YouDoox (${mesiNomi[m]})`,
+            'CONTABILITA',
+            `${currentYear}-${monthNum}-01`,
+            'MONTHLY',
+            `Il giorno 1 di ${mesiNomi[m]} scarica da YouDoox il report fatture ricevute aggiornato (periodo fino a ${prevMonthLabel}) e caricalo in Contabilità (.xlsx/.csv o ZIP XML). I duplicati invariati vengono saltati; correzioni e note di credito aggiornano i record esistenti.`,
+            'https://www.youdoox.com'
+        );
+    }
+    // Anche gennaio anno successivo (visibilità a fine anno)
+    addDeadline(
+        `youdox_report_${currentYear + 1}_01`,
+        `Scarica report Fatture Ricevute YouDoox (Gennaio)`,
+        'CONTABILITA',
+        `${currentYear + 1}-01-01`,
+        'MONTHLY',
+        `Il giorno 1 di Gennaio scarica da YouDoox il report fatture ricevute aggiornato e caricalo in Contabilità.`,
+        'https://www.youdoox.com'
+    );
+
     // 2. LIQUIDAZIONE IVA TRIMESTRALE (16 Maggio, 20 Agosto, 16 Novembre, 16 Febbraio)
     const ivaDeadlines = [
         { q: '1° Trimestre', date: `${currentYear}-05-16`, id: `iva_q1_${currentYear}` },

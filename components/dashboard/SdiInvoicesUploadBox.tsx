@@ -14,9 +14,11 @@ type Props = {
 
 type IngestSummary = {
     imported: number;
+    updated?: number;
     skippedDuplicates: number;
     skippedErrors: number;
     matchedFineco: number;
+    creditNotes?: number;
     totalCents: number;
     warnings: string[];
     skippedDetails?: Array<{ fileName: string; reason: string }>;
@@ -75,7 +77,8 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
                         Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDoox/SDI.
-                        Deduplica automatica (P.IVA + numero + data) e abbinamento ai movimenti Fineco non riconciliati.
+                        Deduplica automatica; correzioni e note di credito (TD04) aggiornano i documenti già presenti
+                        e riconciliano Fineco.
                     </p>
                 </div>
             </div>

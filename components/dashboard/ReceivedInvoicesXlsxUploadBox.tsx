@@ -14,9 +14,11 @@ type Props = {
 
 type IngestSummary = {
     imported: number;
+    updated?: number;
     skippedDuplicates: number;
     skippedErrors: number;
     matchedFineco: number;
+    creditNotes?: number;
     totalCents: number;
     warnings: string[];
     sampleVendors?: string[];
@@ -74,8 +76,8 @@ export default function ReceivedInvoicesXlsxUploadBox({ onImported }: Props) {
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
                         Riconosce colonne SDI: Fornitore / Denominazione, Partita IVA / CF, Data Documento,
-                        Numero Fattura, Imponibile, IVA / Imposta, Totale Documento. Salva come deducibili
-                        (source SDI_XLSX) e riconcilia le uscite Fineco.
+                        Numero Fattura, Imponibile, IVA / Imposta, Totale Documento. Deduplica invariati;
+                        se importo/dati cambiano (o arriva nota di credito) aggiorna il record e riconcilia Fineco.
                     </p>
                 </div>
             </div>

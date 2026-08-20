@@ -185,6 +185,17 @@ export function addAccountingEntries(entries: AccountingEntry[]): void {
     saveLedger(ledger);
 }
 
+/** Upsert scritture (usato quando una fattura SDI già importata viene corretta/aggiornata). */
+export function upsertAccountingEntries(entries: AccountingEntry[]): void {
+    const ledger = getLedger();
+    for (const entry of entries) {
+        const idx = ledger.accountingEntries.findIndex((e) => e.id === entry.id);
+        if (idx >= 0) ledger.accountingEntries[idx] = entry;
+        else ledger.accountingEntries.push(entry);
+    }
+    saveLedger(ledger);
+}
+
 // Riconciliare un movimento esistente aggiornandone lo stato o le note
 export function updateTransactionCategory(txId: string, category: string): void {
     const ledger = getLedger();

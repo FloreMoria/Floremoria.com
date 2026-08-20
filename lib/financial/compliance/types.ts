@@ -1,7 +1,7 @@
 export interface TaxDeadline {
     id: string;
     title: string;
-    category: 'IVA' | 'F24' | 'BILANCIO' | 'STARTUP_INNOVATIVA' | 'ESTEROMETRO' | 'DICHIARATIVI';
+    category: 'IVA' | 'F24' | 'BILANCIO' | 'STARTUP_INNOVATIVA' | 'ESTEROMETRO' | 'DICHIARATIVI' | 'CONTABILITA';
     dueDate: string; // Formato YYYY-MM-DD
     frequency: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
     description: string;

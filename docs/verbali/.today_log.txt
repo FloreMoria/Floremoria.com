@@ -77,3 +77,4 @@
 [2026-08-20 18:20] feat(finance): upload massivo ZIP/XML/CSV fatture elettroniche SDI/YouDoox + match Fineco
 
 [2026-08-20 20:22] feat/finance: upload report fatture xlsx/csv (SDI_XLSX), riconciliazione Fineco e alert Fioristi in attesa di Fattura.
+[2026-08-20 20:34] feat/finance: update fatture duplicate/NC su re-import + alert YouDoox giorno 1 nello scadenziario.

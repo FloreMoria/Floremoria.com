@@ -1,6 +1,6 @@
 /**
- * Coalesce inbound WhatsApp: una sola reply VERA per burst dallo stesso numero.
- * Perché: Meta spesso consegna N messaggi (foto+caption+ok) in sequenza → N risposte AI.
+ * Coalesce inbound WhatsApp (legacy in-process, finestra corta).
+ * Il debounce primario cross-istanza è `inboundDebounce.ts` (60s su Neon + wake).
  */
 export type CoalesceJob<T> = () => Promise<T>;
 
@@ -15,6 +15,7 @@ type PendingBucket = {
 
 const pendingByPhone = new Map<string, PendingBucket>();
 
+/** Solo fallback locale same-process; produzione usa debounce Neon 60s. */
 const DEFAULT_WINDOW_MS = 2800;
 
 /**

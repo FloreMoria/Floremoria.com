@@ -19,3 +19,5 @@
 [2026-08-19 18:51] feat/finance: registro contabile unificato editabile, ZIP ricevute cortesia (consegna gratuita + scorporo IVA 10/22), settlement fiorista.
 
 [2026-08-20 07:05] feat/dashboard: rimozione telefono defunto, galleria foto multipla dinamica senza placeholder vuoti, sync GdM automatica e associazione utente per nome/cognome editabile (senza email).
+
+[2026-08-20 09:33] feat/vera: debounce 60s aggregazione inbound WhatsApp + anti-ripetizione (caso Matilde Assumma foto a raffica).

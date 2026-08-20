@@ -414,42 +414,68 @@ export interface VeraReplyResult {
     shouldEscalate: boolean;
 }
 
+export interface VeraReplyOptions {
+    /** Contesto da flush debounce 60s (sequenza aggregata). */
+    debounceBatch?: boolean;
+    mediaCount?: number;
+    aggregatedTextParts?: string[];
+}
+
 /**
  * Genera la risposta VERA per un messaggio WhatsApp in entrata.
  *
- * @param message     Testo grezzo del messaggio utente
+ * @param message     Testo grezzo del messaggio utente (o sequenza aggregata)
  * @param session     Sessione WhatsApp corrente (include cronologia)
  * @param mediaUrl    URL media allegato (opzionale)
+ * @param options     Opzioni flush debounce / batch foto
  */
 export async function generateVeraReply(
     message: string,
     session: ChatSession,
-    mediaUrl?: string | null
+    mediaUrl?: string | null,
+    options?: VeraReplyOptions
 ): Promise<VeraReplyResult> {
     const { getHumanEscalationReason } = await import('@/lib/floremDigitalAssistant');
 
     const callerContext = await resolveVeraCallerContext(session);
+    const mediaCount = options?.mediaCount ?? (mediaUrl ? 1 : 0);
+    const isDebounceBatch = Boolean(options?.debounceBatch);
 
     // Fiorista invia foto in chat: registra come prova posa, niente Gemini ridondante.
+    // Su batch debounce: UN solo ringraziamento per N foto (caso Matilde Assumma).
     if (session.userType === 'FLORIST' && mediaUrl && callerContext.phoneE164) {
+        const intentKey = isDebounceBatch
+            ? `florist_pose_photo_batch:${callerContext.phoneE164}:${mediaCount}:${message.slice(0, 80)}`
+            : `florist_pose_photo:${mediaUrl.slice(-48)}`;
         const claimed = await tryClaimConversationIntent({
             phoneE164: callerContext.phoneE164,
-            intentFingerprint: `florist_pose_photo:${mediaUrl.slice(-48)}`,
+            intentFingerprint: intentKey,
         });
         if (!claimed) {
             return { text: '', source: 'silence', shouldEscalate: false };
         }
+
         const name = getDisplayNameFromSession(session, callerContext) || 'partner';
         const orderHint = callerContext.orderNumber
             ? ` per l'ordine ${callerContext.orderNumber}`
             : '';
-        return {
-            text:
-                `Grazie ${name}, ho ricevuto la foto${orderHint}. ` +
-                `La registro come prova di posa. Se manca ancora lo scatto "dopo la posa" (fiori già sul posto), invialo pure qui in chat — è valido come testimonianza.`,
-            source: 'deterministic',
-            shouldEscalate: false,
-        };
+        const textBits = (options?.aggregatedTextParts || [])
+            .map((t) => t.trim())
+            .filter(Boolean);
+
+        // Se nel batch c'è anche testo operativo, lascia a Gemini una risposta unica.
+        if (isDebounceBatch && textBits.some((t) => !/^\[media\]$/i.test(t) && t.length > 2)) {
+            // fall through to normal routing with aggregated message
+        } else {
+            const multi = mediaCount > 1;
+            return {
+                text: multi
+                    ? `Grazie ${name}, ho ricevuto le ${mediaCount} foto${orderHint}: le registro come prova di posa. Se manca ancora qualcosa, mandalo pure qui — senza fretta. 🌹`
+                    : `Grazie ${name}, ho ricevuto la foto${orderHint}: la registro come prova di posa. Se serve altro scatto, invialo pure qui in chat. 🌹`,
+                source: 'deterministic',
+                shouldEscalate: false,
+            };
+        }
     }
 
     // Utente contesta foto errate/duplicate: escalate staff (caso Luciano), non "già inviate".

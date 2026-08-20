@@ -806,3 +806,23 @@ model CustomerOrderReceipt {
   @@map("customer_order_receipts")
 }
 
+/**
+ * Batch debounce inbound WhatsApp: accumula messaggi/foto e flush dopo 60s di quiete.
+ * Perché: Meta consegna burst spezzati → senza buffer Vera risponde a raffica (caso Matilde).
+ */
+model WhatsAppInboundDebounceBatch {
+  id               String   @id @default(cuid())
+  phoneKey         String   @unique @map("phone_key") @db.VarChar(128)
+  outboundAddress  String   @map("outbound_address") @db.VarChar(128)
+  senderName       String   @default("") @map("sender_name") @db.VarChar(255)
+  status           String   @default("PENDING") @db.VarChar(24)
+  lastInboundAt    DateTime @map("last_inbound_at")
+  flushAfter       DateTime @map("flush_after")
+  itemsJson        Json     @map("items_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([status, flushAfter])
+  @@map("whatsapp_inbound_debounce_batches")
+}
+

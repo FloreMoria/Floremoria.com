@@ -28,6 +28,7 @@ import {
 } from '@/lib/whatsapp/bsuid';
 import { generateVeraReply } from '@/lib/whatsapp/veraAiReply';
 import { groupIncomingByPhone } from '@/lib/whatsapp/replyCoalesce';
+import { scheduleVeraInboundDebounce } from '@/lib/whatsapp/inboundDebounce';
 import { triggerPostmanBackgroundSync } from '@/lib/postman/triggerBackgroundSync';
 import { runFloristDeliveryAutomation } from '@/lib/deliveryProof/runFloristDeliveryAutomation';
 import { notifyStaffOfWhatsAppInbound } from '@/lib/push/staffPush';
@@ -52,7 +53,7 @@ import { buildOutboundWamidMetadata, normalizeWamid } from '@/lib/whatsapp/norma
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 interface MetaWebhookMessage extends MetaInboundMediaMessage {
     from?: string;
@@ -356,7 +357,29 @@ async function processIncomingWhatsAppMessage(
     }
 
     if (options?.deferReply) {
-        return { ok: true, skipped: 'defer_reply' };
+        // Accumula comunque nel debounce 60s; solo l'ultimo del POST Meta evita work ridondante.
+        if (outboundAddress && !silenceVera) {
+            const skipUserUnsupported =
+                unsupportedMedia && session.userType !== 'FLORIST' && !mediaUrl;
+            if (!skipUserUnsupported) {
+                await scheduleVeraInboundDebounce({
+                    phoneKey,
+                    outboundAddress,
+                    senderName,
+                    item: {
+                        inboundMessageId,
+                        body: inboundBody,
+                        mediaUrl,
+                        unsupportedMedia: Boolean(unsupportedMedia),
+                        forceFloristUnsupportedMediaReply: Boolean(
+                            unsupportedMedia && session.userType === 'FLORIST' && Boolean(mediaUrl)
+                        ),
+                        at: new Date().toISOString(),
+                    },
+                });
+            }
+        }
+        return { ok: true, skipped: 'defer_reply', coalesced: true };
     }
 
     if (!outboundAddress) {
@@ -377,30 +400,6 @@ async function processIncomingWhatsAppMessage(
         return { ok: true, source: 'silence', escalated: false, sent: false, skipped: 'silence_non_conversational' };
     }
 
-    // Fiorista: file non foto (o unsupported senza media) → guida umanizzata, zero Gemini/OTP.
-    if (unsupportedMedia && session.userType === 'FLORIST' && !mediaUrl) {
-        return sendFloristUnsupportedMediaGuidance({
-            phoneKey,
-            outboundAddress,
-            senderName,
-            inboundMessageId,
-            userType: session.userType,
-        });
-    }
-
-    // Documento non-immagine con mediaUrl: prova ingest; se fallisce la guida parte da VERA deterministico.
-    if (unsupportedMedia && session.userType === 'FLORIST' && mediaUrl) {
-        return finalizeVeraOutboundReply({
-            phoneKey,
-            outboundAddress,
-            senderName,
-            inboundBody,
-            mediaUrl,
-            inboundMessageId,
-            forceFloristUnsupportedMediaReply: true,
-        });
-    }
-
     // Utente finale con allegato non leggibile: silenzio (niente testo tecnico).
     if (unsupportedMedia && session.userType !== 'FLORIST' && !mediaUrl) {
         console.info(`[wa-webhook] Allegato non leggibile da utente ${identityLabel}: silenzio`);
@@ -414,14 +413,29 @@ async function processIncomingWhatsAppMessage(
         return { ok: true, source: 'silence', sent: false, skipped: 'unsupported_media_user_silence' };
     }
 
-    return finalizeVeraOutboundReply({
+    // Debounce 60s: accumula testo/foto e rispondi UNA sola volta dopo quiete (anti-raffica Matilde).
+    await scheduleVeraInboundDebounce({
         phoneKey,
         outboundAddress,
         senderName,
-        inboundBody,
-        mediaUrl,
-        inboundMessageId,
+        item: {
+            inboundMessageId,
+            body: inboundBody,
+            mediaUrl,
+            unsupportedMedia: Boolean(unsupportedMedia),
+            forceFloristUnsupportedMediaReply: Boolean(
+                unsupportedMedia && session.userType === 'FLORIST' && Boolean(mediaUrl)
+            ),
+            at: new Date().toISOString(),
+        },
     });
+
+    return {
+        ok: true,
+        skipped: 'debounced_60s',
+        coalesced: true,
+        sent: false,
+    };
 }
 
 async function sendFloristUnsupportedMediaGuidance(params: {

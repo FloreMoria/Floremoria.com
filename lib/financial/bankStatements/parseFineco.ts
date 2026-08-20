@@ -485,6 +485,8 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
                 warnings: tabular.warnings,
                 textPreview: tabular.textPreview,
                 anomalies: tabular.anomalies,
+                ignoredMarginNotes: tabular.ignoredMarginNotes,
+                parseSummary: tabular.parseSummary,
             };
         }
     } catch (err) {

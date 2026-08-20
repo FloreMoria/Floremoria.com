@@ -58,16 +58,21 @@ export async function POST(request: Request) {
             buffer,
         });
 
+        const meta = document?.metadataJson as {
+            textPreview?: string[];
+            anomalies?: unknown[];
+            warnings?: string[];
+            parseSummary?: string;
+            ignoredMarginNotes?: number;
+            movementCount?: number;
+        } | null;
+
         // File archiviato anche se il parsing non ha estratto movimenti (es. PDF scan)
         if (document?.status === 'FAILED') {
             const preview =
-                (document as { textPreview?: string[] }).textPreview ||
-                ((document.metadataJson as { textPreview?: string[] } | null)?.textPreview ??
-                    undefined);
+                (document as { textPreview?: string[] }).textPreview || meta?.textPreview;
             const anomalies =
-                (document as { anomalies?: unknown[] }).anomalies ||
-                ((document.metadataJson as { anomalies?: unknown[] } | null)?.anomalies ??
-                    undefined);
+                (document as { anomalies?: unknown[] }).anomalies || meta?.anomalies;
             return NextResponse.json(
                 {
                     ok: false,
@@ -77,21 +82,30 @@ export async function POST(request: Request) {
                     document,
                     textPreview: preview,
                     anomalies,
+                    parseSummary: meta?.parseSummary,
+                    ignoredMarginNotes: meta?.ignoredMarginNotes ?? 0,
                 },
                 { status: 422 }
             );
         }
 
         const anomalies =
-            (document as { anomalies?: unknown[] } | null)?.anomalies ||
-            ((document?.metadataJson as { anomalies?: unknown[] } | null)?.anomalies ?? undefined);
+            (document as { anomalies?: unknown[] } | null)?.anomalies || meta?.anomalies;
+        const parseSummary =
+            (document as { parseSummary?: string } | null)?.parseSummary || meta?.parseSummary;
+        const ignoredMarginNotes =
+            (document as { ignoredMarginNotes?: number } | null)?.ignoredMarginNotes ??
+            meta?.ignoredMarginNotes ??
+            0;
 
         return NextResponse.json({
             ok: true,
             document,
             anomalies,
-            warnings:
-                (document?.metadataJson as { warnings?: string[] } | null)?.warnings ?? undefined,
+            warnings: meta?.warnings,
+            parseSummary,
+            ignoredMarginNotes,
+            movementCount: meta?.movementCount,
         });
     } catch (error) {
         console.error('[bank-statements upload]', error);

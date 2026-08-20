@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getArticleBySlug, getAllArticles } from '@/lib/articles';
 
+export const revalidate = 3600;
+
+
 // ISR o SSG: Predispone la rigenerazione statica delle rotte del blog
 export async function generateStaticParams() {
     const articles = await getAllArticles();

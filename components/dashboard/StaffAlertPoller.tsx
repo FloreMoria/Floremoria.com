@@ -7,7 +7,7 @@ import {
     type StaffAlertSound,
 } from '@/lib/dashboard/staffAlertSounds';
 
-const POLL_MS = 4000;
+const POLL_MS = 30000;
 
 interface StaffAlertsSummary {
     inboundMessageCount: number;
@@ -51,6 +51,7 @@ export default function StaffAlertPoller() {
         let cancelled = false;
 
         async function poll() {
+            if (typeof document !== 'undefined' && document.hidden) return;
             try {
                 const res = await fetch('/api/dashboard/staff-alerts/summary', {
                     cache: 'no-store',
@@ -97,6 +98,7 @@ export default function StaffAlertPoller() {
             clearInterval(interval);
         };
     }, []);
+
 
     return null;
 }

@@ -3,6 +3,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getAllArticles } from '@/lib/articles';
 
+export const revalidate = 3600;
+
+
 export const metadata: Metadata = {
     title: 'Il Diario di FloreMoria | Storie, pensieri e guide',
     description: 'Leggi le nostre storie e scopri i significati dietro ogni fiore.',

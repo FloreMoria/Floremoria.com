@@ -184,6 +184,15 @@ export async function uploadAndProcessBankStatement(input: {
             }
         );
 
+        const warnAnomalies = (parsed.anomalies || []).filter(
+            (a) => a.severity === 'warn' || a.severity === 'error'
+        );
+        const parseInfoMessage =
+            parsed.parseSummary ||
+            (warnAnomalies.length
+                ? warnAnomalies.map((a) => a.message).join(' | ')
+                : null);
+
         await prisma.$transaction([
             prisma.bankStatementLine.createMany({ data: lineRows }),
             prisma.bankStatementDocument.update({
@@ -196,10 +205,15 @@ export async function uploadAndProcessBankStatement(input: {
                     matchedCount,
                     unmatchedCount,
                     processedAt: new Date(),
-                    parseError: parsed.warnings.length ? parsed.warnings.join(' | ') : null,
+                    // Solo problemi reali in parseError; il summary informativo resta in metadata
+                    parseError: warnAnomalies.length
+                        ? warnAnomalies.map((a) => a.message).slice(0, 3).join(' | ')
+                        : null,
                     metadataJson: {
                         warnings: parsed.warnings,
                         movementCount: parsed.movements.length,
+                        ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
+                        parseSummary: parsed.parseSummary || parseInfoMessage,
                         ...(parsed.textPreview?.length
                             ? { textPreview: parsed.textPreview }
                             : {}),
@@ -220,6 +234,8 @@ export async function uploadAndProcessBankStatement(input: {
                     metadataJson: {
                         warnings: parsed.warnings,
                         movementCount: 0,
+                        ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
+                        parseSummary: parsed.parseSummary,
                         ...(parsed.textPreview?.length
                             ? { textPreview: parsed.textPreview }
                             : {}),
@@ -235,6 +251,8 @@ export async function uploadAndProcessBankStatement(input: {
                   ...detail,
                   textPreview: parsed.textPreview,
                   anomalies: parsed.anomalies,
+                  ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
+                  parseSummary: parsed.parseSummary || parseInfoMessage,
               }
             : detail;
     } catch (err) {

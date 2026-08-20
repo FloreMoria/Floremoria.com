@@ -3,6 +3,9 @@ import { findBySlug } from '@/lib/municipalities';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import prisma from '@/lib/prisma';
+
+export const revalidate = 300;
+
 import TrePorteSection from '@/components/TrePorteSection';
 import ProductGrid from '@/components/shared/ProductGrid';
 import {

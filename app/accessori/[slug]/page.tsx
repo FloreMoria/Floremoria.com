@@ -5,6 +5,9 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { Metadata } from 'next';
 import ProductClientView from '@/components/ProductClientView';
 
+export const revalidate = 300;
+
+
 interface ProductPageProps {
     params: Promise<{
         slug: string;

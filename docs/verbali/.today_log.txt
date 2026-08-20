@@ -65,4 +65,7 @@
 
 [2026-08-20 17:22] feat(users): script di pulizia ed eliminazione utenti con stato orfano.
 
+[2026-08-20 17:26] perf(core): ottimizzazione serverless cpu e caching rotte per mitigazione consumi vercel.
+
+
 

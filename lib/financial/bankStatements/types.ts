@@ -28,6 +28,8 @@ export type ParsedBankMovement = {
 export type ParseBankStatementAnomaly = {
     code: string;
     message: string;
+    /** info = nota a margine; warn = dato parziale; error = problema serio */
+    severity?: 'info' | 'warn' | 'error';
     page?: number;
     lineIndex?: number;
     raw?: string;
@@ -43,6 +45,10 @@ export type ParseBankStatementResult = {
     textPreview?: string[];
     /** Anomalie non bloccanti (righe saltate, oneri senza importo, ecc.). */
     anomalies?: ParseBankStatementAnomaly[];
+    /** Note a margine/footer escluse in silenzio. */
+    ignoredMarginNotes?: number;
+    /** Messaggio informativo tipo «69 movimenti • 6 note a margine escluse». */
+    parseSummary?: string;
 };
 
 export type StatementMatchResult = {

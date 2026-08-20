@@ -3,6 +3,9 @@ import Image from 'next/image';
 import { buildGenericAlt } from '@/utils/altText';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 
+export const revalidate = 3600;
+
+
 export const metadata: Metadata = {
     title: 'Chi Siamo | FloreMoria',
     description: 'Scopri chi siamo e perché ci dedichiamo alla cura della memoria. FloreMoria unisce persone e territori con un servizio innovativo e sostenibile.',

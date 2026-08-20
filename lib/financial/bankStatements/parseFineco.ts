@@ -460,14 +460,43 @@ export function extractMovementsFromPdfText(text: string): {
 }
 
 /**
- * PDF Fineco: estrazione testo server-side (unpdf + polyfill DOMMatrix).
+ * PDF Fineco: 1) parser tabellare a coordinate (unpdf extractTextItems);
+ * 2) fallback testo lineare; 3) CSV embedded.
  * Limitazione: PDF scansionati (immagine) non producono testo utile.
  */
 export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatementResult> {
+    let tabularAnomalies: import('./types').ParseBankStatementAnomaly[] = [];
+    let tabularWarnings: string[] = [];
+    let tabularPreview: string[] | undefined;
+
+    // Path ufficiale: ricostruzione colonne da coordinate / blocchi
+    try {
+        const { parseFinecoPdfTabular } = await import('@/lib/financial/parseFinecoPdf');
+        const tabular = await parseFinecoPdfTabular(buffer);
+        tabularAnomalies = tabular.anomalies || [];
+        tabularWarnings = tabular.warnings || [];
+        tabularPreview = tabular.textPreview;
+        if (tabular.movements.length > 0) {
+            return {
+                movements: tabular.movements,
+                periodStart: tabular.periodStart,
+                periodEnd: tabular.periodEnd,
+                closingBalanceCents: tabular.closingBalanceCents,
+                warnings: tabular.warnings,
+                textPreview: tabular.textPreview,
+                anomalies: tabular.anomalies,
+            };
+        }
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[parseFinecoPdf] tabular path failed', msg);
+        tabularAnomalies = [{ code: 'TABULAR_IMPORT_FAILED', message: msg }];
+        tabularWarnings = [`Parser tabellare non disponibile (${msg}).`];
+    }
+
     let text = '';
 
     try {
-        // Polyfill prima di caricare il parser PDF (Node/Vercel non ha DOM browser)
         const { ensurePdfDomPolyfills } = await import('./pdfDomPolyfill');
         ensurePdfDomPolyfills();
 
@@ -475,7 +504,6 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
         const pdf = await getDocumentProxy(new Uint8Array(buffer));
         const extracted = await extractText(pdf, { mergePages: true });
 
-        // Deduzione sicura: evita "Property 'join' does not exist on type 'never'" in build Vercel
         const rawText: unknown = (extracted as { text?: unknown })?.text;
         if (typeof rawText === 'string') {
             text = rawText;
@@ -495,8 +523,11 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
             periodEnd: null,
             closingBalanceCents: null,
             warnings: [
+                ...tabularWarnings,
                 `Estrazione PDF non riuscita (${msg}). Esporta l'estratto da Fineco in CSV o Excel e ricaricalo.`,
             ],
+            anomalies: tabularAnomalies,
+            textPreview: tabularPreview,
         };
     }
 
@@ -506,18 +537,47 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
             periodStart: null,
             periodEnd: null,
             closingBalanceCents: null,
-            warnings: ['PDF senza testo estraibile (possibile scansione). Esporta CSV/Excel da Fineco.'],
+            warnings: [
+                ...tabularWarnings,
+                'PDF senza testo estraibile (possibile scansione). Esporta CSV/Excel da Fineco.',
+            ],
+            anomalies: tabularAnomalies,
+            textPreview: tabularPreview,
         };
     }
 
-    // Prova a interpretare come CSV embedded
     if (text.includes(';') && /data/i.test(text)) {
         const asCsv = parseFinecoCsv(Buffer.from(text, 'utf-8'));
-        if (asCsv.movements.length > 0) return asCsv;
+        if (asCsv.movements.length > 0) {
+            return {
+                ...asCsv,
+                warnings: [...tabularWarnings, ...asCsv.warnings],
+                anomalies: tabularAnomalies,
+            };
+        }
     }
 
     const extracted = extractMovementsFromPdfText(text);
-    return finalize(extracted.movements, extracted.warnings, extracted.textPreview);
+    const result = finalize(
+        extracted.movements,
+        [...tabularWarnings, ...extracted.warnings],
+        extracted.textPreview
+    );
+    return {
+        ...result,
+        anomalies: [
+            ...tabularAnomalies,
+            ...(extracted.movements.length === 0
+                ? [
+                      {
+                          code: 'LINEAR_FALLBACK_EMPTY',
+                          message: 'Anche il fallback lineare non ha riconosciuto movimenti.',
+                      },
+                  ]
+                : []),
+        ],
+        textPreview: result.textPreview || tabularPreview,
+    };
 }
 
 export async function parseBankStatementFile(

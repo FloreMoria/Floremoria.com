@@ -203,6 +203,7 @@ export async function uploadAndProcessBankStatement(input: {
                         ...(parsed.textPreview?.length
                             ? { textPreview: parsed.textPreview }
                             : {}),
+                        ...(parsed.anomalies?.length ? { anomalies: parsed.anomalies } : {}),
                     },
                 },
             }),
@@ -222,6 +223,7 @@ export async function uploadAndProcessBankStatement(input: {
                         ...(parsed.textPreview?.length
                             ? { textPreview: parsed.textPreview }
                             : {}),
+                        ...(parsed.anomalies?.length ? { anomalies: parsed.anomalies } : {}),
                     },
                 },
             });
@@ -232,6 +234,7 @@ export async function uploadAndProcessBankStatement(input: {
             ? {
                   ...detail,
                   textPreview: parsed.textPreview,
+                  anomalies: parsed.anomalies,
               }
             : detail;
     } catch (err) {

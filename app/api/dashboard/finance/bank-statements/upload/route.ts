@@ -64,6 +64,10 @@ export async function POST(request: Request) {
                 (document as { textPreview?: string[] }).textPreview ||
                 ((document.metadataJson as { textPreview?: string[] } | null)?.textPreview ??
                     undefined);
+            const anomalies =
+                (document as { anomalies?: unknown[] }).anomalies ||
+                ((document.metadataJson as { anomalies?: unknown[] } | null)?.anomalies ??
+                    undefined);
             return NextResponse.json(
                 {
                     ok: false,
@@ -72,12 +76,23 @@ export async function POST(request: Request) {
                         'File salvato ma elaborazione fallita. Preferisci CSV/Excel Fineco.',
                     document,
                     textPreview: preview,
+                    anomalies,
                 },
                 { status: 422 }
             );
         }
 
-        return NextResponse.json({ ok: true, document });
+        const anomalies =
+            (document as { anomalies?: unknown[] } | null)?.anomalies ||
+            ((document?.metadataJson as { anomalies?: unknown[] } | null)?.anomalies ?? undefined);
+
+        return NextResponse.json({
+            ok: true,
+            document,
+            anomalies,
+            warnings:
+                (document?.metadataJson as { warnings?: string[] } | null)?.warnings ?? undefined,
+        });
     } catch (error) {
         console.error('[bank-statements upload]', error);
         return jsonError(

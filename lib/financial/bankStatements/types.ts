@@ -25,6 +25,14 @@ export type ParsedBankMovement = {
     raw?: Record<string, unknown>;
 };
 
+export type ParseBankStatementAnomaly = {
+    code: string;
+    message: string;
+    page?: number;
+    lineIndex?: number;
+    raw?: string;
+};
+
 export type ParseBankStatementResult = {
     movements: ParsedBankMovement[];
     periodStart: string | null;
@@ -33,6 +41,8 @@ export type ParseBankStatementResult = {
     warnings: string[];
     /** Prime N righe di testo PDF per calibrazione pattern (solo se parsing debole/fallito). */
     textPreview?: string[];
+    /** Anomalie non bloccanti (righe saltate, oneri senza importo, ecc.). */
+    anomalies?: ParseBankStatementAnomaly[];
 };
 
 export type StatementMatchResult = {

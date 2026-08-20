@@ -32,3 +32,5 @@
 [2026-08-20 11:43] feat(fioristi): resa modificabile ogni voce d'ordine nel Registro Consegne con sync DB e ricalcolo totali.
 [2026-08-20 11:44] refactor/finance: sezioni Contabilità riordinate (operativo in alto, Scadenziario in fondo) + coordinate FinecoBank al posto di Qonto.
 [2026-08-20 11:56] refactor/finance: Conto Corrente Operativo in cima con SDI K0ROACV; simulatore/AI engine sotto tab operativi, prima dello Scadenziario.
+
+[2026-08-20 12:10] chore(db): rimozione definitiva ordini annullati e di test con pulizia relazioni a cascata.

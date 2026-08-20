@@ -3,10 +3,28 @@ import { UserRole } from '@prisma/client';
 import { generateOtpToken } from '@/lib/auth/otp';
 import { parseIdentifier, findOrCreatePasswordlessUser } from '@/lib/auth/identity';
 import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
+import { checkHoneypot, checkRateLimit, getClientIp } from '@/lib/security/antiBot';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
+
+        // 1. Protezione Honeypot anti-bot
+        if (checkHoneypot(body)) {
+            console.warn('[otp-request] Bot intercettato tramite Honeypot');
+            return NextResponse.json({ success: true, message: 'Operazione completata.' });
+        }
+
+        // 2. Rate limiting basato su IP
+        const clientIp = getClientIp(request);
+        const rateLimit = checkRateLimit(clientIp, 5, 10 * 60 * 1000);
+        if (rateLimit.isRateLimited) {
+            return NextResponse.json(
+                { success: false, message: `Troppi tentativi. Riprova tra ${rateLimit.resetInSeconds} secondi.` },
+                { status: 429 }
+            );
+        }
+
         const identifier = typeof body.identifier === 'string' ? body.identifier.trim() : '';
 
         const parsed = parseIdentifier(identifier);
@@ -20,12 +38,10 @@ export async function POST(request: Request) {
         const user = await findOrCreatePasswordlessUser(parsed);
 
         if (!user) {
-            const message =
-                parsed.type === 'email'
-                    ? 'Indirizzo email non registrato. Effettua un acquisto per creare un account.'
-                    : 'Numero di telefono non trovato o non associato ad alcun ordine.';
+            const message = 'Registrazione consentita solo ai clienti con un ordine completato su FloreMoria.';
             return NextResponse.json({ success: false, message }, { status: 404 });
         }
+
 
         if (user.systemRole !== UserRole.USER) {
             return NextResponse.json(

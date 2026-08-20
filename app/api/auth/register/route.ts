@@ -5,13 +5,31 @@ import { parseIdentifier, registerPasswordlessUser } from '@/lib/auth/identity';
 import { generateOtpToken } from '@/lib/auth/otp';
 import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
 import { getSiteBaseUrl } from '@/lib/site/config';
+import { checkHoneypot, checkRateLimit, getClientIp } from '@/lib/security/antiBot';
 
 /**
- * Attivazione profilo B2C: crea l'account USER (se assente) e invia Magic Link o OTP.
+ * Attivazione profilo B2C: crea l'account USER (solo se esiste ordine o profilo valido) e invia Magic Link o OTP.
  */
 export async function POST(request: Request) {
     try {
         const body = await request.json();
+
+        // 1. Protezione Honeypot anti-bot
+        if (checkHoneypot(body)) {
+            console.warn('[auth-register] Bot intercettato tramite Honeypot');
+            return NextResponse.json({ success: true, message: 'Operazione completata.' });
+        }
+
+        // 2. Rate limiting basato su IP
+        const clientIp = getClientIp(request);
+        const rateLimit = checkRateLimit(clientIp, 5, 10 * 60 * 1000);
+        if (rateLimit.isRateLimited) {
+            return NextResponse.json(
+                { success: false, message: `Troppi tentativi di registrazione. Riprova tra ${rateLimit.resetInSeconds} secondi.` },
+                { status: 429 }
+            );
+        }
+
         const identifier = typeof body.identifier === 'string' ? body.identifier.trim() : '';
 
         const parsed = parseIdentifier(identifier);
@@ -27,13 +45,14 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: 'Questo contatto è già associato a un account professionale. Accedi con email e password.',
+                    message: 'Registrazione consentita solo ai clienti con un ordine completato su FloreMoria.',
                 },
                 { status: 403 }
             );
         }
 
         const { user, channel } = registration;
+
 
         if (channel === 'email' && parsed.email) {
             const token = generateMagicLinkToken(parsed.email);

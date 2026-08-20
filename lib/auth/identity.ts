@@ -199,13 +199,8 @@ export async function registerPasswordlessUser(
                 user = await createUserFromOrder(order);
             }
             if (!user) {
-                user = await prisma.user.create({
-                    data: {
-                        email: parsed.email,
-                        systemRole: UserRole.USER,
-                        isActive: true,
-                    },
-                });
+                // Registrazione aperta bloccata: se non ha né account né ordine pagato, rifiuta.
+                return null;
             }
         } else {
             await linkHistoricalOrders(user);
@@ -222,7 +217,8 @@ export async function registerPasswordlessUser(
                 user = await createUserFromOrder(order);
             }
             if (!user) {
-                user = await createUserWithPhone(parsed.phone);
+                // Registrazione aperta bloccata: se non ha né account né ordine pagato, rifiuta.
+                return null;
             }
         } else {
             await linkHistoricalOrders(user);
@@ -266,7 +262,7 @@ export interface IdentityClassification {
 /**
  * Determina come deve proseguire il login per un dato identificativo.
  *  - ruolo professionale  → password
- *  - USER (o nuovo cliente email / storico ordini) → passwordless
+        *  - USER (con ordine completato o già registrato) → passwordless
  */
 export async function classifyLoginIdentity(rawIdentifier: string): Promise<IdentityClassification> {
     const trimmed = rawIdentifier.trim();
@@ -291,7 +287,16 @@ export async function classifyLoginIdentity(rawIdentifier: string): Promise<Iden
         if (user && isProfessionalRole(user.systemRole)) {
             return { ok: true, type: 'email', mode: 'password', channel: 'email' };
         }
-        // USER esistente, oppure email nuova (il Magic Link effettua l'onboarding silenzioso).
+        if (!user) {
+            const order = await findOrderByEmail(parsed.email);
+            if (!order) {
+                return {
+                    ok: false,
+                    type: 'email',
+                    message: 'Registrazione consentita solo ai clienti con un ordine completato su FloreMoria.',
+                };
+            }
+        }
         return { ok: true, type: 'email', mode: 'passwordless', channel: 'email' };
     }
 
@@ -315,6 +320,7 @@ export async function classifyLoginIdentity(rawIdentifier: string): Promise<Iden
     return {
         ok: false,
         type: 'phone',
-        message: 'Numero non trovato. Verifica il numero usato in fase d\'ordine oppure accedi con la tua email.',
+        message: 'Registrazione consentita solo ai clienti con un ordine completato su FloreMoria.',
     };
 }
+

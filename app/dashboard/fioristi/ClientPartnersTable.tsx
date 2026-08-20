@@ -898,21 +898,16 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                              </div>
 
                                              {/* Preview Foto Assegnate (Grandi) */}
-                                             <div className="md:w-[320px] shrink-0 bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
-                                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Prove Visive (S3)</div>
-                                                {order.photos && order.photos.length > 0 ? (
-                                                    <div className="flex gap-3 w-full overflow-x-auto pb-2 custom-scrollbar snap-x">
-                                                        {order.photos.map((photo: string, idx: number) => (
-                                                            <img key={idx} src={photo} alt="Prova visiva fiorista" className="w-[140px] h-[140px] object-cover rounded-xl border border-gray-200 shadow-sm shrink-0 snap-center transition transform hover:scale-105" />
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full h-24 border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 bg-white">
-                                                         <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
-                                                         <span className="text-xs">Nessuna foto ricevuta</span>
-                                                    </div>
-                                                )}
-                                             </div>
+                                              {order.photos && order.photos.length > 0 ? (
+                                                  <div className="md:w-[320px] shrink-0 bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center">
+                                                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Prove Visive (S3)</div>
+                                                      <div className="flex gap-3 w-full overflow-x-auto pb-2 custom-scrollbar snap-x">
+                                                          {order.photos.map((photo: string, idx: number) => (
+                                                              <img key={idx} src={photo} alt="Prova visiva fiorista" className="w-[140px] h-[140px] object-cover rounded-xl border border-gray-200 shadow-sm shrink-0 snap-center transition transform hover:scale-105" />
+                                                          ))}
+                                                      </div>
+                                                  </div>
+                                              ) : null}
                                         </div>
                                     </div>
                                     );

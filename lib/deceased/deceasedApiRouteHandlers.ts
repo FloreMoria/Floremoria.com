@@ -10,6 +10,8 @@ import {
     linkOrderToDeceased,
     linkUserToDeceased,
     updateDeceasedProfileFull,
+    unlinkUserFromDeceased,
+    updateLinkedUserName,
 } from '@/lib/deceased/updateDeceasedProfileFull';
 
 type IdContext = { params: Promise<{ id: string }> };
@@ -138,7 +140,28 @@ export async function deceasedPostById(request: Request, context: IdContext) {
             return NextResponse.json({ ok: true, detail, message: 'Utente collegato al profilo' });
         }
 
+        if (action === 'unlink_user') {
+            const userId = String(body.userId || '').trim();
+            if (!userId) {
+                return NextResponse.json({ ok: false, error: 'userId mancante.' }, { status: 400 });
+            }
+            const detail = await unlinkUserFromDeceased({ deceasedProfileId, userId });
+            return NextResponse.json({ ok: true, detail, message: 'Utente scollegato dal profilo' });
+        }
+
+        if (action === 'update_user_name') {
+            const userId = String(body.userId || '').trim();
+            const name = String(body.name || '').trim();
+            if (!userId || !name) {
+                return NextResponse.json({ ok: false, error: 'userId o nome mancante.' }, { status: 400 });
+            }
+            await updateLinkedUserName({ userId, name });
+            const detail = await getDeceasedProfileDetail(deceasedProfileId);
+            return NextResponse.json({ ok: true, detail, message: 'Nome utente aggiornato' });
+        }
+
         if (action === 'link_order' || action === 'link_flowers') {
+
             const orderId = String(body.orderId || '').trim();
             if (!orderId) {
                 return NextResponse.json({ ok: false, error: 'orderId mancante.' }, { status: 400 });

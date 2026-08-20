@@ -17,3 +17,5 @@
 [2026-08-19 17:55] fix/route: Convertita la costante top-level in generateWarmOrderThought in funzione lazy getFallbackThought() ed assicurata la direttiva export const dynamic = 'force-dynamic' su /api/admin/backfill-order-chat.
 
 [2026-08-19 18:51] feat/finance: registro contabile unificato editabile, ZIP ricevute cortesia (consegna gratuita + scorporo IVA 10/22), settlement fiorista.
+
+[2026-08-20 07:05] feat/dashboard: rimozione telefono defunto, galleria foto multipla dinamica senza placeholder vuoti, sync GdM automatica e associazione utente per nome/cognome editabile (senza email).

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, ChevronLeft, User, Image as ImageIcon, MapPin, Calendar, Mail, UserPlus } from 'lucide-react';
+
 import Image from 'next/image';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
 import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvatar';
@@ -37,6 +39,7 @@ export default function ClientUsersTable({
     initialUsers: any[];
     florists?: { id: string; shopName: string; ownerName: string | null }[];
 }) {
+    const router = useRouter();
     const [users, setUsers] = useState(initialUsers);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -44,6 +47,7 @@ export default function ClientUsersTable({
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [rowDraft, setRowDraft] = useState<Record<string, { name: string; phone: string; email: string }>>({});
     const [rowSavingId, setRowSavingId] = useState<string | null>(null);
+
 
     const filteredUsers = users
         .filter(
@@ -169,6 +173,7 @@ export default function ClientUsersTable({
                 const updatedModUser = { ...selectedUser, name, email, phone };
                 setSelectedUser(updatedModUser);
                 setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedModUser : u));
+                router.refresh();
                 alert('Profilo Utente aggiornato nei database storici!');
             }
         } catch {
@@ -187,21 +192,17 @@ export default function ClientUsersTable({
 
         const parseITDateToISO = (raw: string) => {
             if (!raw) return null;
-            // Se l'utente inserisce la data usando trattini o in formato ISO YYYY-MM-DD
             if (raw.includes('-')) {
                 const parts = raw.split('-');
                 if (parts.length === 3 && parts[0].length === 4) {
-                    return raw; // Già in formato YYYY-MM-DD
+                    return raw;
                 }
             }
-            // Formato standard italiano: GG/MM/AAAA
             const parts = raw.split('/');
             if (parts.length === 3) {
                 const day = parts[0].trim().padStart(2, '0');
                 const month = parts[1].trim().padStart(2, '0');
                 let year = parts[2].trim();
-                
-                // Se l'utente scrive l'anno a 2 cifre (es: 43 o 13), completiamo automaticamente a 1943 o 2013
                 if (year.length === 2) {
                     const yearNum = parseInt(year, 10);
                     year = yearNum < 50 ? `20${year}` : `19${year}`;
@@ -225,12 +226,12 @@ export default function ClientUsersTable({
             if (res.ok) {
                 const updated = await res.json();
                 
-                // Aggiorniamo sia il Modale che la Tabella
                 const updatedOrders = selectedUser.orders.map((o: any) => o.id === order.id ? { ...o, deceasedBirthDate: updated.deceasedBirthDate, deceasedDeathDate: updated.deceasedDeathDate } : o);
                 const updatedModUser = { ...selectedUser, orders: updatedOrders };
                 
                 setSelectedUser(updatedModUser);
                 setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedModUser : u));
+                router.refresh();
                 alert('Date commemorative salvate nel server!');
             }
         } catch {
@@ -239,6 +240,7 @@ export default function ClientUsersTable({
             setSavingOrderId(null);
         }
     };
+
 
     return (
         <div>

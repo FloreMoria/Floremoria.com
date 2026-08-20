@@ -52,7 +52,6 @@ type Props = {
 type EditForm = {
     firstName: string;
     lastName: string;
-    phone: string;
     city: string;
     cemeteryName: string;
     cemeteryCity: string;
@@ -91,7 +90,6 @@ function detailToForm(detail: DeceasedDetailPayload): EditForm {
     return {
         firstName,
         lastName,
-        phone: detail.phone || '',
         city: detail.city || detail.cemeteryCity || '',
         cemeteryName: detail.cemeteryName || '',
         cemeteryCity: detail.cemeteryCity || detail.city || '',
@@ -103,6 +101,7 @@ function detailToForm(detail: DeceasedDetailPayload): EditForm {
         plannedDeliveryDates: sanitizePlannedDeliveryDates(detail.plannedDeliveryDates),
     };
 }
+
 
 export default function DeceasedProfileDrawer({
     row,
@@ -247,7 +246,6 @@ export default function DeceasedProfileDrawer({
                     action: 'update_profile',
                     firstName: form.firstName,
                     lastName: form.lastName,
-                    phone: form.phone || null,
                     city: form.city || form.cemeteryCity,
                     cemeteryName: form.cemeteryName || null,
                     cemeteryCity: form.city || form.cemeteryCity,
@@ -281,6 +279,66 @@ export default function DeceasedProfileDrawer({
         }
     };
 
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
+    const [editingUserName, setEditingUserName] = useState('');
+    const [updatingUser, setUpdatingUser] = useState(false);
+
+    const handleUpdateUserName = async (userId: string) => {
+        if (!detail?.deceasedProfileId || !editingUserName.trim()) return;
+        setUpdatingUser(true);
+        try {
+            const res = await fetch(`/api/dashboard/deceased/${detail.deceasedProfileId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_user_name',
+                    userId,
+                    name: editingUserName.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (data.ok && data.detail) {
+                setDetail(data.detail);
+                showToast('Nome e Cognome utente aggiornato');
+                router.refresh();
+                onUpdated?.(data.detail);
+            } else {
+                alert(data.error || 'Errore durante l\'aggiornamento del nome.');
+            }
+        } catch {
+            alert('Errore di rete.');
+        } finally {
+            setUpdatingUser(false);
+            setEditingUserId(null);
+        }
+    };
+
+    const handleUnlinkUser = async (userId: string) => {
+        if (!detail?.deceasedProfileId) return;
+        if (!window.confirm('Vuoi davvero scollegare questo utente dal profilo del defunto?')) return;
+        try {
+            const res = await fetch(`/api/dashboard/deceased/${detail.deceasedProfileId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'unlink_user',
+                    userId,
+                }),
+            });
+            const data = await res.json();
+            if (data.ok && data.detail) {
+                setDetail(data.detail);
+                showToast('Utente scollegato.');
+                router.refresh();
+                onUpdated?.(data.detail);
+            } else {
+                alert(data.error || 'Errore durante lo scollegamento.');
+            }
+        } catch {
+            alert('Errore di rete.');
+        }
+    };
+
     const deleteProfile = async () => {
         if (!detail?.deceasedProfileId) return;
         setDeleting(true);
@@ -309,148 +367,81 @@ export default function DeceasedProfileDrawer({
     const displayName = detail?.fullName || row.fullName;
 
     return (
-        <div
-            className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
-            onClick={onClose}
-        >
-            {toast ? (
-                <div className="fixed top-6 right-6 z-[60] rounded-xl bg-[#0f172a] text-white px-4 py-3 text-sm font-medium shadow-lg">
-                    {toast}
-                </div>
-            ) : null}
-
-            <div
-                className="bg-white rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {detail?.coverUrl ? (
-                    <div className="relative h-28 sm:h-36 w-full bg-gray-100">
-                        <Image
-                            src={detail.coverUrl}
-                            alt={`Copertina ${displayName}`}
-                            fill
-                            className="object-cover"
-                            unoptimized
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 flex justify-end">
+            <div className="w-full max-w-2xl bg-white h-full shadow-2xl overflow-y-auto flex flex-col custom-scrollbar">
+                {/* Header */}
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+                    <div className="flex items-center gap-3">
+                        <AdminMediaUploadAvatar
+                            imageUrl={detail?.photoUrl ?? null}
+                            fallbackLabel={displayName}
+                            entity="deceased"
+                            entityId={detail?.deceasedProfileId || undefined}
+                            onUploaded={(url) => {
+                                setDetail((prev) => (prev ? { ...prev, photoUrl: url } : prev));
+                                showToast('Foto profilo aggiornata');
+                                router.refresh();
+                            }}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    </div>
-                ) : null}
-
-                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-[#FAF9F6]">
-                    <div className="flex items-center gap-5">
-                        {row.deceasedProfileId ? (
-                            <AdminMediaUploadAvatar
-                                imageUrl={detail?.photoUrl ?? row.photoUrl}
-                                fallbackLabel={displayName}
-                                entity="deceased"
-                                entityId={row.deceasedProfileId}
-                                onUploaded={(url) => {
-                                    setDetail((prev) => (prev ? { ...prev, photoUrl: url } : prev));
-                                    showToast('Foto profilo aggiornata');
-                                }}
-                            />
-                        ) : (
-                            <div className="w-20 h-20 rounded-full bg-[#EFEAE2] flex items-center justify-center border-4 border-white shadow-md">
-                                <Heart size={28} className="text-red-400 fill-red-400" />
-                            </div>
-                        )}
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880] mb-1">
-                                {detail?.kind === 'orphan'
-                                    ? 'Scheda orfana — da registrare'
-                                    : 'Scheda defunto registrato'}
-                            </p>
-                            <h2 className="text-2xl font-display font-bold text-gray-900 flex items-center gap-2">
-                                <Heart size={18} className="text-red-500 fill-red-500" />
+                            <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                                {row.isOrphan ? 'Scheda Defunto non registrata' : 'Scheda Defunto'}
+                            </div>
+                            <h2 className="text-lg font-display font-bold text-gray-900 flex items-center gap-2">
                                 {displayName}
                             </h2>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {detail?.cemeteryName || row.cemeteryName || 'Cimitero'} ·{' '}
-                                {detail?.cemeteryCity || row.cemeteryCity}
-                                {(detail?.gravePosition || row.gravePosition)
-                                    ? ` · ${detail?.gravePosition || row.gravePosition}`
-                                    : ''}
-                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2">
                         {detail?.kind === 'profile' && !editMode ? (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={beginEdit}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-700 hover:border-[#c5a880]"
-                                >
-                                    <Pencil size={13} /> Modifica
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmDelete(true)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700 hover:bg-red-100"
-                                >
-                                    <Trash2 size={13} /> Elimina
-                                </button>
-                            </>
+                            <button
+                                type="button"
+                                onClick={beginEdit}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                <Pencil size={13} /> Modifica
+                            </button>
                         ) : null}
                         <button
                             type="button"
                             onClick={onClose}
-                            className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
-                            aria-label="Chiudi"
+                            className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                         >
                             <X size={18} />
                         </button>
                     </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1 space-y-8 bg-white">
-                    {loading ? (
-                        <div className="flex items-center justify-center py-20 text-gray-400 gap-2">
-                            <Loader2 className="animate-spin" size={20} />
-                            Caricamento scheda…
+                {/* Body Content */}
+                <div className="flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar">
+                    {toast ? (
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs font-semibold text-emerald-800">
+                            {toast}
                         </div>
-                    ) : error && !detail ? (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 text-sm flex gap-2">
-                            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                            {error}
+                    ) : null}
+                    {error ? (
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs font-semibold text-red-800 flex items-center gap-2">
+                            <AlertCircle size={14} /> {error}
+                        </div>
+                    ) : null}
+
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12 text-gray-400 gap-2">
+                            <Loader2 className="animate-spin" size={20} /> Caricamento scheda defunto...
                         </div>
                     ) : detail ? (
                         <>
-                            {detail.kind === 'orphan' ? (
-                                <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-semibold text-amber-900">
-                                            Questo defunto proviene da {detail.orders.length}{' '}
-                                            {detail.orders.length === 1 ? 'ordine' : 'ordini'} non ancora collegati
-                                            all&apos;anagrafica commemorativa.
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        disabled={registering}
-                                        onClick={handleRegisterOrphan}
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0f172a] px-5 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
-                                    >
-                                        {registering ? (
-                                            <Loader2 size={14} className="animate-spin" />
-                                        ) : (
-                                            <Link2 size={14} />
-                                        )}
-                                        Registra in anagrafica
-                                    </button>
-                                </section>
-                            ) : null}
                             {editMode && form ? (
-                                <section className="space-y-4 bg-gray-50/80 p-5 rounded-2xl border border-gray-200/80">
-                                    <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                                        <h3 className="font-display font-semibold text-sm text-gray-900">
-                                            Modifica anagrafica defunto
+                                <section className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600">
+                                            Modifica Anagrafica Defunto
                                         </h3>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() => setEditMode(false)}
-                                                className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                                                onClick={cancelEdit}
+                                                className="px-3 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
                                             >
                                                 Annulla
                                             </button>
@@ -458,90 +449,61 @@ export default function DeceasedProfileDrawer({
                                                 type="button"
                                                 onClick={saveProfile}
                                                 disabled={saving}
-                                                className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+                                                className="inline-flex items-center gap-1 rounded-lg bg-black px-3 py-1 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
                                             >
-                                                {saving ? (
-                                                    <Loader2 size={13} className="animate-spin" />
-                                                ) : (
-                                                    <Save size={13} />
-                                                )}
-                                                Salva
+                                                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Salva
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Nome
                                             <input
                                                 value={form.firstName}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, firstName: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, firstName: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Cognome
                                             <input
                                                 value={form.lastName}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, lastName: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, lastName: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
-                                        <div className="block text-xs font-semibold text-gray-500">
-                                            <span>Numero di telefono</span>
-                                            <div className="mt-1">
-                                                <PhoneInput
-                                                    value={form.phone}
-                                                    onChange={(val) =>
-                                                        setForm((f) => (f ? { ...f, phone: val } : f))
-                                                    }
-                                                    placeholder="Numero di telefono"
-                                                />
-                                            </div>
-                                        </div>
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Città / Comune
                                             <input
                                                 value={form.city}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, city: e.target.value, cemeteryCity: e.target.value } : f))
-                                                }
+                                                onChange={(e) => setForm((f) => (f ? { ...f, city: e.target.value, cemeteryCity: e.target.value } : f))}
                                                 required
                                                 placeholder="Es. Bergamo"
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
-                                        <label className="block text-xs font-semibold text-gray-500 sm:col-span-2">
+                                        <label className="block text-xs font-semibold text-gray-500">
                                             Cimitero di sepoltura
                                             <input
                                                 value={form.cemeteryName}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, cemeteryName: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, cemeteryName: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Blocco / Settore
                                             <input
                                                 value={form.graveSector}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, graveSector: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, graveSector: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
                                             Numero Loculo / Tomba
                                             <input
                                                 value={form.graveNumber}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, graveNumber: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, graveNumber: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
@@ -549,10 +511,8 @@ export default function DeceasedProfileDrawer({
                                             <input
                                                 type="date"
                                                 value={form.birthDate}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, birthDate: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, birthDate: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                         <label className="block text-xs font-semibold text-gray-500">
@@ -560,10 +520,8 @@ export default function DeceasedProfileDrawer({
                                             <input
                                                 type="date"
                                                 value={form.deathDate}
-                                                onChange={(e) =>
-                                                    setForm((f) => (f ? { ...f, deathDate: e.target.value } : f))
-                                                }
-                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                                onChange={(e) => setForm((f) => (f ? { ...f, deathDate: e.target.value } : f))}
+                                                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                             />
                                         </label>
                                     </div>
@@ -571,150 +529,141 @@ export default function DeceasedProfileDrawer({
                                         Frase commemorativa
                                         <textarea
                                             value={form.verifiedNotes}
-                                            onChange={(e) =>
-                                                setForm((f) => (f ? { ...f, verifiedNotes: e.target.value } : f))
-                                            }
-                                            rows={3}
-                                            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                                            onChange={(e) => setForm((f) => (f ? { ...f, verifiedNotes: e.target.value } : f))}
+                                            rows={2}
+                                            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-900"
                                         />
                                     </label>
-                                    <div className="rounded-xl border border-gray-100 bg-white p-4">
-                                        <PlannedDeliveryDatesEditor
-                                            dates={form.plannedDeliveryDates}
-                                            onChange={(dates) =>
-                                                setForm((f) => (f ? { ...f, plannedDeliveryDates: dates } : f))
-                                            }
-                                            disabled={saving}
-                                            showNoCommitmentBanner={
-                                                !detail.linkedUsers.some((u) => u.userType === 'SUBSCRIBER')
-                                            }
-                                        />
-                                    </div>
                                 </section>
                             ) : (
                                 <>
-                                    <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Contatto & Città
+                                    <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                                                Ubicazione Sepoltura
                                             </p>
-                                            <p className="text-sm text-gray-700">
-                                                Telefono: <strong>{detail.phone || '—'}</strong>
-                                            </p>
-                                            <p className="text-sm text-gray-700 mt-1">
-                                                Città: <strong>{detail.city || detail.cemeteryCity || '—'}</strong>
-                                            </p>
-                                        </div>
-                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Ubicazione
-                                            </p>
-                                            <p className="text-sm text-gray-700 flex items-start gap-1.5">
-                                                <MapPin size={14} className="text-[#c5a880] mt-0.5 shrink-0" />
+                                            <p className="text-xs text-gray-700 flex items-start gap-1.5">
+                                                <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
                                                 <span>
-                                                    {detail.cemeteryName || 'Cimitero'} — {detail.cemeteryCity}
+                                                    <strong>{detail.cemeteryName || 'Cimitero'}</strong> — {detail.cemeteryCity}
                                                     <br />
                                                     Posizione: {detail.gravePosition || 'Non specificata'}
                                                 </span>
                                             </p>
                                         </div>
-                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Date & cronologia
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                                                Date Anagrafiche
                                             </p>
-                                            <p className="text-sm text-gray-700">
-                                                Nascita: <strong>{formatDisplayDate(detail.birthDate)}</strong>
+                                            <p className="text-xs text-gray-700">
+                                                Nascita: <strong>{formatDisplayDate(detail.birthDate)}</strong> · Morte: <strong>{formatDisplayDate(detail.deathDate)}</strong>
                                             </p>
-                                            <p className="text-sm text-gray-700 mt-1">
-                                                Morte / commemorazione:{' '}
-                                                <strong>{formatDisplayDate(detail.deathDate)}</strong>
-                                            </p>
-                                            <p className="text-sm text-gray-700 mt-2">
-                                                <strong>{detail.orders.length}</strong>{' '}
-                                                {detail.orders.length === 1 ? 'ordine' : 'ordini'} ·{' '}
-                                                <strong>{detail.linkedUsers.length}</strong>{' '}
-                                                {detail.linkedUsers.length === 1 ? 'parente' : 'parenti'}
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                <strong>{detail.orders.length}</strong> ordini · <strong>{detail.linkedUsers.length}</strong> parenti
                                             </p>
                                         </div>
                                     </section>
-
-                                    {(detail.plannedDeliveryDates?.length ?? 0) > 0 ? (
-                                        <section className="rounded-xl border border-amber-100 bg-amber-50/60 p-5">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/80 mb-2 flex items-center gap-1.5">
-                                                <Calendar size={12} /> Date future (senza impegno)
-                                            </p>
-                                            <ul className="flex flex-wrap gap-2">
-                                                {detail.plannedDeliveryDates.map((d) => (
-                                                    <li
-                                                        key={d}
-                                                        className="rounded-full bg-white border border-amber-200 px-3 py-1 text-sm font-medium text-amber-950"
-                                                    >
-                                                        {formatDisplayDate(d)}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </section>
-                                    ) : null}
-
-                                    {detail.verifiedNotes ? (
-                                        <section className="rounded-xl border border-gray-100 bg-[#FAF9F6] p-5">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                                                Dedica
-                                            </p>
-                                            <p className="text-sm text-gray-700 italic leading-relaxed">
-                                                “{detail.verifiedNotes}”
-                                            </p>
-                                        </section>
-                                    ) : null}
                                 </>
                             )}
 
                             {detail.kind === 'profile' ? (
                                 <>
-                                    <section className="rounded-xl border border-gray-100 p-5">
-                                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-                                            <Users size={15} /> Parenti collegati
+                                    {/* UTENTI COLLEGATI (Nome e Cognome Editabile, SENZA EMAIL) */}
+                                    <section className="rounded-xl border border-gray-100 p-4 bg-white shadow-sm space-y-3">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                            <Users size={14} className="text-[#c5a880]" /> Utente / Parenti Associati
                                         </h3>
                                         {detail.linkedUsers.length === 0 ? (
-                                            <p className="text-sm text-gray-400">Nessun utente collegato al profilo.</p>
+                                            <p className="text-xs text-gray-400">Nessun utente collegato a questa scheda defunto.</p>
                                         ) : (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 {detail.linkedUsers.map((u) => (
                                                     <div
                                                         key={u.id}
-                                                        className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                                                        className="rounded-lg border border-gray-100 bg-gray-50 p-3 flex flex-col justify-between gap-2"
                                                     >
-                                                        <p className="font-semibold text-gray-900 flex items-center gap-2">
-                                                            <User size={14} className="text-gray-400" />
-                                                            {u.name || 'Utente'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 mt-1">{u.email}</p>
-                                                        {u.phone ? (
-                                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                                                                <Phone size={11} />
-                                                                {u.phone}
-                                                            </p>
-                                                        ) : null}
-                                                        {u.relationship ? (
-                                                            <p className="text-[10px] uppercase tracking-wider text-[#c5a880] mt-2 font-bold">
-                                                                {u.relationship}
-                                                            </p>
-                                                        ) : null}
+                                                        {editingUserId === u.id ? (
+                                                            <div className="space-y-2">
+                                                                <label className="block text-[10px] font-semibold text-gray-500 uppercase">
+                                                                    Nome e Cognome Utente
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={editingUserName}
+                                                                    onChange={(e) => setEditingUserName(e.target.value)}
+                                                                    className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 focus:ring-1 focus:ring-black outline-none bg-white font-semibold text-gray-900"
+                                                                    placeholder="Nome e Cognome..."
+                                                                />
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setEditingUserId(null)}
+                                                                        className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900"
+                                                                    >
+                                                                        Annulla
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={updatingUser}
+                                                                        onClick={() => handleUpdateUserName(u.id)}
+                                                                        className="px-3 py-1 text-xs font-bold bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50"
+                                                                    >
+                                                                        Salva
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div>
+                                                                    <div className="font-semibold text-gray-900 text-sm flex items-center justify-between gap-2">
+                                                                        <span className="flex items-center gap-1.5">
+                                                                            <User size={14} className="text-[#c5a880] shrink-0" />
+                                                                            {u.name?.trim() ? u.name : 'Nome e Cognome non specificati'}
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditingUserId(u.id);
+                                                                                setEditingUserName(u.name || '');
+                                                                            }}
+                                                                            className="p-1 text-gray-400 hover:text-black hover:bg-gray-100 rounded transition-colors"
+                                                                            title="Modifica Nome e Cognome"
+                                                                        >
+                                                                            <Pencil size={13} />
+                                                                        </button>
+                                                                    </div>
+                                                                    {u.relationship ? (
+                                                                        <p className="text-[10px] uppercase tracking-wider text-[#c5a880] mt-1 font-bold">
+                                                                            Grado: {u.relationship}
+                                                                        </p>
+                                                                    ) : null}
+                                                                </div>
+                                                                <div className="flex justify-end pt-1 border-t border-gray-200/50">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleUnlinkUser(u.id)}
+                                                                        className="text-[11px] text-red-600 hover:text-red-800 hover:underline font-medium"
+                                                                    >
+                                                                        Scollega Utente
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </section>
 
-                                    <section className="rounded-xl border border-gray-100 p-5">
-                                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-                                            <Flower2 size={15} /> Fiorista custode (unico)
+                                    <section className="rounded-xl border border-gray-100 p-4 bg-white shadow-sm">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+                                            <Flower2 size={14} className="text-fm-gold" /> Fiorista custode (unico)
                                         </h3>
-                                        <div className="flex flex-col sm:flex-row gap-3">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <select
                                                 value={selectedPartnerId}
                                                 onChange={(e) => setSelectedPartnerId(e.target.value)}
-                                                className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 bg-white focus:ring-2 focus:ring-[#c5a880]/30 outline-none"
+                                                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 bg-white focus:ring-2 focus:ring-[#c5a880]/30 outline-none"
                                             >
                                                 <option value="">Seleziona fiorista…</option>
                                                 {partners.map((p) => (
@@ -727,7 +676,7 @@ export default function DeceasedProfileDrawer({
                                                 type="button"
                                                 disabled={!selectedPartnerId || savingFlorist}
                                                 onClick={handleSaveFlorist}
-                                                className="rounded-lg bg-[#0f172a] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
+                                                className="rounded-lg bg-[#0f172a] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
                                             >
                                                 {savingFlorist ? 'Salvataggio…' : 'Assegna fiorista'}
                                             </button>
@@ -736,11 +685,11 @@ export default function DeceasedProfileDrawer({
                                 </>
                             ) : null}
 
-                            <section>
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
-                                    <Calendar size={15} /> Cronologia ordini e prove visive
+                            <section className="space-y-3">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                                    <Calendar size={14} /> Cronologia ordini e prove visive
                                 </h3>
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     {detail.orders.map((order) => {
                                         const proof = getOrderProofPhotos(order);
                                         const lat = order.latitude ?? order.deliveryProof?.gpsLatitude;
@@ -749,65 +698,53 @@ export default function DeceasedProfileDrawer({
                                         return (
                                             <div
                                                 key={order.id}
-                                                className="border border-gray-200 rounded-xl overflow-hidden shadow-sm"
+                                                className="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white"
                                             >
-                                                <div className="bg-gray-50/80 px-5 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                                                <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
                                                     <div>
-                                                        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500 block mb-1">
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-0.5">
                                                             ORDINE #{order.orderNumber || order.id.slice(0, 8)}
                                                         </span>
-                                                        <span className="font-semibold text-gray-900">
-                                                            {orderStatusLabel(order.status)} ·{' '}
-                                                            {formatDisplayDate(order.createdAt)}
+                                                        <span className="font-semibold text-gray-900 text-xs">
+                                                            {orderStatusLabel(order.status)} · {formatDisplayDate(order.createdAt)}
                                                         </span>
                                                     </div>
                                                     {order.partner ? (
                                                         <span className="text-xs font-medium text-gray-600">
-                                                            Fiorista ordine: {order.partner.shopName}
+                                                            Fiorista: {order.partner.shopName}
                                                         </span>
                                                     ) : null}
                                                 </div>
 
-                                                <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                                    <div className="space-y-3 text-sm text-gray-600">
+                                                <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                    <div className="space-y-2 text-xs text-gray-600">
                                                         <p>
-                                                            <strong>Consegna prevista:</strong>{' '}
-                                                            {formatDisplayDate(order.deliveryDate)}
+                                                            <strong>Consegna prevista:</strong> {formatDisplayDate(order.deliveryDate)}
                                                         </p>
-                                                        <p className="flex items-start gap-1.5">
-                                                            <MapPin
-                                                                size={14}
-                                                                className="text-[#c5a880] mt-0.5 shrink-0"
-                                                            />
+                                                        <p className="flex items-start gap-1">
+                                                            <MapPin size={13} className="text-[#c5a880] mt-0.5 shrink-0" />
                                                             <span>
                                                                 {order.cemeteryName}, {order.cemeteryCity}
-                                                                <br />
-                                                                Posizione: {order.gravePosition || 'Non specificata'}
                                                             </span>
                                                         </p>
-                                                        <ul className="text-xs space-y-1">
-                                                            {order.items.map((item) => (
-                                                                <li key={item.id}>
-                                                                    {item.product.name} ×{item.quantity}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
                                                     </div>
 
-                                                    <CustodiedProofGallery
-                                                        orderId={order.id}
-                                                        deceasedName={order.deceasedName}
-                                                        initialBefore={proof.before}
-                                                        initialAfter={proof.after}
-                                                        lat={lat}
-                                                        lng={lng}
-                                                        isAdmin
-                                                        showGpsMap
-                                                        compact
-                                                        hasPreDeliveryPhotoOpt={order.items.some(
-                                                            (item) => item.productId === 'florem-foto-stato-prima'
-                                                        )}
-                                                    />
+                                                    {(proof.before.length > 0 || proof.after.length > 0) && (
+                                                        <CustodiedProofGallery
+                                                            orderId={order.id}
+                                                            deceasedName={order.deceasedName}
+                                                            initialBefore={proof.before}
+                                                            initialAfter={proof.after}
+                                                            lat={lat}
+                                                            lng={lng}
+                                                            isAdmin
+                                                            showGpsMap
+                                                            compact
+                                                            hasPreDeliveryPhotoOpt={order.items.some(
+                                                                (item) => item.productId === 'florem-foto-stato-prima'
+                                                            )}
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -861,3 +798,4 @@ export default function DeceasedProfileDrawer({
         </div>
     );
 }
+

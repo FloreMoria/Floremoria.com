@@ -276,3 +276,33 @@ export async function linkOrderToDeceased(params: {
     if (!detail) throw new Error('Profilo non trovato dopo il collegamento ordine.');
     return detail;
 }
+
+export async function unlinkUserFromDeceased(params: {
+    deceasedProfileId: string;
+    userId: string;
+}): Promise<DeceasedDetailPayload> {
+    await prisma.userDeceasedLink.deleteMany({
+        where: {
+            deceasedProfileId: params.deceasedProfileId,
+            userId: params.userId,
+        },
+    });
+    revalidatePath('/dashboard/defunti');
+    revalidatePath('/dashboard/users');
+    const detail = await getDeceasedProfileDetail(params.deceasedProfileId);
+    if (!detail) throw new Error('Profilo non trovato dopo lo scollegamento utente.');
+    return detail;
+}
+
+export async function updateLinkedUserName(params: {
+    userId: string;
+    name: string;
+}): Promise<void> {
+    await prisma.user.update({
+        where: { id: params.userId },
+        data: { name: params.name.trim() },
+    });
+    revalidatePath('/dashboard/defunti');
+    revalidatePath('/dashboard/users');
+}
+

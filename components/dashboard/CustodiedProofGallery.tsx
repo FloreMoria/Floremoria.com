@@ -267,25 +267,9 @@ export default function CustodiedProofGallery({
     const mapSpan = isAdmin ? 0.01 : 0.005;
 
     if (!hasPhotos) {
-        return (
-            <div className={compact ? 'w-full' : ''}>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <ImageIcon size={13} /> {sectionTitle}
-                </div>
-                <div className="bg-slate-50/70 border border-dashed border-slate-200 p-8 rounded-2xl text-center space-y-2.5">
-                    <div className="text-slate-300 text-3xl">📷</div>
-                    <div className="text-xs font-semibold text-slate-500">
-                        {isAdmin ? 'Foto in attesa dal fiorista' : 'Foto non ancora disponibile'}
-                    </div>
-                    {!isAdmin ? (
-                        <p className="text-[11px] text-slate-400 max-w-[200px] mx-auto leading-relaxed">
-                            Verrà scattata e caricata sul posto dal fiorista partner al momento della posa.
-                        </p>
-                    ) : null}
-                </div>
-            </div>
-        );
+        return null;
     }
+
 
     const gridClass = compact ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-3 gap-2';
 

@@ -24,3 +24,4 @@
 [2026-08-20 09:55] fix/delivery: foto WhatsApp fiorista in append su DeliveryProof/Order + gallery defunto + UI fiorista/GdM.
 
 [2026-08-20 10:12] feat(dashboard): tasto Aggiungi + in Sincronizzazione Foto Garanzia e upload multi-foto dinamico senza slot vuoti.
+[2026-08-20 10:31] feat/orders: Ordina Per «Data consegna» nei filtri Coda Ordini.

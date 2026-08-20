@@ -37,7 +37,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
     // Filri & Sort State
-    const [sortField, setSortField] = useState<'date' | 'alpha' | 'price'>('date');
+    const [sortField, setSortField] = useState<'date' | 'deliveryDate' | 'alpha' | 'price'>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [filterSearch, setFilterSearch] = useState('');
     const [filterDate, setFilterDate] = useState('tutti');
@@ -265,6 +265,20 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             if (sortDirection === 'asc') cmp = -cmp;
             return cmp;
         }
+        if (sortField === 'deliveryDate') {
+            const aRaw = a.deliveryDate || a.funeralDate;
+            const bRaw = b.deliveryDate || b.funeralDate;
+            const aMs = aRaw ? new Date(aRaw).getTime() : NaN;
+            const bMs = bRaw ? new Date(bRaw).getTime() : NaN;
+            const aOk = Number.isFinite(aMs);
+            const bOk = Number.isFinite(bMs);
+            // Senza data consegna: sempre in coda (indipendente da direzione).
+            if (!aOk && !bOk) cmp = 0;
+            else if (!aOk) cmp = 1;
+            else if (!bOk) cmp = -1;
+            else cmp = aMs - bMs;
+            return sortDirection === 'asc' ? cmp : -cmp;
+        }
         if (sortField === 'price') cmp = a.totalPriceCents - b.totalPriceCents;
         else if (sortField === 'alpha') cmp = (a.buyerFullName || '').localeCompare(b.buyerFullName || '');
         return sortDirection === 'asc' ? cmp : -cmp;
@@ -466,6 +480,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ordina Per</label>
                             <select value={sortField} onChange={e => setSortField(e.target.value as any)} className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black">
                                 <option value="date">Data Creazione</option>
+                                <option value="deliveryDate">Data consegna</option>
                                 <option value="alpha">Ordine Alfabetico</option>
                                 <option value="price">Valore (Prezzo)</option>
                             </select>

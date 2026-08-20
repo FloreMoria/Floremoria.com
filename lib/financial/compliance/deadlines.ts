@@ -221,5 +221,19 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
     );
 
     // Ordina le scadenze: prima quelle urgenti/imminenti (date più vicine), poi le altre
-    return deadlines.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    // Contabilità operativa FloreMoria: solo da Q2 2026 (1° aprile 2026) in avanti.
+    // Esclude anche scadenze scadute da oltre 90 giorni (rumore pregresso).
+    const OPERATIONAL_START = '2026-04-01';
+    const staleCutoff = new Date(today);
+    staleCutoff.setDate(staleCutoff.getDate() - 90);
+
+    return deadlines
+        .filter((d) => {
+            if (d.dueDate < OPERATIONAL_START) return false;
+            const due = new Date(d.dueDate);
+            due.setHours(0, 0, 0, 0);
+            if (due < staleCutoff) return false;
+            return true;
+        })
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 }

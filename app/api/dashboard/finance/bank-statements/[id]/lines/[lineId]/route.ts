@@ -1,15 +1,28 @@
 /**
- * Abbinamento manuale riga estratto conto → ordine / spesa / nota libera.
+ * Abbinamento manuale riga estratto conto → ordine / spesa / categoria / nota libera.
  */
 
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import prisma from '@/lib/prisma';
+import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
+import { markManualExpenseReconciled } from '@/lib/financial/manualExpenses';
+import type { LedgerCategory } from '@/lib/financial/historicalLedgerTypes';
 
 type Ctx = { params: Promise<{ id: string; lineId: string }> };
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+function categoryFromMatchType(matchType: string, amountCents: number): LedgerCategory {
+    if (matchType === 'FLORIST_TRANSFER') return 'COSTI_FIORISTI';
+    if (matchType === 'SDI_INVOICE' || matchType === 'MANUAL_EXPENSE') return 'SPESE_OPERATIVE';
+    if (matchType === 'CASH_EXPENSE') return 'SPESE_OPERATIVE';
+    if (matchType === 'INTERNAL_TRANSFER') return 'ALTRI_COSTI';
+    if (matchType === 'OTHER_REVENUE' || amountCents > 0) return 'ALTRI_RICAVI';
+    if (matchType === 'BANK_FEE') return 'ONERI_BANCARI';
+    return amountCents >= 0 ? 'ALTRI_RICAVI' : 'SPESE_OPERATIVE';
+}
 
 export async function PATCH(request: Request, ctx: Ctx) {
     const auth = await requireDashboardAdmin();
@@ -33,8 +46,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
         const matchNotes =
             typeof body.matchNotes === 'string' && body.matchNotes.trim()
                 ? body.matchNotes.trim().slice(0, 500)
-                : 'Abbinamento manuale da Contabilità';
+                : 'Riconciliato Manualmente da Contabilità';
         const asMatched = body.asMatched !== false;
+        const expenseId =
+            typeof body.expenseId === 'string' && body.expenseId.trim()
+                ? body.expenseId.trim()
+                : null;
 
         const line = await prisma.bankStatementLine.findFirst({
             where: { id: lineId, documentId },
@@ -53,6 +70,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
             }
         }
 
+        const notes = asMatched
+            ? matchNotes.startsWith('Riconciliato Manualmente')
+                ? matchNotes
+                : `Riconciliato Manualmente — ${matchNotes}`
+            : matchNotes;
+
         const updated = await prisma.bankStatementLine.update({
             where: { id: lineId },
             data: {
@@ -60,12 +83,45 @@ export async function PATCH(request: Request, ctx: Ctx) {
                 matchType,
                 matchScore: asMatched ? 100 : 60,
                 matchedOrderId,
-                matchedTxId,
-                matchNotes,
+                matchedTxId: matchedTxId || expenseId,
+                matchNotes: notes,
             },
         });
 
-        // Aggiorna contatori documento
+        if (expenseId) {
+            try {
+                await markManualExpenseReconciled(expenseId, lineId);
+            } catch {
+                /* best-effort */
+            }
+        }
+
+        try {
+            const cat = categoryFromMatchType(matchType, line.amountCents);
+            await appendLedgerEntries([
+                {
+                    sourceKey: `BANK_LINE_MANUAL:${line.id}`,
+                    sourceType: 'BANK_LINE',
+                    sourceId: line.id,
+                    direction: line.amountCents >= 0 ? 'ENTRATA' : 'USCITA',
+                    category: cat,
+                    accountingDate: line.accountingDate || line.valueDate || new Date(),
+                    valueDate: line.valueDate,
+                    description: line.description,
+                    netCents: line.amountCents,
+                    vatCents: 0,
+                    totalCents: line.amountCents,
+                    reconciliationStatus: 'MATCHED',
+                    documentRef: matchType,
+                    bankLineId: line.id,
+                    orderId: matchedOrderId,
+                    metadataJson: { manualMatch: true, matchType, matchNotes: notes },
+                },
+            ]);
+        } catch (err) {
+            console.warn('[bank-statements] ledger append', err);
+        }
+
         const [matchedCount, unmatchedCount] = await Promise.all([
             prisma.bankStatementLine.count({
                 where: { documentId, matchStatus: 'MATCHED' },

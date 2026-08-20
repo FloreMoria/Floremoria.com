@@ -11,9 +11,11 @@ import {
     FileUp,
     Link2,
     Loader2,
+    RefreshCw,
     Search,
     Trash2,
     UploadCloud,
+    X,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
@@ -69,6 +71,25 @@ type StatementDoc = {
 
 type StatusFilter = 'ALL' | 'MATCHED' | 'UNMATCHED';
 
+type MatchSuggestion = {
+    kind: 'SDI_INVOICE' | 'FLORIST_ORDER' | 'INTERNAL' | 'CATEGORY';
+    label: string;
+    score: number;
+    matchType: string;
+    matchedTxId?: string | null;
+    matchedOrderId?: string | null;
+    expenseId?: string | null;
+    notes: string;
+};
+
+const CATEGORY_OPTIONS = [
+    { matchType: 'SDI_INVOICE', label: 'Fattura Fornitore' },
+    { matchType: 'FLORIST_TRANSFER', label: 'Compenso Fiorista' },
+    { matchType: 'CASH_EXPENSE', label: 'Spesa senza Fattura (Scontrino/Ricevuta)' },
+    { matchType: 'INTERNAL_TRANSFER', label: 'Giroconto / Patrimonio' },
+    { matchType: 'OTHER_REVENUE', label: 'Altro Ricavo' },
+] as const;
+
 function formatPeriod(start: string | null, end: string | null): string {
     if (!start && !end) return '—';
     const a = start ? start.slice(0, 10) : '?';
@@ -120,7 +141,7 @@ function lineMatchBadge(status: string): { text: string; className: string } {
     if (status === 'PARTIAL') {
         return { text: 'In attesa', className: 'bg-amber-50 text-amber-700 border-amber-100' };
     }
-    return { text: 'Non abbinato', className: 'bg-slate-100 text-slate-600 border-slate-200' };
+    return { text: 'Non abbinato', className: 'bg-amber-50 text-amber-800 border-amber-100' };
 }
 
 function categoryOf(line: StatementLine): 'Entrata' | 'Uscita' | 'Onere Bancario' {
@@ -165,10 +186,14 @@ export default function BankStatementsPanel() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
     const [matchingLineId, setMatchingLineId] = useState<string | null>(null);
-    const [matchDraft, setMatchDraft] = useState<{
-        lineId: string;
-        orderId: string;
+    const [reReconciling, setReReconciling] = useState(false);
+    const [matchModal, setMatchModal] = useState<{
+        line: StatementLine;
+        suggestions: MatchSuggestion[];
+        loadingSuggestions: boolean;
+        category: string;
         notes: string;
+        orderId: string;
     } | null>(null);
 
     const loadLines = useCallback(async (docId: string) => {
@@ -316,19 +341,66 @@ export default function BankStatementsPanel() {
         }
     };
 
-    const submitManualMatch = async () => {
-        if (!matchDraft || !activeDocId) return;
-        setMatchingLineId(matchDraft.lineId);
+    const openMatchModal = async (line: StatementLine) => {
+        if (!activeDocId) return;
+        setMatchModal({
+            line,
+            suggestions: [],
+            loadingSuggestions: true,
+            category: line.amountCents >= 0 ? 'OTHER_REVENUE' : 'SDI_INVOICE',
+            notes: '',
+            orderId: line.matchedOrderId || '',
+        });
         try {
             const res = await fetch(
-                `/api/dashboard/finance/bank-statements/${activeDocId}/lines/${matchDraft.lineId}`,
+                `/api/dashboard/finance/bank-statements/${activeDocId}/lines/${line.id}/suggestions`
+            );
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                suggestions?: MatchSuggestion[];
+                error?: string;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Suggerimenti non disponibili');
+            setMatchModal((prev) =>
+                prev && prev.line.id === line.id
+                    ? {
+                          ...prev,
+                          suggestions: parsed.data?.suggestions || [],
+                          loadingSuggestions: false,
+                      }
+                    : prev
+            );
+        } catch {
+            setMatchModal((prev) =>
+                prev && prev.line.id === line.id
+                    ? { ...prev, loadingSuggestions: false, suggestions: [] }
+                    : prev
+            );
+        }
+    };
+
+    const applyMatch = async (payload: {
+        matchType: string;
+        matchNotes: string;
+        matchedOrderId?: string | null;
+        matchedTxId?: string | null;
+        expenseId?: string | null;
+    }) => {
+        if (!matchModal || !activeDocId) return;
+        const lineId = matchModal.line.id;
+        setMatchingLineId(lineId);
+        try {
+            const res = await fetch(
+                `/api/dashboard/finance/bank-statements/${activeDocId}/lines/${lineId}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        matchedOrderId: matchDraft.orderId.trim() || null,
-                        matchNotes: matchDraft.notes.trim() || 'Abbinamento manuale',
-                        matchType: matchDraft.orderId.trim() ? 'MANUAL_ORDER' : 'MANUAL_MATCH',
+                        matchType: payload.matchType,
+                        matchNotes: payload.matchNotes,
+                        matchedOrderId: payload.matchedOrderId || null,
+                        matchedTxId: payload.matchedTxId || null,
+                        expenseId: payload.expenseId || null,
                         asMatched: true,
                     }),
                 }
@@ -340,7 +412,7 @@ export default function BankStatementsPanel() {
                 unmatchedCount?: number;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Abbinamento fallito');
-            setMatchDraft(null);
+            setMatchModal(null);
             await loadLines(activeDocId);
             setDocs((prev) =>
                 prev.map((d) =>
@@ -357,6 +429,57 @@ export default function BankStatementsPanel() {
             setError(e instanceof Error ? e.message : 'Abbinamento fallito');
         } finally {
             setMatchingLineId(null);
+        }
+    };
+
+    const confirmSuggestion = (s: MatchSuggestion) => {
+        void applyMatch({
+            matchType: s.matchType,
+            matchNotes: s.notes || s.label,
+            matchedOrderId: s.matchedOrderId,
+            matchedTxId: s.matchedTxId,
+            expenseId: s.expenseId,
+        });
+    };
+
+    const submitCategoryMatch = () => {
+        if (!matchModal) return;
+        const catLabel =
+            CATEGORY_OPTIONS.find((c) => c.matchType === matchModal.category)?.label ||
+            matchModal.category;
+        void applyMatch({
+            matchType: matchModal.category,
+            matchNotes:
+                matchModal.notes.trim() ||
+                `Riconciliato Manualmente — ${catLabel}`,
+            matchedOrderId: matchModal.orderId.trim() || null,
+        });
+    };
+
+    const runReReconcile = async () => {
+        if (!activeDocId) return;
+        setReReconciling(true);
+        setError(null);
+        try {
+            const res = await fetch(
+                `/api/dashboard/finance/bank-statements/${activeDocId}/re-reconcile`,
+                { method: 'POST' }
+            );
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                error?: string;
+                message?: string;
+                matched?: number;
+                stillUnmatched?: number;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Ri-analisi fallita');
+            setUploadSummary(parsed.data?.message || null);
+            await loadLines(activeDocId);
+            await load();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Ri-analisi fallita');
+        } finally {
+            setReReconciling(false);
         }
     };
 
@@ -502,6 +625,20 @@ export default function BankStatementsPanel() {
                             </p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                            <button
+                                type="button"
+                                disabled={reReconciling || linesLoading}
+                                onClick={() => void runReReconcile()}
+                                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                title="Ri-applica le regole di auto-match potenziato sulle righe non abbinate"
+                            >
+                                {reReconciling ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                ) : (
+                                    <RefreshCw size={13} />
+                                )}
+                                Ri-analizza non abbinati
+                            </button>
                             <div className="relative">
                                 <Search
                                     size={14}
@@ -540,59 +677,9 @@ export default function BankStatementsPanel() {
                         </div>
                     </div>
 
-                    {matchDraft && (
-                        <div className="rounded-xl border border-[#c5a880]/40 bg-[#c5a880]/10 px-3 py-3 space-y-2">
-                            <p className="text-xs font-semibold text-slate-700">
-                                Abbina / Associa movimento
-                            </p>
-                            <div className="grid sm:grid-cols-2 gap-2">
-                                <input
-                                    type="text"
-                                    value={matchDraft.orderId}
-                                    onChange={(e) =>
-                                        setMatchDraft({ ...matchDraft, orderId: e.target.value })
-                                    }
-                                    placeholder="ID ordine (opzionale)"
-                                    className="px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
-                                />
-                                <input
-                                    type="text"
-                                    value={matchDraft.notes}
-                                    onChange={(e) =>
-                                        setMatchDraft({ ...matchDraft, notes: e.target.value })
-                                    }
-                                    placeholder="Nota (compenso fiorista, fattura, spesa…)"
-                                    className="px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white"
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    disabled={matchingLineId === matchDraft.lineId}
-                                    onClick={() => void submitManualMatch()}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold disabled:opacity-50"
-                                >
-                                    {matchingLineId === matchDraft.lineId ? (
-                                        <Loader2 size={13} className="animate-spin" />
-                                    ) : (
-                                        <Link2 size={13} />
-                                    )}
-                                    Conferma abbinamento
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setMatchDraft(null)}
-                                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600"
-                                >
-                                    Annulla
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="overflow-x-auto rounded-xl border border-slate-100">
+                    <div className="overflow-auto max-h-[min(70vh,720px)] rounded-xl border border-slate-100">
                         <table className="w-full text-sm min-w-[960px]">
-                            <thead>
+                            <thead className="sticky top-0 z-10">
                                 <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">
                                     <th className="px-3 py-2 font-bold">Data op.</th>
                                     <th className="px-3 py-2 font-bold">Data valuta</th>
@@ -635,12 +722,12 @@ export default function BankStatementsPanel() {
                                                 <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
                                                     {formatItDate(line.valueDate)}
                                                 </td>
-                                                <td className="px-3 py-2.5 text-slate-800 max-w-[360px]">
-                                                    <div className="text-xs leading-snug">
+                                                <td className="px-3 py-2.5 text-slate-800 min-w-[280px] max-w-[480px]">
+                                                    <div className="text-xs leading-snug whitespace-pre-wrap break-words">
                                                         {line.description}
                                                     </div>
                                                     {line.matchNotes && (
-                                                        <div className="text-[10px] text-slate-400 mt-1 line-clamp-2">
+                                                        <div className="text-[10px] text-slate-400 mt-1">
                                                             {line.matchNotes}
                                                         </div>
                                                     )}
@@ -679,17 +766,11 @@ export default function BankStatementsPanel() {
                                                 <td className="px-3 py-2.5 text-right">
                                                     <button
                                                         type="button"
-                                                        onClick={() =>
-                                                            setMatchDraft({
-                                                                lineId: line.id,
-                                                                orderId: line.matchedOrderId || '',
-                                                                notes: line.matchNotes || '',
-                                                            })
-                                                        }
+                                                        onClick={() => void openMatchModal(line)}
                                                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-white text-[11px] font-semibold"
                                                     >
                                                         <Link2 size={12} />
-                                                        Abbina / Associa
+                                                        Abbina
                                                     </button>
                                                 </td>
                                             </tr>
@@ -698,6 +779,171 @@ export default function BankStatementsPanel() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                        Elenco completo: {lines.length} movimenti caricati · scroll per vedere tutte le
+                        righe · badge verde = Riconciliato · ambra = Non abbinato
+                    </p>
+                </div>
+            )}
+
+            {matchModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="match-modal-title"
+                >
+                    <div className="w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
+                        <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-white">
+                            <h3 id="match-modal-title" className="text-sm font-bold text-slate-800">
+                                Abbina / Associa movimento
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setMatchModal(null)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-50"
+                                aria-label="Chiudi"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="px-4 py-3 space-y-4">
+                            <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1">
+                                <div className="flex justify-between gap-2 text-xs">
+                                    <span className="text-slate-500">Data</span>
+                                    <span className="font-mono font-semibold text-slate-800">
+                                        {formatItDate(
+                                            matchModal.line.accountingDate ||
+                                                matchModal.line.valueDate
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between gap-2 text-xs">
+                                    <span className="text-slate-500">Importo</span>
+                                    <span
+                                        className={`font-mono font-bold ${
+                                            matchModal.line.amountCents >= 0
+                                                ? 'text-emerald-700'
+                                                : 'text-rose-700'
+                                        }`}
+                                    >
+                                        {formatEuro(matchModal.line.amountCents)}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-700 leading-snug pt-1 whitespace-pre-wrap break-words">
+                                    {matchModal.line.description}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Suggerimenti intelligenti
+                                </p>
+                                {matchModal.loadingSuggestions ? (
+                                    <p className="text-xs text-slate-400 flex items-center gap-2">
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Analisi in corso…
+                                    </p>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {matchModal.suggestions
+                                            .filter((s) => s.kind !== 'CATEGORY')
+                                            .slice(0, 3)
+                                            .map((s, i) => (
+                                                <li
+                                                    key={`${s.matchType}-${i}`}
+                                                    className="flex items-start justify-between gap-2 rounded-xl border border-slate-100 px-3 py-2"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-semibold text-slate-800">
+                                                            {s.label}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                                            {s.notes} · score {s.score}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        disabled={matchingLineId === matchModal.line.id}
+                                                        onClick={() => confirmSuggestion(s)}
+                                                        className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white text-[10px] font-bold disabled:opacity-50"
+                                                    >
+                                                        Conferma
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        {!matchModal.suggestions.some((s) => s.kind !== 'CATEGORY') && (
+                                            <li className="text-xs text-slate-400">
+                                                Nessun match automatico forte — scegli una categoria
+                                                sotto.
+                                            </li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                    Categoria rapida
+                                </p>
+                                <select
+                                    value={matchModal.category}
+                                    onChange={(e) =>
+                                        setMatchModal({ ...matchModal, category: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                                >
+                                    {CATEGORY_OPTIONS.map((c) => (
+                                        <option key={c.matchType} value={c.matchType}>
+                                            {c.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    value={matchModal.orderId}
+                                    onChange={(e) =>
+                                        setMatchModal({ ...matchModal, orderId: e.target.value })
+                                    }
+                                    placeholder="ID ordine (opzionale)"
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                                />
+                                <input
+                                    type="text"
+                                    value={matchModal.notes}
+                                    onChange={(e) =>
+                                        setMatchModal({ ...matchModal, notes: e.target.value })
+                                    }
+                                    placeholder="Nota libera (opzionale)"
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pb-2">
+                                <button
+                                    type="button"
+                                    disabled={matchingLineId === matchModal.line.id}
+                                    onClick={() => submitCategoryMatch()}
+                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-50"
+                                >
+                                    {matchingLineId === matchModal.line.id ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        <Link2 size={14} />
+                                    )}
+                                    Salva come Riconciliato Manualmente
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMatchModal(null)}
+                                    className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600"
+                                >
+                                    Annulla
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

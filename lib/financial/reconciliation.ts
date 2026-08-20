@@ -21,6 +21,8 @@ const BANK_FEE_RE =
     /(imposta\s+di\s+bollo|canone(\s+mensile|\s+annuale)?|spese\s+(di\s+)?tenuta|commissioni|competenze(\s+e\s+spese)?|ritenute\s+fiscali|\bf24\b|agenzia\s+delle\s+entrate)/i;
 const STRIPE_HINT_RE = /\b(stripe|transfer)\b/i;
 const PAYPAL_HINT_RE = /\bpaypal\b/i;
+const INTERNAL_TRANSFER_RE =
+    /\b(giroconto|prelievo|versamento\s+soci|finanziamento(\s+soci)?|apporto\s+soci|movimento\s+interno|trasferimento\s+interno)\b/i;
 
 function dayMs(iso: string | null | undefined): number | null {
     if (!iso) return null;
@@ -335,6 +337,23 @@ export async function matchCumulativePayout(
 }
 
 /**
+ * Giroconti / patrimonio / versamenti soci → riconciliati come movimento interno.
+ */
+export async function matchInternalTransfer(
+    movement: ParsedBankMovement
+): Promise<StatementMatchResult | null> {
+    if (!INTERNAL_TRANSFER_RE.test(movement.description)) return null;
+    const abs = Math.abs(movement.amountCents);
+    return matched({
+        matchType: 'INTERNAL_TRANSFER',
+        matchScore: 96,
+        matchedTxId: null,
+        matchedOrderId: null,
+        matchNotes: `Movimento patrimoniale interno (€${(abs / 100).toFixed(2)}) — giroconto/prelievo/versamento soci`,
+    });
+}
+
+/**
  * Bonifico in uscita verso fiorista: codice ordine e/o nome partner → compenso maturato.
  */
 export async function matchFloristTransfer(
@@ -390,10 +409,12 @@ export async function matchFloristTransfer(
     const partnerHit = partners.find((p) => {
         const shop = normalizeName(p.shopName || '');
         const owner = normalizeName(p.ownerName || '');
-        return (
-            (shop.length > 3 && descNorm.includes(shop)) ||
-            (owner.length > 3 && descNorm.includes(owner))
-        );
+        if (shop.length > 3 && descNorm.includes(shop)) return true;
+        if (owner.length > 3 && descNorm.includes(owner)) return true;
+        // Cognome / token singoli (anche senza prefisso PT-)
+        const ownerTokens = owner.split(' ').filter((t) => t.length > 3);
+        const shopTokens = shop.split(' ').filter((t) => t.length > 3);
+        return [...ownerTokens, ...shopTokens].some((t) => descNorm.includes(t));
     });
 
     if (partnerHit) {
@@ -519,6 +540,10 @@ function matchAgainstLedgerTx(
 export async function reconcileBankMovement(
     movement: ParsedBankMovement
 ): Promise<StatementMatchResult> {
+    // 0) Giroconti / patrimonio
+    const internalHit = await matchInternalTransfer(movement);
+    if (internalHit) return internalHit;
+
     // 1) Oneri / fiscali ricorrenti
     const feeHit = await matchBankFeeOrTax(movement);
     if (feeHit) return feeHit;
@@ -540,7 +565,7 @@ export async function reconcileBankMovement(
         if (!best || hit.matchScore > best.matchScore) best = hit;
     }
 
-    // 5) Spese manuali
+    // 5) Fatture SDI / spese manuali (fuzzy P.IVA + fornitore)
     if (movement.amountCents < 0) {
         const manual = await matchManualExpenseByAmount(
             Math.abs(movement.amountCents),
@@ -548,14 +573,14 @@ export async function reconcileBankMovement(
             movement.description
         );
         if (manual) {
-            const score = 88;
+            const score = Math.max(88, manual.score || 88);
             if (!best || score > best.matchScore) {
                 best = matched({
-                    matchType: 'MANUAL_EXPENSE',
+                    matchType: 'SDI_INVOICE',
                     matchScore: score,
                     matchedTxId: manual.id,
                     matchedOrderId: null,
-                    matchNotes: `Abbinato a spesa manuale ${manual.vendorName}`,
+                    matchNotes: `Abbinato a fattura/spesa ${manual.vendorName}`,
                 });
                 await markManualExpenseReconciled(manual.id, null);
             }
@@ -569,6 +594,7 @@ export async function reconcileBankMovement(
     let hint = movement.amountCents >= 0 ? 'INFLOW' : 'OUTFLOW';
     if (STRIPE_HINT_RE.test(u) || PAYPAL_HINT_RE.test(u)) hint = 'GATEWAY_PAYOUT_UNMATCHED';
     if (BANK_FEE_RE.test(u)) hint = 'BANK_FEE';
+    if (INTERNAL_TRANSFER_RE.test(u)) hint = 'INTERNAL_TRANSFER';
     if (/FIORIST|BEN:|BENEFICIARIO/i.test(u)) hint = 'FLORIST_TRANSFER';
 
     return {
@@ -606,4 +632,184 @@ export function movementCategoryLabel(
 
 export function isBankFeeMatchType(matchType: string | null | undefined): boolean {
     return matchType === 'BANK_FEE' || matchType === 'TAX_PAYMENT';
+}
+
+export type MatchSuggestion = {
+    kind: 'SDI_INVOICE' | 'FLORIST_ORDER' | 'INTERNAL' | 'CATEGORY';
+    label: string;
+    score: number;
+    matchType: string;
+    matchedTxId?: string | null;
+    matchedOrderId?: string | null;
+    expenseId?: string | null;
+    notes: string;
+};
+
+/**
+ * Suggerimenti intelligenti per abbinamento manuale (top 3).
+ */
+export async function suggestMatchesForLine(line: {
+    description: string;
+    amountCents: number;
+    accountingDate: Date | null;
+    valueDate: Date | null;
+}): Promise<MatchSuggestion[]> {
+    const movement: ParsedBankMovement = {
+        lineIndex: 0,
+        description: line.description,
+        amountCents: line.amountCents,
+        accountingDate: line.accountingDate?.toISOString().slice(0, 10) || null,
+        valueDate: line.valueDate?.toISOString().slice(0, 10) || null,
+        debitCents: line.amountCents < 0 ? Math.abs(line.amountCents) : null,
+        creditCents: line.amountCents > 0 ? line.amountCents : null,
+        balanceCents: null,
+    };
+
+    const suggestions: MatchSuggestion[] = [];
+
+    const internal = await matchInternalTransfer(movement);
+    if (internal) {
+        suggestions.push({
+            kind: 'INTERNAL',
+            label: 'Giroconto / Patrimonio',
+            score: internal.matchScore,
+            matchType: 'INTERNAL_TRANSFER',
+            notes: internal.matchNotes || 'Movimento interno',
+        });
+    }
+
+    if (movement.amountCents < 0) {
+        const manual = await matchManualExpenseByAmount(
+            Math.abs(movement.amountCents),
+            movementDateIso(movement),
+            movement.description
+        );
+        if (manual) {
+            suggestions.push({
+                kind: 'SDI_INVOICE',
+                label: `Fattura / spesa — ${manual.vendorName}`,
+                score: manual.score,
+                matchType: 'SDI_INVOICE',
+                matchedTxId: manual.id,
+                expenseId: manual.id,
+                notes: `Importo compatibile con ${manual.vendorName}`,
+            });
+        }
+
+        const florist = await matchFloristTransfer(movement);
+        if (florist && florist.matchScore >= 60) {
+            suggestions.push({
+                kind: 'FLORIST_ORDER',
+                label: florist.matchNotes || 'Compenso fiorista',
+                score: florist.matchScore,
+                matchType: 'FLORIST_TRANSFER',
+                matchedOrderId: florist.matchedOrderId,
+                notes: florist.matchNotes || 'Match fiorista',
+            });
+        }
+    }
+
+    // Categorie rapide sempre disponibili
+    const cats: MatchSuggestion[] = [
+        {
+            kind: 'CATEGORY',
+            label: 'Fattura Fornitore',
+            score: 40,
+            matchType: 'SDI_INVOICE',
+            notes: 'Riconciliato manualmente — fattura fornitore',
+        },
+        {
+            kind: 'CATEGORY',
+            label: 'Compenso Fiorista',
+            score: 40,
+            matchType: 'FLORIST_TRANSFER',
+            notes: 'Riconciliato manualmente — compenso fiorista',
+        },
+        {
+            kind: 'CATEGORY',
+            label: 'Spesa senza Fattura (Scontrino/Ricevuta)',
+            score: 35,
+            matchType: 'CASH_EXPENSE',
+            notes: 'Riconciliato manualmente — scontrino/ricevuta',
+        },
+        {
+            kind: 'CATEGORY',
+            label: 'Giroconto / Patrimonio',
+            score: 35,
+            matchType: 'INTERNAL_TRANSFER',
+            notes: 'Riconciliato manualmente — giroconto/patrimonio',
+        },
+        {
+            kind: 'CATEGORY',
+            label: 'Altro Ricavo',
+            score: 30,
+            matchType: 'OTHER_REVENUE',
+            notes: 'Riconciliato manualmente — altro ricavo',
+        },
+    ];
+
+    suggestions.sort((a, b) => b.score - a.score);
+    const top = suggestions.filter((s) => s.kind !== 'CATEGORY').slice(0, 3);
+    return [...top, ...cats];
+}
+
+/**
+ * Ri-esegue auto-match sulle righe non MATCHED di un documento.
+ */
+export async function reReconcileBankStatementDocument(documentId: string): Promise<{
+    updated: number;
+    matched: number;
+    stillUnmatched: number;
+}> {
+    const lines = await prisma.bankStatementLine.findMany({
+        where: { documentId, matchStatus: { not: 'MATCHED' } },
+        orderBy: { lineIndex: 'asc' },
+    });
+
+    let updated = 0;
+    let matched = 0;
+
+    for (const line of lines) {
+        const movement: ParsedBankMovement = {
+            lineIndex: line.lineIndex,
+            description: line.description,
+            amountCents: line.amountCents,
+            accountingDate: line.accountingDate?.toISOString().slice(0, 10) || null,
+            valueDate: line.valueDate?.toISOString().slice(0, 10) || null,
+            debitCents: line.debitCents,
+            creditCents: line.creditCents,
+            balanceCents: line.balanceCents,
+        };
+        const result = await reconcileBankMovement(movement);
+        if (result.matchStatus === 'UNMATCHED' && result.matchScore < 70) continue;
+
+        await prisma.bankStatementLine.update({
+            where: { id: line.id },
+            data: {
+                matchStatus: result.matchStatus,
+                matchType: result.matchType,
+                matchScore: result.matchScore,
+                matchedTxId: result.matchedTxId,
+                matchedOrderId: result.matchedOrderId,
+                matchNotes: result.matchNotes,
+            },
+        });
+        updated += 1;
+        if (result.matchStatus === 'MATCHED') matched += 1;
+    }
+
+    const [matchedCount, unmatchedCount] = await Promise.all([
+        prisma.bankStatementLine.count({ where: { documentId, matchStatus: 'MATCHED' } }),
+        prisma.bankStatementLine.count({ where: { documentId, matchStatus: { not: 'MATCHED' } } }),
+    ]);
+    await prisma.bankStatementDocument.update({
+        where: { id: documentId },
+        data: {
+            matchedCount,
+            unmatchedCount,
+            status: unmatchedCount === 0 ? 'RECONCILED' : 'PARSED',
+        },
+    });
+
+    return { updated, matched, stillUnmatched: unmatchedCount };
 }

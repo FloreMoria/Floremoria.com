@@ -173,38 +173,73 @@ export async function deleteManualExpense(id: string) {
     return true;
 }
 
-/** Match uscite estratto vs spese manuali non ancora riconciliate. */
+/** Match uscite estratto vs spese manuali / fatture SDI non ancora riconciliate. */
 export async function matchManualExpenseByAmount(
     amountCentsAbs: number,
     accountingDateIso: string | null,
     description: string
-): Promise<{ id: string; vendorName: string } | null> {
+): Promise<{ id: string; vendorName: string; score: number } | null> {
+    const tolerance = 100; // ±1 €
     const candidates = await prisma.manualFinanceExpense.findMany({
         where: {
             reconciled: false,
-            totalCents: amountCentsAbs,
+            totalCents: {
+                gte: amountCentsAbs - tolerance,
+                lte: amountCentsAbs + tolerance,
+            },
         },
         orderBy: { expenseDate: 'desc' },
-        take: 40,
+        take: 80,
+        select: {
+            id: true,
+            vendorName: true,
+            expenseDate: true,
+            totalCents: true,
+            metadataJson: true,
+            description: true,
+        },
     });
     if (!candidates.length) return null;
 
-    const desc = description.toUpperCase();
+    const desc = description
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+    const descDigits = desc.replace(/\D/g, '');
+
     const scored = candidates.map((c) => {
-        let score = 50;
-        if (desc.includes(c.vendorName.toUpperCase().slice(0, 8))) score += 40;
+        let score = 40;
+        const vendor = c.vendorName
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+        const tokens = vendor.split(/[^A-Z0-9]+/).filter((t) => t.length > 3);
+        let tokenHits = 0;
+        for (const t of tokens.slice(0, 6)) {
+            if (desc.includes(t)) tokenHits += 1;
+        }
+        score += Math.min(40, tokenHits * 12);
+        if (vendor.length >= 5 && desc.includes(vendor.slice(0, Math.min(12, vendor.length)))) {
+            score += 15;
+        }
+        const meta = (c.metadataJson || {}) as { vendorVat?: string | null };
+        const vatDigits = (meta.vendorVat || '').replace(/\D/g, '');
+        if (vatDigits.length >= 8 && descDigits.includes(vatDigits.slice(-11))) {
+            score += 35;
+        }
+        if (Math.abs(c.totalCents - amountCentsAbs) === 0) score += 15;
+        else if (Math.abs(c.totalCents - amountCentsAbs) <= 50) score += 8;
         if (accountingDateIso) {
-            const d = Math.abs(
-                Date.parse(accountingDateIso) - c.expenseDate.getTime()
-            );
-            if (d <= 5 * 24 * 60 * 60 * 1000) score += 20;
+            const d = Math.abs(Date.parse(accountingDateIso) - c.expenseDate.getTime());
+            if (d <= 15 * 24 * 60 * 60 * 1000) score += 15;
+            else if (d <= 45 * 24 * 60 * 60 * 1000) score += 5;
         }
         return { c, score };
     });
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
-    if (!best || best.score < 50) return null;
-    return { id: best.c.id, vendorName: best.c.vendorName };
+    if (!best || best.score < 55) return null;
+    return { id: best.c.id, vendorName: best.c.vendorName, score: best.score };
 }
 
 export async function markManualExpenseReconciled(

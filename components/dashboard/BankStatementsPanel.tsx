@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, FileUp, Loader2, Trash2, UploadCloud } from 'lucide-react';
+import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 type StatementDoc = {
     id: string;
@@ -59,9 +60,15 @@ export default function BankStatementsPanel() {
         setError(null);
         try {
             const res = await fetch('/api/dashboard/finance/bank-statements');
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Caricamento fallito');
-            setDocs(data.documents || []);
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                documents?: StatementDoc[];
+                error?: string;
+            }>(res);
+            if (!parsed.ok || !parsed.data) {
+                throw new Error(parsed.error || 'Caricamento fallito');
+            }
+            setDocs(parsed.data.documents || []);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore archivio rendiconti');
         } finally {
@@ -83,8 +90,10 @@ export default function BankStatementsPanel() {
                 method: 'POST',
                 body: form,
             });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Upload fallito');
+            const parsed = await readJsonResponse<{ ok?: boolean; error?: string }>(res);
+            if (!parsed.ok) {
+                throw new Error(parsed.error || 'Upload fallito');
+            }
             await load();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
@@ -106,8 +115,8 @@ export default function BankStatementsPanel() {
             const res = await fetch(`/api/dashboard/finance/bank-statements/${id}`, {
                 method: 'DELETE',
             });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Eliminazione fallita');
+            const parsed = await readJsonResponse(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Eliminazione fallita');
             setDocs((prev) => prev.filter((d) => d.id !== id));
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Eliminazione fallita');

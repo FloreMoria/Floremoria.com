@@ -15,6 +15,8 @@ import {
 } from '@/lib/ai/agents/cfoSkills';
 import { buildBankReconciliationReport } from '@/lib/financial/bankStatements/store';
 import type { BankReconciliationReport } from '@/lib/financial/bankStatements/types';
+import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
+import { sumSaasForeignEurCents } from '@/lib/financial/saasForeignInvoices';
 
 const FLORIST_SHARE = 0.65;
 
@@ -311,15 +313,19 @@ export async function getCompanyFinancialHealth(): Promise<CompanyFinancialHealt
         windowDays: 30,
     });
 
-    // Cassa stimata: netto movimenti Stripe all-time (proxy) + buffer da netAmount ordini recenti
+    // Cassa stimata: saldo Fineco manuale (se allineato) → altrimenti netto Stripe
+    const finecoManual = await getFinecoManualBalance();
+    if (finecoManual) sources.push('SystemState finance.fineco.manual_balance');
+
     const stripeNet = await prisma.stripeFinanceMovement.aggregate({
         _sum: { netCents: true, amountCents: true },
     });
     sources.push('stripe_finance_movements aggregate net');
 
     const estimatedCashCents =
-        (stripeNet._sum.netCents ?? stripeNet._sum.amountCents ?? 0) ||
-        Math.max(0, operatingCashFlow30dCents);
+        finecoManual?.balanceCents ??
+        ((stripeNet._sum.netCents ?? stripeNet._sum.amountCents ?? 0) ||
+            Math.max(0, operatingCashFlow30dCents));
 
     const runway = calculateRunwayMonths({
         cashOnHandCents: Math.max(0, estimatedCashCents),
@@ -340,11 +346,25 @@ export async function getCompanyFinancialHealth(): Promise<CompanyFinancialHealt
     };
 }
 
-/** Report riconciliazione cassa: saldo bancario (ultimo estratto) vs ledger / Stripe. */
+/** Report riconciliazione cassa: saldo bancario (manuale o estratto) vs ledger / Stripe. */
 export async function getBankReconciliationReport(
     documentId?: string
-): Promise<BankReconciliationReport> {
-    return buildBankReconciliationReport(documentId);
+): Promise<BankReconciliationReport & { manualFinecoBalanceCents: number | null; saasForeignEurCents: number }> {
+    const [report, manual, saasForeignEurCents] = await Promise.all([
+        buildBankReconciliationReport(documentId),
+        getFinecoManualBalance(),
+        sumSaasForeignEurCents(),
+    ]);
+    const bankClosing =
+        manual?.balanceCents ?? report.bankClosingBalanceCents ?? null;
+    return {
+        ...report,
+        bankClosingBalanceCents: bankClosing,
+        deltaBankVsLedgerCents:
+            bankClosing == null ? report.deltaBankVsLedgerCents : bankClosing - report.ledgerBalanceCents,
+        manualFinecoBalanceCents: manual?.balanceCents ?? null,
+        saasForeignEurCents,
+    };
 }
 
 /** Registro tool invocabili da Alberto (nome → handler). */

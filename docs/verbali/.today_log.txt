@@ -37,3 +37,4 @@
 [2026-08-20 13:03] feat/finance: upload rendiconti Fineco (PDF/CSV/XLSX) con parsing, riconciliazione automatica e tool Alberto getBankReconciliationReport.
 
 [2026-08-20 13:12] fix(orders): ordinamento decrescente per data consegna e ripristino ordini prenotati da ricorrenze GdM.
+[2026-08-20 13:28] fix/finance: upload estratti JSON-safe + proxy API 401; saldo Fineco editabile; SaaS drawer con upload e ZIP mensile.

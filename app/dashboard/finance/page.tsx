@@ -19,16 +19,20 @@ import {
     Calendar,
     CheckSquare,
     Square,
-    AlertOctagon
+    AlertOctagon,
+    Pencil,
+    Check,
 } from 'lucide-react';
 import type { FinancialLedger, BankTransaction, AccountingEntry } from '@/lib/financial/types';
 import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 import TaxQuarterlyPanel from './TaxQuarterlyPanel';
 import BankStatementsPanel from '@/components/dashboard/BankStatementsPanel';
+import SaasForeignExpensesPanel from '@/components/dashboard/SaasForeignExpensesPanel';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
 } from '@/lib/financial/companyBankDetails';
+import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
@@ -53,15 +57,40 @@ export default function FinanceDashboardPage() {
     const [lastSimResult, setLastSimResult] = useState<any>(null);
     const [processingManual, setProcessingManual] = useState(false);
 
+    // Saldo Fineco manuale (SystemState) + drawer SaaS
+    const [manualBalanceCents, setManualBalanceCents] = useState<number | null>(null);
+    const [manualBalanceAlignedAt, setManualBalanceAlignedAt] = useState<string | null>(null);
+    const [editingBalance, setEditingBalance] = useState(false);
+    const [balanceDraft, setBalanceDraft] = useState('');
+    const [savingBalance, setSavingBalance] = useState(false);
+    const [saasDrawerOpen, setSaasDrawerOpen] = useState(false);
+    const [saasTotalCents, setSaasTotalCents] = useState(0);
+
     // Caricamento dati
     const loadLedger = async () => {
         setLoading(true);
         try {
             const res = await fetch('/api/dashboard/finance');
-            const data = await res.json();
-            if (data.ok) {
-                if (data.ledger) setLedger(data.ledger);
-                if (data.statements) setStatements(data.statements);
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                ledger?: FinancialLedger;
+                statements?: unknown;
+                finecoBalance?: { balanceCents: number; alignedAt: string } | null;
+                saasTotalEurCents?: number;
+                error?: string;
+            }>(res);
+            if (parsed.ok && parsed.data) {
+                if (parsed.data.ledger) setLedger(parsed.data.ledger);
+                if (parsed.data.statements) setStatements(parsed.data.statements);
+                if (parsed.data.finecoBalance) {
+                    setManualBalanceCents(parsed.data.finecoBalance.balanceCents);
+                    setManualBalanceAlignedAt(parsed.data.finecoBalance.alignedAt);
+                }
+                if (typeof parsed.data.saasTotalEurCents === 'number') {
+                    setSaasTotalCents(parsed.data.saasTotalEurCents);
+                }
+            } else if (parsed.error) {
+                console.error('Errore di caricamento ledger:', parsed.error);
             }
         } catch (error) {
             console.error('Errore di caricamento ledger:', error);
@@ -313,14 +342,48 @@ export default function FinanceDashboardPage() {
             ? Math.round((reconciledCount / transactions.length) * 100) 
             : 100;
 
+        const displayBalanceCents =
+            manualBalanceCents != null ? manualBalanceCents : balanceCents;
+        const saasDisplayCents = Math.max(foreignSaasCents, saasTotalCents);
+
         return {
-            balance: (balanceCents / 100).toFixed(2),
+            balance: (displayBalanceCents / 100).toFixed(2),
+            balanceIsManual: manualBalanceCents != null,
             income: (incomeCents / 100).toFixed(2),
             expense: (expenseCents / 100).toFixed(2),
-            foreignSaas: (foreignSaasCents / 100).toFixed(2),
+            foreignSaas: (saasDisplayCents / 100).toFixed(2),
             recRate
         };
-    }, [ledger]);
+    }, [ledger, manualBalanceCents, saasTotalCents]);
+
+    const saveManualBalance = async () => {
+        const euros = Number(String(balanceDraft).replace(',', '.'));
+        if (!Number.isFinite(euros)) return;
+        setSavingBalance(true);
+        try {
+            const res = await fetch('/api/dashboard/finance/fineco-balance', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ balanceEuros: euros }),
+            });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                balance?: { balanceCents: number; alignedAt: string };
+                error?: string;
+            }>(res);
+            if (!parsed.ok || !parsed.data?.balance) {
+                throw new Error(parsed.error || 'Salvataggio fallito');
+            }
+            setManualBalanceCents(parsed.data.balance.balanceCents);
+            setManualBalanceAlignedAt(parsed.data.balance.alignedAt);
+            setEditingBalance(false);
+        } catch (err) {
+            console.error(err);
+            alert(err instanceof Error ? err.message : 'Salvataggio saldo fallito');
+        } finally {
+            setSavingBalance(false);
+        }
+    };
 
     // Filtraggio transazioni/scritture
     const filteredTransactions = (ledger?.transactions || []).filter(t => {
@@ -418,11 +481,54 @@ export default function FinanceDashboardPage() {
             {/* Metrics cards grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0 flex-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Saldo FinecoBank</span>
-                        <h3 className="text-2xl font-bold font-mono text-slate-900 mt-1">€{stats.balance}</h3>
+                        {editingBalance ? (
+                            <div className="mt-1 flex items-center gap-2">
+                                <span className="text-slate-500 font-mono">€</span>
+                                <input
+                                    autoFocus
+                                    value={balanceDraft}
+                                    onChange={(e) => setBalanceDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') void saveManualBalance();
+                                        if (e.key === 'Escape') setEditingBalance(false);
+                                    }}
+                                    className="w-28 rounded-lg border border-slate-200 px-2 py-1 text-lg font-bold font-mono"
+                                />
+                                <button
+                                    type="button"
+                                    disabled={savingBalance}
+                                    onClick={() => void saveManualBalance()}
+                                    className="p-1.5 rounded-lg bg-emerald-600 text-white disabled:opacity-50"
+                                    title="Salva"
+                                >
+                                    <Check size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="mt-1 flex items-center gap-2">
+                                <h3 className="text-2xl font-bold font-mono text-slate-900">€{stats.balance}</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setBalanceDraft(stats.balance);
+                                        setEditingBalance(true);
+                                    }}
+                                    className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+                                    title="Modifica saldo manuale"
+                                >
+                                    <Pencil size={14} />
+                                </button>
+                            </div>
+                        )}
+                        {stats.balanceIsManual && manualBalanceAlignedAt && !editingBalance && (
+                            <p className="text-[10px] text-slate-400 mt-1">
+                                Allineato {new Date(manualBalanceAlignedAt).toLocaleString('it-IT')}
+                            </p>
+                        )}
                     </div>
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-700">
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-700 shrink-0">
                         <DollarSign size={24} />
                     </div>
                 </div>
@@ -444,15 +550,20 @@ export default function FinanceDashboardPage() {
                         <TrendingDown size={24} />
                     </div>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={() => setSaasDrawerOpen(true)}
+                    className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between text-left hover:border-blue-300 hover:ring-2 hover:ring-blue-100 transition-all"
+                >
                     <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Spese SaaS / Estere</span>
                         <h3 className="text-2xl font-bold font-mono text-blue-600 mt-1">€{stats.foreignSaas}</h3>
+                        <span className="text-[10px] text-blue-500 font-semibold">Apri gestione →</span>
                     </div>
                     <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
                         <Settings size={24} />
                     </div>
-                </div>
+                </button>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tasso Riconciliazione</span>
@@ -463,6 +574,12 @@ export default function FinanceDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <SaasForeignExpensesPanel
+                open={saasDrawerOpen}
+                onClose={() => setSaasDrawerOpen(false)}
+                onTotalsChange={setSaasTotalCents}
+            />
 
             {/* Tabs content tables */}
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">

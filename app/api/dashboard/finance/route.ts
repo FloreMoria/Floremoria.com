@@ -3,6 +3,10 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getLedger, addTransaction, saveLedger } from '@/lib/financial/ledgerStore';
 import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
 import { calculateFinancialStatements } from '@/lib/financial/statements';
+import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
+import { sumSaasForeignEurCents } from '@/lib/financial/saasForeignInvoices';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     const auth = await requireDashboardAdmin();
@@ -10,8 +14,18 @@ export async function GET() {
 
     try {
         const ledger = getLedger();
-        const statements = await calculateFinancialStatements();
-        return NextResponse.json({ ok: true, ledger, statements });
+        const [statements, finecoBalance, saasTotalEurCents] = await Promise.all([
+            calculateFinancialStatements(),
+            getFinecoManualBalance(),
+            sumSaasForeignEurCents(),
+        ]);
+        return NextResponse.json({
+            ok: true,
+            ledger,
+            statements,
+            finecoBalance,
+            saasTotalEurCents,
+        });
     } catch (error) {
         console.error('[Finance API GET] Errore:', error);
         return NextResponse.json({ ok: false, error: 'Errore interno' }, { status: 500 });

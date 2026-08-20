@@ -28,6 +28,7 @@ import TaxQuarterlyPanel from './TaxQuarterlyPanel';
 import BankStatementsPanel from '@/components/dashboard/BankStatementsPanel';
 import SaasForeignExpensesPanel from '@/components/dashboard/SaasForeignExpensesPanel';
 import ManualExpenseModal from '@/components/dashboard/ManualExpenseModal';
+import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
@@ -544,6 +545,8 @@ export default function FinanceDashboardPage() {
                 onClose={() => setManualExpenseOpen(false)}
                 onSaved={() => void loadLedger()}
             />
+
+            <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
 
             {/* Tabs content tables */}
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">

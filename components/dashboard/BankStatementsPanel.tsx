@@ -5,8 +5,16 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, FileUp, Loader2, Trash2, UploadCloud } from 'lucide-react';
+import { ChevronDown, Download, FileUp, Loader2, Trash2, UploadCloud } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+
+type ParseAnomaly = {
+    code: string;
+    message: string;
+    severity?: 'info' | 'warn' | 'error';
+    page?: number;
+    raw?: string;
+};
 
 type StatementDoc = {
     id: string;
@@ -22,6 +30,13 @@ type StatementDoc = {
     unmatchedCount: number;
     uploadedAt: string;
     processedAt: string | null;
+    metadataJson?: {
+        movementCount?: number;
+        ignoredMarginNotes?: number;
+        parseSummary?: string;
+        anomalies?: ParseAnomaly[];
+        warnings?: string[];
+    } | null;
 };
 
 function formatPeriod(start: string | null, end: string | null): string {
@@ -46,6 +61,16 @@ function statusLabel(status: string): { text: string; className: string } {
     }
 }
 
+function docSummary(doc: StatementDoc): string | null {
+    return doc.metadataJson?.parseSummary || null;
+}
+
+function warnAnomalies(doc: StatementDoc): ParseAnomaly[] {
+    return (doc.metadataJson?.anomalies || []).filter(
+        (a) => a.severity === 'warn' || a.severity === 'error' || !a.severity
+    );
+}
+
 export default function BankStatementsPanel() {
     const inputRef = useRef<HTMLInputElement>(null);
     const [docs, setDocs] = useState<StatementDoc[]>([]);
@@ -53,8 +78,11 @@ export default function BankStatementsPanel() {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [textPreview, setTextPreview] = useState<string[] | null>(null);
+    const [uploadSummary, setUploadSummary] = useState<string | null>(null);
+    const [uploadAnomalies, setUploadAnomalies] = useState<ParseAnomaly[]>([]);
     const [dragOver, setDragOver] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [openAnomalyDocId, setOpenAnomalyDocId] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -85,6 +113,8 @@ export default function BankStatementsPanel() {
         setUploading(true);
         setError(null);
         setTextPreview(null);
+        setUploadSummary(null);
+        setUploadAnomalies([]);
         try {
             const form = new FormData();
             form.append('file', file);
@@ -96,7 +126,17 @@ export default function BankStatementsPanel() {
                 ok?: boolean;
                 error?: string;
                 textPreview?: string[];
-                document?: { metadataJson?: { textPreview?: string[] } };
+                parseSummary?: string;
+                anomalies?: ParseAnomaly[];
+                ignoredMarginNotes?: number;
+                movementCount?: number;
+                document?: {
+                    metadataJson?: {
+                        textPreview?: string[];
+                        parseSummary?: string;
+                        anomalies?: ParseAnomaly[];
+                    };
+                };
             }>(res);
             if (!parsed.ok) {
                 const preview =
@@ -107,6 +147,19 @@ export default function BankStatementsPanel() {
                 await load();
                 throw new Error(parsed.error || 'Upload fallito');
             }
+
+            const summary =
+                parsed.data?.parseSummary ||
+                parsed.data?.document?.metadataJson?.parseSummary ||
+                null;
+            const anomalies =
+                parsed.data?.anomalies ||
+                parsed.data?.document?.metadataJson?.anomalies ||
+                [];
+            setUploadSummary(summary);
+            setUploadAnomalies(
+                anomalies.filter((a) => a.severity === 'warn' || a.severity === 'error')
+            );
             await load();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
@@ -198,6 +251,34 @@ export default function BankStatementsPanel() {
                 </div>
             </div>
 
+            {uploadSummary && !error && (
+                <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 space-y-2">
+                    <p className="font-medium">{uploadSummary}</p>
+                    {uploadAnomalies.length > 0 && (
+                        <details className="group">
+                            <summary className="cursor-pointer list-none flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <ChevronDown
+                                    size={14}
+                                    className="transition-transform group-open:rotate-180"
+                                />
+                                Dettagli anomalie ({uploadAnomalies.length})
+                            </summary>
+                            <ul className="mt-2 space-y-1.5 font-mono text-[10px] text-slate-600">
+                                {uploadAnomalies.map((a, i) => (
+                                    <li
+                                        key={`${a.code}-${i}`}
+                                        className="rounded-lg bg-white border border-slate-100 px-2 py-1.5"
+                                    >
+                                        <span className="font-bold text-amber-700">{a.code}</span>
+                                        {a.page != null ? ` · pag. ${a.page}` : ''} — {a.message}
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
+                </div>
+            )}
+
             {error && (
                 <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 space-y-2">
                     <p>{error}</p>
@@ -245,16 +326,46 @@ export default function BankStatementsPanel() {
                         ) : (
                             docs.map((doc) => {
                                 const st = statusLabel(doc.status);
+                                const summary = docSummary(doc);
+                                const warns = warnAnomalies(doc);
+                                const open = openAnomalyDocId === doc.id;
                                 return (
                                     <tr key={doc.id} className="border-t border-slate-100 align-top">
                                         <td className="px-3 py-2.5">
-                                            <div className="font-medium text-slate-800 max-w-[220px] truncate">
+                                            <div className="font-medium text-slate-800 max-w-[260px] truncate">
                                                 {doc.fileName}
                                             </div>
-                                            {doc.parseError && (
-                                                <div className="text-[10px] text-amber-700 mt-0.5 line-clamp-2">
-                                                    {doc.parseError}
+                                            {summary && (
+                                                <div className="mt-1 inline-flex max-w-[280px] text-[10px] text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
+                                                    {summary}
                                                 </div>
+                                            )}
+                                            {doc.parseError && warns.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setOpenAnomalyDocId(open ? null : doc.id)
+                                                    }
+                                                    className="mt-1 flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 hover:underline"
+                                                >
+                                                    <ChevronDown
+                                                        size={12}
+                                                        className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                                    />
+                                                    Dettagli anomalie ({warns.length})
+                                                </button>
+                                            )}
+                                            {open && warns.length > 0 && (
+                                                <ul className="mt-1 space-y-1 max-w-[320px]">
+                                                    {warns.map((a, i) => (
+                                                        <li
+                                                            key={`${doc.id}-${i}`}
+                                                            className="text-[10px] font-mono text-slate-600 bg-amber-50/60 border border-amber-100 rounded-lg px-2 py-1"
+                                                        >
+                                                            {a.message}
+                                                        </li>
+                                                    ))}
+                                                </ul>
                                             )}
                                         </td>
                                         <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">

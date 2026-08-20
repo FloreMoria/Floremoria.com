@@ -111,6 +111,7 @@ export async function listBankStatements() {
             unmatchedCount: true,
             uploadedAt: true,
             processedAt: true,
+            metadataJson: true,
         },
     });
 }

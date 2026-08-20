@@ -36,13 +36,13 @@ function statusLabel(status: string): { text: string; className: string } {
         case 'RECONCILED':
             return { text: 'Riconciliato', className: 'bg-emerald-50 text-emerald-700' };
         case 'PARSED':
-            return { text: 'Elaborato', className: 'bg-sky-50 text-sky-700' };
+            return { text: 'In attesa', className: 'bg-amber-50 text-amber-700' };
         case 'PARSING':
-            return { text: 'In elaborazione', className: 'bg-amber-50 text-amber-700' };
+            return { text: 'In elaborazione', className: 'bg-sky-50 text-sky-700' };
         case 'FAILED':
-            return { text: 'Errore', className: 'bg-rose-50 text-rose-700' };
+            return { text: 'Non abbinato / errore', className: 'bg-rose-50 text-rose-700' };
         default:
-            return { text: status, className: 'bg-slate-100 text-slate-600' };
+            return { text: status || 'In attesa', className: 'bg-slate-100 text-slate-600' };
     }
 }
 
@@ -146,7 +146,7 @@ export default function BankStatementsPanel() {
                         Estratti Conto &amp; Rendiconti
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        Carica PDF/CSV/Excel Fineco: parsing automatico e riconciliazione vs ledger, Stripe e fioristi.
+                        Carica PDF/CSV/Excel Fineco: matching vs Stripe/PayPal, compensi fioristi, SaaS e spese manuali (stati: Riconciliato / In attesa / Non abbinato).
                     </p>
                 </div>
             </div>

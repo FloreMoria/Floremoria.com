@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Search, ChevronRight, Plus, Heart, AlertTriangle } from 'lucide-react';
+import { Search, ChevronRight, Plus, Heart, AlertTriangle, GitMerge, Loader2 } from 'lucide-react';
 import DeceasedProfileDrawer from '@/components/dashboard/DeceasedProfileDrawer';
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
 import { compareByRecentActivity } from '@/lib/dashboard/sortDashboardLists';
@@ -35,6 +35,7 @@ export default function ClientDeceasedTable({
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
+    const [isMerging, setIsMerging] = useState(false);
     const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
     const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
     const [toast, setToast] = useState<string | null>(null);
@@ -46,6 +47,38 @@ export default function ClientDeceasedTable({
         setToast(message);
         window.setTimeout(() => setToast(null), 3200);
     };
+
+    const handleAutoMerge = async () => {
+        const ok = window.confirm(
+            'Avviare la deduplicazione automatica dei profili omonimi (es. "Santo Sancono", "Tusa Salvatore") e dei relativi ordini?'
+        );
+        if (!ok) return;
+
+        setIsMerging(true);
+        try {
+            const res = await fetch('/api/dashboard/defunti/merge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ autoScan: true }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Errore durante la deduplicazione.');
+            }
+
+            if (data.clustersMergedCount > 0) {
+                showToast(`✅ Uniti con successo ${data.clustersMergedCount} cluster omonimi duplicati!`);
+            } else {
+                showToast('Nessun profilo omonimo duplicato da unire.');
+            }
+            router.refresh();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Errore deduplicazione.');
+        } finally {
+            setIsMerging(false);
+        }
+    };
+
 
     useEffect(() => {
         setRows(initialRows);
@@ -222,14 +255,28 @@ export default function ClientDeceasedTable({
                         className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] outline-none transition-all"
                     />
                 </div>
-                <button
-                    type="button"
-                    onClick={() => setShowCreateForm((v) => !v)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c5a880]/40 bg-[#c5a880]/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#8a7349] hover:bg-[#c5a880]/15"
-                >
-                    <Plus size={14} />
-                    Nuovo defunto
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleAutoMerge}
+                        disabled={isMerging}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-purple-800 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+                        title="Unisci automaticamente i profili omonimi duplicati e gli ordini storici"
+                    >
+                        {isMerging ? <Loader2 size={14} className="animate-spin" /> : <GitMerge size={14} />}
+                        {isMerging ? 'Unione in corso…' : 'Unisci Duplicati'}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowCreateForm((v) => !v)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c5a880]/40 bg-[#c5a880]/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#8a7349] hover:bg-[#c5a880]/15"
+                    >
+                        <Plus size={14} />
+                        Nuovo defunto
+                    </button>
+                </div>
+
             </div>
 
             {showCreateForm ? (

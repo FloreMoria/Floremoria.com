@@ -7,6 +7,10 @@ import prisma from '@/lib/prisma';
 import { getLedger } from '@/lib/financial/ledgerStore';
 import type { BankTransaction } from '@/lib/financial/types';
 import type { ParsedBankMovement, StatementMatchResult } from './types';
+import {
+    matchManualExpenseByAmount,
+    markManualExpenseReconciled,
+} from '@/lib/financial/manualExpenses';
 
 function dayMs(iso: string | null | undefined): number | null {
     if (!iso) return null;
@@ -188,6 +192,29 @@ export async function reconcileParsedMovement(
 
     const orderHit = await matchAgainstFloristOrOrder(movement);
     if (orderHit && (!best || orderHit.matchScore > best.matchScore)) best = orderHit;
+
+    // Spese manuali (fatture/scontrini/ricevute) — solo uscite
+    if (movement.amountCents < 0) {
+        const manual = await matchManualExpenseByAmount(
+            Math.abs(movement.amountCents),
+            movement.accountingDate || movement.valueDate,
+            movement.description
+        );
+        if (manual) {
+            const score = 88;
+            if (!best || score > best.matchScore) {
+                best = {
+                    matchStatus: 'MATCHED',
+                    matchType: 'MANUAL_EXPENSE',
+                    matchScore: score,
+                    matchedTxId: manual.id,
+                    matchedOrderId: null,
+                    matchNotes: `Abbinato a spesa manuale ${manual.vendorName}`,
+                };
+                await markManualExpenseReconciled(manual.id, null);
+            }
+        }
+    }
 
     if (best) return best;
 

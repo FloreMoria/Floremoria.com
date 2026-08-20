@@ -128,7 +128,10 @@ model DeceasedProfile {
   partnerLinks  PartnerDeceasedAssignment[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  deletedAt     DateTime? @map("deleted_at")
+  mergedIntoId  String?   @map("merged_into_id")
 }
+
 
 /// Pivot User ↔ Defunto (DeceasedProfile): più utenti possono seguire lo stesso defunto.
 model UserDeceasedLink {
@@ -184,6 +187,8 @@ model Order {
   buyerEmail             String?
   isRecurring            Boolean           @default(false)
   deletedAt              DateTime?
+  mergedIntoId           String?           @map("merged_into_id")
+
   additionalInstructions String?
   funeralDate            DateTime?
   latitude               Float?
@@ -903,6 +908,39 @@ model SaasForeignInvoice {
   @@index([invoiceDate])
   @@index([vendorName])
   @@map("saas_foreign_invoices")
+}
+
+/// Spesa / documento manuale (fattura ricevuta, scontrino, ricevuta) per Contabilità.
+model ManualFinanceExpense {
+  id                      String   @id @default(cuid())
+  expenseDate             DateTime @map("expense_date")
+  /** FATTURA | SCONTRINO | RICEVUTA */
+  docType                 String   @map("doc_type") @db.VarChar(32)
+  vendorName              String   @map("vendor_name") @db.VarChar(160)
+  description             String   @db.Text
+  totalCents              Int      @map("total_cents")
+  vatRate                 Float    @default(0) @map("vat_rate")
+  vatCents                Int      @default(0) @map("vat_cents")
+  netCents                Int      @default(0) @map("net_cents")
+  fileName                String?  @map("file_name") @db.VarChar(255)
+  contentType             String?  @map("content_type") @db.VarChar(128)
+  sizeBytes               Int?     @map("size_bytes")
+  blobPath                String?  @map("blob_path") @db.Text
+  blobUrl                 String?  @map("blob_url") @db.Text
+  storageKind             String   @default("none") @map("storage_kind") @db.VarChar(16)
+  periodKey               String   @map("period_key") @db.VarChar(7)
+  reconciled              Boolean  @default(false)
+  matchedStatementLineId  String?  @map("matched_statement_line_id")
+  notes                   String?  @db.Text
+  metadataJson            Json?    @map("metadata_json")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@index([periodKey])
+  @@index([expenseDate])
+  @@index([vendorName])
+  @@index([reconciled])
+  @@map("manual_finance_expenses")
 }
 
 /**

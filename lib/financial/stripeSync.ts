@@ -1,36 +1,103 @@
 /**
- * Sync bidirezionale Stripe → DB contabile:
- * balance_transactions (entrate/uscite/fee), payouts (Fineco), fatture mensili commissioni.
+ * Sync Stripe → DB contabile (multi-account):
+ * - COM = floremoria.com (STRIPE_SECRET_KEY)
+ * - EU  = floremoria.eu / PSA San Marco (STRIPE_EU_SECRET_KEY)
+ *
+ * ID univoci: stripe_tx_<id> | stripe_eu_tx_<id> per evitare collisioni tra account.
  */
 
 import Stripe from 'stripe';
 import prisma from '@/lib/prisma';
 import { scorporaIvaOrdinaria } from '@/lib/financial/vat';
 
+export type StripeAccountCode = 'COM' | 'EU';
+
+export type StripeAccountConfig = {
+    code: StripeAccountCode;
+    /** Badge UI */
+    label: string;
+    /** Prefisso ID persistito (stripe_tx_ / stripe_eu_tx_) */
+    idPrefix: string;
+    secretKey: string;
+};
+
 export type StripeSyncResult = {
     ok: boolean;
     movementsUpserted: number;
     payoutsUpserted: number;
     invoicesUpserted: number;
+    accountsSynced: Array<{
+        code: StripeAccountCode;
+        label: string;
+        movementsUpserted: number;
+        payoutsUpserted: number;
+        invoicesUpserted: number;
+        errors: string[];
+    }>;
     errors: string[];
 };
 
-function getStripeClient(): Stripe {
-    const key = process.env.STRIPE_SECRET_KEY?.trim();
-    if (!key) throw new Error('STRIPE_SECRET_KEY non configurata');
-    return new Stripe(key, { apiVersion: '2023-10-16' as any });
+function makeStripeClient(secretKey: string): Stripe {
+    return new Stripe(secretKey, { apiVersion: '2023-10-16' as any });
 }
 
-function periodKeyFromDate(d: Date): string {
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-    return `${y}-${m}`;
+/**
+ * Elenco account configurati. COM obbligatorio se presente la chiave;
+ * EU opzionale (legacy PSA / floremoria.eu).
+ */
+export function listConfiguredStripeAccounts(): StripeAccountConfig[] {
+    const accounts: StripeAccountConfig[] = [];
+    const com =
+        process.env.STRIPE_SECRET_KEY?.trim() ||
+        process.env.STRIPE_COM_SECRET_KEY?.trim() ||
+        '';
+    if (com) {
+        accounts.push({
+            code: 'COM',
+            label: 'Stripe COM',
+            idPrefix: 'stripe_tx_',
+            secretKey: com,
+        });
+    }
+    const eu =
+        process.env.STRIPE_EU_SECRET_KEY?.trim() ||
+        process.env.STRIPE_SECRET_KEY_EU?.trim() ||
+        process.env.STRIPE_PSA_SECRET_KEY?.trim() ||
+        '';
+    if (eu) {
+        accounts.push({
+            code: 'EU',
+            label: 'Stripe EU - PSA',
+            idPrefix: 'stripe_eu_tx_',
+            secretKey: eu,
+        });
+    }
+    return accounts;
+}
+
+export function scopedStripeId(account: StripeAccountConfig, rawId: string): string {
+    if (rawId.startsWith(account.idPrefix)) return rawId.slice(0, 128);
+    return `${account.idPrefix}${rawId}`.slice(0, 128);
+}
+
+function periodKeyForAccount(account: StripeAccountConfig, d: Date): string {
+    const base = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    // COM mantiene chiave storica YYYY-MM; EU usa prefisso per unicità.
+    return account.code === 'COM' ? base : `eu:${base}`;
 }
 
 function monthBoundsUtc(year: number, monthIndex0: number): { start: Date; end: Date } {
     const start = new Date(Date.UTC(year, monthIndex0, 1, 0, 0, 0));
     const end = new Date(Date.UTC(year, monthIndex0 + 1, 0, 23, 59, 59));
     return { start, end };
+}
+
+function accountMeta(account: StripeAccountConfig, extra?: Record<string, unknown>) {
+    return {
+        account: account.code,
+        accountLabel: account.label,
+        ...(extra || {}),
+    };
 }
 
 async function resolveOrderIdFromSource(
@@ -45,7 +112,8 @@ async function resolveOrderIdFromSource(
                 charge.metadata?.orderNumber ||
                 (typeof charge.payment_intent === 'string'
                     ? undefined
-                    : (charge.payment_intent as Stripe.PaymentIntent | null)?.metadata?.orderNumber);
+                    : (charge.payment_intent as Stripe.PaymentIntent | null)?.metadata
+                          ?.orderNumber);
             if (orderNumber) {
                 const order = await prisma.order.findFirst({
                     where: { orderNumber, deletedAt: null },
@@ -55,18 +123,21 @@ async function resolveOrderIdFromSource(
             }
         }
     } catch {
-        /* ignore lookup failures */
+        /* ignore */
     }
     return null;
 }
 
-/** Sincronizza balance transactions Stripe nel DB. */
+/** Sincronizza balance transactions per un account. */
 export async function syncStripeBalanceMovements(params?: {
+    account: StripeAccountConfig;
     createdGte?: Date;
     createdLte?: Date;
     limitPages?: number;
 }): Promise<{ upserted: number; errors: string[] }> {
-    const stripe = getStripeClient();
+    if (!params?.account) throw new Error('account Stripe obbligatorio');
+    const account = params.account;
+    const stripe = makeStripeClient(account.secretKey);
     const errors: string[] = [];
     let upserted = 0;
     const limitPages = params?.limitPages ?? 8;
@@ -87,10 +158,16 @@ export async function syncStripeBalanceMovements(params?: {
             try {
                 const sourceId = typeof bt.source === 'string' ? bt.source : bt.source?.id ?? null;
                 const orderId = await resolveOrderIdFromSource(stripe, sourceId);
+                const stripeId = scopedStripeId(account, bt.id);
+                const meta = accountMeta(account, {
+                    rawStripeId: bt.id,
+                    fee_details: bt.fee_details as unknown as object[],
+                    exchange_rate: bt.exchange_rate,
+                });
                 await prisma.stripeFinanceMovement.upsert({
-                    where: { stripeId: bt.id },
+                    where: { stripeId },
                     create: {
-                        stripeId: bt.id,
+                        stripeId,
                         type: bt.type,
                         reportingCategory: bt.reporting_category || null,
                         description: bt.description || null,
@@ -103,10 +180,7 @@ export async function syncStripeBalanceMovements(params?: {
                         availableOn: bt.available_on ? new Date(bt.available_on * 1000) : null,
                         sourceId,
                         orderId,
-                        metadataJson: {
-                            fee_details: bt.fee_details as unknown as object[],
-                            exchange_rate: bt.exchange_rate,
-                        } as object,
+                        metadataJson: meta as object,
                     },
                     update: {
                         type: bt.type,
@@ -120,16 +194,15 @@ export async function syncStripeBalanceMovements(params?: {
                         availableOn: bt.available_on ? new Date(bt.available_on * 1000) : null,
                         sourceId,
                         orderId: orderId ?? undefined,
-                        metadataJson: {
-                            fee_details: bt.fee_details as unknown as object[],
-                            exchange_rate: bt.exchange_rate,
-                        } as object,
+                        metadataJson: meta as object,
                         syncedAt: new Date(),
                     },
                 });
                 upserted += 1;
             } catch (err) {
-                errors.push(`bt ${bt.id}: ${err instanceof Error ? err.message : String(err)}`);
+                errors.push(
+                    `${account.code} bt ${bt.id}: ${err instanceof Error ? err.message : String(err)}`
+                );
             }
         }
 
@@ -141,12 +214,15 @@ export async function syncStripeBalanceMovements(params?: {
     return { upserted, errors };
 }
 
-/** Sincronizza payout verso conto bancario (Fineco). */
+/** Sincronizza payout verso banca per un account. */
 export async function syncStripePayouts(params?: {
+    account: StripeAccountConfig;
     createdGte?: Date;
     limitPages?: number;
 }): Promise<{ upserted: number; errors: string[] }> {
-    const stripe = getStripeClient();
+    if (!params?.account) throw new Error('account Stripe obbligatorio');
+    const account = params.account;
+    const stripe = makeStripeClient(account.secretKey);
     const errors: string[] = [];
     let upserted = 0;
     const limitPages = params?.limitPages ?? 4;
@@ -164,14 +240,21 @@ export async function syncStripePayouts(params?: {
 
         for (const po of list.data) {
             try {
-                // Uscita dal wallet Stripe → banca: amount positivo in payout, segno negativo in ledger.
+                const stripeId = scopedStripeId(account, po.id);
+                const meta = accountMeta(account, {
+                    rawStripeId: po.id,
+                    method: po.method,
+                    destination: typeof po.destination === 'string' ? po.destination : null,
+                    statement_descriptor: po.statement_descriptor,
+                    bank: 'Fineco (dest. account Stripe)',
+                });
                 await prisma.stripeFinanceMovement.upsert({
-                    where: { stripeId: po.id },
+                    where: { stripeId },
                     create: {
-                        stripeId: po.id,
+                        stripeId,
                         type: 'payout',
                         reportingCategory: 'payout',
-                        description: po.description || `Payout Stripe → banca (${po.arrival_date})`,
+                        description: po.description || `Payout ${account.label} → banca (${po.arrival_date})`,
                         amountCents: -Math.abs(po.amount),
                         feeCents: 0,
                         netCents: -Math.abs(po.amount),
@@ -179,32 +262,24 @@ export async function syncStripePayouts(params?: {
                         status: po.status,
                         createdAtStripe: new Date(po.created * 1000),
                         availableOn: po.arrival_date ? new Date(po.arrival_date * 1000) : null,
-                        payoutId: po.id,
-                        metadataJson: {
-                            method: po.method,
-                            destination: typeof po.destination === 'string' ? po.destination : null,
-                            statement_descriptor: po.statement_descriptor,
-                            bank: 'Fineco (dest. account Stripe)',
-                        },
+                        payoutId: stripeId,
+                        metadataJson: meta as object,
                     },
                     update: {
-                        description: po.description || `Payout Stripe → banca (${po.arrival_date})`,
+                        description: po.description || `Payout ${account.label} → banca (${po.arrival_date})`,
                         amountCents: -Math.abs(po.amount),
                         netCents: -Math.abs(po.amount),
                         status: po.status,
                         availableOn: po.arrival_date ? new Date(po.arrival_date * 1000) : null,
-                        metadataJson: {
-                            method: po.method,
-                            destination: typeof po.destination === 'string' ? po.destination : null,
-                            statement_descriptor: po.statement_descriptor,
-                            bank: 'Fineco (dest. account Stripe)',
-                        },
+                        metadataJson: meta as object,
                         syncedAt: new Date(),
                     },
                 });
                 upserted += 1;
             } catch (err) {
-                errors.push(`payout ${po.id}: ${err instanceof Error ? err.message : String(err)}`);
+                errors.push(
+                    `${account.code} payout ${po.id}: ${err instanceof Error ? err.message : String(err)}`
+                );
             }
         }
 
@@ -216,19 +291,18 @@ export async function syncStripePayouts(params?: {
     return { upserted, errors };
 }
 
-/**
- * Acquisisce fatture mensili commissioni Stripe.
- * Preferisce invoice Stripe formali; altrimenti aggrega fee da balance_transactions per mese (reverse charge).
- */
+/** Fatture / aggregato fee mensili per account. */
 export async function syncStripeServiceInvoices(params?: {
+    account: StripeAccountConfig;
     monthsBack?: number;
 }): Promise<{ upserted: number; errors: string[] }> {
-    const stripe = getStripeClient();
+    if (!params?.account) throw new Error('account Stripe obbligatorio');
+    const account = params.account;
+    const stripe = makeStripeClient(account.secretKey);
     const errors: string[] = [];
     let upserted = 0;
     const monthsBack = params?.monthsBack ?? 18;
 
-    // 1) Invoice Stripe Billing (se presenti sull'account)
     try {
         const invoices = await stripe.invoices.list({
             limit: 100,
@@ -242,16 +316,19 @@ export async function syncStripeServiceInvoices(params?: {
                 : new Date(Date.UTC(issuedAt.getUTCFullYear(), issuedAt.getUTCMonth(), 1));
             const periodEnd = inv.period_end
                 ? new Date(inv.period_end * 1000)
-                : new Date(Date.UTC(issuedAt.getUTCFullYear(), issuedAt.getUTCMonth() + 1, 0, 23, 59, 59));
-            const key = periodKeyFromDate(periodStart);
+                : new Date(
+                      Date.UTC(issuedAt.getUTCFullYear(), issuedAt.getUTCMonth() + 1, 0, 23, 59, 59)
+                  );
+            const key = periodKeyForAccount(account, periodStart);
             const totalFeeCents = Math.abs(inv.total || inv.amount_paid || 0);
             const taxable = scorporaIvaOrdinaria(totalFeeCents);
+            const scopedInvoiceId = scopedStripeId(account, inv.id);
 
             try {
                 await prisma.stripeServiceInvoice.upsert({
                     where: { periodKey: key },
                     create: {
-                        stripeInvoiceId: inv.id,
+                        stripeInvoiceId: scopedInvoiceId,
                         periodKey: key,
                         number: inv.number || inv.id,
                         status: inv.status || 'paid',
@@ -265,14 +342,15 @@ export async function syncStripeServiceInvoices(params?: {
                         vendorName: 'Stripe Payments Europe Ltd',
                         invoicePdfUrl: inv.invoice_pdf || null,
                         hostedInvoiceUrl: inv.hosted_invoice_url || null,
-                        metadataJson: {
+                        metadataJson: accountMeta(account, {
+                            rawStripeInvoiceId: inv.id,
                             customer_email: inv.customer_email,
                             billing_reason: inv.billing_reason,
                             source: 'stripe_invoices_api',
-                        },
+                        }) as object,
                     },
                     update: {
-                        stripeInvoiceId: inv.id,
+                        stripeInvoiceId: scopedInvoiceId,
                         number: inv.number || inv.id,
                         status: inv.status || 'paid',
                         issuedAt,
@@ -284,49 +362,66 @@ export async function syncStripeServiceInvoices(params?: {
                         invoicePdfUrl: inv.invoice_pdf || null,
                         hostedInvoiceUrl: inv.hosted_invoice_url || null,
                         syncedAt: new Date(),
-                        metadataJson: {
+                        metadataJson: accountMeta(account, {
+                            rawStripeInvoiceId: inv.id,
                             customer_email: inv.customer_email,
                             billing_reason: inv.billing_reason,
                             source: 'stripe_invoices_api',
-                        },
+                        }) as object,
                     },
                 });
                 upserted += 1;
             } catch (err) {
-                errors.push(`invoice ${inv.id}: ${err instanceof Error ? err.message : String(err)}`);
+                errors.push(
+                    `${account.code} invoice ${inv.id}: ${err instanceof Error ? err.message : String(err)}`
+                );
             }
         }
     } catch (err) {
-        errors.push(`invoices.list: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(
+            `${account.code} invoices.list: ${err instanceof Error ? err.message : String(err)}`
+        );
     }
 
-    // 2) Aggregazione mensile fee da movimenti (sempre, riempie mesi senza invoice formale)
     const now = new Date();
     for (let i = 0; i < monthsBack; i++) {
         const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
         const { start, end } = monthBoundsUtc(d.getUTCFullYear(), d.getUTCMonth());
-        const key = periodKeyFromDate(start);
+        const key = periodKeyForAccount(account, start);
 
         const existing = await prisma.stripeServiceInvoice.findUnique({ where: { periodKey: key } });
-        // Non sovrascrivere se già arriva da invoice Stripe formale con PDF.
         if (existing?.stripeInvoiceId && existing.invoicePdfUrl) continue;
+
+        const accountScope =
+            account.code === 'COM'
+                ? {
+                      OR: [
+                          { stripeId: { startsWith: 'stripe_tx_' } },
+                          {
+                              AND: [
+                                  { NOT: { stripeId: { startsWith: 'stripe_eu_tx_' } } },
+                                  { NOT: { stripeId: { startsWith: 'stripe_tx_' } } },
+                              ],
+                          },
+                      ],
+                  }
+                : { stripeId: { startsWith: account.idPrefix } };
 
         const feeAgg = await prisma.stripeFinanceMovement.aggregate({
             where: {
                 createdAtStripe: { gte: start, lte: end },
-                OR: [
-                    { type: 'stripe_fee' },
-                    { feeCents: { gt: 0 } },
+                AND: [
+                    accountScope,
+                    { OR: [{ type: 'stripe_fee' }, { feeCents: { gt: 0 } }] },
                 ],
             },
             _sum: { feeCents: true },
         });
 
-        // Fee trattenute sui payment: somma feeCents; type stripe_fee ha amount negativo.
         const stripeFeeRows = await prisma.stripeFinanceMovement.aggregate({
             where: {
                 createdAtStripe: { gte: start, lte: end },
-                type: 'stripe_fee',
+                AND: [accountScope, { type: 'stripe_fee' }],
             },
             _sum: { amountCents: true },
         });
@@ -343,7 +438,7 @@ export async function syncStripeServiceInvoices(params?: {
                 where: { periodKey: key },
                 create: {
                     periodKey: key,
-                    number: `STRIPE-FEE-${key}`,
+                    number: `STRIPE-FEE-${account.code}-${key.replace(/^eu:/, '')}`,
                     status: 'aggregated',
                     issuedAt: end,
                     periodStart: start,
@@ -353,10 +448,10 @@ export async function syncStripeServiceInvoices(params?: {
                     taxableFeeCents: taxable.imponibileCents,
                     vatReverseChargeCents: taxable.ivaCents,
                     vendorName: 'Stripe Payments Europe Ltd',
-                    metadataJson: {
+                    metadataJson: accountMeta(account, {
                         source: 'balance_transactions_aggregate',
-                        note: 'Fattura sintetica da fee Stripe; PDF ufficiale da Dashboard → Documents se non presente via API.',
-                    },
+                        note: 'Fattura sintetica da fee Stripe; PDF ufficiale da Dashboard se non presente via API.',
+                    }) as object,
                 },
                 update: {
                     totalFeeCents: totalFeeCents || existing?.totalFeeCents || 0,
@@ -367,62 +462,112 @@ export async function syncStripeServiceInvoices(params?: {
                         ? {}
                         : {
                               status: 'aggregated',
-                              number: `STRIPE-FEE-${key}`,
-                              metadataJson: {
+                              number: `STRIPE-FEE-${account.code}-${key.replace(/^eu:/, '')}`,
+                              metadataJson: accountMeta(account, {
                                   source: 'balance_transactions_aggregate',
-                                  note: 'Fattura sintetica da fee Stripe; PDF ufficiale da Dashboard → Documents se non presente via API.',
-                              },
+                                  note: 'Fattura sintetica da fee Stripe; PDF ufficiale da Dashboard se non presente via API.',
+                              }) as object,
                           }),
                 },
             });
             upserted += 1;
         } catch (err) {
-            errors.push(`period ${key}: ${err instanceof Error ? err.message : String(err)}`);
+            errors.push(
+                `${account.code} period ${key}: ${err instanceof Error ? err.message : String(err)}`
+            );
         }
     }
 
     return { upserted, errors };
 }
 
-/** Orchestrazione sync completa. */
+/** Orchestrazione sync completa su tutti gli account configurati. */
 export async function runStripeFinanceSync(params?: {
     createdGte?: Date;
     limitPages?: number;
 }): Promise<StripeSyncResult> {
     const createdGte =
-        params?.createdGte || new Date(Date.now() - 400 * 24 * 60 * 60 * 1000); // ~13 mesi
+        params?.createdGte || new Date(Date.now() - 400 * 24 * 60 * 60 * 1000);
     const limitPages = params?.limitPages ?? 50;
+    const accounts = listConfiguredStripeAccounts();
+
+    if (!accounts.length) {
+        return {
+            ok: false,
+            movementsUpserted: 0,
+            payoutsUpserted: 0,
+            invoicesUpserted: 0,
+            accountsSynced: [],
+            errors: [
+                'Nessuna chiave Stripe configurata (STRIPE_SECRET_KEY e/o STRIPE_EU_SECRET_KEY).',
+            ],
+        };
+    }
 
     const errors: string[] = [];
     let movementsUpserted = 0;
     let payoutsUpserted = 0;
     let invoicesUpserted = 0;
+    const accountsSynced: StripeSyncResult['accountsSynced'] = [];
 
-    try {
-        const mov = await syncStripeBalanceMovements({ createdGte, limitPages });
-        movementsUpserted = mov.upserted;
-        errors.push(...mov.errors);
-    } catch (err) {
-        errors.push(`movements: ${err instanceof Error ? err.message : String(err)}`);
+    for (const account of accounts) {
+        const accErrors: string[] = [];
+        let movU = 0;
+        let poU = 0;
+        let invU = 0;
+
+        try {
+            const mov = await syncStripeBalanceMovements({
+                account,
+                createdGte,
+                limitPages,
+            });
+            movU = mov.upserted;
+            accErrors.push(...mov.errors);
+        } catch (err) {
+            accErrors.push(
+                `${account.code} movements: ${err instanceof Error ? err.message : String(err)}`
+            );
+        }
+
+        try {
+            const po = await syncStripePayouts({
+                account,
+                createdGte,
+                limitPages: Math.min(limitPages, 20),
+            });
+            poU = po.upserted;
+            accErrors.push(...po.errors);
+        } catch (err) {
+            accErrors.push(
+                `${account.code} payouts: ${err instanceof Error ? err.message : String(err)}`
+            );
+        }
+
+        try {
+            const inv = await syncStripeServiceInvoices({ account, monthsBack: 24 });
+            invU = inv.upserted;
+            accErrors.push(...inv.errors);
+        } catch (err) {
+            accErrors.push(
+                `${account.code} invoices: ${err instanceof Error ? err.message : String(err)}`
+            );
+        }
+
+        movementsUpserted += movU;
+        payoutsUpserted += poU;
+        invoicesUpserted += invU;
+        errors.push(...accErrors);
+        accountsSynced.push({
+            code: account.code,
+            label: account.label,
+            movementsUpserted: movU,
+            payoutsUpserted: poU,
+            invoicesUpserted: invU,
+            errors: accErrors,
+        });
     }
 
-    try {
-        const po = await syncStripePayouts({ createdGte, limitPages: Math.min(limitPages, 20) });
-        payoutsUpserted = po.upserted;
-        errors.push(...po.errors);
-    } catch (err) {
-        errors.push(`payouts: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    try {
-        const inv = await syncStripeServiceInvoices({ monthsBack: 24 });
-        invoicesUpserted = inv.upserted;
-        errors.push(...inv.errors);
-    } catch (err) {
-        errors.push(`invoices: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    // Propaga fee Stripe nel libro mastro (idempotente via sourceKey)
     try {
         const { syncHistoricalLedgerFromSources } = await import(
             '@/lib/financial/historicalLedgerSync'
@@ -432,12 +577,28 @@ export async function runStripeFinanceSync(params?: {
         errors.push(`ledger: ${err instanceof Error ? err.message : String(err)}`);
     }
 
-    // Meta ultimo sync
     try {
         await prisma.systemState.upsert({
             where: { key: 'finance.stripe.last_sync' },
-            create: { key: 'finance.stripe.last_sync', value: new Date().toISOString() },
+            create: {
+                key: 'finance.stripe.last_sync',
+                value: new Date().toISOString(),
+            },
             update: { value: new Date().toISOString() },
+        });
+        await prisma.systemState.upsert({
+            where: { key: 'finance.stripe.accounts' },
+            create: {
+                key: 'finance.stripe.accounts',
+                value: JSON.stringify(
+                    accounts.map((a) => ({ code: a.code, label: a.label, configured: true }))
+                ),
+            },
+            update: {
+                value: JSON.stringify(
+                    accounts.map((a) => ({ code: a.code, label: a.label, configured: true }))
+                ),
+            },
         });
     } catch {
         /* ignore */
@@ -448,6 +609,22 @@ export async function runStripeFinanceSync(params?: {
         movementsUpserted,
         payoutsUpserted,
         invoicesUpserted,
+        accountsSynced,
         errors,
     };
+}
+
+/** Helper badge UI da metadata / stripeId. */
+export function stripeAccountBadgeFromMovement(m: {
+    stripeId?: string | null;
+    metadataJson?: unknown;
+}): { code: StripeAccountCode; label: string } {
+    const meta = (m.metadataJson || {}) as Record<string, unknown>;
+    if (meta.account === 'EU' || String(m.stripeId || '').startsWith('stripe_eu_tx_')) {
+        return { code: 'EU', label: String(meta.accountLabel || 'Stripe EU - PSA') };
+    }
+    if (meta.account === 'COM' || String(m.stripeId || '').startsWith('stripe_tx_')) {
+        return { code: 'COM', label: String(meta.accountLabel || 'Stripe COM') };
+    }
+    return { code: 'COM', label: 'Stripe COM' };
 }

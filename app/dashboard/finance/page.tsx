@@ -163,9 +163,18 @@ export default function FinanceDashboardPage() {
             if (!data.ok && !data.movementsUpserted) {
                 throw new Error(data.error || data.errors?.[0] || 'Sync Stripe fallita');
             }
-            setGatewaySyncMsg(
-                `Stripe: ${data.movementsUpserted ?? 0} movimenti · ${data.payoutsUpserted ?? 0} payout · ${data.recordCount ?? 0} record dal 01/01/2026`
-            );
+                                            setGatewaySyncMsg(
+                                                `Stripe: ${data.movementsUpserted ?? 0} movimenti · ${data.payoutsUpserted ?? 0} payout` +
+                                                    (Array.isArray(data.accountsSynced)
+                                                        ? ` · account: ${data.accountsSynced
+                                                              .map(
+                                                                  (a: { label: string; movementsUpserted: number }) =>
+                                                                      `${a.label} (${a.movementsUpserted})`
+                                                              )
+                                                              .join(', ')}`
+                                                        : '') +
+                                                    ` · ${data.recordCount ?? 0} record dal 01/01/2026`
+                                            );
             await loadGateways();
         } catch (e) {
             setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync Stripe fallita');
@@ -1128,7 +1137,7 @@ export default function FinanceDashboardPage() {
                                             ) : (
                                                 <RefreshCw size={14} />
                                             )}
-                                            Sincronizza Stripe (dal 01/01/2026)
+                                            Sincronizza Stripe COM + EU (dal 01/01/2026)
                                         </button>
                                         <button
                                             type="button"
@@ -1178,6 +1187,7 @@ export default function FinanceDashboardPage() {
                                                 <thead>
                                                     <tr className="bg-slate-50 text-[10px] uppercase text-slate-400">
                                                         <th className="px-3 py-2">Data</th>
+                                                        <th className="px-3 py-2">Account</th>
                                                         <th className="px-3 py-2">Tipo</th>
                                                         <th className="px-3 py-2">ID</th>
                                                         <th className="px-3 py-2 text-right">Lordo</th>
@@ -1187,10 +1197,30 @@ export default function FinanceDashboardPage() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {(stripeSyncMeta?.movements || []).slice(0, 40).map((m: any) => (
+                                                    {(stripeSyncMeta?.movements || []).slice(0, 40).map((m: any) => {
+                                                        const accountLabel =
+                                                            m.accountLabel ||
+                                                            (String(m.stripeId || '').startsWith('stripe_eu_tx_')
+                                                                ? 'Stripe EU - PSA'
+                                                                : 'Stripe COM');
+                                                        const isEu =
+                                                            accountLabel.includes('EU') ||
+                                                            String(m.stripeId || '').startsWith('stripe_eu_tx_');
+                                                        return (
                                                         <tr key={m.id || m.stripeId} className="border-t border-slate-50">
                                                             <td className="px-3 py-2 whitespace-nowrap">
                                                                 {formatDateTime(m.createdAtStripe)}
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <span
+                                                                    className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${
+                                                                        isEu
+                                                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                            : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                                                    }`}
+                                                                >
+                                                                    {accountLabel}
+                                                                </span>
                                                             </td>
                                                             <td className="px-3 py-2">{m.type}</td>
                                                             <td className="px-3 py-2 font-mono text-[10px]">
@@ -1211,7 +1241,8 @@ export default function FinanceDashboardPage() {
                                                                 </span>
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>

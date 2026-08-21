@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
-import { runStripeFinanceSync } from '@/lib/financial/stripeSync';
+import {
+    listConfiguredStripeAccounts,
+    runStripeFinanceSync,
+    stripeAccountBadgeFromMovement,
+} from '@/lib/financial/stripeSync';
 import prisma from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -9,7 +13,7 @@ export const maxDuration = 120;
 
 const SYNC_FROM = new Date('2026-01-01T00:00:00.000Z');
 
-/** POST: sync Stripe BalanceTransaction / payouts / fee dal 01/01/2026. */
+/** POST: sync Stripe COM + EU (se configurato) dal 01/01/2026. */
 export async function POST() {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
@@ -31,6 +35,11 @@ export async function POST() {
             movementsUpserted: result.movementsUpserted,
             payoutsUpserted: result.payoutsUpserted,
             invoicesUpserted: result.invoicesUpserted,
+            accountsSynced: result.accountsSynced,
+            accountsConfigured: listConfiguredStripeAccounts().map((a) => ({
+                code: a.code,
+                label: a.label,
+            })),
             recordCount: count,
             lastSyncAt: meta?.value || new Date().toISOString(),
             errors: result.errors,
@@ -60,12 +69,24 @@ export async function GET() {
                 take: 200,
             }),
         ]);
+        const enriched = movements.map((m) => {
+            const badge = stripeAccountBadgeFromMovement(m);
+            return {
+                ...m,
+                accountCode: badge.code,
+                accountLabel: badge.label,
+            };
+        });
         return NextResponse.json({
             ok: true,
             from: '2026-01-01T00:00:00.000Z',
             lastSyncAt: meta?.value || null,
             recordCount: count,
-            movements,
+            movements: enriched,
+            accountsConfigured: listConfiguredStripeAccounts().map((a) => ({
+                code: a.code,
+                label: a.label,
+            })),
             badge: 'Sincronizzato da API',
         });
     } catch (error) {

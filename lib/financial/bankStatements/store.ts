@@ -116,6 +116,109 @@ export async function listBankStatements() {
     });
 }
 
+/**
+ * Archivio completo movimenti (tutti i PDF) con metadati documento.
+ * year = undefined → tutti; altrimenti filtro su accountingDate/valueDate.
+ */
+export async function listBankStatementMovements(params?: {
+    year?: number | null;
+}) {
+    const year = params?.year ?? null;
+    const dateFilter =
+        year != null && Number.isFinite(year)
+            ? {
+                  OR: [
+                      {
+                          accountingDate: {
+                              gte: new Date(Date.UTC(year, 0, 1)),
+                              lt: new Date(Date.UTC(year + 1, 0, 1)),
+                          },
+                      },
+                      {
+                          AND: [
+                              { accountingDate: null },
+                              {
+                                  valueDate: {
+                                      gte: new Date(Date.UTC(year, 0, 1)),
+                                      lt: new Date(Date.UTC(year + 1, 0, 1)),
+                                  },
+                              },
+                          ],
+                      },
+                  ],
+              }
+            : undefined;
+
+    const lines = await prisma.bankStatementLine.findMany({
+        where: dateFilter,
+        orderBy: [{ accountingDate: 'desc' }, { valueDate: 'desc' }, { lineIndex: 'asc' }],
+        include: {
+            document: {
+                select: {
+                    id: true,
+                    fileName: true,
+                    periodStart: true,
+                    periodEnd: true,
+                },
+            },
+        },
+        take: 20000,
+    });
+
+    // Anni disponibili su tutto l'archivio (non solo sul filtro corrente)
+    const yearRows = await prisma.$queryRaw<Array<{ y: number }>>`
+        SELECT DISTINCT EXTRACT(YEAR FROM COALESCE(accounting_date, value_date))::int AS y
+        FROM bank_statement_lines
+        WHERE COALESCE(accounting_date, value_date) IS NOT NULL
+        ORDER BY y DESC
+    `;
+
+    const years = [
+        ...new Set(
+            yearRows
+                .map((r) => Number(r.y))
+                .filter((y) => Number.isFinite(y) && y >= 2000 && y <= 2100)
+        ),
+    ].sort((a, b) => b - a);
+
+    return {
+        years,
+        lines: lines.map((l) => {
+            const periodStart = l.document.periodStart;
+            const periodEnd = l.document.periodEnd;
+            let quarterLabel: string | null = null;
+            const ref: Date | null = l.accountingDate || l.valueDate || periodStart || null;
+            if (ref) {
+                const m = ref.getUTCMonth();
+                const y = ref.getUTCFullYear();
+                quarterLabel = `Q${Math.floor(m / 3) + 1} ${y}`;
+            }
+            return {
+                id: l.id,
+                documentId: l.documentId,
+                lineIndex: l.lineIndex,
+                valueDate: l.valueDate?.toISOString() ?? null,
+                accountingDate: l.accountingDate?.toISOString() ?? null,
+                description: l.description,
+                amountCents: l.amountCents,
+                debitCents: l.debitCents,
+                creditCents: l.creditCents,
+                balanceCents: l.balanceCents,
+                matchStatus: l.matchStatus,
+                matchType: l.matchType,
+                matchScore: l.matchScore,
+                matchedTxId: l.matchedTxId,
+                matchedOrderId: l.matchedOrderId,
+                matchNotes: l.matchNotes,
+                fileName: l.document.fileName,
+                periodStart: periodStart?.toISOString() ?? null,
+                periodEnd: periodEnd?.toISOString() ?? null,
+                quarterLabel,
+            };
+        }),
+    };
+}
+
 export async function getBankStatementDetail(id: string) {
     return prisma.bankStatementDocument.findUnique({
         where: { id },

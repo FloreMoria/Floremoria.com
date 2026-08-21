@@ -29,6 +29,7 @@ type ParseAnomaly = {
 
 type StatementLine = {
     id: string;
+    documentId: string;
     lineIndex: number;
     valueDate: string | null;
     accountingDate: string | null;
@@ -43,7 +44,13 @@ type StatementLine = {
     matchedTxId: string | null;
     matchedOrderId: string | null;
     matchNotes: string | null;
+    fileName?: string | null;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    quarterLabel?: string | null;
 };
+
+type YearFilter = 'all' | number;
 
 type StatementDoc = {
     id: string;
@@ -136,25 +143,16 @@ function statusLabel(status: string): { text: string; className: string } {
 
 function lineMatchBadge(status: string): { text: string; className: string } {
     if (status === 'MATCHED') {
-        return { text: 'Riconciliato', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+        return { text: 'Abbinato', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
     }
     if (status === 'PARTIAL') {
-        return { text: 'In attesa', className: 'bg-amber-50 text-amber-700 border-amber-100' };
+        return { text: 'Parziale', className: 'bg-amber-50 text-amber-700 border-amber-100' };
     }
-    return { text: 'Non abbinato', className: 'bg-amber-50 text-amber-800 border-amber-100' };
+    return { text: 'Non abbinato', className: 'bg-slate-100 text-slate-600 border-slate-200' };
 }
 
-function categoryOf(line: StatementLine): 'Entrata' | 'Uscita' | 'Onere Bancario' {
-    const t = (line.matchType || '').toUpperCase();
-    const d = line.description.toUpperCase();
-    if (
-        t === 'BANK_FEE' ||
-        t === 'TAX_PAYMENT' ||
-        /IMPOSTA DI BOLLO|CANONE|SPESE DI TENUTA|COMMISSIONI|COMPETENZE|\bF24\b/.test(d)
-    ) {
-        return 'Onere Bancario';
-    }
-    return line.amountCents >= 0 ? 'Entrata' : 'Uscita';
+function currentCalendarYear(): number {
+    return new Date().getFullYear();
 }
 
 function docSummary(doc: StatementDoc): string | null {
@@ -181,6 +179,8 @@ export default function BankStatementsPanel() {
     const [openAnomalyDocId, setOpenAnomalyDocId] = useState<string | null>(null);
 
     const [activeDocId, setActiveDocId] = useState<string | null>(null);
+    const [yearFilter, setYearFilter] = useState<YearFilter>(currentCalendarYear());
+    const [availableYears, setAvailableYears] = useState<number[]>([currentCalendarYear()]);
     const [lines, setLines] = useState<StatementLine[]>([]);
     const [linesLoading, setLinesLoading] = useState(false);
     const [search, setSearch] = useState('');
@@ -196,26 +196,41 @@ export default function BankStatementsPanel() {
         orderId: string;
     } | null>(null);
 
-    const loadLines = useCallback(async (docId: string) => {
+    const loadMovements = useCallback(async (year: YearFilter) => {
         setLinesLoading(true);
         try {
-            const res = await fetch(`/api/dashboard/finance/bank-statements/${docId}`);
+            const qs =
+                year === 'all'
+                    ? 'view=movements&year=all'
+                    : `view=movements&year=${encodeURIComponent(String(year))}`;
+            const res = await fetch(`/api/dashboard/finance/bank-statements?${qs}`);
             const parsed = await readJsonResponse<{
                 ok?: boolean;
-                document?: StatementDoc;
+                lines?: StatementLine[];
+                years?: number[];
                 error?: string;
             }>(res);
-            if (!parsed.ok || !parsed.data?.document) {
-                throw new Error(parsed.error || 'Dettaglio rendiconto non disponibile');
+            if (!parsed.ok || !parsed.data) {
+                throw new Error(parsed.error || 'Movimenti non disponibili');
             }
-            setActiveDocId(docId);
-            setLines(parsed.data.document.lines || []);
-            setUploadSummary((prev) => prev || docSummary(parsed.data!.document!) || null);
+            setLines(parsed.data.lines || []);
+            const years = (parsed.data.years || []).filter((y) => Number.isFinite(y));
+            if (years.length > 0) {
+                setAvailableYears(years);
+            } else if (year !== 'all' && typeof year === 'number') {
+                setAvailableYears((prev) =>
+                    prev.includes(year) ? prev : [...prev, year].sort((a, b) => b - a)
+                );
+            }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore caricamento movimenti');
         } finally {
             setLinesLoading(false);
         }
+    }, []);
+
+    const loadLines = useCallback(async (docId: string) => {
+        setActiveDocId(docId);
     }, []);
 
     const load = useCallback(async () => {
@@ -234,13 +249,8 @@ export default function BankStatementsPanel() {
             const list = parsed.data.documents || [];
             setDocs(list);
             if (list.length > 0) {
-                const preferred =
-                    list.find((d) => d.id === activeDocId) ||
-                    list.find((d) => d.status === 'RECONCILED' || d.status === 'PARSED') ||
-                    list[0];
-                if (preferred) await loadLines(preferred.id);
+                setActiveDocId((prev) => prev || list[0]?.id || null);
             } else {
-                setLines([]);
                 setActiveDocId(null);
             }
         } catch (e) {
@@ -248,12 +258,15 @@ export default function BankStatementsPanel() {
         } finally {
             setLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- activeDocId solo come preferenza al refresh
-    }, [loadLines]);
+    }, []);
 
     useEffect(() => {
         void load();
     }, [load]);
+
+    useEffect(() => {
+        void loadMovements(yearFilter);
+    }, [yearFilter, loadMovements]);
 
     const uploadFile = async (file: File) => {
         setUploading(true);
@@ -306,7 +319,8 @@ export default function BankStatementsPanel() {
             );
             const newId = parsed.data?.document?.id;
             await load();
-            if (newId) await loadLines(newId);
+            await loadMovements(yearFilter);
+            if (newId) setActiveDocId(newId);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
         } finally {
@@ -332,8 +346,8 @@ export default function BankStatementsPanel() {
             setDocs((prev) => prev.filter((d) => d.id !== id));
             if (activeDocId === id) {
                 setActiveDocId(null);
-                setLines([]);
             }
+            await loadMovements(yearFilter);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Eliminazione fallita');
         } finally {
@@ -342,7 +356,8 @@ export default function BankStatementsPanel() {
     };
 
     const openMatchModal = async (line: StatementLine) => {
-        if (!activeDocId) return;
+        const docId = line.documentId;
+        if (!docId) return;
         setMatchModal({
             line,
             suggestions: [],
@@ -353,7 +368,7 @@ export default function BankStatementsPanel() {
         });
         try {
             const res = await fetch(
-                `/api/dashboard/finance/bank-statements/${activeDocId}/lines/${line.id}/suggestions`
+                `/api/dashboard/finance/bank-statements/${docId}/lines/${line.id}/suggestions`
             );
             const parsed = await readJsonResponse<{
                 ok?: boolean;
@@ -386,12 +401,13 @@ export default function BankStatementsPanel() {
         matchedTxId?: string | null;
         expenseId?: string | null;
     }) => {
-        if (!matchModal || !activeDocId) return;
+        if (!matchModal || !matchModal.line.documentId) return;
         const lineId = matchModal.line.id;
+        const docId = matchModal.line.documentId;
         setMatchingLineId(lineId);
         try {
             const res = await fetch(
-                `/api/dashboard/finance/bank-statements/${activeDocId}/lines/${lineId}`,
+                `/api/dashboard/finance/bank-statements/${docId}/lines/${lineId}`,
                 {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -413,10 +429,10 @@ export default function BankStatementsPanel() {
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Abbinamento fallito');
             setMatchModal(null);
-            await loadLines(activeDocId);
+            await loadMovements(yearFilter);
             setDocs((prev) =>
                 prev.map((d) =>
-                    d.id === activeDocId
+                    d.id === docId
                         ? {
                               ...d,
                               matchedCount: parsed.data?.matchedCount ?? d.matchedCount,
@@ -474,7 +490,7 @@ export default function BankStatementsPanel() {
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Ri-analisi fallita');
             setUploadSummary(parsed.data?.message || null);
-            await loadLines(activeDocId);
+            await loadMovements(yearFilter);
             await load();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Ri-analisi fallita');
@@ -492,18 +508,52 @@ export default function BankStatementsPanel() {
             return (
                 line.description.toLowerCase().includes(q) ||
                 (line.matchNotes || '').toLowerCase().includes(q) ||
-                (line.matchType || '').toLowerCase().includes(q)
+                (line.matchType || '').toLowerCase().includes(q) ||
+                (line.fileName || '').toLowerCase().includes(q)
             );
         });
     }, [lines, search, statusFilter]);
+
+    const yearKpis = useMemo(() => {
+        let inflows = 0;
+        let outflows = 0;
+        let matched = 0;
+        for (const line of lines) {
+            if (line.amountCents > 0) inflows += line.amountCents;
+            else if (line.amountCents < 0) outflows += Math.abs(line.amountCents);
+            if (line.matchStatus === 'MATCHED') matched += 1;
+        }
+        const total = lines.length;
+        const pct = total > 0 ? Math.round((matched / total) * 100) : 0;
+        return {
+            inflows,
+            outflows,
+            net: inflows - outflows,
+            matched,
+            total,
+            pct,
+        };
+    }, [lines]);
+
+    const yearTabs = useMemo(() => {
+        const years = [...availableYears].sort((a, b) => b - a);
+        if (typeof yearFilter === 'number' && !years.includes(yearFilter)) {
+            years.unshift(yearFilter);
+            years.sort((a, b) => b - a);
+        }
+        return years;
+    }, [availableYears, yearFilter]);
 
     const activeDoc = docs.find((d) => d.id === activeDocId) || null;
     const tableSummary =
         uploadSummary ||
         (activeDoc
             ? docSummary(activeDoc) ||
-              `${lines.length} movimenti estratti • ${activeDoc.matchedCount} riconciliati / ${activeDoc.unmatchedCount} non abbinati`
+              `${activeDoc.matchedCount} riconciliati / ${activeDoc.unmatchedCount} non abbinati`
             : null);
+
+    const yearLabel =
+        yearFilter === 'all' ? 'tutti gli anni' : String(yearFilter);
 
     return (
         <div className="mt-5 pt-5 border-t border-slate-100 space-y-4">
@@ -611,159 +661,239 @@ export default function BankStatementsPanel() {
                 </div>
             )}
 
-            {/* Tabella movimenti estratto conto */}
-            {activeDocId && (
-                <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3 sm:p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                        <div>
-                            <h5 className="text-sm font-bold text-slate-800">
-                                Movimenti estratto conto
-                            </h5>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                                {activeDoc?.fileName || 'Rendiconto'} · {filteredLines.length}/
-                                {lines.length} righe visualizzate
-                            </p>
+            {/* Tabella movimenti estratto conto — archivio storico per anno */}
+            <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3 sm:p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <h5 className="text-sm font-bold text-slate-800">
+                            Movimenti estratto conto
+                        </h5>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            Archivio completo · {yearLabel} · {filteredLines.length}/
+                            {lines.length} righe visualizzate
+                        </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                        <button
+                            type="button"
+                            disabled={reReconciling || linesLoading || !activeDocId}
+                            onClick={() => void runReReconcile()}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                            title="Ri-applica le regole di auto-match sul rendiconto selezionato in archivio"
+                        >
+                            {reReconciling ? (
+                                <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                                <RefreshCw size={13} />
+                            )}
+                            Ri-analizza non abbinati
+                        </button>
+                        <div className="relative">
+                            <Search
+                                size={14}
+                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Cerca causale / beneficiario…"
+                                className="w-full sm:w-64 pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#c5a880]/40"
+                            />
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                            <button
-                                type="button"
-                                disabled={reReconciling || linesLoading}
-                                onClick={() => void runReReconcile()}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                                title="Ri-applica le regole di auto-match potenziato sulle righe non abbinate"
-                            >
-                                {reReconciling ? (
-                                    <Loader2 size={13} className="animate-spin" />
-                                ) : (
-                                    <RefreshCw size={13} />
-                                )}
-                                Ri-analizza non abbinati
-                            </button>
-                            <div className="relative">
-                                <Search
-                                    size={14}
-                                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                                />
-                                <input
-                                    type="search"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Cerca causale / beneficiario…"
-                                    className="w-full sm:w-64 pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#c5a880]/40"
-                                />
-                            </div>
-                            <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-[11px] font-semibold">
-                                {(
-                                    [
-                                        ['ALL', 'Tutti'],
-                                        ['MATCHED', 'Solo Riconciliati'],
-                                        ['UNMATCHED', 'Solo Non Abbinati'],
-                                    ] as const
-                                ).map(([key, label]) => (
-                                    <button
-                                        key={key}
-                                        type="button"
-                                        onClick={() => setStatusFilter(key)}
-                                        className={`px-2.5 py-2 ${
-                                            statusFilter === key
-                                                ? 'bg-slate-900 text-white'
-                                                : 'bg-white text-slate-600 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-[11px] font-semibold">
+                            {(
+                                [
+                                    ['ALL', 'Tutti'],
+                                    ['MATCHED', 'Solo Abbinati'],
+                                    ['UNMATCHED', 'Solo Non Abbinati'],
+                                ] as const
+                            ).map(([key, label]) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setStatusFilter(key)}
+                                    className={`px-2.5 py-2 ${
+                                        statusFilter === key
+                                            ? 'bg-slate-900 text-white'
+                                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
+                </div>
 
-                    <div className="overflow-auto max-h-[min(70vh,720px)] rounded-xl border border-slate-100">
-                        <table className="w-full text-sm min-w-[960px]">
-                            <thead className="sticky top-0 z-10">
-                                <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">
-                                    <th className="px-3 py-2 font-bold">Data op.</th>
-                                    <th className="px-3 py-2 font-bold">Data valuta</th>
-                                    <th className="px-3 py-2 font-bold">Descrizione / Causale</th>
-                                    <th className="px-3 py-2 font-bold">Tipo</th>
-                                    <th className="px-3 py-2 font-bold text-right">Importo</th>
-                                    <th className="px-3 py-2 font-bold">Stato</th>
-                                    <th className="px-3 py-2 font-bold text-right">Azione</th>
+                <div className="inline-flex flex-wrap rounded-xl border border-slate-200 overflow-hidden text-[11px] font-semibold">
+                    <button
+                        type="button"
+                        onClick={() => setYearFilter('all')}
+                        className={`px-3 py-2 ${
+                            yearFilter === 'all'
+                                ? 'bg-slate-900 text-white'
+                                : 'bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                    >
+                        Tutti gli anni
+                    </button>
+                    {yearTabs.map((y) => (
+                        <button
+                            key={y}
+                            type="button"
+                            onClick={() => setYearFilter(y)}
+                            className={`px-3 py-2 border-l border-slate-200 ${
+                                yearFilter === y
+                                    ? 'bg-slate-900 text-white'
+                                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                            {y}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Totale entrate
+                        </p>
+                        <p className="mt-1 font-mono text-sm font-bold text-emerald-700">
+                            €{(yearKpis.inflows / 100).toLocaleString('it-IT', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Totale uscite
+                        </p>
+                        <p className="mt-1 font-mono text-sm font-bold text-rose-700">
+                            €{(yearKpis.outflows / 100).toLocaleString('it-IT', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Saldo netto periodo
+                        </p>
+                        <p
+                            className={`mt-1 font-mono text-sm font-bold ${
+                                yearKpis.net >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                            }`}
+                        >
+                            {formatEuro(yearKpis.net)}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Tasso riconciliazione
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">
+                            {yearKpis.matched}/{yearKpis.total} abbinati
+                            <span className="ml-1 font-mono text-slate-500">
+                                · {yearKpis.pct}%
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <div className="overflow-auto max-h-[min(70vh,900px)] rounded-xl border border-slate-100">
+                    <table className="w-full text-sm min-w-[1100px]">
+                        <thead className="sticky top-0 z-10">
+                            <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">
+                                <th className="px-3 py-2 font-bold">Data op.</th>
+                                <th className="px-3 py-2 font-bold">Data valuta</th>
+                                <th className="px-3 py-2 font-bold">Descrizione / Causale</th>
+                                <th className="px-3 py-2 font-bold text-right">Importo</th>
+                                <th className="px-3 py-2 font-bold">Stato riconciliazione</th>
+                                <th className="px-3 py-2 font-bold">PDF / Trimestre</th>
+                                <th className="px-3 py-2 font-bold text-right">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {linesLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
+                                        <Loader2 className="inline animate-spin mr-2" size={16} />
+                                        Caricamento movimenti…
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {linesLoading ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
-                                            <Loader2 className="inline animate-spin mr-2" size={16} />
-                                            Caricamento movimenti…
-                                        </td>
-                                    </tr>
-                                ) : filteredLines.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={7}
-                                            className="px-3 py-8 text-center text-slate-400 text-xs"
+                            ) : filteredLines.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={7}
+                                        className="px-3 py-8 text-center text-slate-400 text-xs"
+                                    >
+                                        Nessun movimento per {yearLabel} con i filtri correnti.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredLines.map((line) => {
+                                    const badge = lineMatchBadge(line.matchStatus);
+                                    const isMatched = line.matchStatus === 'MATCHED';
+                                    return (
+                                        <tr
+                                            key={line.id}
+                                            className="border-t border-slate-100 align-top hover:bg-slate-50/60"
                                         >
-                                            Nessun movimento con i filtri correnti.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredLines.map((line) => {
-                                        const badge = lineMatchBadge(line.matchStatus);
-                                        const cat = categoryOf(line);
-                                        return (
-                                            <tr
-                                                key={line.id}
-                                                className="border-t border-slate-100 align-top hover:bg-slate-50/60"
+                                            <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
+                                                {formatItDate(line.accountingDate)}
+                                            </td>
+                                            <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
+                                                {formatItDate(line.valueDate)}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-slate-800 min-w-[280px] max-w-[520px]">
+                                                <div className="text-xs leading-snug whitespace-pre-wrap break-words">
+                                                    {line.description}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={`px-3 py-2.5 text-right font-mono text-xs font-semibold whitespace-nowrap ${
+                                                    line.amountCents > 0
+                                                        ? 'text-emerald-700'
+                                                        : line.amountCents < 0
+                                                          ? 'text-rose-700'
+                                                          : 'text-slate-600'
+                                                }`}
                                             >
-                                                <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                                    {formatItDate(line.accountingDate)}
-                                                </td>
-                                                <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                                    {formatItDate(line.valueDate)}
-                                                </td>
-                                                <td className="px-3 py-2.5 text-slate-800 min-w-[280px] max-w-[480px]">
-                                                    <div className="text-xs leading-snug whitespace-pre-wrap break-words">
-                                                        {line.description}
-                                                    </div>
-                                                    {line.matchNotes && (
-                                                        <div className="text-[10px] text-slate-400 mt-1">
-                                                            {line.matchNotes}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2.5 whitespace-nowrap">
-                                                    <span
-                                                        className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                                                            cat === 'Entrata'
-                                                                ? 'bg-emerald-50 text-emerald-700'
-                                                                : cat === 'Onere Bancario'
-                                                                  ? 'bg-violet-50 text-violet-700'
-                                                                  : 'bg-rose-50 text-rose-700'
-                                                        }`}
-                                                    >
-                                                        {cat}
-                                                    </span>
-                                                </td>
-                                                <td
-                                                    className={`px-3 py-2.5 text-right font-mono text-xs font-semibold whitespace-nowrap ${
-                                                        line.amountCents > 0
-                                                            ? 'text-emerald-700'
-                                                            : line.amountCents < 0
-                                                              ? 'text-rose-700'
-                                                              : 'text-slate-600'
-                                                    }`}
-                                                >
-                                                    {formatEuro(line.amountCents)}
-                                                </td>
-                                                <td className="px-3 py-2.5 whitespace-nowrap">
+                                                {formatEuro(line.amountCents)}
+                                            </td>
+                                            <td className="px-3 py-2.5">
+                                                <div className="space-y-1 max-w-[220px]">
                                                     <span
                                                         className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${badge.className}`}
                                                     >
                                                         {badge.text}
                                                     </span>
-                                                </td>
-                                                <td className="px-3 py-2.5 text-right">
+                                                    {isMatched && line.matchNotes && (
+                                                        <div className="text-[10px] text-emerald-800/80 leading-snug">
+                                                            {line.matchNotes}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-slate-600 max-w-[200px]">
+                                                <div
+                                                    className="font-medium text-slate-800 truncate"
+                                                    title={line.fileName || undefined}
+                                                >
+                                                    {line.fileName || '—'}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                                    {line.quarterLabel ||
+                                                        formatPeriod(
+                                                            line.periodStart || null,
+                                                            line.periodEnd || null
+                                                        )}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2.5 text-right">
+                                                {!isMatched ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => void openMatchModal(line)}
@@ -772,20 +902,29 @@ export default function BankStatementsPanel() {
                                                         <Link2 size={12} />
                                                         Abbina
                                                     </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p className="text-[10px] text-slate-400">
-                        Elenco completo: {lines.length} movimenti caricati · scroll per vedere tutte le
-                        righe · badge verde = Riconciliato · ambra = Non abbinato
-                    </p>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void openMatchModal(line)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-100 text-emerald-800 hover:bg-emerald-50 text-[11px] font-semibold"
+                                                    >
+                                                        <Link2 size={12} />
+                                                        Modifica
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+                <p className="text-[10px] text-slate-400">
+                    Elenco completo senza paginazione: {lines.length} movimenti estratti dai
+                    rendiconti PDF per {yearLabel} · scroll per scorrere tutte le righe
+                </p>
+            </div>
 
             {matchModal && (
                 <div

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy, Calendar as CalendarIcon, Table } from 'lucide-react';
+import { Download, Filter, Image as ImageIcon, X, MessageSquare, Phone, MapPin, Package, Camera, Check, Info, Clock, Navigation, Users, Repeat, Activity, Plus, Copy, Calendar as CalendarIcon, Table, Pencil, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { exportToCSV } from '@/lib/utils';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
@@ -86,9 +86,19 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
         'CANCELLED': { label: 'Annullato', color: 'bg-red-100 text-red-800' },
         'GDM_PLANNED': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
         'GDM_ANNIVERSARY': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
-
     };
 
+    const uniqueStatusOptions = React.useMemo(() => {
+        const seen = new Set<string>();
+        const opts: Array<{ key: string; label: string }> = [];
+        for (const [key, val] of Object.entries(statusMap)) {
+            if (!seen.has(val.label)) {
+                seen.add(val.label);
+                opts.push({ key, label: val.label });
+            }
+        }
+        return opts;
+    }, []);
 
     const statusTabOrder = ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
 
@@ -97,13 +107,10 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
         if (!raw) return '—';
         const d = new Date(raw);
         if (Number.isNaN(d.getTime())) return '—';
-        const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
-        return d.toLocaleDateString(
-            'it-IT',
-            hasTime
-                ? { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
-                : { day: '2-digit', month: '2-digit', year: 'numeric' }
-        );
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
     };
 
     const handleSelectOrder = (order: any) => {
@@ -237,9 +244,16 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
 
     const StatusBadge = ({ status }: { status: string }) => {
         const conf = statusMap[status as keyof typeof statusMap] || { label: status, color: 'bg-gray-100 text-gray-800' };
+        const words = conf.label.split(' ');
+        const isMultiWord = words.length > 1;
+
         return (
-            <span className={`px-2.5 py-1 rounded-full text-[12px] font-semibold tracking-wide ${conf.color}`}>
-                {conf.label}
+            <span className={`inline-flex flex-col items-center justify-center px-2.5 py-1 rounded-xl text-[11px] font-semibold leading-tight text-center shadow-sm ${conf.color}`}>
+                {isMultiWord ? (
+                    words.map((w, idx) => <span key={idx}>{w}</span>)
+                ) : (
+                    <span>{conf.label}</span>
+                )}
             </span>
         );
     };
@@ -298,8 +312,6 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
             'Utente': o.buyerFullName || 'Sconosciuto',
             'Telefono': o.customerPhone || '',
-            'Origine Citta': o.buyerCity || '',
-            'Origine Nazione': o.buyerCountry || '',
             'Prodotto': o.items?.[0]?.product?.name || 'Composizione',
             'Prezzo': `${(o.totalPriceCents / 100).toFixed(2)} €`,
             'Comune Destinazione': o.cemeteryCity || '',
@@ -522,25 +534,24 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
-                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Data e N° Ordine</th>
+                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider whitespace-nowrap">Data e N° Ordine</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider whitespace-nowrap">Data Consegna</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">Foto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Defunto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Utente</th>
-                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Origine</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Prodotto</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-right">Prezzo Pagato</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Destinazione</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider text-center">Ricorrente</th>
                                 <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider">Fiorista</th>
-                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider min-w-[140px]">Stato</th>
-                                <th className="font-semibold py-3 px-2 w-8"></th>
+                                <th className="font-semibold py-3 px-3 uppercase text-[11px] tracking-wider min-w-[120px]">Stato</th>
+                                <th className="font-semibold py-3 px-3 text-right">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredOrders.length === 0 && (
                                 <tr>
-                                    <td colSpan={13} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
+                                    <td colSpan={12} className="text-center py-10 text-gray-500">Nessun ordine trovato.</td>
                                 </tr>
                             )}
                             {filteredOrders.map(order => {
@@ -558,7 +569,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                         }`}
                                         onClick={() => handleSelectOrder(order)}
                                     >
-                                        <td className="py-3 px-3">
+                                        <td className="py-3 px-3 whitespace-nowrap">
                                             {cancelled ? (
                                                 <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded inline-block">
                                                     Ordine cancellato
@@ -567,7 +578,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                             <div suppressHydrationWarning className="text-gray-500 text-[11px] uppercase tracking-wider mb-0.5 whitespace-nowrap">
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
-                                            <div className="font-bold text-black text-[14px]">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
+                                            <div className="font-bold text-black text-[14px] whitespace-nowrap">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
                                         </td>
                                         <td className="py-3 px-3 whitespace-nowrap">
                                             {editingOrderId === order.id ? (
@@ -584,14 +595,14 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                     className="border border-gray-200 rounded px-2 py-1 text-xs"
                                                 />
                                             ) : (
-                                                <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px]">
+                                                <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px] whitespace-nowrap">
                                                     {formatDeliveryDate(order)}
                                                 </div>
                                             )}
                                         </td>
                                         <td className="py-3 px-3 text-center align-middle">
                                             {order.photos && order.photos.length > 0 ? (
-                                                <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm mx-auto">
+                                                <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200 shadow-sm mx-auto">
                                                     <Image src={order.photos[0]} alt="Foto Consegna" fill className="object-cover" />
                                                 </div>
                                             ) : (
@@ -662,40 +673,38 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                     />
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <div className="font-medium text-black leading-tight break-words flex flex-wrap items-center gap-1.5">
-                                                        <span>{order.buyerFullName || 'Utente Sconosciuto'}</span>
-                                                        {order.userId ? (
-                                                            <span onClick={(e) => e.stopPropagation()}>
-                                                                <UserTypeBadge
-                                                                    userId={order.userId}
-                                                                    initialType={(order.user?.userType as ProfileUserType) || 'NEW'}
-                                                                    onChanged={(next) => {
-                                                                        setLocalOrders((prev) =>
-                                                                            prev.map((o) =>
-                                                                                o.id === order.id
-                                                                                    ? {
-                                                                                          ...o,
-                                                                                          user: {
-                                                                                              ...(o.user || {}),
-                                                                                              userType: next,
-                                                                                          },
-                                                                                      }
-                                                                                    : o
-                                                                            )
-                                                                        );
-                                                                    }}
-                                                                />
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
-                                                    <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5">{order.customerPhone || 'Nessun Recapito'}</div>
-                                                </>
+                                                <div className="flex flex-wrap items-center gap-1.5 leading-tight">
+                                                    <span className="font-semibold text-black">{order.buyerFullName || 'Utente Sconosciuto'}</span>
+                                                    {order.userId ? (
+                                                        <span onClick={(e) => e.stopPropagation()}>
+                                                            <UserTypeBadge
+                                                                userId={order.userId}
+                                                                initialType={(order.user?.userType as ProfileUserType) || 'NEW'}
+                                                                onChanged={(next) => {
+                                                                    setLocalOrders((prev) =>
+                                                                        prev.map((o) =>
+                                                                            o.id === order.id
+                                                                                ? {
+                                                                                      ...o,
+                                                                                      user: {
+                                                                                          ...(o.user || {}),
+                                                                                          userType: next,
+                                                                                      },
+                                                                                  }
+                                                                                : o
+                                                                        )
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </span>
+                                                    ) : null}
+                                                    {order.customerPhone && (
+                                                        <span className="text-gray-500 text-[11px] font-mono whitespace-nowrap">
+                                                            · {order.customerPhone}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
-                                        </td>
-                                        <td className="py-3 px-3">
-                                            <div className="text-gray-700 text-[13px] leading-tight break-words">{order.buyerCity || 'Città n.d.'}</div>
-                                            <div className="text-gray-500 text-[12px] leading-tight break-words">{order.buyerCountry || 'Nazione n.d.'}</div>
                                         </td>
                                         <td className="py-3 px-3">
                                             <div className="font-medium text-black leading-tight break-words">{mainItem?.name || 'Composizione Floreale'}</div>
@@ -789,8 +798,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="px-2 py-1.5 pr-6 rounded-full text-[11px] font-semibold tracking-wide appearance-none outline-none cursor-pointer border border-gray-200 bg-white"
                                                 >
-                                                    {Object.entries(statusMap).map(([key, val]) => (
-                                                        <option key={key} value={key} className="bg-white text-black font-sans">{val.label}</option>
+                                                    {uniqueStatusOptions.map((opt) => (
+                                                        <option key={opt.key} value={opt.key} className="bg-white text-black font-sans">{opt.label}</option>
                                                     ))}
                                                 </select>
                                             ) : canChangeStatus ? (
@@ -800,16 +809,16 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                     onClick={(e) => e.stopPropagation()}
                                                     className={`px-2 py-1.5 pr-6 rounded-full text-[11px] font-semibold tracking-wide appearance-none outline-none cursor-pointer border-r-8 border-transparent transition-colors shadow-sm ${statusMap[order.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}`}
                                                 >
-                                                    {Object.entries(statusMap).map(([key, val]) => (
-                                                        <option key={key} value={key} className="bg-white text-black font-sans">{val.label}</option>
+                                                    {uniqueStatusOptions.map((opt) => (
+                                                        <option key={opt.key} value={opt.key} className="bg-white text-black font-sans">{opt.label}</option>
                                                     ))}
                                                 </select>
                                             ) : (
                                                 <StatusBadge status={order.status} />
                                             )}
                                         </td>
-                                        <td className="py-3 px-2 text-center">
-                                            <div className="inline-flex items-center gap-1">
+                                        <td className="py-3 px-2 text-right">
+                                            <div className="flex items-center justify-end gap-1">
                                                 {editingOrderId === order.id ? (
                                                     <>
                                                         <button
@@ -831,7 +840,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                             }}
                                                             className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
                                                         >
-                                                            Annulla
+                                                            X
                                                         </button>
                                                     </>
                                                 ) : cancelled ? (
@@ -844,9 +853,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                                 e.stopPropagation();
                                                                 beginRowOrderEdit(order);
                                                             }}
-                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                            title="Modifica ordine"
+                                                            aria-label="Modifica ordine"
+                                                            className="p-1.5 rounded-lg text-gray-600 hover:text-black hover:bg-gray-100 transition-colors"
                                                         >
-                                                            Modifica
+                                                            <Pencil size={15} />
                                                         </button>
                                                         <button
                                                             type="button"
@@ -854,9 +865,11 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                                 e.stopPropagation();
                                                                 void deleteRowOrder(order);
                                                             }}
-                                                            className="px-2 py-1 text-[11px] font-semibold rounded border border-red-200 text-red-700 hover:bg-red-50"
+                                                            title="Elimina ordine"
+                                                            aria-label="Elimina ordine"
+                                                            className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-colors"
                                                         >
-                                                            Cancella
+                                                            <Trash2 size={15} />
                                                         </button>
                                                     </>
                                                 )}
@@ -868,6 +881,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                         </tbody>
                     </table>
                 </div>
+            </div>
                 <OrderDetailDrawer
                     order={selectedOrder}
                     onClose={closeDrawer}
@@ -881,7 +895,6 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                     isGlobalAdmin={isGlobalAdmin}
                     openDuplicateModal={openDuplicateModal}
                 />
-            </div>
             </>
             )}
 

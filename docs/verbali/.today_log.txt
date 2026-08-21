@@ -16,3 +16,4 @@
 
 [2026-08-21 11:34] fix(users): layout giardino utente con cognome in alto, badge stato cliente e riallineamento colonne.
 
+[2026-08-21 11:50] fix(orders): restyling tabella ordini con foto ingrandita, badge stato compatti e icone azione.

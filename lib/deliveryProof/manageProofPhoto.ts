@@ -8,7 +8,7 @@ import {
     type ProofPhotoSlot,
 } from '@/lib/deliveryProof/proofPhotoUrls';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
-import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
+import { propagateDeliveryPhotosToLinkedProfiles } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 
 type ProofArrays = {
     photosBeforeUrls: string[];
@@ -62,6 +62,15 @@ async function persistProofUpdate(
     const flatPhotos = syncOrderPhotosArray(arrays.photosBeforeUrls, arrays.photosAfterUrls);
     const hasAnyPhoto = flatPhotos.length > 0;
 
+    // Merge con Order.photos esistenti: non sovrascrivere lo storico con solo lo slot corrente.
+    const existingOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { photos: true },
+    });
+    const mergedPhotos = [
+        ...new Set([...(existingOrder?.photos || []), ...flatPhotos].map((u) => u.trim()).filter(Boolean)),
+    ];
+
     await prisma.$transaction([
         prisma.deliveryProof.update({
             where: { id: proofId },
@@ -75,15 +84,16 @@ async function persistProofUpdate(
         }),
         prisma.order.update({
             where: { id: orderId },
-            data: { photos: flatPhotos },
+            data: { photos: mergedPhotos.length > 0 ? mergedPhotos : flatPhotos },
         }),
     ]);
 
-    if (hasAnyPhoto) {
+    // Propaga galleria defunto/GdM senza re-trigger WhatsApp (gestito da submit/link-chat).
+    if (arrays.photosAfterUrls.length > 0) {
         try {
-            await onOrderStatusChanged(orderId, 'COMPLETED');
+            await propagateDeliveryPhotosToLinkedProfiles(orderId, arrays.photosAfterUrls);
         } catch (err) {
-            console.error('[persistProofUpdate] Errore notifica post-consegna:', err);
+            console.error('[persistProofUpdate] Propagazione GdM fallita (non bloccante):', err);
         }
     }
 
@@ -91,6 +101,7 @@ async function persistProofUpdate(
     revalidatePath('/dashboard/users');
     revalidatePath('/dashboard/orders');
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/defunti');
     revalidatePath(`/fiorista/consegna/${orderId}`);
     if (orderNumber) {
         revalidatePath(`/fiorista/consegna/${orderNumber}`);

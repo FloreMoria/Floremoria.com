@@ -17,22 +17,29 @@ export function getOrderProofPhotos(order: {
     > | null;
 }): OrderProofPhotos {
     const proof = order.deliveryProof;
-    if (proof) {
-        const before =
-            proof.photosBeforeUrls.length > 0
-                ? proof.photosBeforeUrls
-                : proof.photoBeforeUrl
-                  ? [proof.photoBeforeUrl]
-                  : [];
-        const after =
-            proof.photosAfterUrls.length > 0
-                ? proof.photosAfterUrls
-                : proof.photoAfterUrl
-                  ? [proof.photoAfterUrl]
-                  : [];
-        if (before.length > 0 || after.length > 0) {
-            return { before, after, hasPhotos: true };
-        }
+    const beforeFromProof =
+        proof && proof.photosBeforeUrls.length > 0
+            ? proof.photosBeforeUrls
+            : proof?.photoBeforeUrl
+              ? [proof.photoBeforeUrl]
+              : [];
+    const afterFromProof =
+        proof && proof.photosAfterUrls.length > 0
+            ? proof.photosAfterUrls
+            : proof?.photoAfterUrl
+              ? [proof.photoAfterUrl]
+              : [];
+
+    if (beforeFromProof.length > 0 || afterFromProof.length > 0) {
+        // Unisce anche Order.photos storiche non ancora propagate negli array proof.
+        const legacyExtra = (order.photos ?? []).filter(
+            (u) => u && !beforeFromProof.includes(u) && !afterFromProof.includes(u)
+        );
+        return {
+            before: beforeFromProof,
+            after: [...afterFromProof, ...legacyExtra],
+            hasPhotos: true,
+        };
     }
 
     const legacy = order.photos ?? [];

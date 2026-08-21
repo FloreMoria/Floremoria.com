@@ -45,15 +45,20 @@ function generateShortCode(length = 8): string {
     return code;
 }
 
-/** Base URL compatta per WhatsApp (senza www se possibile). */
+/** Base URL pubblica per MagicLink foto — allineata a www (Meta / WhatsApp). */
 export function getProofFotoPublicBase(): string {
-    const base = (
+    const raw = (
         process.env.PROOF_FOTO_BASE_URL?.trim() ||
         process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
         process.env.NEXT_PUBLIC_BASE_URL?.trim() ||
-        'https://floremoria.com'
+        'https://www.floremoria.com'
     ).replace(/\/$/, '');
-    return base.replace('://www.', '://');
+
+    // Apex → www: evita ambiguità e matcha il dominio registrato nei template Meta.
+    if (raw === 'https://floremoria.com' || raw === 'http://floremoria.com') {
+        return raw.replace('://floremoria.com', '://www.floremoria.com');
+    }
+    return raw;
 }
 
 function signProofFotoOrder(orderNumber: string): string | null {

@@ -2,6 +2,7 @@ import type { DeliveryProof, DeceasedProfile, Order, OrderItem, Product } from '
 import { Calendar, ExternalLink, MapPin } from 'lucide-react';
 import AdminManualProofUploadPanel from '@/components/dashboard/AdminManualProofUploadPanel';
 import CustodiedProofGallery from '@/components/dashboard/CustodiedProofGallery';
+import ProofHdDownloadButton from '@/components/dashboard/ProofHdDownloadButton';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import {
     customerFacingDeliveryDateLabel,
@@ -9,7 +10,6 @@ import {
     resolveCustomerFacingDeliveryDate,
 } from '@/lib/orders/displayDeliveryDate';
 import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
-import { downloadMedia } from '@/lib/utils/downloadMedia';
 
 
 export type BachecaOrder = Order & {
@@ -231,17 +231,11 @@ export function UserBachecaOrderCard({
                                 <ExternalLink size={14} />
                                 Vedi foto della posa
                             </a>
-                            <button
-                                type="button"
-                                onClick={() => void downloadMedia({
-                                    url: `/api/delivery-proof/download?orderId=${encodeURIComponent(order.id)}&url=${encodeURIComponent(primaryPhotoUrl)}`,
-                                    filename: `foto-posa-${order.orderNumber || order.id}.jpg`,
-                                    title: 'Foto Posa FloreMoria',
-                                })}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold uppercase tracking-wider hover:border-[#c5a880] hover:text-[#8a7048] transition-colors"
-                            >
-                                Scarica HD
-                            </button>
+                            <ProofHdDownloadButton
+                                orderId={order.id}
+                                photoUrl={primaryPhotoUrl}
+                                orderNumber={order.orderNumber}
+                            />
                         </div>
                     ) : null}
 

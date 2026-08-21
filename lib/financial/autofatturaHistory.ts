@@ -1,9 +1,10 @@
 /**
- * Listing e riscarica XML autofatture TD17/TD18 generate.
+ * Listing, PDF, riscarica XML ed eliminazione autofatture TD17/TD18 generate.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import {
@@ -12,6 +13,10 @@ import {
     type AutofatturaDocType,
     type ForeignVendorPreset,
 } from '@/lib/financial/generateAutofatturaXml';
+import {
+    generateAutofatturaPdf,
+    type AutofatturaPdfInput,
+} from '@/lib/financial/generateAutofatturaPdf';
 
 export type AutofatturaHistoryItem = {
     id: string;
@@ -84,8 +89,81 @@ function guessVendorPreset(vendorName: string): ForeignVendorPreset {
     return hit || AUTOFATTURA_VENDOR_PRESETS[0];
 }
 
+function assertIsGeneratedAutofattura(row: {
+    notes: string | null;
+    metadataJson: unknown;
+}): Record<string, unknown> {
+    const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    const source = String(meta.source || '');
+    if (!source.startsWith('AUTOFATTURA_TD') && !String(row.notes || '').startsWith('AUTOFATTURA_TD')) {
+        throw new Error("Documento non e' un'autofattura generata");
+    }
+    return meta;
+}
+
+function vendorFromMeta(meta: Record<string, unknown>, vendorName: string): ForeignVendorPreset {
+    const presetId = typeof meta.vendorId === 'string' ? meta.vendorId : '';
+    const fromId = AUTOFATTURA_VENDOR_PRESETS.find((p) => p.id === presetId);
+    const base = fromId || guessVendorPreset(vendorName);
+    return {
+        ...base,
+        denominazione:
+            typeof meta.vendorDenominazione === 'string'
+                ? meta.vendorDenominazione
+                : vendorName || base.denominazione,
+        idPaese: typeof meta.vendorIdPaese === 'string' ? meta.vendorIdPaese : base.idPaese,
+        idCodice: typeof meta.vendorIdCodice === 'string' ? meta.vendorIdCodice : base.idCodice,
+        indirizzo: typeof meta.vendorIndirizzo === 'string' ? meta.vendorIndirizzo : base.indirizzo,
+        cap: typeof meta.vendorCap === 'string' ? meta.vendorCap : base.cap,
+        comune: typeof meta.vendorComune === 'string' ? meta.vendorComune : base.comune,
+        nazione: typeof meta.vendorNazione === 'string' ? meta.vendorNazione : base.nazione,
+    };
+}
+
+function buildPdfInputFromRow(row: {
+    id: string;
+    vendorName: string;
+    expenseDate: Date;
+    netCents: number;
+    totalCents: number;
+    vatCents: number;
+    notes: string | null;
+    metadataJson: unknown;
+}): AutofatturaPdfInput {
+    const meta = assertIsGeneratedAutofattura(row);
+    const fromNotes = String(row.notes || '')
+        .replace(/^AUTOFATTURA_TD1[78]\s+/i, '')
+        .trim();
+    const docType: AutofatturaDocType =
+        String(meta.tipoDocumento || meta.autofatturaType || 'TD17').toUpperCase() === 'TD18'
+            ? 'TD18'
+            : 'TD17';
+    const imponibile = Math.abs(row.netCents || row.totalCents);
+    const vat =
+        typeof meta.vatCentsVirtual === 'number'
+            ? Math.abs(meta.vatCentsVirtual)
+            : Math.abs(row.vatCents || Math.round(imponibile * 0.22));
+    const vendor = vendorFromMeta(meta, row.vendorName);
+    return {
+        docType,
+        documentNumber: String(meta.documentNumber || fromNotes || row.id.slice(0, 8)),
+        autofatturaDate: row.expenseDate.toISOString().slice(0, 10),
+        foreignInvoiceNumber: String(meta.foreignInvoiceNumber || 'N/D'),
+        foreignInvoiceDate: String(
+            meta.foreignInvoiceDate || row.expenseDate.toISOString().slice(0, 10)
+        ),
+        imponibileCents: imponibile,
+        vatCents: vat,
+        totaleCents:
+            typeof meta.totaleDocumentoCents === 'number'
+                ? Math.abs(meta.totaleDocumentoCents)
+                : imponibile + vat,
+        descrizioneLinea: String(meta.descrizioneLinea || vendor.defaultDescrizione || 'SERVIZI'),
+        vendor,
+    };
+}
+
 export async function listGeneratedAutofatture(): Promise<AutofatturaHistoryItem[]> {
-    // notes: "AUTOFATTURA_TD17 000001-2026-EST" — filtro stabile senza JSON path DB-specific.
     const rows = await prisma.manualFinanceExpense.findMany({
         where: {
             OR: [
@@ -133,12 +211,7 @@ export async function getAutofatturaXmlDownload(expenseId: string): Promise<{
 }> {
     const row = await prisma.manualFinanceExpense.findUnique({ where: { id: expenseId } });
     if (!row) throw new Error('Autofattura non trovata');
-
-    const meta = (row.metadataJson || {}) as Record<string, unknown>;
-    const source = String(meta.source || '');
-    if (!source.startsWith('AUTOFATTURA_TD') && !String(row.notes || '').startsWith('AUTOFATTURA_TD')) {
-        throw new Error('Documento non è un\'autofattura generata');
-    }
+    const meta = assertIsGeneratedAutofattura(row);
 
     if (row.blobPath) {
         const buf = await readStoredBytes(row.blobPath, row.storageKind, row.blobUrl);
@@ -150,27 +223,109 @@ export async function getAutofatturaXmlDownload(expenseId: string): Promise<{
         }
     }
 
-    // Fallback: rigenera XML da metadata
-    const docType: AutofatturaDocType =
-        String(meta.tipoDocumento || meta.autofatturaType || 'TD17').toUpperCase() === 'TD18'
-            ? 'TD18'
-            : 'TD17';
-    const documentNumber = String(meta.documentNumber || `REGEN-${expenseId.slice(0, 6)}`);
-    const progressivoInvio = String(meta.progressivoInvio || documentNumber.replace(/[^A-Z0-9]/gi, '').slice(0, 10));
-    const foreignInvoiceNumber = String(meta.foreignInvoiceNumber || 'N/D');
-    const foreignInvoiceDate = String(
-        meta.foreignInvoiceDate || row.expenseDate.toISOString().slice(0, 10)
+    const pdfInput = buildPdfInputFromRow(row);
+    const progressivoInvio = String(
+        meta.progressivoInvio ||
+            pdfInput.documentNumber.replace(/[^A-Z0-9]/gi, '').slice(0, 10)
     );
-    const vendor = guessVendorPreset(row.vendorName);
+    const vendor = vendorFromMeta(meta, row.vendorName);
     const generated = generateAutofatturaXml({
-        docType,
-        autofatturaDate: row.expenseDate.toISOString().slice(0, 10),
-        foreignInvoiceNumber,
-        foreignInvoiceDate,
-        imponibileCents: Math.abs(row.netCents || row.totalCents),
-        vendor: { ...vendor, denominazione: row.vendorName },
-        documentNumber,
+        docType: pdfInput.docType,
+        autofatturaDate: pdfInput.autofatturaDate,
+        foreignInvoiceNumber: pdfInput.foreignInvoiceNumber,
+        foreignInvoiceDate: pdfInput.foreignInvoiceDate,
+        imponibileCents: pdfInput.imponibileCents,
+        vendor,
+        descrizioneLinea: pdfInput.descrizioneLinea,
+        documentNumber: pdfInput.documentNumber,
         progressivoInvio,
     });
     return { xml: generated.xml, fileName: generated.fileName };
+}
+
+export async function getAutofatturaPdfDownload(expenseId: string): Promise<{
+    bytes: Uint8Array;
+    fileName: string;
+}> {
+    const row = await prisma.manualFinanceExpense.findUnique({ where: { id: expenseId } });
+    if (!row) throw new Error('Autofattura non trovata');
+    const input = buildPdfInputFromRow(row);
+    return generateAutofatturaPdf(input);
+}
+
+async function unlinkFinecoMatch(expenseId: string, lineId: string | null) {
+    if (!lineId) return;
+    try {
+        const line = await prisma.bankStatementLine.findUnique({ where: { id: lineId } });
+        if (!line) return;
+        await prisma.bankStatementLine.update({
+            where: { id: lineId },
+            data: {
+                matchStatus: 'UNMATCHED',
+                matchType: null,
+                matchScore: null,
+                matchedTxId: null,
+                matchNotes: `Scollegato: autofattura ${expenseId} eliminata`,
+            },
+        });
+        if (line.documentId) {
+            const [matchedCount, unmatchedCount] = await Promise.all([
+                prisma.bankStatementLine.count({
+                    where: { documentId: line.documentId, matchStatus: 'MATCHED' },
+                }),
+                prisma.bankStatementLine.count({
+                    where: { documentId: line.documentId, matchStatus: { not: 'MATCHED' } },
+                }),
+            ]);
+            await prisma.bankStatementDocument.update({
+                where: { id: line.documentId },
+                data: { matchedCount, unmatchedCount },
+            });
+        }
+    } catch (err) {
+        console.warn('[autofatture] unlink fineco', err);
+    }
+}
+
+export async function deleteGeneratedAutofattura(expenseId: string): Promise<void> {
+    const row = await prisma.manualFinanceExpense.findUnique({ where: { id: expenseId } });
+    if (!row) throw new Error('Autofattura non trovata');
+    assertIsGeneratedAutofattura(row);
+
+    await unlinkFinecoMatch(expenseId, row.matchedStatementLineId);
+
+    try {
+        await prisma.financialLedgerEntry.updateMany({
+            where: {
+                OR: [
+                    { sourceKey: `AUTOFATTURA_GEN:${expenseId}` },
+                    { sourceKey: `MANUAL_EXPENSE:${expenseId}` },
+                    { sourceId: expenseId, sourceType: 'MANUAL_EXPENSE' },
+                ],
+                reversedAt: null,
+            },
+            data: { reversedAt: new Date() },
+        });
+    } catch (err) {
+        console.warn('[autofatture] reverse ledger', err);
+    }
+
+    if (row.storageKind === 'local' && row.blobPath && fs.existsSync(row.blobPath)) {
+        try {
+            fs.unlinkSync(row.blobPath);
+        } catch {
+            /* ignore */
+        }
+    } else if (row.storageKind === 'blob') {
+        const token = getBlobToken();
+        if (token && (row.blobUrl || row.blobPath)) {
+            try {
+                await del(row.blobUrl || row.blobPath!, { token });
+            } catch (err) {
+                console.warn('[autofatture] delete blob', err);
+            }
+        }
+    }
+
+    await prisma.manualFinanceExpense.delete({ where: { id: expenseId } });
 }

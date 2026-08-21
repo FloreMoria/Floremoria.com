@@ -5,7 +5,16 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, Globe2, Loader2, UploadCloud } from 'lucide-react';
+import {
+    ChevronDown,
+    Code2,
+    Download,
+    Eye,
+    Globe2,
+    Loader2,
+    Trash2,
+    UploadCloud,
+} from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 type Props = {
@@ -108,7 +117,8 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const [historyOpen, setHistoryOpen] = useState(false);
     const [history, setHistory] = useState<AutofatturaHistoryItem[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
-    const [redownloadingId, setRedownloadingId] = useState<string | null>(null);
+    const [actionId, setActionId] = useState<string | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
     const loadHistory = useCallback(async () => {
         setHistoryLoading(true);
@@ -161,6 +171,8 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 message?: string;
                 xml?: string;
                 fileName?: string;
+                pdfUrl?: string | null;
+                expenseId?: string | null;
                 matchedFineco?: boolean;
                 documentNumber?: string;
             }>(res);
@@ -168,7 +180,18 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 throw new Error(parsed.error || parsed.data?.message || 'Generazione fallita');
             }
             downloadXml(parsed.data.fileName, parsed.data.xml);
-            setMessage(parsed.data.message || 'XML scaricato');
+            const pdfPath =
+                parsed.data.pdfUrl ||
+                (parsed.data.expenseId
+                    ? `/api/dashboard/finance/autofatture/${parsed.data.expenseId}/pdf`
+                    : null);
+            if (pdfPath) {
+                window.open(pdfPath, '_blank', 'noopener,noreferrer');
+            }
+            setMessage(
+                `${parsed.data.message || 'XML scaricato'}` +
+                    (pdfPath ? ' · PDF aperto in nuova scheda' : '')
+            );
             await loadHistory();
             onImported?.();
         } catch (e) {
@@ -178,8 +201,16 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
         }
     };
 
+    const openPdf = (id: string) => {
+        window.open(
+            `/api/dashboard/finance/autofatture/${id}/pdf`,
+            '_blank',
+            'noopener,noreferrer'
+        );
+    };
+
     const redownloadXml = async (id: string) => {
-        setRedownloadingId(id);
+        setActionId(id);
         setError(null);
         try {
             const res = await fetch(`/api/dashboard/finance/autofatture/${id}/xml`);
@@ -196,7 +227,28 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Riscarica fallita');
         } finally {
-            setRedownloadingId(null);
+            setActionId(null);
+        }
+    };
+
+    const confirmDelete = async (id: string) => {
+        setActionId(id);
+        setError(null);
+        try {
+            const res = await fetch(`/api/dashboard/finance/autofatture/${id}`, {
+                method: 'DELETE',
+            });
+            const parsed = await readJsonResponse<{ ok?: boolean; error?: string }>(res);
+            if (!parsed.ok) {
+                throw new Error(parsed.error || 'Eliminazione non riuscita');
+            }
+            setHistory((prev) => prev.filter((h) => h.id !== id));
+            setDeleteConfirmId(null);
+            setMessage('Autofattura eliminata. Abbinamento Fineco scollegato.');
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Eliminazione fallita');
+        } finally {
+            setActionId(null);
         }
     };
 
@@ -310,22 +362,24 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                         className="px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white"
                     />
                 </div>
-                <button
-                    type="button"
-                    disabled={generating}
-                    onClick={() => void generateXml()}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
-                >
-                    {generating ? (
-                        <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                        <Download size={14} />
-                    )}
-                    Scarica XML per YouDoox
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                        type="button"
+                        disabled={generating}
+                        onClick={() => void generateXml()}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
+                    >
+                        {generating ? (
+                            <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                            <Download size={14} />
+                        )}
+                        Scarica XML + apri PDF
+                    </button>
+                </div>
                 <p className="text-[10px] text-slate-500">
                     Numero doc. progressivo <span className="font-mono">00000N-AAAA-EST</span> · IVA
-                    22% in reverse charge · registrazione Contabilità + match Fineco
+                    22% in reverse charge · XML YouDoox + PDF leggibile · Contabilità + Fineco
                 </p>
             </div>
 
@@ -417,19 +471,41 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                                 )}
                                             </td>
                                             <td className="px-2.5 py-2 text-right">
-                                                <button
-                                                    type="button"
-                                                    disabled={redownloadingId === h.id}
-                                                    onClick={() => void redownloadXml(h.id)}
-                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 text-indigo-800 text-[10px] font-bold disabled:opacity-50"
-                                                >
-                                                    {redownloadingId === h.id ? (
-                                                        <Loader2 size={11} className="animate-spin" />
-                                                    ) : (
-                                                        <Download size={11} />
-                                                    )}
-                                                    Riscarica XML
-                                                </button>
+                                                <div className="inline-flex flex-wrap justify-end gap-1">
+                                                    <button
+                                                        type="button"
+                                                        title="Apri / Visualizza PDF"
+                                                        onClick={() => openPdf(h.id)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 text-slate-700 text-[10px] font-bold hover:bg-slate-50"
+                                                    >
+                                                        <Eye size={11} />
+                                                        PDF
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        title="Scarica XML"
+                                                        disabled={actionId === h.id}
+                                                        onClick={() => void redownloadXml(h.id)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 text-indigo-800 text-[10px] font-bold disabled:opacity-50"
+                                                    >
+                                                        {actionId === h.id && deleteConfirmId !== h.id ? (
+                                                            <Loader2 size={11} className="animate-spin" />
+                                                        ) : (
+                                                            <Code2 size={11} />
+                                                        )}
+                                                        XML
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        title="Elimina"
+                                                        disabled={actionId === h.id}
+                                                        onClick={() => setDeleteConfirmId(h.id)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200 text-rose-700 text-[10px] font-bold hover:bg-rose-50 disabled:opacity-50"
+                                                    >
+                                                        <Trash2 size={11} />
+                                                        Elimina
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -554,6 +630,48 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     Estere riconosciute: {summary.foreignAutofatture ?? 0} · Fineco:{' '}
                     {summary.matchedFineco} · duplicati: {summary.skippedDuplicates}
                 </p>
+            )}
+
+            {deleteConfirmId && (
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/40 p-4"
+                    onClick={() => setDeleteConfirmId(null)}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-xl p-5 space-y-3"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <p className="text-sm font-semibold text-slate-900">
+                            Sei sicuro di voler eliminare questa autofattura?
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            Verranno rimossi il record in Contabilità, il file XML archiviato e
+                            l&apos;eventuale abbinamento Fineco. L&apos;operazione non è annullabile.
+                        </p>
+                        <div className="flex justify-end gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                type="button"
+                                disabled={actionId === deleteConfirmId}
+                                onClick={() => void confirmDelete(deleteConfirmId)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+                            >
+                                {actionId === deleteConfirmId ? (
+                                    <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                    <Trash2 size={12} />
+                                )}
+                                Elimina
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

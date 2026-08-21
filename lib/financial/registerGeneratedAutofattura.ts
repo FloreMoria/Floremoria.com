@@ -53,6 +53,7 @@ export async function registerGeneratedAutofattura(input: {
     autofatturaDate: string;
     foreignInvoiceNumber: string;
     foreignInvoiceDate: string;
+    descrizioneLinea?: string;
 }): Promise<{
     expenseId: string;
     matchedFineco: boolean;
@@ -60,6 +61,8 @@ export async function registerGeneratedAutofattura(input: {
 }> {
     const { generated, vendor } = input;
     const stored = await storeXml(generated.xml, generated.fileName);
+    const descrizioneLinea =
+        input.descrizioneLinea?.trim() || vendor.defaultDescrizione || 'SERVIZI';
     const expenseDate = new Date(`${input.autofatturaDate}T12:00:00.000Z`);
     const source =
         generated.docType === 'TD18' ? 'AUTOFATTURA_TD18' : AUTOFATTURA_TD17_SOURCE;
@@ -98,6 +101,15 @@ export async function registerGeneratedAutofattura(input: {
                 progressivoInvio: generated.progressivoInvio,
                 foreignInvoiceNumber: input.foreignInvoiceNumber,
                 foreignInvoiceDate: input.foreignInvoiceDate,
+                descrizioneLinea,
+                vendorId: vendor.id,
+                vendorDenominazione: vendor.denominazione,
+                vendorIdPaese: vendor.idPaese,
+                vendorIdCodice: vendor.idCodice,
+                vendorIndirizzo: vendor.indirizzo,
+                vendorCap: vendor.cap,
+                vendorComune: vendor.comune,
+                vendorNazione: vendor.nazione,
                 vendorVat,
                 totaleDocumentoCents: generated.totaleCents,
                 vatCentsVirtual: generated.vatCents,

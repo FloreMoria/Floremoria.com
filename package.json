@@ -68,6 +68,7 @@
     "next": "16.1.6",
     "nodemailer": "^8.0.7",
     "papaparse": "^5.5.3",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-google-autocomplete": "^2.7.5",

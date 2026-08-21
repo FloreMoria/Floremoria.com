@@ -100,6 +100,7 @@ export async function POST(request: Request) {
                 autofatturaDate,
                 foreignInvoiceNumber,
                 foreignInvoiceDate,
+                descrizioneLinea,
             });
             expenseId = registered.expenseId;
             matchedFineco = registered.matchedFineco;
@@ -116,6 +117,9 @@ export async function POST(request: Request) {
                     : ''),
             fileName: generated.fileName,
             xml: generated.xml,
+            pdfUrl: expenseId
+                ? `/api/dashboard/finance/autofatture/${expenseId}/pdf`
+                : null,
             documentNumber: generated.documentNumber,
             progressivoInvio: generated.progressivoInvio,
             imponibileCents: generated.imponibileCents,

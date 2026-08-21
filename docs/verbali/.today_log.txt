@@ -24,3 +24,5 @@
 [2026-08-21 16:28] feat/finance: Incolla rapido movimenti Fineco (parser testo, anteprima dedup, auto-match fioristi/Stripe/PayPal/canoni).
 
 [2026-08-21 20:25] fix(whatsapp): allineamento invio template Meta floremoria_consegna_foto_utente con MagicLink token e gestione errori per notifica consegna utente.
+
+[2026-08-21 21:58] style(users): ottimizzazione spaziatura e bilanciamento colonne tabella Giardino.

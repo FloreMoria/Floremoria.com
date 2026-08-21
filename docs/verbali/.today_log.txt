@@ -13,3 +13,6 @@
 
 [2026-08-21 11:04] feat(orders): checkbox opzionale Aggiungi Bigliettino + testo dedica per categorie FF/FA nel Nuovo Ordine.
 [2026-08-21 11:30] feat(finance): PDF leggibile autofatture TD17/TD18 + azioni PDF/XML/Elimina nello storico.
+
+[2026-08-21 11:34] fix(users): layout giardino utente con cognome in alto, badge stato cliente e riallineamento colonne.
+

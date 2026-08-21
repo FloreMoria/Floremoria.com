@@ -360,11 +360,7 @@ export default function ClientUsersTable({
                     </span>
                 );
             default:
-                return (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        <User size={11} /> Utente
-                    </span>
-                );
+                return null;
         }
     };
 
@@ -484,7 +480,7 @@ export default function ClientUsersTable({
                             <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                                 <th
                                     onClick={() => toggleSortHeader('name')}
-                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors w-auto lg:w-[28%]"
+                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors w-auto lg:w-[25%]"
                                 >
                                     <div className="flex items-center gap-1.5">
                                         <span>Giardino Utente</span>
@@ -497,13 +493,13 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 w-auto lg:w-[20%]">Ruolo / Stato</th>
-                                <th className="px-4 py-3.5 w-auto lg:w-[26%]">Contatti</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[27%]">Stato / Ruolo</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[22%]">Contatti</th>
                                 <th
                                     onClick={() => toggleSortHeader('orders')}
-                                    className="px-3 py-3.5 cursor-pointer hover:text-black transition-colors text-center w-auto lg:w-[8%]"
+                                    className="px-2 py-3.5 cursor-pointer hover:text-black transition-colors text-center w-auto lg:w-[8%]"
                                 >
-                                    <div className="flex items-center justify-center gap-1.5">
+                                    <div className="flex items-center justify-center gap-1">
                                         <span>Ordini</span>
                                         {sortOption === 'orders_desc' ? (
                                             <ArrowDown size={13} className="text-fm-gold" />
@@ -514,12 +510,12 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 text-right w-auto lg:w-[8%]">Spesa</th>
+                                <th className="px-2 py-3.5 text-right w-auto lg:w-[8%]">Spesa</th>
                                 <th
                                     onClick={() => toggleSortHeader('created')}
-                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors text-right w-auto lg:w-[5%]"
+                                    className="px-2 py-3.5 cursor-pointer hover:text-black transition-colors text-right w-auto lg:w-[5%]"
                                 >
-                                    <div className="flex items-center justify-end gap-1.5">
+                                    <div className="flex items-center justify-end gap-1">
                                         <span>Data Reg.</span>
                                         {sortOption === 'created_desc' ? (
                                             <ArrowDown size={13} className="text-fm-gold" />
@@ -530,7 +526,7 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 text-right w-auto lg:w-[5%]">Azioni</th>
+                                <th className="px-2 py-3.5 text-right w-auto lg:w-[5%]">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -555,8 +551,9 @@ export default function ClientUsersTable({
                                 filteredUsers.map((u, i) => {
                                     const rawName = (u.name || 'Utente Sconosciuto').trim();
                                     const nameParts = rawName.split(' ');
-                                    const firstName = nameParts[0] || 'Utente';
-                                    const lastName = nameParts.slice(1).join(' ');
+                                    const firstName = nameParts[0] || '';
+                                    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || 'Utente';
+                                    const isSingleWord = nameParts.length <= 1;
 
                                     return (
                                         <tr
@@ -599,15 +596,12 @@ export default function ClientUsersTable({
                                                         />
                                                     ) : (
                                                         <div className="flex flex-col">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="font-bold text-gray-900 text-sm leading-tight">
+                                                            <span className="font-bold text-gray-900 text-sm leading-tight">
+                                                                {lastName}
+                                                            </span>
+                                                            {!isSingleWord && firstName && (
+                                                                <span className="text-xs font-normal text-gray-600 leading-tight">
                                                                     {firstName}
-                                                                </span>
-                                                                <UserTypeBadge userId={u.id} initialType={u.userType} />
-                                                            </div>
-                                                            {lastName && (
-                                                                <span className="text-xs font-semibold text-gray-600 leading-tight">
-                                                                    {lastName}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -617,6 +611,7 @@ export default function ClientUsersTable({
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-wrap items-center gap-1.5">
                                                     {getRoleBadge(u.role)}
+                                                    <UserTypeBadge userId={u.id} initialType={u.userType} />
                                                     {getStatusBadge(u.status)}
                                                 </div>
                                             </td>
@@ -651,7 +646,7 @@ export default function ClientUsersTable({
                                                         {u.email && (
                                                             <div className="flex items-center gap-1.5 text-gray-700 font-medium">
                                                                 <Mail size={12} className="text-gray-400 shrink-0" />
-                                                                <span className="truncate max-w-[180px]">{u.email}</span>
+                                                                <span className="truncate max-w-[170px]">{u.email}</span>
                                                             </div>
                                                         )}
                                                         {u.phone && (
@@ -662,19 +657,19 @@ export default function ClientUsersTable({
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
+                                            <td className="px-2 py-3 text-center">
+                                                <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
                                                     <ShoppingBag size={11} className="text-slate-500" />
                                                     {u.ordersCount ?? u.orders?.length ?? 0}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-mono text-xs font-bold text-gray-900">
+                                            <td className="px-2 py-3 text-right font-mono text-xs font-bold text-gray-900">
                                                 €{((u.totalSpentCents || 0) / 100).toFixed(2)}
                                             </td>
-                                            <td className="px-4 py-3 text-right text-xs text-gray-500 font-mono font-medium whitespace-nowrap">
+                                            <td className="px-2 py-3 text-right text-xs text-gray-500 font-mono font-medium whitespace-nowrap">
                                                 {formatITDate(u.createdAt || u.lastOrderDate)}
                                             </td>
-                                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-2 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                                 {editingUserId === u.id ? (
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <button

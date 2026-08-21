@@ -4,3 +4,6 @@
 
 [2026-08-21 09:45] feat/finance: autofatture estere TD17/TD18/TD19 — box Contabilità, riconoscimento XLSX/XML, match Fineco SaaS, badge indaco Libro Mastro.
 [2026-08-21 10:06] feat/finance: generatore XML autofatture TD17/TD18 FPR12 (K0ROACV, SoggettoEmittente CC) + download YouDoox + registrazione Contabilità/Fineco.
+
+[2026-08-21 10:14] fix(users/deceased): eliminazione orfani e utenti test, ui tabella compatta, fix prefissi esteri e posizionamento modale.
+

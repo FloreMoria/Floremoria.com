@@ -360,7 +360,7 @@ export default function ClientUsersTable({
             default:
                 return (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        <User size={12} /> Cliente
+                        <User size={12} /> Utente
                     </span>
                 );
         }
@@ -423,7 +423,7 @@ export default function ClientUsersTable({
                         >
                             <option value="ALL">Tutti i Ruoli</option>
                             <option value="ADMIN">Amministratore</option>
-                            <option value="CUSTOMER">Cliente</option>
+                            <option value="CUSTOMER">Utente</option>
                             <option value="FLORIST">Fiorista / Partner</option>
                         </select>
 
@@ -476,13 +476,13 @@ export default function ClientUsersTable({
 
             {/* Users Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="w-full overflow-x-auto lg:overflow-x-visible">
+                    <table className="w-full text-left border-collapse table-auto lg:table-fixed">
                         <thead>
                             <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                                 <th
                                     onClick={() => toggleSortHeader('name')}
-                                    className="px-6 py-4 cursor-pointer hover:text-black transition-colors"
+                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors w-auto lg:w-[24%]"
                                 >
                                     <div className="flex items-center gap-1.5">
                                         <span>Giardino Utente</span>
@@ -495,12 +495,12 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-6 py-4">Ruolo & Stato</th>
-                                <th className="px-6 py-4">Contatti</th>
-                                <th className="px-6 py-4">Città</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[13%]">Ruolo & Stato</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[24%]">Contatti</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[12%]">Città</th>
                                 <th
                                     onClick={() => toggleSortHeader('orders')}
-                                    className="px-6 py-4 cursor-pointer hover:text-black transition-colors text-center"
+                                    className="px-3 py-3.5 cursor-pointer hover:text-black transition-colors text-center w-auto lg:w-[8%]"
                                 >
                                     <div className="flex items-center justify-center gap-1.5">
                                         <span>Ordini</span>
@@ -513,13 +513,13 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-right">Spesa Totale</th>
+                                <th className="px-4 py-3.5 text-right w-auto lg:w-[9%]">Spesa</th>
                                 <th
                                     onClick={() => toggleSortHeader('created')}
-                                    className="px-6 py-4 cursor-pointer hover:text-black transition-colors text-right"
+                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors text-right w-auto lg:w-[10%]"
                                 >
                                     <div className="flex items-center justify-end gap-1.5">
-                                        <span>Registrazione</span>
+                                        <span>Data Reg.</span>
                                         {sortOption === 'created_desc' ? (
                                             <ArrowDown size={13} className="text-fm-gold" />
                                         ) : sortOption === 'created_asc' ? (
@@ -529,7 +529,7 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-right">Azioni</th>
+                                <th className="px-4 py-3.5 text-right w-auto lg:w-[10%]">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -562,19 +562,19 @@ export default function ClientUsersTable({
                                             setSelectedUser(u);
                                         }}
                                     >
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 {u.profilePicUrl ? (
                                                     <Image
                                                         src={u.profilePicUrl}
                                                         alt={u.name || 'Utente'}
-                                                        width={40}
-                                                        height={40}
-                                                        className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm shrink-0"
+                                                        width={36}
+                                                        height={36}
+                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm shrink-0"
                                                         unoptimized
                                                     />
                                                 ) : (
-                                                    <div className="w-10 h-10 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0">
+                                                    <div className="w-9 h-9 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0 text-xs">
                                                         {u.name?.charAt(0) || '?'}
                                                     </div>
                                                 )}
@@ -593,23 +593,20 @@ export default function ClientUsersTable({
                                                 ) : (
                                                     <div>
                                                         <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                                                            <span>{u.name || 'Utente Sconosciuto'}</span>
+                                                            <span className="truncate max-w-[160px]">{u.name || 'Utente Sconosciuto'}</span>
                                                             <UserTypeBadge userId={u.id} initialType={u.userType} />
-                                                        </div>
-                                                        <div className="text-[11px] text-gray-400 font-mono">
-                                                            ID: {u.id?.slice(-8) || 'virtual'}
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3">
                                             <div className="flex flex-col gap-1 items-start">
                                                 {getRoleBadge(u.role)}
                                                 {getStatusBadge(u.status)}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3">
                                             {editingUserId === u.id ? (
                                                 <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
                                                     <input
@@ -640,7 +637,7 @@ export default function ClientUsersTable({
                                                     {u.email && (
                                                         <div className="flex items-center gap-1.5 text-gray-700 font-medium">
                                                             <Mail size={12} className="text-gray-400 shrink-0" />
-                                                            <span className="truncate max-w-[180px]">{u.email}</span>
+                                                            <span className="truncate max-w-[170px]">{u.email}</span>
                                                         </div>
                                                     )}
                                                     {u.phone && (
@@ -651,22 +648,22 @@ export default function ClientUsersTable({
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                                        <td className="px-4 py-3 text-xs font-medium text-gray-600 truncate">
                                             {u.city || '—'}
                                         </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
-                                                <ShoppingBag size={12} className="text-slate-500" />
+                                        <td className="px-3 py-3 text-center">
+                                            <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
+                                                <ShoppingBag size={11} className="text-slate-500" />
                                                 {u.ordersCount ?? u.orders?.length ?? 0}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right font-mono text-sm font-bold text-gray-900">
+                                        <td className="px-4 py-3 text-right font-mono text-xs font-bold text-gray-900">
                                             €{((u.totalSpentCents || 0) / 100).toFixed(2)}
                                         </td>
-                                        <td className="px-6 py-4 text-right text-xs text-gray-500 font-medium">
+                                        <td className="px-4 py-3 text-right text-xs text-gray-500 font-medium">
                                             {formatITDate(u.createdAt || u.lastOrderDate)}
                                         </td>
-                                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                             {editingUserId === u.id ? (
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
@@ -727,13 +724,14 @@ export default function ClientUsersTable({
             {/* Drawer Dettaglio Utente e Storico Ordini */}
             {selectedUser && (
                 <div
-                    className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 top-[72px] z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setSelectedUser(null)}
                 >
                     <div
-                        className="bg-white w-full max-w-2xl h-full shadow-2xl overflow-y-auto p-6 md:p-8 space-y-8 animate-in slide-in-from-right duration-300"
+                        className="bg-white w-full max-w-2xl h-[calc(100vh-72px)] shadow-2xl overflow-y-auto p-6 md:p-8 space-y-8 animate-in slide-in-from-right duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
+
                         {/* Header Drawer */}
                         <div className="flex items-start justify-between border-b border-gray-100 pb-6">
                             <div className="flex items-center gap-4">

@@ -311,7 +311,8 @@ function vendorCompatible(invoiceVendor: string, bankDescription: string): boole
     return hits >= 1;
 }
 
-async function reconcileInvoiceWithFineco(expense: {
+/** Riconcilia spesa manuale / autofattura con uscita Fineco (importo + vendor / SaaS). */
+export async function reconcileInvoiceWithFineco(expense: {
     id: string;
     vendorName: string;
     totalCents: number;

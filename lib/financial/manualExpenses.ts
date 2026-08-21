@@ -244,6 +244,8 @@ export async function matchManualExpenseByAmount(
         }
         const isForeign =
             meta.source === FOREIGN_AUTOFATTURA_SOURCE ||
+            meta.source === 'AUTOFATTURA_TD17' ||
+            meta.source === 'AUTOFATTURA_TD18' ||
             Boolean(meta.isForeignAutofattura || meta.isReverseCharge);
         if (isForeign && descIsSaas) score += 30;
         if (isForeign && SAAS_FOREIGN_VENDOR_RE.test(vendor) && descIsSaas) score += 15;

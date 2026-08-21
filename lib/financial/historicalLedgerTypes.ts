@@ -97,7 +97,13 @@ export function categorizeManualExpense(opts: {
     const meta = opts.metadata || {};
     const source = String(meta.source || '');
     const blob = `${opts.vendorName} ${opts.description} ${source}`.toUpperCase();
-    if (source === 'SDI_AUTOFATTURA_ESTERA' || meta.isReverseCharge || meta.isForeignAutofattura) {
+    if (
+        source === 'SDI_AUTOFATTURA_ESTERA' ||
+        source === 'AUTOFATTURA_TD17' ||
+        source === 'AUTOFATTURA_TD18' ||
+        meta.isReverseCharge ||
+        meta.isForeignAutofattura
+    ) {
         return 'SPESE_SAAS';
     }
     if (source.startsWith('SDI') || /FATTURA|SDI|YOUDOOX/.test(blob)) {

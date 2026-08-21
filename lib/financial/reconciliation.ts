@@ -18,7 +18,7 @@ import {
 
 const ORDER_CODE_RE = /PT-[A-Z]{2}-\d{2}-\d{3,4}/gi;
 const BANK_FEE_RE =
-    /(imposta\s+di\s+bollo|canone(\s+mensile|\s+annuale)?|spese\s+(di\s+)?tenuta|commissioni|competenze(\s+e\s+spese)?|ritenute\s+fiscali|\bf24\b|agenzia\s+delle\s+entrate)/i;
+    /(imposta\s+(di\s+)?bollo|canone(\s+mensile|\s+annuale)?(\s+conto)?|spese\s+(di\s+)?tenuta|commissioni|competenze(\s+e\s+spese)?|ritenute\s+fiscali|\bf24\b|agenzia\s+delle\s+entrate)/i;
 const STRIPE_HINT_RE = /\b(stripe|transfer)\b/i;
 const PAYPAL_HINT_RE = /\bpaypal\b/i;
 const INTERNAL_TRANSFER_RE =

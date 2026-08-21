@@ -9,8 +9,13 @@ import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { getLedger } from '@/lib/financial/ledgerStore';
 import { parseBankStatementFile } from './parseFineco';
+import {
+    buildFinecoDedupKey,
+    parseFinecoPasteText,
+    type FinecoPasteMovement,
+} from './parseFinecoPaste';
 import { reconcileAllMovements } from './reconcileStatement';
-import type { BankReconciliationReport } from './types';
+import type { BankReconciliationReport, ParsedBankMovement } from './types';
 import type { Prisma } from '@prisma/client';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'bank-statements');
@@ -234,6 +239,225 @@ export async function deleteBankStatement(id: string) {
     await deleteStoredFile(doc.blobPath, doc.storageKind, doc.blobUrl);
     await prisma.bankStatementDocument.delete({ where: { id } });
     return true;
+}
+
+export type PastePreviewRow = {
+    lineIndex: number;
+    date: string | null;
+    description: string;
+    typology: string | null;
+    amountCents: number;
+    dedupKey: string;
+    status: 'NEW' | 'DUPLICATE';
+};
+
+async function existingDedupKeysForMovements(
+    movements: FinecoPasteMovement[]
+): Promise<Set<string>> {
+    const dates = movements
+        .map((m) => m.accountingDate || m.valueDate)
+        .filter((d): d is string => Boolean(d));
+    if (dates.length === 0 && movements.length === 0) return new Set();
+
+    const sorted = [...dates].sort();
+    const minIso = sorted[0] || '2000-01-01';
+    const maxIso = sorted[sorted.length - 1] || '2100-12-31';
+    // Margine ±3 giorni per mismatch data valuta/operazione
+    const minDate = new Date(`${minIso}T00:00:00.000Z`);
+    minDate.setUTCDate(minDate.getUTCDate() - 3);
+    const maxDate = new Date(`${maxIso}T23:59:59.999Z`);
+    maxDate.setUTCDate(maxDate.getUTCDate() + 3);
+
+    const amounts = [...new Set(movements.map((m) => m.amountCents))];
+
+    const existing = await prisma.bankStatementLine.findMany({
+        where: {
+            amountCents: { in: amounts },
+            OR: [
+                { accountingDate: { gte: minDate, lte: maxDate } },
+                { valueDate: { gte: minDate, lte: maxDate } },
+                { AND: [{ accountingDate: null }, { valueDate: null }] },
+            ],
+        },
+        select: {
+            accountingDate: true,
+            valueDate: true,
+            amountCents: true,
+            description: true,
+        },
+        take: 20000,
+    });
+
+    const keys = new Set<string>();
+    for (const row of existing) {
+        const dateIso =
+            (row.accountingDate || row.valueDate)?.toISOString().slice(0, 10) ?? null;
+        keys.add(buildFinecoDedupKey(dateIso, row.amountCents, row.description));
+    }
+    return keys;
+}
+
+/** Anteprima parse + stato Nuovo / Già presente (vs PDF e paste precedenti). */
+export async function previewFinecoPaste(rawText: string) {
+    const parsed = parseFinecoPasteText(rawText);
+    const existingKeys = await existingDedupKeysForMovements(parsed.pasteMovements);
+
+    const rows: PastePreviewRow[] = parsed.pasteMovements.map((m) => ({
+        lineIndex: m.lineIndex,
+        date: m.accountingDate || m.valueDate,
+        description: m.description,
+        typology: m.typology,
+        amountCents: m.amountCents,
+        dedupKey: m.dedupKey,
+        status: existingKeys.has(m.dedupKey) ? 'DUPLICATE' : 'NEW',
+    }));
+
+    const newCount = rows.filter((r) => r.status === 'NEW').length;
+    const duplicateCount = rows.filter((r) => r.status === 'DUPLICATE').length;
+
+    return {
+        rows,
+        newCount,
+        duplicateCount,
+        parseSummary: parsed.parseSummary,
+        warnings: parsed.warnings,
+        anomalies: parsed.anomalies || [],
+        periodStart: parsed.periodStart,
+        periodEnd: parsed.periodEnd,
+    };
+}
+
+/**
+ * Salva solo i movimenti NEW da testo Fineco + auto-match (fioristi, Stripe/PayPal, canoni/bollo).
+ */
+export async function confirmFinecoPaste(rawText: string) {
+    const parsed = parseFinecoPasteText(rawText);
+    if (parsed.pasteMovements.length === 0) {
+        throw new Error(
+            parsed.parseSummary || 'Nessun movimento riconosciuto nel testo incollato'
+        );
+    }
+
+    const existingKeys = await existingDedupKeysForMovements(parsed.pasteMovements);
+    const toSave: FinecoPasteMovement[] = parsed.pasteMovements.filter(
+        (m) => !existingKeys.has(m.dedupKey)
+    );
+
+    if (toSave.length === 0) {
+        return {
+            document: null,
+            savedCount: 0,
+            skippedDuplicates: parsed.pasteMovements.length,
+            matchedCount: 0,
+            unmatchedCount: 0,
+            message: 'Tutti i movimenti incollati risultano già presenti in archivio.',
+        };
+    }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `fineco-paste-${stamp}.txt`;
+    const buffer = Buffer.from(rawText, 'utf-8');
+    const stored = await storeOriginalFile(buffer, fileName, 'text/plain');
+
+    const doc = await prisma.bankStatementDocument.create({
+        data: {
+            fileName,
+            contentType: 'text/plain',
+            sizeBytes: buffer.byteLength,
+            blobPath: stored.blobPath,
+            blobUrl: stored.blobUrl,
+            storageKind: stored.storageKind,
+            status: 'PARSING',
+            metadataJson: {
+                source: 'fineco_paste',
+                pastedAt: new Date().toISOString(),
+            },
+        },
+    });
+
+    try {
+        const asMovements: ParsedBankMovement[] = toSave.map((m, i) => ({
+            ...m,
+            lineIndex: i,
+        }));
+        const matches = await reconcileAllMovements(asMovements);
+
+        let matchedCount = 0;
+        let unmatchedCount = 0;
+        const lineRows: Prisma.BankStatementLineCreateManyInput[] = asMovements.map(
+            (m, i) => {
+                const match = matches[i];
+                if (match.matchStatus === 'MATCHED') matchedCount += 1;
+                else unmatchedCount += 1;
+                return {
+                    documentId: doc.id,
+                    lineIndex: m.lineIndex,
+                    valueDate: toDate(m.valueDate),
+                    accountingDate: toDate(m.accountingDate),
+                    description: m.description,
+                    amountCents: m.amountCents,
+                    debitCents: m.debitCents,
+                    creditCents: m.creditCents,
+                    balanceCents: m.balanceCents,
+                    matchStatus: match.matchStatus,
+                    matchType: match.matchType,
+                    matchScore: match.matchScore,
+                    matchedTxId: match.matchedTxId,
+                    matchedOrderId: match.matchedOrderId,
+                    matchNotes: match.matchNotes,
+                    rawJson: (m.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+                };
+            }
+        );
+
+        const dates = asMovements
+            .map((m) => m.accountingDate || m.valueDate)
+            .filter((d): d is string => Boolean(d))
+            .sort();
+
+        const parseSummary = `Incolla Fineco: ${asMovements.length} nuovi salvati · ${parsed.pasteMovements.length - asMovements.length} duplicati saltati · ${matchedCount} abbinati automaticamente`;
+
+        await prisma.$transaction([
+            prisma.bankStatementLine.createMany({ data: lineRows }),
+            prisma.bankStatementDocument.update({
+                where: { id: doc.id },
+                data: {
+                    status: 'RECONCILED',
+                    periodStart: toDate(dates[0] || null),
+                    periodEnd: toDate(dates[dates.length - 1] || null),
+                    matchedCount,
+                    unmatchedCount,
+                    processedAt: new Date(),
+                    parseError: null,
+                    metadataJson: {
+                        source: 'fineco_paste',
+                        warnings: parsed.warnings,
+                        movementCount: asMovements.length,
+                        skippedDuplicates: parsed.pasteMovements.length - asMovements.length,
+                        parseSummary,
+                        anomalies: parsed.anomalies || [],
+                    },
+                },
+            }),
+        ]);
+
+        const detail = await getBankStatementDetail(doc.id);
+        return {
+            document: detail,
+            savedCount: asMovements.length,
+            skippedDuplicates: parsed.pasteMovements.length - asMovements.length,
+            matchedCount,
+            unmatchedCount,
+            message: parseSummary,
+        };
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await prisma.bankStatementDocument.update({
+            where: { id: doc.id },
+            data: { status: 'FAILED', parseError: msg, processedAt: new Date() },
+        });
+        throw err;
+    }
 }
 
 export async function uploadAndProcessBankStatement(input: {

@@ -8,6 +8,7 @@ import {
     type ProofPhotoSlot,
 } from '@/lib/deliveryProof/proofPhotoUrls';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 type ProofArrays = {
     photosBeforeUrls: string[];
@@ -77,6 +78,14 @@ async function persistProofUpdate(
             data: { photos: flatPhotos },
         }),
     ]);
+
+    if (hasAnyPhoto) {
+        try {
+            await onOrderStatusChanged(orderId, 'COMPLETED');
+        } catch (err) {
+            console.error('[persistProofUpdate] Errore notifica post-consegna:', err);
+        }
+    }
 
     revalidatePath('/dashboard/user');
     revalidatePath('/dashboard/users');

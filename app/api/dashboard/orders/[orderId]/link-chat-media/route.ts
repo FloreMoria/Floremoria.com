@@ -12,6 +12,7 @@ import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 import { propagateDeliveryPhotosToLinkedProfiles } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { uniqueAppendPhotoUrls } from '@/lib/deliveryProof/uniqueAppendPhotoUrls';
+import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -137,6 +138,14 @@ export async function POST(
 
         // 5. Propaga a cascata su Scheda Defunto (se collegato)
         const propagateResult = await propagateDeliveryPhotosToLinkedProfiles(order.id, [mediaUrl]);
+
+        // 5b. Notifica WhatsApp VERA al cliente con template Meta floremoria_consegna_foto_utente
+        try {
+            await onOrderStatusChanged(order.id, 'COMPLETED');
+            console.info('[link-chat-media] Notifica WhatsApp floremoria_consegna_foto_utente inviata per ordine:', order.id);
+        } catch (notifyErr) {
+            console.error('[link-chat-media] Errore non bloccante invio notifica WhatsApp post-consegna:', notifyErr);
+        }
 
         // 6. Revalida le viste della Dashboard e Bacheca Utente
         revalidatePath('/dashboard/orders');

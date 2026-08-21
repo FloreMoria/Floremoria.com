@@ -22,3 +22,5 @@
 [2026-08-21 16:19] feat/finance: Selettore anno + storico completo movimenti estratto conto, KPI quadratura e colonna PDF/trimestre.
 [2026-08-21 16:22] fix/finance: Troncamento causali bancarie a 2 righe (line-clamp) con tooltip e toggle Mostra tutto/Riduci.
 [2026-08-21 16:28] feat/finance: Incolla rapido movimenti Fineco (parser testo, anteprima dedup, auto-match fioristi/Stripe/PayPal/canoni).
+
+[2026-08-21 20:25] fix(whatsapp): allineamento invio template Meta floremoria_consegna_foto_utente con MagicLink token e gestione errori per notifica consegna utente.

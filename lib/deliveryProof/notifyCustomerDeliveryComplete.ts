@@ -17,13 +17,14 @@ export interface NotifyCustomerDeliveryCompleteResult {
  * Le foto Prima/Dopo partono solo se l'utente risponde Sì.
  */
 export async function notifyCustomerDeliveryComplete(
-    orderId: string
+    orderId: string,
+    options?: { forceResend?: boolean }
 ): Promise<NotifyCustomerDeliveryCompleteResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
         include: {
             deliveryProof: true,
-            user: { select: { name: true, email: true } },
+            user: { select: { name: true, email: true, phone: true } },
         },
     });
 
@@ -55,13 +56,14 @@ export async function notifyCustomerDeliveryComplete(
         orderId: order.id,
         orderNumber: order.orderNumber,
         buyerFullName: order.user?.name || order.buyerFullName,
-        customerPhone: order.customerPhone,
+        customerPhone: order.customerPhone || order.user?.phone,
         deceasedName: order.deceasedName,
         cemeteryCity: order.cemeteryCity,
         cemeteryName: order.cemeteryName,
         deliveryProvince: order.deliveryProvince,
         photoAfterUrl: deliveryPhotoUrls[0],
         photoAfterUrls: deliveryPhotoUrls,
+        forceResend: options?.forceResend,
     });
 
     if (!result.ok) {

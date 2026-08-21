@@ -155,6 +155,56 @@ function currentCalendarYear(): number {
     return new Date().getFullYear();
 }
 
+/** Causale bancaria: max 2 righe, tooltip hover, toggle Mostra tutto / Riduci se overflow. */
+function CausaleCell({ description }: { description: string }) {
+    const textRef = useRef<HTMLDivElement>(null);
+    const [expanded, setExpanded] = useState(false);
+    const [needsClamp, setNeedsClamp] = useState(false);
+
+    useEffect(() => {
+        setExpanded(false);
+    }, [description]);
+
+    useEffect(() => {
+        const el = textRef.current;
+        if (!el) return;
+        const measure = () => {
+            const styles = window.getComputedStyle(el);
+            const lh = parseFloat(styles.lineHeight);
+            const lineHeight = Number.isFinite(lh) && lh > 0 ? lh : 16;
+            const maxTwoLines = lineHeight * 2;
+            setNeedsClamp(el.scrollHeight > maxTwoLines + 1);
+        };
+        measure();
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+        ro?.observe(el);
+        return () => ro?.disconnect();
+    }, [description, expanded]);
+
+    return (
+        <div className="min-w-0">
+            <div
+                ref={textRef}
+                title={description}
+                className={`text-xs leading-snug break-words whitespace-pre-wrap ${
+                    expanded ? '' : 'line-clamp-2'
+                }`}
+            >
+                {description}
+            </div>
+            {needsClamp && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded((v) => !v)}
+                    className="mt-1 text-[10px] font-semibold text-[#8a6d4a] hover:underline"
+                >
+                    {expanded ? 'Riduci' : 'Mostra tutto'}
+                </button>
+            )}
+        </div>
+    );
+}
+
 function docSummary(doc: StatementDoc): string | null {
     return doc.metadataJson?.parseSummary || null;
 }
@@ -848,9 +898,7 @@ export default function BankStatementsPanel() {
                                                 {formatItDate(line.valueDate)}
                                             </td>
                                             <td className="px-3 py-2.5 text-slate-800 min-w-[280px] max-w-[520px]">
-                                                <div className="text-xs leading-snug whitespace-pre-wrap break-words">
-                                                    {line.description}
-                                                </div>
+                                                <CausaleCell description={line.description} />
                                             </td>
                                             <td
                                                 className={`px-3 py-2.5 text-right font-mono text-xs font-semibold whitespace-nowrap ${

@@ -20,3 +20,4 @@
 [2026-08-21 15:20] feat(finance): sync Stripe/PayPal dal 01/01/2026, upload multi XML YouDoox con classificazione attiva/passiva/autofattura, Apri/Elimina file SDI/XLSX.
 [2026-08-21 15:35] feat(finance): sync multi-account Stripe COM + EU (PSA), badge provenienza, ID stripe_tx_/stripe_eu_tx_.
 [2026-08-21 16:19] feat/finance: Selettore anno + storico completo movimenti estratto conto, KPI quadratura e colonna PDF/trimestre.
+[2026-08-21 16:22] fix/finance: Troncamento causali bancarie a 2 righe (line-clamp) con tooltip e toggle Mostra tutto/Riduci.

@@ -59,6 +59,19 @@ export default function FinanceDashboardPage() {
     // Gateways live status
     const [gatewayData, setGatewayData] = useState<any>(null);
     const [loadingGateways, setLoadingGateways] = useState(true);
+    const [syncingStripe, setSyncingStripe] = useState(false);
+    const [syncingPaypal, setSyncingPaypal] = useState(false);
+    const [stripeSyncMeta, setStripeSyncMeta] = useState<{
+        lastSyncAt?: string | null;
+        recordCount?: number;
+        movements?: any[];
+    } | null>(null);
+    const [paypalSyncMeta, setPaypalSyncMeta] = useState<{
+        lastSyncAt?: string | null;
+        recordCount?: number;
+        transactions?: any[];
+    } | null>(null);
+    const [gatewaySyncMsg, setGatewaySyncMsg] = useState<string | null>(null);
 
     // Compliance state
     const [complianceFilter, setComplianceFilter] = useState<'ALL' | 'FISC' | 'ESTER' | 'CORP'>('ALL');
@@ -116,10 +129,68 @@ export default function FinanceDashboardPage() {
             if (data.ok) {
                 setGatewayData(data);
             }
+            const [st, pp] = await Promise.all([
+                fetch('/api/dashboard/finance/sync/stripe').then((r) => r.json()).catch(() => null),
+                fetch('/api/dashboard/finance/sync/paypal').then((r) => r.json()).catch(() => null),
+            ]);
+            if (st?.ok) {
+                setStripeSyncMeta({
+                    lastSyncAt: st.lastSyncAt,
+                    recordCount: st.recordCount,
+                    movements: st.movements,
+                });
+            }
+            if (pp?.ok) {
+                setPaypalSyncMeta({
+                    lastSyncAt: pp.lastSyncAt,
+                    recordCount: pp.recordCount,
+                    transactions: pp.transactions,
+                });
+            }
         } catch (error) {
             console.error('Errore di caricamento dati gateway:', error);
         } finally {
             setLoadingGateways(false);
+        }
+    };
+
+    const runStripeSync = async () => {
+        setSyncingStripe(true);
+        setGatewaySyncMsg(null);
+        try {
+            const res = await fetch('/api/dashboard/finance/sync/stripe', { method: 'POST' });
+            const data = await res.json();
+            if (!data.ok && !data.movementsUpserted) {
+                throw new Error(data.error || data.errors?.[0] || 'Sync Stripe fallita');
+            }
+            setGatewaySyncMsg(
+                `Stripe: ${data.movementsUpserted ?? 0} movimenti · ${data.payoutsUpserted ?? 0} payout · ${data.recordCount ?? 0} record dal 01/01/2026`
+            );
+            await loadGateways();
+        } catch (e) {
+            setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync Stripe fallita');
+        } finally {
+            setSyncingStripe(false);
+        }
+    };
+
+    const runPaypalSync = async () => {
+        setSyncingPaypal(true);
+        setGatewaySyncMsg(null);
+        try {
+            const res = await fetch('/api/dashboard/finance/sync/paypal', { method: 'POST' });
+            const data = await res.json();
+            if (!data.ok && !(data.transactionsUpserted > 0)) {
+                throw new Error(data.error || data.errors?.[0] || 'Sync PayPal fallita');
+            }
+            setGatewaySyncMsg(
+                `PayPal: ${data.transactionsUpserted ?? 0} tx · ${data.feesUpserted ?? 0} fee · ${data.recordCount ?? 0} in cache`
+            );
+            await loadGateways();
+        } catch (e) {
+            setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync PayPal fallita');
+        } finally {
+            setSyncingPaypal(false);
         }
     };
 
@@ -1028,6 +1099,123 @@ export default function FinanceDashboardPage() {
                                             </div>
                                         )}
                                     </div>
+                                </div>
+
+                                {/* Sync API Stripe / PayPal dal 01/01/2026 */}
+                                <div className="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+                                        <div>
+                                            <h4 className="text-lg font-bold text-slate-900">
+                                                Sincronizzazione API Gateway (dal 01/01/2026)
+                                            </h4>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Balance transactions, commissioni e payout → Contabilità / Libro Mastro
+                                            </p>
+                                        </div>
+                                        <span className="inline-flex self-start px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-indigo-50 border border-indigo-200 text-indigo-700">
+                                            Sincronizzato da API
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        <button
+                                            type="button"
+                                            disabled={syncingStripe}
+                                            onClick={() => void runStripeSync()}
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
+                                        >
+                                            {syncingStripe ? (
+                                                <RefreshCw size={14} className="animate-spin" />
+                                            ) : (
+                                                <RefreshCw size={14} />
+                                            )}
+                                            Sincronizza Stripe (dal 01/01/2026)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={syncingPaypal}
+                                            onClick={() => void runPaypalSync()}
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-bold disabled:opacity-50"
+                                        >
+                                            {syncingPaypal ? (
+                                                <RefreshCw size={14} className="animate-spin" />
+                                            ) : (
+                                                <RefreshCw size={14} />
+                                            )}
+                                            Sincronizza PayPal (dal 01/01/2026)
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
+                                        <p>
+                                            Stripe — ultimo sync:{' '}
+                                            <strong>
+                                                {stripeSyncMeta?.lastSyncAt
+                                                    ? formatDateTime(stripeSyncMeta.lastSyncAt)
+                                                    : 'mai'}
+                                            </strong>{' '}
+                                            · record:{' '}
+                                            <strong>{stripeSyncMeta?.recordCount ?? 0}</strong>
+                                        </p>
+                                        <p>
+                                            PayPal — ultimo sync:{' '}
+                                            <strong>
+                                                {paypalSyncMeta?.lastSyncAt
+                                                    ? formatDateTime(paypalSyncMeta.lastSyncAt)
+                                                    : 'mai'}
+                                            </strong>{' '}
+                                            · record:{' '}
+                                            <strong>{paypalSyncMeta?.recordCount ?? 0}</strong>
+                                        </p>
+                                    </div>
+                                    {gatewaySyncMsg && (
+                                        <p className="text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                                            {gatewaySyncMsg}
+                                        </p>
+                                    )}
+
+                                    {(stripeSyncMeta?.movements?.length || 0) > 0 && (
+                                        <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                            <table className="w-full text-left text-xs min-w-[720px]">
+                                                <thead>
+                                                    <tr className="bg-slate-50 text-[10px] uppercase text-slate-400">
+                                                        <th className="px-3 py-2">Data</th>
+                                                        <th className="px-3 py-2">Tipo</th>
+                                                        <th className="px-3 py-2">ID</th>
+                                                        <th className="px-3 py-2 text-right">Lordo</th>
+                                                        <th className="px-3 py-2 text-right">Fee</th>
+                                                        <th className="px-3 py-2 text-right">Netto</th>
+                                                        <th className="px-3 py-2">Badge</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(stripeSyncMeta?.movements || []).slice(0, 40).map((m: any) => (
+                                                        <tr key={m.id || m.stripeId} className="border-t border-slate-50">
+                                                            <td className="px-3 py-2 whitespace-nowrap">
+                                                                {formatDateTime(m.createdAtStripe)}
+                                                            </td>
+                                                            <td className="px-3 py-2">{m.type}</td>
+                                                            <td className="px-3 py-2 font-mono text-[10px]">
+                                                                {m.stripeId}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right font-mono">
+                                                                €{((m.amountCents || 0) / 100).toFixed(2)}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right font-mono">
+                                                                €{((m.feeCents || 0) / 100).toFixed(2)}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right font-mono">
+                                                                €{((m.netCents || 0) / 100).toFixed(2)}
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <span className="inline-flex px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[10px]">
+                                                                    Sincronizzato da API
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Ultimi tentativi e transazioni su Stripe */}

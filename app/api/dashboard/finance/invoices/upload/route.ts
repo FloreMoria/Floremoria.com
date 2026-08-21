@@ -53,25 +53,22 @@ export async function POST(request: Request) {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
+        const filesN = summary.filesProcessed || 1;
         const message =
-            summary.imported > 0 || summary.updated > 0
-                ? `Importate ${summary.imported} · aggiornate ${summary.updated} fatture per un totale di ${totalEuro} €` +
-                  (summary.matchedFineco > 0
-                      ? ` • ${summary.matchedFineco} abbinate automaticamente ai movimenti Fineco`
-                      : '') +
-                  (summary.creditNotes > 0 ? ` • ${summary.creditNotes} note di credito` : '') +
-                  (summary.cancelledByCreditNote > 0
-                      ? ` • ${summary.cancelledByCreditNote} fatture stornate da NC`
-                      : '') +
-                  (summary.skippedDuplicates > 0
-                      ? ` • ${summary.skippedDuplicates} duplicati invariati saltati`
-                      : '')
-                : summary.skippedDuplicates > 0
-                  ? `Nessuna nuova fattura: ${summary.skippedDuplicates} già presenti (identiche).`
-                  : 'Nessuna fattura importata. Verifica che lo ZIP contenga XML FatturaPA o un CSV YouDoox/SDI.';
+            `${filesN} file elaborati: ${summary.passiveInvoices} passive, ${summary.foreignAutofatture} autofatture, ${summary.activeInvoices} attive, ${summary.skippedDuplicates} duplicati` +
+            (summary.imported > 0 || summary.updated > 0
+                ? ` · importate ${summary.imported} · aggiornate ${summary.updated} (${totalEuro} €)`
+                : '') +
+            (summary.matchedFineco > 0
+                ? ` · ${summary.matchedFineco} abbinate Fineco`
+                : '');
 
         return NextResponse.json({
-            ok: summary.imported > 0 || summary.updated > 0 || summary.skippedDuplicates > 0,
+            ok:
+                summary.imported > 0 ||
+                summary.updated > 0 ||
+                summary.skippedDuplicates > 0 ||
+                summary.activeInvoices > 0,
             message,
             summary,
         });

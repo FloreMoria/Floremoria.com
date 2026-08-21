@@ -592,11 +592,17 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     <input
                         ref={inputRef}
                         type="file"
+                        multiple
                         accept=".zip,.xml,.csv,.pdf,.png,.jpg,.jpeg,.webp"
                         className="hidden"
                         onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) void upload(f);
+                            const files = e.target.files;
+                            if (!files?.length) return;
+                            void (async () => {
+                                for (const f of Array.from(files)) {
+                                    await upload(f);
+                                }
+                            })();
                         }}
                     />
                     <button
@@ -610,7 +616,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                         ) : (
                             <UploadCloud size={14} />
                         )}
-                        Carica XML / ZIP / PDF
+                        Carica XML / ZIP (multi) / PDF
                     </button>
                 </div>
             </div>

@@ -24,6 +24,7 @@ export type LedgerSourceType =
     | 'MANUAL_EXPENSE'
     | 'SAAS_INVOICE'
     | 'STRIPE_MOVEMENT'
+    | 'PAYPAL_MOVEMENT'
     | 'CUSTOMER_RECEIPT'
     | 'JSON_ENTRY'
     | 'REVERSAL';

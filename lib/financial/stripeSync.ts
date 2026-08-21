@@ -387,9 +387,11 @@ export async function syncStripeServiceInvoices(params?: {
 /** Orchestrazione sync completa. */
 export async function runStripeFinanceSync(params?: {
     createdGte?: Date;
+    limitPages?: number;
 }): Promise<StripeSyncResult> {
     const createdGte =
         params?.createdGte || new Date(Date.now() - 400 * 24 * 60 * 60 * 1000); // ~13 mesi
+    const limitPages = params?.limitPages ?? 50;
 
     const errors: string[] = [];
     let movementsUpserted = 0;
@@ -397,7 +399,7 @@ export async function runStripeFinanceSync(params?: {
     let invoicesUpserted = 0;
 
     try {
-        const mov = await syncStripeBalanceMovements({ createdGte });
+        const mov = await syncStripeBalanceMovements({ createdGte, limitPages });
         movementsUpserted = mov.upserted;
         errors.push(...mov.errors);
     } catch (err) {
@@ -405,7 +407,7 @@ export async function runStripeFinanceSync(params?: {
     }
 
     try {
-        const po = await syncStripePayouts({ createdGte });
+        const po = await syncStripePayouts({ createdGte, limitPages: Math.min(limitPages, 20) });
         payoutsUpserted = po.upserted;
         errors.push(...po.errors);
     } catch (err) {
@@ -413,11 +415,32 @@ export async function runStripeFinanceSync(params?: {
     }
 
     try {
-        const inv = await syncStripeServiceInvoices({ monthsBack: 18 });
+        const inv = await syncStripeServiceInvoices({ monthsBack: 24 });
         invoicesUpserted = inv.upserted;
         errors.push(...inv.errors);
     } catch (err) {
         errors.push(`invoices: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Propaga fee Stripe nel libro mastro (idempotente via sourceKey)
+    try {
+        const { syncHistoricalLedgerFromSources } = await import(
+            '@/lib/financial/historicalLedgerSync'
+        );
+        await syncHistoricalLedgerFromSources();
+    } catch (err) {
+        errors.push(`ledger: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Meta ultimo sync
+    try {
+        await prisma.systemState.upsert({
+            where: { key: 'finance.stripe.last_sync' },
+            create: { key: 'finance.stripe.last_sync', value: new Date().toISOString() },
+            update: { value: new Date().toISOString() },
+        });
+    } catch {
+        /* ignore */
     }
 
     return {

@@ -22,6 +22,7 @@ import {
     bankDescriptionMatchesSaasVendor,
 } from '@/lib/financial/foreignAutofattura';
 import { recordInvoiceUpload } from '@/lib/financial/invoiceUploadHistory';
+import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'sdi-invoices');
 const BLOB_PREFIX = 'floremoria-finance/sdi-invoices';
@@ -37,7 +38,15 @@ export type SdiIngestSummary = {
     creditNotes: number;
     cancelledByCreditNote: number;
     foreignAutofatture: number;
+    /** Fatture passive fornitore (non autofattura). */
+    passiveInvoices: number;
+    /** Fatture emesse da FloreMoria (ricavi). */
+    activeInvoices: number;
+    /** File XML singoli elaborati (utile in ZIP multipli). */
+    filesProcessed: number;
     totalCents: number;
+    totalNetCents: number;
+    uploadId?: string;
     warnings: string[];
     skippedDetails: Array<{ fileName: string; reason: string }>;
     sampleVendors: string[];
@@ -143,8 +152,12 @@ function fingerprint(inv: {
 function resolveMetadataSource(
     inv: ParsedFatturaPa,
     channel: InvoiceIngestChannel
-): typeof FOREIGN_AUTOFATTURA_SOURCE | InvoiceIngestChannel {
-    if (inv.isForeignAutofattura || inv.isReverseCharge) return FOREIGN_AUTOFATTURA_SOURCE;
+): string {
+    const role = inv.invoiceRole || (inv.isForeignAutofattura ? 'AUTOFATTURA' : 'PASSIVE');
+    if (role === 'ACTIVE') return 'SDI_ACTIVE';
+    if (role === 'AUTOFATTURA' || inv.isForeignAutofattura || inv.isReverseCharge) {
+        return FOREIGN_AUTOFATTURA_SOURCE;
+    }
     return channel;
 }
 
@@ -154,21 +167,33 @@ function buildInvoiceMetadata(
     channel: InvoiceIngestChannel,
     extra?: Record<string, unknown>
 ): Prisma.InputJsonValue {
-    const source = resolveMetadataSource(inv, channel);
+    const role = inv.invoiceRole || (inv.isForeignAutofattura ? 'AUTOFATTURA' : 'PASSIVE');
+    const source =
+        role === 'ACTIVE'
+            ? 'SDI_ACTIVE'
+            : role === 'AUTOFATTURA'
+              ? FOREIGN_AUTOFATTURA_SOURCE
+              : channel;
     const isForeign = source === FOREIGN_AUTOFATTURA_SOURCE;
     return {
         source,
         ingestChannel: channel,
-        isDeductible: inv.docKind !== 'NOTA_CREDITO',
+        invoiceRole: role,
+        isDeductible: role !== 'ACTIVE' && inv.docKind !== 'NOTA_CREDITO',
+        isRevenue: role === 'ACTIVE',
         isReverseCharge: Boolean(inv.isReverseCharge || isForeign),
         isForeignAutofattura: Boolean(inv.isForeignAutofattura || isForeign),
         category: isForeign
             ? inv.foreignCategory || 'Software & Servizi SaaS Estero'
-            : null,
+            : role === 'ACTIVE'
+              ? 'Ricavi vendite / Fatture attive'
+              : null,
         tipoDocumento: inv.tipoDocumento || null,
         autofatturaType: inv.autofatturaType || null,
         dedupeKey: inv.dedupeKey,
         vendorVat: inv.vendorVat,
+        cedenteVat: inv.cedenteVat || inv.vendorVat,
+        cessionarioVat: inv.cessionarioVat || null,
         invoiceNumber: inv.invoiceNumber,
         docKind: inv.docKind,
         relatedInvoiceNumber: inv.relatedInvoiceNumber || null,
@@ -406,16 +431,28 @@ export async function reconcileInvoiceWithFineco(expense: {
 async function persistInvoice(
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
-    channel: InvoiceIngestChannel
+    channel: InvoiceIngestChannel,
+    uploadId?: string
 ) {
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
     const metaSource = resolveMetadataSource(inv, channel);
+    const role = inv.invoiceRole || (inv.isForeignAutofattura ? 'AUTOFATTURA' : 'PASSIVE');
     const contentType =
         channel === 'SDI_XLSX'
             ? archive.fileName.toLowerCase().endsWith('.csv')
                 ? 'text/csv'
                 : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             : 'application/xml';
+
+    // Attive: importi positivi (ricavo). Passive/autofattura: mantieni segno dal parser.
+    let totalCents = inv.totalCents;
+    let netCents = inv.isReverseCharge ? inv.totalCents : inv.netCents;
+    let vatCents = inv.isReverseCharge ? 0 : inv.vatCents;
+    if (role === 'ACTIVE') {
+        totalCents = Math.abs(inv.totalCents);
+        netCents = Math.abs(inv.netCents || inv.totalCents);
+        vatCents = Math.abs(inv.vatCents);
+    }
 
     const row = await prisma.manualFinanceExpense.create({
         data: {
@@ -425,16 +462,18 @@ async function persistInvoice(
             description:
                 inv.causale ||
                 `${
-                    inv.isForeignAutofattura
-                        ? `Autofattura ${inv.autofatturaType || 'TD17'}`
-                        : inv.docKind === 'NOTA_CREDITO'
-                          ? 'Nota di credito'
-                          : 'Fattura'
+                    role === 'ACTIVE'
+                        ? 'Fattura attiva'
+                        : inv.isForeignAutofattura
+                          ? `Autofattura ${inv.autofatturaType || 'TD17'}`
+                          : inv.docKind === 'NOTA_CREDITO'
+                            ? 'Nota di credito'
+                            : 'Fattura'
                 } n. ${inv.invoiceNumber}`,
-            totalCents: inv.totalCents,
+            totalCents,
             vatRate: inv.vatRate,
-            vatCents: inv.isReverseCharge ? 0 : inv.vatCents,
-            netCents: inv.isReverseCharge ? inv.totalCents : inv.netCents,
+            vatCents,
+            netCents,
             fileName: archive.fileName,
             contentType,
             sizeBytes: null,
@@ -443,12 +482,48 @@ async function persistInvoice(
             storageKind: archive.storageKind,
             periodKey: periodKeyFromDate(expenseDate),
             notes: `${metaSource} ${inv.dedupeKey}`,
-            metadataJson: buildInvoiceMetadata(inv, archive, channel),
+            metadataJson: buildInvoiceMetadata(inv, archive, channel, {
+                uploadId: uploadId || null,
+            }),
             reconciled: false,
         },
     });
 
     addAccountingEntries([toLedgerEntry(row.id, inv, channel)]);
+
+    if (role === 'ACTIVE') {
+        try {
+            await appendLedgerEntries([
+                {
+                    sourceKey: `SDI_ACTIVE:${inv.dedupeKey}`.slice(0, 180),
+                    sourceType: 'MANUAL_EXPENSE',
+                    sourceId: row.id,
+                    direction: 'ENTRATA',
+                    category: 'RICAVI_VENDITE',
+                    accountingDate: expenseDate,
+                    description: row.description,
+                    counterpartyName: inv.vendorName,
+                    counterpartyVat: inv.cessionarioVat || inv.vendorVat,
+                    netCents: Math.abs(netCents),
+                    vatRate: inv.vatRate,
+                    vatCents: Math.abs(vatCents),
+                    totalCents: Math.abs(totalCents),
+                    reconciliationStatus: 'UNMATCHED',
+                    documentRef: inv.invoiceNumber,
+                    attachmentUrl: archive.blobUrl,
+                    attachmentPath: archive.blobPath,
+                    metadataJson: {
+                        source: 'SDI_ACTIVE',
+                        dedupeKey: inv.dedupeKey,
+                        uploadId: uploadId || null,
+                    },
+                },
+            ]);
+        } catch (err) {
+            console.warn('[ingest] active ledger', err);
+        }
+    }
+
     return row;
 }
 
@@ -535,9 +610,14 @@ export async function ingestParsedPassiveInvoices(input: {
     let creditNotes = 0;
     let cancelledByCreditNote = 0;
     let foreignAutofatture = 0;
+    let passiveInvoices = 0;
+    let activeInvoices = 0;
     let totalCents = 0;
+    let totalNetCents = 0;
     const sampleVendors: string[] = [];
     const seenInBatch = new Set<string>();
+    const uploadId = `upl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const sourceFiles = new Set(input.invoices.map((i) => i.sourceFileName).filter(Boolean));
 
     let archive = {
         blobPath: null as string | null,
@@ -568,8 +648,13 @@ export async function ingestParsedPassiveInvoices(input: {
 
     for (const inv of input.invoices) {
         try {
+            const role =
+                inv.invoiceRole ||
+                (inv.isForeignAutofattura || inv.isReverseCharge ? 'AUTOFATTURA' : 'PASSIVE');
             if (inv.docKind === 'NOTA_CREDITO') creditNotes += 1;
-            if (inv.isForeignAutofattura || inv.isReverseCharge) foreignAutofatture += 1;
+            if (role === 'AUTOFATTURA') foreignAutofatture += 1;
+            else if (role === 'ACTIVE') activeInvoices += 1;
+            else passiveInvoices += 1;
 
             // Dedup interno al file (stessa fattura ripetuta nel report)
             const alreadyInBatch = [...seenInBatch].some((k) => dedupeKeysMatch(k, inv.dedupeKey));
@@ -612,7 +697,6 @@ export async function ingestParsedPassiveInvoices(input: {
                     continue;
                 }
 
-                // Stessa chiave ma dati diversi (correzione / report aggiornato) → update
                 const { row, amountChanged } = await updateExistingInvoice(
                     existing,
                     inv,
@@ -621,6 +705,7 @@ export async function ingestParsedPassiveInvoices(input: {
                 );
                 updated += 1;
                 totalCents += inv.totalCents;
+                totalNetCents += Math.abs(inv.netCents || inv.totalCents);
                 if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
                     sampleVendors.push(inv.vendorName);
                 }
@@ -630,7 +715,11 @@ export async function ingestParsedPassiveInvoices(input: {
 
                 cancelledByCreditNote += await markRelatedInvoiceCancelledByCreditNote(inv);
 
-                if (inv.docKind !== 'NOTA_CREDITO' && (!row.reconciled || amountChanged)) {
+                if (
+                    role !== 'ACTIVE' &&
+                    inv.docKind !== 'NOTA_CREDITO' &&
+                    (!row.reconciled || amountChanged)
+                ) {
                     const matched = await reconcileInvoiceWithFineco({
                         id: row.id,
                         vendorName: inv.vendorName,
@@ -645,17 +734,18 @@ export async function ingestParsedPassiveInvoices(input: {
                 continue;
             }
 
-            const row = await persistInvoice(inv, archive, input.source);
+            const row = await persistInvoice(inv, archive, input.source, uploadId);
             imported += 1;
             seenInBatch.add(inv.dedupeKey);
             totalCents += inv.totalCents;
+            totalNetCents += Math.abs(inv.netCents || inv.totalCents);
             if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
                 sampleVendors.push(inv.vendorName);
             }
 
             cancelledByCreditNote += await markRelatedInvoiceCancelledByCreditNote(inv);
 
-            if (inv.docKind !== 'NOTA_CREDITO') {
+            if (role !== 'ACTIVE' && inv.docKind !== 'NOTA_CREDITO') {
                 const matched = await reconcileInvoiceWithFineco({
                     id: row.id,
                     vendorName: inv.vendorName,
@@ -685,8 +775,10 @@ export async function ingestParsedPassiveInvoices(input: {
         }
     }
 
+    let recordedUploadId = uploadId;
     try {
-        await recordInvoiceUpload({
+        const recorded = await recordInvoiceUpload({
+            id: uploadId,
             channel: input.source,
             fileName: input.fileName,
             sizeBytes: input.buffer.byteLength,
@@ -694,7 +786,13 @@ export async function ingestParsedPassiveInvoices(input: {
             imported,
             updated,
             skippedDuplicates,
+            totalNetCents,
+            passiveCount: passiveInvoices,
+            foreignCount: foreignAutofatture,
+            activeCount: activeInvoices,
+            filesProcessed: Math.max(1, sourceFiles.size),
         });
+        recordedUploadId = recorded.id;
     } catch (err) {
         console.warn('[ingest] upload history', err);
     }
@@ -708,7 +806,12 @@ export async function ingestParsedPassiveInvoices(input: {
         creditNotes,
         cancelledByCreditNote,
         foreignAutofatture,
+        passiveInvoices,
+        activeInvoices,
+        filesProcessed: Math.max(1, sourceFiles.size),
         totalCents,
+        totalNetCents,
+        uploadId: recordedUploadId,
         warnings: warnings.slice(0, 40),
         skippedDetails: skippedDetails.slice(0, 40),
         sampleVendors,

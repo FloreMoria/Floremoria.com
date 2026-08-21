@@ -17,3 +17,4 @@
 [2026-08-21 11:34] fix(users): layout giardino utente con cognome in alto, badge stato cliente e riallineamento colonne.
 
 [2026-08-21 11:50] fix(orders): restyling tabella ordini con foto ingrandita, badge stato compatti e icone azione.
+[2026-08-21 15:20] feat(finance): sync Stripe/PayPal dal 01/01/2026, upload multi XML YouDoox con classificazione attiva/passiva/autofattura, Apri/Elimina file SDI/XLSX.

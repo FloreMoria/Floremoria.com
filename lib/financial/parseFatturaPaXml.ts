@@ -12,6 +12,9 @@ import {
     normalizeVendorVat,
 } from '@/lib/financial/invoiceDedupe';
 import { detectForeignAutofattura } from '@/lib/financial/foreignAutofattura';
+import { FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
+
+export type InvoiceRole = 'PASSIVE' | 'ACTIVE' | 'AUTOFATTURA';
 
 export type ParsedFatturaPa = {
     vendorName: string;
@@ -38,8 +41,35 @@ export type ParsedFatturaPa = {
     isReverseCharge?: boolean;
     autofatturaType?: 'TD17' | 'TD18' | 'TD19' | null;
     foreignCategory?: 'Software & Servizi SaaS Estero' | 'Hosting / Infrastruttura' | null;
+    /** PASSIVE fornitore | ACTIVE FloreMoria emittente | AUTOFATTURA TD17/18/19 */
+    invoiceRole?: InvoiceRole;
+    cedenteVat?: string | null;
+    cessionarioVat?: string | null;
     rawPreview?: string;
 };
+
+function vatDigits(v: string | null | undefined): string {
+    return String(v || '').replace(/\D/g, '');
+}
+
+function isFloremoriaVat(vat: string | null | undefined): boolean {
+    const dig = vatDigits(vat);
+    const ours = vatDigits(FLOREMORIA_LEGAL_ENTITY.vatNumber);
+    return Boolean(dig && ours && dig === ours);
+}
+
+function classifyInvoiceRole(input: {
+    tipoDocumento: string;
+    isForeignAutofattura: boolean;
+    cedenteVat: string | null;
+}): InvoiceRole {
+    const td = input.tipoDocumento.toUpperCase();
+    if (td === 'TD17' || td === 'TD18' || td === 'TD19' || input.isForeignAutofattura) {
+        return 'AUTOFATTURA';
+    }
+    if (isFloremoriaVat(input.cedenteVat)) return 'ACTIVE';
+    return 'PASSIVE';
+}
 
 export type ParseFatturaBatchResult = {
     invoices: ParsedFatturaPa[];
@@ -247,6 +277,24 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         causale: descriptionParts.join(' '),
     });
 
+    const cessionario =
+        extractXmlTag(xml, 'CessionarioCommittente') ||
+        extractXmlTag(xml, 'CessionarioCommittenteDTE') ||
+        '';
+    const cessionarioIdCodice = textOf(extractXmlTag(cessionario, 'IdCodice'));
+    const cessionarioIdPaese = textOf(extractXmlTag(cessionario, 'IdPaese')) || 'IT';
+    const cessionarioVat = normalizeVendorVat(
+        cessionarioIdCodice
+            ? `${cessionarioIdPaese}${cessionarioIdCodice}`
+            : textOf(extractXmlTag(cessionario, 'CodiceFiscale')) || null
+    );
+
+    const invoiceRole = classifyInvoiceRole({
+        tipoDocumento,
+        isForeignAutofattura: Boolean(foreign.isForeignAutofattura),
+        cedenteVat: vendorVat,
+    });
+
     return {
         vendorName: vendorName.slice(0, 160),
         vendorVat,
@@ -263,10 +311,13 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         docKind,
         relatedInvoiceNumber,
         tipoDocumento: tipoDocumento || null,
-        isForeignAutofattura: foreign.isForeignAutofattura,
-        isReverseCharge: foreign.isReverseCharge,
+        isForeignAutofattura: foreign.isForeignAutofattura || invoiceRole === 'AUTOFATTURA',
+        isReverseCharge: foreign.isReverseCharge || invoiceRole === 'AUTOFATTURA',
         autofatturaType: foreign.autofatturaType,
         foreignCategory: foreign.category,
+        invoiceRole,
+        cedenteVat: vendorVat,
+        cessionarioVat,
         rawPreview: xml.slice(0, 240),
     };
 }

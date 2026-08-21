@@ -55,8 +55,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
         void loadUploads();
     }, [loadUploads]);
 
-    const upload = async (file: File) => {
-        setDupWarn(null);
+    const uploadOne = async (file: File): Promise<string | null> => {
         try {
             const check = await fetch(
                 `/api/dashboard/finance/invoices/uploads?channel=SDI_XML&checkFileName=${encodeURIComponent(file.name)}`
@@ -74,42 +73,57 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     `Il file «${file.name}» risulta già caricato (${when}, ${checked.data.upload?.invoiceCount ?? '?'} fatture).\n\nVuoi caricarlo di nuovo? I duplicati invariati verranno saltati.`
                 );
                 if (!ok) {
-                    setDupWarn(`Caricamento annullato: «${file.name}» già presente nello storico.`);
-                    if (inputRef.current) inputRef.current.value = '';
-                    return;
+                    setDupWarn(`Saltato: «${file.name}» già presente.`);
+                    return null;
                 }
-                setDupWarn(`Attenzione: file già presente — procedo con re-import di «${file.name}».`);
+                setDupWarn(`Attenzione: re-import di «${file.name}».`);
             }
         } catch {
             /* proceed */
         }
 
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch('/api/dashboard/finance/invoices/upload', {
+            method: 'POST',
+            body: form,
+        });
+        const parsed = await readJsonResponse<{
+            ok?: boolean;
+            error?: string;
+            message?: string;
+            summary?: IngestSummary;
+        }>(res);
+        if (!parsed.ok && !parsed.data?.summary?.skippedDuplicates) {
+            throw new Error(parsed.error || parsed.data?.message || `Upload fallito: ${file.name}`);
+        }
+        return parsed.data?.message || `OK ${file.name}`;
+    };
+
+    const uploadMany = async (files: FileList | File[]) => {
+        const list = Array.from(files).filter(Boolean);
+        if (!list.length) return;
         setUploading(true);
         setError(null);
         setMessage(null);
         setSummary(null);
+        setDupWarn(null);
+        const notes: string[] = [];
         try {
-            const form = new FormData();
-            form.append('file', file);
-            const res = await fetch('/api/dashboard/finance/invoices/upload', {
-                method: 'POST',
-                body: form,
-            });
-            const parsed = await readJsonResponse<{
-                ok?: boolean;
-                error?: string;
-                message?: string;
-                summary?: IngestSummary;
-            }>(res);
-            if (!parsed.ok && !parsed.data?.summary?.skippedDuplicates) {
-                throw new Error(parsed.error || parsed.data?.message || 'Upload fallito');
+            for (const f of list) {
+                const msg = await uploadOne(f);
+                if (msg) notes.push(msg);
             }
-            setMessage(parsed.data?.message || 'Import completato');
-            setSummary(parsed.data?.summary || null);
+            setMessage(
+                notes.length
+                    ? notes.join(' | ')
+                    : 'Nessun file importato (tutti annullati o già presenti).'
+            );
             await loadUploads();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
+            await loadUploads();
         } finally {
             setUploading(false);
             if (inputRef.current) inputRef.current.value = '';
@@ -143,8 +157,8 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                 onDrop={(e) => {
                     e.preventDefault();
                     setDragOver(false);
-                    const f = e.dataTransfer.files?.[0];
-                    if (f) void upload(f);
+                    const files = e.dataTransfer.files;
+                    if (files?.length) void uploadMany(files);
                 }}
                 className={`rounded-2xl border-2 border-dashed px-4 py-5 transition-colors ${
                     dragOver
@@ -155,7 +169,10 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="flex items-center gap-3 text-sm text-slate-600">
                         <UploadCloud className="text-[#c5a880] shrink-0" size={22} />
-                        <span>Trascina qui lo ZIP fatture elettroniche oppure seleziona un file</span>
+                        <span>
+                            Trascina ZIP o più XML FatturaPA (selezione multipla), oppure seleziona i
+                            file
+                        </span>
                     </div>
                     <button
                         type="button"
@@ -168,16 +185,17 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                         ) : (
                             <FileArchive size={14} />
                         )}
-                        {uploading ? 'Importazione…' : 'Carica ZIP Fatture Elettroniche (YouDoox / SDI)'}
+                        {uploading ? 'Importazione…' : 'Carica ZIP / XML (multi)'}
                     </button>
                     <input
                         ref={inputRef}
                         type="file"
+                        multiple
                         accept=".zip,.xml,.csv,application/zip,text/xml,text/csv"
                         className="hidden"
                         onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) void upload(f);
+                            const files = e.target.files;
+                            if (files?.length) void uploadMany(files);
                         }}
                     />
                 </div>
@@ -187,7 +205,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     File caricati ({uploads.length})
                 </p>
-                <UploadedInvoicesFileList uploads={uploads} />
+                <UploadedInvoicesFileList uploads={uploads} onChanged={() => void loadUploads()} />
             </div>
 
             {dupWarn && (

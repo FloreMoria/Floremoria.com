@@ -1,0 +1,294 @@
+/**
+ * Sync PayPal Transaction Search API → ledger + SystemState cache.
+ * Assumption: PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET (+ PAYPAL_MODE=live|sandbox).
+ */
+
+import prisma from '@/lib/prisma';
+import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
+
+const SYNC_META_KEY = 'finance.paypal.last_sync';
+const TX_CACHE_KEY = 'finance.paypal.transactions';
+
+export type PaypalSyncResult = {
+    ok: boolean;
+    transactionsUpserted: number;
+    feesUpserted: number;
+    errors: string[];
+    lastSyncAt: string;
+};
+
+type PaypalTx = {
+    id: string;
+    status: string;
+    grossCents: number;
+    feeCents: number;
+    netCents: number;
+    currency: string;
+    transactionDate: string;
+    description: string;
+    payerEmail?: string | null;
+};
+
+function paypalBaseUrl(): string {
+    const mode = (process.env.PAYPAL_MODE || 'live').toLowerCase();
+    return mode === 'sandbox'
+        ? 'https://api-m.sandbox.paypal.com'
+        : 'https://api-m.paypal.com';
+}
+
+async function getPaypalAccessToken(): Promise<string> {
+    const clientId = process.env.PAYPAL_CLIENT_ID?.trim();
+    const secret = process.env.PAYPAL_CLIENT_SECRET?.trim();
+    if (!clientId || !secret) {
+        throw new Error('PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET non configurati');
+    }
+    const auth = Buffer.from(`${clientId}:${secret}`).toString('base64');
+    const res = await fetch(`${paypalBaseUrl()}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+    });
+    if (!res.ok) {
+        throw new Error(`PayPal OAuth fallito (HTTP ${res.status})`);
+    }
+    const data = (await res.json()) as { access_token?: string };
+    if (!data.access_token) throw new Error('PayPal OAuth: access_token assente');
+    return data.access_token;
+}
+
+function parseAmount(raw: string | undefined, currency?: string): number {
+    if (!raw) return 0;
+    const n = Number(String(raw).replace(',', '.'));
+    if (!Number.isFinite(n)) return 0;
+    // PayPal amounts are decimal currency units
+    return Math.round(n * 100);
+}
+
+async function fetchPaypalTransactions(params: {
+    startDate: Date;
+    endDate: Date;
+    accessToken: string;
+}): Promise<{ txs: PaypalTx[]; errors: string[] }> {
+    const errors: string[] = [];
+    const txs: PaypalTx[] = [];
+    let page = 1;
+    const maxPages = 40;
+
+    while (page <= maxPages) {
+        const url = new URL(`${paypalBaseUrl()}/v1/reporting/transactions`);
+        url.searchParams.set('start_date', params.startDate.toISOString());
+        url.searchParams.set('end_date', params.endDate.toISOString());
+        url.searchParams.set('fields', 'all');
+        url.searchParams.set('page_size', '100');
+        url.searchParams.set('page', String(page));
+
+        const res = await fetch(url.toString(), {
+            headers: {
+                Authorization: `Bearer ${params.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            errors.push(`PayPal transactions page ${page}: HTTP ${res.status} ${body.slice(0, 180)}`);
+            break;
+        }
+
+        const data = (await res.json()) as {
+            transaction_details?: Array<{
+                transaction_info?: {
+                    transaction_id?: string;
+                    transaction_status?: string;
+                    transaction_amount?: { value?: string; currency_code?: string };
+                    fee_amount?: { value?: string; currency_code?: string };
+                    transaction_initiation_date?: string;
+                    transaction_subject?: string;
+                    transaction_note?: string;
+                };
+                payer_info?: { email_address?: string };
+            }>;
+            total_pages?: number;
+        };
+
+        const details = data.transaction_details || [];
+        for (const d of details) {
+            const info = d.transaction_info;
+            if (!info?.transaction_id) continue;
+            const currency = info.transaction_amount?.currency_code || 'EUR';
+            if (currency.toUpperCase() !== 'EUR') continue;
+            const grossCents = parseAmount(info.transaction_amount?.value);
+            const feeCents = Math.abs(parseAmount(info.fee_amount?.value));
+            const netCents = grossCents - (grossCents >= 0 ? feeCents : -feeCents);
+            txs.push({
+                id: info.transaction_id,
+                status: info.transaction_status || 'UNKNOWN',
+                grossCents,
+                feeCents,
+                netCents,
+                currency: currency.toLowerCase(),
+                transactionDate:
+                    info.transaction_initiation_date || new Date().toISOString(),
+                description:
+                    info.transaction_subject ||
+                    info.transaction_note ||
+                    `PayPal ${info.transaction_id}`,
+                payerEmail: d.payer_info?.email_address || null,
+            });
+        }
+
+        const totalPages = data.total_pages || 1;
+        if (page >= totalPages || details.length === 0) break;
+        page += 1;
+    }
+
+    return { txs, errors };
+}
+
+export async function runPaypalFinanceSync(params?: {
+    createdGte?: Date;
+}): Promise<PaypalSyncResult> {
+    const createdGte = params?.createdGte || new Date('2026-01-01T00:00:00.000Z');
+    const endDate = new Date();
+    const errors: string[] = [];
+    let transactionsUpserted = 0;
+    let feesUpserted = 0;
+
+    try {
+        const accessToken = await getPaypalAccessToken();
+        // PayPal richiede finestre ≤ 31 giorni: spezza per mesi
+        const cursor = new Date(createdGte);
+        const allTxs: PaypalTx[] = [];
+        while (cursor < endDate) {
+            const chunkEnd = new Date(cursor);
+            chunkEnd.setUTCDate(chunkEnd.getUTCDate() + 30);
+            if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
+            const { txs, errors: chunkErr } = await fetchPaypalTransactions({
+                startDate: new Date(cursor),
+                endDate: chunkEnd,
+                accessToken,
+            });
+            allTxs.push(...txs);
+            errors.push(...chunkErr);
+            cursor.setTime(chunkEnd.getTime() + 1000);
+            if (chunkErr.length) break;
+        }
+
+        const ledger = [];
+        for (const tx of allTxs) {
+            const accountingDate = new Date(tx.transactionDate);
+            if (Number.isNaN(accountingDate.getTime())) continue;
+
+            if (tx.grossCents !== 0) {
+                ledger.push({
+                    sourceKey: `PAYPAL_TX:${tx.id}`.slice(0, 180),
+                    sourceType: 'PAYPAL_MOVEMENT' as const,
+                    sourceId: tx.id.slice(0, 128),
+                    direction: (tx.grossCents >= 0 ? 'ENTRATA' : 'USCITA') as 'ENTRATA' | 'USCITA',
+                    category: (tx.grossCents >= 0 ? 'RICAVI_VENDITE' : 'ALTRI_COSTI') as
+                        | 'RICAVI_VENDITE'
+                        | 'ALTRI_COSTI',
+                    accountingDate,
+                    description: tx.description.slice(0, 2000),
+                    counterpartyName: tx.payerEmail || 'PayPal',
+                    netCents: tx.grossCents,
+                    vatRate: 0,
+                    vatCents: 0,
+                    totalCents: tx.grossCents,
+                    reconciliationStatus: 'UNMATCHED' as const,
+                    documentRef: tx.id,
+                    metadataJson: {
+                        provider: 'paypal',
+                        feeCents: tx.feeCents,
+                        netCents: tx.netCents,
+                        status: tx.status,
+                        syncedFromApi: true,
+                    },
+                });
+                transactionsUpserted += 1;
+            }
+
+            if (tx.feeCents > 0) {
+                ledger.push({
+                    sourceKey: `PAYPAL_FEE:${tx.id}`.slice(0, 180),
+                    sourceType: 'PAYPAL_MOVEMENT' as const,
+                    sourceId: `fee_${tx.id}`.slice(0, 128),
+                    direction: 'USCITA' as const,
+                    category: 'ONERI_BANCARI' as const,
+                    accountingDate,
+                    description: `Commissione PayPal — ${tx.id}`,
+                    counterpartyName: 'PayPal',
+                    netCents: -Math.abs(tx.feeCents),
+                    vatRate: 0,
+                    vatCents: 0,
+                    totalCents: -Math.abs(tx.feeCents),
+                    reconciliationStatus: 'MATCHED' as const,
+                    documentRef: tx.id,
+                    metadataJson: { provider: 'paypal', syncedFromApi: true },
+                });
+                feesUpserted += 1;
+            }
+        }
+
+        if (ledger.length) {
+            await appendLedgerEntries(ledger);
+        }
+
+        const lastSyncAt = new Date().toISOString();
+        await prisma.systemState.upsert({
+            where: { key: SYNC_META_KEY },
+            create: { key: SYNC_META_KEY, value: lastSyncAt },
+            update: { value: lastSyncAt },
+        });
+        await prisma.systemState.upsert({
+            where: { key: TX_CACHE_KEY },
+            create: {
+                key: TX_CACHE_KEY,
+                value: JSON.stringify(allTxs.slice(0, 500)),
+            },
+            update: { value: JSON.stringify(allTxs.slice(0, 500)) },
+        });
+
+        return {
+            ok: errors.length === 0,
+            transactionsUpserted,
+            feesUpserted,
+            errors,
+            lastSyncAt,
+        };
+    } catch (err) {
+        errors.push(err instanceof Error ? err.message : String(err));
+        return {
+            ok: false,
+            transactionsUpserted,
+            feesUpserted,
+            errors,
+            lastSyncAt: new Date().toISOString(),
+        };
+    }
+}
+
+export async function getPaypalSyncStatus(): Promise<{
+    lastSyncAt: string | null;
+    transactions: PaypalTx[];
+    count: number;
+}> {
+    const [meta, cache] = await Promise.all([
+        prisma.systemState.findUnique({ where: { key: SYNC_META_KEY } }),
+        prisma.systemState.findUnique({ where: { key: TX_CACHE_KEY } }),
+    ]);
+    let transactions: PaypalTx[] = [];
+    try {
+        transactions = cache?.value ? (JSON.parse(cache.value) as PaypalTx[]) : [];
+    } catch {
+        transactions = [];
+    }
+    return {
+        lastSyncAt: meta?.value || null,
+        transactions: Array.isArray(transactions) ? transactions : [],
+        count: Array.isArray(transactions) ? transactions.length : 0,
+    };
+}

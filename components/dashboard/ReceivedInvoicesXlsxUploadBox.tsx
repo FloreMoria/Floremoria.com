@@ -172,11 +172,18 @@ export default function ReceivedInvoicesXlsxUploadBox({ onImported }: Props) {
                     <input
                         ref={inputRef}
                         type="file"
+                        multiple
                         accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
                         className="hidden"
                         onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) void upload(f);
+                            const files = e.target.files;
+                            if (!files?.length) return;
+                            // Sequenziale: un report alla volta
+                            void (async () => {
+                                for (const f of Array.from(files)) {
+                                    await upload(f);
+                                }
+                            })();
                         }}
                     />
                 </div>
@@ -186,7 +193,7 @@ export default function ReceivedInvoicesXlsxUploadBox({ onImported }: Props) {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Report caricati ({uploads.length})
                 </p>
-                <UploadedInvoicesFileList uploads={uploads} />
+                <UploadedInvoicesFileList uploads={uploads} onChanged={() => void loadUploads()} />
             </div>
 
             {dupWarn && (

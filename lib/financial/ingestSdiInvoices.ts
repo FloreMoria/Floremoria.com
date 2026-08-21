@@ -21,6 +21,7 @@ import {
     SAAS_FOREIGN_VENDOR_RE,
     bankDescriptionMatchesSaasVendor,
 } from '@/lib/financial/foreignAutofattura';
+import { recordInvoiceUpload } from '@/lib/financial/invoiceUploadHistory';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'sdi-invoices');
 const BLOB_PREFIX = 'floremoria-finance/sdi-invoices';
@@ -682,6 +683,20 @@ export async function ingestParsedPassiveInvoices(input: {
                 /* ignore */
             }
         }
+    }
+
+    try {
+        await recordInvoiceUpload({
+            channel: input.source,
+            fileName: input.fileName,
+            sizeBytes: input.buffer.byteLength,
+            invoiceCount: input.invoices.length,
+            imported,
+            updated,
+            skippedDuplicates,
+        });
+    } catch (err) {
+        console.warn('[ingest] upload history', err);
     }
 
     return {

@@ -4,9 +4,12 @@
  * Upload massivo fatture elettroniche SDI / YouDoox (ZIP XML o CSV).
  */
 
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileArchive, Loader2, UploadCloud } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import UploadedInvoicesFileList, {
+    type UploadedFileRow,
+} from '@/components/dashboard/UploadedInvoicesFileList';
 
 type Props = {
     onImported?: () => void;
@@ -32,8 +35,55 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<IngestSummary | null>(null);
+    const [uploads, setUploads] = useState<UploadedFileRow[]>([]);
+    const [dupWarn, setDupWarn] = useState<string | null>(null);
+
+    const loadUploads = useCallback(async () => {
+        try {
+            const res = await fetch('/api/dashboard/finance/invoices/uploads?channel=SDI_XML');
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                uploads?: UploadedFileRow[];
+            }>(res);
+            if (parsed.ok) setUploads(parsed.data?.uploads || []);
+        } catch {
+            /* silent */
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadUploads();
+    }, [loadUploads]);
 
     const upload = async (file: File) => {
+        setDupWarn(null);
+        try {
+            const check = await fetch(
+                `/api/dashboard/finance/invoices/uploads?channel=SDI_XML&checkFileName=${encodeURIComponent(file.name)}`
+            );
+            const checked = await readJsonResponse<{
+                ok?: boolean;
+                exists?: boolean;
+                upload?: { uploadedAt?: string; invoiceCount?: number };
+            }>(check);
+            if (checked.data?.exists) {
+                const when = checked.data.upload?.uploadedAt
+                    ? new Date(checked.data.upload.uploadedAt).toLocaleString('it-IT')
+                    : 'in precedenza';
+                const ok = window.confirm(
+                    `Il file «${file.name}» risulta già caricato (${when}, ${checked.data.upload?.invoiceCount ?? '?'} fatture).\n\nVuoi caricarlo di nuovo? I duplicati invariati verranno saltati.`
+                );
+                if (!ok) {
+                    setDupWarn(`Caricamento annullato: «${file.name}» già presente nello storico.`);
+                    if (inputRef.current) inputRef.current.value = '';
+                    return;
+                }
+                setDupWarn(`Attenzione: file già presente — procedo con re-import di «${file.name}».`);
+            }
+        } catch {
+            /* proceed */
+        }
+
         setUploading(true);
         setError(null);
         setMessage(null);
@@ -56,6 +106,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
             }
             setMessage(parsed.data?.message || 'Import completato');
             setSummary(parsed.data?.summary || null);
+            await loadUploads();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
@@ -131,6 +182,19 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     />
                 </div>
             </div>
+
+            <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    File caricati ({uploads.length})
+                </p>
+                <UploadedInvoicesFileList uploads={uploads} />
+            </div>
+
+            {dupWarn && (
+                <div className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                    {dupWarn}
+                </div>
+            )}
 
             {message && (
                 <div className="text-xs text-slate-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 space-y-1">

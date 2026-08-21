@@ -4,8 +4,8 @@
  * Autofatture Estere: generatore XML TD17/TD18 (YouDoox) + upload XML/ZIP/PDF.
  */
 
-import { useRef, useState } from 'react';
-import { Download, Globe2, Loader2, UploadCloud } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronDown, Download, Globe2, Loader2, UploadCloud } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 type Props = {
@@ -29,6 +29,22 @@ type VendorPreset = {
     defaultDescrizione: string;
 };
 
+type AutofatturaHistoryItem = {
+    id: string;
+    documentNumber: string;
+    vendorName: string;
+    autofatturaDate: string;
+    foreignInvoiceDate: string | null;
+    foreignInvoiceNumber: string | null;
+    imponibileCents: number;
+    vatCents: number;
+    totaleCents: number;
+    docType: string;
+    reconciled: boolean;
+    fileName: string | null;
+    createdAt: string;
+};
+
 const PRESETS: VendorPreset[] = [
     { id: 'openai', label: 'OpenAI Ireland Ltd', defaultDocType: 'TD17', defaultDescrizione: 'SERVIZI' },
     { id: 'vercel', label: 'Vercel Inc.', defaultDocType: 'TD17', defaultDescrizione: 'SERVIZI HOSTING / EDGE' },
@@ -47,6 +63,20 @@ function downloadXml(fileName: string, xml: string) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function euro(cents: number): string {
+    return (Math.abs(cents) / 100).toLocaleString('it-IT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function formatItDate(iso: string | null): string {
+    if (!iso) return '—';
+    const m = iso.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    return iso;
 }
 
 export default function ForeignAutofattureUploadBox({ onImported }: Props) {
@@ -74,6 +104,32 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const [autofatturaType, setAutofatturaType] = useState<'TD17' | 'TD18' | 'TD19'>('TD17');
     const [countryCode, setCountryCode] = useState('US');
     const [jurisdiction, setJurisdiction] = useState<'UE' | 'EXTRA_UE'>('EXTRA_UE');
+
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const [history, setHistory] = useState<AutofatturaHistoryItem[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [redownloadingId, setRedownloadingId] = useState<string | null>(null);
+
+    const loadHistory = useCallback(async () => {
+        setHistoryLoading(true);
+        try {
+            const res = await fetch('/api/dashboard/finance/autofatture');
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                items?: AutofatturaHistoryItem[];
+                count?: number;
+            }>(res);
+            if (parsed.ok) setHistory(parsed.data?.items || []);
+        } catch {
+            /* silent */
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadHistory();
+    }, [loadHistory]);
 
     const onVendorChange = (id: string) => {
         setVendorId(id);
@@ -113,11 +169,34 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
             }
             downloadXml(parsed.data.fileName, parsed.data.xml);
             setMessage(parsed.data.message || 'XML scaricato');
+            await loadHistory();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Generazione fallita');
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const redownloadXml = async (id: string) => {
+        setRedownloadingId(id);
+        setError(null);
+        try {
+            const res = await fetch(`/api/dashboard/finance/autofatture/${id}/xml`);
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                error?: string;
+                xml?: string;
+                fileName?: string;
+            }>(res);
+            if (!parsed.ok || !parsed.data?.xml || !parsed.data?.fileName) {
+                throw new Error(parsed.error || 'XML non disponibile');
+            }
+            downloadXml(parsed.data.fileName, parsed.data.xml);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Riscarica fallita');
+        } finally {
+            setRedownloadingId(null);
         }
     };
 
@@ -156,6 +235,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
             }
             setMessage(parsed.data?.message || 'Import completato');
             setSummary(parsed.data?.summary || null);
+            await loadHistory();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
@@ -247,6 +327,117 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     Numero doc. progressivo <span className="font-mono">00000N-AAAA-EST</span> · IVA
                     22% in reverse charge · registrazione Contabilità + match Fineco
                 </p>
+            </div>
+
+            {/* Storico autofatture */}
+            <div className="rounded-2xl border border-indigo-100 overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setHistoryOpen((o) => !o);
+                        if (!historyOpen) void loadHistory();
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-indigo-50/50 hover:bg-indigo-50 text-left"
+                >
+                    <span className="text-[11px] font-bold text-indigo-900">
+                        Visualizza Storico Autofatture Create
+                        <span className="ml-2 inline-flex min-w-[1.5rem] justify-center px-1.5 py-0.5 rounded-full bg-indigo-700 text-white text-[10px]">
+                            {history.length}
+                        </span>
+                    </span>
+                    <ChevronDown
+                        size={16}
+                        className={`text-indigo-700 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
+                    />
+                </button>
+                {historyOpen && (
+                    <div className="max-h-[320px] overflow-auto border-t border-indigo-100">
+                        {historyLoading ? (
+                            <p className="px-3 py-4 text-xs text-slate-400 flex items-center gap-2">
+                                <Loader2 size={14} className="animate-spin" /> Caricamento storico…
+                            </p>
+                        ) : history.length === 0 ? (
+                            <p className="px-3 py-4 text-xs text-slate-400">
+                                Nessuna autofattura generata ancora.
+                            </p>
+                        ) : (
+                            <table className="w-full text-[11px] min-w-[640px]">
+                                <thead className="sticky top-0 bg-white">
+                                    <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                        <th className="px-2.5 py-2 font-bold">N. Doc</th>
+                                        <th className="px-2.5 py-2 font-bold">Fornitore</th>
+                                        <th className="px-2.5 py-2 font-bold">Date</th>
+                                        <th className="px-2.5 py-2 font-bold text-right">Importi</th>
+                                        <th className="px-2.5 py-2 font-bold">Fineco</th>
+                                        <th className="px-2.5 py-2 font-bold text-right">Azione</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {history.map((h) => (
+                                        <tr key={h.id} className="border-t border-slate-50 align-top">
+                                            <td className="px-2.5 py-2">
+                                                <div className="font-mono font-semibold text-slate-800">
+                                                    {h.documentNumber}
+                                                </div>
+                                                <div className="text-[10px] text-indigo-700 font-bold">
+                                                    {h.docType}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 py-2 max-w-[140px]">
+                                                <div className="truncate font-medium text-slate-800" title={h.vendorName}>
+                                                    {h.vendorName}
+                                                </div>
+                                                {h.foreignInvoiceNumber && (
+                                                    <div className="text-[10px] text-slate-400 truncate">
+                                                        rif. {h.foreignInvoiceNumber}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-2.5 py-2 whitespace-nowrap text-slate-600">
+                                                <div>AF {formatItDate(h.autofatturaDate)}</div>
+                                                <div className="text-[10px] text-slate-400">
+                                                    Orig. {formatItDate(h.foreignInvoiceDate)}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                                                <div>Imp. €{euro(h.imponibileCents)}</div>
+                                                <div className="text-[10px] text-slate-400">
+                                                    IVA €{euro(h.vatCents)} · Tot €{euro(h.totaleCents)}
+                                                </div>
+                                            </td>
+                                            <td className="px-2.5 py-2">
+                                                {h.reconciled ? (
+                                                    <span className="inline-flex px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[10px]">
+                                                        Abbinato
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-100 font-bold text-[10px]">
+                                                        Non abbinato
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-2.5 py-2 text-right">
+                                                <button
+                                                    type="button"
+                                                    disabled={redownloadingId === h.id}
+                                                    onClick={() => void redownloadXml(h.id)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 text-indigo-800 text-[10px] font-bold disabled:opacity-50"
+                                                >
+                                                    {redownloadingId === h.id ? (
+                                                        <Loader2 size={11} className="animate-spin" />
+                                                    ) : (
+                                                        <Download size={11} />
+                                                    )}
+                                                    Riscarica XML
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Upload esistente */}

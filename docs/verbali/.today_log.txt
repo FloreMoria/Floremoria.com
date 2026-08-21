@@ -7,3 +7,4 @@
 
 [2026-08-21 10:14] fix(users/deceased): eliminazione orfani e utenti test, ui tabella compatta, fix prefissi esteri e posizionamento modale.
 
+[2026-08-21 10:26] feat(finance): elenco file caricati SDI/XLSX con avviso duplicati; storico autofatture TD17/TD18 con Riscarica XML.

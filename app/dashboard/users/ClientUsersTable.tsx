@@ -19,6 +19,8 @@ import {
     CheckCircle2,
     Ban,
     ShoppingBag,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 
 import Image from 'next/image';
@@ -32,9 +34,9 @@ import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 
 const formatITDate = (dateStr: string | null) => {
-    if (!dateStr) return '';
+    if (!dateStr) return '—';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
+    if (isNaN(d.getTime())) return '—';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     let year = d.getFullYear();
@@ -42,8 +44,8 @@ const formatITDate = (dateStr: string | null) => {
     if (year === 43) year = 1943;
     if (year === 13) year = 2013;
 
-    const paddedYear = String(year).padStart(4, '0');
-    return `${day}/${month}/${paddedYear}`;
+    const shortYear = String(year).slice(-2);
+    return `${day}/${month}/${shortYear}`;
 };
 
 type UserRoleFilter = 'ALL' | 'ADMIN' | 'CUSTOMER' | 'FLORIST';
@@ -346,21 +348,21 @@ export default function ClientUsersTable({
         switch (role) {
             case 'ADMIN':
                 return (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                        <Shield size={12} /> Admin
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                        <Shield size={11} /> Admin
                     </span>
                 );
             case 'FLORIST':
             case 'PARTNER':
                 return (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                         🌸 Fiorista
                     </span>
                 );
             default:
                 return (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        <User size={12} /> Utente
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        <User size={11} /> Utente
                     </span>
                 );
         }
@@ -369,14 +371,14 @@ export default function ClientUsersTable({
     const getStatusBadge = (status: string) => {
         if (status === 'SUSPENDED') {
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                    <Ban size={12} /> Sospeso
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                    <Ban size={11} /> Sospeso
                 </span>
             );
         }
         return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <CheckCircle2 size={12} /> Attivo
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <CheckCircle2 size={11} /> Attivo
             </span>
         );
     };
@@ -482,7 +484,7 @@ export default function ClientUsersTable({
                             <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                                 <th
                                     onClick={() => toggleSortHeader('name')}
-                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors w-auto lg:w-[24%]"
+                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors w-auto lg:w-[28%]"
                                 >
                                     <div className="flex items-center gap-1.5">
                                         <span>Giardino Utente</span>
@@ -495,9 +497,8 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 w-auto lg:w-[13%]">Ruolo & Stato</th>
-                                <th className="px-4 py-3.5 w-auto lg:w-[24%]">Contatti</th>
-                                <th className="px-4 py-3.5 w-auto lg:w-[12%]">Città</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[20%]">Ruolo / Stato</th>
+                                <th className="px-4 py-3.5 w-auto lg:w-[26%]">Contatti</th>
                                 <th
                                     onClick={() => toggleSortHeader('orders')}
                                     className="px-3 py-3.5 cursor-pointer hover:text-black transition-colors text-center w-auto lg:w-[8%]"
@@ -513,10 +514,10 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 text-right w-auto lg:w-[9%]">Spesa</th>
+                                <th className="px-4 py-3.5 text-right w-auto lg:w-[8%]">Spesa</th>
                                 <th
                                     onClick={() => toggleSortHeader('created')}
-                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors text-right w-auto lg:w-[10%]"
+                                    className="px-4 py-3.5 cursor-pointer hover:text-black transition-colors text-right w-auto lg:w-[5%]"
                                 >
                                     <div className="flex items-center justify-end gap-1.5">
                                         <span>Data Reg.</span>
@@ -529,13 +530,13 @@ export default function ClientUsersTable({
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-3.5 text-right w-auto lg:w-[10%]">Azioni</th>
+                                <th className="px-4 py-3.5 text-right w-auto lg:w-[5%]">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
                                         <div className="flex flex-col items-center gap-2">
                                             <User size={32} className="text-gray-300 stroke-[1.5]" />
                                             <span className="text-sm font-medium">Nessun utente corrisponde ai filtri selezionati.</span>
@@ -551,158 +552,173 @@ export default function ClientUsersTable({
                                     </td>
                                 </tr>
                             ) : (
-                                filteredUsers.map((u, i) => (
-                                    <tr
-                                        key={u.id || i}
-                                        className={`hover:bg-gray-50/50 transition-colors ${
-                                            editingUserId !== u.id ? 'cursor-pointer' : ''
-                                        }`}
-                                        onClick={() => {
-                                            if (editingUserId) return;
-                                            setSelectedUser(u);
-                                        }}
-                                    >
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                {u.profilePicUrl ? (
-                                                    <Image
-                                                        src={u.profilePicUrl}
-                                                        alt={u.name || 'Utente'}
-                                                        width={36}
-                                                        height={36}
-                                                        className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm shrink-0"
-                                                        unoptimized
-                                                    />
-                                                ) : (
-                                                    <div className="w-9 h-9 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0 text-xs">
-                                                        {u.name?.charAt(0) || '?'}
-                                                    </div>
-                                                )}
+                                filteredUsers.map((u, i) => {
+                                    const rawName = (u.name || 'Utente Sconosciuto').trim();
+                                    const nameParts = rawName.split(' ');
+                                    const firstName = nameParts[0] || 'Utente';
+                                    const lastName = nameParts.slice(1).join(' ');
+
+                                    return (
+                                        <tr
+                                            key={u.id || i}
+                                            className={`hover:bg-gray-50/50 transition-colors ${
+                                                editingUserId !== u.id ? 'cursor-pointer' : ''
+                                            }`}
+                                            onClick={() => {
+                                                if (editingUserId) return;
+                                                setSelectedUser(u);
+                                            }}
+                                        >
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    {u.profilePicUrl ? (
+                                                        <Image
+                                                            src={u.profilePicUrl}
+                                                            alt={u.name || 'Utente'}
+                                                            width={36}
+                                                            height={36}
+                                                            className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm shrink-0"
+                                                            unoptimized
+                                                        />
+                                                    ) : (
+                                                        <div className="w-9 h-9 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0 text-xs">
+                                                            {u.name?.charAt(0) || '?'}
+                                                        </div>
+                                                    )}
+                                                    {editingUserId === u.id ? (
+                                                        <input
+                                                            value={rowDraft[u.id]?.name || ''}
+                                                            onChange={(e) =>
+                                                                setRowDraft((prev) => ({
+                                                                    ...prev,
+                                                                    [u.id]: { ...prev[u.id], name: e.target.value },
+                                                                }))
+                                                            }
+                                                            className="px-2 py-1 border border-gray-300 rounded text-xs font-semibold w-full"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="font-bold text-gray-900 text-sm leading-tight">
+                                                                    {firstName}
+                                                                </span>
+                                                                <UserTypeBadge userId={u.id} initialType={u.userType} />
+                                                            </div>
+                                                            {lastName && (
+                                                                <span className="text-xs font-semibold text-gray-600 leading-tight">
+                                                                    {lastName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    {getRoleBadge(u.role)}
+                                                    {getStatusBadge(u.status)}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
                                                 {editingUserId === u.id ? (
-                                                    <input
-                                                        value={rowDraft[u.id]?.name || ''}
-                                                        onChange={(e) =>
-                                                            setRowDraft((prev) => ({
-                                                                ...prev,
-                                                                [u.id]: { ...prev[u.id], name: e.target.value },
-                                                            }))
-                                                        }
-                                                        className="px-2 py-1 border border-gray-300 rounded text-xs font-semibold w-full"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
+                                                    <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            value={rowDraft[u.id]?.email || ''}
+                                                            onChange={(e) =>
+                                                                setRowDraft((prev) => ({
+                                                                    ...prev,
+                                                                    [u.id]: { ...prev[u.id], email: e.target.value },
+                                                                }))
+                                                            }
+                                                            className="px-2 py-1 border border-gray-300 rounded text-xs w-full"
+                                                            placeholder="Email"
+                                                        />
+                                                        <input
+                                                            value={rowDraft[u.id]?.phone || ''}
+                                                            onChange={(e) =>
+                                                                setRowDraft((prev) => ({
+                                                                    ...prev,
+                                                                    [u.id]: { ...prev[u.id], phone: e.target.value },
+                                                                }))
+                                                            }
+                                                            className="px-2 py-1 border border-gray-300 rounded text-xs w-full"
+                                                            placeholder="Telefono"
+                                                        />
+                                                    </div>
                                                 ) : (
-                                                    <div>
-                                                        <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                                                            <span className="truncate max-w-[160px]">{u.name || 'Utente Sconosciuto'}</span>
-                                                            <UserTypeBadge userId={u.id} initialType={u.userType} />
-                                                        </div>
+                                                    <div className="space-y-0.5 text-xs text-gray-600">
+                                                        {u.email && (
+                                                            <div className="flex items-center gap-1.5 text-gray-700 font-medium">
+                                                                <Mail size={12} className="text-gray-400 shrink-0" />
+                                                                <span className="truncate max-w-[180px]">{u.email}</span>
+                                                            </div>
+                                                        )}
+                                                        {u.phone && (
+                                                            <div className="text-gray-500 font-mono text-[11px]">
+                                                                {u.phone}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col gap-1 items-start">
-                                                {getRoleBadge(u.role)}
-                                                {getStatusBadge(u.status)}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {editingUserId === u.id ? (
-                                                <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                                                    <input
-                                                        value={rowDraft[u.id]?.email || ''}
-                                                        onChange={(e) =>
-                                                            setRowDraft((prev) => ({
-                                                                ...prev,
-                                                                [u.id]: { ...prev[u.id], email: e.target.value },
-                                                            }))
-                                                        }
-                                                        className="px-2 py-1 border border-gray-300 rounded text-xs w-full"
-                                                        placeholder="Email"
-                                                    />
-                                                    <input
-                                                        value={rowDraft[u.id]?.phone || ''}
-                                                        onChange={(e) =>
-                                                            setRowDraft((prev) => ({
-                                                                ...prev,
-                                                                [u.id]: { ...prev[u.id], phone: e.target.value },
-                                                            }))
-                                                        }
-                                                        className="px-2 py-1 border border-gray-300 rounded text-xs w-full"
-                                                        placeholder="Telefono"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-0.5 text-xs text-gray-600">
-                                                    {u.email && (
-                                                        <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-                                                            <Mail size={12} className="text-gray-400 shrink-0" />
-                                                            <span className="truncate max-w-[170px]">{u.email}</span>
-                                                        </div>
-                                                    )}
-                                                    {u.phone && (
-                                                        <div className="text-gray-500 font-mono text-[11px]">
-                                                            {u.phone}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-xs font-medium text-gray-600 truncate">
-                                            {u.city || '—'}
-                                        </td>
-                                        <td className="px-3 py-3 text-center">
-                                            <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
-                                                <ShoppingBag size={11} className="text-slate-500" />
-                                                {u.ordersCount ?? u.orders?.length ?? 0}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono text-xs font-bold text-gray-900">
-                                            €{((u.totalSpentCents || 0) / 100).toFixed(2)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-xs text-gray-500 font-medium">
-                                            {formatITDate(u.createdAt || u.lastOrderDate)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                            {editingUserId === u.id ? (
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => void saveRowEdit(u)}
-                                                        disabled={rowSavingId === u.id}
-                                                        className="px-2.5 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700"
-                                                    >
-                                                        {rowSavingId === u.id ? 'Salva…' : 'Salva'}
-                                                    </button>
-                                                    <button
-                                                        onClick={cancelRowEdit}
-                                                        className="px-2.5 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300"
-                                                    >
-                                                        Annulla
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-end gap-3 text-xs">
-                                                    {!String(u.id).startsWith('virtual_') && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => beginRowEdit(u)}
-                                                                className="text-gray-600 hover:text-black font-semibold"
-                                                            >
-                                                                Modifica
-                                                            </button>
-                                                            <button
-                                                                onClick={() => void deleteRowUser(u)}
-                                                                className="text-rose-600 hover:text-rose-800 font-semibold"
-                                                            >
-                                                                Elimina
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 bg-slate-100 rounded-full font-mono text-xs font-bold text-slate-800">
+                                                    <ShoppingBag size={11} className="text-slate-500" />
+                                                    {u.ordersCount ?? u.orders?.length ?? 0}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-mono text-xs font-bold text-gray-900">
+                                                €{((u.totalSpentCents || 0) / 100).toFixed(2)}
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-xs text-gray-500 font-mono font-medium whitespace-nowrap">
+                                                {formatITDate(u.createdAt || u.lastOrderDate)}
+                                            </td>
+                                            <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                {editingUserId === u.id ? (
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => void saveRowEdit(u)}
+                                                            disabled={rowSavingId === u.id}
+                                                            className="px-2 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700"
+                                                        >
+                                                            {rowSavingId === u.id ? '…' : 'Ok'}
+                                                        </button>
+                                                        <button
+                                                            onClick={cancelRowEdit}
+                                                            className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300"
+                                                        >
+                                                            X
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {!String(u.id).startsWith('virtual_') && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => beginRowEdit(u)}
+                                                                    title="Modifica Utente"
+                                                                    aria-label="Modifica Utente"
+                                                                    className="p-1.5 rounded-lg text-gray-600 hover:text-black hover:bg-gray-100 transition-colors"
+                                                                >
+                                                                    <Pencil size={15} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => void deleteRowUser(u)}
+                                                                    title="Elimina Utente"
+                                                                    aria-label="Elimina Utente"
+                                                                    className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-colors"
+                                                                >
+                                                                    <Trash2 size={15} />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

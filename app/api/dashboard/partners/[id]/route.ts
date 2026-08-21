@@ -12,7 +12,7 @@ export async function PUT(request: Request, context: any) {
         // Remove structural properties that Prisma doesn't need for updates
         const { id: _, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...updateData } = body;
 
-        let uniqueCode = updateData.uniqueCode;
+        let uniqueCode = typeof updateData.uniqueCode === 'string' ? updateData.uniqueCode.trim() : '';
 
         // Fetch original to compare province if we need to regenerate
         const original = await prisma.partner.findUnique({ where: { id } });
@@ -23,10 +23,13 @@ export async function PUT(request: Request, context: any) {
 
         if (!uniqueCode && !original.uniqueCode) {
             uniqueCode = await generatePartnerCode(updateData.province || original.province);
-        } else if (updateData.province && original.province !== updateData.province) {
-            // Re-generate if province changes
+        } else if (!uniqueCode) {
+            uniqueCode = original.uniqueCode;
+        } else if (updateData.province && original.province !== updateData.province && uniqueCode === original.uniqueCode) {
+            // Re-generate if province changes and user didn't specify a custom uniqueCode
             uniqueCode = await generatePartnerCode(updateData.province);
         }
+
 
         const newEmail = updateData.email?.trim().toLowerCase();
         let userId = original.userId;

@@ -9,10 +9,11 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { id, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...data } = body;
 
-        let uniqueCode = data.uniqueCode;
+        let uniqueCode = typeof data.uniqueCode === 'string' ? data.uniqueCode.trim() : '';
         if (!uniqueCode) {
             uniqueCode = await generatePartnerCode(data.province);
         }
+
 
         const partnerEmail = data.email?.trim().toLowerCase();
         let userId = null;

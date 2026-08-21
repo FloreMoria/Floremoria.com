@@ -1,51 +1,54 @@
 import prisma from '@/lib/prisma';
 
 export async function generatePartnerCode(province: string): Promise<string> {
-    const prov = (province || 'XX').substring(0, 2).toUpperCase();
+    const rawProv = (province || '').trim().toUpperCase();
+    const prov = rawProv.length >= 2 ? rawProv.substring(0, 2) : 'XX';
     const prefix = `FS-${prov}-`;
 
-    const lastPartner = await prisma.partner.findFirst({
+    const partners = await prisma.partner.findMany({
         where: { uniqueCode: { startsWith: prefix } },
-        orderBy: { uniqueCode: 'desc' }
+        select: { uniqueCode: true }
     });
 
-    if (!lastPartner || !lastPartner.uniqueCode) {
-        return `${prefix}001`;
-    }
-
-    const parts = lastPartner.uniqueCode.split('-');
-    if (parts.length === 3) {
-        const lastNum = parseInt(parts[2], 10);
-        if (!isNaN(lastNum)) {
-            const nextNum = (lastNum + 1).toString().padStart(3, '0');
-            return `${prefix}${nextNum}`;
+    let maxNum = 0;
+    for (const p of partners) {
+        if (!p.uniqueCode) continue;
+        const parts = p.uniqueCode.split('-');
+        if (parts.length >= 3) {
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
         }
     }
 
-    return `${prefix}001`;
+    const nextNum = (maxNum + 1).toString().padStart(3, '0');
+    return `${prefix}${nextNum}`;
 }
 
 export async function generateSupplierCode(countryCode: string = 'IT'): Promise<string> {
-    const cc = (countryCode || 'IT').substring(0, 2).toUpperCase();
+    const rawCc = (countryCode || 'IT').trim().toUpperCase();
+    const cc = rawCc.length >= 2 ? rawCc.substring(0, 2) : 'IT';
     const prefix = `FN-${cc}-`;
 
-    const lastSupplier = await prisma.supplier.findFirst({
+    const suppliers = await prisma.supplier.findMany({
         where: { uniqueCode: { startsWith: prefix } },
-        orderBy: { uniqueCode: 'desc' }
+        select: { uniqueCode: true }
     });
 
-    if (!lastSupplier || !lastSupplier.uniqueCode) {
-        return `${prefix}001`;
-    }
-
-    const parts = lastSupplier.uniqueCode.split('-');
-    if (parts.length === 3) {
-        const lastNum = parseInt(parts[2], 10);
-        if (!isNaN(lastNum)) {
-            const nextNum = (lastNum + 1).toString().padStart(3, '0');
-            return `${prefix}${nextNum}`;
+    let maxNum = 0;
+    for (const s of suppliers) {
+        if (!s.uniqueCode) continue;
+        const parts = s.uniqueCode.split('-');
+        if (parts.length >= 3) {
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
         }
     }
 
-    return `${prefix}001`;
+    const nextNum = (maxNum + 1).toString().padStart(3, '0');
+    return `${prefix}${nextNum}`;
 }
+

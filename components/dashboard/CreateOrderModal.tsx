@@ -211,12 +211,26 @@ function CreateOrderFormPanel({
     })();
     const [cardMessageText, setCardMessageText] = useState(initialTicketParts.cardText);
     const [ribbonMessageText, setRibbonMessageText] = useState(initialTicketParts.ribbonText);
+    /** FF/FA: bigliettino anche senza riga catalogo (es. funerale ha solo nastro). */
+    const [freeBigliettino, setFreeBigliettino] = useState(
+        Boolean(initialTicketParts.cardText) &&
+            !draft.selectedAccessoryIds.some((id) => {
+                const p = products.find((x) => x.id === id);
+                return p && isCardMessageAccessory(p.slug, p.name);
+            })
+    );
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const mainProducts = filterDashboardMainProducts(products);
     const availableAccessories = filterDashboardAccessories(products, orderCategory);
+    const showDedicatedBigliettino = orderCategory === 'FF' || orderCategory === 'FA';
+    const cardAccessoryProduct =
+        availableAccessories.find((p) => isCardMessageAccessory(p.slug, p.name)) || null;
+    const otherAccessories = showDedicatedBigliettino
+        ? availableAccessories.filter((p) => !isCardMessageAccessory(p.slug, p.name))
+        : availableAccessories;
 
     const sortedUsers = [...users].sort((a, b) => compareBySurname(a.name, b.name));
     const sortedDeceasedProfiles = [...deceasedProfiles].sort(compareByRecentActivity);
@@ -227,10 +241,12 @@ function CreateOrderFormPanel({
     const hasCardMessageAccessory = selectedAccessoryProducts.some((p) =>
         isCardMessageAccessory(p.slug, p.name)
     );
+    const includeBigliettino =
+        hasCardMessageAccessory || (showDedicatedBigliettino && freeBigliettino);
     const hasRibbonAccessory = selectedAccessoryProducts.some((p) =>
         isRibbonAccessory(p.slug, p.name)
     );
-    const showCustomTextField = hasCardMessageAccessory || hasRibbonAccessory;
+    const showCustomTextField = includeBigliettino || hasRibbonAccessory;
 
     const estimatedTotalCents =
         (priceCents === '' ? 0 : Number(priceCents) || 0) * quantity +
@@ -298,12 +314,30 @@ function CreateOrderFormPanel({
                 return p?.isBouquet === false && (!slug || p.category?.slug === slug);
             })
         );
+        if (orderCategory !== 'FF' && orderCategory !== 'FA') {
+            setFreeBigliettino(false);
+        }
     }, [orderCategory, products]);
 
     const toggleAccessory = (id: string) => {
         setSelectedAccessoryIds((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         );
+    };
+
+    const toggleBigliettino = (checked: boolean) => {
+        if (cardAccessoryProduct) {
+            setSelectedAccessoryIds((prev) => {
+                const has = prev.includes(cardAccessoryProduct.id);
+                if (checked && !has) return [...prev, cardAccessoryProduct.id];
+                if (!checked && has) return prev.filter((x) => x !== cardAccessoryProduct.id);
+                return prev;
+            });
+            setFreeBigliettino(false);
+        } else {
+            setFreeBigliettino(checked);
+        }
+        if (!checked) setCardMessageText('');
     };
 
     const handleUserPick = (id: string) => {
@@ -338,15 +372,21 @@ function CreateOrderFormPanel({
         const deliveryDate = joinDeliveryDatetime(deliveryDatePart, deliveryTimePart);
 
         try {
-            if (hasCardMessageAccessory && !cardMessageText.trim()) {
-                throw new Error('Inserisci il testo del messaggio / dedica per il biglietto.');
-            }
+            // Bigliettino: casella opzionale; se spuntata il testo è consigliato ma non bloccante
+            // salvo quando c'è anche riga catalogo a pagamento (validazione lato API).
             if (hasRibbonAccessory && !ribbonMessageText.trim()) {
                 throw new Error('Inserisci il testo per il nastro commemorativo.');
             }
+            if (
+                hasCardMessageAccessory &&
+                !cardMessageText.trim() &&
+                !showDedicatedBigliettino
+            ) {
+                throw new Error('Inserisci il testo del messaggio / dedica per il biglietto.');
+            }
 
             const ticketMessage = composeTicketMessageParts(
-                hasCardMessageAccessory ? cardMessageText : null,
+                includeBigliettino ? cardMessageText : null,
                 hasRibbonAccessory ? ribbonMessageText : null
             );
 
@@ -699,16 +739,49 @@ function CreateOrderFormPanel({
                             />
                         </div>
 
-                        {availableAccessories.length > 0 && (
+                        {(showDedicatedBigliettino || otherAccessories.length > 0) && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                                     Accessori / optional
                                 </h4>
                                 <p className="text-xs text-gray-500 mb-3">
-                                    Seleziona il bigliettino o il nastro per abilitare i campi testo dedicati.
+                                    {showDedicatedBigliettino
+                                        ? 'Il bigliettino è opzionale. Se lo aggiungi, puoi scrivere la dedica nel campo dedicato.'
+                                        : 'Seleziona il bigliettino o il nastro per abilitare i campi testo dedicati.'}
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {availableAccessories.map((acc) => {
+                                    {showDedicatedBigliettino && (
+                                        <label
+                                            className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                                                includeBigliettino
+                                                    ? 'border-amber-300 bg-amber-50/60'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={includeBigliettino}
+                                                onChange={(e) => toggleBigliettino(e.target.checked)}
+                                                className="mt-0.5"
+                                            />
+                                            <span className="text-sm text-gray-800">
+                                                <span className="font-medium block">Aggiungi Bigliettino</span>
+                                                <span className="text-gray-500 text-xs block">
+                                                    Opzionale — messaggio / dedica da allegare ai fiori
+                                                </span>
+                                                {cardAccessoryProduct ? (
+                                                    <span className="text-gray-500 text-xs">
+                                                        €{(cardAccessoryProduct.basePriceCents / 100).toFixed(2)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-gray-500 text-xs">
+                                                        Senza costo aggiuntivo a catalogo
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </label>
+                                    )}
+                                    {otherAccessories.map((acc) => {
                                         const ui = accessoryUiLabel(acc);
                                         const checked = selectedAccessoryIds.includes(acc.id);
                                         return (
@@ -744,15 +817,13 @@ function CreateOrderFormPanel({
 
                         {showCustomTextField && (
                             <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-1">
-                                {hasCardMessageAccessory && (
+                                {includeBigliettino && (
                                     <div>
                                         <label className="block text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1.5">
-                                            Testo del messaggio / dedica per il biglietto{' '}
-                                            <span className="text-red-600">*</span>
+                                            Testo del Bigliettino / Dedica
                                         </label>
                                         <textarea
-                                            required
-                                            placeholder="Scrivi qui il pensiero da stampare sul bigliettino…"
+                                            placeholder="Scrivi qui il messaggio da allegare ai fiori..."
                                             value={cardMessageText}
                                             onChange={(e) => setCardMessageText(e.target.value)}
                                             rows={3}
@@ -776,7 +847,7 @@ function CreateOrderFormPanel({
                                         />
                                     </div>
                                 )}
-                                {hasCardMessageAccessory && hasRibbonAccessory ? (
+                                {includeBigliettino && hasRibbonAccessory ? (
                                     <p className="text-xs text-gray-500">
                                         I due testi restano distinti in dashboard e vengono uniti in{' '}
                                         <code className="text-[11px]">ticketMessage</code> per WhatsApp

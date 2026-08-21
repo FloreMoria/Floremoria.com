@@ -13,7 +13,7 @@ import {
     normalizeDeliveryProvince,
     normalizeOrderCategory,
 } from '@/lib/orders/orderNumber';
-import { productRequiresCustomMessage } from '@/lib/orders/productCustomText';
+import { isRibbonAccessory } from '@/lib/orders/productCustomText';
 import {
     isDashboardAccessoryProduct,
     isDashboardMainProduct,
@@ -165,12 +165,13 @@ export async function createDashboardManualOrder(
         });
     }
 
-    const requiresTicketMessage = accessoryLines.some((line) =>
-        productRequiresCustomMessage(line.slug)
-    );
+    const requiresTicketMessage = accessoryLines.some((line) => {
+        // Nastro: testo impresso obbligatorio. Bigliettino: accessorio opzionale anche senza testo.
+        return isRibbonAccessory(line.slug);
+    });
     const ticketMessage = input.ticketMessage?.trim() || null;
     if (requiresTicketMessage && !ticketMessage) {
-        throw new Error('Inserisci il testo per Messaggio o Nastro commemorativo.');
+        throw new Error('Inserisci il testo per il Nastro commemorativo.');
     }
 
     const totalPriceCents =

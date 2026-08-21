@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Download,
@@ -242,16 +242,24 @@ export default function CustodiedProofGallery({
     isAdmin,
     showGpsMap,
     compact = false,
-    hasPreDeliveryPhotoOpt = false,
+    hasPreDeliveryPhotoOpt: _hasPreDeliveryPhotoOpt = false,
     gardenUrl = null,
     senderName = null,
 }: Props) {
     const router = useRouter();
-    const [beforeUrls, setBeforeUrls] = useState(hasPreDeliveryPhotoOpt ? initialBefore : []);
+    // Sempre mostra le foto "prima" se presenti in DB — indipendente dall'acquisto
+    // dell'opzione "foto stato di fatto" (altrimenti resta solo 1 foto "dopo").
+    const [beforeUrls, setBeforeUrls] = useState(initialBefore);
     const [afterUrls, setAfterUrls] = useState(initialAfter);
 
+    // Allinea lo stato locale dopo router.refresh() / nuove prove.
+    useEffect(() => {
+        setBeforeUrls(initialBefore);
+        setAfterUrls(initialAfter);
+    }, [initialBefore, initialAfter]);
+
     const hasPhotos = beforeUrls.length > 0 || afterUrls.length > 0;
-    const primaryAfter = afterUrls[0];
+    const primaryAfter = afterUrls[0] ?? beforeUrls[0];
 
     const refresh = () => router.refresh();
 

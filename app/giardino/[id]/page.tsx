@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import GraveNotesForm from './GraveNotesForm';
@@ -14,19 +13,23 @@ import {
 } from '@/lib/orders/displayDeliveryDate';
 import { getSiteBaseUrl } from '@/lib/site/config';
 import GardenHeaderShare from '@/components/memorial/GardenHeaderShare';
+import GardenOrderPhotoGallery from '@/components/memorial/GardenOrderPhotoGallery';
 
-const giardinoUserInclude = {
-    orders: {
-        where: { deletedAt: null, status: { not: 'CANCELLED' as const } },
-        include: {
-            deliveryProof: true,
-            items: { include: { product: true } },
-        },
-        orderBy: [{ deliveryDate: 'desc' as const }, { createdAt: 'desc' as const }],
-    },
-} satisfies Prisma.UserInclude;
+const orderInclude = {
+    deliveryProof: true,
+    items: { include: { product: true } },
+} satisfies Prisma.OrderInclude;
 
-type GiardinoUserData = Prisma.UserGetPayload<{ include: typeof giardinoUserInclude }>;
+type GiardinoOrder = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+
+type GiardinoUserData = {
+    id: string;
+    name: string | null;
+    email?: string | null;
+    uniqueCode: string | null;
+    avatarUrl?: string | null;
+    orders: GiardinoOrder[];
+};
 
 interface GiardinoPageProps {
     params: Promise<{
@@ -44,6 +47,42 @@ export async function generateMetadata({ params }: GiardinoPageProps): Promise<M
             follow: false,
         },
     };
+}
+
+/** Ordini GdM: tutti gli stati con foto storiche, esclusi solo cancellati/soft-delete. */
+async function loadGardenOrdersForUser(user: {
+    id: string;
+    email: string | null;
+}): Promise<GiardinoOrder[]> {
+    const byUserId = await prisma.order.findMany({
+        where: {
+            deletedAt: null,
+            status: { not: 'CANCELLED' },
+            userId: user.id,
+        },
+        include: orderInclude,
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const email = user.email?.trim().toLowerCase();
+    if (!email) return byUserId;
+
+    const byEmail = await prisma.order.findMany({
+        where: {
+            deletedAt: null,
+            status: { not: 'CANCELLED' },
+            buyerEmail: { equals: email, mode: 'insensitive' },
+            NOT: { id: { in: byUserId.map((o) => o.id) } },
+        },
+        include: orderInclude,
+        orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    return [...byUserId, ...byEmail].sort((a, b) => {
+        const ta = resolveCustomerFacingDeliveryDate(a)?.getTime() ?? a.createdAt.getTime();
+        const tb = resolveCustomerFacingDeliveryDate(b)?.getTime() ?? b.createdAt.getTime();
+        return tb - ta;
+    });
 }
 
 export default async function GiardinoPage({ params }: GiardinoPageProps) {
@@ -91,12 +130,22 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
             ],
         } as unknown as GiardinoUserData;
     } else {
-        user = await prisma.user.findFirst({
+        const dbUser = await prisma.user.findFirst({
             where: {
                 OR: [{ uniqueCode: userIdOrCode }, { id: userIdOrCode }],
             },
-            include: giardinoUserInclude,
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                uniqueCode: true,
+                avatarUrl: true,
+            },
         });
+        if (dbUser) {
+            const orders = await loadGardenOrdersForUser(dbUser);
+            user = { ...dbUser, orders };
+        }
     }
 
     if (!user) {
@@ -185,14 +234,15 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                         {timelineOrders.map((order, idx) => {
                             const isEven = idx % 2 === 0;
                             const proofPhotos = getOrderProofPhotos(order);
-                            const primaryAfter = proofPhotos.after[0] ?? null;
-                            const hasPhoto = Boolean(primaryAfter);
+                            const hasPhoto = proofPhotos.hasPhotos;
                             const dateLabel = customerFacingDeliveryDateLabel(order);
                             const dateText = formatCustomerFacingDeliveryDate(order);
                             const isDelivered =
                                 order.status === 'COMPLETED' ||
+                                order.status === 'DELIVERING' ||
                                 order.deliveryProof?.status === 'COMPLETED' ||
-                                Boolean(order.deliveryProof?.timestampAfter);
+                                Boolean(order.deliveryProof?.timestampAfter) ||
+                                proofPhotos.hasPhotos;
 
                             return (
                                 <div
@@ -224,65 +274,12 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                                             </p>
 
                                             {hasPhoto ? (
-                                                <div className="mt-4">
-                                                    <div className="relative h-48 w-full rounded-xl overflow-hidden mb-3">
-                                                        <Image
-                                                            src={primaryAfter!}
-                                                            alt={`Consegna per ${order.deceasedName}`}
-                                                            fill
-                                                            className="object-cover transition-transform hover:scale-105 duration-700"
-                                                        />
-                                                    </div>
-                                                    {proofPhotos.after.length > 1 ||
-                                                    proofPhotos.before.length > 0 ? (
-                                                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
-                                                            {[
-                                                                ...proofPhotos.before,
-                                                                ...proofPhotos.after,
-                                                            ].map((url, i) => (
-                                                                <a
-                                                                    key={`${url}-${i}`}
-                                                                    href={url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-fm-rose-soft/40"
-                                                                >
-                                                                    <Image
-                                                                        src={url}
-                                                                        alt={`Prova ${i + 1}`}
-                                                                        fill
-                                                                        className="object-cover"
-                                                                    />
-                                                                </a>
-                                                            ))}
-                                                        </div>
-                                                    ) : null}
-                                                    <div className="flex flex-wrap items-center gap-3">
-                                                        <p className="text-[13px] text-green-700 font-medium flex items-center gap-1">
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="currentColor"
-                                                                viewBox="0 0 20 20"
-                                                            >
-                                                                <path
-                                                                    fillRule="evenodd"
-                                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                                    clipRule="evenodd"
-                                                                />
-                                                            </svg>
-                                                            Consegna verificata
-                                                            {dateText ? ` il ${dateText}` : ''}
-                                                        </p>
-                                                        <a
-                                                            href={primaryAfter!}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-[13px] font-semibold text-fm-gold underline underline-offset-2 hover:opacity-80"
-                                                        >
-                                                            Vedi foto della posa
-                                                        </a>
-                                                    </div>
-                                                </div>
+                                                <GardenOrderPhotoGallery
+                                                    deceasedName={order.deceasedName}
+                                                    before={proofPhotos.before}
+                                                    after={proofPhotos.after}
+                                                    deliveredLabel={dateText}
+                                                />
                                             ) : (
                                                 <div className="mt-4 flex items-center gap-3 p-4 bg-fm-section/50 rounded-xl">
                                                     <div className="w-10 h-10 rounded-full bg-fm-gold/20 flex items-center justify-center flex-shrink-0">

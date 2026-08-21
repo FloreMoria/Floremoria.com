@@ -27,3 +27,4 @@
 
 [2026-08-21 21:58] style(users): ottimizzazione spaziatura e bilanciamento colonne tabella Giardino.
 [2026-08-21 22:21] hotfix(delivery): Fix 500 bacheca MagicLink (Scarica HD server onClick), merge foto storico GdM, base URL www, no overwrite photos su edit.
+[2026-08-21 22:45] fix/gdm: Aggregazione completa foto Prima+Dopo in GdM/bacheca; fix CustodiedProofGallery che nascondeva le before senza opzione prodotto.

@@ -8,7 +8,7 @@ export type OrderProofPhotos = {
     hasPhotos: boolean;
 };
 
-/** Unifica deliveryProof (mini-app fiorista) e fallback su order.photos. */
+/** Unifica deliveryProof (mini-app fiorista) e fallback su order.photos — senza LIMIT 1. */
 export function getOrderProofPhotos(order: {
     photos?: string[];
     deliveryProof?: Pick<
@@ -17,37 +17,39 @@ export function getOrderProofPhotos(order: {
     > | null;
 }): OrderProofPhotos {
     const proof = order.deliveryProof;
-    const beforeFromProof =
-        proof && proof.photosBeforeUrls.length > 0
-            ? proof.photosBeforeUrls
-            : proof?.photoBeforeUrl
-              ? [proof.photoBeforeUrl]
-              : [];
-    const afterFromProof =
-        proof && proof.photosAfterUrls.length > 0
-            ? proof.photosAfterUrls
-            : proof?.photoAfterUrl
-              ? [proof.photoAfterUrl]
-              : [];
 
-    if (beforeFromProof.length > 0 || afterFromProof.length > 0) {
-        // Unisce anche Order.photos storiche non ancora propagate negli array proof.
-        const legacyExtra = (order.photos ?? []).filter(
-            (u) => u && !beforeFromProof.includes(u) && !afterFromProof.includes(u)
-        );
-        return {
-            before: beforeFromProof,
-            after: [...afterFromProof, ...legacyExtra],
-            hasPhotos: true,
-        };
+    const beforeSet = new Set<string>();
+    const afterSet = new Set<string>();
+
+    const pushUnique = (set: Set<string>, urls: Array<string | null | undefined>) => {
+        for (const u of urls) {
+            const t = typeof u === 'string' ? u.trim() : '';
+            if (t) set.add(t);
+        }
+    };
+
+    if (proof) {
+        pushUnique(beforeSet, proof.photosBeforeUrls || []);
+        pushUnique(beforeSet, [proof.photoBeforeUrl]);
+        pushUnique(afterSet, proof.photosAfterUrls || []);
+        pushUnique(afterSet, [proof.photoAfterUrl]);
     }
 
-    const legacy = order.photos ?? [];
-    if (legacy.length > 0) {
-        return { before: [], after: legacy, hasPhotos: true };
+    // URL in Order.photos non già classificate → slot "dopo" (storico flat).
+    for (const u of order.photos || []) {
+        const t = typeof u === 'string' ? u.trim() : '';
+        if (!t) continue;
+        if (beforeSet.has(t) || afterSet.has(t)) continue;
+        afterSet.add(t);
     }
 
-    return { before: [], after: [], hasPhotos: false };
+    const before = [...beforeSet];
+    const after = [...afterSet];
+    return {
+        before,
+        after,
+        hasPhotos: before.length > 0 || after.length > 0,
+    };
 }
 
 /** Array flat per sezioni che non distinguono prima/dopo (es. scheda utenti admin). */

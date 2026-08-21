@@ -576,11 +576,15 @@ export async function reconcileBankMovement(
             const score = Math.max(88, manual.score || 88);
             if (!best || score > best.matchScore) {
                 best = matched({
-                    matchType: 'SDI_INVOICE',
+                    matchType: manual.isForeignAutofattura
+                        ? 'FOREIGN_AUTOFATTURA'
+                        : 'SDI_INVOICE',
                     matchScore: score,
                     matchedTxId: manual.id,
                     matchedOrderId: null,
-                    matchNotes: `Abbinato a fattura/spesa ${manual.vendorName}`,
+                    matchNotes: manual.isForeignAutofattura
+                        ? `Abbinato ad autofattura estera ${manual.vendorName}`
+                        : `Abbinato a fattura/spesa ${manual.vendorName}`,
                 });
                 await markManualExpenseReconciled(manual.id, null);
             }

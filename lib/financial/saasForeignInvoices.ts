@@ -113,7 +113,7 @@ export async function uploadSaasForeignInvoice(input: {
     eurAmountCents: number;
     countryCode?: string | null;
     jurisdiction: 'UE' | 'EXTRA_UE';
-    autofatturaType: 'NONE' | 'TD17' | 'TD18';
+    autofatturaType: 'NONE' | 'TD17' | 'TD18' | 'TD19';
     notes?: string | null;
 }) {
     const invoiceDate = new Date(`${input.invoiceDate.slice(0, 10)}T12:00:00.000Z`);

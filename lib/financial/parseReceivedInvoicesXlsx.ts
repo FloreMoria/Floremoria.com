@@ -9,6 +9,7 @@ import {
     buildInvoiceDedupeKey,
     normalizeVendorVat,
 } from '@/lib/financial/invoiceDedupe';
+import { detectForeignAutofattura } from '@/lib/financial/foreignAutofattura';
 
 function normKey(k: string): string {
     return k
@@ -154,6 +155,15 @@ const TYPE_KEYS = [
     'tipo_documento',
     'tipodocumento',
     'tipo doc',
+    'tipo',
+];
+const COUNTRY_KEYS = [
+    'paese',
+    'nazione',
+    'country',
+    'id paese',
+    'codice paese',
+    'paese fornitore',
 ];
 const RELATED_KEYS = [
     'fattura collegata',
@@ -168,7 +178,15 @@ function rowToInvoice(
     sourceFileName: string
 ): ParsedFatturaPa | { error: string } {
     const vendorName = findCol(row, VENDOR_KEYS) || 'Fornitore SDI';
-    const vendorVat = normalizeVendorVat(findCol(row, VAT_KEYS) || null);
+    let vendorVat = normalizeVendorVat(findCol(row, VAT_KEYS) || null);
+    const countryRaw = findCol(row, COUNTRY_KEYS);
+    // Se manca prefisso paese sulla P.IVA ma c'è colonna Paese estero → prefissa
+    if (vendorVat && /^\d{8,12}$/.test(vendorVat) && countryRaw) {
+        const cc = countryRaw.replace(/\s+/g, '').toUpperCase().slice(0, 2);
+        if (/^[A-Z]{2}$/.test(cc) && cc !== 'IT') {
+            vendorVat = normalizeVendorVat(`${cc}${vendorVat}`);
+        }
+    }
     const invoiceNumber = findCol(row, NUMBER_KEYS);
     const invoiceDate = parseDate(findCol(row, DATE_KEYS) || findCol(row, ['data']));
     const totalEuros = parseAmount(findCol(row, TOTAL_KEYS));
@@ -204,6 +222,12 @@ function rowToInvoice(
     const netAbs = netEuros !== 0 ? eurosToCents(Math.abs(netEuros)) : totalAbs - vatAbs;
     const docKind: ParsedFatturaPa['docKind'] = sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
     const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
+    const foreign = detectForeignAutofattura({
+        tipoDocumento: tipoRaw,
+        vendorVat,
+        vendorName,
+        causale: `${vendorName} ${tipoRaw}`,
+    });
 
     return {
         vendorName: vendorName.slice(0, 160),
@@ -220,6 +244,11 @@ function rowToInvoice(
         dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
         docKind,
         relatedInvoiceNumber,
+        tipoDocumento: tipoRaw || null,
+        isForeignAutofattura: foreign.isForeignAutofattura,
+        isReverseCharge: foreign.isReverseCharge,
+        autofatturaType: foreign.autofatturaType,
+        foreignCategory: foreign.category,
     };
 }
 

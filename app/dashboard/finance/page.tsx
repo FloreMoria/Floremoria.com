@@ -32,6 +32,7 @@ import ManualExpenseModal, {
 } from '@/components/dashboard/ManualExpenseModal';
 import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
 import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoicesXlsxUploadBox';
+import ForeignAutofattureUploadBox from '@/components/dashboard/ForeignAutofattureUploadBox';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import {
@@ -579,9 +580,10 @@ export default function FinanceDashboardPage() {
                 onSaved={() => void loadLedger()}
             />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                 <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
                 <ReceivedInvoicesXlsxUploadBox onImported={() => void loadLedger()} />
+                <ForeignAutofattureUploadBox onImported={() => void loadLedger()} />
             </div>
 
             {/* Tabs content tables */}
@@ -758,8 +760,13 @@ export default function FinanceDashboardPage() {
                                             </td>
                                             <td className="px-5 py-3.5">
                                                 {entry.isForeignService ? (
-                                                    <span className="inline-flex px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[9px] font-bold uppercase tracking-wider">
-                                                        Reverse Charge
+                                                    <span className="inline-flex flex-col gap-1">
+                                                        <span className="inline-flex px-2 py-0.5 rounded bg-indigo-100 border border-indigo-200 text-indigo-800 text-[9px] font-bold uppercase tracking-wider">
+                                                            Autofattura Estera (TD17/TD18)
+                                                        </span>
+                                                        <span className="inline-flex px-2 py-0.5 rounded bg-violet-50 border border-violet-200 text-violet-700 text-[9px] font-bold uppercase tracking-wider">
+                                                            Reverse Charge
+                                                        </span>
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-600 text-[9px] font-bold uppercase tracking-wider">

@@ -69,7 +69,10 @@ export async function POST(request: Request) {
             : 'EXTRA_UE';
         const autofatturaRaw = String(form.get('autofatturaType') || 'TD17').toUpperCase();
         const autofatturaType =
-            autofatturaRaw === 'TD18' || autofatturaRaw === 'NONE' || autofatturaRaw === 'TD17'
+            autofatturaRaw === 'TD18' ||
+            autofatturaRaw === 'TD19' ||
+            autofatturaRaw === 'NONE' ||
+            autofatturaRaw === 'TD17'
                 ? autofatturaRaw
                 : 'TD17';
 
@@ -84,7 +87,7 @@ export async function POST(request: Request) {
             eurAmountCents,
             countryCode: form.get('countryCode') ? String(form.get('countryCode')) : null,
             jurisdiction,
-            autofatturaType: autofatturaType as 'NONE' | 'TD17' | 'TD18',
+            autofatturaType: autofatturaType as 'NONE' | 'TD17' | 'TD18' | 'TD19',
             notes: form.get('notes') ? String(form.get('notes')) : null,
         });
 

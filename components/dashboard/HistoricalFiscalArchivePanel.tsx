@@ -386,7 +386,17 @@ export default function HistoricalFiscalArchivePanel() {
                                             </span>
                                         </td>
                                         <td className="px-3 py-2.5 text-[11px] text-slate-600">
-                                            {r.category}
+                                            <div className="flex flex-col gap-1">
+                                                <span>{r.category}</span>
+                                                {(r.category === 'SPESE_SAAS' ||
+                                                    /AUTOFATTURA|TD17|TD18|TD19/i.test(
+                                                        `${r.description} ${r.documentRef || ''} ${r.sourceType}`
+                                                    )) && (
+                                                    <span className="inline-flex w-fit px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                        Autofattura Estera (TD17/TD18)
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-3 py-2.5 max-w-[280px]">
                                             <p className="truncate font-medium text-slate-800" title={r.description}>

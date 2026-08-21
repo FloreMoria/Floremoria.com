@@ -11,6 +11,7 @@ import {
     buildInvoiceDedupeKey,
     normalizeVendorVat,
 } from '@/lib/financial/invoiceDedupe';
+import { detectForeignAutofattura } from '@/lib/financial/foreignAutofattura';
 
 export type ParsedFatturaPa = {
     vendorName: string;
@@ -30,6 +31,13 @@ export type ParsedFatturaPa = {
     docKind: 'FATTURA' | 'NOTA_CREDITO';
     /** Eventuale numero fattura collegata (per NC che annullano un documento). */
     relatedInvoiceNumber?: string | null;
+    /** Tipo documento SDI (TD01, TD17, TD18, TD19, TD04, …). */
+    tipoDocumento?: string | null;
+    /** Autofattura / integrazione acquisti esteri (TD17/TD18/TD19 o P.IVA estera). */
+    isForeignAutofattura?: boolean;
+    isReverseCharge?: boolean;
+    autofatturaType?: 'TD17' | 'TD18' | 'TD19' | null;
+    foreignCategory?: 'Software & Servizi SaaS Estero' | 'Hosting / Infrastruttura' | null;
     rawPreview?: string;
 };
 
@@ -232,6 +240,13 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         lineDescriptions.slice(0, 3).join('; '),
     ].filter(Boolean);
 
+    const foreign = detectForeignAutofattura({
+        tipoDocumento,
+        vendorVat,
+        vendorName,
+        causale: descriptionParts.join(' '),
+    });
+
     return {
         vendorName: vendorName.slice(0, 160),
         vendorVat,
@@ -247,6 +262,11 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
         docKind,
         relatedInvoiceNumber,
+        tipoDocumento: tipoDocumento || null,
+        isForeignAutofattura: foreign.isForeignAutofattura,
+        isReverseCharge: foreign.isReverseCharge,
+        autofatturaType: foreign.autofatturaType,
+        foreignCategory: foreign.category,
         rawPreview: xml.slice(0, 240),
     };
 }
@@ -398,10 +418,17 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
             const docKind: ParsedFatturaPa['docKind'] =
                 sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
             const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
+            const vatNorm = normalizeVendorVat(vendorVat);
+            const foreign = detectForeignAutofattura({
+                tipoDocumento: tipoRaw,
+                vendorVat: vatNorm,
+                vendorName,
+                causale,
+            });
 
             invoices.push({
                 vendorName: vendorName.slice(0, 160),
-                vendorVat: normalizeVendorVat(vendorVat),
+                vendorVat: vatNorm,
                 invoiceNumber,
                 invoiceDate,
                 totalCents: sign * totalAbs,
@@ -414,6 +441,11 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
                 dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
                 docKind,
                 relatedInvoiceNumber,
+                tipoDocumento: tipoRaw || null,
+                isForeignAutofattura: foreign.isForeignAutofattura,
+                isReverseCharge: foreign.isReverseCharge,
+                autofatturaType: foreign.autofatturaType,
+                foreignCategory: foreign.category,
             });
         } catch (err) {
             skipped.push({

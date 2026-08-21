@@ -46,7 +46,7 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
     const [eurAmount, setEurAmount] = useState('');
     const [countryCode, setCountryCode] = useState('US');
     const [jurisdiction, setJurisdiction] = useState<'UE' | 'EXTRA_UE'>('EXTRA_UE');
-    const [autofatturaType, setAutofatturaType] = useState<'NONE' | 'TD17' | 'TD18'>('TD17');
+    const [autofatturaType, setAutofatturaType] = useState<'NONE' | 'TD17' | 'TD18' | 'TD19'>('TD17');
     const [file, setFile] = useState<File | null>(null);
 
     const load = useCallback(async () => {
@@ -133,7 +133,7 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                     <div>
                         <h3 className="text-lg font-display font-bold text-slate-900">Spese SaaS / Estere</h3>
                         <p className="text-xs text-slate-500">
-                            Fatture passive estere, autofattura TD17/TD18 ed export ZIP per il commercialista.
+                            Fatture passive estere, autofattura TD17/TD18/TD19 ed export ZIP per il commercialista.
                         </p>
                     </div>
                     <button
@@ -203,12 +203,13 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                         <select
                             value={autofatturaType}
                             onChange={(e) =>
-                                setAutofatturaType(e.target.value as 'NONE' | 'TD17' | 'TD18')
+                                setAutofatturaType(e.target.value as 'NONE' | 'TD17' | 'TD18' | 'TD19')
                             }
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                         >
                             <option value="TD17">Autofattura TD17</option>
                             <option value="TD18">Autofattura TD18</option>
+                            <option value="TD19">Autofattura TD19</option>
                             <option value="NONE">Nessuna</option>
                         </select>
                         <input
@@ -316,7 +317,17 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                                                 {inv.countryCode || '—'} · {inv.jurisdiction}
                                             </td>
                                             <td className="px-3 py-2 text-xs font-semibold">
-                                                {inv.autofatturaType}
+                                                <span
+                                                    className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                        inv.autofatturaType !== 'NONE'
+                                                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                                            : 'bg-slate-100 text-slate-600'
+                                                    }`}
+                                                >
+                                                    {inv.autofatturaType !== 'NONE'
+                                                        ? `Autofattura Estera (${inv.autofatturaType})`
+                                                        : inv.autofatturaType}
+                                                </span>
                                             </td>
                                             <td className="px-3 py-2">
                                                 <a

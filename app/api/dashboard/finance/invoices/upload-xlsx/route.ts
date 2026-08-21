@@ -56,6 +56,9 @@ export async function POST(request: Request) {
         const message =
             summary.imported > 0 || summary.updated > 0
                 ? `Importate ${summary.imported} · aggiornate ${summary.updated} fatture dal report per un totale di ${totalEuro} €` +
+                  (summary.foreignAutofatture > 0
+                      ? ` • ${summary.foreignAutofatture} autofatture estere (TD17/TD18/TD19)`
+                      : '') +
                   (summary.matchedFineco > 0
                       ? ` • ${summary.matchedFineco} riconciliate con uscite Fineco`
                       : '') +

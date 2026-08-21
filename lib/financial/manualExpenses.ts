@@ -10,6 +10,10 @@ import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { addAccountingEntries } from '@/lib/financial/ledgerStore';
 import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
 import type { AccountingEntry } from '@/lib/financial/types';
+import {
+    FOREIGN_AUTOFATTURA_SOURCE,
+    SAAS_FOREIGN_VENDOR_RE,
+} from '@/lib/financial/foreignAutofattura';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'manual-expenses');
 const BLOB_PREFIX = 'floremoria-finance/manual-expenses';
@@ -178,8 +182,13 @@ export async function matchManualExpenseByAmount(
     amountCentsAbs: number,
     accountingDateIso: string | null,
     description: string
-): Promise<{ id: string; vendorName: string; score: number } | null> {
-    const tolerance = 100; // ±1 €
+): Promise<{
+    id: string;
+    vendorName: string;
+    score: number;
+    isForeignAutofattura?: boolean;
+} | null> {
+    const tolerance = 200; // ±2 € (FX / carta SaaS)
     const candidates = await prisma.manualFinanceExpense.findMany({
         where: {
             reconciled: false,
@@ -206,6 +215,7 @@ export async function matchManualExpenseByAmount(
         .replace(/[\u0300-\u036f]/g, '')
         .toUpperCase();
     const descDigits = desc.replace(/\D/g, '');
+    const descIsSaas = SAAS_FOREIGN_VENDOR_RE.test(desc);
 
     const scored = candidates.map((c) => {
         let score = 40;
@@ -222,24 +232,40 @@ export async function matchManualExpenseByAmount(
         if (vendor.length >= 5 && desc.includes(vendor.slice(0, Math.min(12, vendor.length)))) {
             score += 15;
         }
-        const meta = (c.metadataJson || {}) as { vendorVat?: string | null };
+        const meta = (c.metadataJson || {}) as {
+            vendorVat?: string | null;
+            source?: string;
+            isForeignAutofattura?: boolean;
+            isReverseCharge?: boolean;
+        };
         const vatDigits = (meta.vendorVat || '').replace(/\D/g, '');
         if (vatDigits.length >= 8 && descDigits.includes(vatDigits.slice(-11))) {
             score += 35;
         }
+        const isForeign =
+            meta.source === FOREIGN_AUTOFATTURA_SOURCE ||
+            Boolean(meta.isForeignAutofattura || meta.isReverseCharge);
+        if (isForeign && descIsSaas) score += 30;
+        if (isForeign && SAAS_FOREIGN_VENDOR_RE.test(vendor) && descIsSaas) score += 15;
         if (Math.abs(c.totalCents - amountCentsAbs) === 0) score += 15;
         else if (Math.abs(c.totalCents - amountCentsAbs) <= 50) score += 8;
+        else if (Math.abs(c.totalCents - amountCentsAbs) <= 200 && isForeign) score += 6;
         if (accountingDateIso) {
             const d = Math.abs(Date.parse(accountingDateIso) - c.expenseDate.getTime());
             if (d <= 15 * 24 * 60 * 60 * 1000) score += 15;
             else if (d <= 45 * 24 * 60 * 60 * 1000) score += 5;
         }
-        return { c, score };
+        return { c, score, isForeign };
     });
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
     if (!best || best.score < 55) return null;
-    return { id: best.c.id, vendorName: best.c.vendorName, score: best.score };
+    return {
+        id: best.c.id,
+        vendorName: best.c.vendorName,
+        score: best.score,
+        isForeignAutofattura: best.isForeign,
+    };
 }
 
 export async function markManualExpenseReconciled(

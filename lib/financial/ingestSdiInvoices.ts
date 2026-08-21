@@ -16,9 +16,16 @@ import {
 } from '@/lib/financial/parseFatturaPaXml';
 import { dedupeKeysMatch } from '@/lib/financial/invoiceDedupe';
 import type { Prisma } from '@prisma/client';
+import {
+    FOREIGN_AUTOFATTURA_SOURCE,
+    SAAS_FOREIGN_VENDOR_RE,
+    bankDescriptionMatchesSaasVendor,
+} from '@/lib/financial/foreignAutofattura';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'sdi-invoices');
 const BLOB_PREFIX = 'floremoria-finance/sdi-invoices';
+
+export type InvoiceIngestChannel = 'SDI_XML' | 'SDI_XLSX';
 
 export type SdiIngestSummary = {
     imported: number;
@@ -28,6 +35,7 @@ export type SdiIngestSummary = {
     matchedFineco: number;
     creditNotes: number;
     cancelledByCreditNote: number;
+    foreignAutofatture: number;
     totalCents: number;
     warnings: string[];
     skippedDetails: Array<{ fileName: string; reason: string }>;
@@ -106,7 +114,7 @@ async function findExistingByDedupeKey(dedupeKey: string) {
             if (meta?.dedupeKey && dedupeKeysMatch(meta.dedupeKey, dedupeKey)) return true;
             // notes: "SDI_XML IT…|num|date" — confronto esatto sulla chiave, non substring
             const notes = r.notes || '';
-            const m = notes.match(/(?:SDI_XML|SDI_XLSX)\s+(\S+)/);
+            const m = notes.match(/(?:SDI_XML|SDI_XLSX|SDI_AUTOFATTURA_ESTERA)\s+(\S+)/);
             if (m?.[1] && dedupeKeysMatch(m[1], dedupeKey)) return true;
             return false;
         }) || null
@@ -131,15 +139,33 @@ function fingerprint(inv: {
     ].join('|');
 }
 
+function resolveMetadataSource(
+    inv: ParsedFatturaPa,
+    channel: InvoiceIngestChannel
+): typeof FOREIGN_AUTOFATTURA_SOURCE | InvoiceIngestChannel {
+    if (inv.isForeignAutofattura || inv.isReverseCharge) return FOREIGN_AUTOFATTURA_SOURCE;
+    return channel;
+}
+
 function buildInvoiceMetadata(
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
-    source: 'SDI_XML' | 'SDI_XLSX',
+    channel: InvoiceIngestChannel,
     extra?: Record<string, unknown>
 ): Prisma.InputJsonValue {
+    const source = resolveMetadataSource(inv, channel);
+    const isForeign = source === FOREIGN_AUTOFATTURA_SOURCE;
     return {
         source,
+        ingestChannel: channel,
         isDeductible: inv.docKind !== 'NOTA_CREDITO',
+        isReverseCharge: Boolean(inv.isReverseCharge || isForeign),
+        isForeignAutofattura: Boolean(inv.isForeignAutofattura || isForeign),
+        category: isForeign
+            ? inv.foreignCategory || 'Software & Servizi SaaS Estero'
+            : null,
+        tipoDocumento: inv.tipoDocumento || null,
+        autofatturaType: inv.autofatturaType || null,
         dedupeKey: inv.dedupeKey,
         vendorVat: inv.vendorVat,
         invoiceNumber: inv.invoiceNumber,
@@ -155,25 +181,35 @@ function buildInvoiceMetadata(
 function toLedgerEntry(
     rowId: string,
     inv: ParsedFatturaPa,
-    source: 'SDI_XML' | 'SDI_XLSX'
+    channel: InvoiceIngestChannel
 ): AccountingEntry {
     const isNc = inv.docKind === 'NOTA_CREDITO';
+    const isForeign = Boolean(inv.isForeignAutofattura || inv.isReverseCharge);
+    const sourceLabel = isForeign
+        ? 'autofattura estera'
+        : channel === 'SDI_XLSX'
+          ? 'report'
+          : 'SDI';
     return {
         id: `entry_sdi_${rowId}`,
         date: inv.invoiceDate,
-        description: `${isNc ? 'Nota credito' : 'Fattura'} ${source === 'SDI_XLSX' ? 'report' : 'SDI'} ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(
+        description: `${isNc ? 'Nota credito' : isForeign ? 'Autofattura estera' : 'Fattura'} ${sourceLabel} ${inv.vendorName} n. ${inv.invoiceNumber}`.slice(
             0,
             240
         ),
         dareAccount: isNc
             ? LEDGER_BANK_ACCOUNT
-            : '70900 - Spese Generali / Fatture Passive',
+            : isForeign
+              ? '70300 - Software / SaaS Esteri (Reverse Charge)'
+              : '70900 - Spese Generali / Fatture Passive',
         avereAccount: isNc
-            ? '70900 - Spese Generali / Fatture Passive'
+            ? isForeign
+                ? '70300 - Software / SaaS Esteri (Reverse Charge)'
+                : '70900 - Spese Generali / Fatture Passive'
             : LEDGER_BANK_ACCOUNT,
         amountCents: Math.abs(inv.totalCents),
-        vatAmountCents: Math.abs(inv.vatCents),
-        isForeignService: false,
+        vatAmountCents: isForeign ? 0 : Math.abs(inv.vatCents),
+        isForeignService: isForeign,
         invoiceReference: inv.invoiceNumber,
         status: 'CONFIRMED',
     };
@@ -281,16 +317,21 @@ async function reconcileInvoiceWithFineco(expense: {
     totalCents: number;
     expenseDate: Date;
     vendorVat?: string | null;
+    isForeignAutofattura?: boolean;
 }): Promise<boolean> {
     const abs = Math.abs(expense.totalCents);
     const from = new Date(expense.expenseDate.getTime() - 45 * 24 * 60 * 60 * 1000);
     const to = new Date(expense.expenseDate.getTime() + 20 * 24 * 60 * 60 * 1000);
     const vatDigits = (expense.vendorVat || '').replace(/\D/g, '');
+    // SaaS: tolleranza ±€2 su FX/carta
+    const amountFilter = expense.isForeignAutofattura
+        ? { gte: -(abs + 200), lte: -(Math.max(1, abs - 200)) }
+        : { in: [-abs, abs] as number[] };
 
     const candidates = await prisma.bankStatementLine.findMany({
         where: {
             matchStatus: { not: 'MATCHED' },
-            amountCents: { in: [-abs, abs] },
+            amountCents: amountFilter,
             OR: [
                 { accountingDate: { gte: from, lte: to } },
                 { valueDate: { gte: from, lte: to } },
@@ -298,26 +339,38 @@ async function reconcileInvoiceWithFineco(expense: {
             ],
         },
         orderBy: { accountingDate: 'desc' },
-        take: 40,
+        take: 60,
     });
 
     const hit = candidates.find((c) => {
         if (c.amountCents >= 0) return false;
         if (vendorCompatible(expense.vendorName, c.description)) return true;
-        if (vatDigits.length >= 8 && c.description.replace(/\D/g, '').includes(vatDigits)) return true;
+        if (vatDigits.length >= 8 && c.description.replace(/\D/g, '').includes(vatDigits)) {
+            return true;
+        }
+        if (
+            expense.isForeignAutofattura &&
+            (SAAS_FOREIGN_VENDOR_RE.test(c.description) ||
+                bankDescriptionMatchesSaasVendor(c.description, expense.vendorName))
+        ) {
+            return Math.abs(Math.abs(c.amountCents) - abs) <= 200;
+        }
         return false;
     });
     if (!hit) return false;
 
+    const matchType = expense.isForeignAutofattura ? 'FOREIGN_AUTOFATTURA' : 'SDI_INVOICE';
     await prisma.$transaction([
         prisma.bankStatementLine.update({
             where: { id: hit.id },
             data: {
                 matchStatus: 'MATCHED',
-                matchType: 'SDI_INVOICE',
-                matchScore: 94,
+                matchType,
+                matchScore: expense.isForeignAutofattura ? 92 : 94,
                 matchedTxId: expense.id,
-                matchNotes: `Riconciliato — fattura ${expense.vendorName} (€${(abs / 100).toFixed(2)})`,
+                matchNotes: `Riconciliato — ${
+                    expense.isForeignAutofattura ? 'autofattura estera' : 'fattura'
+                } ${expense.vendorName} (€${(abs / 100).toFixed(2)})`,
             },
         }),
         prisma.manualFinanceExpense.update({
@@ -351,11 +404,12 @@ async function reconcileInvoiceWithFineco(expense: {
 async function persistInvoice(
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
-    source: 'SDI_XML' | 'SDI_XLSX'
+    channel: InvoiceIngestChannel
 ) {
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
+    const metaSource = resolveMetadataSource(inv, channel);
     const contentType =
-        source === 'SDI_XLSX'
+        channel === 'SDI_XLSX'
             ? archive.fileName.toLowerCase().endsWith('.csv')
                 ? 'text/csv'
                 : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -366,11 +420,19 @@ async function persistInvoice(
             expenseDate,
             docType: inv.docKind,
             vendorName: inv.vendorName,
-            description: inv.causale || `${inv.docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura'} n. ${inv.invoiceNumber}`,
+            description:
+                inv.causale ||
+                `${
+                    inv.isForeignAutofattura
+                        ? `Autofattura ${inv.autofatturaType || 'TD17'}`
+                        : inv.docKind === 'NOTA_CREDITO'
+                          ? 'Nota di credito'
+                          : 'Fattura'
+                } n. ${inv.invoiceNumber}`,
             totalCents: inv.totalCents,
             vatRate: inv.vatRate,
-            vatCents: inv.vatCents,
-            netCents: inv.netCents,
+            vatCents: inv.isReverseCharge ? 0 : inv.vatCents,
+            netCents: inv.isReverseCharge ? inv.totalCents : inv.netCents,
             fileName: archive.fileName,
             contentType,
             sizeBytes: null,
@@ -378,13 +440,13 @@ async function persistInvoice(
             blobUrl: archive.blobUrl,
             storageKind: archive.storageKind,
             periodKey: periodKeyFromDate(expenseDate),
-            notes: `${source} ${inv.dedupeKey}`,
-            metadataJson: buildInvoiceMetadata(inv, archive, source),
+            notes: `${metaSource} ${inv.dedupeKey}`,
+            metadataJson: buildInvoiceMetadata(inv, archive, channel),
             reconciled: false,
         },
     });
 
-    addAccountingEntries([toLedgerEntry(row.id, inv, source)]);
+    addAccountingEntries([toLedgerEntry(row.id, inv, channel)]);
     return row;
 }
 
@@ -407,7 +469,7 @@ async function updateExistingInvoice(
     },
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
-    source: 'SDI_XML' | 'SDI_XLSX'
+    channel: InvoiceIngestChannel
 ) {
     const amountChanged = existing.totalCents !== inv.totalCents;
     if (amountChanged && existing.matchedStatementLineId) {
@@ -416,6 +478,7 @@ async function updateExistingInvoice(
 
     const prevMeta = (existing.metadataJson || {}) as Record<string, unknown>;
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
+    const metaSource = resolveMetadataSource(inv, channel);
     const row = await prisma.manualFinanceExpense.update({
         where: { id: existing.id },
         data: {
@@ -425,15 +488,15 @@ async function updateExistingInvoice(
             description: inv.causale || existing.description,
             totalCents: inv.totalCents,
             vatRate: inv.vatRate,
-            vatCents: inv.vatCents,
-            netCents: inv.netCents,
+            vatCents: inv.isReverseCharge ? 0 : inv.vatCents,
+            netCents: inv.isReverseCharge ? inv.totalCents : inv.netCents,
             fileName: archive.fileName || undefined,
             blobPath: archive.blobPath || undefined,
             blobUrl: archive.blobUrl || undefined,
             storageKind: archive.storageKind !== 'none' ? archive.storageKind : undefined,
             periodKey: periodKeyFromDate(expenseDate),
-            notes: `${source} ${inv.dedupeKey} | aggiornata ${new Date().toISOString().slice(0, 10)}`,
-            metadataJson: buildInvoiceMetadata(inv, archive, source, {
+            notes: `${metaSource} ${inv.dedupeKey} | aggiornata ${new Date().toISOString().slice(0, 10)}`,
+            metadataJson: buildInvoiceMetadata(inv, archive, channel, {
                 previousTotalCents: existing.totalCents,
                 updatedFromImport: true,
                 updatedAt: new Date().toISOString(),
@@ -444,7 +507,7 @@ async function updateExistingInvoice(
         },
     });
 
-    upsertAccountingEntries([toLedgerEntry(row.id, inv, source)]);
+    upsertAccountingEntries([toLedgerEntry(row.id, inv, channel)]);
     return { row, amountChanged };
 }
 
@@ -469,6 +532,7 @@ export async function ingestParsedPassiveInvoices(input: {
     let matchedFineco = 0;
     let creditNotes = 0;
     let cancelledByCreditNote = 0;
+    let foreignAutofatture = 0;
     let totalCents = 0;
     const sampleVendors: string[] = [];
     const seenInBatch = new Set<string>();
@@ -503,6 +567,7 @@ export async function ingestParsedPassiveInvoices(input: {
     for (const inv of input.invoices) {
         try {
             if (inv.docKind === 'NOTA_CREDITO') creditNotes += 1;
+            if (inv.isForeignAutofattura || inv.isReverseCharge) foreignAutofatture += 1;
 
             // Dedup interno al file (stessa fattura ripetuta nel report)
             const alreadyInBatch = [...seenInBatch].some((k) => dedupeKeysMatch(k, inv.dedupeKey));
@@ -570,6 +635,7 @@ export async function ingestParsedPassiveInvoices(input: {
                         totalCents: inv.totalCents,
                         expenseDate: row.expenseDate,
                         vendorVat: inv.vendorVat,
+                        isForeignAutofattura: Boolean(inv.isForeignAutofattura || inv.isReverseCharge),
                     });
                     if (matched) matchedFineco += 1;
                 }
@@ -594,6 +660,7 @@ export async function ingestParsedPassiveInvoices(input: {
                     totalCents: inv.totalCents,
                     expenseDate: row.expenseDate,
                     vendorVat: inv.vendorVat,
+                    isForeignAutofattura: Boolean(inv.isForeignAutofattura || inv.isReverseCharge),
                 });
                 if (matched) matchedFineco += 1;
             }
@@ -624,6 +691,7 @@ export async function ingestParsedPassiveInvoices(input: {
         matchedFineco,
         creditNotes,
         cancelledByCreditNote,
+        foreignAutofatture,
         totalCents,
         warnings: warnings.slice(0, 40),
         skippedDetails: skippedDetails.slice(0, 40),

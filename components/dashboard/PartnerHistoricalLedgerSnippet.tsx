@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
 
 type Props = { partnerId: string };
 
@@ -80,7 +81,7 @@ export default function PartnerHistoricalLedgerSnippet({ partnerId }: Props) {
                             <div className="min-w-0">
                                 <p className="truncate font-medium text-slate-800">{r.description}</p>
                                 <p className="text-slate-400">
-                                    {String(r.accountingDate).slice(0, 10)} · {r.category} ·{' '}
+                                    {formatFinanceDate(r.accountingDate)} · {r.category} ·{' '}
                                     {r.reconciliationStatus}
                                 </p>
                             </div>

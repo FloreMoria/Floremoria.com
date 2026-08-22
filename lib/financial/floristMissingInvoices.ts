@@ -17,6 +17,7 @@ export type FloristMissingInvoiceRow = {
     amountCents: number;
     daysSincePayment: number;
     bankLineId: string | null;
+    documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
     description: string;
@@ -189,6 +190,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             amountCents,
             daysSincePayment: days,
             bankLineId: line.id,
+            documentId: line.documentId,
             orderId: line.matchedOrderId,
             orderNumber: null,
             description: line.description,
@@ -273,12 +275,27 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             amountCents,
             daysSincePayment: days,
             bankLineId: null,
+            documentId: null,
             orderId: order.id,
             orderNumber: order.orderNumber,
             description: `Compenso ordine ${order.orderNumber || order.id.slice(0, 8)}`,
             severity,
             statusLabel: `In attesa fattura da ${days} giorni`,
         });
+    }
+
+    
+    // Risolvi orderNumber per bonifici già abbinati a un ordine
+    const orderIds = [...new Set(rows.map((r) => r.orderId).filter(Boolean))] as string[];
+    if (orderIds.length) {
+        const orders = await prisma.order.findMany({
+            where: { id: { in: orderIds } },
+            select: { id: true, orderNumber: true },
+        });
+        const byId = new Map(orders.map((o) => [o.id, o.orderNumber]));
+        for (const r of rows) {
+            if (r.orderId && !r.orderNumber) r.orderNumber = byId.get(r.orderId) || null;
+        }
     }
 
     rows.sort((a, b) => b.daysSincePayment - a.daysSincePayment);

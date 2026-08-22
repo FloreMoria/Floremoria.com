@@ -72,6 +72,9 @@ export async function persistJsonAccountingEntry(entry: {
     vatAmountCents: number;
     invoiceReference: string | null;
 }): Promise<void> {
+    const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
+    if (isFinanceSeedEntryId(entry.id)) return;
+
     const isRevenue = /Ricavi/i.test(entry.avereAccount || '');
     const isFlorist = /Produzione|Fiorist/i.test(entry.dareAccount || '');
     const isSaas = /SaaS|Software/i.test(entry.dareAccount || '');

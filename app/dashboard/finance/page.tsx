@@ -37,6 +37,9 @@ import PaypalCsvUploadBox from '@/components/dashboard/PaypalCsvUploadBox';
 import GatewaySyncTable from '@/components/dashboard/GatewaySyncTable';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
+import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
+import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
+import { formatFinanceDate, formatFinanceDateTime } from '@/lib/financial/formatFinanceDate';
 import {
     FLOREMORIA_FINECO_BANK,
     FLOREMORIA_LEGAL_ENTITY,
@@ -242,35 +245,9 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    // Helper sicuri per formattazione date (evitano crash RangeError)
-    const formatDate = (dateStr?: string) => {
-        if (!dateStr) return '—';
-        try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return '—';
-            return date.toLocaleDateString('it-IT', { dateStyle: 'medium' });
-        } catch {
-            return '—';
-        }
-    };
-
-    const formatDateTime = (dateStr?: string) => {
-        if (!dateStr) return '—';
-        try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return '—';
-            // Non usare timeStyle con toLocaleDateString (RangeError → "—")
-            return date.toLocaleString('it-IT', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-        } catch {
-            return '—';
-        }
-    };
+    // Date Contabilità: rigorosamente GG/MM/AAAA (mai ISO / medium / anglosassone)
+    const formatDate = (dateStr?: string) => formatFinanceDate(dateStr);
+    const formatDateTime = (dateStr?: string) => formatFinanceDateTime(dateStr);
 
     // Calcolo scadenze: mai mostrare adempimenti scaduti da >90 giorni
     const allDeadlines = React.useMemo(() => {
@@ -693,13 +670,13 @@ export default function FinanceDashboardPage() {
                         onClick={() => setActiveTab('transactions')}
                         className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'transactions' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Movimenti Bancari Estratto Conto ({(ledger?.transactions || []).length})
+                        Movimenti Bancari Estratto Conto
                     </button>
                     <button
                         onClick={() => setActiveTab('accounting')}
                         className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'accounting' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Scritture di Prima Nota ({(ledger?.accountingEntries || []).length})
+                        Scritture di Prima Nota
                     </button>
                     <button
                         onClick={() => setActiveTab('florist-invoices')}
@@ -750,146 +727,14 @@ export default function FinanceDashboardPage() {
                 )}
 
                 {activeTab === 'transactions' && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <th className="px-5 py-3">ID Transazione</th>
-                                    <th className="px-5 py-3">Data</th>
-                                    <th className="px-5 py-3">Controparte</th>
-                                    <th className="px-5 py-3">Canale</th>
-                                    <th className="px-5 py-3">Causale bancaria</th>
-                                    <th className="px-5 py-3 text-right">Importo</th>
-                                    <th className="px-5 py-3">Stato Riconciliazione</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
-                                {filteredTransactions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-5 py-8 text-center text-slate-400 italic">Nessun movimento bancario registrato.</td>
-                                    </tr>
-                                ) : (
-                                    filteredTransactions.map((tx) => {
-                                        const cat = (tx.category || '').toUpperCase();
-                                        const status =
-                                            cat && cat !== 'UNRECONCILED'
-                                                ? 'reconciled'
-                                                : cat === 'UNRECONCILED'
-                                                  ? 'unmatched'
-                                                  : 'pending';
-                                        
-                                        return (
-                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">{tx.id}</td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-500" suppressHydrationWarning>
-                                                    {formatDateTime(tx.emittedAt)}
-                                                </td>
-                                                <td className="px-5 py-3.5 font-semibold text-slate-800">{tx.counterpartyName}</td>
-                                                <td className="px-5 py-3.5">
-                                                    <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                                                        {tx.side}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-3.5 font-mono text-xs text-slate-600 max-w-[300px] truncate" title={tx.reference || ''}>
-                                                    {tx.reference || '—'}
-                                                </td>
-                                                <td className={`px-5 py-3.5 font-bold font-mono text-right text-sm ${tx.amountCents > 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
-                                                    {tx.amountCents > 0 ? '+' : ''}{(tx.amountCents / 100).toFixed(2)} €
-                                                </td>
-                                                <td className="px-5 py-3.5">
-                                                    {status === 'reconciled' ? (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
-                                                            <CheckCircle2 size={12} />
-                                                            Riconciliato
-                                                        </span>
-                                                    ) : status === 'unmatched' ? (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold uppercase tracking-wide">
-                                                            <AlertTriangle size={12} />
-                                                            Non abbinato
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wide">
-                                                            <AlertTriangle size={12} />
-                                                            In attesa
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <BankMovementsStatementTable searchTerm={searchTerm} />
                 )}
 
                 {activeTab === 'accounting' && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse min-w-[900px]">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <th className="px-5 py-3">Data Reg.</th>
-                                    <th className="px-5 py-3">Descrizione Voce</th>
-                                    <th className="px-5 py-3">Conto Dare</th>
-                                    <th className="px-5 py-3">Conto Avere</th>
-                                    <th className="px-5 py-3 text-right">Lordo (Dare)</th>
-                                    <th className="px-5 py-3 text-right">IVA</th>
-                                    <th className="px-5 py-3">Regime</th>
-                                    <th className="px-5 py-3">Rif. Ordine/Fattura</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
-                                {filteredEntries.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={8} className="px-5 py-8 text-center text-slate-400 italic">Nessuna scrittura di Prima Nota registrata.</td>
-                                    </tr>
-                                ) : (
-                                    filteredEntries.map((entry) => (
-                                        <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-5 py-3.5 text-xs text-slate-500">{entry.date}</td>
-                                            <td className="px-5 py-3.5 font-medium text-slate-800 max-w-[280px] truncate" title={entry.description}>
-                                                {entry.description}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-xs font-mono text-slate-600">{entry.dareAccount}</td>
-                                            <td className="px-5 py-3.5 text-xs font-mono text-slate-600">{entry.avereAccount}</td>
-                                            <td className="px-5 py-3.5 font-bold font-mono text-right text-slate-950">
-                                                {(entry.amountCents / 100).toFixed(2)} €
-                                            </td>
-                                            <td className="px-5 py-3.5 font-mono text-right text-slate-600">
-                                                {entry.vatAmountCents > 0 ? `${(entry.vatAmountCents / 100).toFixed(2)} €` : '—'}
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                {entry.isForeignService ? (
-                                                    <span className="inline-flex flex-col gap-1">
-                                                        <span className="inline-flex px-2 py-0.5 rounded bg-indigo-100 border border-indigo-200 text-indigo-800 text-[9px] font-bold uppercase tracking-wider">
-                                                            Autofattura Estera (TD17/TD18)
-                                                        </span>
-                                                        <span className="inline-flex px-2 py-0.5 rounded bg-violet-50 border border-violet-200 text-violet-700 text-[9px] font-bold uppercase tracking-wider">
-                                                            Reverse Charge
-                                                        </span>
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-600 text-[9px] font-bold uppercase tracking-wider">
-                                                        Standard IT
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                {entry.invoiceReference ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold font-mono">
-                                                        <FileText size={11} />
-                                                        {entry.invoiceReference}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-400">—</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <PrimaNotaTable
+                        localEntries={ledger?.accountingEntries || []}
+                        searchTerm={searchTerm}
+                    />
                 )}
 
                 {activeTab === 'statements' && (

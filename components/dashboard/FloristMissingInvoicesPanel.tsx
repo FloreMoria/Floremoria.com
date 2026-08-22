@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Alert Contabilità: fioristi pagati senza fattura ricevuta entro 15 giorni.
+ * Alert Contabilità: fioristi pagati senza fattura + Associa ordine.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -12,8 +12,11 @@ import {
     Mail,
     MessageCircle,
     RefreshCw,
+    Search,
+    X,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
 
 export type FloristMissingInvoiceRow = {
     id: string;
@@ -26,11 +29,20 @@ export type FloristMissingInvoiceRow = {
     amountCents: number;
     daysSincePayment: number;
     bankLineId: string | null;
+    documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
     description: string;
     severity: 'warning' | 'critical';
     statusLabel: string;
+};
+
+type OrderHit = {
+    id: string;
+    orderNumber: string | null;
+    buyerFullName?: string | null;
+    totalPriceCents?: number | null;
+    partner?: { shopName?: string | null } | null;
 };
 
 type Props = {
@@ -56,6 +68,12 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [flash, setFlash] = useState<string | null>(null);
 
+    const [linkRow, setLinkRow] = useState<FloristMissingInvoiceRow | null>(null);
+    const [orderQuery, setOrderQuery] = useState('');
+    const [orderHits, setOrderHits] = useState<OrderHit[]>([]);
+    const [searchingOrders, setSearchingOrders] = useState(false);
+    const [linking, setLinking] = useState(false);
+
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -80,7 +98,39 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         void load();
     }, [load]);
 
-    const remind = async (row: FloristMissingInvoiceRow, channel: 'email' | 'whatsapp' | 'both') => {
+    useEffect(() => {
+        if (!linkRow) return;
+        const q = orderQuery.trim();
+        if (q.length < 2) {
+            setOrderHits([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            setSearchingOrders(true);
+            try {
+                const res = await fetch(
+                    `/api/dashboard/orders/search?q=${encodeURIComponent(q)}&limit=20`
+                );
+                const parsed = await readJsonResponse<{
+                    ok?: boolean;
+                    orders?: OrderHit[];
+                    results?: OrderHit[];
+                }>(res);
+                const list = parsed.data?.orders || parsed.data?.results || [];
+                setOrderHits(Array.isArray(list) ? list : []);
+            } catch {
+                setOrderHits([]);
+            } finally {
+                setSearchingOrders(false);
+            }
+        }, 280);
+        return () => clearTimeout(t);
+    }, [orderQuery, linkRow]);
+
+    const remind = async (
+        row: FloristMissingInvoiceRow,
+        channel: 'email' | 'whatsapp' | 'both'
+    ) => {
         setBusyId(`${row.id}-${channel}`);
         setFlash(null);
         try {
@@ -112,6 +162,43 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             setFlash(e instanceof Error ? e.message : 'Sollecito fallito');
         } finally {
             setBusyId(null);
+        }
+    };
+
+    const associateOrder = async (order: OrderHit) => {
+        if (!linkRow?.bankLineId || !linkRow.documentId) {
+            setFlash('Questa riga non è collegata a un movimento bancario abbinabile.');
+            return;
+        }
+        setLinking(true);
+        setFlash(null);
+        try {
+            const res = await fetch('/api/dashboard/finance/florist-missing-invoices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'link_order',
+                    bankLineId: linkRow.bankLineId,
+                    documentId: linkRow.documentId,
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                }),
+            });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                message?: string;
+                error?: string;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Associazione fallita');
+            setFlash(parsed.data?.message || `Ordine ${order.orderNumber || order.id} associato`);
+            setLinkRow(null);
+            setOrderQuery('');
+            setOrderHits([]);
+            await load();
+        } catch (e) {
+            setFlash(e instanceof Error ? e.message : 'Associazione fallita');
+        } finally {
+            setLinking(false);
         }
     };
 
@@ -166,7 +253,8 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 </div>
             ) : rows.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-500">
-                    Nessun fiorista in attesa di fattura. Tutti i pagamenti hanno un match entro 15 giorni.
+                    Nessun fiorista in attesa di fattura. Tutti i pagamenti hanno un match entro 15
+                    giorni.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
@@ -196,7 +284,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
-                                        {row.paymentDate}
+                                        {formatFinanceDate(row.paymentDate)}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
                                         €{euro(row.amountCents)}
@@ -218,11 +306,6 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                             <button
                                                 type="button"
                                                 disabled={!!busyId || !row.partnerEmail}
-                                                title={
-                                                    row.partnerEmail
-                                                        ? 'Invia sollecito email'
-                                                        : 'Email assente'
-                                                }
                                                 onClick={() => void remind(row, 'email')}
                                                 className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
                                             >
@@ -236,11 +319,6 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                             <button
                                                 type="button"
                                                 disabled={!!busyId || !row.partnerWhatsapp}
-                                                title={
-                                                    row.partnerWhatsapp
-                                                        ? 'Invia sollecito WhatsApp'
-                                                        : 'WhatsApp assente'
-                                                }
                                                 onClick={() => void remind(row, 'whatsapp')}
                                                 className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
                                             >
@@ -250,6 +328,19 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                                     <MessageCircle size={12} />
                                                 )}
                                                 WhatsApp
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={!row.bankLineId || !row.documentId}
+                                                onClick={() => {
+                                                    setLinkRow(row);
+                                                    setOrderQuery('');
+                                                    setOrderHits([]);
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/10 text-[#8a6d45] text-[10px] font-bold uppercase tracking-wide hover:bg-[#c5a880]/20 disabled:opacity-40"
+                                            >
+                                                <Search size={12} />
+                                                Associa ordine
                                             </button>
                                             <button
                                                 type="button"
@@ -272,6 +363,89 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            )}
+
+            {linkRow && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div className="w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
+                        <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-white z-10">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-800">Associa ordine</h3>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    {linkRow.partnerName} · €{euro(linkRow.amountCents)} ·{' '}
+                                    {formatFinanceDate(linkRow.paymentDate)}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setLinkRow(null)}
+                                className="p-2 rounded-lg hover:bg-slate-50 text-slate-500"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                Cerca ordine (numero, cliente, email…)
+                                <div className="mt-1 relative">
+                                    <Search
+                                        size={14}
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                    />
+                                    <input
+                                        value={orderQuery}
+                                        onChange={(e) => setOrderQuery(e.target.value)}
+                                        placeholder="Es. PT-MI-26-001"
+                                        className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                        autoFocus
+                                    />
+                                </div>
+                            </label>
+                            {searchingOrders && (
+                                <p className="text-xs text-slate-400 inline-flex items-center gap-1">
+                                    <Loader2 size={12} className="animate-spin" /> Ricerca…
+                                </p>
+                            )}
+                            <ul className="divide-y divide-slate-100 border border-slate-100 rounded-xl max-h-64 overflow-y-auto">
+                                {orderHits.length === 0 ? (
+                                    <li className="px-3 py-6 text-center text-xs text-slate-400">
+                                        {orderQuery.trim().length < 2
+                                            ? 'Digita almeno 2 caratteri'
+                                            : 'Nessun ordine trovato'}
+                                    </li>
+                                ) : (
+                                    orderHits.map((o) => (
+                                        <li key={o.id}>
+                                            <button
+                                                type="button"
+                                                disabled={linking}
+                                                onClick={() => void associateOrder(o)}
+                                                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 disabled:opacity-50"
+                                            >
+                                                <p className="text-sm font-semibold text-slate-800 font-mono">
+                                                    {o.orderNumber || o.id.slice(0, 10)}
+                                                </p>
+                                                <p className="text-[11px] text-slate-500 truncate">
+                                                    {o.buyerFullName || 'Cliente n/d'}
+                                                    {o.partner?.shopName
+                                                        ? ` · ${o.partner.shopName}`
+                                                        : ''}
+                                                    {typeof o.totalPriceCents === 'number'
+                                                        ? ` · €${euro(o.totalPriceCents)}`
+                                                        : ''}
+                                                </p>
+                                            </button>
+                                        </li>
+                                    ))
+                                )}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

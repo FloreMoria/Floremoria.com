@@ -81,8 +81,12 @@ export async function computeHistoricalPnl(opts: {
             netCents: true,
             vatCents: true,
             sourceType: true,
+            sourceId: true,
+            sourceKey: true,
         },
     });
+
+    const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
 
     // Evita doppio conteggio: se esistono sia ORDER che BANK_LINE payout, preferiamo ORDER per ricavi
     // e BANK_LINE solo se non coperto. Per semplicità gestionale: ricavi da ORDER+ALTRI; costi fioristi
@@ -91,6 +95,12 @@ export async function computeHistoricalPnl(opts: {
     // (approccio pragmatico: somma per categoria escludendo BANK_LINE ricavi se ci sono ORDER).
 
     const hasOrders = rows.some((r) => r.sourceType === 'ORDER');
+    // Escludi seed demo JSON (entry_001_* / entry_002_* / …) dal CE
+    const usable = rows.filter((r) => {
+        if (r.sourceType === 'JSON_ENTRY' && isFinanceSeedEntryId(r.sourceId || '')) return false;
+        if (r.sourceKey?.startsWith('JSON_ENTRY:entry_00')) return false;
+        return true;
+    });
 
     let ricaviLordiCents = 0;
     let ricaviNettiCents = 0;
@@ -101,14 +111,14 @@ export async function computeHistoricalPnl(opts: {
     let oneriBancariCents = 0;
     let ivaCreditoCents = 0;
 
-    for (const r of rows) {
+    for (const r of usable) {
         if (r.sourceType === 'BANK_LINE' && r.direction === 'ENTRATA' && hasOrders) {
             // Payout gateway già riflessi negli ordini — evita doppio ricavo
             continue;
         }
         if (r.sourceType === 'BANK_LINE' && r.category === 'COSTI_FIORISTI') {
             // Preferisci FLORIST_PAYOUT da ordine se presente
-            const hasFloristPayout = rows.some((x) => x.sourceType === 'FLORIST_PAYOUT');
+            const hasFloristPayout = usable.some((x) => x.sourceType === 'FLORIST_PAYOUT');
             if (hasFloristPayout) continue;
         }
 
@@ -150,7 +160,7 @@ export async function computeHistoricalPnl(opts: {
         ivaCreditoCents,
         ivaNettaCents,
         risultatoAnteImposteCents,
-        entriesCount: rows.length,
+        entriesCount: usable.length,
     };
 }
 

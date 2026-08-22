@@ -15,6 +15,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
 
 type Pnl = {
     fiscalYear: number;
@@ -372,7 +373,7 @@ export default function HistoricalFiscalArchivePanel() {
                                 rows.map((r) => (
                                     <tr key={r.id} className="hover:bg-slate-50/80">
                                         <td className="px-3 py-2.5 whitespace-nowrap text-xs text-slate-600">
-                                            {String(r.accountingDate).slice(0, 10)}
+                                            {formatFinanceDate(r.accountingDate)}
                                         </td>
                                         <td className="px-3 py-2.5">
                                             <span

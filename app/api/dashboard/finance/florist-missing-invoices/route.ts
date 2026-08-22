@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import prisma from '@/lib/prisma';
 import {
     listFloristMissingInvoices,
     sendFloristInvoiceReminder,
@@ -54,10 +55,55 @@ export async function POST(request: Request) {
             paymentDate?: string;
             daysSincePayment?: number;
             orderNumber?: string | null;
+            bankLineId?: string;
+            documentId?: string;
+            orderId?: string;
         } | null;
 
-        if (!body || body.action !== 'remind') {
-            return jsonError('Azione non supportata (usa action: "remind").', 400);
+        if (!body?.action) {
+            return jsonError('Azione mancante.', 400);
+        }
+
+        if (body.action === 'link_order') {
+            const bankLineId = String(body.bankLineId || '').trim();
+            const documentId = String(body.documentId || '').trim();
+            const orderId = String(body.orderId || '').trim();
+            if (!bankLineId || !documentId || !orderId) {
+                return jsonError('bankLineId, documentId e orderId sono obbligatori.', 400);
+            }
+
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                select: { id: true, orderNumber: true },
+            });
+            if (!order) return jsonError('Ordine non trovato.', 404);
+
+            const line = await prisma.bankStatementLine.findFirst({
+                where: { id: bankLineId, documentId },
+            });
+            if (!line) return jsonError('Movimento bancario non trovato.', 404);
+
+            await prisma.bankStatementLine.update({
+                where: { id: bankLineId },
+                data: {
+                    matchedOrderId: order.id,
+                    matchStatus: 'MATCHED',
+                    matchType: line.matchType || 'FLORIST_TRANSFER',
+                    matchScore: 100,
+                    matchNotes: `Ordine associato da Contabilità: ${order.orderNumber || order.id}`,
+                },
+            });
+
+            return NextResponse.json({
+                ok: true,
+                message: `Ordine ${order.orderNumber || order.id} associato al pagamento.`,
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+            });
+        }
+
+        if (body.action !== 'remind') {
+            return jsonError('Azione non supportata (usa "remind" o "link_order").', 400);
         }
         if (!body.partnerName || !body.paymentDate || body.amountCents == null) {
             return jsonError('Dati sollecito incompleti.', 400);
@@ -96,7 +142,7 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('[florist-missing-invoices POST]', error);
         return jsonError(
-            error instanceof Error ? error.message : 'Sollecito fallito',
+            error instanceof Error ? error.message : 'Operazione fallita',
             500
         );
     }

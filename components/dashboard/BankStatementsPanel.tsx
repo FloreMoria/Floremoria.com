@@ -19,6 +19,7 @@ import {
     X,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
 
 type ParseAnomaly = {
     code: string;
@@ -110,24 +111,12 @@ const CATEGORY_OPTIONS = [
 
 function formatPeriod(start: string | null, end: string | null): string {
     if (!start && !end) return '—';
-    const a = start ? start.slice(0, 10) : '?';
-    const b = end ? end.slice(0, 10) : '?';
+    const a = start ? formatFinanceDate(start) : '?';
+    const b = end ? formatFinanceDate(end) : '?';
     return a === b ? a : `${a} → ${b}`;
 }
 
-function formatItDate(iso: string | null | undefined): string {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) {
-        const m = String(iso).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-        return '—';
-    }
-    const dd = String(d.getUTCDate()).padStart(2, '0');
-    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const yyyy = d.getUTCFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-}
+
 
 function formatEuro(cents: number): string {
     const sign = cents > 0 ? '+' : cents < 0 ? '−' : '';
@@ -1006,10 +995,10 @@ export default function BankStatementsPanel() {
                                             className="border-t border-slate-100 align-top hover:bg-slate-50/60"
                                         >
                                             <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                                {formatItDate(line.accountingDate)}
+                                                {formatFinanceDate(line.accountingDate)}
                                             </td>
                                             <td className="px-3 py-2.5 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                                {formatItDate(line.valueDate)}
+                                                {formatFinanceDate(line.valueDate)}
                                             </td>
                                             <td className="px-3 py-2.5 text-slate-800 min-w-[280px] max-w-[520px]">
                                                 <CausaleCell description={line.description} />
@@ -1199,7 +1188,7 @@ export default function BankStatementsPanel() {
                                                     className="border-t border-slate-100 align-top"
                                                 >
                                                     <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
-                                                        {formatItDate(row.date)}
+                                                        {formatFinanceDate(row.date)}
                                                     </td>
                                                     <td className="px-3 py-2 text-xs max-w-[240px]">
                                                         <div
@@ -1272,7 +1261,7 @@ export default function BankStatementsPanel() {
                                 <div className="flex justify-between gap-2 text-xs">
                                     <span className="text-slate-500">Data</span>
                                     <span className="font-mono font-semibold text-slate-800">
-                                        {formatItDate(
+                                        {formatFinanceDate(
                                             matchModal.line.accountingDate ||
                                                 matchModal.line.valueDate
                                         )}

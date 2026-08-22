@@ -2,12 +2,14 @@
 
 /**
  * Scritture di Prima Nota da dati reali (ledger bonificato + Registro Neon).
+ * Gerarchia fiscale: banca/gateway prevalgono su ordini web/manuali.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatFinanceDate';
+import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { AccountingEntry } from '@/lib/financial/types';
 
 type NeonRow = {
@@ -16,7 +18,9 @@ type NeonRow = {
     description: string;
     sourceType: string;
     sourceId: string;
+    sourceKey?: string | null;
     documentRef?: string | null;
+    orderId?: string | null;
     totalCents: number;
     netCents: number;
     vatCents: number;
@@ -25,6 +29,8 @@ type NeonRow = {
     metadataJson?: {
         dareAccount?: string;
         avereAccount?: string;
+        stripeTransactionId?: string;
+        [key: string]: unknown;
     } | null;
 };
 
@@ -48,7 +54,7 @@ function euro(cents: number): string {
 function accountsFromNeon(r: NeonRow): { dare: string; avere: string } {
     const meta = r.metadataJson || {};
     if (meta.dareAccount && meta.avereAccount) {
-        return { dare: meta.dareAccount, avere: meta.avereAccount };
+        return { dare: String(meta.dareAccount), avere: String(meta.avereAccount) };
     }
     const bank = '10100 - Banca Fineco';
     if (r.direction === 'ENTRATA' || r.totalCents > 0) {
@@ -76,7 +82,9 @@ function accountForCategory(category: string, revenueSide: boolean): string {
 function sourceLabel(sourceType: string): string {
     switch (sourceType) {
         case 'ORDER':
+            return 'Ordine web';
         case 'STRIPE_MOVEMENT':
+        case 'PAYPAL_MOVEMENT':
             return 'Incasso gateway';
         case 'FLORIST_PAYOUT':
             return 'Compenso fiorista';
@@ -130,27 +138,35 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
     }, [load]);
 
     const rows: DisplayEntry[] = useMemo(() => {
+        const cleanedNeon = neonRows.filter((r) => {
+            if (r.sourceType === 'CUSTOMER_RECEIPT') return false;
+            if (r.sourceType === 'JSON_ENTRY' && isFinanceSeedEntryId(r.sourceId || '')) return false;
+            return true;
+        });
+
+        // Dedup già lato API; ricalcolo locale per sicurezza e per escludere JSON locali duplicati
+        const fiscalRows = applyFiscalAuthorityHierarchy(
+            cleanedNeon.map((r) => ({
+                id: r.id,
+                sourceType: r.sourceType,
+                sourceId: r.sourceId,
+                sourceKey: r.sourceKey,
+                orderId: r.orderId,
+                documentRef: r.documentRef,
+                accountingDate: r.accountingDate,
+                totalCents: r.totalCents,
+                direction: r.direction,
+                category: r.category,
+                metadataJson: r.metadataJson,
+            }))
+        );
+        const keepNeonIds = new Set(fiscalRows.map((r) => r.id).filter(Boolean) as string[]);
+
         const map = new Map<string, DisplayEntry>();
 
-        for (const e of localEntries) {
-            if (isFinanceSeedEntryId(e.id)) continue;
-            map.set(e.id, {
-                id: e.id,
-                date: e.date,
-                description: e.description,
-                dareAccount: e.dareAccount,
-                avereAccount: e.avereAccount,
-                amountCents: e.amountCents,
-                sourceLabel: 'Prima Nota',
-            });
-        }
-
-        for (const r of neonRows) {
-            if (r.sourceType === 'CUSTOMER_RECEIPT') continue;
-            if (r.sourceType === 'JSON_ENTRY' && isFinanceSeedEntryId(r.sourceId || '')) continue;
+        for (const r of cleanedNeon) {
+            if (!keepNeonIds.has(r.id)) continue;
             const accounts = accountsFromNeon(r);
-            if (map.has(r.id)) continue;
-            if (r.sourceType === 'JSON_ENTRY' && map.has(r.sourceId)) continue;
             map.set(r.id, {
                 id: r.id,
                 date: String(r.accountingDate).slice(0, 10),
@@ -159,6 +175,44 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 avereAccount: accounts.avere,
                 amountCents: Math.abs(r.totalCents || r.netCents || 0),
                 sourceLabel: sourceLabel(r.sourceType),
+            });
+        }
+
+        const combinedForLocalFilter = applyFiscalAuthorityHierarchy([
+            ...fiscalRows,
+            ...localEntries
+                .filter((e) => !isFinanceSeedEntryId(e.id))
+                .map((e) => ({
+                    id: e.id,
+                    sourceType: 'JSON_ENTRY' as const,
+                    sourceId: e.id,
+                    sourceKey: `JSON_ENTRY:${e.id}`,
+                    accountingDate: e.date,
+                    totalCents: e.amountCents,
+                    direction: 'ENTRATA' as const,
+                    category: 'RICAVI_VENDITE',
+                    metadataJson: null,
+                })),
+        ]);
+        const keepLocalIds = new Set(
+            combinedForLocalFilter
+                .filter((r) => r.sourceType === 'JSON_ENTRY')
+                .map((r) => r.id)
+                .filter(Boolean) as string[]
+        );
+
+        for (const e of localEntries) {
+            if (isFinanceSeedEntryId(e.id)) continue;
+            if (!keepLocalIds.has(e.id)) continue;
+            if (map.has(e.id)) continue;
+            map.set(e.id, {
+                id: e.id,
+                date: e.date,
+                description: e.description,
+                dareAccount: e.dareAccount,
+                avereAccount: e.avereAccount,
+                amountCents: e.amountCents,
+                sourceLabel: 'Prima Nota',
             });
         }
 
@@ -190,8 +244,8 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         <div className="space-y-2">
             <div className="px-4 pt-3 flex items-center justify-between gap-2">
                 <p className="text-[11px] text-slate-500">
-                    Solo scritture reali (gateway, SDI, banca, spese documentate) · {rows.length}{' '}
-                    voci
+                    Solo scritture reali (gateway/banca prioritari; ordini esclusi se già
+                    incassati) · {rows.length} voci
                 </p>
                 <button
                     type="button"

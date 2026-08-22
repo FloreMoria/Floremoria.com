@@ -9,6 +9,7 @@ import {
     type HistoricalPnl,
     type LedgerCategory,
 } from '@/lib/financial/historicalLedgerTypes';
+import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
 
 export type HistoricalLedgerFilters = {
     fiscalYear?: number;
@@ -48,15 +49,29 @@ export async function listHistoricalLedgerEntries(filters: HistoricalLedgerFilte
     const take = Math.min(filters.take ?? 200, 2000);
     const skip = filters.skip ?? 0;
     const where = buildWhere(filters);
-    const [rows, total] = await Promise.all([
+    // Over-fetch per applicare dedup gerarchica senza perdere autorità fuori pagina
+    const fetchTake = Math.min(take + skip + 500, 5000);
+    const [rawRows, totalRaw] = await Promise.all([
         prisma.financialLedgerEntry.findMany({
             where,
             orderBy: [{ accountingDate: 'desc' }, { createdAt: 'desc' }],
-            take,
-            skip,
+            take: fetchTake,
+            skip: 0,
         }),
         prisma.financialLedgerEntry.count({ where }),
     ]);
+
+    const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
+    const cleaned = rawRows.filter((r) => {
+        if (r.sourceType === 'JSON_ENTRY' && isFinanceSeedEntryId(r.sourceId || '')) return false;
+        if (r.sourceKey?.startsWith('JSON_ENTRY:entry_00')) return false;
+        return true;
+    });
+    const deduped = applyFiscalAuthorityHierarchy(cleaned);
+    const rows = deduped.slice(skip, skip + take);
+    const suppressed = Math.max(0, cleaned.length - deduped.length);
+    const total = Math.max(0, totalRaw - suppressed);
+
     return { rows, total };
 }
 
@@ -83,24 +98,22 @@ export async function computeHistoricalPnl(opts: {
             sourceType: true,
             sourceId: true,
             sourceKey: true,
+            orderId: true,
+            documentRef: true,
+            accountingDate: true,
+            metadataJson: true,
         },
     });
 
     const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
 
-    // Evita doppio conteggio: se esistono sia ORDER che BANK_LINE payout, preferiamo ORDER per ricavi
-    // e BANK_LINE solo se non coperto. Per semplicità gestionale: ricavi da ORDER+ALTRI; costi fioristi
-    // da FLORIST_PAYOUT; bank lines uscite non fiorista; manual expenses; saas; stripe fees.
-    // Per ricavi bank line gateway: includi solo se non abbiamo già sync ordini nello stesso anno
-    // (approccio pragmatico: somma per categoria escludendo BANK_LINE ricavi se ci sono ORDER).
-
-    const hasOrders = rows.some((r) => r.sourceType === 'ORDER');
-    // Escludi seed demo JSON (entry_001_* / entry_002_* / …) dal CE
-    const usable = rows.filter((r) => {
+    // Escludi seed demo JSON; poi gerarchia fiscale: banca/gateway > ORDER (e JSON duplicati)
+    const cleaned = rows.filter((r) => {
         if (r.sourceType === 'JSON_ENTRY' && isFinanceSeedEntryId(r.sourceId || '')) return false;
         if (r.sourceKey?.startsWith('JSON_ENTRY:entry_00')) return false;
         return true;
     });
+    const usable = applyFiscalAuthorityHierarchy(cleaned);
 
     let ricaviLordiCents = 0;
     let ricaviNettiCents = 0;
@@ -112,12 +125,9 @@ export async function computeHistoricalPnl(opts: {
     let ivaCreditoCents = 0;
 
     for (const r of usable) {
-        if (r.sourceType === 'BANK_LINE' && r.direction === 'ENTRATA' && hasOrders) {
-            // Payout gateway già riflessi negli ordini — evita doppio ricavo
-            continue;
-        }
+        // Costi fioristi: se esiste scrittura da ordine liquidato, ignora il doppione bancario
+        // (il ricavo resta comunque prioritario da banca/gateway sopra).
         if (r.sourceType === 'BANK_LINE' && r.category === 'COSTI_FIORISTI') {
-            // Preferisci FLORIST_PAYOUT da ordine se presente
             const hasFloristPayout = usable.some((x) => x.sourceType === 'FLORIST_PAYOUT');
             if (hasFloristPayout) continue;
         }

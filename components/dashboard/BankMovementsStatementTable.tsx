@@ -30,6 +30,19 @@ function euro(cents: number): string {
     });
 }
 
+/** Saldo sempre con segno esplicito (+/−) e colore contabile. */
+function formatSignedSaldo(cents: number): { text: string; className: string } {
+    const sign = cents >= 0 ? '+' : '−';
+    return {
+        text: `${sign}€ ${euro(cents)}`,
+        className: cents >= 0 ? 'text-emerald-700' : 'text-rose-700',
+    };
+}
+
+/** Header ~2.75rem + 15 righe ~2.85rem (py-3 + testo) → ~15 movimenti a colpo d'occhio. */
+const BANK_TABLE_SCROLL_CLASS =
+    'max-h-[calc(2.75rem+15*2.85rem)] overflow-y-auto overflow-x-auto';
+
 function categoryLabel(matchType: string | null | undefined, amountCents: number): string {
     const t = (matchType || '').toUpperCase();
     if (t.includes('FLORIST')) return 'Compenso fiorista';
@@ -156,18 +169,18 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                     {error}
                 </div>
             )}
-            <div className="overflow-x-auto">
+            <div className={BANK_TABLE_SCROLL_CLASS}>
                 <table className="w-full text-left border-collapse min-w-[1100px]">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            <th className="px-4 py-3">Data Contabile</th>
-                            <th className="px-4 py-3">Data Valuta</th>
-                            <th className="px-4 py-3">Descrizione / Causale</th>
-                            <th className="px-4 py-3">Categoria</th>
-                            <th className="px-4 py-3 text-right">Entrate</th>
-                            <th className="px-4 py-3 text-right">Uscite</th>
-                            <th className="px-4 py-3 text-right">Saldo</th>
-                            <th className="px-4 py-3">Origine</th>
+                    <thead className="sticky top-0 z-10">
+                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
+                            <th className="px-4 py-3 bg-slate-50">Data Contabile</th>
+                            <th className="px-4 py-3 bg-slate-50">Data Valuta</th>
+                            <th className="px-4 py-3 bg-slate-50">Descrizione / Causale</th>
+                            <th className="px-4 py-3 bg-slate-50">Categoria</th>
+                            <th className="px-4 py-3 text-right bg-slate-50">Entrate</th>
+                            <th className="px-4 py-3 text-right bg-slate-50">Uscite</th>
+                            <th className="px-4 py-3 text-right bg-slate-50">Saldo</th>
+                            <th className="px-4 py-3 bg-slate-50">Origine</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -187,6 +200,7 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                 const credit = line.amountCents > 0 ? line.amountCents : 0;
                                 const debit =
                                     line.amountCents < 0 ? Math.abs(line.amountCents) : 0;
+                                const saldo = formatSignedSaldo(line.progressiveCents);
                                 return (
                                     <tr key={line.id} className="hover:bg-slate-50/60">
                                         <td className="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">
@@ -214,8 +228,10 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                         <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-rose-700 whitespace-nowrap">
                                             {debit > 0 ? `−€${euro(debit)}` : '—'}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-xs font-bold text-slate-900 whitespace-nowrap">
-                                            €{euro(line.progressiveCents)}
+                                        <td
+                                            className={`px-4 py-3 text-right font-mono text-xs font-bold whitespace-nowrap ${saldo.className}`}
+                                        >
+                                            {saldo.text}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span

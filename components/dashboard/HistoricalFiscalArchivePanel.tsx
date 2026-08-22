@@ -16,6 +16,10 @@ import {
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import {
+    labelReconciliationStatusIt,
+    labelSourceTypeIt,
+} from '@/lib/financial/fiscalItalianLabels';
 
 type Pnl = {
     fiscalYear: number;
@@ -404,7 +408,7 @@ export default function HistoricalFiscalArchivePanel() {
                                                 {r.description}
                                             </p>
                                             <p className="text-[11px] text-slate-400 truncate">
-                                                {r.counterpartyName || r.sourceType}
+                                                {r.counterpartyName || labelSourceTypeIt(r.sourceType)}
                                             </p>
                                         </td>
                                         <td className="px-3 py-2.5 text-right font-mono text-xs">
@@ -416,8 +420,10 @@ export default function HistoricalFiscalArchivePanel() {
                                         <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                                             €{euro(r.totalCents)}
                                         </td>
-                                        <td className="px-3 py-2.5 text-[10px] uppercase text-slate-500">
-                                            {r.reconciliationStatus}
+                                        <td className="px-3 py-2.5 text-[10px] text-slate-600">
+                                            <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 font-semibold">
+                                                {labelReconciliationStatusIt(r.reconciliationStatus)}
+                                            </span>
                                         </td>
                                         <td className="px-3 py-2.5">
                                             {r.attachmentUrl ? (

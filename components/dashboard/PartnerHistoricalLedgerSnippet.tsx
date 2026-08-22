@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import { labelReconciliationStatusIt } from '@/lib/financial/fiscalItalianLabels';
 
 type Props = { partnerId: string };
 
@@ -82,7 +83,7 @@ export default function PartnerHistoricalLedgerSnippet({ partnerId }: Props) {
                                 <p className="truncate font-medium text-slate-800">{r.description}</p>
                                 <p className="text-slate-400">
                                     {formatFinanceDate(r.accountingDate)} · {r.category} ·{' '}
-                                    {r.reconciliationStatus}
+                                    {labelReconciliationStatusIt(r.reconciliationStatus)}
                                 </p>
                             </div>
                             <span className="font-mono font-semibold text-slate-700 shrink-0">

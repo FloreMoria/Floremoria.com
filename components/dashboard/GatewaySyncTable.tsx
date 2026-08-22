@@ -265,16 +265,30 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                                     </td>
                                     <td className="px-3 py-2.5">
                                         <span
-                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${gatewayBadgeClass(r.accountCode)}`}
+                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${gatewayBadgeClass(r.accountCode || (r.gateway === 'paypal' ? 'PAYPAL' : 'COM'))}`}
                                         >
-                                            {r.accountLabel}
+                                            {r.accountLabel ||
+                                                (r.gateway === 'paypal'
+                                                    ? 'PayPal'
+                                                    : r.accountCode === 'EU'
+                                                      ? 'Stripe EU'
+                                                      : 'Stripe COM')}
                                         </span>
                                     </td>
                                     <td className="px-3 py-2.5">
                                         <span
-                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${movementBadgeClass(r.movementKind)}`}
+                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${movementBadgeClass(r.movementKind || 'altro')}`}
                                         >
-                                            {r.movementLabel}
+                                            {r.movementLabel ||
+                                                (r.movementKind === 'incasso'
+                                                    ? 'Incasso Ordine'
+                                                    : r.movementKind === 'commissione'
+                                                      ? 'Commissione Gateway'
+                                                      : r.movementKind === 'payout'
+                                                        ? 'Payout Bancario'
+                                                        : r.movementKind === 'rimborso'
+                                                          ? 'Rimborso'
+                                                          : 'Altro movimento')}
                                         </span>
                                     </td>
                                     <td className="px-3 py-2.5">

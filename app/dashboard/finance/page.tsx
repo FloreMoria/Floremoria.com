@@ -682,7 +682,7 @@ export default function FinanceDashboardPage() {
                         onClick={() => setActiveTab('florist-invoices')}
                         className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'florist-invoices' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Fioristi in attesa di Fattura
+                        Fatture in attesa dai fioristi
                     </button>
                     <button
                         onClick={() => setActiveTab('historical')}

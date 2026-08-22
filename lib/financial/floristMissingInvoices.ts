@@ -1,5 +1,6 @@
 /**
  * Alert: bonifici a fioristi senza fattura ricevuta entro 15 giorni.
+ * Cross-match automatico ordine ↔ bonifico (data, fiorista, defunto, cimitero, importo).
  */
 
 import prisma from '@/lib/prisma';
@@ -20,6 +21,8 @@ export type FloristMissingInvoiceRow = {
     documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
+    /** manual = Associa ordine; auto = matching incrociato; null = non associato */
+    orderMatchSource: 'manual' | 'auto' | null;
     description: string;
     severity: 'warning' | 'critical';
     statusLabel: string;
@@ -43,6 +46,18 @@ function namesCompatible(a: string, b: string): boolean {
     return tokens.some((t) => nb.includes(t));
 }
 
+function textContainsName(haystack: string, needle: string): boolean {
+    const h = normalizeName(haystack);
+    const n = normalizeName(needle);
+    if (!h || !n || n.length < 3) return false;
+    if (h.includes(n)) return true;
+    const parts = n.split(' ').filter((p) => p.length >= 3);
+    if (parts.length >= 2) {
+        return parts.filter((p) => h.includes(p)).length >= Math.min(2, parts.length);
+    }
+    return parts.some((p) => h.includes(p));
+}
+
 function daysBetween(from: Date, to: Date): number {
     return Math.floor((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
 }
@@ -53,6 +68,82 @@ type InvoiceCandidate = {
     expenseDate: Date;
     vendorVat: string | null;
 };
+
+type OrderMatchCandidate = {
+    id: string;
+    orderNumber: string | null;
+    partnerId: string | null;
+    deceasedName: string;
+    cemeteryName: string;
+    cemeteryCity: string;
+    floristCompensationCents: number | null;
+    totalPriceCents: number;
+    createdAt: Date;
+    updatedAt: Date;
+    deliveryDate: Date | null;
+    partnerShopName: string | null;
+    partnerOwnerName: string | null;
+};
+
+/**
+ * Punteggio matching bonifico ↔ ordine: date, fiorista, defunto, cimitero, importo.
+ * Soglia minima 45; preferisce match forte su importo+partner.
+ */
+function scoreOrderAgainstBankLine(
+    order: OrderMatchCandidate,
+    opts: {
+        description: string;
+        amountCents: number;
+        paymentDate: Date;
+        partnerId: string | null;
+        partnerName: string;
+    }
+): number {
+    let score = 0;
+    const desc = opts.description || '';
+
+    if (opts.partnerId && order.partnerId === opts.partnerId) score += 35;
+    else if (
+        order.partnerShopName &&
+        namesCompatible(opts.partnerName, order.partnerShopName)
+    ) {
+        score += 22;
+    } else if (
+        order.partnerOwnerName &&
+        namesCompatible(opts.partnerName, order.partnerOwnerName)
+    ) {
+        score += 18;
+    } else if (order.partnerShopName && textContainsName(desc, order.partnerShopName)) {
+        score += 15;
+    }
+
+    const comp = order.floristCompensationCents || 0;
+    if (comp > 0 && Math.abs(comp - opts.amountCents) <= 50) score += 40;
+    else if (comp > 0 && Math.abs(comp - opts.amountCents) <= 200) score += 22;
+    else if (Math.abs(order.totalPriceCents - opts.amountCents) <= 50) score += 12;
+
+    const anchors = [order.updatedAt, order.createdAt, order.deliveryDate].filter(
+        (d): d is Date => Boolean(d)
+    );
+    let bestDayDelta = Infinity;
+    for (const d of anchors) {
+        bestDayDelta = Math.min(bestDayDelta, Math.abs(daysBetween(d, opts.paymentDate)));
+    }
+    if (bestDayDelta <= 3) score += 20;
+    else if (bestDayDelta <= 10) score += 12;
+    else if (bestDayDelta <= 21) score += 5;
+    else if (bestDayDelta > 45) score -= 15;
+
+    if (order.deceasedName && textContainsName(desc, order.deceasedName)) score += 25;
+    if (order.cemeteryName && textContainsName(desc, order.cemeteryName)) score += 15;
+    if (order.cemeteryCity && textContainsName(desc, order.cemeteryCity)) score += 10;
+
+    if (order.orderNumber && desc.toUpperCase().includes(order.orderNumber.toUpperCase())) {
+        score += 40;
+    }
+
+    return score;
+}
 
 function hasMatchingInvoice(
     invoices: InvoiceCandidate[],
@@ -72,7 +163,11 @@ function hasMatchingInvoice(
         if (inv.expenseDate < from || inv.expenseDate > to) return false;
         if (Math.abs(inv.totalCents - abs) > 100) return false;
         const invVat = (inv.vendorVat || '').replace(/\D/g, '');
-        if (vatDigits.length >= 8 && invVat && (invVat.includes(vatDigits) || vatDigits.includes(invVat))) {
+        if (
+            vatDigits.length >= 8 &&
+            invVat &&
+            (invVat.includes(vatDigits) || vatDigits.includes(invVat))
+        ) {
             return true;
         }
         if (namesCompatible(opts.partnerName, inv.vendorName)) return true;
@@ -90,7 +185,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
     const rows: FloristMissingInvoiceRow[] = [];
     const seen = new Set<string>();
 
-    const [partners, invoiceRows] = await Promise.all([
+    const [partners, invoiceRows, candidateOrders] = await Promise.all([
         prisma.partner.findMany({
             where: { deletedAt: null, isActive: true },
             select: {
@@ -117,7 +212,48 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             },
             take: 2000,
         }),
+        prisma.order.findMany({
+            where: {
+                isTest: false,
+                deletedAt: null,
+                createdAt: { gte: new Date(lookback.getTime() - 60 * 24 * 60 * 60 * 1000) },
+            },
+            select: {
+                id: true,
+                orderNumber: true,
+                partnerId: true,
+                deceasedName: true,
+                cemeteryName: true,
+                cemeteryCity: true,
+                floristCompensationCents: true,
+                totalPriceCents: true,
+                createdAt: true,
+                updatedAt: true,
+                deliveryDate: true,
+                partner: {
+                    select: { shopName: true, ownerName: true },
+                },
+            },
+            take: 1500,
+            orderBy: { updatedAt: 'desc' },
+        }),
     ]);
+
+    const orderPool: OrderMatchCandidate[] = candidateOrders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        partnerId: o.partnerId,
+        deceasedName: o.deceasedName,
+        cemeteryName: o.cemeteryName,
+        cemeteryCity: o.cemeteryCity,
+        floristCompensationCents: o.floristCompensationCents,
+        totalPriceCents: o.totalPriceCents,
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt,
+        deliveryDate: o.deliveryDate,
+        partnerShopName: o.partner?.shopName || null,
+        partnerOwnerName: o.partner?.ownerName || null,
+    }));
 
     const invoices: InvoiceCandidate[] = invoiceRows.map((inv) => {
         const meta = inv.metadataJson as { vendorVat?: string | null } | null;
@@ -129,7 +265,6 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         };
     });
 
-    // 1) Uscite estratto conto fiorista
     const bankLines = await prisma.bankStatementLine.findMany({
         where: {
             amountCents: { lt: 0 },
@@ -154,14 +289,13 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                     namesCompatible(p.ownerName, line.description)
             ) || null;
 
-        // Solo se fiorista riconosciuto o già classificato FLORIST_TRANSFER
         if (!partner && line.matchType !== 'FLORIST_TRANSFER') continue;
 
         const partnerName = partner?.shopName || partner?.ownerName || 'Fiorista (da causale)';
         const partnerVat = partner?.vatNumber || partner?.taxCode || null;
         const amountCents = Math.abs(line.amountCents);
         const days = daysBetween(payDate, now);
-        if (days < 1) continue; // troppo recente
+        if (days < 1) continue;
 
         if (
             hasMatchingInvoice(invoices, {
@@ -178,6 +312,30 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         if (seen.has(key)) continue;
         seen.add(key);
 
+        let orderId = line.matchedOrderId;
+        let orderNumber: string | null = null;
+        let orderMatchSource: 'manual' | 'auto' | null = orderId ? 'manual' : null;
+
+        if (!orderId) {
+            let best: { order: OrderMatchCandidate; score: number } | null = null;
+            for (const o of orderPool) {
+                const score = scoreOrderAgainstBankLine(o, {
+                    description: line.description,
+                    amountCents,
+                    paymentDate: payDate,
+                    partnerId: partner?.id || null,
+                    partnerName,
+                });
+                if (score < 45) continue;
+                if (!best || score > best.score) best = { order: o, score };
+            }
+            if (best) {
+                orderId = best.order.id;
+                orderNumber = best.order.orderNumber;
+                orderMatchSource = 'auto';
+            }
+        }
+
         const severity = days >= 15 ? 'critical' : 'warning';
         rows.push({
             id: `bank-${line.id}`,
@@ -191,15 +349,15 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             daysSincePayment: days,
             bankLineId: line.id,
             documentId: line.documentId,
-            orderId: line.matchedOrderId,
-            orderNumber: null,
+            orderId,
+            orderNumber,
+            orderMatchSource,
             description: line.description,
             severity,
             statusLabel: `In attesa fattura da ${days} giorni`,
         });
     }
 
-    // 2) Ordini con compenso liquidato (PAID / BONIFICATO) senza fattura
     const paidOrders = await prisma.order.findMany({
         where: {
             isTest: false,
@@ -236,7 +394,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
     });
 
     for (const order of paidOrders) {
-        if (order.floristSettlementStatus === 'RICEVUTA') continue; // fattura già ricevuta lato workflow
+        if (order.floristSettlementStatus === 'RICEVUTA') continue;
         const partner = order.partner;
         if (!partner) continue;
         const amountCents = order.floristCompensationCents || 0;
@@ -258,7 +416,6 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
 
         const key = `${partner.id}|${payDate.toISOString().slice(0, 10)}|${amountCents}|${order.id}`;
         if (seen.has(key)) continue;
-        // Evita doppio se già coperto da bank line stesso partner/importo/giorno
         const bankKey = `${partner.id}|${payDate.toISOString().slice(0, 10)}|${amountCents}`;
         if (seen.has(bankKey)) continue;
         seen.add(key);
@@ -278,14 +435,13 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             documentId: null,
             orderId: order.id,
             orderNumber: order.orderNumber,
+            orderMatchSource: 'manual',
             description: `Compenso ordine ${order.orderNumber || order.id.slice(0, 8)}`,
             severity,
             statusLabel: `In attesa fattura da ${days} giorni`,
         });
     }
 
-    
-    // Risolvi orderNumber per bonifici già abbinati a un ordine
     const orderIds = [...new Set(rows.map((r) => r.orderId).filter(Boolean))] as string[];
     if (orderIds.length) {
         const orders = await prisma.order.findMany({

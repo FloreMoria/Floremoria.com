@@ -120,7 +120,7 @@ function classifyStripeType(type: string, amountCents: number): {
     if (t.includes('reserve')) return { kind: 'riserva', label: 'Riserva' };
     if (amountCents < 0 && (t === 'adjustment' || t === 'fee'))
         return { kind: 'commissione', label: 'Commissione Gateway' };
-    return { kind: 'altro', label: type || 'Altro' };
+    return { kind: 'altro', label: 'Altro movimento' };
 }
 
 function classifyPaypal(description: string, grossCents: number): {
@@ -374,27 +374,52 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
 }
 
 export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
-    const byKey = new Map<string, GatewaySyncRow>();
-
     const score = (r: GatewaySyncRow) => {
         let s = 0;
         if (r.description) s += 2;
         if (r.customerName || r.customerEmail) s += 3;
         if (r.reference) s += 2;
         if (r.feeCents > 0) s += 1;
+        if (r.accountLabel) s += 1;
+        if (r.movementLabel) s += 1;
         if (r.sourceLabel === 'Webhook PayPal' || r.sourceLabel === 'CSV Import') s += 1;
+        if (r.sourceLabel === 'API Stripe' || r.sourceLabel === 'API PayPal') s += 1;
         return s;
     };
 
+    /** Normalizza ID reale (charge / pi / txn / PayPal) per collassare sync multipli. */
+    const normalizeTxId = (id: string): string =>
+        id
+            .trim()
+            .toLowerCase()
+            .replace(/^stripe_(eu_)?(tx_)?/, '')
+            .replace(/^paypal[-:]/, '')
+            .replace(/^fee_/, '');
+
+    // 1) Dedup per chiave tipizzata (gateway + ID + tipo movimento)
+    const byTypedKey = new Map<string, GatewaySyncRow>();
     for (const row of rows) {
-        const prev = byKey.get(row.dedupeKey);
-        if (!prev || score(row) > score(prev)) byKey.set(row.dedupeKey, row);
+        const prev = byTypedKey.get(row.dedupeKey);
+        if (!prev || score(row) > score(prev)) byTypedKey.set(row.dedupeKey, row);
     }
 
-    const list = Array.from(byKey.values());
+    // 2) Dedup tassativo su ID transazione reale (stesso gateway + stesso ID)
+    const byTxId = new Map<string, GatewaySyncRow>();
+    for (const row of byTypedKey.values()) {
+        const tx = normalizeTxId(row.transactionId || row.id);
+        if (!tx) {
+            byTxId.set(`fallback:${row.id}`, ensureGatewayBadges(row));
+            continue;
+        }
+        const key = `${row.gateway}:${tx}:${row.movementKind}`;
+        const prev = byTxId.get(key);
+        const enriched = ensureGatewayBadges(row);
+        if (!prev || score(enriched) > score(prev)) byTxId.set(key, enriched);
+    }
+
     const payoutSeen = new Set<string>();
     const out: GatewaySyncRow[] = [];
-    for (const r of list.sort(
+    for (const r of Array.from(byTxId.values()).sort(
         (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     )) {
         if (r.gateway === 'stripe' && r.movementKind === 'payout') {
@@ -406,6 +431,43 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
         out.push(r);
     }
     return out;
+}
+
+/** Garantisce badge Gateway/Account e Tipo Movimento su ogni riga. */
+export function ensureGatewayBadges(row: GatewaySyncRow): GatewaySyncRow {
+    const accountLabel =
+        row.accountLabel?.trim() ||
+        (row.gateway === 'paypal'
+            ? 'PayPal'
+            : row.accountCode === 'EU'
+              ? 'Stripe EU'
+              : 'Stripe COM');
+
+    const movementLabel =
+        row.movementLabel?.trim() ||
+        (row.movementKind === 'incasso'
+            ? 'Incasso Ordine'
+            : row.movementKind === 'commissione'
+              ? 'Commissione Gateway'
+              : row.movementKind === 'payout'
+                ? 'Payout Bancario'
+                : row.movementKind === 'rimborso'
+                  ? 'Rimborso'
+                  : row.movementKind === 'riserva'
+                    ? 'Riserva'
+                    : 'Altro movimento');
+
+    const accountCode =
+        row.accountCode ||
+        (row.gateway === 'paypal' ? 'PAYPAL' : accountLabel.includes('EU') ? 'EU' : 'COM');
+
+    return {
+        ...row,
+        accountCode,
+        accountLabel,
+        movementLabel,
+        movementKind: row.movementKind || 'altro',
+    };
 }
 
 export function buildGatewaySyncRows(input: {

@@ -37,3 +37,4 @@
 
 [2026-08-22 19:33] fix(finance): date GG/MM/AAAA, estratto conto Fineco reale, prima nota senza seed, Associa ordine fioristi, PnL archivio senza mock
 [2026-08-22 20:05] fix/finance: segno esplicito saldo estratto conto, scroll 15 righe sticky, dedup gerarchica gateway/banca>ordini in Prima Nota/PnL.
+[2026-08-22 20:37] fix/finance: colori dare/avere Prima Nota, Fatture in attesa fioristi + colonna Ordine cross-match, glossario fiscale IT, dedup gateway con badge obbligatori.

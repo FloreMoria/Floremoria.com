@@ -32,6 +32,7 @@ export type FloristMissingInvoiceRow = {
     documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
+    orderMatchSource?: 'manual' | 'auto' | null;
     description: string;
     severity: 'warning' | 'critical';
     statusLabel: string;
@@ -59,6 +60,15 @@ function euro(cents: number) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+}
+
+function formatOrderRef(row: FloristMissingInvoiceRow): string | null {
+    if (row.orderNumber) {
+        const n = row.orderNumber.trim();
+        return n.startsWith('#') || /^ORD/i.test(n) ? n : `#${n}`;
+    }
+    if (row.orderId) return `#${row.orderId.slice(0, 10)}…`;
+    return null;
 }
 
 export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
@@ -216,9 +226,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 >
                     <AlertTriangle className="shrink-0 mt-0.5" size={18} />
                     <div className="text-sm">
-                        <p className="font-semibold">
-                            Fatture Fioristi Mancanti dopo il pagamento
-                        </p>
+                        <p className="font-semibold">Fatture in attesa dai fioristi</p>
                         <p className="text-xs mt-0.5 opacity-90">
                             {rows.length} bonifici/compensi senza fattura ricevuta entro 15 giorni
                             {critical > 0 ? ` · ${critical} oltre soglia critica (≥15 gg)` : ''}.
@@ -253,8 +261,8 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 </div>
             ) : rows.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-500">
-                    Nessun fiorista in attesa di fattura. Tutti i pagamenti hanno un match entro 15
-                    giorni.
+                    Nessuna fattura in attesa dai fioristi. Tutti i pagamenti hanno un match entro
+                    15 giorni.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
@@ -262,6 +270,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                         <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                             <tr>
                                 <th className="px-4 py-3 font-bold">Fiorista & P.IVA</th>
+                                <th className="px-4 py-3 font-bold">Ordine</th>
                                 <th className="px-4 py-3 font-bold">Data bonifico</th>
                                 <th className="px-4 py-3 font-bold text-right">Importo</th>
                                 <th className="px-4 py-3 font-bold">Giorni</th>
@@ -270,17 +279,37 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {rows.map((row) => (
+                            {rows.map((row) => {
+                                const orderRef = formatOrderRef(row);
+                                return (
                                 <tr key={row.id} className="hover:bg-slate-50/80">
                                     <td className="px-4 py-3">
                                         <p className="font-medium text-slate-900">{row.partnerName}</p>
                                         <p className="text-[11px] text-slate-500 font-mono">
                                             {row.partnerVat || 'P.IVA n/d'}
                                         </p>
-                                        {row.orderNumber && (
-                                            <p className="text-[11px] text-slate-400">
-                                                Ordine {row.orderNumber}
-                                            </p>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {orderRef ? (
+                                            <div>
+                                                <p className="font-mono text-xs font-semibold text-slate-800">
+                                                    {orderRef}
+                                                </p>
+                                                {row.orderMatchSource === 'auto' && (
+                                                    <p className="text-[10px] text-teal-700 font-medium mt-0.5">
+                                                        Match automatico
+                                                    </p>
+                                                )}
+                                                {row.orderMatchSource === 'manual' && (
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                                        Associato
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-[11px] text-slate-400 italic">
+                                                Non associato
+                                            </span>
                                         )}
                                     </td>
                                     <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
@@ -360,7 +389,8 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

@@ -41,6 +41,8 @@ type DisplayEntry = {
     dareAccount: string;
     avereAccount: string;
     amountCents: number;
+    /** true = entrata/ricavo (verde); false = uscita/costo (rosso) */
+    isEntrata: boolean;
     sourceLabel: string;
 };
 
@@ -49,6 +51,35 @@ function euro(cents: number): string {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+}
+
+function formatSignedAmount(cents: number, isEntrata: boolean): {
+    text: string;
+    className: string;
+} {
+    const signed = isEntrata ? Math.abs(cents) : -Math.abs(cents);
+    const sign = signed >= 0 ? '+' : '−';
+    return {
+        text: `${sign}€ ${euro(signed)}`,
+        className: isEntrata ? 'text-emerald-700' : 'text-rose-700',
+    };
+}
+
+function isEntrataFromNeon(r: NeonRow): boolean {
+    if (r.direction === 'ENTRATA') return true;
+    if (r.direction === 'USCITA') return false;
+    return r.totalCents > 0;
+}
+
+/** Dare su cassa/banca ⇒ entrata di liquidità (verde). */
+function isEntrataFromLocal(dareAccount: string, avereAccount: string): boolean {
+    const dare = dareAccount.toLowerCase();
+    const avere = avereAccount.toLowerCase();
+    if (/banca|cassa|10100|10200/.test(dare)) return true;
+    if (/banca|cassa|10100|10200/.test(avere)) return false;
+    if (/ricav|60100|60900/.test(avere)) return true;
+    if (/cost|spes|70100|70200|70300|70900/.test(dare)) return false;
+    return true;
 }
 
 function accountsFromNeon(r: NeonRow): { dare: string; avere: string } {
@@ -174,6 +205,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 dareAccount: accounts.dare,
                 avereAccount: accounts.avere,
                 amountCents: Math.abs(r.totalCents || r.netCents || 0),
+                isEntrata: isEntrataFromNeon(r),
                 sourceLabel: sourceLabel(r.sourceType),
             });
         }
@@ -212,6 +244,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 dareAccount: e.dareAccount,
                 avereAccount: e.avereAccount,
                 amountCents: e.amountCents,
+                isEntrata: isEntrataFromLocal(e.dareAccount, e.avereAccount),
                 sourceLabel: 'Prima Nota',
             });
         }
@@ -286,7 +319,12 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                 </td>
                             </tr>
                         ) : (
-                            rows.map((entry) => (
+                            rows.map((entry) => {
+                                const amount = formatSignedAmount(
+                                    entry.amountCents,
+                                    entry.isEntrata
+                                );
+                                return (
                                 <tr key={entry.id} className="hover:bg-slate-50/50">
                                     <td className="px-5 py-3.5 text-xs text-slate-600 whitespace-nowrap">
                                         {formatFinanceDate(entry.date)}
@@ -311,8 +349,10 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                     <td className="px-5 py-3.5 text-xs font-mono text-slate-600">
                                         {entry.avereAccount}
                                     </td>
-                                    <td className="px-5 py-3.5 font-bold font-mono text-right text-slate-950">
-                                        €{euro(entry.amountCents)}
+                                    <td
+                                        className={`px-5 py-3.5 font-bold font-mono text-right whitespace-nowrap ${amount.className}`}
+                                    >
+                                        {amount.text}
                                     </td>
                                     <td className="px-5 py-3.5">
                                         <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600">
@@ -320,7 +360,8 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                         </span>
                                     </td>
                                 </tr>
-                            ))
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

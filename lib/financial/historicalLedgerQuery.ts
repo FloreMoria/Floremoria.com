@@ -10,6 +10,10 @@ import {
     type LedgerCategory,
 } from '@/lib/financial/historicalLedgerTypes';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
+import {
+    labelReconciliationStatusIt,
+    labelSourceTypeIt,
+} from '@/lib/financial/fiscalItalianLabels';
 
 export type HistoricalLedgerFilters = {
     fiscalYear?: number;
@@ -228,9 +232,9 @@ export async function buildHistoricalLedgerCsv(filters: HistoricalLedgerFilters)
             r.vatRate,
             (r.vatCents / 100).toFixed(2),
             (r.totalCents / 100).toFixed(2),
-            r.reconciliationStatus,
+            labelReconciliationStatusIt(r.reconciliationStatus),
             r.documentRef || '',
-            r.sourceType,
+            labelSourceTypeIt(r.sourceType),
             r.sourceId,
             r.orderId || '',
             r.partnerId || '',
@@ -264,9 +268,9 @@ export async function buildHistoricalLedgerXlsxBuffer(
         'Aliquota IVA': r.vatRate,
         'IVA EUR': r.vatCents / 100,
         'Totale EUR': r.totalCents / 100,
-        'Stato Riconciliazione': r.reconciliationStatus,
+        'Stato Riconciliazione': labelReconciliationStatusIt(r.reconciliationStatus),
         'Rif. Documento': r.documentRef || '',
-        'Tipo Fonte': r.sourceType,
+        'Tipo Fonte': labelSourceTypeIt(r.sourceType),
         'ID Fonte': r.sourceId,
         'ID Ordine': r.orderId || '',
         'ID Partner': r.partnerId || '',

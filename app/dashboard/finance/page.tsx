@@ -34,6 +34,7 @@ import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
 import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoicesXlsxUploadBox';
 import ForeignAutofattureUploadBox from '@/components/dashboard/ForeignAutofattureUploadBox';
 import PaypalCsvUploadBox from '@/components/dashboard/PaypalCsvUploadBox';
+import GatewaySyncTable from '@/components/dashboard/GatewaySyncTable';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import {
@@ -73,6 +74,7 @@ export default function FinanceDashboardPage() {
         transactions?: any[];
     } | null>(null);
     const [gatewaySyncMsg, setGatewaySyncMsg] = useState<string | null>(null);
+    const [gatewayTableRefresh, setGatewayTableRefresh] = useState(0);
 
     // Compliance state
     const [complianceFilter, setComplianceFilter] = useState<'ALL' | 'FISC' | 'ESTER' | 'CORP'>('ALL');
@@ -177,6 +179,7 @@ export default function FinanceDashboardPage() {
                                                     ` · ${data.recordCount ?? 0} record dal 01/01/2026`
                                             );
             await loadGateways();
+            setGatewayTableRefresh((n) => n + 1);
         } catch (e) {
             setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync Stripe fallita');
         } finally {
@@ -205,6 +208,7 @@ export default function FinanceDashboardPage() {
             );
             await loadGateways();
             await loadLedger();
+            setGatewayTableRefresh((n) => n + 1);
         } catch (e) {
             setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync PayPal fallita');
         } finally {
@@ -255,7 +259,14 @@ export default function FinanceDashboardPage() {
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) return '—';
-            return date.toLocaleDateString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+            // Non usare timeStyle con toLocaleDateString (RangeError → "—")
+            return date.toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
         } catch {
             return '—';
         }
@@ -1120,6 +1131,7 @@ export default function FinanceDashboardPage() {
                                             onImported={() => {
                                                 void loadGateways();
                                                 void loadLedger();
+                                                setGatewayTableRefresh((n) => n + 1);
                                             }}
                                         />
                                     </div>
@@ -1133,7 +1145,8 @@ export default function FinanceDashboardPage() {
                                                 Sincronizzazione API Gateway (dal 01/01/2026)
                                             </h4>
                                             <p className="text-xs text-slate-500 mt-0.5">
-                                                Balance transactions, commissioni e payout → Contabilità / Libro Mastro
+                                                Movimenti Stripe COM/EU + PayPal (API, Webhook, CSV) —
+                                                date reali, deduplicati, con lordo/fee/netto
                                             </p>
                                         </div>
                                         <span className="inline-flex self-start px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-indigo-50 border border-indigo-200 text-indigo-700">
@@ -1196,72 +1209,7 @@ export default function FinanceDashboardPage() {
                                         </p>
                                     )}
 
-                                    {(stripeSyncMeta?.movements?.length || 0) > 0 && (
-                                        <div className="overflow-x-auto rounded-xl border border-slate-100">
-                                            <table className="w-full text-left text-xs min-w-[720px]">
-                                                <thead>
-                                                    <tr className="bg-slate-50 text-[10px] uppercase text-slate-400">
-                                                        <th className="px-3 py-2">Data</th>
-                                                        <th className="px-3 py-2">Account</th>
-                                                        <th className="px-3 py-2">Tipo</th>
-                                                        <th className="px-3 py-2">ID</th>
-                                                        <th className="px-3 py-2 text-right">Lordo</th>
-                                                        <th className="px-3 py-2 text-right">Fee</th>
-                                                        <th className="px-3 py-2 text-right">Netto</th>
-                                                        <th className="px-3 py-2">Badge</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {(stripeSyncMeta?.movements || []).slice(0, 40).map((m: any) => {
-                                                        const accountLabel =
-                                                            m.accountLabel ||
-                                                            (String(m.stripeId || '').startsWith('stripe_eu_tx_')
-                                                                ? 'Stripe EU - PSA'
-                                                                : 'Stripe COM');
-                                                        const isEu =
-                                                            accountLabel.includes('EU') ||
-                                                            String(m.stripeId || '').startsWith('stripe_eu_tx_');
-                                                        return (
-                                                        <tr key={m.id || m.stripeId} className="border-t border-slate-50">
-                                                            <td className="px-3 py-2 whitespace-nowrap">
-                                                                {formatDateTime(m.createdAtStripe)}
-                                                            </td>
-                                                            <td className="px-3 py-2">
-                                                                <span
-                                                                    className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${
-                                                                        isEu
-                                                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                                                            : 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                                                                    }`}
-                                                                >
-                                                                    {accountLabel}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-3 py-2">{m.type}</td>
-                                                            <td className="px-3 py-2 font-mono text-[10px]">
-                                                                {m.stripeId}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-right font-mono">
-                                                                €{((m.amountCents || 0) / 100).toFixed(2)}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-right font-mono">
-                                                                €{((m.feeCents || 0) / 100).toFixed(2)}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-right font-mono">
-                                                                €{((m.netCents || 0) / 100).toFixed(2)}
-                                                            </td>
-                                                            <td className="px-3 py-2">
-                                                                <span className="inline-flex px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[10px]">
-                                                                    Sincronizzato da API
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
+                                    <GatewaySyncTable refreshToken={gatewayTableRefresh} />
                                 </div>
 
                                 {/* Ultimi tentativi e transazioni su Stripe */}

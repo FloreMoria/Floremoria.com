@@ -19,7 +19,7 @@ export type PaypalSyncResult = {
     apiForbidden?: boolean;
 };
 
-type PaypalTx = {
+export type PaypalTx = {
     id: string;
     status: string;
     grossCents: number;

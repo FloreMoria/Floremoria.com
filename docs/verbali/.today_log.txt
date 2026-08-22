@@ -33,3 +33,4 @@
 [2026-08-22 18:15] feat: importatore CSV PayPal storico transazioni, upload dashboard, fallback messaggio 403 sync API
 
 [2026-08-22 18:32] fix(users): rimozione filtri ruoli/stati, pulsante Cerca con invio Enter/click e posizionamento Nuovo Utente sotto la ricerca.
+[2026-08-22 18:55] fix: tabella Sincronizzazione API Gateway — date reali DD/MM/YYYY HH:mm, dedupe Stripe/PayPal, colonne complete, filtri gateway/tipo/ricerca

@@ -31,3 +31,5 @@
 [2026-08-22 07:55] feat: sezioni fatture Contabilità — altezza uniforme h-[520px], tabelle scrollabili, dettaglio al clic ed eliminazione batch/singola fattura e autofatture
 [2026-08-22 08:50] feat: webhook PayPal /api/webhooks/paypal — verify-webhook-signature, incassi/rimborsi → FinancialLedgerEntry idempotente
 [2026-08-22 18:15] feat: importatore CSV PayPal storico transazioni, upload dashboard, fallback messaggio 403 sync API
+
+[2026-08-22 18:32] fix(users): rimozione filtri ruoli/stati, pulsante Cerca con invio Enter/click e posizionamento Nuovo Utente sotto la ricerca.

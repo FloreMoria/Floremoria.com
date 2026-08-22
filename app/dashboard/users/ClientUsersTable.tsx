@@ -67,13 +67,10 @@ export default function ClientUsersTable({
 
     // Leggi i parametri iniziali dall'URL
     const initialQuery = searchParams.get('q') || '';
-    const initialRole = (searchParams.get('role')?.toUpperCase() as UserRoleFilter) || 'ALL';
-    const initialStatus = (searchParams.get('status')?.toUpperCase() as UserStatusFilter) || 'ALL';
     const initialSort = (searchParams.get('sort') as SortOption) || 'created_desc';
-
+    
+    const [searchInput, setSearchInput] = useState(initialQuery);
     const [searchTerm, setSearchTerm] = useState(initialQuery);
-    const [roleFilter, setRoleFilter] = useState<UserRoleFilter>(initialRole);
-    const [statusFilter, setStatusFilter] = useState<UserStatusFilter>(initialStatus);
     const [sortOption, setSortOption] = useState<SortOption>(initialSort);
 
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -86,29 +83,24 @@ export default function ClientUsersTable({
 
     // Sincronizza lo stato locale se cambia l'URL (navigazione browser avanti/indietro)
     useEffect(() => {
-        setSearchTerm(searchParams.get('q') || '');
-        setRoleFilter((searchParams.get('role')?.toUpperCase() as UserRoleFilter) || 'ALL');
-        setStatusFilter((searchParams.get('status')?.toUpperCase() as UserStatusFilter) || 'ALL');
+        const q = searchParams.get('q') || '';
+        setSearchInput(q);
+        setSearchTerm(q);
         setSortOption((searchParams.get('sort') as SortOption) || 'created_desc');
     }, [searchParams]);
 
     // Aggiorna gli URL SearchParams in Next.js in modo trasparente
-    const updateUrlParams = (updates: { q?: string; role?: string; status?: string; sort?: string }) => {
+    const updateUrlParams = (updates: { q?: string; sort?: string }) => {
         const params = new URLSearchParams(searchParams.toString());
 
         const newQ = updates.q !== undefined ? updates.q : searchTerm;
-        const newRole = updates.role !== undefined ? updates.role : roleFilter;
-        const newStatus = updates.status !== undefined ? updates.status : statusFilter;
         const newSort = updates.sort !== undefined ? updates.sort : sortOption;
 
         if (newQ.trim()) params.set('q', newQ.trim());
         else params.delete('q');
 
-        if (newRole && newRole !== 'ALL') params.set('role', newRole);
-        else params.delete('role');
-
-        if (newStatus && newStatus !== 'ALL') params.set('status', newStatus);
-        else params.delete('status');
+        params.delete('role');
+        params.delete('status');
 
         if (newSort && newSort !== 'created_desc') params.set('sort', newSort);
         else params.delete('sort');
@@ -117,19 +109,11 @@ export default function ClientUsersTable({
         router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
     };
 
-    const handleSearchChange = (val: string) => {
+    const handleSearchSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const val = searchInput.trim();
         setSearchTerm(val);
         updateUrlParams({ q: val });
-    };
-
-    const handleRoleChange = (val: UserRoleFilter) => {
-        setRoleFilter(val);
-        updateUrlParams({ role: val });
-    };
-
-    const handleStatusChange = (val: UserStatusFilter) => {
-        setStatusFilter(val);
-        updateUrlParams({ status: val });
     };
 
     const handleSortChange = (val: SortOption) => {
@@ -138,9 +122,8 @@ export default function ClientUsersTable({
     };
 
     const resetFilters = () => {
+        setSearchInput('');
         setSearchTerm('');
-        setRoleFilter('ALL');
-        setStatusFilter('ALL');
         setSortOption('created_desc');
         router.replace(pathname, { scroll: false });
     };
@@ -173,26 +156,7 @@ export default function ClientUsersTable({
             );
         }
 
-        // 2. Filtro Ruolo
-        if (roleFilter !== 'ALL') {
-            list = list.filter((u) => {
-                if (roleFilter === 'ADMIN') return u.role === 'ADMIN';
-                if (roleFilter === 'CUSTOMER') return u.role === 'CUSTOMER';
-                if (roleFilter === 'FLORIST') return u.role === 'FLORIST' || u.role === 'PARTNER';
-                return true;
-            });
-        }
-
-        // 3. Filtro Stato Operativo
-        if (statusFilter !== 'ALL') {
-            list = list.filter((u) => {
-                if (statusFilter === 'ACTIVE') return u.status === 'ACTIVE' || !u.status;
-                if (statusFilter === 'SUSPENDED') return u.status === 'SUSPENDED';
-                return true;
-            });
-        }
-
-        // 4. Ordinamento Colonne
+        // 2. Ordinamento Colonne
         list.sort((a, b) => {
             if (sortOption === 'name_asc') {
                 return compareBySurname(a.name || '', b.name || '');
@@ -218,9 +182,9 @@ export default function ClientUsersTable({
         });
 
         return list;
-    }, [users, searchTerm, roleFilter, statusFilter, sortOption]);
+    }, [users, searchTerm, sortOption]);
 
-    const isFiltered = searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL' || sortOption !== 'created_desc';
+    const isFiltered = Boolean(searchTerm || sortOption !== 'created_desc');
 
     const beginRowEdit = (u: any) => {
         if (!u.id || String(u.id).startsWith('virtual_')) return;
@@ -229,7 +193,7 @@ export default function ClientUsersTable({
             ...prev,
             [u.id]: {
                 name: u.name || '',
-                phone: u.phone === 'Non specificato' ? '' : u.phone || '',
+                phone: u.phone || '',
                 email: u.email || '',
             },
         }));
@@ -240,43 +204,24 @@ export default function ClientUsersTable({
     };
 
     const saveRowEdit = async (u: any) => {
-        if (!u.id || String(u.id).startsWith('virtual_')) return;
         const draft = rowDraft[u.id];
         if (!draft) return;
-
         setRowSavingId(u.id);
         try {
             const res = await fetch(`/api/dashboard/users/${u.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: draft.name,
-                    phone: draft.phone || null,
-                    email: draft.email || null,
-                }),
+                body: JSON.stringify(draft),
             });
-            const payload = await res.json();
-            if (!res.ok || !payload?.ok) {
-                throw new Error(payload?.error || 'Salvataggio non riuscito.');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Salvataggio non riuscito.');
             }
-
-            setUsers((prev) =>
-                prev.map((item) =>
-                    item.id === u.id
-                        ? { ...item, name: draft.name, phone: draft.phone || 'Non specificato', email: draft.email }
-                        : item
-                )
-            );
-
+            const updated = await res.json();
+            setUsers((prev) => prev.map((item) => (item.id === u.id ? { ...item, ...updated } : item)));
             if (selectedUser?.id === u.id) {
-                setSelectedUser((prev: any) => ({
-                    ...prev,
-                    name: draft.name,
-                    phone: draft.phone || 'Non specificato',
-                    email: draft.email,
-                }));
+                setSelectedUser((prev: any) => ({ ...prev, ...updated }));
             }
-
             setEditingUserId(null);
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Errore salvataggio utente.');
@@ -286,22 +231,20 @@ export default function ClientUsersTable({
     };
 
     const deleteRowUser = async (u: any) => {
-        if (!u.id || String(u.id).startsWith('virtual_')) return;
-        const ok = window.confirm(
-            'Confermi la cancellazione utente? Nota: utenti con ordini associati non possono essere cancellati.'
-        );
+        const ok = window.confirm(`Confermi l'eliminazione dell'utente "${u.name || u.email || u.id}"?`);
         if (!ok) return;
-
         try {
             const res = await fetch(`/api/dashboard/users/${u.id}`, { method: 'DELETE' });
-            const payload = await res.json();
-            if (!res.ok || !payload?.ok) {
-                throw new Error(payload?.error || 'Cancellazione non riuscita.');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Eliminazione non riuscita.');
             }
             setUsers((prev) => prev.filter((item) => item.id !== u.id));
-            if (selectedUser?.id === u.id) setSelectedUser(null);
+            if (selectedUser?.id === u.id) {
+                setSelectedUser(null);
+            }
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Errore cancellazione utente.');
+            alert(err instanceof Error ? err.message : 'Errore eliminazione utente.');
         }
     };
 
@@ -383,20 +326,29 @@ export default function ClientUsersTable({
         <div className="space-y-6">
             {/* Toolbar Ricerca, Filtri & Ordinamento */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    {/* Input di Ricerca Globale */}
-                    <div className="relative flex-1 min-w-[280px]">
+                {/* Campo di Ricerca e Tasto Cerca (Invio o Click) */}
+                <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+                    <div className="relative flex-1">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <input
                             type="text"
                             placeholder="Cerca utente per nome, email, telefono o città…"
-                            value={searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs outline-none focus:border-fm-gold focus:ring-2 focus:ring-fm-gold/20 transition-all"
                         />
                     </div>
+                    <button
+                        type="submit"
+                        className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-black text-white text-xs font-bold hover:bg-gray-800 transition-colors shadow-sm shrink-0"
+                    >
+                        <Search size={14} />
+                        <span>Cerca</span>
+                    </button>
+                </form>
 
-                    {/* Azioni Aggiuntive */}
+                {/* Blocco Inferiore: Tasto Nuovo Utente (sotto la ricerca) + Ordinamento & Reset */}
+                <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
                     <button
                         type="button"
                         onClick={() => setCreateModalOpen(true)}
@@ -404,40 +356,8 @@ export default function ClientUsersTable({
                     >
                         <UserPlus size={15} /> Nuovo Utente
                     </button>
-                </div>
 
-                {/* Filtri Avanzati & Ordinamento */}
-                <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                            <Filter size={14} className="text-fm-gold" /> Filtri:
-                        </div>
-
-                        {/* Filtro Ruolo */}
-                        <select
-                            value={roleFilter}
-                            onChange={(e) => handleRoleChange(e.target.value as UserRoleFilter)}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50/50 text-gray-700 outline-none focus:border-fm-gold"
-                        >
-                            <option value="ALL">Tutti i Ruoli</option>
-                            <option value="ADMIN">Amministratore</option>
-                            <option value="CUSTOMER">Utente</option>
-                            <option value="FLORIST">Fiorista / Partner</option>
-                        </select>
-
-                        {/* Filtro Stato */}
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => handleStatusChange(e.target.value as UserStatusFilter)}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50/50 text-gray-700 outline-none focus:border-fm-gold"
-                        >
-                            <option value="ALL">Tutti gli Stati</option>
-                            <option value="ACTIVE">Stato: Attivo</option>
-                            <option value="SUSPENDED">Stato: Sospeso / Banned</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 ml-auto">
                         {/* Selettore Ordinamento */}
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:inline">

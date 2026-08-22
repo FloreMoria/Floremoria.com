@@ -40,6 +40,21 @@ export type UploadInvoiceDetail = {
     source: string | null;
 };
 
+export type UploadInvoiceDetailExtended = UploadInvoiceDetail & {
+    description: string;
+    docType: string;
+    vatRate: number | null;
+    lineDescriptions: string[];
+    tipoDocumento: string | null;
+    docKind: string | null;
+    blobUrl: string | null;
+    contentType: string | null;
+    notes: string | null;
+    uploadId: string | null;
+    archiveFileName: string | null;
+    isReverseCharge: boolean;
+};
+
 const HISTORY_KEY = 'finance.invoice.uploads';
 const MAX_RECORDS = 80;
 
@@ -168,29 +183,146 @@ export async function listInvoicesForUpload(uploadId: string): Promise<{
         take: 500,
     });
 
-    const invoices: UploadInvoiceDetail[] = rows.map((r) => {
-        const meta = (r.metadataJson || {}) as Record<string, unknown>;
-        return {
-            id: r.id,
-            vendorName: r.vendorName,
-            invoiceNumber:
-                typeof meta.invoiceNumber === 'string'
-                    ? meta.invoiceNumber
-                    : typeof meta.documentNumber === 'string'
-                      ? meta.documentNumber
-                      : null,
-            expenseDate: r.expenseDate.toISOString().slice(0, 10),
-            totalCents: r.totalCents,
-            netCents: r.netCents,
-            vatCents: r.vatCents,
-            reconciled: Boolean(r.reconciled),
-            invoiceRole: String(meta.invoiceRole || meta.source || 'PASSIVE'),
-            vendorVat: typeof meta.vendorVat === 'string' ? meta.vendorVat : null,
-            source: typeof meta.source === 'string' ? meta.source : null,
-        };
-    });
+    const invoices: UploadInvoiceDetail[] = rows.map((r) => mapExpenseToDetail(r));
 
     return { upload, invoices };
+}
+
+function mapExpenseToDetail(r: {
+    id: string;
+    vendorName: string;
+    expenseDate: Date;
+    totalCents: number;
+    netCents: number;
+    vatCents: number;
+    reconciled: boolean;
+    metadataJson: unknown;
+}): UploadInvoiceDetail {
+    const meta = (r.metadataJson || {}) as Record<string, unknown>;
+    return {
+        id: r.id,
+        vendorName: r.vendorName,
+        invoiceNumber:
+            typeof meta.invoiceNumber === 'string'
+                ? meta.invoiceNumber
+                : typeof meta.documentNumber === 'string'
+                  ? meta.documentNumber
+                  : null,
+        expenseDate: r.expenseDate.toISOString().slice(0, 10),
+        totalCents: r.totalCents,
+        netCents: r.netCents,
+        vatCents: r.vatCents,
+        reconciled: Boolean(r.reconciled),
+        invoiceRole: String(meta.invoiceRole || meta.source || 'PASSIVE'),
+        vendorVat: typeof meta.vendorVat === 'string' ? meta.vendorVat : null,
+        source: typeof meta.source === 'string' ? meta.source : null,
+    };
+}
+
+export async function getInvoiceExpenseDetail(
+    expenseId: string
+): Promise<UploadInvoiceDetailExtended> {
+    const row = await prisma.manualFinanceExpense.findUnique({ where: { id: expenseId } });
+    if (!row) throw new Error('Fattura non trovata');
+    const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    const base = mapExpenseToDetail(row);
+    const lineDescriptions = Array.isArray(meta.lineDescriptions)
+        ? meta.lineDescriptions.filter((x): x is string => typeof x === 'string')
+        : [];
+    return {
+        ...base,
+        description: row.description,
+        docType: row.docType,
+        vatRate: typeof row.vatRate === 'number' ? row.vatRate : null,
+        lineDescriptions,
+        tipoDocumento: typeof meta.tipoDocumento === 'string' ? meta.tipoDocumento : null,
+        docKind: typeof meta.docKind === 'string' ? meta.docKind : null,
+        blobUrl: row.blobUrl,
+        contentType: row.contentType,
+        notes: row.notes,
+        uploadId: typeof meta.uploadId === 'string' ? meta.uploadId : null,
+        archiveFileName:
+            typeof meta.archiveFileName === 'string' ? meta.archiveFileName : row.fileName,
+        isReverseCharge: Boolean(meta.isReverseCharge),
+    };
+}
+
+async function reverseLedgerForExpense(row: {
+    id: string;
+    metadataJson: unknown;
+}) {
+    const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    try {
+        await prisma.financialLedgerEntry.updateMany({
+            where: {
+                OR: [
+                    { sourceId: row.id, sourceType: 'MANUAL_EXPENSE' },
+                    { sourceKey: `MANUAL_EXPENSE:${row.id}` },
+                    ...(typeof meta.dedupeKey === 'string'
+                        ? [
+                              {
+                                  sourceKey: `SDI_ACTIVE:${meta.dedupeKey}`.slice(0, 180),
+                              },
+                          ]
+                        : []),
+                ],
+                reversedAt: null,
+            },
+            data: { reversedAt: new Date() },
+        });
+    } catch {
+        /* ignore */
+    }
+}
+
+async function deleteExpenseBlob(row: {
+    storageKind: string;
+    blobPath: string | null;
+    blobUrl: string | null;
+}) {
+    if (row.storageKind === 'local' && row.blobPath && fs.existsSync(row.blobPath)) {
+        try {
+            fs.unlinkSync(row.blobPath);
+        } catch {
+            /* ignore */
+        }
+    } else if (row.storageKind === 'blob') {
+        const token = getBlobToken();
+        if (token && (row.blobUrl || row.blobPath)) {
+            try {
+                await del(row.blobUrl || row.blobPath!, { token });
+            } catch {
+                /* ignore */
+            }
+        }
+    }
+}
+
+export async function deleteInvoiceExpense(expenseId: string): Promise<{ uploadId: string | null }> {
+    const row = await prisma.manualFinanceExpense.findUnique({ where: { id: expenseId } });
+    if (!row) throw new Error('Fattura non trovata');
+    const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    const uploadId = typeof meta.uploadId === 'string' ? meta.uploadId : null;
+
+    await unlinkFinecoMatch(row.id, row.matchedStatementLineId);
+    await reverseLedgerForExpense(row);
+    await deleteExpenseBlob(row);
+    await prisma.manualFinanceExpense.delete({ where: { id: expenseId } });
+
+    if (uploadId) {
+        const prev = await readHistory();
+        const idx = prev.findIndex((r) => r.id === uploadId);
+        if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = {
+                ...next[idx],
+                invoiceCount: Math.max(0, next[idx].invoiceCount - 1),
+            };
+            await writeHistory(next);
+        }
+    }
+
+    return { uploadId };
 }
 
 async function unlinkFinecoMatch(expenseId: string, lineId: string | null) {
@@ -240,46 +372,8 @@ export async function deleteInvoiceUpload(uploadId: string): Promise<{
         const row = await prisma.manualFinanceExpense.findUnique({ where: { id: inv.id } });
         if (!row) continue;
         await unlinkFinecoMatch(row.id, row.matchedStatementLineId);
-        try {
-            await prisma.financialLedgerEntry.updateMany({
-                where: {
-                    OR: [
-                        { sourceId: row.id, sourceType: 'MANUAL_EXPENSE' },
-                        { sourceKey: `MANUAL_EXPENSE:${row.id}` },
-                        ...(typeof (row.metadataJson as any)?.dedupeKey === 'string'
-                            ? [
-                                  {
-                                      sourceKey: `SDI_ACTIVE:${(row.metadataJson as any).dedupeKey}`.slice(
-                                          0,
-                                          180
-                                      ),
-                                  },
-                              ]
-                            : []),
-                    ],
-                    reversedAt: null,
-                },
-                data: { reversedAt: new Date() },
-            });
-        } catch {
-            /* ignore */
-        }
-        if (row.storageKind === 'local' && row.blobPath && fs.existsSync(row.blobPath)) {
-            try {
-                fs.unlinkSync(row.blobPath);
-            } catch {
-                /* ignore */
-            }
-        } else if (row.storageKind === 'blob') {
-            const token = getBlobToken();
-            if (token && (row.blobUrl || row.blobPath)) {
-                try {
-                    await del(row.blobUrl || row.blobPath!, { token });
-                } catch {
-                    /* ignore */
-                }
-            }
-        }
+        await reverseLedgerForExpense(row);
+        await deleteExpenseBlob(row);
         await prisma.manualFinanceExpense.delete({ where: { id: row.id } });
         deletedExpenses += 1;
     }

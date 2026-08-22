@@ -131,8 +131,8 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
-            <div className="flex items-start gap-3">
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm h-[520px] flex flex-col gap-3 overflow-hidden">
+            <div className="flex items-start gap-3 shrink-0">
                 <div className="mt-0.5 rounded-2xl bg-slate-900/5 p-2.5 text-slate-700">
                     <FileArchive size={20} />
                 </div>
@@ -160,7 +160,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     const files = e.dataTransfer.files;
                     if (files?.length) void uploadMany(files);
                 }}
-                className={`rounded-2xl border-2 border-dashed px-4 py-5 transition-colors ${
+                className={`rounded-2xl border-2 border-dashed px-4 py-4 transition-colors shrink-0 ${
                     dragOver
                         ? 'border-[#c5a880] bg-[#c5a880]/10'
                         : 'border-slate-200 bg-slate-50/80 hover:border-slate-300'
@@ -201,13 +201,19 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                 </div>
             </div>
 
-            <div className="space-y-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="flex flex-col flex-1 min-h-0 gap-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
                     File caricati ({uploads.length})
                 </p>
-                <UploadedInvoicesFileList uploads={uploads} onChanged={() => void loadUploads()} />
+                <UploadedInvoicesFileList
+                    uploads={uploads}
+                    fillHeight
+                    onChanged={() => void loadUploads()}
+                />
             </div>
 
+            {(dupWarn || message || error) && (
+                <div className="shrink-0 max-h-[72px] overflow-y-auto space-y-1.5">
             {dupWarn && (
                 <div className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
                     {dupWarn}
@@ -231,6 +237,8 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
             {error && (
                 <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
                     {error}
+                </div>
+            )}
                 </div>
             )}
         </div>

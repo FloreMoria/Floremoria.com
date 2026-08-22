@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
+    deleteInvoiceExpense,
     deleteInvoiceUpload,
     findUploadByFileName,
+    getInvoiceExpenseDetail,
     listInvoiceUploads,
     listInvoicesForUpload,
     type InvoiceUploadChannel,
@@ -20,10 +22,16 @@ export async function GET(request: Request) {
         const channelRaw = searchParams.get('channel');
         const checkName = searchParams.get('checkFileName');
         const detailId = searchParams.get('id');
+        const expenseId = searchParams.get('expenseId');
         const channel =
             channelRaw === 'SDI_XML' || channelRaw === 'SDI_XLSX'
                 ? (channelRaw as InvoiceUploadChannel)
                 : undefined;
+
+        if (expenseId) {
+            const invoice = await getInvoiceExpenseDetail(expenseId);
+            return NextResponse.json({ ok: true, invoice });
+        }
 
         if (detailId) {
             const detail = await listInvoicesForUpload(detailId);
@@ -57,6 +65,11 @@ export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
+        const expenseId = searchParams.get('expenseId');
+        if (expenseId) {
+            const result = await deleteInvoiceExpense(expenseId);
+            return NextResponse.json({ ok: true, ...result });
+        }
         if (!id) {
             return NextResponse.json({ ok: false, error: 'id upload obbligatorio' }, { status: 400 });
         }

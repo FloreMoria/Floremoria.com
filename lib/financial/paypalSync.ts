@@ -29,14 +29,14 @@ type PaypalTx = {
     payerEmail?: string | null;
 };
 
-function paypalBaseUrl(): string {
+export function paypalBaseUrl(): string {
     const mode = (process.env.PAYPAL_MODE || 'live').toLowerCase();
     return mode === 'sandbox'
         ? 'https://api-m.sandbox.paypal.com'
         : 'https://api-m.paypal.com';
 }
 
-async function getPaypalAccessToken(): Promise<string> {
+export async function getPaypalAccessToken(): Promise<string> {
     const clientId = process.env.PAYPAL_CLIENT_ID?.trim();
     const secret = process.env.PAYPAL_CLIENT_SECRET?.trim();
     if (!clientId || !secret) {

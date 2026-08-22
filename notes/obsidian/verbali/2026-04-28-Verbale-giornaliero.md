@@ -2,12 +2,31 @@
 date: 28-04-2026
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sommario: "Pivot Progetto Istituzionale."
+sommario: "Definizione Modello Commerciale PA."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-08-22T05:56:40.105Z
+synced_at: 2026-08-22T06:50:38.179Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# PROTOCOLLO 108 - Definizione Modello Commerciale PA
+
+**Riassunto (BARBARA):** Definizione Modello Commerciale PA.
+
+STATO: Definizione Modello Commerciale PA.
+DISPOSIZIONI: Ratifica listino a 4 fasce (Silver €749, Gold €1499, Platinum €2499, Elite). Introduzione del pagamento dilazionato in 10 rate per i Comuni.
+
+## Dettagli operativi
+
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 108
+- **Punti Discussi:** N/A
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** N/A
+- **Risultati Raggiunti:** N/A
+
+---
+
+## Sviluppo tecnico (repo DEVIN)
 
 # PROTOCOLLO 106 - Pivot Progetto Istituzionale
 

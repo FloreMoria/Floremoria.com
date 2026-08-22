@@ -15,6 +15,8 @@ export type PaypalSyncResult = {
     feesUpserted: number;
     errors: string[];
     lastSyncAt: string;
+    /** Reporting API non autorizzata (403) — usare upload CSV storico + webhook live. */
+    apiForbidden?: boolean;
 };
 
 type PaypalTx = {
@@ -71,9 +73,10 @@ async function fetchPaypalTransactions(params: {
     startDate: Date;
     endDate: Date;
     accessToken: string;
-}): Promise<{ txs: PaypalTx[]; errors: string[] }> {
+}): Promise<{ txs: PaypalTx[]; errors: string[]; apiForbidden?: boolean }> {
     const errors: string[] = [];
     const txs: PaypalTx[] = [];
+    let apiForbidden = false;
     let page = 1;
     const maxPages = 40;
 
@@ -94,7 +97,14 @@ async function fetchPaypalTransactions(params: {
 
         if (!res.ok) {
             const body = await res.text().catch(() => '');
-            errors.push(`PayPal transactions page ${page}: HTTP ${res.status} ${body.slice(0, 180)}`);
+            if (res.status === 403) {
+                apiForbidden = true;
+                errors.push('PAYPAL_API_FORBIDDEN');
+            } else {
+                errors.push(
+                    `PayPal transactions page ${page}: HTTP ${res.status} ${body.slice(0, 180)}`
+                );
+            }
             break;
         }
 
@@ -145,7 +155,7 @@ async function fetchPaypalTransactions(params: {
         page += 1;
     }
 
-    return { txs, errors };
+    return { txs, errors, apiForbidden: apiForbidden || undefined };
 }
 
 export async function runPaypalFinanceSync(params?: {
@@ -156,6 +166,7 @@ export async function runPaypalFinanceSync(params?: {
     const errors: string[] = [];
     let transactionsUpserted = 0;
     let feesUpserted = 0;
+    let apiForbidden = false;
 
     try {
         const accessToken = await getPaypalAccessToken();
@@ -166,15 +177,28 @@ export async function runPaypalFinanceSync(params?: {
             const chunkEnd = new Date(cursor);
             chunkEnd.setUTCDate(chunkEnd.getUTCDate() + 30);
             if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
-            const { txs, errors: chunkErr } = await fetchPaypalTransactions({
-                startDate: new Date(cursor),
-                endDate: chunkEnd,
-                accessToken,
-            });
+            const { txs, errors: chunkErr, apiForbidden: chunkForbidden } =
+                await fetchPaypalTransactions({
+                    startDate: new Date(cursor),
+                    endDate: chunkEnd,
+                    accessToken,
+                });
             allTxs.push(...txs);
             errors.push(...chunkErr);
+            if (chunkForbidden) apiForbidden = true;
             cursor.setTime(chunkEnd.getTime() + 1000);
             if (chunkErr.length) break;
+        }
+
+        if (apiForbidden) {
+            return {
+                ok: false,
+                transactionsUpserted: 0,
+                feesUpserted: 0,
+                errors,
+                lastSyncAt: new Date().toISOString(),
+                apiForbidden: true,
+            };
         }
 
         const ledger = [];
@@ -258,6 +282,7 @@ export async function runPaypalFinanceSync(params?: {
             feesUpserted,
             errors,
             lastSyncAt,
+            apiForbidden: false,
         };
     } catch (err) {
         errors.push(err instanceof Error ? err.message : String(err));
@@ -267,6 +292,7 @@ export async function runPaypalFinanceSync(params?: {
             feesUpserted,
             errors,
             lastSyncAt: new Date().toISOString(),
+            apiForbidden,
         };
     }
 }

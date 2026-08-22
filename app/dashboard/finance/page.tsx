@@ -33,6 +33,7 @@ import ManualExpenseModal, {
 import SdiInvoicesUploadBox from '@/components/dashboard/SdiInvoicesUploadBox';
 import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoicesXlsxUploadBox';
 import ForeignAutofattureUploadBox from '@/components/dashboard/ForeignAutofattureUploadBox';
+import PaypalCsvUploadBox from '@/components/dashboard/PaypalCsvUploadBox';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import {
@@ -189,6 +190,13 @@ export default function FinanceDashboardPage() {
         try {
             const res = await fetch('/api/dashboard/finance/sync/paypal', { method: 'POST' });
             const data = await res.json();
+            if (data.apiForbidden) {
+                setGatewaySyncMsg(
+                    data.error ||
+                        'La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l\'upload del file CSV.'
+                );
+                return;
+            }
             if (!data.ok && !(data.transactionsUpserted > 0)) {
                 throw new Error(data.error || data.errors?.[0] || 'Sync PayPal fallita');
             }
@@ -196,6 +204,7 @@ export default function FinanceDashboardPage() {
                 `PayPal: ${data.transactionsUpserted ?? 0} tx · ${data.feesUpserted ?? 0} fee · ${data.recordCount ?? 0} in cache`
             );
             await loadGateways();
+            await loadLedger();
         } catch (e) {
             setGatewaySyncMsg(e instanceof Error ? e.message : 'Sync PayPal fallita');
         } finally {
@@ -1107,6 +1116,12 @@ export default function FinanceDashboardPage() {
                                                 </p>
                                             </div>
                                         )}
+                                        <PaypalCsvUploadBox
+                                            onImported={() => {
+                                                void loadGateways();
+                                                void loadLedger();
+                                            }}
+                                        />
                                     </div>
                                 </div>
 

@@ -19,6 +19,23 @@ export async function POST() {
     try {
         const result = await runPaypalFinanceSync({ createdGte: SYNC_FROM });
         const status = await getPaypalSyncStatus();
+
+        if (result.apiForbidden) {
+            return NextResponse.json({
+                ok: false,
+                apiForbidden: true,
+                error:
+                    'La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l\'upload del file CSV.',
+                from: '2026-01-01T00:00:00.000Z',
+                transactionsUpserted: 0,
+                feesUpserted: 0,
+                recordCount: status.count,
+                lastSyncAt: status.lastSyncAt,
+                errors: result.errors,
+                badge: 'Webhook attivo',
+            });
+        }
+
         return NextResponse.json({
             ok: result.ok,
             from: '2026-01-01T00:00:00.000Z',

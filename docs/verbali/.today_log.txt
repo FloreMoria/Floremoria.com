@@ -30,3 +30,4 @@
 [2026-08-21 22:45] fix/gdm: Aggregazione completa foto Prima+Dopo in GdM/bacheca; fix CustodiedProofGallery che nascondeva le before senza opzione prodotto.
 [2026-08-22 07:55] feat: sezioni fatture Contabilità — altezza uniforme h-[520px], tabelle scrollabili, dettaglio al clic ed eliminazione batch/singola fattura e autofatture
 [2026-08-22 08:50] feat: webhook PayPal /api/webhooks/paypal — verify-webhook-signature, incassi/rimborsi → FinancialLedgerEntry idempotente
+[2026-08-22 18:15] feat: importatore CSV PayPal storico transazioni, upload dashboard, fallback messaggio 403 sync API

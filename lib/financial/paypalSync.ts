@@ -5,6 +5,12 @@
 
 import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
+import {
+    paypalFeeSourceKey,
+    paypalRefundSourceKey,
+    paypalTxSourceKey,
+} from '@/lib/financial/paypalSourceKeys';
+import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
 
 const SYNC_META_KEY = 'finance.paypal.last_sync';
 const TX_CACHE_KEY = 'finance.paypal.transactions';
@@ -206,15 +212,25 @@ export async function runPaypalFinanceSync(params?: {
             const accountingDate = new Date(tx.transactionDate);
             if (Number.isNaN(accountingDate.getTime())) continue;
 
+            const desc = (tx.description || '').toLowerCase();
+            const isRefund =
+                /refund|rimborso/.test(desc) ||
+                (tx.grossCents < 0 && /refund|rimborso|chargeback/.test(desc));
+
             if (tx.grossCents !== 0) {
                 ledger.push({
-                    sourceKey: `PAYPAL_TX:${tx.id}`.slice(0, 180),
+                    sourceKey: (isRefund
+                        ? paypalRefundSourceKey(tx.id)
+                        : paypalTxSourceKey(tx.id)
+                    ).slice(0, 180),
                     sourceType: 'PAYPAL_MOVEMENT' as const,
                     sourceId: tx.id.slice(0, 128),
                     direction: (tx.grossCents >= 0 ? 'ENTRATA' : 'USCITA') as 'ENTRATA' | 'USCITA',
-                    category: (tx.grossCents >= 0 ? 'RICAVI_VENDITE' : 'ALTRI_COSTI') as
-                        | 'RICAVI_VENDITE'
-                        | 'ALTRI_COSTI',
+                    category: (isRefund
+                        ? 'RIMBORSI'
+                        : tx.grossCents >= 0
+                          ? 'RICAVI_VENDITE'
+                          : 'ALTRI_COSTI') as 'RIMBORSI' | 'RICAVI_VENDITE' | 'ALTRI_COSTI',
                     accountingDate,
                     description: tx.description.slice(0, 2000),
                     counterpartyName: tx.payerEmail || 'PayPal',
@@ -230,6 +246,8 @@ export async function runPaypalFinanceSync(params?: {
                         netCents: tx.netCents,
                         status: tx.status,
                         syncedFromApi: true,
+                        isRefund,
+                        paypalTransactionId: tx.id,
                     },
                 });
                 transactionsUpserted += 1;
@@ -237,7 +255,7 @@ export async function runPaypalFinanceSync(params?: {
 
             if (tx.feeCents > 0) {
                 ledger.push({
-                    sourceKey: `PAYPAL_FEE:${tx.id}`.slice(0, 180),
+                    sourceKey: paypalFeeSourceKey(tx.id),
                     sourceType: 'PAYPAL_MOVEMENT' as const,
                     sourceId: `fee_${tx.id}`.slice(0, 128),
                     direction: 'USCITA' as const,
@@ -251,7 +269,11 @@ export async function runPaypalFinanceSync(params?: {
                     totalCents: -Math.abs(tx.feeCents),
                     reconciliationStatus: 'MATCHED' as const,
                     documentRef: tx.id,
-                    metadataJson: { provider: 'paypal', syncedFromApi: true },
+                    metadataJson: {
+                        provider: 'paypal',
+                        syncedFromApi: true,
+                        paypalTransactionId: tx.id,
+                    },
                 });
                 feesUpserted += 1;
             }
@@ -260,6 +282,8 @@ export async function runPaypalFinanceSync(params?: {
         if (ledger.length) {
             await appendLedgerEntries(ledger);
         }
+
+        await sanitizePaypalLedgerDuplicates();
 
         const lastSyncAt = new Date().toISOString();
         await prisma.systemState.upsert({

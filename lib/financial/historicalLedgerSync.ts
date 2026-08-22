@@ -119,6 +119,13 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     inserted: number;
     skipped: number;
     sources: Record<string, number>;
+    paypalSanitize?: {
+        scanned: number;
+        reversed: number;
+        renamed: number;
+        kept: number;
+        groupsCollapsed: number;
+    };
 }> {
     const candidates: LedgerEntryInput[] = [];
     const sources: Record<string, number> = {};
@@ -380,5 +387,9 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     }
 
     const result = await appendLedgerEntries(candidates);
-    return { ...result, sources };
+    const { sanitizePaypalLedgerDuplicates } = await import(
+        '@/lib/financial/paypalLedgerSanitize'
+    );
+    const paypalSanitize = await sanitizePaypalLedgerDuplicates();
+    return { ...result, sources, paypalSanitize };
 }

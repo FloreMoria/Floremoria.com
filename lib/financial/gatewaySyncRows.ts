@@ -3,6 +3,8 @@
  * per la tabella "Sincronizzazione API Gateway".
  */
 
+import { normalizePaypalTransactionId, parsePaypalSourceKey } from '@/lib/financial/paypalSourceKeys';
+
 export type GatewayKind = 'stripe' | 'paypal';
 
 export type MovementKind =
@@ -321,20 +323,23 @@ export type PaypalLedgerInput = {
 export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow | null {
     const meta = asMeta(entry.metadataJson);
     const sourceKey = entry.sourceKey || '';
-    if (!sourceKey.startsWith('PAYPAL_')) return null;
-    if (sourceKey.startsWith('PAYPAL_FEE')) return null;
+    if (!sourceKey.toUpperCase().startsWith('PAYPAL_')) return null;
+
+    const parsed = parsePaypalSourceKey(sourceKey);
+    if (parsed?.kind === 'FEE') return null;
 
     const txId =
-        str(entry.sourceId)?.replace(/^fee_/, '') ||
-        sourceKey.replace(/^PAYPAL_(TX|REFUND|PAYOUT):/, '') ||
+        parsed?.transactionId ||
+        normalizePaypalTransactionId(entry.sourceId) ||
+        normalizePaypalTransactionId(str(meta.paypalTransactionId)) ||
         entry.id;
 
     let kind: MovementKind = 'incasso';
     let label = 'Incasso Ordine';
-    if (sourceKey.startsWith('PAYPAL_REFUND')) {
+    if (parsed?.kind === 'REFUND' || sourceKey.startsWith('PAYPAL_REFUND')) {
         kind = 'rimborso';
         label = 'Rimborso';
-    } else if (sourceKey.startsWith('PAYPAL_PAYOUT')) {
+    } else if (parsed?.kind === 'PAYOUT' || sourceKey.startsWith('PAYPAL_PAYOUT')) {
         kind = 'payout';
         label = 'Payout Bancario';
     }
@@ -388,13 +393,13 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
     };
 
     /** Normalizza ID reale (charge / pi / txn / PayPal) per collassare sync multipli. */
-    const normalizeTxId = (id: string): string =>
-        id
+    const normalizeTxId = (id: string, gateway: GatewayKind): string => {
+        if (gateway === 'paypal') return normalizePaypalTransactionId(id);
+        return id
             .trim()
             .toLowerCase()
-            .replace(/^stripe_(eu_)?(tx_)?/, '')
-            .replace(/^paypal[-:]/, '')
-            .replace(/^fee_/, '');
+            .replace(/^stripe_(eu_)?(tx_)?/, '');
+    };
 
     // 1) Dedup per chiave tipizzata (gateway + ID + tipo movimento)
     const byTypedKey = new Map<string, GatewaySyncRow>();
@@ -406,7 +411,7 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
     // 2) Dedup tassativo su ID transazione reale (stesso gateway + stesso ID)
     const byTxId = new Map<string, GatewaySyncRow>();
     for (const row of byTypedKey.values()) {
-        const tx = normalizeTxId(row.transactionId || row.id);
+        const tx = normalizeTxId(row.transactionId || row.id, row.gateway);
         if (!tx) {
             byTxId.set(`fallback:${row.id}`, ensureGatewayBadges(row));
             continue;

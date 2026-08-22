@@ -3,10 +3,18 @@
  * Verifica firma via /v1/notifications/verify-webhook-signature; idempotenza su sourceKey.
  */
 
-import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 import type { LedgerEntryInput } from '@/lib/financial/historicalLedgerTypes';
 import { getPaypalAccessToken, paypalBaseUrl } from '@/lib/financial/paypalSync';
+import {
+    paypalFeeSourceKey,
+    paypalRefundSourceKey,
+    paypalTxSourceKey,
+} from '@/lib/financial/paypalSourceKeys';
+import {
+    paypalCanonicalAlreadyRecorded,
+    sanitizePaypalLedgerDuplicates,
+} from '@/lib/financial/paypalLedgerSanitize';
 
 export type PaypalWebhookEvent = {
     id?: string;
@@ -186,9 +194,10 @@ export function extractMovementsFromPaypalEvent(event: PaypalWebhookEvent): Pars
 }
 
 function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
-    const prefix = mv.isRefund ? 'REFUND' : 'TX';
-    const txKey = `PAYPAL_${prefix}:${mv.transactionId}`.slice(0, 180);
-    const feeKey = `PAYPAL_FEE:${prefix}:${mv.transactionId}`.slice(0, 180);
+    const txKey = mv.isRefund
+        ? paypalRefundSourceKey(mv.transactionId)
+        : paypalTxSourceKey(mv.transactionId);
+    const feeKey = paypalFeeSourceKey(mv.transactionId);
     const category = mv.isRefund ? 'RIMBORSI' : 'RICAVI_VENDITE';
     const entries: LedgerEntryInput[] = [];
 
@@ -214,6 +223,7 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
                 feeCents: mv.feeCents,
                 netCents: mv.netCents,
                 isRefund: mv.isRefund,
+                paypalTransactionId: mv.transactionId,
             },
         });
     }
@@ -242,6 +252,7 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
                 webhook: true,
                 isRefund: mv.isRefund,
                 feeReversal: mv.isRefund,
+                paypalTransactionId: mv.transactionId,
             },
         });
     }
@@ -249,15 +260,12 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
     return entries;
 }
 
-/** Idempotenza esplicita: verifica sourceKey prima dell'insert (oltre a skipDuplicates). */
-export async function paypalMovementAlreadyRecorded(transactionId: string, isRefund: boolean): Promise<boolean> {
-    const prefix = isRefund ? 'REFUND' : 'TX';
-    const sourceKey = `PAYPAL_${prefix}:${transactionId}`.slice(0, 180);
-    const existing = await prisma.financialLedgerEntry.findUnique({
-        where: { sourceKey },
-        select: { id: true },
-    });
-    return Boolean(existing);
+/** Idempotenza: sourceKey canonica + alias legacy (FEE:TX:, FEE:REFUND:). */
+export async function paypalMovementAlreadyRecorded(
+    transactionId: string,
+    isRefund: boolean
+): Promise<boolean> {
+    return paypalCanonicalAlreadyRecorded(isRefund ? 'REFUND' : 'TX', transactionId);
 }
 
 export async function verifyPaypalWebhookSignature(
@@ -359,6 +367,7 @@ export async function processPaypalWebhookEvent(event: PaypalWebhookEvent): Prom
     }
 
     const { inserted, skipped: dupSkipped } = await appendLedgerEntries(ledgerBatch);
+    await sanitizePaypalLedgerDuplicates();
 
     return {
         eventType,

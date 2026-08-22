@@ -7,6 +7,13 @@ import Papa from 'papaparse';
 import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 import type { LedgerCategory, LedgerEntryInput } from '@/lib/financial/historicalLedgerTypes';
+import {
+    paypalFeeSourceKey,
+    paypalPayoutSourceKey,
+    paypalRefundSourceKey,
+    paypalTxSourceKey,
+} from '@/lib/financial/paypalSourceKeys';
+import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
 
 export type PaypalCsvRow = {
     transactionId: string;
@@ -308,6 +315,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
         referenceId: row.referenceId,
         feeCents: row.feeCents,
         netCents: row.netCents,
+        paypalTransactionId: row.transactionId,
     };
 
     if (row.kind === 'skip') return entries;
@@ -316,7 +324,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
         const feeSigned = row.grossCents !== 0 ? row.grossCents : -row.feeCents;
         if (feeSigned === 0) return entries;
         entries.push({
-            sourceKey: `PAYPAL_FEE:${row.transactionId}`.slice(0, 180),
+            sourceKey: paypalFeeSourceKey(row.transactionId),
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: `fee_${row.transactionId}`.slice(0, 128),
             direction: feeSigned >= 0 ? 'ENTRATA' : 'USCITA',
@@ -339,7 +347,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
         if (row.grossCents === 0 && row.netCents === 0) return entries;
         const amount = row.grossCents !== 0 ? row.grossCents : row.netCents;
         entries.push({
-            sourceKey: `PAYPAL_PAYOUT:${row.transactionId}`.slice(0, 180),
+            sourceKey: paypalPayoutSourceKey(row.transactionId),
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: row.transactionId.slice(0, 128),
             direction: amount >= 0 ? 'ENTRATA' : 'USCITA',
@@ -368,9 +376,10 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
           : row.netCents;
 
     if (gross !== 0) {
-        const txPrefix = isRefund ? 'PAYPAL_REFUND' : 'PAYPAL_TX';
         entries.push({
-            sourceKey: `${txPrefix}:${row.transactionId}`.slice(0, 180),
+            sourceKey: isRefund
+                ? paypalRefundSourceKey(row.transactionId)
+                : paypalTxSourceKey(row.transactionId),
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: row.transactionId.slice(0, 128),
             direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
@@ -384,15 +393,14 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
             totalCents: gross,
             reconciliationStatus: 'UNMATCHED',
             documentRef: row.transactionId,
-            metadataJson: metaBase,
+            metadataJson: { ...metaBase, isRefund },
         });
     }
 
     if (row.feeCents > 0) {
         const feeSigned = isRefund ? row.feeCents : -row.feeCents;
-        const feeKey = isRefund ? `PAYPAL_FEE:REFUND:${row.transactionId}` : `PAYPAL_FEE:${row.transactionId}`;
         entries.push({
-            sourceKey: feeKey.slice(0, 180),
+            sourceKey: paypalFeeSourceKey(row.transactionId),
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: `fee_${row.transactionId}`.slice(0, 128),
             direction: feeSigned >= 0 ? 'ENTRATA' : 'USCITA',
@@ -408,7 +416,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
             totalCents: feeSigned,
             reconciliationStatus: isRefund ? 'UNMATCHED' : 'MATCHED',
             documentRef: row.transactionId,
-            metadataJson: { ...metaBase, feeReversal: isRefund },
+            metadataJson: { ...metaBase, feeReversal: isRefund, isRefund },
         });
     }
 
@@ -448,6 +456,7 @@ export async function importPaypalCsvToLedger(
     }
 
     const { inserted, skipped } = await appendLedgerEntries(ledgerBatch);
+    const sanitize = await sanitizePaypalLedgerDuplicates();
     const lastImportAt = new Date().toISOString();
 
     await prisma.systemState.upsert({
@@ -464,6 +473,7 @@ export async function importPaypalCsvToLedger(
                 fees,
                 refunds,
                 payouts,
+                sanitize,
             }),
         },
         update: {
@@ -477,6 +487,7 @@ export async function importPaypalCsvToLedger(
                 fees,
                 refunds,
                 payouts,
+                sanitize,
             }),
         },
     });

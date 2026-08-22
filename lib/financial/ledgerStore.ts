@@ -16,6 +16,7 @@ const EMPTY_LEDGER: FinancialLedger = {
     transactions: [],
     accountingEntries: [],
     completedDeadlineIds: [],
+    deadlineStatusById: {},
 };
 
 function sanitizeLedger(ledger: FinancialLedger): FinancialLedger {
@@ -26,6 +27,7 @@ function sanitizeLedger(ledger: FinancialLedger): FinancialLedger {
             (e) => !isFinanceSeedEntryId(e.id)
         ),
         completedDeadlineIds: ledger.completedDeadlineIds || [],
+        deadlineStatusById: ledger.deadlineStatusById || {},
     };
 }
 

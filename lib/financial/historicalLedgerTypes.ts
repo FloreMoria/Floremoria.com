@@ -65,8 +65,11 @@ export type HistoricalPnl = {
     ricaviNettiCents: number;
     ivaDebitoCents: number;
     costiFioristiCents: number;
+    /** Fatture passive SDI / spese documentate (MANUAL_EXPENSE), escluse SaaS. */
+    costiFatturePassiveSdiCents: number;
     costiSaasCents: number;
     costiOperativiCents: number;
+    /** Solo fioristi + fatture passive SDI (nessuna costante / SaaS / residuo). */
     costiProduzioneCents: number;
     ebitdaCents: number;
     oneriBancariCents: number;

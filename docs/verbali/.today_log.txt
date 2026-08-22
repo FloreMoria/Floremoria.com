@@ -39,3 +39,4 @@
 [2026-08-22 20:05] fix/finance: segno esplicito saldo estratto conto, scroll 15 righe sticky, dedup gerarchica gateway/banca>ordini in Prima Nota/PnL.
 [2026-08-22 20:37] fix/finance: colori dare/avere Prima Nota, Fatture in attesa fioristi + colonna Ordine cross-match, glossario fiscale IT, dedup gateway con badge obbligatori.
 [2026-08-22 20:47] fix/finance: dedup profonda PayPal API/Webhook/CSV su sourceKey canonica + sanitize ledger (reversedAt) e totali PnL/gateway.
+[2026-08-22 22:09] feat/finance: KPI in cima, inline edit categorie/fonti/stati/tipo gateway, layout Prima Nota, fix costi produzione=fioristi+SDI, rimossa tabella Stripe ridondante.

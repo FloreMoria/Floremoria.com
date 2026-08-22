@@ -123,6 +123,7 @@ export async function computeHistoricalPnl(opts: {
     let ricaviNettiCents = 0;
     let ivaDebitoCents = 0;
     let costiFioristiCents = 0;
+    let costiFatturePassiveSdiCents = 0;
     let costiSaasCents = 0;
     let costiOperativiCents = 0;
     let oneriBancariCents = 0;
@@ -130,7 +131,6 @@ export async function computeHistoricalPnl(opts: {
 
     for (const r of usable) {
         // Costi fioristi: se esiste scrittura da ordine liquidato, ignora il doppione bancario
-        // (il ricavo resta comunque prioritario da banca/gateway sopra).
         if (r.sourceType === 'BANK_LINE' && r.category === 'COSTI_FIORISTI') {
             const hasFloristPayout = usable.some((x) => x.sourceType === 'FLORIST_PAYOUT');
             if (hasFloristPayout) continue;
@@ -144,18 +144,28 @@ export async function computeHistoricalPnl(opts: {
             }
         } else {
             const abs = Math.abs(r.totalCents);
-            if (r.category === 'COSTI_FIORISTI') costiFioristiCents += abs;
-            else if (r.category === 'SPESE_SAAS') costiSaasCents += abs;
-            else if (r.category === 'ONERI_BANCARI') oneriBancariCents += abs;
-            else costiOperativiCents += abs;
+            if (r.category === 'COSTI_FIORISTI' || r.sourceType === 'FLORIST_PAYOUT') {
+                costiFioristiCents += abs;
+            } else if (r.category === 'SPESE_SAAS' || r.sourceType === 'SAAS_INVOICE') {
+                costiSaasCents += abs;
+            } else if (r.category === 'ONERI_BANCARI') {
+                oneriBancariCents += abs;
+            } else if (r.sourceType === 'MANUAL_EXPENSE') {
+                // Fatture passive SDI / documenti caricati — unica fonte "fatture" in produzione
+                costiFatturePassiveSdiCents += abs;
+            } else {
+                costiOperativiCents += abs;
+            }
             if (r.vatCents < 0 || (r.direction === 'USCITA' && r.vatCents !== 0)) {
                 ivaCreditoCents += Math.abs(r.vatCents);
             }
         }
     }
 
-    const costiProduzioneCents = costiFioristiCents + costiSaasCents + costiOperativiCents;
-    const ebitdaCents = ricaviLordiCents - costiProduzioneCents;
+    // Costi della produzione = solo compensi fioristi reali + fatture passive SDI (niente SaaS/residui)
+    const costiProduzioneCents = costiFioristiCents + costiFatturePassiveSdiCents;
+    const ebitdaCents =
+        ricaviLordiCents - costiProduzioneCents - costiSaasCents - costiOperativiCents;
     const risultatoAnteImposteCents = ebitdaCents - oneriBancariCents;
     const ivaNettaCents = ivaDebitoCents - ivaCreditoCents;
 
@@ -166,6 +176,7 @@ export async function computeHistoricalPnl(opts: {
         ricaviNettiCents,
         ivaDebitoCents,
         costiFioristiCents,
+        costiFatturePassiveSdiCents,
         costiSaasCents,
         costiOperativiCents,
         costiProduzioneCents,

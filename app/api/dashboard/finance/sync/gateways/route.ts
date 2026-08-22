@@ -20,7 +20,8 @@ export async function GET() {
         // Bonifica doppioni PayPal (API/Webhook/CSV) prima di costruire la tabella
         const paypalSanitize = await sanitizePaypalLedgerDuplicates();
 
-        const [stripeMeta, paypalStatus, stripeMovements, paypalLedger] = await Promise.all([
+        const [stripeMeta, paypalStatus, stripeMovements, paypalLedger, kindOverridesState] =
+            await Promise.all([
             prisma.systemState.findUnique({ where: { key: 'finance.stripe.last_sync' } }),
             getPaypalSyncStatus(),
             prisma.stripeFinanceMovement.findMany({
@@ -37,7 +38,19 @@ export async function GET() {
                 orderBy: { accountingDate: 'desc' },
                 take: 400,
             }),
+            prisma.systemState.findUnique({
+                where: { key: 'finance.gateway.movement_kind_overrides' },
+            }),
         ]);
+
+        let kindOverrides: Record<string, string> = {};
+        try {
+            if (kindOverridesState?.value) {
+                kindOverrides = JSON.parse(kindOverridesState.value) as Record<string, string>;
+            }
+        } catch {
+            kindOverrides = {};
+        }
 
         const orderIds = [
             ...new Set(
@@ -113,6 +126,23 @@ export async function GET() {
                 totalCents: e.totalCents,
                 metadataJson: e.metadataJson,
             })),
+        }).map((r) => {
+            const ov = kindOverrides[r.transactionId] || kindOverrides[r.id];
+            if (!ov) return r;
+            const labelMap: Record<string, { kind: typeof r.movementKind; label: string }> = {
+                incasso: { kind: 'incasso', label: 'Incasso Ordine' },
+                commissione: { kind: 'commissione', label: 'Commissione Gateway' },
+                payout: { kind: 'payout', label: 'Payout Bancario' },
+                rimborso: { kind: 'rimborso', label: 'Rimborso' },
+                riserva: { kind: 'riserva', label: 'Riserva' },
+                altro: { kind: 'altro', label: 'Altro movimento' },
+            };
+            const mapped = labelMap[ov] || labelMap.altro;
+            return {
+                ...r,
+                movementKind: mapped.kind,
+                movementLabel: mapped.label,
+            };
         });
 
         return NextResponse.json({
@@ -132,6 +162,63 @@ export async function GET() {
             {
                 ok: false,
                 error: error instanceof Error ? error.message : 'Errore caricamento gateway',
+            },
+            { status: 500 }
+        );
+    }
+}
+
+/** POST: override tipo movimento gateway (inline edit). */
+export async function POST(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
+    try {
+        const body = (await request.json().catch(() => ({}))) as {
+            action?: string;
+            transactionId?: string;
+            movementKind?: string;
+        };
+        if (body.action !== 'set_movement_kind') {
+            return NextResponse.json(
+                { ok: false, error: 'Usa action: "set_movement_kind"' },
+                { status: 400 }
+            );
+        }
+        const transactionId = String(body.transactionId || '').trim();
+        const movementKind = String(body.movementKind || '').trim();
+        const allowed = new Set([
+            'incasso',
+            'commissione',
+            'payout',
+            'rimborso',
+            'riserva',
+            'altro',
+        ]);
+        if (!transactionId || !allowed.has(movementKind)) {
+            return NextResponse.json(
+                { ok: false, error: 'transactionId / movementKind non validi' },
+                { status: 400 }
+            );
+        }
+        const key = 'finance.gateway.movement_kind_overrides';
+        const existing = await prisma.systemState.findUnique({ where: { key } });
+        const map = existing?.value
+            ? (JSON.parse(existing.value) as Record<string, string>)
+            : {};
+        map[transactionId] = movementKind;
+        await prisma.systemState.upsert({
+            where: { key },
+            create: { key, value: JSON.stringify(map) },
+            update: { value: JSON.stringify(map) },
+        });
+        return NextResponse.json({ ok: true, transactionId, movementKind });
+    } catch (error) {
+        console.error('[sync/gateways POST]', error);
+        return NextResponse.json(
+            {
+                ok: false,
+                error: error instanceof Error ? error.message : 'Salvataggio fallito',
             },
             { status: 500 }
         );

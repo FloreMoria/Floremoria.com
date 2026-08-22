@@ -43,5 +43,7 @@ export interface FinancialLedger {
     transactions: BankTransaction[];
     accountingEntries: AccountingEntry[];
     completedDeadlineIds?: string[];
+    /** Override stato scadenziario: PENDING | PAID | ARCHIVED | DUE_SOON */
+    deadlineStatusById?: Record<string, string>;
 }
 

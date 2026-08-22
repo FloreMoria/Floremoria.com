@@ -28,6 +28,7 @@ type Pnl = {
     ricaviNettiCents: number;
     ivaDebitoCents: number;
     costiFioristiCents: number;
+    costiFatturePassiveSdiCents?: number;
     costiSaasCents: number;
     costiOperativiCents: number;
     costiProduzioneCents: number;
@@ -228,13 +229,14 @@ export default function HistoricalFiscalArchivePanel() {
                     </div>
                     <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
                         <p className="text-[10px] font-bold uppercase text-rose-700 flex items-center gap-1">
-                            <TrendingDown size={12} /> Costi produzione
+                            <TrendingDown size={12} /> Costi della produzione
                         </p>
                         <p className="text-xl font-mono font-bold text-rose-800 mt-1">
                             €{euro(pnl.costiProduzioneCents)}
                         </p>
                         <p className="text-[11px] text-rose-700/80 mt-1">
-                            Fioristi €{euro(pnl.costiFioristiCents)} · SaaS €{euro(pnl.costiSaasCents)}
+                            Fioristi €{euro(pnl.costiFioristiCents)} · Fatture SDI €
+                            {euro(pnl.costiFatturePassiveSdiCents || 0)}
                         </p>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">

@@ -16,8 +16,6 @@ import {
     FileJson, 
     Settings, 
     Calendar,
-    CheckSquare,
-    Square,
     AlertOctagon,
     Pencil,
     Check,
@@ -224,16 +222,19 @@ export default function FinanceDashboardPage() {
         void loadGateways();
     }, []);
 
-    // Gestione aggiornamento stato scadenze
-    const handleToggleDeadline = async (deadlineId: string) => {
+    const handleSetDeadlineStatus = async (
+        deadlineId: string,
+        status: 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED'
+    ) => {
         try {
             const res = await fetch('/api/dashboard/finance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'toggle_deadline',
-                    deadlineId
-                })
+                    action: 'set_deadline_status',
+                    deadlineId,
+                    status,
+                }),
             });
             const data = await res.json();
             if (data.ok) {
@@ -241,7 +242,7 @@ export default function FinanceDashboardPage() {
                 if (data.statements) setStatements(data.statements);
             }
         } catch (error) {
-            console.error('Errore aggiornamento scadenza:', error);
+            console.error('Errore aggiornamento stato scadenza:', error);
         }
     };
 
@@ -251,10 +252,11 @@ export default function FinanceDashboardPage() {
 
     // Calcolo scadenze: mai mostrare adempimenti scaduti da >90 giorni
     const allDeadlines = React.useMemo(() => {
-        return getUpcomingDeadlines(ledger?.completedDeadlineIds || []).filter(
-            (item) => item.daysRemaining >= -90
-        );
-    }, [ledger?.completedDeadlineIds]);
+        return getUpcomingDeadlines(
+            ledger?.completedDeadlineIds || [],
+            ledger?.deadlineStatusById || {}
+        ).filter((item) => item.daysRemaining >= -90 && item.uiStatus !== 'ARCHIVED');
+    }, [ledger?.completedDeadlineIds, ledger?.deadlineStatusById]);
 
     const urgentDeadlines = React.useMemo(() => {
         // Solo imminenti (0–10 gg), non le già scadute
@@ -505,47 +507,7 @@ export default function FinanceDashboardPage() {
                 </div>
             </div>
 
-            {/* Coordinate bancarie FinecoBank */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div>
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Conto Corrente Operativo (FinecoBank)</h3>
-                        <p className="mt-1 text-lg font-display font-bold text-slate-900">{FLOREMORIA_FINECO_BANK.institute}</p>
-                        <p className="text-sm text-slate-600 mt-1">{FLOREMORIA_FINECO_BANK.accountHolder}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{FLOREMORIA_LEGAL_ENTITY.registeredOffice}</p>
-                        <p className="text-xs text-slate-500">P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber}</p>
-                        <p className="text-xs text-slate-500">Codice SDI: <span className="font-mono font-semibold text-slate-800">{FLOREMORIA_LEGAL_ENTITY.sdiCode}</span></p>
-                    </div>
-                    <div className="font-mono text-sm space-y-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
-                        <div><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">IBAN</span><div className="font-semibold text-slate-900 tracking-wide">{FLOREMORIA_FINECO_BANK.ibanDisplay}</div></div>
-                        <div className="pt-1"><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">BIC / SWIFT</span><div className="text-slate-800">{FLOREMORIA_FINECO_BANK.bicSepa} <span className="text-slate-400">(SEPA)</span> · {FLOREMORIA_FINECO_BANK.bicSwift} <span className="text-slate-400">(SWIFT)</span></div></div>
-                    </div>
-                </div>
-                <BankStatementsPanel />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
-                    <p className="font-bold uppercase tracking-wider text-emerald-800 text-[10px]">Entrate native</p>
-                    <p className="text-emerald-900 mt-1 leading-relaxed">
-                        Incassi tracciati dai webhook Stripe/PayPal all&apos;acquisto cliente (tab Stato Stripe &amp; PayPal).
-                    </p>
-                </div>
-                <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3">
-                    <p className="font-bold uppercase tracking-wider text-amber-800 text-[10px]">Uscite maturate</p>
-                    <p className="text-amber-900 mt-1 leading-relaxed">
-                        Compensi fiorista su ordini confermati; liquidazione abbinata ai bonifici sull&apos;estratto Fineco.
-                    </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="font-bold uppercase tracking-wider text-slate-600 text-[10px]">Quadratura bancaria</p>
-                    <p className="text-slate-700 mt-1 leading-relaxed">
-                        Carica PDF/CSV Fineco per matching payout, bonifici partner, SaaS/imposte e spese manuali.
-                    </p>
-                </div>
-            </div>
-
-            {/* Metrics cards grid */}
+            {/* KPI Contabilità — sopra Estratti Conto & Rendiconti */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
                     <div className="min-w-0 flex-1">
@@ -642,6 +604,46 @@ export default function FinanceDashboardPage() {
                 </div>
             </div>
 
+            {/* Coordinate bancarie FinecoBank */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Conto Corrente Operativo (FinecoBank)</h3>
+                        <p className="mt-1 text-lg font-display font-bold text-slate-900">{FLOREMORIA_FINECO_BANK.institute}</p>
+                        <p className="text-sm text-slate-600 mt-1">{FLOREMORIA_FINECO_BANK.accountHolder}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{FLOREMORIA_LEGAL_ENTITY.registeredOffice}</p>
+                        <p className="text-xs text-slate-500">P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber}</p>
+                        <p className="text-xs text-slate-500">Codice SDI: <span className="font-mono font-semibold text-slate-800">{FLOREMORIA_LEGAL_ENTITY.sdiCode}</span></p>
+                    </div>
+                    <div className="font-mono text-sm space-y-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3">
+                        <div><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">IBAN</span><div className="font-semibold text-slate-900 tracking-wide">{FLOREMORIA_FINECO_BANK.ibanDisplay}</div></div>
+                        <div className="pt-1"><span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">BIC / SWIFT</span><div className="text-slate-800">{FLOREMORIA_FINECO_BANK.bicSepa} <span className="text-slate-400">(SEPA)</span> · {FLOREMORIA_FINECO_BANK.bicSwift} <span className="text-slate-400">(SWIFT)</span></div></div>
+                    </div>
+                </div>
+                <BankStatementsPanel />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+                    <p className="font-bold uppercase tracking-wider text-emerald-800 text-[10px]">Entrate native</p>
+                    <p className="text-emerald-900 mt-1 leading-relaxed">
+                        Incassi tracciati dai webhook Stripe/PayPal all&apos;acquisto cliente (tab Stato Stripe &amp; PayPal).
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3">
+                    <p className="font-bold uppercase tracking-wider text-amber-800 text-[10px]">Uscite maturate</p>
+                    <p className="text-amber-900 mt-1 leading-relaxed">
+                        Compensi fiorista su ordini confermati; liquidazione abbinata ai bonifici sull&apos;estratto Fineco.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="font-bold uppercase tracking-wider text-slate-600 text-[10px]">Quadratura bancaria</p>
+                    <p className="text-slate-700 mt-1 leading-relaxed">
+                        Carica PDF/CSV Fineco per matching payout, bonifici partner, SaaS/imposte e spese manuali.
+                    </p>
+                </div>
+            </div>
+
             <SaasForeignExpensesPanel
                 open={saasDrawerOpen}
                 onClose={() => setSaasDrawerOpen(false)}
@@ -670,7 +672,7 @@ export default function FinanceDashboardPage() {
                         onClick={() => setActiveTab('transactions')}
                         className={`flex-1 min-w-[140px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'transactions' ? 'border-[#c5a880] text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        Movimenti Bancari Estratto Conto
+                        Movimenti bancari
                     </button>
                     <button
                         onClick={() => setActiveTab('accounting')}
@@ -1133,61 +1135,6 @@ export default function FinanceDashboardPage() {
                                         </table>
                                     </div>
                                 </div>
-
-                                {/* Movimenti Reali Stripe (Contabilità Centesimi) */}
-                                <div className="border border-slate-100 rounded-2xl shadow-sm overflow-hidden space-y-4 p-5">
-                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                                        <h4 className="text-lg font-bold text-slate-900">
-                                            Movimenti Reali Stripe Registrati (Contabilità al Centesimo)
-                                        </h4>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse min-w-[800px]">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                    <th className="px-5 py-3">Transazione ID</th>
-                                                    <th className="px-5 py-3">Codice Ordine</th>
-                                                    <th className="px-5 py-3">Data</th>
-                                                    <th className="px-5 py-3 text-right">Lordo (Ricavo)</th>
-                                                    <th className="px-5 py-3 text-right">Commissione Stripe (Fee)</th>
-                                                    <th className="px-5 py-3 text-right">Netto Incassato</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100 text-sm">
-                                                {!gatewayData.stripe.realTransactions || gatewayData.stripe.realTransactions.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic">Nessun movimento Stripe reale registrato.</td>
-                                                    </tr>
-                                                ) : (
-                                                    gatewayData.stripe.realTransactions.map((tx: any) => {
-                                                        return (
-                                                            <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className="px-5 py-3.5 font-mono text-xs text-slate-500">
-                                                                    {tx.stripeTransactionId}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 font-mono text-xs font-semibold text-slate-700">
-                                                                    {tx.orderNumber}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-xs text-slate-500">
-                                                                    {formatDateTime(tx.createdAt)}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-right font-mono text-slate-800">
-                                                                    €{(tx.grossAmount || 0).toFixed(2)}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-right font-mono text-rose-600">
-                                                                    -€{(tx.stripeFee || 0).toFixed(2)}
-                                                                </td>
-                                                                <td className="px-5 py-3.5 text-right font-mono text-emerald-700 font-semibold">
-                                                                    €{(tx.netAmount || 0).toFixed(2)}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>
@@ -1348,28 +1295,33 @@ export default function FinanceDashboardPage() {
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
-                                            <button
-                                                onClick={() => handleToggleDeadline(item.id)}
-                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider ${
-                                                    isCompleted 
-                                                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' 
-                                                        : isUrgent 
-                                                        ? 'bg-rose-600 text-white hover:bg-rose-500 shadow-sm' 
-                                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                            <select
+                                                value={item.uiStatus}
+                                                onChange={(e) =>
+                                                    void handleSetDeadlineStatus(
+                                                        item.id,
+                                                        e.target.value as
+                                                            | 'PENDING'
+                                                            | 'DUE_SOON'
+                                                            | 'PAID'
+                                                            | 'ARCHIVED'
+                                                    )
+                                                }
+                                                className={`inline-flex px-2 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border cursor-pointer ${
+                                                    item.uiStatus === 'PAID'
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                        : item.uiStatus === 'DUE_SOON'
+                                                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                          : item.uiStatus === 'ARCHIVED'
+                                                            ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                                            : 'bg-amber-50 text-amber-800 border-amber-200'
                                                 }`}
                                             >
-                                                {isCompleted ? (
-                                                    <>
-                                                        <CheckSquare size={13} />
-                                                        Inviato
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Square size={13} />
-                                                        Da Inviare
-                                                    </>
-                                                )}
-                                            </button>
+                                                <option value="DUE_SOON">In scadenza</option>
+                                                <option value="PAID">Pagato</option>
+                                                <option value="PENDING">Da completare</option>
+                                                <option value="ARCHIVED">Archiviato</option>
+                                            </select>
                                         </td>
                                     </tr>
                                 );

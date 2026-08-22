@@ -146,8 +146,9 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
         }
     }
 
-    const totaleCostiCents = costiFioristiCents + costiStripeCents + costiSaasCents + costiMarketingCents;
-    const ebitdaCents = ricaviVenditeCents - totaleCostiCents;
+    const totaleCostiCents = costiFioristiCents; // produzione = solo fioristi in fallback JSON (niente SaaS/fee in questa voce)
+    const ebitdaCents =
+        ricaviVenditeCents - costiFioristiCents - costiStripeCents - costiSaasCents - costiMarketingCents;
 
     // --- 2. STIMA IMPOSTE (IRES 24%, IRAP ~3.9%) ---
     const utilePreImposteCents = Math.max(0, ebitdaCents);

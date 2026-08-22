@@ -8,6 +8,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import {
+    bankCategoriesForAmount,
+    bankCategoryLabel,
+    coerceBankCategoryForAmount,
+} from '@/lib/financial/bankCategoryOptions';
 
 type MovementLine = {
     id: string;
@@ -43,18 +48,6 @@ function formatSignedSaldo(cents: number): { text: string; className: string } {
 const BANK_TABLE_SCROLL_CLASS =
     'max-h-[calc(2.75rem+15*2.85rem)] overflow-y-auto overflow-x-auto';
 
-function categoryLabel(matchType: string | null | undefined, amountCents: number): string {
-    const t = (matchType || '').toUpperCase();
-    if (t.includes('FLORIST')) return 'Compenso fiorista';
-    if (t.includes('STRIPE') || t.includes('PAYPAL') || t.includes('GATEWAY')) return 'Incasso gateway';
-    if (t.includes('SDI') || t.includes('INVOICE')) return 'Fattura / fornitore';
-    if (t.includes('FEE') || t.includes('BANK')) return 'Oneri bancari';
-    if (t.includes('INTERNAL') || t.includes('TRANSFER')) return 'Giroconto';
-    if (t.includes('SAAS') || t.includes('SUBSCRIPTION')) return 'Canone / SaaS';
-    if (t.includes('CASH')) return 'Spesa documentata';
-    return amountCents >= 0 ? 'Entrata' : 'Uscita';
-}
-
 function originBadge(fileName: string | null | undefined): { label: string; className: string } {
     const n = (fileName || '').toLowerCase();
     if (n.includes('paste') || n.includes('incolla') || n.includes('manual')) {
@@ -75,6 +68,8 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
     const [lines, setLines] = useState<MovementLine[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
     const year = new Date().getFullYear();
 
     const load = useCallback(async () => {
@@ -98,6 +93,40 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
             setLoading(false);
         }
     }, [year]);
+
+    const saveCategory = async (line: MovementLine, matchType: string) => {
+        if (!line.documentId) {
+            setError('Documento estratto mancante: impossibile salvare la categoria.');
+            return;
+        }
+        const safe = coerceBankCategoryForAmount(matchType, line.amountCents);
+        setSavingCategoryId(line.id);
+        setError(null);
+        try {
+            const res = await fetch(
+                `/api/dashboard/finance/bank-statements/${line.documentId}/lines/${line.id}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        matchType: safe,
+                        asMatched: false,
+                        matchNotes: `Categoria aggiornata inline → ${safe}`,
+                    }),
+                }
+            );
+            const parsed = await readJsonResponse<{ ok?: boolean; error?: string }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Salvataggio categoria fallito');
+            setLines((prev) =>
+                prev.map((l) => (l.id === line.id ? { ...l, matchType: safe } : l))
+            );
+            setEditingCategoryId(null);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Errore salvataggio categoria');
+        } finally {
+            setSavingCategoryId(null);
+        }
+    };
 
     useEffect(() => {
         void load();
@@ -152,8 +181,8 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
         <div className="space-y-2">
             <div className="px-4 pt-3 flex items-center justify-between gap-2">
                 <p className="text-[11px] text-slate-500">
-                    Solo movimenti reali da estratti Fineco e inserimenti manuali · anno {year} ·{' '}
-                    {displayRows.length} righe
+                    Movimenti bancari · anno {year} · {displayRows.length} righe · clicca la
+                    categoria per modificarla
                 </p>
                 <button
                     type="button"
@@ -218,9 +247,51 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                             </p>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                                                {categoryLabel(line.matchType, line.amountCents)}
-                                            </span>
+                                            {editingCategoryId === line.id ? (
+                                                <select
+                                                    autoFocus
+                                                    disabled={savingCategoryId === line.id}
+                                                    className="w-full max-w-[180px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                                                    value={coerceBankCategoryForAmount(
+                                                        line.matchType,
+                                                        line.amountCents
+                                                    )}
+                                                    onChange={(e) =>
+                                                        void saveCategory(line, e.target.value)
+                                                    }
+                                                    onBlur={() => setEditingCategoryId(null)}
+                                                >
+                                                    {bankCategoriesForAmount(line.amountCents).map(
+                                                        (o) => (
+                                                            <option
+                                                                key={o.matchType}
+                                                                value={o.matchType}
+                                                            >
+                                                                {o.label}
+                                                            </option>
+                                                        )
+                                                    )}
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingCategoryId(line.id)}
+                                                    className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors"
+                                                    title="Modifica categoria"
+                                                >
+                                                    {savingCategoryId === line.id ? (
+                                                        <Loader2
+                                                            size={12}
+                                                            className="animate-spin"
+                                                        />
+                                                    ) : (
+                                                        bankCategoryLabel(
+                                                            line.matchType,
+                                                            line.amountCents
+                                                        )
+                                                    )}
+                                                </button>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-emerald-700 whitespace-nowrap">
                                             {credit > 0 ? `+€${euro(credit)}` : '—'}

@@ -1,3 +1,5 @@
+export type DeadlineUiStatus = 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED';
+
 export interface TaxDeadline {
     id: string;
     title: string;
@@ -6,6 +8,8 @@ export interface TaxDeadline {
     frequency: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
     description: string;
     status: 'PENDING' | 'COMPLETED' | 'URGENT';
+    /** Stato UI editabile (override persistito). */
+    uiStatus: DeadlineUiStatus;
     isUrgent: boolean; // true se mancano <= 10 giorni o se scaduta
     daysRemaining: number;
     externalRef?: string;

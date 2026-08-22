@@ -20,7 +20,10 @@ function parseLocalDate(isoDate: string): Date {
  * Genera l'elenco degli adempimenti fiscali e societari per FloreMoria S.r.l.
  * Esclude sempre: pre-Q2 2026 e scadenze scadute da oltre 90 giorni.
  */
-export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[] {
+export function getUpcomingDeadlines(
+    completedIds: string[] = [],
+    statusOverrides: Record<string, string> = {}
+): TaxDeadline[] {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -47,16 +50,24 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
         if (daysRemaining < -MAX_OVERDUE_DAYS) return;
 
         const isCompleted = completedIds.includes(id);
+        const override = (statusOverrides[id] || '').toUpperCase();
 
         let status: TaxDeadline['status'] = 'PENDING';
         let isUrgent = false;
+        let uiStatus: TaxDeadline['uiStatus'] = 'PENDING';
 
-        if (isCompleted) {
+        if (override === 'ARCHIVED') {
+            uiStatus = 'ARCHIVED';
+            status = 'COMPLETED';
+        } else if (override === 'PAID' || isCompleted) {
+            uiStatus = 'PAID';
             status = 'COMPLETED';
         } else if (daysRemaining >= 0 && daysRemaining <= 10) {
-            // Urgente solo se ancora da scadere entro 10 giorni (non le già scadute)
             status = 'URGENT';
             isUrgent = true;
+            uiStatus = 'DUE_SOON';
+        } else if (override === 'PENDING' || !override) {
+            uiStatus = 'PENDING';
         }
 
         deadlines.push({
@@ -67,6 +78,7 @@ export function getUpcomingDeadlines(completedIds: string[] = []): TaxDeadline[]
             frequency,
             description,
             status,
+            uiStatus,
             isUrgent,
             daysRemaining,
             externalRef,

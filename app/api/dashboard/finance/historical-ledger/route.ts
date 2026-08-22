@@ -97,9 +97,54 @@ export async function POST(request: Request) {
         const auth = await requireDashboardAdmin();
         if (!auth.ok) return auth.response;
 
-        const body = (await request.json().catch(() => ({}))) as { action?: string };
+        const body = (await request.json().catch(() => ({}))) as {
+            action?: string;
+            entryId?: string;
+            fonteLabel?: string;
+        };
+
+        if (body.action === 'set_fonte') {
+            const entryId = String(body.entryId || '').trim();
+            const fonteLabel = String(body.fonteLabel || '').trim().slice(0, 64);
+            if (!entryId || !fonteLabel) {
+                return jsonError('entryId e fonteLabel obbligatori', 400);
+            }
+            const prisma = (await import('@/lib/prisma')).default;
+            const row = await prisma.financialLedgerEntry.findUnique({
+                where: { id: entryId },
+                select: { id: true, metadataJson: true },
+            });
+            if (!row) {
+                // Override locale (JSON Prima Nota) via SystemState
+                const key = 'finance.prima_nota.fonte_overrides';
+                const existing = await prisma.systemState.findUnique({ where: { key } });
+                const map = existing?.value ? (JSON.parse(existing.value) as Record<string, string>) : {};
+                map[entryId] = fonteLabel;
+                await prisma.systemState.upsert({
+                    where: { key },
+                    create: { key, value: JSON.stringify(map) },
+                    update: { value: JSON.stringify(map) },
+                });
+                return NextResponse.json({ ok: true, entryId, fonteLabel, via: 'override' });
+            }
+            const meta =
+                row.metadataJson && typeof row.metadataJson === 'object'
+                    ? (row.metadataJson as Record<string, unknown>)
+                    : {};
+            await prisma.financialLedgerEntry.update({
+                where: { id: entryId },
+                data: {
+                    metadataJson: { ...meta, displayFonte: fonteLabel },
+                },
+            });
+            return NextResponse.json({ ok: true, entryId, fonteLabel, via: 'ledger' });
+        }
+
         if (body.action !== 'sync') {
-            return jsonError('Usa action: "sync" per allineare il registro dalle fonti Neon.', 400);
+            return jsonError(
+                'Usa action: "sync" o action: "set_fonte".',
+                400
+            );
         }
 
         const result = await syncHistoricalLedgerFromSources();

@@ -276,20 +276,67 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                                         </span>
                                     </td>
                                     <td className="px-3 py-2.5">
-                                        <span
-                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${movementBadgeClass(r.movementKind || 'altro')}`}
+                                        <select
+                                            className={`w-full max-w-[150px] rounded border px-1.5 py-0.5 font-bold text-[10px] cursor-pointer ${movementBadgeClass(r.movementKind || 'altro')}`}
+                                            value={r.movementKind || 'altro'}
+                                            onChange={(e) => {
+                                                const kind = e.target.value as MovementKind;
+                                                void (async () => {
+                                                    const res = await fetch(
+                                                        '/api/dashboard/finance/sync/gateways',
+                                                        {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                            },
+                                                            body: JSON.stringify({
+                                                                action: 'set_movement_kind',
+                                                                transactionId: r.transactionId,
+                                                                movementKind: kind,
+                                                            }),
+                                                        }
+                                                    );
+                                                    const data = (await res.json()) as {
+                                                        ok?: boolean;
+                                                    };
+                                                    if (data.ok) {
+                                                        setRows((prev) =>
+                                                            prev.map((row) =>
+                                                                row.id === r.id
+                                                                    ? {
+                                                                          ...row,
+                                                                          movementKind: kind,
+                                                                          movementLabel:
+                                                                              kind === 'incasso'
+                                                                                  ? 'Incasso Ordine'
+                                                                                  : kind ===
+                                                                                      'commissione'
+                                                                                    ? 'Commissione Gateway'
+                                                                                    : kind ===
+                                                                                        'payout'
+                                                                                      ? 'Payout Bancario'
+                                                                                      : kind ===
+                                                                                          'rimborso'
+                                                                                        ? 'Rimborso'
+                                                                                        : kind ===
+                                                                                            'riserva'
+                                                                                          ? 'Riserva'
+                                                                                          : 'Altro movimento',
+                                                                      }
+                                                                    : row
+                                                            )
+                                                        );
+                                                    }
+                                                })();
+                                            }}
                                         >
-                                            {r.movementLabel ||
-                                                (r.movementKind === 'incasso'
-                                                    ? 'Incasso Ordine'
-                                                    : r.movementKind === 'commissione'
-                                                      ? 'Commissione Gateway'
-                                                      : r.movementKind === 'payout'
-                                                        ? 'Payout Bancario'
-                                                        : r.movementKind === 'rimborso'
-                                                          ? 'Rimborso'
-                                                          : 'Altro movimento')}
-                                        </span>
+                                            <option value="incasso">Incasso Ordine</option>
+                                            <option value="commissione">Commissione Gateway</option>
+                                            <option value="payout">Payout Bancario</option>
+                                            <option value="rimborso">Rimborso</option>
+                                            <option value="riserva">Riserva</option>
+                                            <option value="altro">Altro movimento</option>
+                                        </select>
                                     </td>
                                     <td className="px-3 py-2.5">
                                         <div className="font-medium text-slate-800 line-clamp-2">

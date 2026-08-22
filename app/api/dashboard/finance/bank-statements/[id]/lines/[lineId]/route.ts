@@ -60,6 +60,12 @@ export async function PATCH(request: Request, ctx: Ctx) {
             return NextResponse.json({ ok: false, error: 'Riga non trovata' }, { status: 404 });
         }
 
+        // Vincolo semantico: entrate non possono essere etichettate come uscite (es. Compenso fiorista)
+        const { coerceBankCategoryForAmount } = await import(
+            '@/lib/financial/bankCategoryOptions'
+        );
+        const safeMatchType = coerceBankCategoryForAmount(matchType, line.amountCents);
+
         if (matchedOrderId) {
             const order = await prisma.order.findUnique({
                 where: { id: matchedOrderId },
@@ -80,7 +86,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
             where: { id: lineId },
             data: {
                 matchStatus: asMatched ? 'MATCHED' : 'PARTIAL',
-                matchType,
+                matchType: safeMatchType,
                 matchScore: asMatched ? 100 : 60,
                 matchedOrderId,
                 matchedTxId: matchedTxId || expenseId,
@@ -97,7 +103,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
         }
 
         try {
-            const cat = categoryFromMatchType(matchType, line.amountCents);
+            const cat = categoryFromMatchType(safeMatchType, line.amountCents);
             await appendLedgerEntries([
                 {
                     sourceKey: `BANK_LINE_MANUAL:${line.id}`,
@@ -112,10 +118,14 @@ export async function PATCH(request: Request, ctx: Ctx) {
                     vatCents: 0,
                     totalCents: line.amountCents,
                     reconciliationStatus: 'MATCHED',
-                    documentRef: matchType,
+                    documentRef: safeMatchType,
                     bankLineId: line.id,
                     orderId: matchedOrderId,
-                    metadataJson: { manualMatch: true, matchType, matchNotes: notes },
+                    metadataJson: {
+                        manualMatch: true,
+                        matchType: safeMatchType,
+                        matchNotes: notes,
+                    },
                 },
             ]);
         } catch (err) {

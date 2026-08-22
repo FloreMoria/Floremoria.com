@@ -114,6 +114,34 @@ export async function POST(request: Request) {
             });
         }
 
+        if (action === 'set_deadline_status') {
+            const deadlineId = String(body.deadlineId || '').trim();
+            const status = String(body.status || '').trim().toUpperCase();
+            const allowed = new Set(['PENDING', 'DUE_SOON', 'PAID', 'ARCHIVED']);
+            if (!deadlineId || !allowed.has(status)) {
+                return NextResponse.json(
+                    { ok: false, error: 'deadlineId / status non validi' },
+                    { status: 400 }
+                );
+            }
+            const currentLedger = getLedger();
+            if (!currentLedger.deadlineStatusById) currentLedger.deadlineStatusById = {};
+            if (!currentLedger.completedDeadlineIds) currentLedger.completedDeadlineIds = [];
+            currentLedger.deadlineStatusById[deadlineId] = status;
+            const idx = currentLedger.completedDeadlineIds.indexOf(deadlineId);
+            if (status === 'PAID' || status === 'ARCHIVED') {
+                if (idx < 0) currentLedger.completedDeadlineIds.push(deadlineId);
+            } else if (idx > -1) {
+                currentLedger.completedDeadlineIds.splice(idx, 1);
+            }
+            saveLedger(currentLedger);
+            return NextResponse.json({
+                ok: true,
+                ledger: currentLedger,
+                statements: await calculateFinancialStatements(),
+            });
+        }
+
         return NextResponse.json({ ok: false, error: 'Azione non supportata' }, { status: 400 });
     } catch (error) {
         console.error('[Finance API POST] Errore:', error);

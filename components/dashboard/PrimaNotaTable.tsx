@@ -30,6 +30,7 @@ type NeonRow = {
         dareAccount?: string;
         avereAccount?: string;
         stripeTransactionId?: string;
+        displayFonte?: string;
         [key: string]: unknown;
     } | null;
 };
@@ -110,22 +111,34 @@ function accountForCategory(category: string, revenueSide: boolean): string {
     }
 }
 
-function sourceLabel(sourceType: string): string {
+const FONTE_OPTIONS = [
+    'Gateway',
+    'SDI',
+    'Fineco',
+    'Manuale',
+    'Ordine web',
+    'Compenso fiorista',
+    'Fattura / spesa',
+    'Prima Nota',
+] as const;
+
+function sourceLabel(sourceType: string, displayFonte?: string | null): string {
+    if (displayFonte) return displayFonte;
     switch (sourceType) {
         case 'ORDER':
             return 'Ordine web';
         case 'STRIPE_MOVEMENT':
         case 'PAYPAL_MOVEMENT':
-            return 'Incasso gateway';
+            return 'Gateway';
         case 'FLORIST_PAYOUT':
             return 'Compenso fiorista';
         case 'BANK_LINE':
-            return 'Movimento bancario';
+            return 'Fineco';
         case 'SAAS_INVOICE':
         case 'MANUAL_EXPENSE':
-            return 'Fattura / spesa';
+            return 'SDI';
         case 'JSON_ENTRY':
-            return 'Prima Nota';
+            return 'Manuale';
         default:
             return sourceType || 'Registro';
     }
@@ -138,8 +151,10 @@ type Props = {
 
 export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props) {
     const [neonRows, setNeonRows] = useState<NeonRow[]>([]);
+    const [fonteOverrides, setFonteOverrides] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [editingFonteId, setEditingFonteId] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -167,6 +182,39 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
     useEffect(() => {
         void load();
     }, [load]);
+
+    const saveFonte = async (entryId: string, fonteLabel: string) => {
+        try {
+            const res = await fetch('/api/dashboard/finance/historical-ledger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'set_fonte',
+                    entryId,
+                    fonteLabel,
+                }),
+            });
+            const parsed = await readJsonResponse<{ ok?: boolean; error?: string }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Salvataggio fallito');
+            setFonteOverrides((prev) => ({ ...prev, [entryId]: fonteLabel }));
+            setNeonRows((prev) =>
+                prev.map((r) =>
+                    r.id === entryId
+                        ? {
+                              ...r,
+                              metadataJson: {
+                                  ...(r.metadataJson || {}),
+                                  displayFonte: fonteLabel,
+                              },
+                          }
+                        : r
+                )
+            );
+            setEditingFonteId(null);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Errore salvataggio fonte');
+        }
+    };
 
     const rows: DisplayEntry[] = useMemo(() => {
         const cleanedNeon = neonRows.filter((r) => {
@@ -206,7 +254,13 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 avereAccount: accounts.avere,
                 amountCents: Math.abs(r.totalCents || r.netCents || 0),
                 isEntrata: isEntrataFromNeon(r),
-                sourceLabel: sourceLabel(r.sourceType),
+                sourceLabel: sourceLabel(
+                    r.sourceType,
+                    fonteOverrides[r.id] ||
+                        (typeof r.metadataJson?.displayFonte === 'string'
+                            ? r.metadataJson.displayFonte
+                            : null)
+                ),
             });
         }
 
@@ -245,7 +299,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 avereAccount: e.avereAccount,
                 amountCents: e.amountCents,
                 isEntrata: isEntrataFromLocal(e.dareAccount, e.avereAccount),
-                sourceLabel: 'Prima Nota',
+                sourceLabel: fonteOverrides[e.id] || 'Manuale',
             });
         }
 
@@ -262,7 +316,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         }
         list.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
         return list;
-    }, [localEntries, neonRows, searchTerm]);
+    }, [localEntries, neonRows, searchTerm, fonteOverrides]);
 
     if (loading && rows.length === 0) {
         return (
@@ -295,12 +349,12 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 </div>
             )}
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[960px]">
+                <table className="w-full text-left border-collapse min-w-[1100px]">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             <th className="px-5 py-3">Data</th>
                             <th className="px-5 py-3">Numero / ID</th>
-                            <th className="px-5 py-3">Descrizione / Causale</th>
+                            <th className="px-5 py-3 min-w-[280px]">Descrizione / Causale</th>
                             <th className="px-5 py-3">Conto Dare</th>
                             <th className="px-5 py-3">Conto Avere</th>
                             <th className="px-5 py-3 text-right">Importo (€)</th>
@@ -338,15 +392,15 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                         </span>
                                     </td>
                                     <td
-                                        className="px-5 py-3.5 font-medium text-slate-800 max-w-[280px] truncate"
+                                        className="px-5 py-3.5 font-medium text-slate-800 min-w-[280px] max-w-[420px] whitespace-normal break-words"
                                         title={entry.description}
                                     >
                                         {entry.description}
                                     </td>
-                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600">
+                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600 whitespace-nowrap">
                                         {entry.dareAccount}
                                     </td>
-                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600">
+                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600 whitespace-nowrap">
                                         {entry.avereAccount}
                                     </td>
                                     <td
@@ -355,9 +409,32 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                         {amount.text}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                                            {entry.sourceLabel}
-                                        </span>
+                                        {editingFonteId === entry.id ? (
+                                            <select
+                                                autoFocus
+                                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700"
+                                                value={entry.sourceLabel}
+                                                onChange={(e) =>
+                                                    void saveFonte(entry.id, e.target.value)
+                                                }
+                                                onBlur={() => setEditingFonteId(null)}
+                                            >
+                                                {FONTE_OPTIONS.map((f) => (
+                                                    <option key={f} value={f}>
+                                                        {f}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingFonteId(entry.id)}
+                                                className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600"
+                                                title="Modifica fonte"
+                                            >
+                                                {entry.sourceLabel}
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                                 );

@@ -2,11 +2,11 @@
 # daily-verbale-cron.sh — chiusura automatica verbale di giornata (23:50 Europe/Rome)
 #
 # Flusso:
-#   1. Legge docs/verbali/.today_log.txt
+#   1. Legge docs/verbali/.today_log.txt filtrando SOLO le righe [YYYY-MM-DD …] del giorno
 #   2. Compila/aggiorna docs/verbali/DD-MM-YYYY.md
-#   3. npm run log:verbale:sync-docs
+#   3. npm run log:verbale:sync-docs (con VERBALE_RESET_TODAY_LOG=1)
 #   4. commit + push
-#   5. reset di .today_log.txt
+#   5. garanzia: .today_log.txt a 0 byte
 #
 # Uso:
 #   ./scripts/daily-verbale-cron.sh
@@ -87,15 +87,36 @@ if [[ ! -f "${TODAY_LOG}" ]]; then
   exit 0
 fi
 
-# Righe utili (non vuote, non solo whitespace)
-LOG_BODY="$(grep -E '[[:alnum:]]' "${TODAY_LOG}" || true)"
-if [[ -z "${LOG_BODY}" ]]; then
+# Filtro rigido: solo righe con prefisso [YYYY-MM-DD …] della giornata di riferimento.
+# Scarta timestamp di date precedenti rimasti accidentalmente nel buffer.
+RAW_LINES="$(grep -E '[[:alnum:]]' "${TODAY_LOG}" || true)"
+if [[ -z "${RAW_LINES}" ]]; then
   log "SKIP: .today_log.txt vuoto — niente da verbalizzare."
+  if [[ "${DRY_RUN}" != "1" ]]; then
+    : > "${TODAY_LOG}"
+  fi
   exit 0
 fi
 
-LINE_COUNT="$(printf '%s\n' "${LOG_BODY}" | wc -l | tr -d ' ')"
-log "Letto .today_log.txt (${LINE_COUNT} righe operative)."
+LOG_BODY="$(printf '%s\n' "${RAW_LINES}" | grep -E "^\[${ISO}( |])" || true)"
+DISCARDED_BODY="$(printf '%s\n' "${RAW_LINES}" | grep -Ev "^\[${ISO}( |])" || true)"
+DISCARDED_COUNT=0
+if [[ -n "${DISCARDED_BODY}" ]]; then
+  DISCARDED_COUNT="$(printf '%s\n' "${DISCARDED_BODY}" | grep -c . || true)"
+  log "Scartate ${DISCARDED_COUNT} righe con data ≠ ${ISO} (residui buffer)."
+fi
+
+if [[ -z "${LOG_BODY}" ]]; then
+  log "SKIP: nessuna riga con prefisso [${ISO}] — niente da verbalizzare per oggi."
+  if [[ "${DRY_RUN}" != "1" ]]; then
+    : > "${TODAY_LOG}"
+    log "Buffer .today_log.txt comunque svuotato (residui scartati)."
+  fi
+  exit 0
+fi
+
+LINE_COUNT="$(printf '%s\n' "${LOG_BODY}" | grep -c . || true)"
+log "Letto .today_log.txt filtrato (${LINE_COUNT} righe del ${ISO})."
 
 build_bullets() {
   printf '%s\n' "${LOG_BODY}" | while IFS= read -r line || [[ -n "${line}" ]]; do
@@ -109,7 +130,7 @@ BULLETS="$(build_bullets)"
 NEW_SECTION="$(cat <<EOF
 ${SECTION_MARKER}
 
-Registro accumulato automaticamente da Cursor durante la giornata (fonte: \`docs/verbali/.today_log.txt\`).
+Registro accumulato automaticamente da Cursor durante la giornata (fonte: \`docs/verbali/.today_log.txt\`, solo righe \`${ISO}\`).
 
 ${BULLETS}
 EOF
@@ -183,7 +204,7 @@ if [[ ! -f "${CHANGELOG_PATH}" ]]; then
   cat > "${CHANGELOG_PATH}" <<EOF
 # Changelog operativo — ${TITLE_DATE}
 
-Registro allineato a \`docs/verbali/${DOCS_NAME}\` (generato da \`.today_log.txt\` via cron).
+Registro allineato a \`docs/verbali/${DOCS_NAME}\` (generato da \`.today_log.txt\` via cron, filtro data ${ISO}).
 
 ## Registro operativo
 
@@ -202,7 +223,8 @@ EOF
   fi
 fi
 
-log "Eseguo npm run log:verbale:sync-docs…"
+log "Eseguo npm run log:verbale:sync-docs (con reset buffer)…"
+export VERBALE_RESET_TODAY_LOG=1
 npm run log:verbale:sync-docs
 log "Sync Obsidian completato."
 
@@ -231,9 +253,9 @@ else
   log "Push completato su origin."
 fi
 
-# Reset log solo a successo completo
+# Garanzia buffer a 0 byte (anche se sync-docs ha già resettato)
 : > "${TODAY_LOG}"
-log "Reset completato: .today_log.txt svuotato."
+log "Reset completato: .today_log.txt a 0 byte."
 log "=== Fine daily-verbale-cron OK ==="
 
 if command -v osascript >/dev/null 2>&1; then

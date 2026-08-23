@@ -99,7 +99,11 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
             setError('Documento estratto mancante: impossibile salvare la categoria.');
             return;
         }
-        const safe = coerceBankCategoryForAmount(matchType, line.amountCents);
+        const safe = coerceBankCategoryForAmount(
+            matchType,
+            line.amountCents,
+            line.description
+        );
         setSavingCategoryId(line.id);
         setError(null);
         try {
@@ -199,24 +203,23 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                 </div>
             )}
             <div className={BANK_TABLE_SCROLL_CLASS}>
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+                <table className="w-full text-left border-collapse min-w-[960px] table-fixed">
                     <thead className="sticky top-0 z-10">
                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
-                            <th className="px-4 py-3 bg-slate-50">Data Contabile</th>
-                            <th className="px-4 py-3 bg-slate-50">Data Valuta</th>
-                            <th className="px-4 py-3 bg-slate-50">Descrizione / Causale</th>
-                            <th className="px-4 py-3 bg-slate-50">Categoria</th>
-                            <th className="px-4 py-3 text-right bg-slate-50">Entrate</th>
-                            <th className="px-4 py-3 text-right bg-slate-50">Uscite</th>
-                            <th className="px-4 py-3 text-right bg-slate-50">Saldo</th>
-                            <th className="px-4 py-3 bg-slate-50">Origine</th>
+                            <th className="w-[7.5rem] px-3 py-3 bg-slate-50">Data</th>
+                            <th className="px-3 py-3 bg-slate-50">Descrizione / Causale</th>
+                            <th className="w-[11rem] px-3 py-3 bg-slate-50">Categoria</th>
+                            <th className="w-[6.5rem] px-3 py-3 text-right bg-slate-50">Entrate</th>
+                            <th className="w-[6.5rem] px-3 py-3 text-right bg-slate-50">Uscite</th>
+                            <th className="w-[7rem] px-3 py-3 text-right bg-slate-50">Saldo</th>
+                            <th className="w-[9rem] px-3 py-3 bg-slate-50">Origine</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
                         {displayRows.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={8}
+                                    colSpan={7}
                                     className="px-4 py-10 text-center text-slate-400 italic"
                                 >
                                     Nessun movimento bancario reale. Carica o incolla un estratto
@@ -230,31 +233,31 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                 const debit =
                                     line.amountCents < 0 ? Math.abs(line.amountCents) : 0;
                                 const saldo = formatSignedSaldo(line.progressiveCents);
+                                const displayDate =
+                                    line.accountingDate || line.valueDate;
                                 return (
                                     <tr key={line.id} className="hover:bg-slate-50/60">
-                                        <td className="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                            {formatFinanceDate(line.accountingDate)}
+                                        <td className="px-3 py-3 font-mono text-xs text-slate-700 whitespace-nowrap align-top">
+                                            {formatFinanceDate(displayDate)}
                                         </td>
-                                        <td className="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">
-                                            {formatFinanceDate(line.valueDate)}
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-800 max-w-[360px]">
+                                        <td className="px-3 py-3 text-slate-800 align-top">
                                             <p
-                                                className="text-sm leading-snug line-clamp-2"
+                                                className="text-sm leading-snug whitespace-normal break-words"
                                                 title={line.description}
                                             >
                                                 {line.description}
                                             </p>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-3 align-top">
                                             {editingCategoryId === line.id ? (
                                                 <select
                                                     autoFocus
                                                     disabled={savingCategoryId === line.id}
-                                                    className="w-full max-w-[180px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                                                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
                                                     value={coerceBankCategoryForAmount(
                                                         line.matchType,
-                                                        line.amountCents
+                                                        line.amountCents,
+                                                        line.description
                                                     )}
                                                     onChange={(e) =>
                                                         void saveCategory(line, e.target.value)
@@ -276,7 +279,7 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                                 <button
                                                     type="button"
                                                     onClick={() => setEditingCategoryId(line.id)}
-                                                    className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors"
+                                                    className="inline-flex max-w-full text-left px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600 transition-colors"
                                                     title="Modifica categoria"
                                                 >
                                                     {savingCategoryId === line.id ? (
@@ -287,24 +290,25 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                                     ) : (
                                                         bankCategoryLabel(
                                                             line.matchType,
-                                                            line.amountCents
+                                                            line.amountCents,
+                                                            line.description
                                                         )
                                                     )}
                                                 </button>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-emerald-700 whitespace-nowrap">
+                                        <td className="px-3 py-3 text-right font-mono text-sm font-semibold text-emerald-700 whitespace-nowrap align-top">
                                             {credit > 0 ? `+€${euro(credit)}` : '—'}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-rose-700 whitespace-nowrap">
+                                        <td className="px-3 py-3 text-right font-mono text-sm font-semibold text-rose-700 whitespace-nowrap align-top">
                                             {debit > 0 ? `−€${euro(debit)}` : '—'}
                                         </td>
                                         <td
-                                            className={`px-4 py-3 text-right font-mono text-xs font-bold whitespace-nowrap ${saldo.className}`}
+                                            className={`px-3 py-3 text-right font-mono text-xs font-bold whitespace-nowrap align-top ${saldo.className}`}
                                         >
                                             {saldo.text}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-3 align-top">
                                             <span
                                                 className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${origin.className}`}
                                             >

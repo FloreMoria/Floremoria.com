@@ -126,10 +126,29 @@ export function categorizeManualExpense(opts: {
 
 export function categorizeBankLine(description: string, matchType: string | null): LedgerCategory {
     const u = `${description} ${matchType || ''}`.toUpperCase();
-    if (matchType === 'FLORIST_TRANSFER' || /FIORIST|COMPENSO|POSA|TOMBA/.test(u)) return 'COSTI_FIORISTI';
-    if (matchType === 'GATEWAY_PAYOUT' || /STRIPE|PAYPAL/.test(u)) return 'RICAVI_VENDITE';
-    if (matchType === 'BANK_FEE' || /COMMISSION|CANONE|BOLLO|SPESE\s*CONTO/.test(u)) return 'ONERI_BANCARI';
-    if (/CURSOR|VERCEL|OPENAI|CLAUDE|GOOGLE|META|AWS/.test(u)) return 'SPESE_SAAS';
+    if (
+        matchType === 'FLORIST_TRANSFER' ||
+        matchType === 'FLORIST_INVOICE' ||
+        matchType === 'FLORIST_ADVANCE' ||
+        /FIORIST|COMPENSO|POSA|TOMBA|ANTICIPO/.test(u)
+    ) {
+        return 'COSTI_FIORISTI';
+    }
+    if (
+        matchType === 'STRIPE_PAYOUT' ||
+        matchType === 'PAYPAL_PAYOUT' ||
+        matchType === 'GATEWAY_PAYOUT' ||
+        /STRIPE|PAYPAL/.test(u)
+    ) {
+        return 'RICAVI_VENDITE';
+    }
+    if (matchType === 'PAYPAL_CASHBACK') return 'RIMBORSI';
+    if (matchType === 'SAAS_SUBSCRIPTION' || /CURSOR|VERCEL|OPENAI|CLAUDE|GOOGLE|META|AWS/.test(u)) {
+        return 'SPESE_SAAS';
+    }
+    if (matchType === 'BANK_FEE' || /COMMISSION|CANONE|BOLLO|SPESE\s*CONTO/.test(u)) {
+        return 'ONERI_BANCARI';
+    }
     if (/F24|ADE |AGENZIA|INPS|TRIBUT/.test(u)) return 'IMPOSTE';
     return 'SPESE_OPERATIVE';
 }

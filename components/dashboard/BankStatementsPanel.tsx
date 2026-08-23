@@ -102,11 +102,17 @@ type MatchSuggestion = {
 };
 
 const CATEGORY_OPTIONS = [
-    { matchType: 'SDI_INVOICE', label: 'Fattura Fornitore' },
-    { matchType: 'FLORIST_TRANSFER', label: 'Compenso Fiorista' },
-    { matchType: 'CASH_EXPENSE', label: 'Spesa senza Fattura (Scontrino/Ricevuta)' },
-    { matchType: 'INTERNAL_TRANSFER', label: 'Giroconto / Patrimonio' },
-    { matchType: 'OTHER_REVENUE', label: 'Altro Ricavo' },
+    { matchType: 'STRIPE_PAYOUT', label: 'Incasso Stripe (Payout)' },
+    { matchType: 'PAYPAL_PAYOUT', label: 'Incasso PayPal (Payout)' },
+    { matchType: 'PAYPAL_CASHBACK', label: 'Cashback / Rimborsi PayPal' },
+    { matchType: 'OTHER_REVENUE', label: 'Altro Ricavo / Entrata Diretta' },
+    { matchType: 'FLORIST_ADVANCE', label: 'Anticipo fiorista' },
+    { matchType: 'FLORIST_INVOICE', label: 'Fattura fiorista' },
+    { matchType: 'SDI_INVOICE', label: 'Fattura fornitore' },
+    { matchType: 'CASH_EXPENSE', label: 'Spesa documentata' },
+    { matchType: 'BANK_FEE', label: 'Oneri bancari' },
+    { matchType: 'SAAS_SUBSCRIPTION', label: 'Canone SaaS' },
+    { matchType: 'UNDOCUMENTED_EXPENSE', label: 'Spesa non documentata' },
 ] as const;
 
 function formatPeriod(start: string | null, end: string | null): string {

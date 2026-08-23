@@ -15,12 +15,35 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function categoryFromMatchType(matchType: string, amountCents: number): LedgerCategory {
-    if (matchType === 'FLORIST_TRANSFER') return 'COSTI_FIORISTI';
-    if (matchType === 'SDI_INVOICE' || matchType === 'MANUAL_EXPENSE') return 'SPESE_OPERATIVE';
-    if (matchType === 'CASH_EXPENSE') return 'SPESE_OPERATIVE';
+    if (
+        matchType === 'FLORIST_TRANSFER' ||
+        matchType === 'FLORIST_INVOICE' ||
+        matchType === 'FLORIST_ADVANCE'
+    ) {
+        return 'COSTI_FIORISTI';
+    }
+    if (
+        matchType === 'SDI_INVOICE' ||
+        matchType === 'MANUAL_EXPENSE' ||
+        matchType === 'FOREIGN_AUTOFATTURA'
+    ) {
+        return 'SPESE_OPERATIVE';
+    }
+    if (matchType === 'CASH_EXPENSE' || matchType === 'UNDOCUMENTED_EXPENSE') {
+        return 'SPESE_OPERATIVE';
+    }
+    if (matchType === 'SAAS_SUBSCRIPTION') return 'SPESE_SAAS';
     if (matchType === 'INTERNAL_TRANSFER') return 'ALTRI_COSTI';
+    if (
+        matchType === 'STRIPE_PAYOUT' ||
+        matchType === 'PAYPAL_PAYOUT' ||
+        matchType === 'GATEWAY_PAYOUT'
+    ) {
+        return 'RICAVI_VENDITE';
+    }
+    if (matchType === 'PAYPAL_CASHBACK') return 'RIMBORSI';
     if (matchType === 'OTHER_REVENUE' || amountCents > 0) return 'ALTRI_RICAVI';
-    if (matchType === 'BANK_FEE') return 'ONERI_BANCARI';
+    if (matchType === 'BANK_FEE' || matchType === 'TAX_PAYMENT') return 'ONERI_BANCARI';
     return amountCents >= 0 ? 'ALTRI_RICAVI' : 'SPESE_OPERATIVE';
 }
 
@@ -64,7 +87,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
         const { coerceBankCategoryForAmount } = await import(
             '@/lib/financial/bankCategoryOptions'
         );
-        const safeMatchType = coerceBankCategoryForAmount(matchType, line.amountCents);
+        const safeMatchType = coerceBankCategoryForAmount(
+            matchType,
+            line.amountCents,
+            line.description
+        );
 
         if (matchedOrderId) {
             const order = await prisma.order.findUnique({

@@ -15,6 +15,9 @@ import {
     matchManualExpenseByAmount,
     markManualExpenseReconciled,
 } from '@/lib/financial/manualExpenses';
+import {
+    suggestBankCategoryFromDescription,
+} from '@/lib/financial/bankCategoryOptions';
 
 const ORDER_CODE_RE = /PT-[A-Z]{2}-\d{2}-\d{3,4}/gi;
 const BANK_FEE_RE =
@@ -23,6 +26,12 @@ const STRIPE_HINT_RE = /\b(stripe|transfer)\b/i;
 const PAYPAL_HINT_RE = /\bpaypal\b/i;
 const INTERNAL_TRANSFER_RE =
     /\b(giroconto|prelievo|versamento\s+soci|finanziamento(\s+soci)?|apporto\s+soci|movimento\s+interno|trasferimento\s+interno)\b/i;
+const ANTICIPO_RE = /\banticipo\b/i;
+
+/** matchType fiorista: anticipo vs fattura in base alla causale. */
+function floristMatchTypeFromDescription(description: string): 'FLORIST_ADVANCE' | 'FLORIST_INVOICE' {
+    return ANTICIPO_RE.test(description) ? 'FLORIST_ADVANCE' : 'FLORIST_INVOICE';
+}
 
 function dayMs(iso: string | null | undefined): number | null {
     if (!iso) return null;
@@ -151,6 +160,17 @@ export async function matchCumulativePayout(
     const isStripe = STRIPE_HINT_RE.test(desc);
     const isPaypal = PAYPAL_HINT_RE.test(desc);
     if (!isStripe && !isPaypal) return null;
+
+    // Micro-accrediti PayPal (cashback / storni) → non trattarli come payout cumulativo
+    if (isPaypal && /\b(cashback|rimborso|refund|storno|rebate|cash\s*back)\b/i.test(desc)) {
+        return matched({
+            matchType: 'PAYPAL_CASHBACK',
+            matchScore: 92,
+            matchedTxId: null,
+            matchedOrderId: null,
+            matchNotes: `Cashback / rimborso PayPal (€${(movement.amountCents / 100).toFixed(2)})`,
+        });
+    }
 
     const date = movementDateIso(movement);
     const center = date ? new Date(`${date}T12:00:00.000Z`) : new Date();
@@ -344,12 +364,13 @@ export async function matchInternalTransfer(
 ): Promise<StatementMatchResult | null> {
     if (!INTERNAL_TRANSFER_RE.test(movement.description)) return null;
     const abs = Math.abs(movement.amountCents);
+    // Non esporre più "Giroconto" in UI: mappa a ricavo / spesa non documentata
     return matched({
-        matchType: 'INTERNAL_TRANSFER',
+        matchType: movement.amountCents >= 0 ? 'OTHER_REVENUE' : 'UNDOCUMENTED_EXPENSE',
         matchScore: 96,
         matchedTxId: null,
         matchedOrderId: null,
-        matchNotes: `Movimento patrimoniale interno (€${(abs / 100).toFixed(2)}) — giroconto/prelievo/versamento soci`,
+        matchNotes: `Movimento patrimoniale interno (€${(abs / 100).toFixed(2)}) — ex giroconto/prelievo/versamento soci`,
     });
 }
 
@@ -387,9 +408,10 @@ export async function matchFloristTransfer(
                           : order.totalPriceCents) * 0.65
                   );
         const amountOk = Math.abs(expected - abs) <= 100;
+        const floristType = floristMatchTypeFromDescription(desc);
         return matched({
             matchStatus: amountOk ? 'MATCHED' : 'PARTIAL',
-            matchType: 'FLORIST_TRANSFER',
+            matchType: floristType,
             matchScore: amountOk ? 97 : 75,
             matchedTxId: null,
             matchedOrderId: order.id,
@@ -442,7 +464,7 @@ export async function matchFloristTransfer(
         const exact = orders.find((o) => Math.abs((o.floristCompensationCents || 0) - abs) <= 50);
         if (exact) {
             return matched({
-                matchType: 'FLORIST_TRANSFER',
+                matchType: floristMatchTypeFromDescription(desc),
                 matchScore: 93,
                 matchedTxId: null,
                 matchedOrderId: exact.id,
@@ -463,7 +485,7 @@ export async function matchFloristTransfer(
         }
         if (picked.length > 0 && Math.abs(acc - abs) <= 100) {
             return matched({
-                matchType: 'FLORIST_TRANSFER',
+                matchType: floristMatchTypeFromDescription(desc),
                 matchScore: 90,
                 matchedTxId: null,
                 matchedOrderId: picked[0].id,
@@ -473,7 +495,7 @@ export async function matchFloristTransfer(
 
         return matched({
             matchStatus: 'PARTIAL',
-            matchType: 'FLORIST_TRANSFER',
+            matchType: floristMatchTypeFromDescription(desc),
             matchScore: 70,
             matchedTxId: null,
             matchedOrderId: null,
@@ -504,7 +526,7 @@ export async function matchFloristTransfer(
             withinDays(movementDateIso(movement), o.updatedAt.toISOString(), 20)
         ) {
             return matched({
-                matchType: 'FLORIST_TRANSFER',
+                matchType: floristMatchTypeFromDescription(desc),
                 matchScore: 84,
                 matchedTxId: null,
                 matchedOrderId: o.id,
@@ -594,12 +616,11 @@ export async function reconcileBankMovement(
     if (best && best.matchScore >= 70) return best;
     if (best) return best;
 
-    const u = movement.description.toUpperCase();
-    let hint = movement.amountCents >= 0 ? 'INFLOW' : 'OUTFLOW';
-    if (STRIPE_HINT_RE.test(u) || PAYPAL_HINT_RE.test(u)) hint = 'GATEWAY_PAYOUT_UNMATCHED';
-    if (BANK_FEE_RE.test(u)) hint = 'BANK_FEE';
-    if (INTERNAL_TRANSFER_RE.test(u)) hint = 'INTERNAL_TRANSFER';
-    if (/FIORIST|BEN:|BENEFICIARIO/i.test(u)) hint = 'FLORIST_TRANSFER';
+    // Hint semantico: SEPA→fiorista, carta/PayPal→SaaS, gateway→incasso/cashback
+    const hint = suggestBankCategoryFromDescription(
+        movement.amountCents,
+        movement.description
+    );
 
     return {
         matchStatus: 'UNMATCHED',
@@ -673,11 +694,16 @@ export async function suggestMatchesForLine(line: {
 
     const internal = await matchInternalTransfer(movement);
     if (internal) {
+        // Giroconto non è più una categoria UI: mappa a ricavo/uscita generica
         suggestions.push({
             kind: 'INTERNAL',
-            label: 'Giroconto / Patrimonio',
+            label:
+                movement.amountCents >= 0
+                    ? 'Altro Ricavo / Entrata Diretta (ex giroconto)'
+                    : 'Spesa non documentata (ex giroconto)',
             score: internal.matchScore,
-            matchType: 'INTERNAL_TRANSFER',
+            matchType:
+                movement.amountCents >= 0 ? 'OTHER_REVENUE' : 'UNDOCUMENTED_EXPENSE',
             notes: internal.matchNotes || 'Movimento interno',
         });
     }
@@ -691,7 +717,7 @@ export async function suggestMatchesForLine(line: {
         if (manual) {
             suggestions.push({
                 kind: 'SDI_INVOICE',
-                label: `Fattura / spesa — ${manual.vendorName}`,
+                label: `Fattura fornitore — ${manual.vendorName}`,
                 score: manual.score,
                 matchType: 'SDI_INVOICE',
                 matchedTxId: manual.id,
@@ -704,53 +730,99 @@ export async function suggestMatchesForLine(line: {
         if (florist && florist.matchScore >= 60) {
             suggestions.push({
                 kind: 'FLORIST_ORDER',
-                label: florist.matchNotes || 'Compenso fiorista',
+                label: florist.matchNotes || 'Fattura fiorista',
                 score: florist.matchScore,
-                matchType: 'FLORIST_TRANSFER',
+                matchType: florist.matchType || 'FLORIST_INVOICE',
                 matchedOrderId: florist.matchedOrderId,
                 notes: florist.matchNotes || 'Match fiorista',
             });
         }
     }
 
-    // Categorie rapide sempre disponibili
-    const cats: MatchSuggestion[] = [
-        {
-            kind: 'CATEGORY',
-            label: 'Fattura Fornitore',
-            score: 40,
-            matchType: 'SDI_INVOICE',
-            notes: 'Riconciliato manualmente — fattura fornitore',
-        },
-        {
-            kind: 'CATEGORY',
-            label: 'Compenso Fiorista',
-            score: 40,
-            matchType: 'FLORIST_TRANSFER',
-            notes: 'Riconciliato manualmente — compenso fiorista',
-        },
-        {
-            kind: 'CATEGORY',
-            label: 'Spesa senza Fattura (Scontrino/Ricevuta)',
-            score: 35,
-            matchType: 'CASH_EXPENSE',
-            notes: 'Riconciliato manualmente — scontrino/ricevuta',
-        },
-        {
-            kind: 'CATEGORY',
-            label: 'Giroconto / Patrimonio',
-            score: 35,
-            matchType: 'INTERNAL_TRANSFER',
-            notes: 'Riconciliato manualmente — giroconto/patrimonio',
-        },
-        {
-            kind: 'CATEGORY',
-            label: 'Altro Ricavo',
-            score: 30,
-            matchType: 'OTHER_REVENUE',
-            notes: 'Riconciliato manualmente — altro ricavo',
-        },
-    ];
+    // Categorie rapide allineate al set UI Movimenti bancari
+    const cats: MatchSuggestion[] =
+        movement.amountCents >= 0
+            ? [
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Incasso Stripe (Payout)',
+                      score: 40,
+                      matchType: 'STRIPE_PAYOUT',
+                      notes: 'Riconciliato manualmente — payout Stripe',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Incasso PayPal (Payout)',
+                      score: 40,
+                      matchType: 'PAYPAL_PAYOUT',
+                      notes: 'Riconciliato manualmente — payout PayPal',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Cashback / Rimborsi PayPal',
+                      score: 35,
+                      matchType: 'PAYPAL_CASHBACK',
+                      notes: 'Riconciliato manualmente — cashback/rimborso PayPal',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Altro Ricavo / Entrata Diretta',
+                      score: 30,
+                      matchType: 'OTHER_REVENUE',
+                      notes: 'Riconciliato manualmente — altro ricavo',
+                  },
+              ]
+            : [
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Fattura fiorista',
+                      score: 40,
+                      matchType: 'FLORIST_INVOICE',
+                      notes: 'Riconciliato manualmente — fattura fiorista',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Anticipo fiorista',
+                      score: 40,
+                      matchType: 'FLORIST_ADVANCE',
+                      notes: 'Riconciliato manualmente — anticipo fiorista',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Fattura fornitore',
+                      score: 40,
+                      matchType: 'SDI_INVOICE',
+                      notes: 'Riconciliato manualmente — fattura fornitore',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Canone SaaS',
+                      score: 35,
+                      matchType: 'SAAS_SUBSCRIPTION',
+                      notes: 'Riconciliato manualmente — canone SaaS',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Spesa documentata',
+                      score: 35,
+                      matchType: 'CASH_EXPENSE',
+                      notes: 'Riconciliato manualmente — spesa documentata',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Oneri bancari',
+                      score: 35,
+                      matchType: 'BANK_FEE',
+                      notes: 'Riconciliato manualmente — oneri bancari',
+                  },
+                  {
+                      kind: 'CATEGORY',
+                      label: 'Spesa non documentata',
+                      score: 30,
+                      matchType: 'UNDOCUMENTED_EXPENSE',
+                      notes: 'Riconciliato manualmente — spesa non documentata',
+                  },
+              ];
 
     suggestions.sort((a, b) => b.score - a.score);
     const top = suggestions.filter((s) => s.kind !== 'CATEGORY').slice(0, 3);

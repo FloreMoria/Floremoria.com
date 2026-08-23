@@ -269,7 +269,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         where: {
             amountCents: { lt: 0 },
             OR: [
-                { matchType: 'FLORIST_TRANSFER' },
+                { matchType: { in: ['FLORIST_TRANSFER', 'FLORIST_INVOICE', 'FLORIST_ADVANCE'] } },
                 { accountingDate: { gte: lookback } },
                 { valueDate: { gte: lookback } },
             ],
@@ -289,7 +289,11 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                     namesCompatible(p.ownerName, line.description)
             ) || null;
 
-        if (!partner && line.matchType !== 'FLORIST_TRANSFER') continue;
+        const floristType =
+            line.matchType === 'FLORIST_TRANSFER' ||
+            line.matchType === 'FLORIST_INVOICE' ||
+            line.matchType === 'FLORIST_ADVANCE';
+        if (!partner && !floristType) continue;
 
         const partnerName = partner?.shopName || partner?.ownerName || 'Fiorista (da causale)';
         const partnerVat = partner?.vatNumber || partner?.taxCode || null;

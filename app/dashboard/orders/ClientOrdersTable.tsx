@@ -77,30 +77,89 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
         setTimeout(() => setToast(null), 3200);
     };
 
-    const statusMap = {
-        'ACCEPTED': { label: 'Ricevuto', color: 'bg-yellow-100 text-yellow-800' },
-        'IN_PROGRESS': { label: 'In Lavorazione', color: 'bg-blue-100 text-blue-800' },
-        'PENDING': { label: 'Prenotato (da pagare)', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold' },
-        'DELIVERING': { label: 'In Consegna', color: 'bg-purple-100 text-purple-800' },
-        'COMPLETED': { label: 'Completato', color: 'bg-green-100 text-green-800' },
-        'CANCELLED': { label: 'Annullato', color: 'bg-red-100 text-red-800' },
-        'GDM_PLANNED': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
-        'GDM_ANNIVERSARY': { label: 'Ricorrenza GdM', color: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold' },
+    const statusMap: Record<string, { label: string; line1: string; line2?: string; color: string }> = {
+        'ACCEPTED': {
+            label: 'Ricevuto',
+            line1: 'Ordine',
+            line2: 'Ricevuto',
+            color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        },
+        'WAITING': {
+            label: 'In attesa',
+            line1: 'In',
+            line2: 'attesa',
+            color: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold',
+        },
+        'IN_PROGRESS': {
+            label: 'In Lavorazione',
+            line1: 'In',
+            line2: 'Lavorazione',
+            color: 'bg-blue-100 text-blue-800 border-blue-200',
+        },
+        'PAID': {
+            label: 'Pagato',
+            line1: 'Ordine',
+            line2: 'Pagato',
+            color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        },
+        'PAID_TO_DELIVER': {
+            label: 'Pagato da consegnare',
+            line1: 'Pagato',
+            line2: 'Da consegnare',
+            color: 'bg-sky-100 text-sky-800 border-sky-200',
+        },
+        'PENDING': {
+            label: 'In attesa',
+            line1: 'In',
+            line2: 'attesa',
+            color: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold',
+        },
+        'DELIVERING': {
+            label: 'In Consegna',
+            line1: 'In',
+            line2: 'Consegna',
+            color: 'bg-purple-100 text-purple-800 border-purple-200',
+        },
+        'COMPLETED': {
+            label: 'Completato Da pagare',
+            line1: 'Completato',
+            line2: 'Da pagare',
+            color: 'bg-green-100 text-green-800 border-green-200',
+        },
+        'CANCELLED': {
+            label: 'Annullato',
+            line1: 'Ordine',
+            line2: 'Annullato',
+            color: 'bg-red-100 text-red-800 border-red-200',
+        },
+        'GDM_PLANNED': {
+            label: 'Ricorrenza GdM',
+            line1: 'Ricorrenza',
+            line2: 'GdM',
+            color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+        },
+        'GDM_ANNIVERSARY': {
+            label: 'Ricorrenza GdM',
+            line1: 'Ricorrenza',
+            line2: 'GdM',
+            color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+        },
     };
 
     const uniqueStatusOptions = React.useMemo(() => {
         const seen = new Set<string>();
         const opts: Array<{ key: string; label: string }> = [];
         for (const [key, val] of Object.entries(statusMap)) {
-            if (!seen.has(val.label)) {
-                seen.add(val.label);
-                opts.push({ key, label: val.label });
+            const displayLabel = `${val.line1} ${val.line2 || ''}`.trim();
+            if (!seen.has(displayLabel)) {
+                seen.add(displayLabel);
+                opts.push({ key, label: displayLabel });
             }
         }
         return opts;
     }, []);
 
-    const statusTabOrder = ['ACCEPTED', 'IN_PROGRESS', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
+    const statusTabOrder = ['ACCEPTED', 'WAITING', 'IN_PROGRESS', 'PAID', 'PAID_TO_DELIVER', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
 
     const formatDeliveryDate = (order: { deliveryDate?: string | Date | null; funeralDate?: string | Date | null }) => {
         const raw = order.deliveryDate || order.funeralDate;
@@ -243,18 +302,59 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     };
 
     const StatusBadge = ({ status }: { status: string }) => {
-        const conf = statusMap[status as keyof typeof statusMap] || { label: status, color: 'bg-gray-100 text-gray-800' };
-        const words = conf.label.split(' ');
-        const isMultiWord = words.length > 1;
+        const conf = statusMap[status as keyof typeof statusMap] || {
+            label: status,
+            line1: status.split(' ')[0] || status,
+            line2: status.split(' ').slice(1).join(' ') || undefined,
+            color: 'bg-gray-100 text-gray-800 border-gray-200',
+        };
 
         return (
-            <span className={`inline-flex flex-col items-center justify-center px-2.5 py-1 rounded-xl text-[11px] font-semibold leading-tight text-center shadow-sm ${conf.color}`}>
-                {isMultiWord ? (
-                    words.map((w, idx) => <span key={idx}>{w}</span>)
-                ) : (
-                    <span>{conf.label}</span>
-                )}
+            <span
+                className={`inline-flex flex-col items-center justify-center w-[92px] min-h-[48px] px-2 py-2 rounded-xl text-[10px] font-bold leading-tight text-center shadow-sm border mx-auto ${conf.color}`}
+            >
+                <span className="truncate max-w-full">{conf.line1}</span>
+                {conf.line2 && <span className="truncate max-w-full">{conf.line2}</span>}
             </span>
+        );
+    };
+
+    const StatusSelect = ({
+        status,
+        onChange,
+    }: {
+        status: string;
+        onChange: (newStatus: string) => void;
+    }) => {
+        const conf = statusMap[status as keyof typeof statusMap] || {
+            label: status,
+            line1: status.split(' ')[0] || status,
+            line2: status.split(' ').slice(1).join(' ') || undefined,
+            color: 'bg-gray-100 text-gray-800 border-gray-200',
+        };
+
+        return (
+            <div className="relative inline-flex items-center justify-center mx-auto">
+                <div
+                    className={`w-[92px] min-h-[48px] px-2 py-2 rounded-xl text-[10px] font-bold leading-tight text-center flex flex-col items-center justify-center border shadow-sm pointer-events-none ${conf.color}`}
+                >
+                    <span className="truncate max-w-full">{conf.line1}</span>
+                    {conf.line2 && <span className="truncate max-w-full">{conf.line2}</span>}
+                </div>
+                <select
+                    value={status}
+                    onChange={(e) => onChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+                    title="Cambia stato ordine"
+                >
+                    {uniqueStatusOptions.map((opt) => (
+                        <option key={opt.key} value={opt.key} className="bg-white text-black font-sans text-xs py-1">
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
         );
     };
 
@@ -785,34 +885,22 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="py-3 px-3">
+                                        <td className="py-3 px-3 text-center">
                                             {editingOrderId === order.id ? (
-                                                <select
-                                                    value={rowOrderDraft[order.id]?.status || order.status}
-                                                    onChange={(e) =>
+                                                <StatusSelect
+                                                    status={rowOrderDraft[order.id]?.status || order.status}
+                                                    onChange={(val) =>
                                                         setRowOrderDraft((prev) => ({
                                                             ...prev,
-                                                            [order.id]: { ...prev[order.id], status: e.target.value },
+                                                            [order.id]: { ...prev[order.id], status: val },
                                                         }))
                                                     }
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="px-2 py-1.5 pr-6 rounded-full text-[11px] font-semibold tracking-wide appearance-none outline-none cursor-pointer border border-gray-200 bg-white"
-                                                >
-                                                    {uniqueStatusOptions.map((opt) => (
-                                                        <option key={opt.key} value={opt.key} className="bg-white text-black font-sans">{opt.label}</option>
-                                                    ))}
-                                                </select>
+                                                />
                                             ) : canChangeStatus ? (
-                                                <select
-                                                    value={order.status}
-                                                    onChange={(e) => updateStatus(order.id, e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className={`px-2 py-1.5 pr-6 rounded-full text-[11px] font-semibold tracking-wide appearance-none outline-none cursor-pointer border-r-8 border-transparent transition-colors shadow-sm ${statusMap[order.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-800'}`}
-                                                >
-                                                    {uniqueStatusOptions.map((opt) => (
-                                                        <option key={opt.key} value={opt.key} className="bg-white text-black font-sans">{opt.label}</option>
-                                                    ))}
-                                                </select>
+                                                <StatusSelect
+                                                    status={order.status}
+                                                    onChange={(val) => updateStatus(order.id, val)}
+                                                />
                                             ) : (
                                                 <StatusBadge status={order.status} />
                                             )}

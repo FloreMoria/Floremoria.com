@@ -1,0 +1,2 @@
+[2026-08-23 08:59] fix(docs): rotazione automatica today_log — filtro ISO in cron, reset post-sync Obsidian (VERBALE_RESET_TODAY_LOG), helper lib/verbali/todayLog.ts.
+[2026-08-23 09:07] style(orders): badge stato verticali 2 righe, update Completato Da pagare e nuovi stati In attesa / Pagato / Pagato da consegnare.

@@ -177,7 +177,7 @@ export async function computeHistoricalPnl(opts: {
     const risultatoAnteImposteCents = ebitdaCents - oneriBancariCents;
     const ivaNettaCents = ivaDebitoCents - ivaCreditoCents;
 
-    // Binario A — cassa reale da estratto Fineco (BankStatementLine) nel periodo fiscale
+    // Binario A — cassa reale: apertura rendiconto + movimenti Fineco (stesso criterio quadratura)
     let cashInflowCents = 0;
     let cashOutflowCents = 0;
     let cashBankBalanceCents = 0;
@@ -206,6 +206,24 @@ export async function computeHistoricalPnl(opts: {
             cashBankBalanceCents += line.amountCents;
             if (line.amountCents > 0) cashInflowCents += line.amountCents;
             else cashOutflowCents += Math.abs(line.amountCents);
+        }
+
+        // Anno intero: aggiungi saldo iniziale del primo rendiconto
+        if (!q) {
+            const openingDoc = await prisma.bankStatementDocument.findFirst({
+                where: {
+                    openingBalanceCents: { not: null },
+                    OR: [
+                        { periodStart: { gte: yearStart, lt: yearEnd } },
+                        { periodEnd: { gte: yearStart, lt: yearEnd } },
+                    ],
+                },
+                orderBy: { periodStart: 'asc' },
+                select: { openingBalanceCents: true },
+            });
+            if (openingDoc?.openingBalanceCents != null) {
+                cashBankBalanceCents += openingDoc.openingBalanceCents;
+            }
         }
     } catch (err) {
         console.warn('[computeHistoricalPnl] cash Fineco aggregato fallito', err);

@@ -1,19 +1,27 @@
 /**
  * Fascia di quadratura Contabilità — 3 controlli server-side su Neon.
  * Solo lettura aggregata: nessun truncate / delete.
+ *
+ * Saldo calcolato Fineco = saldo iniziale più antico del periodo + Σ movimenti,
+ * oppure ultimo saldo finale di rendiconto se più recente.
  */
 
 import prisma from '@/lib/prisma';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
 import { listFloristMissingInvoices } from '@/lib/financial/floristMissingInvoices';
-import { computeHistoricalPnl } from '@/lib/financial/historicalLedgerQuery';
 
 export type FinanceQuadratura = {
     /** Saldo reale (manuale Fineco) in centesimi; null se non impostato. */
     realBalanceCents: number | null;
     realBalanceAlignedAt: string | null;
-    /** Saldo calcolato da movimenti bancari / ledger. */
+    /** Saldo calcolato da rendiconti (apertura + movimenti / chiusura). */
     calculatedBalanceCents: number;
+    /** Apertura usata nel calcolo (centesimi). */
+    openingBalanceCents: number | null;
+    /** Ultima chiusura di rendiconto (centesimi). */
+    statementClosingCents: number | null;
+    /** Σ movimenti bancari nel periodo. */
+    movementsSumCents: number;
     /** real − calculated (0 = quadrato). Null se manca il saldo reale. */
     balanceDiffCents: number | null;
     isBalanceSquared: boolean;
@@ -25,31 +33,125 @@ export type FinanceQuadratura = {
 
 /**
  * Aggrega differenza saldo, movimenti senza match e documenti mancanti.
- * Perché: above-the-fold operativo senza caricare tutta la UI.
  */
 export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
     const year = new Date().getFullYear();
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
-    const [manual, pnl, unmatchedBank, floristMissing] = await Promise.all([
+    const [manual, unmatchedBank, floristMissing, docs, bankSumAgg] = await Promise.all([
         getFinecoManualBalance(),
-        computeHistoricalPnl({ fiscalYear: year }),
         prisma.bankStatementLine.count({
             where: { matchStatus: { not: 'MATCHED' } },
         }),
         listFloristMissingInvoices(),
+        prisma.bankStatementDocument.findMany({
+            where: {
+                OR: [
+                    { periodStart: { gte: yearStart, lt: yearEnd } },
+                    { periodEnd: { gte: yearStart, lt: yearEnd } },
+                    {
+                        AND: [
+                            { periodStart: null },
+                            { uploadedAt: { gte: yearStart, lt: yearEnd } },
+                        ],
+                    },
+                ],
+                status: { in: ['PARSED', 'RECONCILED'] },
+            },
+            select: {
+                id: true,
+                fileName: true,
+                periodStart: true,
+                periodEnd: true,
+                openingBalanceCents: true,
+                closingBalanceCents: true,
+            },
+            orderBy: [{ periodStart: 'asc' }, { uploadedAt: 'asc' }],
+        }),
+        prisma.bankStatementLine.aggregate({
+            where: {
+                OR: [
+                    { accountingDate: { gte: yearStart, lt: yearEnd } },
+                    {
+                        AND: [
+                            { accountingDate: null },
+                            { valueDate: { gte: yearStart, lt: yearEnd } },
+                        ],
+                    },
+                ],
+            },
+            _sum: { amountCents: true },
+        }),
     ]);
 
-    let calculatedBalanceCents = pnl.cashBankBalanceCents ?? 0;
-    if (calculatedBalanceCents === 0) {
-        const bankSum = await prisma.financialLedgerEntry.aggregate({
-            where: {
-                fiscalYear: year,
-                reversedAt: null,
-                sourceType: 'BANK_LINE',
-            },
-            _sum: { totalCents: true },
+    const movementsSumCents = bankSumAgg._sum.amountCents || 0;
+
+    // Apertura: primo rendiconto con openingBalance (tipicamente Q1 → saldo 1/1)
+    const withOpening = docs
+        .filter((d) => d.openingBalanceCents != null)
+        .sort((a, b) => {
+            const ta = a.periodStart?.getTime() ?? 0;
+            const tb = b.periodStart?.getTime() ?? 0;
+            return ta - tb;
         });
-        calculatedBalanceCents = bankSum._sum.totalCents || 0;
+    const openingBalanceCents = withOpening[0]?.openingBalanceCents ?? null;
+
+    // Chiusura più recente tra i rendiconti
+    const withClosing = docs
+        .filter((d) => d.closingBalanceCents != null)
+        .sort((a, b) => {
+            const ta = a.periodEnd?.getTime() ?? a.periodStart?.getTime() ?? 0;
+            const tb = b.periodEnd?.getTime() ?? b.periodStart?.getTime() ?? 0;
+            return tb - ta;
+        });
+    const statementClosingCents = withClosing[0]?.closingBalanceCents ?? null;
+    const latestClosingEnd = withClosing[0]?.periodEnd ?? withClosing[0]?.periodStart ?? null;
+
+    let calculatedBalanceCents = 0;
+    if (openingBalanceCents != null) {
+        // Libro: saldo iniziale anno + tutti i movimenti YTD importati
+        calculatedBalanceCents = openingBalanceCents + movementsSumCents;
+
+        // Se esiste una chiusura di rendiconto più “fidata” e successiva all’apertura,
+        // e i movimenti dopo quella chiusura sono noti, preferisci:
+        // chiusura + movimenti successivi alla periodEnd del doc di chiusura
+        if (statementClosingCents != null && latestClosingEnd) {
+            const afterClosing = await prisma.bankStatementLine.aggregate({
+                where: {
+                    OR: [
+                        { accountingDate: { gt: latestClosingEnd, lt: yearEnd } },
+                        {
+                            AND: [
+                                { accountingDate: null },
+                                { valueDate: { gt: latestClosingEnd, lt: yearEnd } },
+                            ],
+                        },
+                    ],
+                },
+                _sum: { amountCents: true },
+            });
+            const afterSum = afterClosing._sum.amountCents || 0;
+            calculatedBalanceCents = statementClosingCents + afterSum;
+        }
+    } else if (statementClosingCents != null && latestClosingEnd) {
+        const afterClosing = await prisma.bankStatementLine.aggregate({
+            where: {
+                OR: [
+                    { accountingDate: { gt: latestClosingEnd, lt: yearEnd } },
+                    {
+                        AND: [
+                            { accountingDate: null },
+                            { valueDate: { gt: latestClosingEnd, lt: yearEnd } },
+                        ],
+                    },
+                ],
+            },
+            _sum: { amountCents: true },
+        });
+        calculatedBalanceCents = statementClosingCents + (afterClosing._sum.amountCents || 0);
+    } else {
+        calculatedBalanceCents = movementsSumCents;
     }
 
     const realBalanceCents = manual?.balanceCents ?? null;
@@ -61,6 +163,9 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         realBalanceCents,
         realBalanceAlignedAt: manual?.alignedAt ?? null,
         calculatedBalanceCents,
+        openingBalanceCents,
+        statementClosingCents,
+        movementsSumCents,
         balanceDiffCents,
         isBalanceSquared,
         unmatchedBankLines: unmatchedBank,

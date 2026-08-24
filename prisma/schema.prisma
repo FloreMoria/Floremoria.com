@@ -839,6 +839,8 @@ model BankStatementDocument {
   /** UPLOADED | PARSING | PARSED | RECONCILED | FAILED */
   status            String   @default("UPLOADED") @db.VarChar(24)
   parseError        String?  @map("parse_error") @db.Text
+  /** Saldo iniziale estratto dal rendiconto (centesimi). */
+  openingBalanceCents Int?  @map("opening_balance_cents")
   /** Saldo progressivo finale estratto dal rendiconto (centesimi). */
   closingBalanceCents Int?   @map("closing_balance_cents")
   matchedCount      Int      @default(0) @map("matched_count")

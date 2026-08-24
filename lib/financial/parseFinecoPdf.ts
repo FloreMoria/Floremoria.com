@@ -171,6 +171,40 @@ function eurosToCents(euros: number): number {
     return Math.round(euros * 100);
 }
 
+/**
+ * Estrae saldo iniziale/finale dalle intestazioni Fineco «+32.120,48 Saldo iniziale in euro».
+ * Perché: quelle righe sono note a margine (non movimenti) ma servono alla quadratura cassa.
+ */
+export function extractFinecoHeaderBalances(pageTexts: string[]): {
+    openingBalanceCents: number | null;
+    closingBalanceCents: number | null;
+} {
+    let openingBalanceCents: number | null = null;
+    let closingBalanceCents: number | null = null;
+    const openingRe =
+        /([+-]?\d{1,3}(?:[.\s]\d{3})*,\d{2})\s*Saldo\s+iniziale\s+in\s+euro/i;
+    const closingRe =
+        /([+-]?\d{1,3}(?:[.\s]\d{3})*,\d{2})\s*Saldo\s+finale\s+in\s+euro/i;
+
+    for (const text of pageTexts) {
+        if (openingBalanceCents == null) {
+            const m = text.match(openingRe);
+            if (m) {
+                const euros = parseItalianAmount(m[1]);
+                if (euros != null) openingBalanceCents = eurosToCents(euros);
+            }
+        }
+        if (closingBalanceCents == null) {
+            const m = text.match(closingRe);
+            if (m) {
+                const euros = parseItalianAmount(m[1]);
+                if (euros != null) closingBalanceCents = eurosToCents(euros);
+            }
+        }
+    }
+    return { openingBalanceCents, closingBalanceCents };
+}
+
 function isDateToken(s: string): boolean {
     return DATE_RE.test(s.trim());
 }
@@ -761,7 +795,11 @@ function finalizeResult(
     anomalies: FinecoPdfAnomaly[],
     textPreview: string[],
     ignoredMarginNotes: number,
-    virtualRows?: FinecoVirtualRow[]
+    virtualRows?: FinecoVirtualRow[],
+    headerBalances?: {
+        openingBalanceCents: number | null;
+        closingBalanceCents: number | null;
+    }
 ): ParseFinecoPdfResult {
     const dates = movements
         .map((m) => m.accountingDate || m.valueDate)
@@ -771,11 +809,27 @@ function finalizeResult(
     const summary = buildSummaryWarning(movements.length, ignoredMarginNotes, anomalies);
     const mergedWarnings = summary ? [summary, ...warnings.filter((w) => w !== summary)] : warnings;
 
+    const openingBalanceCents = headerBalances?.openingBalanceCents ?? null;
+    const closingBalanceCents =
+        headerBalances?.closingBalanceCents ?? withBalance?.balanceCents ?? null;
+
+    if (openingBalanceCents != null || headerBalances?.closingBalanceCents != null) {
+        const parts: string[] = [];
+        if (openingBalanceCents != null) {
+            parts.push(`apertura ${(openingBalanceCents / 100).toFixed(2)} €`);
+        }
+        if (headerBalances?.closingBalanceCents != null) {
+            parts.push(`chiusura ${(headerBalances.closingBalanceCents / 100).toFixed(2)} €`);
+        }
+        mergedWarnings.push(`Saldi rendiconto Fineco: ${parts.join(' · ')}`);
+    }
+
     return {
         movements,
         periodStart: dates[0] || null,
         periodEnd: dates[dates.length - 1] || null,
-        closingBalanceCents: withBalance?.balanceCents ?? null,
+        openingBalanceCents,
+        closingBalanceCents,
         warnings: mergedWarnings,
         textPreview: textPreview.length ? textPreview : undefined,
         anomalies,
@@ -826,6 +880,15 @@ export async function parseFinecoPdfTabular(buffer: Buffer): Promise<ParseFineco
             )
             .slice(0, 12);
 
+        // Testo pagina (item concatenati) per saldo iniziale/finale in header
+        const pageTexts = pages.map((p) =>
+            p
+                .map((it) => it.str)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+        );
+        const headerBalances = extractFinecoHeaderBalances(pageTexts);
+
         const virtualRows = convertPositionedItemsToVirtualRows(pages, anomalies, counters);
         const movements = virtualRowsToMovements(virtualRows);
 
@@ -841,7 +904,8 @@ export async function parseFinecoPdfTabular(buffer: Buffer): Promise<ParseFineco
             anomalies,
             textPreview,
             counters.ignoredMarginNotes,
-            virtualRows
+            virtualRows,
+            headerBalances
         );
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

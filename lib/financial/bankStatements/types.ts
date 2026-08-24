@@ -39,6 +39,8 @@ export type ParseBankStatementResult = {
     movements: ParsedBankMovement[];
     periodStart: string | null;
     periodEnd: string | null;
+    /** Saldo di apertura del rendiconto (se presente nel PDF/CSV). */
+    openingBalanceCents: number | null;
     closingBalanceCents: number | null;
     warnings: string[];
     /** Prime N righe di testo PDF per calibrazione pattern (solo se parsing debole/fallito). */

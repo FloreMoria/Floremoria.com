@@ -613,6 +613,19 @@ export default function FinanceDashboardPage() {
                             )}
                         </div>
                     )}
+                    <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
+                        Reale {formatEuroCents(quadratura?.realBalanceCents ?? manualBalanceCents)} · Libro{' '}
+                        {formatEuroCents(quadratura?.calculatedBalanceCents ?? null)}
+                        {quadratura?.openingBalanceCents != null ? (
+                            <>
+                                <br />
+                                Apertura {formatEuroCents(quadratura.openingBalanceCents)}
+                                {quadratura.statementClosingCents != null
+                                    ? ` · Ultima chiusura ${formatEuroCents(quadratura.statementClosingCents)}`
+                                    : ''}
+                            </>
+                        ) : null}
+                    </p>
                     {quadratura?.realBalanceAlignedAt || manualBalanceAlignedAt ? (
                         <p className="text-[10px] text-slate-400">
                             Reale allineato{' '}

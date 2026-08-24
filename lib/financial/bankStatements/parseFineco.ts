@@ -173,6 +173,7 @@ function finalize(
         movements,
         periodStart: dates[0] || null,
         periodEnd: dates[dates.length - 1] || null,
+        openingBalanceCents: null,
         closingBalanceCents: withBalance?.balanceCents ?? null,
         warnings,
         ...(textPreview && textPreview.length ? { textPreview } : {}),
@@ -223,7 +224,7 @@ export async function parseFinecoXlsx(buffer: Buffer): Promise<ParseBankStatemen
     const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
     const sheetName = wb.SheetNames[0];
     if (!sheetName) {
-        return { movements: [], periodStart: null, periodEnd: null, closingBalanceCents: null, warnings: ['Workbook Excel vuoto'] };
+        return { movements: [], periodStart: null, periodEnd: null, openingBalanceCents: null, closingBalanceCents: null, warnings: ['Workbook Excel vuoto'] };
     }
     const sheet = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
@@ -481,6 +482,7 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
                 movements: tabular.movements,
                 periodStart: tabular.periodStart,
                 periodEnd: tabular.periodEnd,
+                openingBalanceCents: tabular.openingBalanceCents ?? null,
                 closingBalanceCents: tabular.closingBalanceCents,
                 warnings: tabular.warnings,
                 textPreview: tabular.textPreview,
@@ -523,6 +525,7 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
             movements: [],
             periodStart: null,
             periodEnd: null,
+            openingBalanceCents: null,
             closingBalanceCents: null,
             warnings: [
                 ...tabularWarnings,
@@ -538,6 +541,7 @@ export async function parseFinecoPdf(buffer: Buffer): Promise<ParseBankStatement
             movements: [],
             periodStart: null,
             periodEnd: null,
+            openingBalanceCents: null,
             closingBalanceCents: null,
             warnings: [
                 ...tabularWarnings,

@@ -380,6 +380,7 @@ export function parseFinecoPasteText(
         pasteMovements: unique,
         periodStart: dates[0] || null,
         periodEnd: dates[dates.length - 1] || null,
+        openingBalanceCents: null,
         closingBalanceCents: null,
         warnings,
         anomalies,

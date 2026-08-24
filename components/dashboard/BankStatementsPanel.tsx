@@ -221,7 +221,12 @@ function warnAnomalies(doc: StatementDoc): ParseAnomaly[] {
     );
 }
 
-export default function BankStatementsPanel() {
+type BankStatementsPanelProps = {
+    /** `tab1`: upload/paste only + archivio collassabile; nasconde la tabella movimenti grande. */
+    variant?: 'full' | 'tab1';
+};
+
+export default function BankStatementsPanel({ variant = 'full' }: BankStatementsPanelProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [docs, setDocs] = useState<StatementDoc[]>([]);
     const [loading, setLoading] = useState(true);
@@ -701,7 +706,13 @@ export default function BankStatementsPanel() {
     const pasteNewCount = pasteRows.filter((r) => r.status === 'NEW').length;
 
     return (
-        <div className="mt-5 pt-5 border-t border-slate-100 space-y-4">
+        <div
+            className={
+                variant === 'tab1'
+                    ? 'space-y-4'
+                    : 'mt-5 pt-5 border-t border-slate-100 space-y-4'
+            }
+        >
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
                     <h4 className="text-sm font-bold uppercase tracking-wider text-slate-500">
@@ -820,7 +831,8 @@ export default function BankStatementsPanel() {
                 </div>
             )}
 
-            {/* Tabella movimenti estratto conto — archivio storico per anno */}
+            {/* Tabella movimenti estratto conto — nascosta in tab1 (usa BankMovementsStatementTable) */}
+            {variant === 'full' && (
             <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3 sm:p-4">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>
@@ -1082,6 +1094,7 @@ export default function BankStatementsPanel() {
                     rendiconti PDF per {yearLabel} · scroll per scorrere tutte le righe
                 </p>
             </div>
+            )}
 
             {pasteOpen && (
                 <div
@@ -1401,6 +1414,162 @@ export default function BankStatementsPanel() {
                 </div>
             )}
 
+            {variant === 'tab1' ? (
+                <details className="group rounded-2xl border border-slate-100 overflow-hidden">
+                    <summary className="cursor-pointer list-none flex items-center gap-2 px-4 py-3 bg-slate-50 text-sm font-bold text-slate-800 hover:bg-slate-100">
+                        <ChevronDown
+                            size={16}
+                            className="text-slate-500 transition-transform group-open:rotate-180"
+                        />
+                        Storico rendiconti caricati
+                        <span className="ml-auto text-[11px] font-semibold text-slate-500">
+                            {docs.length} file
+                        </span>
+                    </summary>
+                    <div className="overflow-x-auto border-t border-slate-100">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">
+                                    <th className="px-3 py-2 font-bold">Nome file</th>
+                                    <th className="px-3 py-2 font-bold">Caricamento</th>
+                                    <th className="px-3 py-2 font-bold">Periodo</th>
+                                    <th className="px-3 py-2 font-bold">Stato</th>
+                                    <th className="px-3 py-2 font-bold">Match</th>
+                                    <th className="px-3 py-2 font-bold text-right">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                                            <Loader2 className="inline animate-spin mr-2" size={16} />
+                                            Caricamento archivio…
+                                        </td>
+                                    </tr>
+                                ) : docs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-3 py-6 text-center text-slate-400 text-xs">
+                                            Nessun estratto conto caricato. Il primo file popola l&apos;archivio storico.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    docs.map((doc) => {
+                                        const st = statusLabel(doc.status);
+                                        const summary = docSummary(doc);
+                                        const warns = warnAnomalies(doc);
+                                        const open = openAnomalyDocId === doc.id;
+                                        const selected = activeDocId === doc.id;
+                                        return (
+                                            <tr
+                                                key={doc.id}
+                                                className={`border-t border-slate-100 align-top ${
+                                                    selected ? 'bg-[#c5a880]/5' : ''
+                                                }`}
+                                            >
+                                                <td className="px-3 py-2.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void loadLines(doc.id)}
+                                                        className="text-left font-medium text-slate-800 max-w-[220px] truncate hover:underline"
+                                                    >
+                                                        {doc.fileName}
+                                                    </button>
+                                                    {summary && (
+                                                        <div className="mt-1 inline-flex max-w-[280px] text-[10px] text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
+                                                            {summary}
+                                                        </div>
+                                                    )}
+                                                    {doc.parseError && warns.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setOpenAnomalyDocId(open ? null : doc.id)
+                                                            }
+                                                            className="mt-1 flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 hover:underline"
+                                                        >
+                                                            <ChevronDown
+                                                                size={12}
+                                                                className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                                            />
+                                                            Dettagli anomalie ({warns.length})
+                                                        </button>
+                                                    )}
+                                                    {open && warns.length > 0 && (
+                                                        <ul className="mt-1 space-y-1 max-w-[320px]">
+                                                            {warns.map((a, i) => (
+                                                                <li
+                                                                    key={`${doc.id}-${i}`}
+                                                                    className="text-[10px] font-mono text-slate-600 bg-amber-50/60 border border-amber-100 rounded-lg px-2 py-1"
+                                                                >
+                                                                    {a.message}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
+                                                    {new Date(doc.uploadedAt).toLocaleString('it-IT')}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-slate-600 font-mono text-xs whitespace-nowrap">
+                                                    {formatPeriod(doc.periodStart, doc.periodEnd)}
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                    <span
+                                                        className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold ${st.className}`}
+                                                    >
+                                                        {st.text}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">
+                                                    <span className="text-emerald-700 font-semibold">
+                                                        {doc.matchedCount}
+                                                    </span>
+                                                    {' / '}
+                                                    <span className="text-rose-600 font-semibold">
+                                                        {doc.unmatchedCount}
+                                                    </span>
+                                                    <span className="text-slate-400"> non abbinati</span>
+                                                </td>
+                                                <td className="px-3 py-2.5">
+                                                    <div className="flex justify-end gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void loadLines(doc.id)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                                                        >
+                                                            Movimenti
+                                                        </button>
+                                                        <a
+                                                            href={`/api/dashboard/finance/bank-statements/${doc.id}/download`}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                                                        >
+                                                            <Download size={13} />
+                                                            Download
+                                                        </a>
+                                                        <button
+                                                            type="button"
+                                                            disabled={deletingId === doc.id}
+                                                            onClick={() => void handleDelete(doc.id)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold disabled:opacity-50"
+                                                        >
+                                                            {deletingId === doc.id ? (
+                                                                <Loader2 size={13} className="animate-spin" />
+                                                            ) : (
+                                                                <Trash2 size={13} />
+                                                            )}
+                                                            Elimina
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            ) : (
             <div className="overflow-x-auto rounded-2xl border border-slate-100">
                 <table className="w-full text-sm">
                     <thead>
@@ -1543,6 +1712,7 @@ export default function BankStatementsPanel() {
                     </tbody>
                 </table>
             </div>
+            )}
         </div>
     );
 }

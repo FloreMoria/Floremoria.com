@@ -12,6 +12,7 @@ import {
     toggleDeadlineCompleted,
     type DeadlineStatus,
 } from '@/lib/financial/financeDeadlineStore';
+import { computeFinanceQuadratura } from '@/lib/financial/financeQuadratura';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,18 +28,21 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     try {
-        const [ledger, statements, finecoBalance, saasTotalEurCents] = await Promise.all([
-            ledgerWithNeonDeadlines(),
-            calculateFinancialStatements(),
-            getFinecoManualBalance(),
-            sumSaasForeignEurCents(),
-        ]);
+        const [ledger, statements, finecoBalance, saasTotalEurCents, quadratura] =
+            await Promise.all([
+                ledgerWithNeonDeadlines(),
+                calculateFinancialStatements(),
+                getFinecoManualBalance(),
+                sumSaasForeignEurCents(),
+                computeFinanceQuadratura(),
+            ]);
         return NextResponse.json({
             ok: true,
             ledger,
             statements,
             finecoBalance,
             saasTotalEurCents,
+            quadratura,
         });
     } catch (error) {
         console.error('[Finance API GET] Errore:', error);

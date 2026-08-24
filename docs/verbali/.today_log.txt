@@ -4,3 +4,7 @@
 [2026-08-24 17:18] fix(finance): Fase 1 — scadenze/progressivi su Neon SystemState, webhook senza x-mock-provider, requireDashboardAdmin con User DB, upsert sourceKey stabile, SHA-256 estratti Fineco, numerazione autofatture atomica.
 
 [2026-08-24 17:31] feat(finance): Fase 2 — TRASFERIMENTO_INTERNO payout Stripe/PayPal, doppio binario Cassa/Fisco IVA 10%/22%, motore riconciliazione unico Neon, scadenziario senza filtro 90gg, statements da FinancialLedgerEntry+BankStatementLine.
+
+[2026-08-24 17:47] feat/ui: FASE 3 Contabilità — 5 tab, fascia quadratura, BankStatementsPanel variant tab1.
+[2026-08-24 17:48] feat(finance): Fase 3 — UI 5 tab (Banca/Prima Nota/Passivo/Gateway/Fisco), fascia quadratura server-side, IBAN compatto, storico documenti preservato; tsc+build OK.
+[2026-08-24 17:48] feat(finance): Fase 3 — UI 5 tab (Banca/Prima Nota/Passivo/Gateway/Fisco), fascia quadratura server-side, IBAN compatto, storico documenti preservato; tsc+build OK.

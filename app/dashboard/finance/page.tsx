@@ -277,6 +277,8 @@ export default function FinanceDashboardPage() {
 
     const filteredDeadlines = React.useMemo(() => {
         return allDeadlines.filter(item => {
+            // Elenco attivo scadenziario: da 01/07/2026
+            if (item.dueDate < '2026-07-01') return false;
             if (complianceFilter === 'ALL') return true;
             if (complianceFilter === 'FISC') {
                 return (

@@ -133,17 +133,28 @@ export async function buildTaxRegisterReport(params: {
                     },
                 },
             },
-            customerReceipts: { select: { id: true }, take: 1 },
+            customerReceipts: {
+                select: {
+                    id: true,
+                    grossCents: true,
+                    floralImponibileCents: true,
+                    accessoryImponibileCents: true,
+                    ivaDebitoCents: true,
+                },
+                take: 1,
+            },
         },
         orderBy: { createdAt: 'asc' },
     });
 
     const rows: TaxRegisterRow[] = [];
     for (const order of orders) {
+        const receipt = order.customerReceipts[0] || null;
         const grossCents =
-            order.grossAmount != null
+            receipt?.grossCents ??
+            (order.grossAmount != null
                 ? Math.round(order.grossAmount * 100)
-                : order.totalPriceCents;
+                : order.totalPriceCents);
         const accessoryGrossCents = Math.min(
             accessoryGrossFromOrder(order),
             Math.abs(grossCents)
@@ -152,6 +163,12 @@ export async function buildTaxRegisterReport(params: {
             grossCents,
             accessoryCents: accessoryGrossCents,
         });
+        // Preferisci importi della ricevuta cliente effettivamente trasmessa
+        const floralImponibileCents =
+            receipt?.floralImponibileCents ?? vat.floral.imponibileCents;
+        const accessoryImponibileCents =
+            receipt?.accessoryImponibileCents ?? vat.accessory?.imponibileCents ?? 0;
+        const ivaDebitoCents = receipt?.ivaDebitoCents ?? vat.ivaCents;
         const feeCents =
             order.stripeFee != null ? Math.round(order.stripeFee * 100) : 0;
         const floristCompensationCents = resolveOrderFloristCompensationCents(order);
@@ -163,10 +180,10 @@ export async function buildTaxRegisterReport(params: {
             orderNumber: order.orderNumber || order.id.slice(0, 8),
             buyerName: order.buyerFullName || order.buyerEmail || 'Cliente',
             grossCents,
-            floralImponibileCents: vat.floral.imponibileCents,
-            accessoryImponibileCents: vat.accessory?.imponibileCents ?? 0,
+            floralImponibileCents,
+            accessoryImponibileCents,
             accessoryGrossCents,
-            ivaDebitoCents: vat.ivaCents,
+            ivaDebitoCents,
             gatewayLabel: formatGatewayFeeLabel({
                 paymentMethodLabel: order.paymentMethodLabel,
                 feeCents,
@@ -181,7 +198,7 @@ export async function buildTaxRegisterReport(params: {
             settlementStatus: order.floristSettlementStatus,
             netMarginCents,
             financeNotes: order.financeNotes,
-            hasReceipt: order.customerReceipts.length > 0,
+            hasReceipt: Boolean(receipt),
         });
     }
 
@@ -213,6 +230,10 @@ export type TaxRegisterPatchInput = {
     accessoryAmountCents?: number | null;
     financeNotes?: string | null;
     paymentMethodLabel?: string | null;
+    /** Forza lordo ordine (centesimi) → Order.grossAmount */
+    grossCents?: number | null;
+    /** Forza fee gateway (centesimi) → Order.stripeFee */
+    gatewayFeeCents?: number | null;
 };
 
 export async function patchTaxRegisterRow(
@@ -228,6 +249,8 @@ export async function patchTaxRegisterRow(
         accessoryAmountCents?: number | null;
         financeNotes?: string | null;
         paymentMethodLabel?: string | null;
+        grossAmount?: number | null;
+        stripeFee?: number | null;
     } = {};
 
     if (input.floristCompensationCents !== undefined) {
@@ -264,6 +287,20 @@ export async function patchTaxRegisterRow(
     if (input.paymentMethodLabel !== undefined) {
         data.paymentMethodLabel = input.paymentMethodLabel?.trim().slice(0, 64) || null;
     }
+    if (input.grossCents !== undefined) {
+        const v = input.grossCents;
+        if (v != null && (!Number.isFinite(v) || v < 0)) {
+            throw new Error('Lordo non valido');
+        }
+        data.grossAmount = v == null ? null : Math.round(v) / 100;
+    }
+    if (input.gatewayFeeCents !== undefined) {
+        const v = input.gatewayFeeCents;
+        if (v != null && (!Number.isFinite(v) || v < 0)) {
+            throw new Error('Fee gateway non valida');
+        }
+        data.stripeFee = v == null ? null : Math.round(v) / 100;
+    }
 
     if (Object.keys(data).length === 0) {
         throw new Error('Nessun campo da aggiornare');
@@ -284,14 +321,25 @@ export async function patchTaxRegisterRow(
                     },
                 },
             },
-            customerReceipts: { select: { id: true }, take: 1 },
+            customerReceipts: {
+                select: {
+                    id: true,
+                    grossCents: true,
+                    floralImponibileCents: true,
+                    accessoryImponibileCents: true,
+                    ivaDebitoCents: true,
+                },
+                take: 1,
+            },
         },
     });
 
+    const receipt = order.customerReceipts[0] || null;
     const grossCents =
-        order.grossAmount != null
+        receipt?.grossCents ??
+        (order.grossAmount != null
             ? Math.round(order.grossAmount * 100)
-            : order.totalPriceCents;
+            : order.totalPriceCents);
     const accessoryGrossCents = Math.min(
         accessoryGrossFromOrder(order),
         Math.abs(grossCents)
@@ -309,10 +357,11 @@ export async function patchTaxRegisterRow(
         orderNumber: order.orderNumber || order.id.slice(0, 8),
         buyerName: order.buyerFullName || order.buyerEmail || 'Cliente',
         grossCents,
-        floralImponibileCents: vat.floral.imponibileCents,
-        accessoryImponibileCents: vat.accessory?.imponibileCents ?? 0,
+        floralImponibileCents: receipt?.floralImponibileCents ?? vat.floral.imponibileCents,
+        accessoryImponibileCents:
+            receipt?.accessoryImponibileCents ?? vat.accessory?.imponibileCents ?? 0,
         accessoryGrossCents,
-        ivaDebitoCents: vat.ivaCents,
+        ivaDebitoCents: receipt?.ivaDebitoCents ?? vat.ivaCents,
         gatewayLabel: formatGatewayFeeLabel({
             paymentMethodLabel: order.paymentMethodLabel,
             feeCents,
@@ -327,6 +376,6 @@ export async function patchTaxRegisterRow(
         settlementStatus: order.floristSettlementStatus,
         netMarginCents: grossCents - feeCents - floristCompensationCents,
         financeNotes: order.financeNotes,
-        hasReceipt: order.customerReceipts.length > 0,
+        hasReceipt: Boolean(receipt),
     };
 }

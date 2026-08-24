@@ -102,6 +102,18 @@ export async function PATCH(request: NextRequest) {
                     : body.paymentMethodLabel == null
                       ? null
                       : String(body.paymentMethodLabel),
+            grossCents:
+                body.grossCents === undefined
+                    ? undefined
+                    : body.grossCents === null
+                      ? null
+                      : Number(body.grossCents),
+            gatewayFeeCents:
+                body.gatewayFeeCents === undefined
+                    ? undefined
+                    : body.gatewayFeeCents === null
+                      ? null
+                      : Number(body.gatewayFeeCents),
         });
 
         return NextResponse.json({ ok: true, row });

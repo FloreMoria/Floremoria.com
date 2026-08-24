@@ -12,6 +12,10 @@ import {
     VAT_PCT_FLORAL,
 } from '@/lib/financial/vat';
 import { resolveOrderFloristCompensationCents } from '@/lib/financial/taxRegister';
+import {
+    buildPaypalMonthlyFeeRows,
+    type PaypalMonthlyFeeRow,
+} from '@/lib/financial/paypalMonthlyFees';
 
 export type TaxQuarter = 1 | 2 | 3 | 4;
 
@@ -88,12 +92,14 @@ export type TaxQuarterlyReport = {
         cashGatewayFeesCents: number;
         cashNettoIncassatoCents: number;
         stripeInvoicesTotalCents: number;
+        paypalFeesTotalCents: number;
         floristCompensiCents: number;
         floristPaidCents: number;
         ivaCreditoFlorist10Cents: number;
     };
     corrispettivi: CorrispettivoRow[];
     stripeInvoices: StripeInvoiceRow[];
+    paypalMonthlyFees: PaypalMonthlyFeeRow[];
     floristLiquidazioni: FloristLiquidazioneRow[];
 };
 
@@ -203,6 +209,11 @@ export async function buildTaxQuarterlyReport(
         hasPdf: Boolean(inv.invoicePdfUrl || inv.localPdfPath || inv.hostedInvoiceUrl),
     }));
 
+    const paypalMonthlyFees = await buildPaypalMonthlyFeeRows({
+        from: bounds.start,
+        to: bounds.end,
+    });
+
     const floristLiquidazioni: FloristLiquidazioneRow[] = orders
         .filter((o) => o.partnerId)
         .map((order) => {
@@ -246,6 +257,7 @@ export async function buildTaxQuarterlyReport(
         /** Netto cassa atteso post-fee (binario A). */
         cashNettoIncassatoCents: corrispettivi.reduce((s, r) => s + r.netCents, 0),
         stripeInvoicesTotalCents: stripeInvoices.reduce((s, r) => s + r.totalFeeCents, 0),
+        paypalFeesTotalCents: paypalMonthlyFees.reduce((s, r) => s + r.totalFeeCents, 0),
         floristCompensiCents: floristLiquidazioni.reduce(
             (s, r) => s + r.compensoConcordatoCents,
             0
@@ -260,7 +272,14 @@ export async function buildTaxQuarterlyReport(
         ),
     };
 
-    return { bounds, summary, corrispettivi, stripeInvoices, floristLiquidazioni };
+    return {
+        bounds,
+        summary,
+        corrispettivi,
+        stripeInvoices,
+        paypalMonthlyFees,
+        floristLiquidazioni,
+    };
 }
 
 /** CSV Excel IT: UTF-8 BOM + separatore `;`. */
@@ -288,6 +307,9 @@ export function buildTaxQuarterlyCsv(report: TaxQuarterlyReport): string {
     lines.push(['Commissioni Gateway', euro(report.summary.gatewayFeesCents)].join(sep));
     lines.push(
         ['Fatture Stripe (fee periodo)', euro(report.summary.stripeInvoicesTotalCents)].join(sep)
+    );
+    lines.push(
+        ['Fee PayPal mensili (periodo)', euro(report.summary.paypalFeesTotalCents)].join(sep)
     );
     lines.push(
         ['Compensi Fioristi (concordati)', euro(report.summary.floristCompensiCents)].join(sep)
@@ -356,6 +378,35 @@ export function buildTaxQuarterlyCsv(report: TaxQuarterlyReport): string {
                 euro(inv.vatReverseChargeCents),
                 q(inv.vendorName),
                 q(inv.invoicePdfUrl || (inv.hasPdf ? 'SI' : 'NO')),
+            ].join(sep)
+        );
+    }
+
+    lines.push('');
+    lines.push('=== COMMISSIONI PAYPAL MENSILI (REVERSE CHARGE STIMA) ===');
+    lines.push(
+        [
+            'Periodo',
+            'Numero',
+            'Fine periodo',
+            'N. TX',
+            'Fee totale EUR',
+            'Imponibile EUR',
+            'IVA RC 22% EUR',
+            'Fornitore',
+        ].join(sep)
+    );
+    for (const inv of report.paypalMonthlyFees) {
+        lines.push(
+            [
+                q(inv.periodKey),
+                q(inv.number),
+                q(inv.issuedAt),
+                String(inv.txnCount),
+                euro(inv.totalFeeCents),
+                euro(inv.taxableFeeCents),
+                euro(inv.vatReverseChargeCents),
+                q(inv.vendorName),
             ].join(sep)
         );
     }

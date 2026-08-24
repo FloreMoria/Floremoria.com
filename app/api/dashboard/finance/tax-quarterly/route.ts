@@ -5,6 +5,7 @@ import {
     buildTaxQuarterlyReport,
     type TaxQuarter,
 } from '@/lib/financial/taxQuarterly';
+import { buildPaypalMonthlyFeesCsv } from '@/lib/financial/paypalMonthlyFees';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -18,7 +19,7 @@ function parseQuarter(raw: string | null): TaxQuarter {
 }
 
 /**
- * GET /api/dashboard/finance/tax-quarterly?year=2026&quarter=3&format=json|csv
+ * GET /api/dashboard/finance/tax-quarterly?year=2026&quarter=3&format=json|csv|paypal-fees-csv
  */
 export async function GET(request: NextRequest) {
     const auth = await requireDashboardAdmin();
@@ -35,6 +36,19 @@ export async function GET(request: NextRequest) {
         }
 
         const report = await buildTaxQuarterlyReport(year, quarter);
+
+        if (format === 'paypal-fees-csv') {
+            const csv = buildPaypalMonthlyFeesCsv(report.paypalMonthlyFees);
+            const filename = `FloreMoria_PayPal_Fee_Mensili_Q${quarter}_${year}.csv`;
+            return new NextResponse(csv, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'text/csv; charset=utf-8',
+                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
 
         if (format === 'csv' || format === 'excel' || format === 'xlsx') {
             const csv = buildTaxQuarterlyCsv(report);

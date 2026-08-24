@@ -20,11 +20,13 @@ type Props = {
 };
 
 function euro(cents: number): string {
-    const sign = cents < 0 ? '−' : '';
-    return `${sign}€${(Math.abs(cents) / 100).toLocaleString('it-IT', {
+    const abs = (Math.abs(cents) / 100).toLocaleString('it-IT', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    })}`;
+    });
+    if (cents < 0) return `−€${abs}`;
+    if (cents > 0) return `+€${abs}`;
+    return `€${abs}`;
 }
 
 function gatewayBadgeClass(code: string): string {
@@ -367,22 +369,26 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                                         </div>
                                     </td>
                                     <td
-                                        className={`px-3 py-2.5 text-right font-mono whitespace-nowrap ${
+                                        className={`px-3 py-2.5 text-right font-mono whitespace-nowrap rounded-sm ${
                                             r.grossCents > 0
-                                                ? 'text-emerald-700'
+                                                ? 'bg-emerald-50 text-emerald-800 font-semibold'
                                                 : r.grossCents < 0
-                                                  ? 'text-rose-700'
+                                                  ? 'bg-rose-50 text-rose-800 font-semibold'
                                                   : 'text-slate-600'
                                         }`}
                                     >
                                         {euro(r.grossCents)}
                                     </td>
-                                    <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap text-orange-700">
+                                    <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap bg-rose-50/80 text-rose-800">
                                         {r.feeCents > 0 ? euro(-r.feeCents) : '—'}
                                     </td>
                                     <td
                                         className={`px-3 py-2.5 text-right font-mono font-bold whitespace-nowrap ${
-                                            r.netCents >= 0 ? 'text-slate-900' : 'text-rose-700'
+                                            r.netCents > 0
+                                                ? 'bg-emerald-50 text-emerald-900'
+                                                : r.netCents < 0
+                                                  ? 'bg-rose-50 text-rose-900'
+                                                  : 'text-slate-900'
                                         }`}
                                     >
                                         {euro(r.netCents)}

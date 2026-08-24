@@ -27,7 +27,7 @@ export async function GET() {
             prisma.stripeFinanceMovement.findMany({
                 where: { createdAtStripe: { gte: FROM } },
                 orderBy: { createdAtStripe: 'desc' },
-                take: 400,
+                take: 2500,
             }),
             prisma.financialLedgerEntry.findMany({
                 where: {
@@ -36,7 +36,7 @@ export async function GET() {
                     reversedAt: null,
                 },
                 orderBy: { accountingDate: 'desc' },
-                take: 400,
+                take: 2500,
             }),
             prisma.systemState.findUnique({
                 where: { key: 'finance.gateway.movement_kind_overrides' },

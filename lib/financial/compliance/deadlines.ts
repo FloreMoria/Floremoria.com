@@ -1,7 +1,7 @@
 import { TaxDeadline } from './types';
 
-/** Avvio contabilità operativa FloreMoria (Q2 2026). */
-const OPERATIONAL_START = '2026-04-01';
+/** Avvio scadenziario attivo Contabilità (dopo archivio Q2). */
+const OPERATIONAL_START = '2026-07-01';
 
 /** Parsa YYYY-MM-DD come mezzanotte locale (evita offset UTC che sposta il giorno). */
 function parseLocalDate(isoDate: string): Date {
@@ -16,7 +16,7 @@ function parseLocalDate(isoDate: string): Date {
 
 /**
  * Genera l'elenco degli adempimenti fiscali e societari per FloreMoria S.r.l.
- * Esclude solo pre-Q2 2026. Gli insoluti oltre 90 giorni restano visibili come SCADUTO.
+ * Elenco attivo da 01/07/2026 (mesi precedenti considerati archiviati).
  */
 export function getUpcomingDeadlines(
     completedIds: string[] = [],
@@ -37,7 +37,7 @@ export function getUpcomingDeadlines(
         description: string,
         externalRef?: string
     ) => {
-        // Mai generare adempimenti precedenti all'avvio contabilità operativa
+        // Scarta adempimenti precedenti al 1° luglio 2026 (già archiviati)
         if (dueDateStr < OPERATIONAL_START) return;
 
         const dueDate = parseLocalDate(dueDateStr);

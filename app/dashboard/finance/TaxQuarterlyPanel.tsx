@@ -63,6 +63,18 @@ type StripeInvoiceRow = {
     hasPdf: boolean;
 };
 
+type PaypalFeeRow = {
+    id: string;
+    periodKey: string;
+    number: string;
+    issuedAt: string;
+    totalFeeCents: number;
+    taxableFeeCents: number;
+    vatReverseChargeCents: number;
+    txnCount: number;
+    hasCsv: boolean;
+};
+
 function euro(cents: number): string {
     return new Intl.NumberFormat('it-IT', {
         style: 'currency',
@@ -85,6 +97,7 @@ export default function TaxQuarterlyPanel() {
     const [quadrimester, setQuadrimester] = useState(currentQuadrimester());
     const [report, setReport] = useState<TaxRegisterReport | null>(null);
     const [stripeInvoices, setStripeInvoices] = useState<StripeInvoiceRow[]>([]);
+    const [paypalFees, setPaypalFees] = useState<PaypalFeeRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -117,6 +130,11 @@ export default function TaxQuarterlyPanel() {
                 setStripeInvoices(taxData.report.stripeInvoices);
             } else {
                 setStripeInvoices([]);
+            }
+            if (taxData.ok && taxData.report?.paypalMonthlyFees) {
+                setPaypalFees(taxData.report.paypalMonthlyFees);
+            } else {
+                setPaypalFees([]);
             }
         } catch (err) {
             setMessage(err instanceof Error ? err.message : 'Errore caricamento');
@@ -184,6 +202,9 @@ export default function TaxQuarterlyPanel() {
                     floristSettlementStatus: editRow.settlementStatus,
                     accessoryAmountCents: editRow.accessoryGrossCents,
                     financeNotes: editRow.financeNotes,
+                    paymentMethodLabel: editRow.gatewayLabel.split('·')[0]?.trim() || undefined,
+                    grossCents: editRow.grossCents,
+                    gatewayFeeCents: editRow.gatewayFeeCents,
                 }),
             });
             const data = await res.json();
@@ -407,6 +428,7 @@ export default function TaxQuarterlyPanel() {
                         </div>
                     </section>
 
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <section className="rounded-2xl border border-slate-200 overflow-hidden">
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                             <Landmark size={16} className="text-[#c5a880]" />
@@ -415,14 +437,13 @@ export default function TaxQuarterlyPanel() {
                             </h4>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm min-w-[720px]">
+                            <table className="w-full text-left text-sm min-w-[520px]">
                                 <thead>
                                     <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100">
                                         <th className="px-4 py-2">Periodo</th>
                                         <th className="px-4 py-2">Numero</th>
                                         <th className="px-4 py-2">Emissione</th>
                                         <th className="px-4 py-2 text-right">Fee</th>
-                                        <th className="px-4 py-2 text-right">Imponibile</th>
                                         <th className="px-4 py-2 text-right">IVA RC 22%</th>
                                         <th className="px-4 py-2">PDF</th>
                                     </tr>
@@ -431,7 +452,7 @@ export default function TaxQuarterlyPanel() {
                                     {stripeInvoices.length === 0 ? (
                                         <tr>
                                             <td
-                                                colSpan={7}
+                                                colSpan={6}
                                                 className="px-4 py-8 text-center text-slate-400 italic"
                                             >
                                                 Nessuna fattura Stripe nel periodo. Esegui Sync Stripe.
@@ -447,9 +468,6 @@ export default function TaxQuarterlyPanel() {
                                                 <td className="px-4 py-2">{inv.issuedAt}</td>
                                                 <td className="px-4 py-2 text-right font-mono">
                                                     {euro(inv.totalFeeCents)}
-                                                </td>
-                                                <td className="px-4 py-2 text-right font-mono">
-                                                    {euro(inv.taxableFeeCents)}
                                                 </td>
                                                 <td className="px-4 py-2 text-right font-mono">
                                                     {euro(inv.vatReverseChargeCents)}
@@ -476,6 +494,103 @@ export default function TaxQuarterlyPanel() {
                             </table>
                         </div>
                     </section>
+
+                    <section className="rounded-2xl border border-slate-200 overflow-hidden">
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <Landmark size={16} className="text-sky-600" />
+                                <h4 className="text-sm font-semibold text-slate-800">
+                                    Fatture Mensili PayPal (commissioni)
+                                </h4>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const q =
+                                        mode === 'quarter'
+                                            ? quarter
+                                            : Math.min(4, Math.ceil(quadrimester * 1.34));
+                                    window.open(
+                                        `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${q}&format=paypal-fees-csv`,
+                                        '_blank'
+                                    );
+                                }}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 hover:underline"
+                            >
+                                <Download size={12} />
+                                Scarica CSV
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm min-w-[520px]">
+                                <thead>
+                                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100">
+                                        <th className="px-4 py-2">Periodo</th>
+                                        <th className="px-4 py-2">Numero</th>
+                                        <th className="px-4 py-2">Fine</th>
+                                        <th className="px-4 py-2 text-right">N. TX</th>
+                                        <th className="px-4 py-2 text-right">Fee</th>
+                                        <th className="px-4 py-2 text-right">IVA RC 22%</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {paypalFees.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colSpan={6}
+                                                className="px-4 py-8 text-center text-slate-400 italic"
+                                            >
+                                                Nessuna commissione PayPal aggregata nel periodo.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        <>
+                                            {paypalFees.map((inv) => (
+                                                <tr key={inv.id} className="hover:bg-slate-50/60">
+                                                    <td className="px-4 py-2 font-mono text-xs">
+                                                        {inv.periodKey}
+                                                    </td>
+                                                    <td className="px-4 py-2">{inv.number}</td>
+                                                    <td className="px-4 py-2">{inv.issuedAt}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">
+                                                        {inv.txnCount}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-right font-mono text-rose-700">
+                                                        {euro(inv.totalFeeCents)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-right font-mono">
+                                                        {euro(inv.vatReverseChargeCents)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-slate-50 font-semibold">
+                                                <td className="px-4 py-2" colSpan={4}>
+                                                    Totale fee PayPal periodo
+                                                </td>
+                                                <td className="px-4 py-2 text-right font-mono text-rose-800">
+                                                    {euro(
+                                                        paypalFees.reduce(
+                                                            (s, r) => s + r.totalFeeCents,
+                                                            0
+                                                        )
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2 text-right font-mono">
+                                                    {euro(
+                                                        paypalFees.reduce(
+                                                            (s, r) => s + r.vatReverseChargeCents,
+                                                            0
+                                                        )
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        </>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    </div>
                 </>
             ) : null}
 
@@ -484,7 +599,46 @@ export default function TaxQuarterlyPanel() {
                     <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 p-5 space-y-4">
                         <h4 className="text-base font-semibold text-slate-900">
                             Modifica riga — {editRow.orderNumber}
+                            {editRow.hasReceipt ? (
+                                <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
+                                    Allineata a ricevuta
+                                </span>
+                            ) : null}
                         </h4>
+                        <label className="block text-xs font-semibold text-slate-600">
+                            Lordo incassato (€)
+                            <input
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                value={(editRow.grossCents / 100).toFixed(2)}
+                                onChange={(e) =>
+                                    setEditRow({
+                                        ...editRow,
+                                        grossCents: Math.round(Number(e.target.value || 0) * 100),
+                                    })
+                                }
+                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                            />
+                        </label>
+                        <label className="block text-xs font-semibold text-slate-600">
+                            Fee gateway (€)
+                            <input
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                value={(editRow.gatewayFeeCents / 100).toFixed(2)}
+                                onChange={(e) =>
+                                    setEditRow({
+                                        ...editRow,
+                                        gatewayFeeCents: Math.round(
+                                            Number(e.target.value || 0) * 100
+                                        ),
+                                    })
+                                }
+                                className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                            />
+                        </label>
                         <label className="block text-xs font-semibold text-slate-600">
                             Compenso fiorista (€)
                             <input

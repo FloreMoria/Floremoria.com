@@ -182,7 +182,15 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
     if (!stripeId) return null;
 
     const rawId = rawStripeId(stripeId, meta);
+    // Evita doppio payout: la riga `txn_*` type=payout è speculare rispetto a `po_*`
     if (type === 'payout' && rawId.startsWith('txn_')) return null;
+    // Hold/release minimo saldo: rumore operativo, non movimento commerciale
+    if (
+        type === 'payout_minimum_balance_hold' ||
+        type === 'payout_minimum_balance_release'
+    ) {
+        return null;
+    }
 
     const amountCents = Number(m.amountCents || 0);
     const feeCents = Math.abs(Number(m.feeCents || 0));
@@ -218,6 +226,20 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
     const description =
         str(m.description) || (orderRef ? `Ordine ${orderRef}` : null) || label;
 
+    // Chiave canonica: charge/po/txn preferendo sourceId/payoutId
+    const sourceId = str(m.sourceId);
+    const payoutIdRaw = str(m.payoutId)?.replace(/^stripe_tx_/, '') || null;
+    let transactionId = rawId || stripeId;
+    if (kind === 'payout') {
+        const po =
+            (sourceId && sourceId.startsWith('po_') ? sourceId : null) ||
+            (payoutIdRaw && payoutIdRaw.startsWith('po_') ? payoutIdRaw : null) ||
+            (rawId.startsWith('po_') ? rawId : null);
+        if (po) transactionId = po;
+    } else if (sourceId && (sourceId.startsWith('ch_') || sourceId.startsWith('py_'))) {
+        transactionId = sourceId;
+    }
+
     const statusRaw = str(m.status);
     const statusLabel =
         !statusRaw ||
@@ -238,15 +260,15 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
         description,
         customerName,
         customerEmail,
-        reference: orderRef || str(m.sourceId) || null,
-        transactionId: rawId || stripeId,
+        reference: orderRef || sourceId || null,
+        transactionId,
         grossCents: amountCents,
         feeCents,
         netCents,
         currency: (m.currency || 'eur').toUpperCase(),
         statusLabel,
         sourceLabel: 'API Stripe',
-        dedupeKey: `stripe:${accountCode}:${rawId || stripeId}:${kind}`,
+        dedupeKey: `stripe:${accountCode}:${transactionId}:${kind}`,
     };
 }
 
@@ -384,42 +406,111 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
         if (r.description) s += 2;
         if (r.customerName || r.customerEmail) s += 3;
         if (r.reference) s += 2;
-        if (r.feeCents > 0) s += 1;
+        if (r.feeCents > 0) s += 4;
         if (r.accountLabel) s += 1;
         if (r.movementLabel) s += 1;
         if (r.sourceLabel === 'Webhook PayPal' || r.sourceLabel === 'CSV Import') s += 1;
-        if (r.sourceLabel === 'API Stripe' || r.sourceLabel === 'API PayPal') s += 1;
+        if (r.sourceLabel === 'API Stripe' || r.sourceLabel === 'API PayPal') s += 2;
+        if (r.movementKind === 'incasso') s += 2;
         return s;
     };
 
-    /** Normalizza ID reale (charge / pi / txn / PayPal) per collassare sync multipli. */
-    const normalizeTxId = (id: string, gateway: GatewayKind): string => {
-        if (gateway === 'paypal') return normalizePaypalTransactionId(id);
-        return id
-            .trim()
-            .toLowerCase()
-            .replace(/^stripe_(eu_)?(tx_)?/, '');
+    /**
+     * Chiave canonica: charge_id / txn_id / po_ / PayPal txn — senza movementKind,
+     * così Webhook + Sync API + CSV collassano sullo stesso ID.
+     */
+    const normalizeTxId = (row: GatewaySyncRow): string => {
+        let id = (row.transactionId || row.id || '').trim();
+        if (!id) return '';
+        if (row.gateway === 'paypal') return normalizePaypalTransactionId(id);
+
+        id = id
+            .replace(/^stripe_eu_tx_/i, '')
+            .replace(/^stripe_tx_/i, '')
+            .replace(/^stripe_eu_/i, '')
+            .replace(/^stripe_/i, '');
+
+        // Payout: preferisci po_… se presente nell'ID o nel riferimento
+        const poFromRef = (row.reference || '').match(/po_[A-Za-z0-9]+/);
+        if (row.movementKind === 'payout' || id.startsWith('po_')) {
+            const po = id.match(/po_[A-Za-z0-9]+/) || poFromRef;
+            if (po) return po[0].toLowerCase();
+        }
+        const ch = id.match(/ch_[A-Za-z0-9]+/);
+        if (ch) return ch[0].toLowerCase();
+        const pi = id.match(/pi_[A-Za-z0-9]+/);
+        if (pi) return pi[0].toLowerCase();
+        const txn = id.match(/txn_[A-Za-z0-9]+/);
+        if (txn) return txn[0].toLowerCase();
+        return id.toLowerCase();
     };
 
-    // 1) Dedup per chiave tipizzata (gateway + ID + tipo movimento)
+    // 1) Dedup tipizzato (stessa dedupeKey)
     const byTypedKey = new Map<string, GatewaySyncRow>();
     for (const row of rows) {
         const prev = byTypedKey.get(row.dedupeKey);
         if (!prev || score(row) > score(prev)) byTypedKey.set(row.dedupeKey, row);
     }
 
-    // 2) Dedup tassativo su ID transazione reale (stesso gateway + stesso ID)
+    // 2) Dedup tassativo su ID transazione gateway (txn/charge/po) — una riga per ID
     const byTxId = new Map<string, GatewaySyncRow>();
     for (const row of byTypedKey.values()) {
-        const tx = normalizeTxId(row.transactionId || row.id, row.gateway);
+        const tx = normalizeTxId(row);
         if (!tx) {
             byTxId.set(`fallback:${row.id}`, ensureGatewayBadges(row));
             continue;
         }
-        const key = `${row.gateway}:${tx}:${row.movementKind}`;
+        // Commissioni separate solo se ID distinto; altrimenti merge fee sulla riga padre
+        const key =
+            row.movementKind === 'commissione'
+                ? `${row.gateway}:fee:${tx}`
+                : `${row.gateway}:${tx}`;
         const prev = byTxId.get(key);
         const enriched = ensureGatewayBadges(row);
-        if (!prev || score(enriched) > score(prev)) byTxId.set(key, enriched);
+        if (!prev) {
+            byTxId.set(key, enriched);
+            continue;
+        }
+        // Merge: tieni il migliore e somma fee se mancanti
+        const winner = score(enriched) >= score(prev) ? enriched : prev;
+        const loser = winner === enriched ? prev : enriched;
+        byTxId.set(key, {
+            ...winner,
+            feeCents: Math.max(winner.feeCents || 0, loser.feeCents || 0),
+            netCents:
+                winner.netCents ||
+                winner.grossCents -
+                    (winner.grossCents >= 0
+                        ? Math.max(winner.feeCents || 0, loser.feeCents || 0)
+                        : -Math.max(winner.feeCents || 0, loser.feeCents || 0)),
+            customerName: winner.customerName || loser.customerName,
+            customerEmail: winner.customerEmail || loser.customerEmail,
+            reference: winner.reference || loser.reference,
+            description:
+                (winner.description?.length || 0) >= (loser.description?.length || 0)
+                    ? winner.description
+                    : loser.description,
+        });
+    }
+
+    // 3) Abbina fee separate (gateway:fee:TX) alla riga TX padre
+    const feeKeys = [...byTxId.keys()].filter((k) => k.includes(':fee:'));
+    for (const feeKey of feeKeys) {
+        const feeRow = byTxId.get(feeKey);
+        if (!feeRow) continue;
+        const parentKey = feeKey.replace(':fee:', ':');
+        const parent = byTxId.get(parentKey);
+        if (parent) {
+            const feeCents = Math.max(parent.feeCents || 0, Math.abs(feeRow.feeCents || feeRow.grossCents || 0));
+            byTxId.set(parentKey, {
+                ...parent,
+                feeCents,
+                netCents:
+                    parent.grossCents -
+                    (parent.grossCents >= 0 ? feeCents : -feeCents),
+            });
+            byTxId.delete(feeKey);
+        }
     }
 
     const payoutSeen = new Set<string>();
@@ -429,7 +520,7 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
     )) {
         if (r.gateway === 'stripe' && r.movementKind === 'payout') {
             const day = r.occurredAt.slice(0, 10);
-            const pk = `${r.accountCode}:${day}:${r.grossCents}`;
+            const pk = `${r.accountCode}:${day}:${Math.abs(r.grossCents)}`;
             if (payoutSeen.has(pk)) continue;
             payoutSeen.add(pk);
         }
@@ -489,9 +580,27 @@ export function buildGatewaySyncRows(input: {
         const row = mapPaypalTxToRow(t);
         if (row) rows.push(row);
     }
+
+    // Fee PayPal (PAYPAL_FEE:txn) → mappa per merge sulle TX
+    const paypalFeeByTx = new Map<string, number>();
+    for (const e of input.paypalLedgerEntries || []) {
+        const parsed = parsePaypalSourceKey(e.sourceKey || '');
+        if (parsed?.kind === 'FEE' && parsed.transactionId) {
+            const prev = paypalFeeByTx.get(parsed.transactionId) || 0;
+            paypalFeeByTx.set(parsed.transactionId, Math.max(prev, Math.abs(e.totalCents || 0)));
+        }
+    }
+
     for (const e of input.paypalLedgerEntries || []) {
         const row = mapPaypalLedgerToRow(e);
-        if (row) rows.push(row);
+        if (!row) continue;
+        const fee = paypalFeeByTx.get(normalizePaypalTransactionId(row.transactionId));
+        if (fee && fee > (row.feeCents || 0)) {
+            row.feeCents = fee;
+            row.netCents =
+                row.grossCents - (row.grossCents >= 0 ? fee : -fee);
+        }
+        rows.push(row);
     }
     return dedupeGatewayRows(rows);
 }

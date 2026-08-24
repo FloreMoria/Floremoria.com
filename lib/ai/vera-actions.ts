@@ -538,34 +538,22 @@ export function buildVeraRegistrationConfirmations(
     const who = opts.firstName?.trim() ? opts.firstName.trim() : null;
 
     if (extracted.cardText) {
-        hints.push(
-            opts.floristNotified
-                ? `Ho registrato con cura il testo del Suo biglietto e l'ho già trasmesso al nostro fiorista di zona.`
-                : `Ho registrato con cura il testo del Suo biglietto sull'ordine.`
-        );
+        hints.push(`Ho registrato con cura il testo del Suo biglietto.`);
     }
     if (extracted.gravePosition) {
-        hints.push(
-            opts.floristNotified
-                ? `Ho aggiornato le indicazioni sulla posizione della tomba e le ho condivise con il fiorista incaricato.`
-                : `Ho registrato le indicazioni sulla posizione della tomba.`
-        );
+        hints.push(`Ho registrato le indicazioni sulla posizione.`);
     }
     if (extracted.deliveryPreference || extracted.productDetail || extracted.notes) {
-        hints.push(
-            opts.floristNotified
-                ? `Ho annotato le Sue preferenze operative e le ho inoltrate al fiorista di zona.`
-                : `Ho annotato le Sue preferenze operative sull'ordine.`
-        );
+        hints.push(`Ho annotato le Sue preferenze per la consegna.`);
     }
     if (extracted.internalNotes || opts.confidentialOnly) {
         hints.push(
-            `Ho preso in carico la richiesta riservata e l'ho inoltrata al nostro Staff: non viene condivisa con il fiorista.`
+            `Ho preso in carico la Sua richiesta speciale e l'ho affidata direttamente al nostro Staff, che se ne prenderà cura con la massima attenzione.`
         );
     }
     if (opts.alertCreated) {
         hints.push(
-            `La Sua segnalazione è prioritaria: il nostro Staff La ricontatterà qui non appena verificata, senza anticipare conferme.`
+            `La Sua segnalazione è prioritaria: il nostro Staff La ricontatterà qui non appena verificata.`
         );
     }
 

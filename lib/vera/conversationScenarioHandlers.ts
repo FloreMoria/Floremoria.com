@@ -264,7 +264,7 @@ export function buildWebsiteFormIssueReply(session: ChatSession): string {
     const name = displayFirstName(session);
     return (
         `Non si preoccupi, ${name}. Può scrivermi qui in chat l'indirizzo esatto e i dettagli della consegna ` +
-        `(cimitero, tomba, data e orario): penserò io a inoltrare tutto al fiorista partner.`
+        `(cimitero, tomba, data e orario): ce ne prenderemo cura noi direttamente.`
     );
 }
 

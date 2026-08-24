@@ -89,7 +89,7 @@ function formatItDate(iso: string | null): string {
 }
 
 const SCROLL_TABLE =
-    'overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
+    'min-h-[450px] max-h-[600px] overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
 
 export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -301,7 +301,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-indigo-100 rounded-3xl p-5 shadow-sm h-[520px] flex flex-col gap-3 overflow-hidden">
+        <div className="bg-white border border-indigo-100 rounded-3xl p-5 shadow-sm min-h-[720px] flex flex-col gap-3 overflow-hidden">
             <div className="flex items-start gap-3 shrink-0">
                 <div className="mt-0.5 rounded-2xl bg-indigo-50 p-2.5 text-indigo-700">
                     <Globe2 size={20} />

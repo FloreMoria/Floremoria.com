@@ -165,9 +165,81 @@ export function excludeJsonRevenuesCoveredByFiscalAuthority<T extends FiscalDedu
     });
 }
 
+/**
+ * Chiave naturale per dedup UI/listati: sourceKey stabile, altrimenti
+ * ordine / payout / documento + categoria + importo assoluto.
+ */
+export function naturalFiscalKey(r: FiscalDedupableEntry): string {
+    const sk = (r.sourceKey || '').trim().toUpperCase();
+    if (sk) return `SK:${sk}`;
+
+    const meta = asMeta(r.metadataJson);
+    const payout =
+        (typeof meta.payoutId === 'string' && meta.payoutId) ||
+        (typeof meta.stripePayoutId === 'string' && meta.stripePayoutId) ||
+        '';
+    if (payout) return `PAYOUT:${payout.toUpperCase()}|${Math.abs(r.totalCents)}`;
+
+    const doc = (r.documentRef || '').trim().toUpperCase();
+    if (doc) {
+        return `DOC:${doc}|${(r.category || '').toUpperCase()}|${Math.abs(r.totalCents)}`;
+    }
+
+    const orderRef = (r.orderId || (r.sourceType === 'ORDER' ? r.sourceId : '') || '')
+        .toString()
+        .trim();
+    if (orderRef) {
+        return `ORD:${orderRef}|${(r.category || '').toUpperCase()}|${r.direction || ''}|${Math.abs(r.totalCents)}`;
+    }
+
+    const sid = (r.sourceId || '').trim().toUpperCase();
+    if (sid) return `SRC:${r.sourceType.toUpperCase()}:${sid}`;
+
+    return `ID:${r.id || ''}|${calendarDayKey(r.accountingDate)}|${Math.abs(r.totalCents)}`;
+}
+
+function authorityRank(r: FiscalDedupableEntry): number {
+    if (FISCAL_AUTHORITY_SOURCE_TYPES.has(r.sourceType)) return 100;
+    if (r.sourceType === 'BANK_LINE') return 100;
+    if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 90;
+    if (r.sourceType === 'FLORIST_PAYOUT' || r.sourceType === 'MANUAL_EXPENSE') return 70;
+    if (r.sourceType === 'ORDER') return 40;
+    if (r.sourceType === 'JSON_ENTRY') return 20;
+    return 50;
+}
+
+/**
+ * Collassa duplicati con la stessa chiave naturale (stesso ordine, payout o documento).
+ * Mantiene la scrittura con autorità fiscale più alta.
+ */
+export function dedupeByNaturalFiscalKey<T extends FiscalDedupableEntry>(rows: T[]): T[] {
+    const best = new Map<string, T>();
+    for (const r of rows) {
+        const key = naturalFiscalKey(r);
+        const prev = best.get(key);
+        if (!prev) {
+            best.set(key, r);
+            continue;
+        }
+        const rankNew = authorityRank(r);
+        const rankPrev = authorityRank(prev);
+        if (rankNew > rankPrev) {
+            best.set(key, r);
+            continue;
+        }
+        if (rankNew === rankPrev) {
+            // Stessa autorità: preferisci id lessicografico stabile (determinismo)
+            const idNew = r.id || '';
+            const idPrev = prev.id || '';
+            if (idNew && idPrev && idNew < idPrev) best.set(key, r);
+        }
+    }
+    return Array.from(best.values());
+}
+
 /** Pipeline unica per listati Prima Nota e aggregati PnL. */
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
-    return excludeJsonRevenuesCoveredByFiscalAuthority(
-        excludeOrdersCoveredByFiscalAuthority(rows)
+    return dedupeByNaturalFiscalKey(
+        excludeJsonRevenuesCoveredByFiscalAuthority(excludeOrdersCoveredByFiscalAuthority(rows))
     );
 }

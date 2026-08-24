@@ -21,7 +21,7 @@ export type FloristMissingInvoiceRow = {
     documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
-    /** manual = Associa ordine; auto = matching incrociato; null = non associato */
+    /** manual = bind Contabilità; auto = anagrafica/città/scoring; null = non associato */
     orderMatchSource: 'manual' | 'auto' | null;
     description: string;
     severity: 'warning' | 'critical';
@@ -176,16 +176,19 @@ function hasMatchingInvoice(
 }
 
 /**
- * Elenco bonifici fiorista senza fattura entro 15gg dal pagamento.
+ * Elenco bonifici fiorista senza fattura — orizzonte fiscale intero anno corrente
+ * (dal 01/01 fino a oggi), senza lookback mobile.
  */
 export async function listFloristMissingInvoices(): Promise<FloristMissingInvoiceRow[]> {
     const now = new Date();
-    const lookback = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
-    const invoiceLookback = new Date(lookback.getTime() - 20 * 24 * 60 * 60 * 1000);
+    const year = now.getFullYear();
+    // Orizzonte fisso: tutto l'anno fiscale in corso (es. 01/01/2026 → oggi).
+    const lookback = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
+    const invoiceLookback = lookback;
     const rows: FloristMissingInvoiceRow[] = [];
     const seen = new Set<string>();
 
-    const [partners, invoiceRows, candidateOrders] = await Promise.all([
+    const [partners, invoiceRows, candidateOrders, primaryFloristByDeceased] = await Promise.all([
         prisma.partner.findMany({
             where: { deletedAt: null, isActive: true },
             select: {
@@ -196,6 +199,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                 taxCode: true,
                 email: true,
                 whatsappNumber: true,
+                coverageArea: true,
             },
             take: 500,
         }),
@@ -210,13 +214,13 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                 expenseDate: true,
                 metadataJson: true,
             },
-            take: 2000,
+            take: 5000,
         }),
         prisma.order.findMany({
             where: {
                 isTest: false,
                 deletedAt: null,
-                createdAt: { gte: new Date(lookback.getTime() - 60 * 24 * 60 * 60 * 1000) },
+                createdAt: { gte: lookback },
             },
             select: {
                 id: true,
@@ -234,8 +238,19 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                     select: { shopName: true, ownerName: true },
                 },
             },
-            take: 1500,
+            take: 5000,
             orderBy: { updatedAt: 'desc' },
+        }),
+        prisma.partnerDeceasedAssignment.findMany({
+            where: { isPrimary: true, partner: { deletedAt: null } },
+            select: {
+                partnerId: true,
+                deceasedProfile: {
+                    select: { fullName: true, cemeteryCity: true, cemeteryName: true },
+                },
+                partner: { select: { id: true, shopName: true, ownerName: true } },
+            },
+            take: 2000,
         }),
     ]);
 
@@ -254,6 +269,35 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         partnerShopName: o.partner?.shopName || null,
         partnerOwnerName: o.partner?.ownerName || null,
     }));
+
+    /** Fiorista di riferimento per defunto/cimitero (anagrafica primaria). */
+    const anagraficaFloristByNorm = new Map<
+        string,
+        { partnerId: string; shopName: string; ownerName: string | null }
+    >();
+    for (const link of primaryFloristByDeceased) {
+        const d = link.deceasedProfile;
+        if (!d) continue;
+        const key = `${normalizeName(d.fullName)}|${normalizeName(d.cemeteryCity)}`;
+        anagraficaFloristByNorm.set(key, {
+            partnerId: link.partnerId,
+            shopName: link.partner.shopName,
+            ownerName: link.partner.ownerName,
+        });
+    }
+
+    /** Partner di copertura per comune cimitero (match automatico di zona). */
+    function partnerByCoverageCity(city: string): (typeof partners)[number] | null {
+        const cityNorm = normalizeName(city);
+        if (!cityNorm) return null;
+        return (
+            partners.find((p) => {
+                const cov = normalizeName(p.coverageArea || '');
+                if (!cov) return false;
+                return cityNorm.includes(cov) || cov.includes(cityNorm.split(' ')[0] || '');
+            }) || null
+        );
+    }
 
     const invoices: InvoiceCandidate[] = invoiceRows.map((inv) => {
         const meta = inv.metadataJson as { vendorVat?: string | null } | null;
@@ -275,18 +319,18 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             ],
         },
         orderBy: { accountingDate: 'desc' },
-        take: 400,
+        take: 3000,
     });
 
     for (const line of bankLines) {
         const payDate = line.accountingDate || line.valueDate;
         if (!payDate || payDate < lookback) continue;
 
-        const partner =
+        let partner =
             partners.find(
                 (p) =>
                     namesCompatible(p.shopName, line.description) ||
-                    namesCompatible(p.ownerName, line.description)
+                    namesCompatible(p.ownerName || '', line.description)
             ) || null;
 
         const floristType =
@@ -295,8 +339,8 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             line.matchType === 'FLORIST_ADVANCE';
         if (!partner && !floristType) continue;
 
-        const partnerName = partner?.shopName || partner?.ownerName || 'Fiorista (da causale)';
-        const partnerVat = partner?.vatNumber || partner?.taxCode || null;
+        let partnerName = partner?.shopName || partner?.ownerName || 'Fiorista (da causale)';
+        let partnerVat = partner?.vatNumber || partner?.taxCode || null;
         const amountCents = Math.abs(line.amountCents);
         const days = daysBetween(payDate, now);
         if (days < 1) continue;
@@ -318,18 +362,57 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
 
         let orderId = line.matchedOrderId;
         let orderNumber: string | null = null;
-        let orderMatchSource: 'manual' | 'auto' | null = orderId ? 'manual' : null;
+        const notes = (line.matchNotes || '').toLowerCase();
+        const isManualBind = notes.includes('associato da contabilità');
+        let orderMatchSource: 'manual' | 'auto' | null = orderId
+            ? isManualBind
+                ? 'manual'
+                : 'auto'
+            : null;
 
-        if (!orderId) {
+        if (orderId) {
+            const linked = orderPool.find((o) => o.id === orderId);
+            if (linked) {
+                orderNumber = linked.orderNumber;
+                // Preferisci fiorista dell'ordine (anagrafica) sul solo match da causale
+                if (linked.partnerId) {
+                    const orderPartner = partners.find((p) => p.id === linked.partnerId);
+                    if (orderPartner) {
+                        partner = orderPartner;
+                        partnerName = orderPartner.shopName || orderPartner.ownerName || partnerName;
+                        partnerVat = orderPartner.vatNumber || orderPartner.taxCode || partnerVat;
+                    }
+                }
+            }
+        } else {
+            // 1) Match automatico da anagrafica defunto/cimitero citati in causale
             let best: { order: OrderMatchCandidate; score: number } | null = null;
             for (const o of orderPool) {
-                const score = scoreOrderAgainstBankLine(o, {
+                const anagKey = `${normalizeName(o.deceasedName)}|${normalizeName(o.cemeteryCity)}`;
+                const anag = anagraficaFloristByNorm.get(anagKey);
+                let score = scoreOrderAgainstBankLine(o, {
                     description: line.description,
                     amountCents,
                     paymentDate: payDate,
-                    partnerId: partner?.id || null,
-                    partnerName,
+                    partnerId: partner?.id || anag?.partnerId || null,
+                    partnerName: partnerName || anag?.shopName || '',
                 });
+                // Boost: fiorista di riferimento su defunto/cimitero → match sempre automatico
+                if (anag && (!partner || partner.id === anag.partnerId)) {
+                    if (
+                        textContainsName(line.description, o.deceasedName) ||
+                        textContainsName(line.description, o.cemeteryCity) ||
+                        textContainsName(line.description, o.cemeteryName) ||
+                        (anag.shopName && textContainsName(line.description, anag.shopName)) ||
+                        (anag.ownerName && textContainsName(line.description, anag.ownerName))
+                    ) {
+                        score += 55;
+                    }
+                }
+                const coveragePartner = partnerByCoverageCity(o.cemeteryCity);
+                if (coveragePartner && partner && coveragePartner.id === partner.id) {
+                    score += 25;
+                }
                 if (score < 45) continue;
                 if (!best || score > best.score) best = { order: o, score };
             }
@@ -337,6 +420,14 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                 orderId = best.order.id;
                 orderNumber = best.order.orderNumber;
                 orderMatchSource = 'auto';
+                if (best.order.partnerId) {
+                    const orderPartner = partners.find((p) => p.id === best!.order.partnerId);
+                    if (orderPartner) {
+                        partner = orderPartner;
+                        partnerName = orderPartner.shopName || orderPartner.ownerName || partnerName;
+                        partnerVat = orderPartner.vatNumber || orderPartner.taxCode || partnerVat;
+                    }
+                }
             }
         }
 

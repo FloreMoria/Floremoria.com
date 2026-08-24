@@ -165,7 +165,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         try {
             const year = new Date().getFullYear();
             const res = await fetch(
-                `/api/dashboard/finance/historical-ledger?year=${year}&take=500&direction=ALL&category=ALL`
+                `/api/dashboard/finance/historical-ledger?year=${year}&take=5000&direction=ALL&category=ALL`
             );
             const parsed = await readJsonResponse<{
                 ok?: boolean;
@@ -351,9 +351,9 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     {error}
                 </div>
             )}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[720px] overflow-y-auto [scrollbar-width:thin]">
                 <table className="w-full text-left border-collapse min-w-[1100px]">
-                    <thead>
+                    <thead className="sticky top-0 z-10">
                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             <th className="px-5 py-3">Data</th>
                             <th className="px-5 py-3">Numero / ID</th>

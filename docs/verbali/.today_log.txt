@@ -8,3 +8,4 @@
 [2026-08-24 17:47] feat/ui: FASE 3 Contabilità — 5 tab, fascia quadratura, BankStatementsPanel variant tab1.
 [2026-08-24 17:48] feat(finance): Fase 3 — UI 5 tab (Banca/Prima Nota/Passivo/Gateway/Fisco), fascia quadratura server-side, IBAN compatto, storico documenti preservato; tsc+build OK.
 [2026-08-24 17:48] feat(finance): Fase 3 — UI 5 tab (Banca/Prima Nota/Passivo/Gateway/Fisco), fascia quadratura server-side, IBAN compatto, storico documenti preservato; tsc+build OK.
+[2026-08-24 18:55] fix(finance): Parte 1 rifiniture — header societario Fineco, dedup Prima Nota max-h 20 righe, storico autofatture 450–600px, FT-ME-26-001→Torre, match automatico anagrafica/città, fatture in attesa da 01/01/2026.

@@ -38,7 +38,7 @@ import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFisca
 import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
 import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
 import { formatFinanceDate, formatFinanceDateTime } from '@/lib/financial/formatFinanceDate';
-import { FLOREMORIA_FINECO_BANK } from '@/lib/financial/companyBankDetails';
+import { FLOREMORIA_FINECO_BANK, FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
 type FinanceTab = 'bank' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
@@ -61,6 +61,7 @@ export default function FinanceDashboardPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [quadratura, setQuadratura] = useState<FinanceQuadratura | null>(null);
     const [ibanCopied, setIbanCopied] = useState(false);
+    const [bicCopied, setBicCopied] = useState(false);
     const [exportingLedger, setExportingLedger] = useState(false);
 
     // Gateways live status
@@ -301,6 +302,17 @@ export default function FinanceDashboardPage() {
         }
     };
 
+    const copyFinecoBic = async () => {
+        try {
+            await navigator.clipboard.writeText(FLOREMORIA_FINECO_BANK.bicSwift);
+            setBicCopied(true);
+            window.setTimeout(() => setBicCopied(false), 2000);
+        } catch (err) {
+            console.error('Copia BIC fallita:', err);
+            alert('Impossibile copiare il BIC/SWIFT');
+        }
+    };
+
     // Export Neon historical ledger (Prima Nota)
     const handleExportHistoricalCSV = async () => {
         setExportingLedger(true);
@@ -450,23 +462,65 @@ export default function FinanceDashboardPage() {
                 </div>
             </div>
 
-            {/* Riga banca Fineco compatta */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm min-w-0 flex-1">
-                    <span className="font-semibold text-slate-900">
-                        {FLOREMORIA_FINECO_BANK.institute}
-                    </span>
-                    <span className="font-mono text-slate-700 tracking-wide">
-                        {FLOREMORIA_FINECO_BANK.ibanDisplay}
-                    </span>
-                    <span className="text-xs text-slate-500 font-mono">
-                        BIC {FLOREMORIA_FINECO_BANK.bicSepa}
-                    </span>
+            {/* Riquadro Fineco + dati societari */}
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Fineco e IBAN · Dati societari
+                        </p>
+                        <h3 className="text-base font-display font-bold text-slate-900">
+                            {FLOREMORIA_LEGAL_ENTITY.legalName}
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                            Sede legale: {FLOREMORIA_LEGAL_ENTITY.registeredOffice}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber} · REA{' '}
+                            {FLOREMORIA_LEGAL_ENTITY.reaNumber} · Capitale sociale{' '}
+                            {FLOREMORIA_LEGAL_ENTITY.shareCapital}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            Codice SDI:{' '}
+                            <span className="font-mono font-semibold text-slate-800">
+                                {FLOREMORIA_LEGAL_ENTITY.sdiCode}
+                            </span>
+                        </p>
+                    </div>
+                    <div className="shrink-0 font-mono text-sm space-y-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 min-w-[260px]">
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                Istituto
+                            </span>
+                            <div className="font-semibold text-slate-900 font-sans">
+                                {FLOREMORIA_FINECO_BANK.institute}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                IBAN
+                            </span>
+                            <div className="font-semibold text-slate-900 tracking-wide">
+                                {FLOREMORIA_FINECO_BANK.ibanDisplay}
+                            </div>
+                        </div>
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                BIC / SWIFT
+                            </span>
+                            <div className="text-slate-800">
+                                {FLOREMORIA_FINECO_BANK.bicSepa}{' '}
+                                <span className="text-slate-400">(SEPA)</span> ·{' '}
+                                {FLOREMORIA_FINECO_BANK.bicSwift}{' '}
+                                <span className="text-slate-400">(SWIFT)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                     {editingBalance ? (
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-500">Saldo</span>
+                            <span className="text-xs text-slate-500">Saldo Fineco</span>
                             <input
                                 autoFocus
                                 value={balanceDraft}
@@ -507,7 +561,15 @@ export default function FinanceDashboardPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
                     >
                         <Copy size={13} />
-                        {ibanCopied ? 'Copiato!' : 'Copia IBAN'}
+                        {ibanCopied ? 'IBAN copiato!' : 'Copia IBAN'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void copyFinecoBic()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                        <Copy size={13} />
+                        {bicCopied ? 'BIC copiato!' : 'Copia BIC/SWIFT'}
                     </button>
                 </div>
             </div>

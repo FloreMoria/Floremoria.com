@@ -296,14 +296,14 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                                     {orderRef}
                                                 </p>
                                                 {row.orderMatchSource === 'auto' && (
-                                                    <p className="text-[10px] text-teal-700 font-medium mt-0.5">
+                                                    <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-teal-50 border border-teal-200 text-teal-800">
                                                         Match automatico
-                                                    </p>
+                                                    </span>
                                                 )}
                                                 {row.orderMatchSource === 'manual' && (
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                                    <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100 border border-slate-200 text-slate-600">
                                                         Associato
-                                                    </p>
+                                                    </span>
                                                 )}
                                             </div>
                                         ) : (

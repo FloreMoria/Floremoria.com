@@ -17,8 +17,18 @@ const SKIP_EVENT_CODES = new Set([
     'T1201',
 ]);
 
-const SAAS_MERCHANT_RE =
-    /GOOGLE\s*\*?GOOGLE\s*ONE|GOOGLE\s*\*?\s*YOUTUBE|GOOGLE\s*\*?\s*CLOUD|GOOGLE\s*\*?\s*WORKSPACE|OPENAI|ANTHROPIC|CURSOR|VERCEL|GITHUB|MICROSOFT|META\s*ADS|FACEBOOK|AWS|AMAZON\s*WEB|DROPBOX|SLACK|NOTION|ADOBE|ZOOM/i;
+/**
+ * Merchant SaaS / tool / abbonamenti: uscite = SPESE_SAAS; crediti = RIMBORSI (mai 60100).
+ */
+export const SAAS_MERCHANT_RE =
+    /GOOGLE|OPENAI|CHATGPT|ANTHROPIC|CLAUDE\.?\s*AI|CURSOR|VERCEL|GITHUB|MICROSOFT|META\s*ADS|FACEBOOK|AWS|AMAZON\s*WEB|DROPBOX|SLACK|NOTION|ADOBE|ZOOM|SUPABASE|TWILIO|FUTURIA|HEROKU|DIGITALOCEAN|CLOUDFLARE|LINEAR\.APP|FIGMA|CANVA|NOTION|JETBRAINS|APPLE\.COM\/BILL|GOOGLE\s*PAYMENT/i;
+
+/** Movimenti interni PayPal (netto/esborso) — non sono lordo vendita né spesa. */
+const INTERNAL_NET_RE =
+    /importo\s+pagato|denaro\s+raccolto\s+per\s+esborso|general\s+withdrawal|user\s+initiated\s+withdrawal|currency\s+conversion|conversione\s+valuta|temporary\s+hold/i;
+
+/** Autorizzazioni che spesso duplicano il carico carta (stesso giorno/importo). */
+const AUTH_DUP_RE = /autorizzazione\s+generica|general\s+authorization/i;
 
 export type PaypalClassifyInput = {
     description: string;
@@ -26,6 +36,7 @@ export type PaypalClassifyInput = {
     feeCents?: number;
     eventCode?: string | null;
     payerEmail?: string | null;
+    counterpartyName?: string | null;
 };
 
 export type PaypalClassifyResult = {
@@ -36,11 +47,16 @@ export type PaypalClassifyResult = {
     reason: string;
 };
 
+function blob(input: PaypalClassifyInput): string {
+    return `${input.description || ''} ${input.counterpartyName || ''} ${input.payerEmail || ''}`;
+}
+
 /**
  * Decide se e come registrare una TX PayPal (non FEE).
  */
 export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalClassifyResult {
     const desc = (input.description || '').trim();
+    const text = blob(input);
     const code = String(input.eventCode || '')
         .trim()
         .toUpperCase();
@@ -55,8 +71,30 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
         };
     }
 
-    // Uscita verso merchant SaaS / abbonamenti (es. Google One)
-    if (gross < 0 && SAAS_MERCHANT_RE.test(desc)) {
+    // Netto / esborso interni: mai in Prima Nota come ricavo/costo commerciale
+    if (INTERNAL_NET_RE.test(desc) || INTERNAL_NET_RE.test(text)) {
+        return {
+            record: false,
+            category: 'ALTRI_COSTI',
+            direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
+            reason: 'skip_internal_net_or_payout_bookkeeping',
+        };
+    }
+
+    const isSaas = SAAS_MERCHANT_RE.test(text);
+
+    // Credito da merchant SaaS (rimborso/parziale) — mai 60100 Ricavi da Vendite
+    if (gross > 0 && isSaas) {
+        return {
+            record: true,
+            category: 'RIMBORSI',
+            direction: 'ENTRATA',
+            reason: 'saas_credit_not_revenue',
+        };
+    }
+
+    // Uscita verso merchant SaaS / abbonamenti
+    if (gross < 0 && isSaas) {
         return {
             record: true,
             category: 'SPESE_SAAS',
@@ -68,7 +106,6 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
     // Descrizione generica "PayPal {id}" senza soggetto: spesso netto/conversione speculare
     const genericOnly = /^paypal\s+[A-Z0-9]+$/i.test(desc) || /^paypal$/i.test(desc);
     if (genericOnly && (!input.feeCents || input.feeCents === 0)) {
-        // Positivi generici senza fee = quasi sempre mirror di netto o conversione
         if (gross > 0) {
             return {
                 record: false,
@@ -77,7 +114,6 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
                 reason: 'skip_generic_credit_no_fee',
             };
         }
-        // Negativi generici senza fee: storno netto / transfer interno
         return {
             record: false,
             category: 'ALTRI_COSTI',
@@ -86,7 +122,7 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
         };
     }
 
-    if (/refund|rimborso|chargeback/i.test(desc) || code === 'T1107' || code === 'T1106') {
+    if (/refund|rimborso|chargeback|storno/i.test(desc) || code === 'T1107' || code === 'T1106') {
         return {
             record: true,
             category: 'RIMBORSI',
@@ -104,16 +140,6 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
         };
     }
 
-    // Altre uscite (merchant non SaaS)
-    if (SAAS_MERCHANT_RE.test(desc)) {
-        return {
-            record: true,
-            category: 'SPESE_SAAS',
-            direction: 'USCITA',
-            reason: 'saas_out',
-        };
-    }
-
     return {
         record: true,
         category: 'ALTRI_COSTI',
@@ -122,6 +148,14 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
     };
 }
 
-export function isSaasPaypalDescription(description: string): boolean {
-    return SAAS_MERCHANT_RE.test(description || '');
+export function isSaasPaypalDescription(description: string, counterparty?: string | null): boolean {
+    return SAAS_MERCHANT_RE.test(`${description || ''} ${counterparty || ''}`);
+}
+
+export function isPaypalInternalNetNoise(description: string): boolean {
+    return INTERNAL_NET_RE.test(description || '');
+}
+
+export function isPaypalAuthDuplicateCandidate(description: string): boolean {
+    return AUTH_DUP_RE.test(description || '');
 }

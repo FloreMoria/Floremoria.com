@@ -230,6 +230,7 @@ export async function runPaypalFinanceSync(params?: {
                 feeCents: tx.feeCents,
                 eventCode: tx.eventCode,
                 payerEmail: tx.payerEmail,
+                counterpartyName: tx.description,
             });
 
             if (!classified.record) {
@@ -246,9 +247,11 @@ export async function runPaypalFinanceSync(params?: {
                       ? SAAS_ACCOUNT
                       : classified.category === 'ONERI_BANCARI'
                         ? FEE_ACCOUNT
-                        : SAAS_ACCOUNT;
+                        : '70900 - Spese operative';
                 const avereAccount = isIn
-                    ? REVENUE_ACCOUNT
+                    ? classified.category === 'RIMBORSI'
+                        ? SAAS_ACCOUNT
+                        : REVENUE_ACCOUNT
                     : LEDGER_PAYPAL_ACCOUNT;
 
                 ledger.push({
@@ -286,8 +289,12 @@ export async function runPaypalFinanceSync(params?: {
                 transactionsUpserted += 1;
             }
 
-            // Fee solo su incassi (mai su spese SaaS / uscite merchant)
-            if (tx.feeCents > 0 && classified.direction === 'ENTRATA') {
+            // Fee solo su incassi commerciali (mai su SaaS / rimborsi merchant)
+            if (
+                tx.feeCents > 0 &&
+                classified.direction === 'ENTRATA' &&
+                classified.category === 'RICAVI_VENDITE'
+            ) {
                 ledger.push({
                     sourceKey: paypalFeeSourceKey(tx.id),
                     sourceType: 'PAYPAL_MOVEMENT' as const,

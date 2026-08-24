@@ -116,6 +116,8 @@ export async function matchBankFeeOrTax(movement: ParsedBankMovement): Promise<S
     }
 
     const entryId = `entry_bankfee_${date}_${abs}_${desc.slice(0, 24).replace(/\W+/g, '_')}`;
+    // Authority contabile = BANK_LINE (estratto Fineco). Non dual-write JSON_ENTRY:
+    // crea doppioni CE con stesso giorno/importo già sanati in ledgerDoubleEntrySanitize.
     const entry: AccountingEntry = {
         id: entryId,
         date,
@@ -128,7 +130,27 @@ export async function matchBankFeeOrTax(movement: ParsedBankMovement): Promise<S
         invoiceReference: `BANK-FEE-${date.replace(/-/g, '')}`,
         status: 'CONFIRMED',
     };
-    addAccountingEntries([entry]);
+    // Solo cache locale ephemeral se manca ancora la riga Neon BANK_LINE
+    try {
+        const prisma = (await import('@/lib/prisma')).default;
+        const bankHit = await prisma.financialLedgerEntry.findFirst({
+            where: {
+                sourceType: 'BANK_LINE',
+                reversedAt: null,
+                totalCents: -abs,
+                accountingDate: {
+                    gte: new Date(`${date}T00:00:00.000Z`),
+                    lt: new Date(`${date}T23:59:59.999Z`),
+                },
+            },
+            select: { id: true },
+        });
+        if (!bankHit) {
+            addAccountingEntries([entry]);
+        }
+    } catch {
+        addAccountingEntries([entry]);
+    }
 
     const txId = `fineco_fee_${date}_${abs}`;
     addTransaction({

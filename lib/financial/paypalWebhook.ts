@@ -251,13 +251,17 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
                     ? LEDGER_PAYPAL_ACCOUNT
                     : category === 'SPESE_SAAS'
                       ? SAAS_ACCOUNT
-                      : SAAS_ACCOUNT,
-                avereAccount: isIn ? REVENUE_ACCOUNT : LEDGER_PAYPAL_ACCOUNT,
+                      : '70900 - Spese operative',
+                avereAccount: isIn
+                    ? category === 'RIMBORSI'
+                        ? SAAS_ACCOUNT
+                        : REVENUE_ACCOUNT
+                    : LEDGER_PAYPAL_ACCOUNT,
             },
         });
     }
 
-    if (mv.feeCents > 0 && direction === 'ENTRATA') {
+    if (mv.feeCents > 0 && direction === 'ENTRATA' && category === 'RICAVI_VENDITE') {
         const feeSigned = mv.isRefund ? mv.feeCents : -mv.feeCents;
         entries.push({
             sourceKey: feeKey,

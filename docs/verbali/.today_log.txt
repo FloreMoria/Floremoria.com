@@ -12,3 +12,5 @@
 [2026-08-24 19:10] fix(finance): Parte 2 — dedup gateway txn/charge+colori +/-; scadenziario da 01/07/2026; edit registro corrispettivi (lordo/fee); fee mensili PayPal gemelle Stripe; tsc+build OK.
 
 [2026-08-24 21:10] fix(finance): Prima Nota partita doppia — classificazione PayPal (Google One/SaaS, skip netto/conversione), conti 10200/10300 vs Fineco 10100, dedup Stripe↔PayPal e GATEWAY↔MANUALE, sanitizzazione soft-reverse Neon 24/08.
+
+[2026-08-24 21:20] fix(finance): bonifica retroattiva 2026 FinancialLedgerEntry — falsi ricavi SaaS, Importo pagato/esborso, auth dupes, bankfee JSON, conti 10100/10200/10300; harden classify/sync/parser.

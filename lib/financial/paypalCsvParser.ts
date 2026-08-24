@@ -148,7 +148,12 @@ function classifyPaypalType(typeLabel: string): PaypalCsvRow['kind'] {
         return 'payout';
     }
     if (/^fee$|tariffa|commissione/.test(t) && !/pagamento|payment/.test(t)) return 'fee';
-    if (/holding|reserve|conversione valuta|currency conversion|general authorization|general currency conversion|temporary hold/.test(t)) {
+    // Netto interno / conversioni / hold — non registrare come vendita
+    if (
+        /holding|reserve|conversione valuta|currency conversion|general authorization|general currency conversion|temporary hold|importo pagato|denaro raccolto|esborso/.test(
+            t
+        )
+    ) {
         return 'skip';
     }
     if (/pagamento|payment|checkout|credit|vendita|express|mobile/.test(t)) return 'payment';
@@ -398,6 +403,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
         grossCents: amountForTx,
         feeCents: row.feeCents,
         payerEmail: row.counterpartyName,
+        counterpartyName: row.counterpartyName,
     });
 
     if (!isRefund && !classified.record) {
@@ -437,13 +443,17 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
                     ? LEDGER_PAYPAL_ACCOUNT
                     : category === 'SPESE_SAAS'
                       ? SAAS_ACCOUNT
-                      : SAAS_ACCOUNT,
-                avereAccount: isIn ? REVENUE_ACCOUNT : LEDGER_PAYPAL_ACCOUNT,
+                      : '70900 - Spese operative',
+                avereAccount: isIn
+                    ? category === 'RIMBORSI'
+                        ? SAAS_ACCOUNT
+                        : REVENUE_ACCOUNT
+                    : LEDGER_PAYPAL_ACCOUNT,
             },
         });
     }
 
-    if (row.feeCents > 0 && (isRefund || classified.direction === 'ENTRATA')) {
+    if (row.feeCents > 0 && (isRefund || classified.category === 'RICAVI_VENDITE')) {
         const feeSigned = isRefund ? row.feeCents : -row.feeCents;
         entries.push({
             sourceKey: paypalFeeSourceKey(row.transactionId),

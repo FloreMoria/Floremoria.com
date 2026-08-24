@@ -358,6 +358,7 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     }
 
     // 4) Movimenti Fineco
+    const { LEDGER_FINECO_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
     const bankLines = await prisma.bankStatementLine.findMany({
         orderBy: { accountingDate: 'desc' },
         take: 8000,
@@ -371,6 +372,8 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             isIn && category === 'SPESE_OPERATIVE'
                 ? 'ALTRI_RICAVI'
                 : category;
+        const isTransfer =
+            resolved === 'TRASFERIMENTO_INTERNO' || resolved === 'PAYPAL_PAYOUT';
         candidates.push({
             sourceKey: `BANK_LINE:${line.id}`,
             sourceType: 'BANK_LINE',
@@ -391,6 +394,16 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             metadataJson: {
                 matchType: line.matchType,
                 documentId: line.documentId,
+                dareAccount: isIn
+                    ? LEDGER_FINECO_ACCOUNT
+                    : resolved === 'ONERI_BANCARI'
+                      ? '70200 - Oneri bancari / Fee gateway'
+                      : '70900 - Spese operative',
+                avereAccount: isIn
+                    ? isTransfer
+                        ? '17100 - Conto transitorio Gateway (giroconto)'
+                        : '60100 - Ricavi da Vendite'
+                    : LEDGER_FINECO_ACCOUNT,
             },
         });
         sources.BANK_LINE = (sources.BANK_LINE || 0) + 1;

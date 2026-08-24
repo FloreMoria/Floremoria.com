@@ -9,7 +9,11 @@
 import prisma from '@/lib/prisma';
 import { getLedger, addAccountingEntries, addTransaction } from '@/lib/financial/ledgerStore';
 import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
-import type { AccountingEntry, BankTransaction } from '@/lib/financial/types';
+import type {
+    AccountingEntry,
+    BankTransaction,
+    ReconciliationResult,
+} from '@/lib/financial/types';
 import type { ParsedBankMovement, StatementMatchResult } from '@/lib/financial/bankStatements/types';
 import {
     matchManualExpenseByAmount,
@@ -42,7 +46,8 @@ function dayMs(iso: string | null | undefined): number | null {
 function withinDays(a: string | null, b: string | null | undefined, days: number): boolean {
     const da = dayMs(a);
     const db = dayMs(b || null);
-    if (da == null || db == null) return true;
+    // Vincolo obbligatorio: senza data non si abbina solo sull'importo.
+    if (da == null || db == null) return false;
     return Math.abs(da - db) <= days * 24 * 60 * 60 * 1000;
 }
 
@@ -218,7 +223,7 @@ export async function matchCumulativePayout(
         );
 
         // Se non ci sono orderId sul payout, cerca charge/payment nello stesso giorno ± payout amount
-        let notes = `Payout Stripe ${payout.stripeId} (€${(amount / 100).toFixed(2)})`;
+        let notes = `Partita di giro Stripe payout ${payout.stripeId} (€${(amount / 100).toFixed(2)}) — non ricavo di vendita`;
         if (orderIds.length > 0) {
             notes += ` — gruppo ${orderIds.length} ordini riconciliati`;
         } else {
@@ -503,7 +508,10 @@ export async function matchFloristTransfer(
         });
     }
 
-    // Fallback importo ≈ compenso su ordini PAID recenti
+    // Fallback importo ≈ compenso su ordini PAID recenti — solo con causale fiorista/SEPA
+    if (!/FIORIST|BONIFIC|SEPA|COMPENSO|POSA|BEN:|BENEFICIARIO|SCT/i.test(desc)) {
+        return null;
+    }
     const paid = await prisma.order.findMany({
         where: {
             isTest: false,
@@ -530,7 +538,7 @@ export async function matchFloristTransfer(
                 matchScore: 84,
                 matchedTxId: null,
                 matchedOrderId: o.id,
-                matchNotes: `Possibile liquidazione fiorista ordine ${o.orderNumber} (match importo/data)`,
+                matchNotes: `Possibile liquidazione fiorista ordine ${o.orderNumber} (match importo/data/causale)`,
             });
         }
     }
@@ -889,3 +897,111 @@ export async function reReconcileBankStatementDocument(documentId: string): Prom
 
     return { updated, matched, stillUnmatched: unmatchedCount };
 }
+
+function mapMatchToResultType(
+    matchType: string | null | undefined
+): ReconciliationResult['type'] {
+    const t = (matchType || '').toUpperCase();
+    if (t.includes('STRIPE') || t.includes('PAYPAL') || t.includes('GATEWAY')) return 'STRIPE';
+    if (t.includes('FLORIST') || t.includes('SDI') || t.includes('SUPPLIER')) return 'B2B_PARTNER';
+    if (t.includes('SAAS') || t.includes('FOREIGN')) return 'EXPENSE_SAAS';
+    if (t.includes('SEPA') || t.includes('DIRECT')) return 'DIRECT_SEPA';
+    return 'UNRECONCILED';
+}
+
+/**
+ * Adapter webhook / simulate_transaction → motore unico Neon (reconcileBankMovement).
+ * Perché: spegne il doppio motore in reconciler.ts evitando scritture ricavo su payout.
+ */
+export async function reconcileTransaction(
+    transaction: BankTransaction
+): Promise<ReconciliationResult> {
+    const dateIso = String(transaction.emittedAt || '').slice(0, 10) || null;
+    const movement: ParsedBankMovement = {
+        lineIndex: 0,
+        valueDate: dateIso,
+        accountingDate: dateIso,
+        description: `${transaction.reference || ''} ${transaction.counterpartyName || ''}`.trim(),
+        amountCents: transaction.amountCents,
+        debitCents: transaction.amountCents < 0 ? Math.abs(transaction.amountCents) : null,
+        creditCents: transaction.amountCents >= 0 ? transaction.amountCents : null,
+        balanceCents: null,
+        raw: (transaction.rawData as Record<string, unknown>) || undefined,
+    };
+
+    const match = await reconcileBankMovement(movement);
+
+    // Aggiorna categoria sul ledger JSON (cache) senza creare ricavi su giroconti
+    const { updateTransactionCategory } = await import('@/lib/financial/ledgerStore');
+    if (match.matchType) {
+        updateTransactionCategory(transaction.id, match.matchType);
+    }
+
+    return {
+        isReconciled: match.matchStatus === 'MATCHED' || match.matchStatus === 'PARTIAL',
+        orderId: match.matchedOrderId,
+        matchingScore: match.matchScore,
+        type: mapMatchToResultType(match.matchType),
+        notes: match.matchNotes,
+    };
+}
+
+/**
+ * Ingestione Prima Nota per ordini gestionali già pagati — idempotente via sourceKey JSON_ENTRY.
+ */
+export async function processManualOrders(): Promise<number> {
+    const { scorporaIvaFloreale, VAT_PCT_FLORAL } = await import('@/lib/financial/vat');
+    const { upsertAccountingEntries } = await import('@/lib/financial/ledgerStore');
+    const { LEDGER_BANK_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
+    const { persistJsonAccountingEntry } = await import('@/lib/financial/historicalLedgerSync');
+
+    const manualOrders = await prisma.order.findMany({
+        where: {
+            isTest: false,
+            deletedAt: null,
+            status: { in: ['COMPLETED', 'IN_PROGRESS', 'ACCEPTED'] },
+        },
+        select: {
+            id: true,
+            orderNumber: true,
+            totalPriceCents: true,
+            createdAt: true,
+        },
+        take: 2000,
+    });
+
+    let count = 0;
+    for (const order of manualOrders) {
+        const orderNumber = order.orderNumber || order.id.slice(0, 8);
+        const entryId = `entry_manual_gross_${order.id}`;
+        const vat = scorporaIvaFloreale(order.totalPriceCents);
+        const entry: AccountingEntry = {
+            id: entryId,
+            date: new Date(order.createdAt).toISOString().split('T')[0],
+            description: `Incasso ordine confermato/pagato - Ordine ${orderNumber}`,
+            dareAccount: LEDGER_BANK_ACCOUNT,
+            avereAccount: '60100 - Ricavi da Vendite',
+            amountCents: order.totalPriceCents,
+            vatAmountCents: vat.ivaCents,
+            isForeignService: false,
+            invoiceReference: orderNumber,
+            status: 'CONFIRMED',
+        };
+        upsertAccountingEntries([entry]);
+        await persistJsonAccountingEntry({
+            id: entry.id,
+            date: entry.date,
+            description: entry.description,
+            dareAccount: entry.dareAccount,
+            avereAccount: entry.avereAccount,
+            amountCents: entry.amountCents,
+            vatAmountCents: entry.vatAmountCents,
+            invoiceReference: entry.invoiceReference,
+        });
+        // Allinea vatRate sul registro permanente (già gestito da persist via scorporo in ORDER sync)
+        void VAT_PCT_FLORAL;
+        count += 1;
+    }
+    return count;
+}
+

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FinecoBankProvider } from '@/lib/financial/providers/fineco';
 import { addTransaction } from '@/lib/financial/ledgerStore';
-import { reconcileTransaction } from '@/lib/financial/reconciler';
+import { reconcileTransaction } from '@/lib/financial/reconciliation';
 
 /**
  * Webhook movimenti bancari Fineco — solo firma HMAC valida.

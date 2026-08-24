@@ -198,7 +198,7 @@ export function generateAutofatturaXml(input: GenerateAutofatturaInput): Generat
     }
 
     const imponibileCents = Math.round(input.imponibileCents);
-    const vatCents = Math.round(imponibileCents * 0.22);
+    const vatCents = Math.round((imponibileCents * 22) / 100);
     const totaleCents = imponibileCents + vatCents;
 
     const v = input.vendor;

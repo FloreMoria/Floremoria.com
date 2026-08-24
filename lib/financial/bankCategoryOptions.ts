@@ -11,9 +11,9 @@ export type BankCategoryOption = {
 };
 
 export const BANK_CATEGORY_OPTIONS: BankCategoryOption[] = [
-    // Entrate (+€)
-    { matchType: 'STRIPE_PAYOUT', label: 'Incasso Stripe (Payout)', sign: 'in' },
-    { matchType: 'PAYPAL_PAYOUT', label: 'Incasso PayPal (Payout)', sign: 'in' },
+    // Entrate (+€) — payout gateway = partita di giro (non ricavo operativo)
+    { matchType: 'STRIPE_PAYOUT', label: 'Giroconto Stripe (partita di giro)', sign: 'in' },
+    { matchType: 'PAYPAL_PAYOUT', label: 'Giroconto PayPal (partita di giro)', sign: 'in' },
     { matchType: 'PAYPAL_CASHBACK', label: 'Cashback / Rimborsi PayPal', sign: 'in' },
     { matchType: 'OTHER_REVENUE', label: 'Altro Ricavo / Entrata Diretta', sign: 'in' },
     // Uscite (−€)

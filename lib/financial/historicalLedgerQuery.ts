@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma';
 import {
     CATEGORY_LABELS,
     LEDGER_CATEGORIES,
+    isInternalTransferCategory,
     type HistoricalPnl,
     type LedgerCategory,
 } from '@/lib/financial/historicalLedgerTypes';
@@ -128,8 +129,15 @@ export async function computeHistoricalPnl(opts: {
     let costiOperativiCents = 0;
     let oneriBancariCents = 0;
     let ivaCreditoCents = 0;
+    let cashGatewayTransferCents = 0;
 
     for (const r of usable) {
+        // Partite di giro: cassa sì, ricavi/costi operativi no.
+        if (isInternalTransferCategory(r.category)) {
+            cashGatewayTransferCents += Math.abs(r.totalCents);
+            continue;
+        }
+
         // Costi fioristi: se esiste scrittura da ordine liquidato, ignora il doppione bancario
         if (r.sourceType === 'BANK_LINE' && r.category === 'COSTI_FIORISTI') {
             const hasFloristPayout = usable.some((x) => x.sourceType === 'FLORIST_PAYOUT');
@@ -169,6 +177,40 @@ export async function computeHistoricalPnl(opts: {
     const risultatoAnteImposteCents = ebitdaCents - oneriBancariCents;
     const ivaNettaCents = ivaDebitoCents - ivaCreditoCents;
 
+    // Binario A — cassa reale da estratto Fineco (BankStatementLine) nel periodo fiscale
+    let cashInflowCents = 0;
+    let cashOutflowCents = 0;
+    let cashBankBalanceCents = 0;
+    try {
+        const yearStart = new Date(Date.UTC(opts.fiscalYear, 0, 1));
+        const yearEnd = new Date(Date.UTC(opts.fiscalYear + 1, 0, 1));
+        const q = opts.fiscalQuarter;
+        const dateFilter =
+            q && q >= 1 && q <= 4
+                ? {
+                      gte: new Date(Date.UTC(opts.fiscalYear, (q - 1) * 3, 1)),
+                      lt: new Date(Date.UTC(opts.fiscalYear, q * 3, 1)),
+                  }
+                : { gte: yearStart, lt: yearEnd };
+
+        const bankLines = await prisma.bankStatementLine.findMany({
+            where: {
+                OR: [
+                    { accountingDate: dateFilter },
+                    { AND: [{ accountingDate: null }, { valueDate: dateFilter }] },
+                ],
+            },
+            select: { amountCents: true },
+        });
+        for (const line of bankLines) {
+            cashBankBalanceCents += line.amountCents;
+            if (line.amountCents > 0) cashInflowCents += line.amountCents;
+            else cashOutflowCents += Math.abs(line.amountCents);
+        }
+    } catch (err) {
+        console.warn('[computeHistoricalPnl] cash Fineco aggregato fallito', err);
+    }
+
     return {
         fiscalYear: opts.fiscalYear,
         fiscalQuarter: opts.fiscalQuarter ?? null,
@@ -186,6 +228,10 @@ export async function computeHistoricalPnl(opts: {
         ivaNettaCents,
         risultatoAnteImposteCents,
         entriesCount: usable.length,
+        cashInflowCents,
+        cashOutflowCents,
+        cashGatewayTransferCents,
+        cashBankBalanceCents,
     };
 }
 

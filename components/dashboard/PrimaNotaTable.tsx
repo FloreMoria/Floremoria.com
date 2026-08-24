@@ -100,6 +100,9 @@ function accountForCategory(category: string, revenueSide: boolean): string {
         case 'RICAVI_VENDITE':
         case 'ALTRI_RICAVI':
             return '60100 - Ricavi da Vendite';
+        case 'TRASFERIMENTO_INTERNO':
+        case 'PAYPAL_PAYOUT':
+            return '17100 - Conto transitorio Gateway (giroconto)';
         case 'COSTI_FIORISTI':
             return '70100 - Costi Fioristi';
         case 'SPESE_SAAS':

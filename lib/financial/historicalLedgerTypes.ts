@@ -7,6 +7,8 @@ export const LEDGER_CATEGORIES = [
     'ALTRI_RICAVI',
     'RIMBORSI',
     'PAYPAL_PAYOUT',
+    /** Giroconto gateway → banca Fineco: non è ricavo di vendita. */
+    'TRASFERIMENTO_INTERNO',
     'COSTI_FIORISTI',
     'SPESE_SAAS',
     'SPESE_OPERATIVE',
@@ -61,6 +63,7 @@ export type LedgerEntryInput = {
 export type HistoricalPnl = {
     fiscalYear: number;
     fiscalQuarter: number | null;
+    /** Competenza fiscale: ricavi lordi di vendita (esclusi giroconti). */
     ricaviLordiCents: number;
     ricaviNettiCents: number;
     ivaDebitoCents: number;
@@ -77,6 +80,14 @@ export type HistoricalPnl = {
     ivaNettaCents: number;
     risultatoAnteImposteCents: number;
     entriesCount: number;
+    /**
+     * Flusso di cassa reale (binario A): lordi Fineco + giroconti gateway.
+     * Non mescolare con ricavi di competenza fiscale.
+     */
+    cashInflowCents?: number;
+    cashOutflowCents?: number;
+    cashGatewayTransferCents?: number;
+    cashBankBalanceCents?: number;
 };
 
 export function fiscalParts(d: Date): {
@@ -134,13 +145,18 @@ export function categorizeBankLine(description: string, matchType: string | null
     ) {
         return 'COSTI_FIORISTI';
     }
+    // Payout Stripe/PayPal su Fineco = partita di giro (non ricavo di vendita).
     if (
         matchType === 'STRIPE_PAYOUT' ||
         matchType === 'PAYPAL_PAYOUT' ||
         matchType === 'GATEWAY_PAYOUT' ||
-        /STRIPE|PAYPAL/.test(u)
+        matchType === 'INTERNAL_TRANSFER' ||
+        /\b(STRIPE|PAYPAL)\b/.test(u)
     ) {
-        return 'RICAVI_VENDITE';
+        if (matchType === 'PAYPAL_CASHBACK' || /CASHBACK|RIMBORSO|REFUND|STORNO/.test(u)) {
+            return 'RIMBORSI';
+        }
+        return 'TRASFERIMENTO_INTERNO';
     }
     if (matchType === 'PAYPAL_CASHBACK') return 'RIMBORSI';
     if (matchType === 'SAAS_SUBSCRIPTION' || /CURSOR|VERCEL|OPENAI|CLAUDE|GOOGLE|META|AWS/.test(u)) {
@@ -153,11 +169,17 @@ export function categorizeBankLine(description: string, matchType: string | null
     return 'SPESE_OPERATIVE';
 }
 
+/** True se la categoria non deve entrare nei ricavi/costi operativi di vendita. */
+export function isInternalTransferCategory(category: string | null | undefined): boolean {
+    return category === 'TRASFERIMENTO_INTERNO' || category === 'PAYPAL_PAYOUT';
+}
+
 export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     RICAVI_VENDITE: 'Ricavi vendite',
     ALTRI_RICAVI: 'Altri ricavi',
     RIMBORSI: 'Rimborsi ricevuti',
-    PAYPAL_PAYOUT: 'Trasferimento PayPal → banca',
+    PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
+    TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',
     COSTI_FIORISTI: 'Costi del venduto / Fioristi',
     SPESE_SAAS: 'Spese server / SaaS',
     SPESE_OPERATIVE: 'Spese operative',

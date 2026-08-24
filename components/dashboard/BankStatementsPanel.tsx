@@ -102,8 +102,8 @@ type MatchSuggestion = {
 };
 
 const CATEGORY_OPTIONS = [
-    { matchType: 'STRIPE_PAYOUT', label: 'Incasso Stripe (Payout)' },
-    { matchType: 'PAYPAL_PAYOUT', label: 'Incasso PayPal (Payout)' },
+    { matchType: 'STRIPE_PAYOUT', label: 'Giroconto Stripe (partita di giro)' },
+    { matchType: 'PAYPAL_PAYOUT', label: 'Giroconto PayPal (partita di giro)' },
     { matchType: 'PAYPAL_CASHBACK', label: 'Cashback / Rimborsi PayPal' },
     { matchType: 'OTHER_REVENUE', label: 'Altro Ricavo / Entrata Diretta' },
     { matchType: 'FLORIST_ADVANCE', label: 'Anticipo fiorista' },

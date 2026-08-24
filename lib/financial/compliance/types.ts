@@ -1,4 +1,4 @@
-export type DeadlineUiStatus = 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED';
+export type DeadlineUiStatus = 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED' | 'SCADUTO';
 
 export interface TaxDeadline {
     id: string;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getLedger, addTransaction } from '@/lib/financial/ledgerStore';
-import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
+import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciliation';
 import { calculateFinancialStatements } from '@/lib/financial/statements';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
 import { sumSaasForeignEurCents } from '@/lib/financial/saasForeignInvoices';
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         if (action === 'set_deadline_status') {
             const deadlineId = String(body.deadlineId || '').trim();
             const status = String(body.status || '').trim().toUpperCase();
-            const allowed = new Set(['PENDING', 'DUE_SOON', 'PAID', 'ARCHIVED']);
+            const allowed = new Set(['PENDING', 'DUE_SOON', 'PAID', 'ARCHIVED', 'SCADUTO']);
             if (!deadlineId || !allowed.has(status)) {
                 return NextResponse.json(
                     { ok: false, error: 'deadlineId / status non validi' },

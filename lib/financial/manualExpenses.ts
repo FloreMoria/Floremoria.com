@@ -210,6 +210,12 @@ export async function matchManualExpenseByAmount(
     });
     if (!candidates.length) return null;
 
+    // Data obbligatoria: niente match solo-importo senza vincolo temporale.
+    if (!accountingDateIso) return null;
+    const centerMs = Date.parse(accountingDateIso.slice(0, 10));
+    if (!Number.isFinite(centerMs)) return null;
+    const maxWindowMs = 45 * 24 * 60 * 60 * 1000;
+
     const desc = description
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -217,8 +223,10 @@ export async function matchManualExpenseByAmount(
     const descDigits = desc.replace(/\D/g, '');
     const descIsSaas = SAAS_FOREIGN_VENDOR_RE.test(desc);
 
-    const scored = candidates.map((c) => {
-        let score = 40;
+    const scored = candidates
+        .filter((c) => Math.abs(c.expenseDate.getTime() - centerMs) <= maxWindowMs)
+        .map((c) => {
+        let score = 0; // niente base score sull'importo solo
         const vendor = c.vendorName
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
@@ -252,16 +260,17 @@ export async function matchManualExpenseByAmount(
         if (Math.abs(c.totalCents - amountCentsAbs) === 0) score += 15;
         else if (Math.abs(c.totalCents - amountCentsAbs) <= 50) score += 8;
         else if (Math.abs(c.totalCents - amountCentsAbs) <= 200 && isForeign) score += 6;
-        if (accountingDateIso) {
-            const d = Math.abs(Date.parse(accountingDateIso) - c.expenseDate.getTime());
-            if (d <= 15 * 24 * 60 * 60 * 1000) score += 15;
-            else if (d <= 45 * 24 * 60 * 60 * 1000) score += 5;
-        }
-        return { c, score, isForeign };
+        const d = Math.abs(centerMs - c.expenseDate.getTime());
+        if (d <= 15 * 24 * 60 * 60 * 1000) score += 15;
+        else if (d <= 45 * 24 * 60 * 60 * 1000) score += 5;
+        return { c, score, isForeign, tokenHits };
     });
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
-    if (!best || best.score < 55) return null;
+    // Richiede almeno un segnale di causale/fornitore (non solo importo+data)
+    if (!best || best.score < 70 || (best.tokenHits < 1 && !best.isForeign && best.score < 85)) {
+        return null;
+    }
     return {
         id: best.c.id,
         vendorName: best.c.vendorName,

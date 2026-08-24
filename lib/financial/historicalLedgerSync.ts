@@ -11,6 +11,12 @@ import {
     fiscalParts,
     type LedgerEntryInput,
 } from '@/lib/financial/historicalLedgerTypes';
+import {
+    scorporaIvaFloreale,
+    scorporaIvaOrdinaria,
+    VAT_PCT_FLORAL,
+    VAT_PCT_ORDINARY,
+} from '@/lib/financial/vat';
 
 function toRow(input: LedgerEntryInput): Prisma.FinancialLedgerEntryCreateManyInput {
     const parts = fiscalParts(input.accountingDate);
@@ -211,10 +217,8 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     for (const o of orders) {
         if (!o.totalPriceCents || o.totalPriceCents <= 0) continue;
         const d = o.createdAt;
-        const vatRate = 22;
-        const total = o.totalPriceCents;
-        const net = Math.round(total / (1 + vatRate / 100));
-        const vat = total - net;
+        // Vendite floreali: IVA 10% (punti percentuali interi).
+        const vat = scorporaIvaFloreale(o.totalPriceCents);
         candidates.push({
             sourceKey: `ORDER:${o.id}`,
             sourceType: 'ORDER',
@@ -223,10 +227,10 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             category: 'RICAVI_VENDITE',
             accountingDate: d,
             description: `Ricavo ordine ${o.orderNumber || o.id.slice(0, 8)} (${o.paymentMethodLabel || 'checkout'})`,
-            netCents: net,
-            vatRate,
-            vatCents: vat,
-            totalCents: total,
+            netCents: vat.imponibileCents,
+            vatRate: VAT_PCT_FLORAL,
+            vatCents: vat.ivaCents,
+            totalCents: o.totalPriceCents,
             reconciliationStatus: o.stripeTransactionId ? 'MATCHED' : 'PARTIAL',
             documentRef: o.orderNumber || o.id,
             orderId: o.id,
@@ -235,13 +239,14 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
         });
         sources.ORDER = (sources.ORDER || 0) + 1;
 
-        // Compenso fiorista liquidato
+        // Compenso fiorista liquidato — IVA 10% a credito (fattura passiva tipica fiorista)
         const paid =
             o.partnerPaymentStatus === 'PAID' ||
             o.floristSettlementStatus === 'BONIFICATO' ||
             o.floristSettlementStatus === 'RICEVUTA';
         const comp = o.floristCompensationCents || 0;
         if (paid && comp > 0) {
+            const floristVat = scorporaIvaFloreale(comp);
             candidates.push({
                 sourceKey: `FLORIST_PAYOUT:${o.id}`,
                 sourceType: 'FLORIST_PAYOUT',
@@ -250,9 +255,9 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
                 category: 'COSTI_FIORISTI',
                 accountingDate: o.updatedAt || d,
                 description: `Compenso fiorista ordine ${o.orderNumber || o.id.slice(0, 8)}`,
-                netCents: -comp,
-                vatRate: 0,
-                vatCents: 0,
+                netCents: -floristVat.imponibileCents,
+                vatRate: VAT_PCT_FLORAL,
+                vatCents: -floristVat.ivaCents,
                 totalCents: -comp,
                 reconciliationStatus:
                     o.floristSettlementStatus === 'RICEVUTA' ? 'MATCHED' : 'PARTIAL',
@@ -318,12 +323,14 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
         sources.MANUAL_EXPENSE = (sources.MANUAL_EXPENSE || 0) + 1;
     }
 
-    // 3) SaaS estere
+    // 3) SaaS estere — reverse charge 22% (neutro: IVA debito = IVA credito, vatCents=0 sul netto)
     const saas = await prisma.saasForeignInvoice.findMany({
         orderBy: { invoiceDate: 'desc' },
         take: 2000,
     });
     for (const s of saas) {
+        const gross = Math.abs(s.eurAmountCents);
+        const rc = scorporaIvaOrdinaria(gross);
         candidates.push({
             sourceKey: `SAAS_INVOICE:${s.id}`,
             sourceType: 'SAAS_INVOICE',
@@ -333,16 +340,23 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             accountingDate: s.invoiceDate,
             description: `SaaS ${s.vendorName} (${s.jurisdiction}/${s.autofatturaType})`,
             counterpartyName: s.vendorName,
-            netCents: -Math.abs(s.eurAmountCents),
-            vatRate: 0,
+            netCents: -rc.imponibileCents,
+            vatRate: VAT_PCT_ORDINARY,
+            // Reverse charge: IVA a debito e a credito si annullano — non alterare ivaCredito netto
             vatCents: 0,
-            totalCents: -Math.abs(s.eurAmountCents),
+            totalCents: -gross,
             reconciliationStatus: 'N/A',
             documentRef: s.fileName,
             attachmentUrl: s.blobUrl,
             attachmentPath: s.blobPath,
             attachmentKind: 'PDF',
-            metadataJson: { periodKey: s.periodKey, countryCode: s.countryCode },
+            metadataJson: {
+                periodKey: s.periodKey,
+                countryCode: s.countryCode,
+                reverseCharge: true,
+                reverseChargeVatCents: rc.ivaCents,
+                reverseChargeImponibileCents: rc.imponibileCents,
+            },
         });
         sources.SAAS_INVOICE = (sources.SAAS_INVOICE || 0) + 1;
     }
@@ -355,17 +369,18 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     for (const line of bankLines) {
         const d = line.accountingDate || line.valueDate || line.createdAt;
         const isIn = line.amountCents > 0;
-        const category = isIn
-            ? (/STRIPE|PAYPAL|PAYOUT|INCASSO/i.test(line.description)
-                  ? 'RICAVI_VENDITE'
-                  : 'ALTRI_RICAVI')
-            : categorizeBankLine(line.description, line.matchType);
+        const category = categorizeBankLine(line.description, line.matchType);
+        // Override entrata generica: se non gateway, ALTRI_RICAVI; gateway già TRASFERIMENTO_INTERNO
+        const resolved =
+            isIn && category === 'SPESE_OPERATIVE'
+                ? 'ALTRI_RICAVI'
+                : category;
         candidates.push({
             sourceKey: `BANK_LINE:${line.id}`,
             sourceType: 'BANK_LINE',
             sourceId: line.id,
             direction: isIn ? 'ENTRATA' : 'USCITA',
-            category,
+            category: resolved,
             accountingDate: d,
             valueDate: line.valueDate,
             description: line.description.slice(0, 2000),

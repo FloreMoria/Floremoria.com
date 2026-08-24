@@ -142,7 +142,7 @@ function buildPdfInputFromRow(row: {
     const vat =
         typeof meta.vatCentsVirtual === 'number'
             ? Math.abs(meta.vatCentsVirtual)
-            : Math.abs(row.vatCents || Math.round(imponibile * 0.22));
+            : Math.abs(row.vatCents || Math.round((imponibile * 22) / 100));
     const vendor = vendorFromMeta(meta, row.vendorName);
     return {
         docType,
@@ -184,7 +184,7 @@ export async function listGeneratedAutofatture(): Promise<AutofatturaHistoryItem
         const vat =
             typeof meta.vatCentsVirtual === 'number'
                 ? Math.abs(meta.vatCentsVirtual)
-                : Math.abs(r.vatCents || Math.round(imponibile * 0.22));
+                : Math.abs(r.vatCents || Math.round((imponibile * 22) / 100));
         return {
             id: r.id,
             documentNumber: String(meta.documentNumber || fromNotes || r.id.slice(0, 8)),

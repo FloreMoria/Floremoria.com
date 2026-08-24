@@ -8,7 +8,7 @@ import type { FinancialLedger } from '@/lib/financial/types';
 
 export const FINANCE_DEADLINES_STATE_KEY = 'finance.deadlines.state';
 
-export type DeadlineStatus = 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED';
+export type DeadlineStatus = 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED' | 'SCADUTO';
 
 export type FinanceDeadlineState = {
     completedDeadlineIds: string[];

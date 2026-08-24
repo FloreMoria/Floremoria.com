@@ -4,10 +4,12 @@
 
 import prisma from '@/lib/prisma';
 import {
+    euroFloatToCents,
     formatEuroFromCents,
     isAccessoryCategory,
+    scorporaIvaFloreale,
     scorporaVenditaFloreale,
-    VAT_RATE_FLORAL,
+    VAT_PCT_FLORAL,
 } from '@/lib/financial/vat';
 import { resolveOrderFloristCompensationCents } from '@/lib/financial/taxRegister';
 
@@ -83,9 +85,12 @@ export type TaxQuarterlyReport = {
         corrispettiviImponibileCents: number;
         ivaDebito10Cents: number;
         gatewayFeesCents: number;
+        cashGatewayFeesCents: number;
+        cashNettoIncassatoCents: number;
         stripeInvoicesTotalCents: number;
         floristCompensiCents: number;
         floristPaidCents: number;
+        ivaCreditoFlorist10Cents: number;
     };
     corrispettivi: CorrispettivoRow[];
     stripeInvoices: StripeInvoiceRow[];
@@ -135,7 +140,7 @@ export async function buildTaxQuarterlyReport(
     for (const order of orders) {
         const grossCents =
             order.grossAmount != null
-                ? Math.round(order.grossAmount * 100)
+                ? euroFloatToCents(order.grossAmount)
                 : order.totalPriceCents;
 
         let accessoryCents =
@@ -151,10 +156,10 @@ export async function buildTaxQuarterlyReport(
 
         const vat = scorporaVenditaFloreale({ grossCents, accessoryCents });
         const feeCents =
-            order.stripeFee != null ? Math.round(order.stripeFee * 100) : 0;
+            order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
         const netCents =
             order.netAmount != null
-                ? Math.round(order.netAmount * 100)
+                ? euroFloatToCents(order.netAmount)
                 : grossCents - feeCents;
 
         corrispettivi.push({
@@ -165,7 +170,7 @@ export async function buildTaxQuarterlyReport(
             grossCents,
             imponibileCents: vat.imponibileCents,
             ivaDebitoCents: vat.ivaCents,
-            vatRate: VAT_RATE_FLORAL,
+            vatRate: VAT_PCT_FLORAL,
             gatewayFeeCents: feeCents,
             netCents,
             transactionId: order.stripeTransactionId || '',
@@ -203,7 +208,7 @@ export async function buildTaxQuarterlyReport(
         .map((order) => {
             const gross =
                 order.grossAmount != null
-                    ? Math.round(order.grossAmount * 100)
+                    ? euroFloatToCents(order.grossAmount)
                     : order.totalPriceCents;
             const compenso = resolveOrderFloristCompensationCents(order);
             const settled =
@@ -236,6 +241,10 @@ export async function buildTaxQuarterlyReport(
         corrispettiviImponibileCents: corrispettivi.reduce((s, r) => s + r.imponibileCents, 0),
         ivaDebito10Cents: corrispettivi.reduce((s, r) => s + r.ivaDebitoCents, 0),
         gatewayFeesCents: corrispettivi.reduce((s, r) => s + r.gatewayFeeCents, 0),
+        /** Cassa gateway (fee trattenute) — non sono ricavi di vendita. */
+        cashGatewayFeesCents: corrispettivi.reduce((s, r) => s + r.gatewayFeeCents, 0),
+        /** Netto cassa atteso post-fee (binario A). */
+        cashNettoIncassatoCents: corrispettivi.reduce((s, r) => s + r.netCents, 0),
         stripeInvoicesTotalCents: stripeInvoices.reduce((s, r) => s + r.totalFeeCents, 0),
         floristCompensiCents: floristLiquidazioni.reduce(
             (s, r) => s + r.compensoConcordatoCents,
@@ -244,6 +253,11 @@ export async function buildTaxQuarterlyReport(
         floristPaidCents: floristLiquidazioni
             .filter((r) => r.bonificoInviato)
             .reduce((s, r) => s + r.compensoConcordatoCents, 0),
+        /** IVA a credito stimata 10% su compensi fioristi (fattura passiva tipica). */
+        ivaCreditoFlorist10Cents: floristLiquidazioni.reduce(
+            (s, r) => s + Math.abs(scorporaIvaFloreale(r.compensoConcordatoCents).ivaCents),
+            0
+        ),
     };
 
     return { bounds, summary, corrispettivi, stripeInvoices, floristLiquidazioni };

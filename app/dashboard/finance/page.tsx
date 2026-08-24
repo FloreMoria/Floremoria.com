@@ -224,7 +224,7 @@ export default function FinanceDashboardPage() {
 
     const handleSetDeadlineStatus = async (
         deadlineId: string,
-        status: 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED'
+        status: 'PENDING' | 'DUE_SOON' | 'PAID' | 'ARCHIVED' | 'SCADUTO'
     ) => {
         try {
             const res = await fetch('/api/dashboard/finance', {
@@ -250,18 +250,22 @@ export default function FinanceDashboardPage() {
     const formatDate = (dateStr?: string) => formatFinanceDate(dateStr);
     const formatDateTime = (dateStr?: string) => formatFinanceDateTime(dateStr);
 
-    // Calcolo scadenze: mai mostrare adempimenti scaduti da >90 giorni
+    // Calcolo scadenze: insoluti (SCADUTO) restano visibili; solo ARCHIVED nascosti.
     const allDeadlines = React.useMemo(() => {
         return getUpcomingDeadlines(
             ledger?.completedDeadlineIds || [],
             ledger?.deadlineStatusById || {}
-        ).filter((item) => item.daysRemaining >= -90 && item.uiStatus !== 'ARCHIVED');
+        ).filter((item) => item.uiStatus !== 'ARCHIVED');
     }, [ledger?.completedDeadlineIds, ledger?.deadlineStatusById]);
 
     const urgentDeadlines = React.useMemo(() => {
-        // Solo imminenti (0–10 gg), non le già scadute
+        // Imminenti (0–10 gg) + insoluti (SCADUTO) in evidenza
         return allDeadlines
-            .filter((item) => item.status === 'URGENT' && item.daysRemaining >= 0 && item.daysRemaining <= 10)
+            .filter(
+                (item) =>
+                    item.uiStatus === 'SCADUTO' ||
+                    (item.status === 'URGENT' && item.daysRemaining >= 0 && item.daysRemaining <= 10)
+            )
             .sort((a, b) => a.daysRemaining - b.daysRemaining);
     }, [allDeadlines]);
 
@@ -1305,18 +1309,21 @@ export default function FinanceDashboardPage() {
                                                             | 'DUE_SOON'
                                                             | 'PAID'
                                                             | 'ARCHIVED'
+                                                            | 'SCADUTO'
                                                     )
                                                 }
                                                 className={`inline-flex px-2 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border cursor-pointer ${
                                                     item.uiStatus === 'PAID'
                                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                        : item.uiStatus === 'DUE_SOON'
+                                                        : item.uiStatus === 'DUE_SOON' ||
+                                                            item.uiStatus === 'SCADUTO'
                                                           ? 'bg-rose-50 text-rose-700 border-rose-200'
                                                           : item.uiStatus === 'ARCHIVED'
                                                             ? 'bg-slate-100 text-slate-500 border-slate-200'
                                                             : 'bg-amber-50 text-amber-800 border-amber-200'
                                                 }`}
                                             >
+                                                <option value="SCADUTO">Scaduto</option>
                                                 <option value="DUE_SOON">In scadenza</option>
                                                 <option value="PAID">Pagato</option>
                                                 <option value="PENDING">Da completare</option>

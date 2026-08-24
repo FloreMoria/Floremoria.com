@@ -1,2 +1,4 @@
 [2026-08-24 16:11] prompt(vera): affinamento tono & riservatezza implicita — rimozione tecnicismi/note di instradamento interno ("non viene condivisa col fiorista"), aggiunta few-shot ed esempi in system prompt.
 [2026-08-24 16:30] feat(verbali): cron 05:00 giorno precedente — Git+.today_log → 4 sezioni, LaunchAgent com.floremoria.dailyverbale, ricostruito verbale 23-08-2026.
+
+[2026-08-24 17:18] fix(finance): Fase 1 — scadenze/progressivi su Neon SystemState, webhook senza x-mock-provider, requireDashboardAdmin con User DB, upsert sourceKey stabile, SHA-256 estratti Fineco, numerazione autofatture atomica.

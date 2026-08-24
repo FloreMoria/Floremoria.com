@@ -145,6 +145,8 @@ function assertIsoDate(d: string, label: string) {
 
 /**
  * Alloca il prossimo Numero documento `00000N-YYYY-EST` e ProgressivoInvio.
+ * Atomico su Neon: INSERT … ON CONFLICT + SELECT … FOR UPDATE nella stessa transazione.
+ * Perché: due generate parallele non devono ottenere lo stesso progressivo TD17/TD18.
  */
 export async function allocateAutofatturaEstSequence(year?: number): Promise<{
     documentNumber: string;
@@ -153,14 +155,25 @@ export async function allocateAutofatturaEstSequence(year?: number): Promise<{
 }> {
     const y = year ?? new Date().getFullYear();
     const key = `finance.autofattura.est.seq.${y}`;
-    const row = await prisma.systemState.findUnique({ where: { key } });
-    const current = Math.max(0, parseInt(String(row?.value || '0'), 10) || 0);
-    const next = current + 1;
-    await prisma.systemState.upsert({
-        where: { key },
-        create: { key, value: String(next) },
-        update: { value: String(next) },
+
+    const next = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`
+            INSERT INTO system_state (key, value, updated_at)
+            VALUES (${key}, '0', NOW())
+            ON CONFLICT (key) DO NOTHING
+        `;
+        const rows = await tx.$queryRaw<Array<{ value: string | null }>>`
+            SELECT value FROM system_state WHERE key = ${key} FOR UPDATE
+        `;
+        const current = Math.max(0, parseInt(String(rows[0]?.value || '0'), 10) || 0);
+        const seq = current + 1;
+        await tx.systemState.update({
+            where: { key },
+            data: { value: String(seq) },
+        });
+        return seq;
     });
+
     const documentNumber = `${String(next).padStart(6, '0')}-${y}-EST`;
     // ProgressivoInvio FatturaPA: max 10 char alfanumerici
     const progressivoInvio = `A${String(next).padStart(5, '0')}${String(y).slice(-2)}`.slice(0, 10);

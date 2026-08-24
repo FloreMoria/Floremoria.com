@@ -49,11 +49,12 @@ export class FinecoBankProvider implements BankProvider {
     }
 
     parseWebhookPayload(body: string, headers: Record<string, string>): BankTransaction | null {
+        // Firma obbligatoria in ogni ambiente — nessun bypass non-prod / mock.
         if (!this.verifyWebhookSignature(body, headers)) {
-            console.warn('[FinecoBankProvider parseWebhookPayload] Firma webhook non valida o mancante.');
-            if (process.env.NODE_ENV === 'production' && this.webhookSecret) {
-                return null;
-            }
+            console.warn(
+                '[FinecoBankProvider parseWebhookPayload] Firma webhook non valida o mancante.'
+            );
+            return null;
         }
 
         try {

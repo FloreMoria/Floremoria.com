@@ -1,20 +1,34 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
-import { getLedger, addTransaction, saveLedger } from '@/lib/financial/ledgerStore';
+import { getLedger, addTransaction } from '@/lib/financial/ledgerStore';
 import { reconcileTransaction, processManualOrders } from '@/lib/financial/reconciler';
 import { calculateFinancialStatements } from '@/lib/financial/statements';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
 import { sumSaasForeignEurCents } from '@/lib/financial/saasForeignInvoices';
+import {
+    mergeDeadlineStateIntoLedger,
+    migrateDeadlineStateFromLedgerFileIfNeeded,
+    setDeadlineStatus,
+    toggleDeadlineCompleted,
+    type DeadlineStatus,
+} from '@/lib/financial/financeDeadlineStore';
 
 export const dynamic = 'force-dynamic';
+
+async function ledgerWithNeonDeadlines() {
+    const ledger = getLedger();
+    // getLedger espone ancora le scadenze file in memoria per la migrazione one-shot.
+    const deadlineState = await migrateDeadlineStateFromLedgerFileIfNeeded(ledger);
+    return mergeDeadlineStateIntoLedger(ledger, deadlineState);
+}
 
 export async function GET() {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
 
     try {
-        const ledger = getLedger();
-        const [statements, finecoBalance, saasTotalEurCents] = await Promise.all([
+        const [ledger, statements, finecoBalance, saasTotalEurCents] = await Promise.all([
+            ledgerWithNeonDeadlines(),
             calculateFinancialStatements(),
             getFinecoManualBalance(),
             sumSaasForeignEurCents(),
@@ -42,12 +56,21 @@ export async function POST(request: Request) {
 
         if (action === 'simulate_transaction') {
             const amountCents = Number(body.amountCents);
-            const side = (body.side === 'card' ? 'card' : body.side === 'sepa' ? 'sepa' : 'iban') as 'iban' | 'card' | 'sepa';
+            const side = (body.side === 'card'
+                ? 'card'
+                : body.side === 'sepa'
+                  ? 'sepa'
+                  : 'iban') as 'iban' | 'card' | 'sepa';
             const reference = body.reference ? String(body.reference).trim() : null;
-            const counterpartyName = body.counterpartyName ? String(body.counterpartyName).trim() : 'Test Partner';
+            const counterpartyName = body.counterpartyName
+                ? String(body.counterpartyName).trim()
+                : 'Test Partner';
 
             if (Number.isNaN(amountCents)) {
-                return NextResponse.json({ ok: false, error: 'Importo non valido' }, { status: 400 });
+                return NextResponse.json(
+                    { ok: false, error: 'Importo non valido' },
+                    { status: 400 }
+                );
             }
 
             const transaction = {
@@ -60,57 +83,46 @@ export async function POST(request: Request) {
                 counterpartyName,
                 counterpartyIban: body.counterpartyIban || null,
                 emittedAt: new Date().toISOString(),
-                category: null
+                category: null,
             };
 
-            // Ingesta transazione
             addTransaction(transaction);
-
-            // Riconcilia
             const recResult = await reconcileTransaction(transaction);
 
-            return NextResponse.json({ 
-                ok: true, 
-                transaction, 
+            return NextResponse.json({
+                ok: true,
+                transaction,
                 reconciliation: recResult,
-                ledger: getLedger(),
-                statements: await calculateFinancialStatements()
+                ledger: await ledgerWithNeonDeadlines(),
+                statements: await calculateFinancialStatements(),
             });
         }
 
         if (action === 'process_manual_orders') {
             const count = await processManualOrders();
-            return NextResponse.json({ 
-                ok: true, 
+            return NextResponse.json({
+                ok: true,
                 processedCount: count,
-                ledger: getLedger(),
-                statements: await calculateFinancialStatements()
+                ledger: await ledgerWithNeonDeadlines(),
+                statements: await calculateFinancialStatements(),
             });
         }
 
         if (action === 'toggle_deadline') {
             const deadlineId = String(body.deadlineId || '').trim();
             if (!deadlineId) {
-                return NextResponse.json({ ok: false, error: 'ID scadenza mancante' }, { status: 400 });
+                return NextResponse.json(
+                    { ok: false, error: 'ID scadenza mancante' },
+                    { status: 400 }
+                );
             }
 
-            const currentLedger = getLedger();
-            if (!currentLedger.completedDeadlineIds) {
-                currentLedger.completedDeadlineIds = [];
-            }
-
-            const index = currentLedger.completedDeadlineIds.indexOf(deadlineId);
-            if (index > -1) {
-                currentLedger.completedDeadlineIds.splice(index, 1);
-            } else {
-                currentLedger.completedDeadlineIds.push(deadlineId);
-            }
-
-            saveLedger(currentLedger);
-            return NextResponse.json({ 
-                ok: true, 
-                ledger: currentLedger,
-                statements: await calculateFinancialStatements()
+            const deadlineState = await toggleDeadlineCompleted(deadlineId);
+            const ledger = mergeDeadlineStateIntoLedger(getLedger(), deadlineState);
+            return NextResponse.json({
+                ok: true,
+                ledger,
+                statements: await calculateFinancialStatements(),
             });
         }
 
@@ -124,20 +136,14 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
-            const currentLedger = getLedger();
-            if (!currentLedger.deadlineStatusById) currentLedger.deadlineStatusById = {};
-            if (!currentLedger.completedDeadlineIds) currentLedger.completedDeadlineIds = [];
-            currentLedger.deadlineStatusById[deadlineId] = status;
-            const idx = currentLedger.completedDeadlineIds.indexOf(deadlineId);
-            if (status === 'PAID' || status === 'ARCHIVED') {
-                if (idx < 0) currentLedger.completedDeadlineIds.push(deadlineId);
-            } else if (idx > -1) {
-                currentLedger.completedDeadlineIds.splice(idx, 1);
-            }
-            saveLedger(currentLedger);
+            const deadlineState = await setDeadlineStatus(
+                deadlineId,
+                status as DeadlineStatus
+            );
+            const ledger = mergeDeadlineStateIntoLedger(getLedger(), deadlineState);
             return NextResponse.json({
                 ok: true,
-                ledger: currentLedger,
+                ledger,
                 statements: await calculateFinancialStatements(),
             });
         }

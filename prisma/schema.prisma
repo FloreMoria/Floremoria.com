@@ -832,6 +832,8 @@ model BankStatementDocument {
   blobPath          String   @map("blob_path") @db.Text
   blobUrl           String?  @map("blob_url") @db.Text
   storageKind       String   @default("blob") @map("storage_kind") @db.VarChar(16)
+  /** SHA-256 del file originale — blocca re-upload dello stesso estratto Fineco. */
+  sha256Hash        String?  @unique @map("sha256_hash") @db.VarChar(64)
   periodStart       DateTime? @map("period_start")
   periodEnd         DateTime? @map("period_end")
   /** UPLOADED | PARSING | PARSED | RECONCILED | FAILED */
@@ -875,6 +877,8 @@ model BankStatementLine {
   matchedOrderId    String?  @map("matched_order_id")
   matchNotes        String?  @map("match_notes") @db.Text
   rawJson           Json?    @map("raw_json")
+  /** SHA-256 della chiave naturale (data|importo|causale) — dedup cross-document. */
+  fingerprint       String?  @unique @map("fingerprint") @db.VarChar(64)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   document          BankStatementDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)

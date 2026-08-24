@@ -4,6 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash } from 'crypto';
 import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
@@ -33,6 +34,22 @@ function ensureLocalDir() {
 
 function sanitizeFileName(name: string): string {
     return name.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 180);
+}
+
+/** SHA-256 hex del buffer file (dedup estratto Fineco). */
+export function sha256Hex(buffer: Buffer): string {
+    return createHash('sha256').update(buffer).digest('hex');
+}
+
+/** Fingerprint movimento: SHA-256 della chiave naturale Fineco. */
+export function movementFingerprint(
+    dateIso: string | null,
+    amountCents: number,
+    description: string
+): string {
+    return createHash('sha256')
+        .update(buildFinecoDedupKey(dateIso, amountCents, description))
+        .digest('hex');
 }
 
 async function storeOriginalFile(
@@ -357,6 +374,23 @@ export async function confirmFinecoPaste(rawText: string) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `fineco-paste-${stamp}.txt`;
     const buffer = Buffer.from(rawText, 'utf-8');
+    const fileHash = sha256Hex(buffer);
+
+    const existingDoc = await prisma.bankStatementDocument.findUnique({
+        where: { sha256Hash: fileHash },
+    });
+    if (existingDoc) {
+        const detail = await getBankStatementDetail(existingDoc.id);
+        return {
+            document: detail,
+            savedCount: 0,
+            skippedDuplicates: parsed.pasteMovements.length,
+            matchedCount: existingDoc.matchedCount,
+            unmatchedCount: existingDoc.unmatchedCount,
+            message: 'Questo testo Fineco è già stato caricato (hash SHA-256 identico).',
+        };
+    }
+
     const stored = await storeOriginalFile(buffer, fileName, 'text/plain');
 
     const doc = await prisma.bankStatementDocument.create({
@@ -367,6 +401,7 @@ export async function confirmFinecoPaste(rawText: string) {
             blobPath: stored.blobPath,
             blobUrl: stored.blobUrl,
             storageKind: stored.storageKind,
+            sha256Hash: fileHash,
             status: 'PARSING',
             metadataJson: {
                 source: 'fineco_paste',
@@ -389,6 +424,7 @@ export async function confirmFinecoPaste(rawText: string) {
                 const match = matches[i];
                 if (match.matchStatus === 'MATCHED') matchedCount += 1;
                 else unmatchedCount += 1;
+                const dateIso = m.accountingDate || m.valueDate || null;
                 return {
                     documentId: doc.id,
                     lineIndex: m.lineIndex,
@@ -406,6 +442,7 @@ export async function confirmFinecoPaste(rawText: string) {
                     matchedOrderId: match.matchedOrderId,
                     matchNotes: match.matchNotes,
                     rawJson: (m.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+                    fingerprint: movementFingerprint(dateIso, m.amountCents, m.description),
                 };
             }
         );
@@ -418,7 +455,7 @@ export async function confirmFinecoPaste(rawText: string) {
         const parseSummary = `Incolla Fineco: ${asMovements.length} nuovi salvati · ${parsed.pasteMovements.length - asMovements.length} duplicati saltati · ${matchedCount} abbinati automaticamente`;
 
         await prisma.$transaction([
-            prisma.bankStatementLine.createMany({ data: lineRows }),
+            prisma.bankStatementLine.createMany({ data: lineRows, skipDuplicates: true }),
             prisma.bankStatementDocument.update({
                 where: { id: doc.id },
                 data: {
@@ -466,6 +503,23 @@ export async function uploadAndProcessBankStatement(input: {
     buffer: Buffer;
 }) {
     const { fileName, contentType, buffer } = input;
+    const fileHash = sha256Hex(buffer);
+
+    const existingDoc = await prisma.bankStatementDocument.findUnique({
+        where: { sha256Hash: fileHash },
+    });
+    if (existingDoc) {
+        const detail = await getBankStatementDetail(existingDoc.id);
+        return detail
+            ? {
+                  ...detail,
+                  parseSummary:
+                      'Estratto conto già presente in archivio (hash SHA-256 identico). Nessun duplicato creato.',
+                  duplicateSha256: true,
+              }
+            : detail;
+    }
+
     const stored = await storeOriginalFile(buffer, fileName, contentType);
 
     const doc = await prisma.bankStatementDocument.create({
@@ -476,21 +530,42 @@ export async function uploadAndProcessBankStatement(input: {
             blobPath: stored.blobPath,
             blobUrl: stored.blobUrl,
             storageKind: stored.storageKind,
+            sha256Hash: fileHash,
             status: 'PARSING',
         },
     });
 
     try {
         const parsed = await parseBankStatementFile(buffer, fileName, contentType);
-        const matches = await reconcileAllMovements(parsed.movements);
+
+        // Dedup per fingerprint: evita raddoppio se stessi movimenti già da paste/altro file.
+        const fingerprints = parsed.movements.map((m) =>
+            movementFingerprint(m.accountingDate || m.valueDate || null, m.amountCents, m.description)
+        );
+        const existingFp = fingerprints.length
+            ? await prisma.bankStatementLine.findMany({
+                  where: { fingerprint: { in: fingerprints } },
+                  select: { fingerprint: true },
+              })
+            : [];
+        const existingFpSet = new Set(
+            existingFp.map((r) => r.fingerprint).filter((f): f is string => Boolean(f))
+        );
+        const newMovements = parsed.movements.filter(
+            (m, i) => !existingFpSet.has(fingerprints[i])
+        );
+        const skippedByFingerprint = parsed.movements.length - newMovements.length;
+
+        const matches = await reconcileAllMovements(newMovements);
 
         let matchedCount = 0;
         let unmatchedCount = 0;
-        const lineRows: Prisma.BankStatementLineCreateManyInput[] = parsed.movements.map(
+        const lineRows: Prisma.BankStatementLineCreateManyInput[] = newMovements.map(
             (m, i) => {
                 const match = matches[i];
                 if (match.matchStatus === 'MATCHED') matchedCount += 1;
                 else unmatchedCount += 1;
+                const dateIso = m.accountingDate || m.valueDate || null;
                 return {
                     documentId: doc.id,
                     lineIndex: m.lineIndex,
@@ -508,6 +583,7 @@ export async function uploadAndProcessBankStatement(input: {
                     matchedOrderId: match.matchedOrderId,
                     matchNotes: match.matchNotes,
                     rawJson: (m.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+                    fingerprint: movementFingerprint(dateIso, m.amountCents, m.description),
                 };
             }
         );
@@ -522,7 +598,7 @@ export async function uploadAndProcessBankStatement(input: {
                 : null);
 
         await prisma.$transaction([
-            prisma.bankStatementLine.createMany({ data: lineRows }),
+            prisma.bankStatementLine.createMany({ data: lineRows, skipDuplicates: true }),
             prisma.bankStatementDocument.update({
                 where: { id: doc.id },
                 data: {
@@ -539,7 +615,8 @@ export async function uploadAndProcessBankStatement(input: {
                         : null,
                     metadataJson: {
                         warnings: parsed.warnings,
-                        movementCount: parsed.movements.length,
+                        movementCount: newMovements.length,
+                        skippedByFingerprint,
                         ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
                         parseSummary: parsed.parseSummary || parseInfoMessage,
                         ...(parsed.textPreview?.length
@@ -571,6 +648,24 @@ export async function uploadAndProcessBankStatement(input: {
                     },
                 },
             });
+        } else if (newMovements.length === 0) {
+            await prisma.bankStatementDocument.update({
+                where: { id: doc.id },
+                data: {
+                    status: 'RECONCILED',
+                    parseError: null,
+                    metadataJson: {
+                        warnings: parsed.warnings,
+                        movementCount: 0,
+                        skippedByFingerprint,
+                        parseSummary:
+                            'Tutti i movimenti del file risultano già presenti (fingerprint).',
+                        ...(parsed.textPreview?.length
+                            ? { textPreview: parsed.textPreview }
+                            : {}),
+                    },
+                },
+            });
         }
 
         const detail = await getBankStatementDetail(doc.id);
@@ -581,6 +676,7 @@ export async function uploadAndProcessBankStatement(input: {
                   anomalies: parsed.anomalies,
                   ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
                   parseSummary: parsed.parseSummary || parseInfoMessage,
+                  skippedByFingerprint,
               }
             : detail;
     } catch (err) {

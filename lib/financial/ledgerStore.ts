@@ -11,7 +11,7 @@ const LEDGER_PATH = IS_VERCEL
     ? path.join('/tmp', 'financial_ledger.json')
     : path.join(process.cwd(), 'financial_ledger.json');
 
-/** Ledger vuoto: nessun seed demo. Solo dati reali. */
+/** Ledger vuoto: nessun seed demo. Solo dati reali. Scadenze vivono su Neon. */
 const EMPTY_LEDGER: FinancialLedger = {
     transactions: [],
     accountingEntries: [],
@@ -26,8 +26,9 @@ function sanitizeLedger(ledger: FinancialLedger): FinancialLedger {
         accountingEntries: (ledger.accountingEntries || []).filter(
             (e) => !isFinanceSeedEntryId(e.id)
         ),
-        completedDeadlineIds: ledger.completedDeadlineIds || [],
-        deadlineStatusById: ledger.deadlineStatusById || {},
+        // Scadenze F24: non persistono più sul file (vedi financeDeadlineStore / Neon).
+        completedDeadlineIds: [],
+        deadlineStatusById: {},
     };
 }
 
@@ -45,12 +46,44 @@ export function getLedger(): FinancialLedger {
             cleaned.transactions.length !== (parsed.transactions || []).length ||
             cleaned.accountingEntries.length !== (parsed.accountingEntries || []).length
         ) {
-            saveLedger(cleaned);
+            // Riscrive senza seed; le scadenze restano in memoria finché migrate Neon non le assorbe.
+            saveLedger({
+                ...cleaned,
+                completedDeadlineIds: parsed.completedDeadlineIds || [],
+                deadlineStatusById: parsed.deadlineStatusById || {},
+            });
         }
-        return cleaned;
+        return {
+            ...cleaned,
+            completedDeadlineIds: parsed.completedDeadlineIds || [],
+            deadlineStatusById: parsed.deadlineStatusById || {},
+        };
     } catch (error) {
         console.error('[ledgerStore getLedger] Errore lettura, restituisco vuoto.', error);
         return { ...EMPTY_LEDGER };
+    }
+}
+
+/**
+ * Snapshot scadenze ancora presenti sul file (prima della migrazione Neon).
+ * Dopo saveLedger le scadenze sul file sono sempre vuote.
+ */
+export function peekFileDeadlineState(): {
+    completedDeadlineIds: string[];
+    deadlineStatusById: Record<string, string>;
+} {
+    try {
+        if (!fs.existsSync(LEDGER_PATH)) {
+            return { completedDeadlineIds: [], deadlineStatusById: {} };
+        }
+        const raw = fs.readFileSync(LEDGER_PATH, 'utf-8');
+        const parsed = JSON.parse(raw) as FinancialLedger;
+        return {
+            completedDeadlineIds: parsed.completedDeadlineIds || [],
+            deadlineStatusById: parsed.deadlineStatusById || {},
+        };
+    } catch {
+        return { completedDeadlineIds: [], deadlineStatusById: {} };
     }
 }
 
@@ -97,6 +130,10 @@ export function addAccountingEntries(entries: AccountingEntry[]): void {
         .catch((err) => console.warn('[ledgerStore] dual-write PG fallito', err));
 }
 
+/**
+ * Upsert scritture Prima Nota: sourceKey stabile JSON_ENTRY:{id} (niente :v&lt;Date.now()&gt;).
+ * Perché: il suffisso temporale creava una nuova riga Neon a ogni aggiornamento.
+ */
 export function upsertAccountingEntries(entries: AccountingEntry[]): void {
     const real = entries.filter((e) => !isFinanceSeedEntryId(e.id));
     if (!real.length) return;
@@ -109,14 +146,7 @@ export function upsertAccountingEntries(entries: AccountingEntry[]): void {
     saveLedger(ledger);
     void import('@/lib/financial/historicalLedgerSync')
         .then(({ persistJsonAccountingEntry }) =>
-            Promise.all(
-                real.map((e) =>
-                    persistJsonAccountingEntry({
-                        ...mapEntryForPersist(e),
-                        id: `${e.id}:v${Date.now()}`,
-                    })
-                )
-            )
+            Promise.all(real.map((e) => persistJsonAccountingEntry(mapEntryForPersist(e))))
         )
         .catch((err) => console.warn('[ledgerStore] dual-write upsert PG fallito', err));
 }

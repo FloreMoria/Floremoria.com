@@ -46,7 +46,7 @@ function toRow(input: LedgerEntryInput): Prisma.FinancialLedgerEntryCreateManyIn
     };
 }
 
-/** Inserisce solo chiavi assenti — mai overwrite (immutabilità). */
+/** Inserisce solo chiavi assenti — mai overwrite (immutabilità sync massivo). */
 export async function appendLedgerEntries(
     entries: LedgerEntryInput[]
 ): Promise<{ inserted: number; skipped: number }> {
@@ -60,7 +60,57 @@ export async function appendLedgerEntries(
 }
 
 /**
- * Dual-write da scrittura Prima Nota JSON → PG permanente.
+ * Upsert su sourceKey (ON CONFLICT DO UPDATE).
+ * Perché: aggiornamenti Prima Nota devono aggiornare la riga esistente, non crearne versioni :v&lt;Date.now()&gt;.
+ */
+export async function upsertLedgerEntry(
+    input: LedgerEntryInput
+): Promise<'inserted' | 'updated'> {
+    const row = toRow(input);
+    const existing = await prisma.financialLedgerEntry.findUnique({
+        where: { sourceKey: row.sourceKey as string },
+        select: { id: true },
+    });
+
+    if (!existing) {
+        await prisma.financialLedgerEntry.create({ data: row });
+        return 'inserted';
+    }
+
+    await prisma.financialLedgerEntry.update({
+        where: { sourceKey: row.sourceKey as string },
+        data: {
+            direction: row.direction,
+            category: row.category,
+            fiscalYear: row.fiscalYear,
+            fiscalQuarter: row.fiscalQuarter,
+            periodKey: row.periodKey,
+            accountingDate: row.accountingDate,
+            valueDate: row.valueDate,
+            description: row.description,
+            counterpartyName: row.counterpartyName,
+            counterpartyVat: row.counterpartyVat,
+            netCents: row.netCents,
+            vatRate: row.vatRate,
+            vatCents: row.vatCents,
+            totalCents: row.totalCents,
+            reconciliationStatus: row.reconciliationStatus,
+            documentRef: row.documentRef,
+            attachmentUrl: row.attachmentUrl,
+            attachmentPath: row.attachmentPath,
+            attachmentKind: row.attachmentKind,
+            bankLineId: row.bankLineId,
+            orderId: row.orderId,
+            partnerId: row.partnerId,
+            metadataJson: row.metadataJson,
+            reversedAt: null,
+        },
+    });
+    return 'updated';
+}
+
+/**
+ * Dual-write da scrittura Prima Nota JSON → PG permanente (upsert su sourceKey stabile).
  */
 export async function persistJsonAccountingEntry(entry: {
     id: string;
@@ -90,26 +140,27 @@ export async function persistJsonAccountingEntry(entry: {
 
     const signed = direction === 'ENTRATA' ? Math.abs(entry.amountCents) : -Math.abs(entry.amountCents);
     const net = Math.abs(entry.amountCents) - Math.abs(entry.vatAmountCents || 0);
-    await appendLedgerEntries([
-        {
-            sourceKey: `JSON_ENTRY:${entry.id}`,
-            sourceType: 'JSON_ENTRY',
-            sourceId: entry.id,
-            direction,
-            category,
-            accountingDate: new Date(`${entry.date}T12:00:00.000Z`),
-            description: entry.description,
-            netCents: direction === 'ENTRATA' ? net : -net,
-            vatCents: direction === 'ENTRATA' ? Math.abs(entry.vatAmountCents || 0) : -Math.abs(entry.vatAmountCents || 0),
-            totalCents: signed,
-            documentRef: entry.invoiceReference,
-            reconciliationStatus: 'N/A',
-            metadataJson: {
-                dareAccount: entry.dareAccount,
-                avereAccount: entry.avereAccount,
-            },
+    await upsertLedgerEntry({
+        sourceKey: `JSON_ENTRY:${entry.id}`,
+        sourceType: 'JSON_ENTRY',
+        sourceId: entry.id,
+        direction,
+        category,
+        accountingDate: new Date(`${entry.date}T12:00:00.000Z`),
+        description: entry.description,
+        netCents: direction === 'ENTRATA' ? net : -net,
+        vatCents:
+            direction === 'ENTRATA'
+                ? Math.abs(entry.vatAmountCents || 0)
+                : -Math.abs(entry.vatAmountCents || 0),
+        totalCents: signed,
+        documentRef: entry.invoiceReference,
+        reconciliationStatus: 'N/A',
+        metadataJson: {
+            dareAccount: entry.dareAccount,
+            avereAccount: entry.avereAccount,
         },
-    ]);
+    });
 }
 
 /**

@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { cookies } from 'next/headers';
-import { hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const cookieStore = await cookies();
-        const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
-
-        // Solo amministratori globali o ruoli abilitati possono vedere i dati finanziari sensibili
-        if (!hasGlobalOrdersView(roleName)) {
-            return NextResponse.json({ error: 'Non autorizzato' }, { status: 403 });
-        }
+        const auth = await requireDashboardAdmin();
+        if (!auth.ok) return auth.response;
 
         const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
         if (!stripeKey) {

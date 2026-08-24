@@ -56,3 +56,24 @@ export function readAndFilterTodayLog(
 export function resetTodayLog(cwd = process.cwd()): void {
     writeFileSync(todayLogPath(cwd), '', 'utf8');
 }
+
+/**
+ * Dopo aver verbalizzato `iso`, toglie quelle righe dal buffer e tiene il resto
+ * (es. attività già scritte dopo mezzanotte del giorno nuovo).
+ * Se non resta nulla, il file va a 0 byte.
+ */
+export function dropIsoLinesFromTodayLog(iso: string, cwd = process.cwd()): void {
+    const path = todayLogPath(cwd);
+    if (!existsSync(path)) {
+        writeFileSync(path, '', 'utf8');
+        return;
+    }
+    const raw = readFileSync(path, 'utf8');
+    const kept: string[] = [];
+    for (const line of raw.split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        if (lineMatchesIsoDate(line, iso)) continue;
+        kept.push(line);
+    }
+    writeFileSync(path, kept.length ? `${kept.join('\n')}\n` : '', 'utf8');
+}

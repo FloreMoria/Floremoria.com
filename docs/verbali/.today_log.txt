@@ -1,1 +1,2 @@
 [2026-08-24 16:11] prompt(vera): affinamento tono & riservatezza implicita — rimozione tecnicismi/note di instradamento interno ("non viene condivisa col fiorista"), aggiunta few-shot ed esempi in system prompt.
+[2026-08-24 16:30] feat(verbali): cron 05:00 giorno precedente — Git+.today_log → 4 sezioni, LaunchAgent com.floremoria.dailyverbale, ricostruito verbale 23-08-2026.

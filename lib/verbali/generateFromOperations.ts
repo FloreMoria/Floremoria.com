@@ -3,8 +3,10 @@ import { applyVerbaleContentPolicy } from './contentPolicy';
 import {
     getGitCommitsForSessionDay,
     formatCommitsBullets,
+    classifyVerbaleCategory,
     type GitCommitLine,
 } from './gitActivity';
+import { readAndFilterTodayLog } from './todayLog';
 
 export type VerbaleSections = {
     infrastruttura: string[];
@@ -29,17 +31,25 @@ function sessionBounds(iso: string): { start: Date; end: Date } {
     return { start, end };
 }
 
-function bucketCommits(commits: GitCommitLine[]): Omit<VerbaleSections, never> {
-    const sections: VerbaleSections = {
-        infrastruttura: [],
-        strategia: [],
-        sviluppo: [],
-        logistica: [],
-    };
+function emptySections(): VerbaleSections {
+    return { infrastruttura: [], strategia: [], sviluppo: [], logistica: [] };
+}
+
+function bucketCommits(commits: GitCommitLine[]): VerbaleSections {
+    const sections = emptySections();
     for (const c of commits) {
         sections[c.category].push(`- \`${c.hash}\` ${c.subject} _(${c.author})_`);
     }
     return sections;
+}
+
+function mergeTodayLog(sections: VerbaleSections, iso: string, cwd: string): number {
+    const { kept } = readAndFilterTodayLog(iso, cwd);
+    for (const line of kept) {
+        const cat = classifyVerbaleCategory(line);
+        sections[cat].push(`- ${line}`);
+    }
+    return kept.length;
 }
 
 async function loadOperationalMetrics(
@@ -91,8 +101,9 @@ function hasSubstance(sections: VerbaleSections, commits: GitCommitLine[]): bool
 }
 
 /**
- * Genera verbale da commit Git (ultime 24h del giorno) + metriche operativi (se DATABASE_URL).
- * Restituisce null se non c'è nulla da documentare — niente scaffold vuoto.
+ * Genera verbale da commit Git (00:00–23:59 del giorno) + buffer .today_log.txt
+ * + metriche operativi (se Prisma disponibile).
+ * Restituisce null solo se tutte le fonti sono vuote.
  */
 export async function generateVerbaleFromOperations(
     cwd: string,
@@ -101,6 +112,7 @@ export async function generateVerbaleFromOperations(
 ): Promise<{ markdown: string; shortSummary: string } | null> {
     const commits = getGitCommitsForSessionDay(cwd, iso);
     const sections = bucketCommits(commits);
+    const logCount = mergeTodayLog(sections, iso, cwd);
 
     if (prisma) {
         try {
@@ -111,15 +123,17 @@ export async function generateVerbaleFromOperations(
         }
     }
 
-    if (!hasSubstance(sections, commits)) {
+    if (!hasSubstance(sections, commits) && logCount === 0) {
         return null;
     }
 
     const label = italianLongDate(iso);
     const commitSummary =
         commits.length > 0
-            ? `${commits.length} commit su main (${formatCommitsBullets(commits).slice(0, 2).join('; ')}${commits.length > 2 ? '…' : ''})`
-            : 'Metriche operativi del giorno';
+            ? `${commits.length} commit (${formatCommitsBullets(commits).slice(0, 2).join('; ')}${commits.length > 2 ? '…' : ''})`
+            : logCount > 0
+              ? `${logCount} righe da .today_log.txt`
+              : 'Metriche operativi del giorno';
 
     const markdown = `# Verbale Operativo FloreMoria — ${label}
 

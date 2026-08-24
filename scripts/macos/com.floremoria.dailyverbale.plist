@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.floremoria.dailyverbale</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/floremoria/Library/Application Support/FloreMoria/run-daily-verbale.sh</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>5</integer>
+		<key>Minute</key>
+		<integer>0</integer>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/floremoria/Downloads/Floremoria_dot_com/floremoria</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+		<key>TZ</key>
+		<string>Europe/Rome</string>
+		<key>LANG</key>
+		<string>it_IT.UTF-8</string>
+		<key>HOME</key>
+		<string>/Users/floremoria</string>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/logs/daily-verbale-launchd.out.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/logs/daily-verbale-launchd.err.log</string>
+	<key>RunAtLoad</key>
+	<false/>
+</dict>
+</plist>

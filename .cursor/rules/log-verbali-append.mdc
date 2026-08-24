@@ -39,11 +39,11 @@ Quando l’utente chiede il verbale di fine giornata (o equivalente):
    `chore(verbali): sincronizzato verbale integrale DD mese YYYY`.
 5. **Svuotare** `.today_log.txt` (solo a questo punto, dopo sync e commit riusciti) lasciando il file vuoto o con un’unica riga di reset per il giorno successivo.
 
-## Automazione Mac (fallback 23:50)
+## Automazione Mac (05:00 — giorno precedente)
 
-`scripts/daily-verbale-cron.sh` via **LaunchAgent** `~/Library/LaunchAgents/com.floremoria.daily-verbale.plist` (ore 23:50, `TZ=Europe/Rome`).  
-Su macOS moderno `cron` non appare in Privacy e spesso non ha i permessi giusti: non usare crontab.  
-Se il verbale Regia esiste già, **non lo sovrascrive**: aggiorna solo la sezione `## Registro operativo automatico (.today_log)`.
+`scripts/daily-verbale-cron.sh` via **LaunchAgent** `~/Library/LaunchAgents/com.floremoria.dailyverbale.plist` (ore 05:00, `TZ=Europe/Rome`).  
+Fonte: righe `[YYYY-MM-DD]` in `.today_log.txt` + `git log` 00:00–23:59 di ieri. File docs: `DD-MM-YYYY.md` (sync Obsidian).  
+Su macOS moderno `cron` non appare in Privacy e spesso non ha i permessi giusti: non usare crontab.
 
 ## Note
 

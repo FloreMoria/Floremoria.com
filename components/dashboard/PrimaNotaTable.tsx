@@ -88,11 +88,27 @@ function accountsFromNeon(r: NeonRow): { dare: string; avere: string } {
     if (meta.dareAccount && meta.avereAccount) {
         return { dare: String(meta.dareAccount), avere: String(meta.avereAccount) };
     }
-    const bank = '10100 - Banca Fineco';
-    if (r.direction === 'ENTRATA' || r.totalCents > 0) {
-        return { dare: bank, avere: accountForCategory(r.category, true) };
+    const fineco = '10100 - Banca Fineco';
+    const paypal = '10200 - Conto PayPal';
+    const stripe = '10300 - Conto Stripe';
+
+    // Gateway wallet vs banca fisica
+    let cash = fineco;
+    if (r.sourceType === 'PAYPAL_MOVEMENT' || r.category === 'PAYPAL_PAYOUT') {
+        cash = paypal;
+    } else if (
+        r.sourceType === 'STRIPE_MOVEMENT' ||
+        (typeof r.sourceKey === 'string' && r.sourceKey.includes('stripe'))
+    ) {
+        cash = stripe;
+    } else if (r.category === 'TRASFERIMENTO_INTERNO') {
+        cash = fineco;
     }
-    return { dare: accountForCategory(r.category, false), avere: bank };
+
+    if (r.direction === 'ENTRATA' || r.totalCents > 0) {
+        return { dare: cash, avere: accountForCategory(r.category, true) };
+    }
+    return { dare: accountForCategory(r.category, false), avere: cash };
 }
 
 function accountForCategory(category: string, revenueSide: boolean): string {
@@ -106,9 +122,9 @@ function accountForCategory(category: string, revenueSide: boolean): string {
         case 'COSTI_FIORISTI':
             return '70100 - Costi Fioristi';
         case 'SPESE_SAAS':
-            return '70300 - Software SaaS';
+            return '70900 - Spese operative/SaaS';
         case 'ONERI_BANCARI':
-            return '70200 - Commissioni / Oneri bancari';
+            return '70200 - Oneri bancari / Fee gateway';
         default:
             return revenueSide ? '60900 - Altri ricavi' : '70900 - Spese operative';
     }

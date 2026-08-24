@@ -6,14 +6,16 @@
 import Papa from 'papaparse';
 import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
-import type { LedgerCategory, LedgerEntryInput } from '@/lib/financial/historicalLedgerTypes';
+import type { LedgerEntryInput } from '@/lib/financial/historicalLedgerTypes';
+import { LEDGER_PAYPAL_ACCOUNT } from '@/lib/financial/companyBankDetails';
+import { classifyPaypalTransaction } from '@/lib/financial/paypalClassify';
 import {
     paypalFeeSourceKey,
     paypalPayoutSourceKey,
     paypalRefundSourceKey,
     paypalTxSourceKey,
 } from '@/lib/financial/paypalSourceKeys';
-import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
+import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export type PaypalCsvRow = {
     transactionId: string;
@@ -146,7 +148,7 @@ function classifyPaypalType(typeLabel: string): PaypalCsvRow['kind'] {
         return 'payout';
     }
     if (/^fee$|tariffa|commissione/.test(t) && !/pagamento|payment/.test(t)) return 'fee';
-    if (/holding|reserve|conversione valuta|currency conversion|general authorization/.test(t)) {
+    if (/holding|reserve|conversione valuta|currency conversion|general authorization|general currency conversion|temporary hold/.test(t)) {
         return 'skip';
     }
     if (/pagamento|payment|checkout|credit|vendita|express|mobile/.test(t)) return 'payment';
@@ -308,6 +310,9 @@ export function parsePaypalCsvText(text: string): PaypalCsvParseResult {
 
 function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
     const entries: LedgerEntryInput[] = [];
+    const FEE_ACCOUNT = '70200 - Oneri bancari / Fee PayPal';
+    const REVENUE_ACCOUNT = '60100 - Ricavi da Vendite';
+    const SAAS_ACCOUNT = '70900 - Spese operative/SaaS';
     const metaBase = {
         provider: 'paypal',
         csvImport: true,
@@ -338,7 +343,11 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
             totalCents: feeSigned,
             reconciliationStatus: 'MATCHED',
             documentRef: row.transactionId,
-            metadataJson: metaBase,
+            metadataJson: {
+                ...metaBase,
+                dareAccount: FEE_ACCOUNT,
+                avereAccount: LEDGER_PAYPAL_ACCOUNT,
+            },
         });
         return entries;
     }
@@ -361,7 +370,12 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
             totalCents: amount,
             reconciliationStatus: 'N/A',
             documentRef: row.transactionId,
-            metadataJson: metaBase,
+            metadataJson: {
+                ...metaBase,
+                // Payout verso Fineco: la riga Fineco BANK_LINE è TRASFERIMENTO_INTERNO
+                dareAccount: LEDGER_PAYPAL_ACCOUNT,
+                avereAccount: '17100 - Conto transitorio Gateway (giroconto)',
+            },
         });
         return entries;
     }
@@ -375,29 +389,61 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
           ? row.grossCents
           : row.netCents;
 
-    if (gross !== 0) {
+    // Per i payment: solo lordo (+ fee separata). Mai scrivere il netto come TX.
+    const amountForTx =
+        row.kind === 'payment' && row.grossCents !== 0 ? row.grossCents : gross;
+
+    const classified = classifyPaypalTransaction({
+        description: row.description || row.counterpartyName || '',
+        grossCents: amountForTx,
+        feeCents: row.feeCents,
+        payerEmail: row.counterpartyName,
+    });
+
+    if (!isRefund && !classified.record) {
+        return entries;
+    }
+
+    if (amountForTx !== 0) {
+        const category = isRefund ? 'RIMBORSI' : classified.category;
+        const direction = isRefund
+            ? amountForTx >= 0
+                ? 'ENTRATA'
+                : 'USCITA'
+            : classified.direction;
+        const isIn = direction === 'ENTRATA';
         entries.push({
             sourceKey: isRefund
                 ? paypalRefundSourceKey(row.transactionId)
                 : paypalTxSourceKey(row.transactionId),
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: row.transactionId.slice(0, 128),
-            direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
-            category: isRefund ? 'RIMBORSI' : 'RICAVI_VENDITE',
+            direction,
+            category,
             accountingDate: row.accountingDate,
             description: row.description,
             counterpartyName: row.counterpartyName || 'PayPal',
-            netCents: gross,
+            netCents: amountForTx,
             vatRate: 0,
             vatCents: 0,
-            totalCents: gross,
+            totalCents: amountForTx,
             reconciliationStatus: 'UNMATCHED',
             documentRef: row.transactionId,
-            metadataJson: { ...metaBase, isRefund },
+            metadataJson: {
+                ...metaBase,
+                isRefund,
+                classifyReason: classified.reason,
+                dareAccount: isIn
+                    ? LEDGER_PAYPAL_ACCOUNT
+                    : category === 'SPESE_SAAS'
+                      ? SAAS_ACCOUNT
+                      : SAAS_ACCOUNT,
+                avereAccount: isIn ? REVENUE_ACCOUNT : LEDGER_PAYPAL_ACCOUNT,
+            },
         });
     }
 
-    if (row.feeCents > 0) {
+    if (row.feeCents > 0 && (isRefund || classified.direction === 'ENTRATA')) {
         const feeSigned = isRefund ? row.feeCents : -row.feeCents;
         entries.push({
             sourceKey: paypalFeeSourceKey(row.transactionId),
@@ -416,7 +462,13 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
             totalCents: feeSigned,
             reconciliationStatus: isRefund ? 'UNMATCHED' : 'MATCHED',
             documentRef: row.transactionId,
-            metadataJson: { ...metaBase, feeReversal: isRefund, isRefund },
+            metadataJson: {
+                ...metaBase,
+                feeReversal: isRefund,
+                isRefund,
+                dareAccount: FEE_ACCOUNT,
+                avereAccount: LEDGER_PAYPAL_ACCOUNT,
+            },
         });
     }
 
@@ -456,7 +508,7 @@ export async function importPaypalCsvToLedger(
     }
 
     const { inserted, skipped } = await appendLedgerEntries(ledgerBatch);
-    const sanitize = await sanitizePaypalLedgerDuplicates();
+    const sanitize = await sanitizeLedgerDoubleEntryAnomalies();
     const lastImportAt = new Date().toISOString();
 
     await prisma.systemState.upsert({

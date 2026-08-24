@@ -7,7 +7,7 @@ import {
     listHistoricalLedgerEntries,
     listPartnerLedgerExtract,
 } from '@/lib/financial/historicalLedgerQuery';
-import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
+import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,8 +22,8 @@ export async function GET(request: Request) {
         const auth = await requireDashboardAdmin();
         if (!auth.ok) return auth.response;
 
-        // Dedup PayPal prima di listati/PnL (API↔Webhook↔CSV)
-        await sanitizePaypalLedgerDuplicates();
+        // Dedup PayPal + sanitizzazione partita doppia prima di listati/PnL
+        await sanitizeLedgerDoubleEntryAnomalies();
 
         const url = new URL(request.url);
         const view = url.searchParams.get('view') || 'list';

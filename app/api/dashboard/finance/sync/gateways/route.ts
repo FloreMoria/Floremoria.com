@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { getPaypalSyncStatus } from '@/lib/financial/paypalSync';
 import { stripeAccountBadgeFromMovement } from '@/lib/financial/stripeSync';
 import { buildGatewaySyncRows } from '@/lib/financial/gatewaySyncRows';
-import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
+import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,8 +17,8 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     try {
-        // Bonifica doppioni PayPal (API/Webhook/CSV) prima di costruire la tabella
-        const paypalSanitize = await sanitizePaypalLedgerDuplicates();
+        // Bonifica doppioni PayPal + anomalie partita doppia prima della tabella gateway
+        const paypalSanitize = await sanitizeLedgerDoubleEntryAnomalies();
 
         const [stripeMeta, paypalStatus, stripeMovements, paypalLedger, kindOverridesState] =
             await Promise.all([

@@ -6,11 +6,15 @@
 import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 import {
+    LEDGER_PAYPAL_ACCOUNT,
+} from '@/lib/financial/companyBankDetails';
+import { classifyPaypalTransaction } from '@/lib/financial/paypalClassify';
+import {
     paypalFeeSourceKey,
     paypalRefundSourceKey,
     paypalTxSourceKey,
 } from '@/lib/financial/paypalSourceKeys';
-import { sanitizePaypalLedgerDuplicates } from '@/lib/financial/paypalLedgerSanitize';
+import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 const SYNC_META_KEY = 'finance.paypal.last_sync';
 const TX_CACHE_KEY = 'finance.paypal.transactions';
@@ -35,6 +39,7 @@ export type PaypalTx = {
     transactionDate: string;
     description: string;
     payerEmail?: string | null;
+    eventCode?: string | null;
 };
 
 export function paypalBaseUrl(): string {
@@ -119,6 +124,7 @@ async function fetchPaypalTransactions(params: {
                 transaction_info?: {
                     transaction_id?: string;
                     transaction_status?: string;
+                    transaction_event_code?: string;
                     transaction_amount?: { value?: string; currency_code?: string };
                     fee_amount?: { value?: string; currency_code?: string };
                     transaction_initiation_date?: string;
@@ -138,6 +144,7 @@ async function fetchPaypalTransactions(params: {
             if (currency.toUpperCase() !== 'EUR') continue;
             const grossCents = parseAmount(info.transaction_amount?.value);
             const feeCents = Math.abs(parseAmount(info.fee_amount?.value));
+            // Solo lordo: mai registrare il netto come seconda scrittura
             const netCents = grossCents - (grossCents >= 0 ? feeCents : -feeCents);
             txs.push({
                 id: info.transaction_id,
@@ -153,6 +160,7 @@ async function fetchPaypalTransactions(params: {
                     info.transaction_note ||
                     `PayPal ${info.transaction_id}`,
                 payerEmail: d.payer_info?.email_address || null,
+                eventCode: info.transaction_event_code || null,
             });
         }
 
@@ -208,16 +216,41 @@ export async function runPaypalFinanceSync(params?: {
         }
 
         const ledger = [];
+        const FEE_ACCOUNT = '70200 - Oneri bancari / Fee PayPal';
+        const REVENUE_ACCOUNT = '60100 - Ricavi da Vendite';
+        const SAAS_ACCOUNT = '70900 - Spese operative/SaaS';
+
         for (const tx of allTxs) {
             const accountingDate = new Date(tx.transactionDate);
             if (Number.isNaN(accountingDate.getTime())) continue;
 
-            const desc = (tx.description || '').toLowerCase();
-            const isRefund =
-                /refund|rimborso/.test(desc) ||
-                (tx.grossCents < 0 && /refund|rimborso|chargeback/.test(desc));
+            const classified = classifyPaypalTransaction({
+                description: tx.description,
+                grossCents: tx.grossCents,
+                feeCents: tx.feeCents,
+                eventCode: tx.eventCode,
+                payerEmail: tx.payerEmail,
+            });
+
+            if (!classified.record) {
+                continue;
+            }
+
+            const isRefund = classified.category === 'RIMBORSI';
 
             if (tx.grossCents !== 0) {
+                const isIn = classified.direction === 'ENTRATA';
+                const dareAccount = isIn
+                    ? LEDGER_PAYPAL_ACCOUNT
+                    : classified.category === 'SPESE_SAAS'
+                      ? SAAS_ACCOUNT
+                      : classified.category === 'ONERI_BANCARI'
+                        ? FEE_ACCOUNT
+                        : SAAS_ACCOUNT;
+                const avereAccount = isIn
+                    ? REVENUE_ACCOUNT
+                    : LEDGER_PAYPAL_ACCOUNT;
+
                 ledger.push({
                     sourceKey: (isRefund
                         ? paypalRefundSourceKey(tx.id)
@@ -225,12 +258,8 @@ export async function runPaypalFinanceSync(params?: {
                     ).slice(0, 180),
                     sourceType: 'PAYPAL_MOVEMENT' as const,
                     sourceId: tx.id.slice(0, 128),
-                    direction: (tx.grossCents >= 0 ? 'ENTRATA' : 'USCITA') as 'ENTRATA' | 'USCITA',
-                    category: (isRefund
-                        ? 'RIMBORSI'
-                        : tx.grossCents >= 0
-                          ? 'RICAVI_VENDITE'
-                          : 'ALTRI_COSTI') as 'RIMBORSI' | 'RICAVI_VENDITE' | 'ALTRI_COSTI',
+                    direction: classified.direction,
+                    category: classified.category,
                     accountingDate,
                     description: tx.description.slice(0, 2000),
                     counterpartyName: tx.payerEmail || 'PayPal',
@@ -245,15 +274,20 @@ export async function runPaypalFinanceSync(params?: {
                         feeCents: tx.feeCents,
                         netCents: tx.netCents,
                         status: tx.status,
+                        eventCode: tx.eventCode,
                         syncedFromApi: true,
                         isRefund,
+                        classifyReason: classified.reason,
                         paypalTransactionId: tx.id,
+                        dareAccount,
+                        avereAccount,
                     },
                 });
                 transactionsUpserted += 1;
             }
 
-            if (tx.feeCents > 0) {
+            // Fee solo su incassi (mai su spese SaaS / uscite merchant)
+            if (tx.feeCents > 0 && classified.direction === 'ENTRATA') {
                 ledger.push({
                     sourceKey: paypalFeeSourceKey(tx.id),
                     sourceType: 'PAYPAL_MOVEMENT' as const,
@@ -273,6 +307,8 @@ export async function runPaypalFinanceSync(params?: {
                         provider: 'paypal',
                         syncedFromApi: true,
                         paypalTransactionId: tx.id,
+                        dareAccount: FEE_ACCOUNT,
+                        avereAccount: LEDGER_PAYPAL_ACCOUNT,
                     },
                 });
                 feesUpserted += 1;
@@ -283,7 +319,7 @@ export async function runPaypalFinanceSync(params?: {
             await appendLedgerEntries(ledger);
         }
 
-        await sanitizePaypalLedgerDuplicates();
+        await sanitizeLedgerDoubleEntryAnomalies();
 
         const lastSyncAt = new Date().toISOString();
         await prisma.systemState.upsert({

@@ -5,6 +5,8 @@
 
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 import type { LedgerEntryInput } from '@/lib/financial/historicalLedgerTypes';
+import { LEDGER_PAYPAL_ACCOUNT } from '@/lib/financial/companyBankDetails';
+import { classifyPaypalTransaction } from '@/lib/financial/paypalClassify';
 import { getPaypalAccessToken, paypalBaseUrl } from '@/lib/financial/paypalSync';
 import {
     paypalFeeSourceKey,
@@ -13,8 +15,8 @@ import {
 } from '@/lib/financial/paypalSourceKeys';
 import {
     paypalCanonicalAlreadyRecorded,
-    sanitizePaypalLedgerDuplicates,
 } from '@/lib/financial/paypalLedgerSanitize';
+import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export type PaypalWebhookEvent = {
     id?: string;
@@ -194,19 +196,39 @@ export function extractMovementsFromPaypalEvent(event: PaypalWebhookEvent): Pars
 }
 
 function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
+    const FEE_ACCOUNT = '70200 - Oneri bancari / Fee PayPal';
+    const REVENUE_ACCOUNT = '60100 - Ricavi da Vendite';
+    const SAAS_ACCOUNT = '70900 - Spese operative/SaaS';
+
+    const classified = classifyPaypalTransaction({
+        description: mv.description,
+        grossCents: mv.grossCents,
+        feeCents: mv.feeCents,
+        payerEmail: mv.payerEmail,
+    });
+    if (!classified.record && !mv.isRefund) {
+        return [];
+    }
+
     const txKey = mv.isRefund
         ? paypalRefundSourceKey(mv.transactionId)
         : paypalTxSourceKey(mv.transactionId);
     const feeKey = paypalFeeSourceKey(mv.transactionId);
-    const category = mv.isRefund ? 'RIMBORSI' : 'RICAVI_VENDITE';
+    const category = mv.isRefund ? 'RIMBORSI' : classified.category;
+    const direction = mv.isRefund
+        ? mv.grossCents >= 0
+            ? 'ENTRATA'
+            : 'USCITA'
+        : classified.direction;
     const entries: LedgerEntryInput[] = [];
 
     if (mv.grossCents !== 0) {
+        const isIn = direction === 'ENTRATA';
         entries.push({
             sourceKey: txKey,
             sourceType: 'PAYPAL_MOVEMENT',
             sourceId: mv.transactionId.slice(0, 128),
-            direction: mv.grossCents >= 0 ? 'ENTRATA' : 'USCITA',
+            direction,
             category,
             accountingDate: mv.accountingDate,
             description: mv.description,
@@ -223,12 +245,19 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
                 feeCents: mv.feeCents,
                 netCents: mv.netCents,
                 isRefund: mv.isRefund,
+                classifyReason: classified.reason,
                 paypalTransactionId: mv.transactionId,
+                dareAccount: isIn
+                    ? LEDGER_PAYPAL_ACCOUNT
+                    : category === 'SPESE_SAAS'
+                      ? SAAS_ACCOUNT
+                      : SAAS_ACCOUNT,
+                avereAccount: isIn ? REVENUE_ACCOUNT : LEDGER_PAYPAL_ACCOUNT,
             },
         });
     }
 
-    if (mv.feeCents > 0) {
+    if (mv.feeCents > 0 && direction === 'ENTRATA') {
         const feeSigned = mv.isRefund ? mv.feeCents : -mv.feeCents;
         entries.push({
             sourceKey: feeKey,
@@ -253,6 +282,8 @@ function ledgerEntriesForMovement(mv: ParsedMovement): LedgerEntryInput[] {
                 isRefund: mv.isRefund,
                 feeReversal: mv.isRefund,
                 paypalTransactionId: mv.transactionId,
+                dareAccount: FEE_ACCOUNT,
+                avereAccount: LEDGER_PAYPAL_ACCOUNT,
             },
         });
     }
@@ -367,7 +398,7 @@ export async function processPaypalWebhookEvent(event: PaypalWebhookEvent): Prom
     }
 
     const { inserted, skipped: dupSkipped } = await appendLedgerEntries(ledgerBatch);
-    await sanitizePaypalLedgerDuplicates();
+    await sanitizeLedgerDoubleEntryAnomalies();
 
     return {
         eventType,

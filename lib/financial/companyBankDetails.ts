@@ -30,8 +30,18 @@ export const FLOREMORIA_FINECO_BANK = {
     bicSwift: 'FEBIITM2',
 } as const;
 
-/** Conto contabile disponibilità liquide (Piano dei Conti interno). */
-export const LEDGER_BANK_ACCOUNT = '50100 - Banca FinecoBank' as const;
+/** Conto Fineco — solo payout fisici (TRASFERIMENTO_INTERNO) e bonifici SEPA. */
+export const LEDGER_FINECO_ACCOUNT = '10100 - Banca Fineco' as const;
+/** Wallet PayPal (incassi/fee prima del payout). */
+export const LEDGER_PAYPAL_ACCOUNT = '10200 - Conto PayPal' as const;
+/** Wallet Stripe (incassi/fee prima del payout). */
+export const LEDGER_STRIPE_ACCOUNT = '10300 - Conto Stripe' as const;
+
+/**
+ * Legacy alias: punti ancora a Fineco. Preferire LEDGER_FINECO_ACCOUNT / gateway.
+ * @deprecated usare LEDGER_FINECO_ACCOUNT
+ */
+export const LEDGER_BANK_ACCOUNT = LEDGER_FINECO_ACCOUNT;
 
 export function formatFloremoriaBankBlock(): string {
     return [
@@ -52,7 +62,7 @@ export function buildAlbertoBankContextPrompt(): string {
     return `
 COORDINATE BANCARIE AZIENDALI (conto operativo FloreMoria — FinecoBank, NON altri istituti):
 ${formatFloremoriaBankBlock()}
-- In Prima Nota il conto disponibilità liquide è: ${LEDGER_BANK_ACCOUNT}.
-- I payout Stripe/PayPal accreditano questo IBAN Fineco.
+- In Prima Nota: Fineco = ${LEDGER_FINECO_ACCOUNT}; PayPal = ${LEDGER_PAYPAL_ACCOUNT}; Stripe = ${LEDGER_STRIPE_ACCOUNT}.
+- I payout Stripe/PayPal accreditano l'IBAN Fineco come TRASFERIMENTO_INTERNO (giroconto).
 `.trim();
 }

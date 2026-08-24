@@ -176,13 +176,9 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     inserted: number;
     skipped: number;
     sources: Record<string, number>;
-    paypalSanitize?: {
-        scanned: number;
-        reversed: number;
-        renamed: number;
-        kept: number;
-        groupsCollapsed: number;
-    };
+    paypalSanitize?: Awaited<
+        ReturnType<typeof import('@/lib/financial/ledgerDoubleEntrySanitize').sanitizeLedgerDoubleEntryAnomalies>
+    >;
 }> {
     const candidates: LedgerEntryInput[] = [];
     const sources: Record<string, number> = {};
@@ -400,7 +396,8 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
         sources.BANK_LINE = (sources.BANK_LINE || 0) + 1;
     }
 
-    // 5) Stripe fees
+    // 5) Stripe fees → conto 10300 (non Fineco)
+    const { LEDGER_STRIPE_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
     const stripeMoves = await prisma.stripeFinanceMovement.findMany({
         where: { feeCents: { gt: 0 } },
         orderBy: { createdAtStripe: 'desc' },
@@ -423,7 +420,12 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             reconciliationStatus: 'MATCHED',
             documentRef: m.payoutId || m.stripeId,
             orderId: m.orderId,
-            metadataJson: { type: m.type, amountCents: m.amountCents },
+            metadataJson: {
+                type: m.type,
+                amountCents: m.amountCents,
+                dareAccount: '70200 - Oneri bancari / Fee Stripe',
+                avereAccount: LEDGER_STRIPE_ACCOUNT,
+            },
         });
         sources.STRIPE_MOVEMENT = (sources.STRIPE_MOVEMENT || 0) + 1;
     }
@@ -453,9 +455,9 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     }
 
     const result = await appendLedgerEntries(candidates);
-    const { sanitizePaypalLedgerDuplicates } = await import(
-        '@/lib/financial/paypalLedgerSanitize'
+    const { sanitizeLedgerDoubleEntryAnomalies } = await import(
+        '@/lib/financial/ledgerDoubleEntrySanitize'
     );
-    const paypalSanitize = await sanitizePaypalLedgerDuplicates();
+    const paypalSanitize = await sanitizeLedgerDoubleEntryAnomalies();
     return { ...result, sources, paypalSanitize };
 }

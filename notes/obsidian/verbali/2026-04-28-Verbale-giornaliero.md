@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Trust Identity \\"Made in Italy\\"."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-08-24T20:05:31.795Z
+synced_at: 2026-08-24T20:16:39.933Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

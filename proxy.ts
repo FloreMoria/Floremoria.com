@@ -169,7 +169,15 @@ function getHostContext(request: NextRequest): DashboardHostContext {
 
         const loginUrl = buildAppUrl(request, hostCtx, '/login?expired=1');
 
-        if (roleExpiresAt) {
+        // Mini-app fiorista e upload proof: accesso via link WhatsApp senza login.
+        // Cookie di sessione scaduti (dashboard/magic-link) non devono dirottare qui.
+        const isFloristPublicPath =
+            pathname.startsWith('/fiorista') ||
+            pathname.startsWith('/partner/upload') ||
+            pathname === '/api/partner/order/upload-proof' ||
+            pathname.startsWith('/api/partner/order/upload-proof/');
+
+        if (roleExpiresAt && !isFloristPublicPath) {
             if (new Date() > new Date(roleExpiresAt)) {
                 // API devono ricevere JSON, non redirect HTML alla login (rompe FormData/fetch JSON).
                 if (isApiRoute) {

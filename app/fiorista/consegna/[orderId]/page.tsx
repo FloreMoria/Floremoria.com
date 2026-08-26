@@ -95,7 +95,7 @@ export default async function FloristConsegnaPage({
         return (
             <BlockedPage
                 title="Consegna già registrata"
-                message="Le foto per questo ordine sono già state inviate. Grazie per il servizio."
+                message="Le foto per questo ordine sono già state inviate correttamente. Grazie per il servizio. Se serve correggere qualcosa, contatta FloreMoria."
             />
         );
     }

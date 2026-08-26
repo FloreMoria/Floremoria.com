@@ -24,7 +24,10 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
         pathname?.startsWith('/dashboard') ||
         pathname?.startsWith('/login') ||
         pathname?.startsWith('/admin-panel') ||
-        pathname?.startsWith('/admin');
+        pathname?.startsWith('/admin') ||
+        pathname?.startsWith('/fiorista') ||
+        pathname?.startsWith('/partner/upload') ||
+        pathname?.startsWith('/auth');
     const isPrintRoute = pathname?.startsWith('/stampa');
     const isPartnerDocsRoute = pathname?.startsWith('/docs/partner-api');
 

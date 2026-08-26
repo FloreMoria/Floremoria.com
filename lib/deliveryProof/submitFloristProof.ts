@@ -56,7 +56,11 @@ export async function submitFloristDeliveryProof(
         return { ok: false, error: 'Ordine non trovato.' };
     }
     if (!order.partnerId) {
-        return { ok: false, error: 'Ordine senza fiorista assegnato.' };
+        return {
+            ok: false,
+            error:
+                'Ordine non ancora assegnato a un fiorista. Contatta FloreMoria prima di caricare le foto.',
+        };
     }
 
     const photosBeforeUrls: string[] = [];

@@ -1,28 +1,24 @@
-import MobileUploadClient from './MobileUploadClient';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
+import { buildFloristDeliveryPath } from '@/lib/orders/resolveOrderIdentifier';
 
 export const metadata = {
-  title: 'Upload Prove - FloreMoria Partner',
-  description: 'Area riservata per il caricamento off-line delle conferme fotografiche dai cimiteri.',
+    title: 'Upload Prove - FloreMoria Partner',
+    description: 'Reindirizzamento alla mini-app fiorista per le conferme fotografiche.',
 };
 
-export default async function FloristUploadPage({ params }: { params: Promise<{ orderId: string }> | { orderId: string } }) {
-  // Estraggo il codice ID dall'URL univoco
-  const resolvedParams = await Promise.resolve(params);
-  const { orderId } = resolvedParams;
-
-  if (!orderId) {
-    return notFound();
-  }
-
-  // Qui in futuro il backend leggerà il database per estrarre il tipo di ordine
-  // const order = await prisma.order.findUnique({ where: { orderNumber: orderId } });
-  // const isFuneral = order?.type === 'FUNERAL';
-  const isFuneral = false; // Mock for scaffolding
-
-  return (
-    <div className="min-h-screen bg-[#F0F2F5] pb-24 font-body text-[#111B21]">
-        <MobileUploadClient orderId={orderId} isFuneral={isFuneral} />
-    </div>
-  );
+/**
+ * Legacy: /partner/upload/[orderId] → mini-app /fiorista/consegna/[orderId].
+ * Evita la pagina stub “in allestimento” ancora citata in link vecchi.
+ */
+export default async function FloristUploadRedirectPage({
+    params,
+}: {
+    params: Promise<{ orderId: string }> | { orderId: string };
+}) {
+    const resolved = await Promise.resolve(params);
+    const orderId = resolved.orderId?.trim();
+    if (!orderId) {
+        redirect('/');
+    }
+    redirect(buildFloristDeliveryPath({ id: orderId, orderNumber: orderId }));
 }

@@ -22,3 +22,5 @@
 - Verificata con successo l'autenticazione API v1 su `GET /api/v1/partner/catalog` (risposta HTTP 200 con 29 prodotti attivi).
 [2026-08-26 10:45] fix(auth): Magic Link login — TTL 24h, landing anti-prefetch /auth/magic-link, sanitize token, cookie Secure/SameSite=Lax, errori login espliciti.
 [2026-08-26 11:15] fix(giardino): risoluzione multi-entità link /giardino/[id] — aggiunto fallback per ID DeceasedProfile e ID/Numero Ordine, rendendo perfettamente funzionante il link per Assunta Franzina (Robbiate LC) e qualsiasi profilo defunto.
+[2026-08-26 12:04] fix(fioristi): mini-app — no hijack login da cookie scaduti, layout shell-less + safe-area, risoluzione id/numero/proofFotoCode, upload HEIC/timeout, GPS opzionale, redirect /partner/upload.
+[2026-08-26 12:04] fix(fioristi): mini-app — no hijack login da cookie scaduti, layout shell-less + safe-area, risoluzione id/numero/proofFotoCode, upload HEIC/timeout, GPS opzionale, redirect /partner/upload.

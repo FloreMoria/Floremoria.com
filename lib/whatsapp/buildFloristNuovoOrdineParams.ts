@@ -158,7 +158,8 @@ export function formatFloristMiniAppUrlParam(url: string | null | undefined): st
 /** Riga completa con spazio obbligatorio dopo i due punti (link blu + anteprima). */
 export function formatFloristMiniAppInstructionLine(url: string): string {
     const clean = formatFloristMiniAppUrlParam(url);
-    const href = clean === '-' ? 'https://www.floremoria.com/fiorista' : clean;
+    // Fallback: home sito (non /fiorista — non esiste una pagina indice fiorista).
+    const href = clean === '-' ? 'https://www.floremoria.com' : clean;
     return `🔗 Per favore, completa l'ordine con la mini-app: ${href}`;
 }
 

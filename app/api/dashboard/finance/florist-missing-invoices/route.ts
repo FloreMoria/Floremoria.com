@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
-import prisma from '@/lib/prisma';
 import {
     listFloristMissingInvoices,
     sendFloristInvoiceReminder,
 } from '@/lib/financial/floristMissingInvoices';
+import {
+    dismissFloristMissingRow,
+    linkFloristMissingExpense,
+    linkFloristMissingOrder,
+    updateFloristMissingRow,
+    uploadFloristMissingReceipt,
+} from '@/lib/financial/floristMissingInvoicesMutations';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+const ALLOWED_RECEIPT = /\.(pdf|png|jpe?g|webp)$/i;
+const MAX_BYTES = 12 * 1024 * 1024;
 
 function jsonError(error: string, status: number) {
     return NextResponse.json({ ok: false, error }, { status });
@@ -43,6 +53,41 @@ export async function POST(request: Request) {
         const auth = await requireDashboardAdmin();
         if (!auth.ok) return auth.response;
 
+        const contentType = request.headers.get('content-type') || '';
+        if (contentType.includes('multipart/form-data')) {
+            const form = await request.formData();
+            const action = String(form.get('action') || 'upload_receipt');
+            const rowId = String(form.get('rowId') || '').trim();
+            if (!rowId) return jsonError('rowId obbligatorio.', 400);
+
+            if (action === 'upload_receipt') {
+                const file = form.get('file');
+                if (!(file instanceof Blob)) {
+                    return jsonError('File scontrino obbligatorio.', 400);
+                }
+                const blob = file as Blob & { name?: string };
+                const fileName = blob.name || String(form.get('fileName') || 'scontrino.jpg');
+                if (!ALLOWED_RECEIPT.test(fileName)) {
+                    return jsonError('Formato non supportato (JPEG, PNG, PDF, WebP).', 400);
+                }
+                if (blob.size > MAX_BYTES) {
+                    return jsonError('Allegato troppo grande (max 12 MB).', 400);
+                }
+                const result = await uploadFloristMissingReceipt({
+                    rowId,
+                    buffer: Buffer.from(await blob.arrayBuffer()),
+                    fileName,
+                    contentType: blob.type || 'application/octet-stream',
+                });
+                return NextResponse.json({
+                    ok: true,
+                    message: 'Scontrino allegato e salvato.',
+                    ...result,
+                });
+            }
+            return jsonError('Azione multipart non supportata.', 400);
+        }
+
         const body = (await request.json().catch(() => null)) as {
             action?: string;
             channel?: 'email' | 'whatsapp' | 'both';
@@ -58,6 +103,8 @@ export async function POST(request: Request) {
             bankLineId?: string;
             documentId?: string;
             orderId?: string;
+            expenseId?: string;
+            notes?: string | null;
         } | null;
 
         if (!body?.action) {
@@ -65,45 +112,61 @@ export async function POST(request: Request) {
         }
 
         if (body.action === 'link_order') {
-            const bankLineId = String(body.bankLineId || '').trim();
-            const documentId = String(body.documentId || '').trim();
             const orderId = String(body.orderId || '').trim();
-            if (!bankLineId || !documentId || !orderId) {
-                return jsonError('bankLineId, documentId e orderId sono obbligatori.', 400);
-            }
-
-            const order = await prisma.order.findUnique({
-                where: { id: orderId },
-                select: { id: true, orderNumber: true },
+            if (!orderId) return jsonError('orderId obbligatorio.', 400);
+            const linked = await linkFloristMissingOrder({
+                bankLineId: body.bankLineId,
+                documentId: body.documentId,
+                orderId,
+                rowId: body.rowId,
             });
-            if (!order) return jsonError('Ordine non trovato.', 404);
-
-            const line = await prisma.bankStatementLine.findFirst({
-                where: { id: bankLineId, documentId },
-            });
-            if (!line) return jsonError('Movimento bancario non trovato.', 404);
-
-            await prisma.bankStatementLine.update({
-                where: { id: bankLineId },
-                data: {
-                    matchedOrderId: order.id,
-                    matchStatus: 'MATCHED',
-                    matchType: line.matchType || 'FLORIST_TRANSFER',
-                    matchScore: 100,
-                    matchNotes: `Ordine associato da Contabilità: ${order.orderNumber || order.id}`,
-                },
-            });
-
             return NextResponse.json({
                 ok: true,
-                message: `Ordine ${order.orderNumber || order.id} associato al pagamento.`,
-                orderId: order.id,
-                orderNumber: order.orderNumber,
+                message: `Ordine ${linked.orderNumber || linked.orderId} associato e salvato.`,
+                ...linked,
             });
         }
 
+        if (body.action === 'link_expense') {
+            const rowId = String(body.rowId || '').trim();
+            const expenseId = String(body.expenseId || '').trim();
+            if (!rowId || !expenseId) {
+                return jsonError('rowId e expenseId obbligatori.', 400);
+            }
+            const linked = await linkFloristMissingExpense({ rowId, expenseId });
+            return NextResponse.json({
+                ok: true,
+                message: 'Fattura passiva associata e salvata.',
+                ...linked,
+            });
+        }
+
+        if (body.action === 'update') {
+            const rowId = String(body.rowId || '').trim();
+            if (!rowId) return jsonError('rowId obbligatorio.', 400);
+            await updateFloristMissingRow({
+                rowId,
+                paymentDate: body.paymentDate,
+                amountCents: body.amountCents,
+                partnerId: body.partnerId,
+                notes: body.notes,
+                orderId: body.orderId,
+            });
+            return NextResponse.json({ ok: true, message: 'Riga aggiornata.' });
+        }
+
+        if (body.action === 'dismiss' || body.action === 'delete') {
+            const rowId = String(body.rowId || '').trim();
+            if (!rowId) return jsonError('rowId obbligatorio.', 400);
+            await dismissFloristMissingRow(rowId);
+            return NextResponse.json({ ok: true, message: 'Riga archiviata.' });
+        }
+
         if (body.action !== 'remind') {
-            return jsonError('Azione non supportata (usa "remind" o "link_order").', 400);
+            return jsonError(
+                'Azione non supportata (remind | link_order | link_expense | update | dismiss).',
+                400
+            );
         }
         if (!body.partnerName || !body.paymentDate || body.amountCents == null) {
             return jsonError('Dati sollecito incompleti.', 400);
@@ -143,6 +206,66 @@ export async function POST(request: Request) {
         console.error('[florist-missing-invoices POST]', error);
         return jsonError(
             error instanceof Error ? error.message : 'Operazione fallita',
+            500
+        );
+    }
+}
+
+export async function PATCH(request: Request) {
+    try {
+        const auth = await requireDashboardAdmin();
+        if (!auth.ok) return auth.response;
+
+        const body = (await request.json().catch(() => null)) as {
+            rowId?: string;
+            paymentDate?: string;
+            amountCents?: number;
+            partnerId?: string | null;
+            notes?: string | null;
+            orderId?: string | null;
+        } | null;
+
+        const rowId = String(body?.rowId || '').trim();
+        if (!rowId) return jsonError('rowId obbligatorio.', 400);
+
+        await updateFloristMissingRow({
+            rowId,
+            paymentDate: body?.paymentDate,
+            amountCents: body?.amountCents,
+            partnerId: body?.partnerId,
+            notes: body?.notes,
+            orderId: body?.orderId,
+        });
+
+        return NextResponse.json({ ok: true, message: 'Riga aggiornata.' });
+    } catch (error) {
+        console.error('[florist-missing-invoices PATCH]', error);
+        return jsonError(
+            error instanceof Error ? error.message : 'Aggiornamento fallito',
+            500
+        );
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const auth = await requireDashboardAdmin();
+        if (!auth.ok) return auth.response;
+
+        const url = new URL(request.url);
+        let rowId = url.searchParams.get('rowId')?.trim() || '';
+        if (!rowId) {
+            const body = (await request.json().catch(() => null)) as { rowId?: string } | null;
+            rowId = String(body?.rowId || '').trim();
+        }
+        if (!rowId) return jsonError('rowId obbligatorio.', 400);
+
+        await dismissFloristMissingRow(rowId);
+        return NextResponse.json({ ok: true, message: 'Riga archiviata.' });
+    } catch (error) {
+        console.error('[florist-missing-invoices DELETE]', error);
+        return jsonError(
+            error instanceof Error ? error.message : 'Eliminazione fallita',
             500
         );
     }

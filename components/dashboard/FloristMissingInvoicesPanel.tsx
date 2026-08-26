@@ -1,18 +1,21 @@
 'use client';
 
 /**
- * Alert Contabilità: fioristi pagati senza fattura + Associa ordine.
+ * Alert Contabilità: fioristi pagati senza fattura + Associa / Modifica / Elimina / scontrino.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     AlertTriangle,
     Link2,
     Loader2,
     Mail,
     MessageCircle,
+    Paperclip,
+    Pencil,
     RefreshCw,
     Search,
+    Trash2,
     X,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
@@ -26,14 +29,21 @@ export type FloristMissingInvoiceRow = {
     partnerEmail: string | null;
     partnerWhatsapp: string | null;
     paymentDate: string;
+    bankPaymentDate?: string | null;
     amountCents: number;
     daysSincePayment: number;
     bankLineId: string | null;
     documentId: string | null;
     orderId: string | null;
     orderNumber: string | null;
+    orderCreatedAt?: string | null;
+    orderDeliveryDate?: string | null;
     orderMatchSource?: 'manual' | 'auto' | null;
     description: string;
+    notes?: string | null;
+    receiptUrl?: string | null;
+    receiptPath?: string | null;
+    linkedExpenseId?: string | null;
     severity: 'warning' | 'critical';
     statusLabel: string;
 };
@@ -71,6 +81,8 @@ function formatOrderRef(row: FloristMissingInvoiceRow): string | null {
     return null;
 }
 
+const API = '/api/dashboard/finance/florist-missing-invoices';
+
 export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
     const [rows, setRows] = useState<FloristMissingInvoiceRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -79,16 +91,24 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
     const [flash, setFlash] = useState<string | null>(null);
 
     const [linkRow, setLinkRow] = useState<FloristMissingInvoiceRow | null>(null);
+    const [editRow, setEditRow] = useState<FloristMissingInvoiceRow | null>(null);
     const [orderQuery, setOrderQuery] = useState('');
     const [orderHits, setOrderHits] = useState<OrderHit[]>([]);
     const [searchingOrders, setSearchingOrders] = useState(false);
     const [linking, setLinking] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
+    const [editDate, setEditDate] = useState('');
+    const [editAmount, setEditAmount] = useState('');
+    const [editNotes, setEditNotes] = useState('');
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/dashboard/finance/florist-missing-invoices');
+            const res = await fetch(API);
             const parsed = await readJsonResponse<{
                 ok?: boolean;
                 rows?: FloristMissingInvoiceRow[];
@@ -109,7 +129,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
     }, [load]);
 
     useEffect(() => {
-        if (!linkRow) return;
+        if (!linkRow && !editRow) return;
         const q = orderQuery.trim();
         if (q.length < 2) {
             setOrderHits([]);
@@ -135,7 +155,17 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             }
         }, 280);
         return () => clearTimeout(t);
-    }, [orderQuery, linkRow]);
+    }, [orderQuery, linkRow, editRow]);
+
+    const openEdit = (row: FloristMissingInvoiceRow) => {
+        setEditRow(row);
+        setEditDate(row.paymentDate);
+        setEditAmount((row.amountCents / 100).toFixed(2).replace('.', ','));
+        setEditNotes(row.notes || '');
+        setOrderQuery(row.orderNumber || '');
+        setOrderHits([]);
+        setFlash(null);
+    };
 
     const remind = async (
         row: FloristMissingInvoiceRow,
@@ -144,7 +174,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         setBusyId(`${row.id}-${channel}`);
         setFlash(null);
         try {
-            const res = await fetch('/api/dashboard/finance/florist-missing-invoices', {
+            const res = await fetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -175,21 +205,18 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         }
     };
 
-    const associateOrder = async (order: OrderHit) => {
-        if (!linkRow?.bankLineId || !linkRow.documentId) {
-            setFlash('Questa riga non è collegata a un movimento bancario abbinabile.');
-            return;
-        }
+    const associateOrder = async (order: OrderHit, target: FloristMissingInvoiceRow) => {
         setLinking(true);
         setFlash(null);
         try {
-            const res = await fetch('/api/dashboard/finance/florist-missing-invoices', {
+            const res = await fetch(API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'link_order',
-                    bankLineId: linkRow.bankLineId,
-                    documentId: linkRow.documentId,
+                    rowId: target.id,
+                    bankLineId: target.bankLineId,
+                    documentId: target.documentId,
                     orderId: order.id,
                     orderNumber: order.orderNumber,
                 }),
@@ -202,6 +229,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             if (!parsed.ok) throw new Error(parsed.error || 'Associazione fallita');
             setFlash(parsed.data?.message || `Ordine ${order.orderNumber || order.id} associato`);
             setLinkRow(null);
+            setEditRow(null);
             setOrderQuery('');
             setOrderHits([]);
             await load();
@@ -209,6 +237,94 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             setFlash(e instanceof Error ? e.message : 'Associazione fallita');
         } finally {
             setLinking(false);
+        }
+    };
+
+    const saveEdit = async () => {
+        if (!editRow) return;
+        setSaving(true);
+        setFlash(null);
+        try {
+            const amount = Number(String(editAmount).replace(',', '.'));
+            const amountCents = Number.isFinite(amount) ? Math.round(amount * 100) : undefined;
+            const res = await fetch(API, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rowId: editRow.id,
+                    paymentDate: editDate || undefined,
+                    amountCents,
+                    notes: editNotes,
+                    partnerId: editRow.partnerId,
+                    orderId: editRow.orderId,
+                }),
+            });
+            const parsed = await readJsonResponse<{ ok?: boolean; message?: string; error?: string }>(
+                res
+            );
+            if (!parsed.ok) throw new Error(parsed.error || 'Salvataggio fallito');
+            setFlash(parsed.data?.message || 'Modifiche salvate');
+            setEditRow(null);
+            await load();
+        } catch (e) {
+            setFlash(e instanceof Error ? e.message : 'Salvataggio fallito');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const dismissRow = async (row: FloristMissingInvoiceRow) => {
+        const ok = window.confirm(
+            `Archiviare la riga di ${row.partnerName}` +
+                (row.orderNumber ? ` (ordine ${row.orderNumber})` : '') +
+                '? Non comparirà più nell’elenco.'
+        );
+        if (!ok) return;
+        setBusyId(`${row.id}-delete`);
+        setFlash(null);
+        try {
+            const res = await fetch(`${API}?rowId=${encodeURIComponent(row.id)}`, {
+                method: 'DELETE',
+            });
+            const parsed = await readJsonResponse<{ ok?: boolean; message?: string; error?: string }>(
+                res
+            );
+            if (!parsed.ok) throw new Error(parsed.error || 'Eliminazione fallita');
+            setFlash(parsed.data?.message || 'Riga archiviata');
+            await load();
+        } catch (e) {
+            setFlash(e instanceof Error ? e.message : 'Eliminazione fallita');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const uploadReceipt = async (row: FloristMissingInvoiceRow, file: File) => {
+        setUploading(true);
+        setFlash(null);
+        try {
+            const form = new FormData();
+            form.set('action', 'upload_receipt');
+            form.set('rowId', row.id);
+            form.set('file', file);
+            const res = await fetch(API, { method: 'POST', body: form });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                message?: string;
+                receiptUrl?: string;
+                error?: string;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Upload fallito');
+            setFlash(parsed.data?.message || 'Scontrino salvato');
+            if (editRow?.id === row.id && parsed.data?.receiptUrl) {
+                setEditRow({ ...editRow, receiptUrl: parsed.data.receiptUrl });
+            }
+            await load();
+        } catch (e) {
+            setFlash(e instanceof Error ? e.message : 'Upload fallito');
+        } finally {
+            setUploading(false);
+            if (fileRef.current) fileRef.current.value = '';
         }
     };
 
@@ -228,8 +344,9 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                     <div className="text-sm">
                         <p className="font-semibold">Fatture in attesa dai fioristi</p>
                         <p className="text-xs mt-0.5 opacity-90">
-                            {rows.length} bonifici/compensi senza fattura ricevuta entro 15 giorni
+                            {rows.length} bonifici/compensi senza fattura ricevuta
                             {critical > 0 ? ` · ${critical} oltre soglia critica (≥15 gg)` : ''}.
+                            Date e giorni calcolati dall’ordine collegato quando presente.
                         </p>
                     </div>
                     <button
@@ -271,7 +388,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                             <tr>
                                 <th className="px-4 py-3 font-bold">Fiorista & P.IVA</th>
                                 <th className="px-4 py-3 font-bold">Ordine</th>
-                                <th className="px-4 py-3 font-bold">Data bonifico</th>
+                                <th className="px-4 py-3 font-bold">Data rif.</th>
                                 <th className="px-4 py-3 font-bold text-right">Importo</th>
                                 <th className="px-4 py-3 font-bold">Giorni</th>
                                 <th className="px-4 py-3 font-bold">Stato</th>
@@ -282,113 +399,156 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                             {rows.map((row) => {
                                 const orderRef = formatOrderRef(row);
                                 return (
-                                <tr key={row.id} className="hover:bg-slate-50/80">
-                                    <td className="px-4 py-3">
-                                        <p className="font-medium text-slate-900">{row.partnerName}</p>
-                                        <p className="text-[11px] text-slate-500 font-mono">
-                                            {row.partnerVat || 'P.IVA n/d'}
-                                        </p>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        {orderRef ? (
-                                            <div>
-                                                <p className="font-mono text-xs font-semibold text-slate-800">
-                                                    {orderRef}
-                                                </p>
-                                                {row.orderMatchSource === 'auto' && (
-                                                    <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-teal-50 border border-teal-200 text-teal-800">
-                                                        Match automatico
-                                                    </span>
+                                    <tr key={row.id} className="hover:bg-slate-50/80">
+                                        <td className="px-4 py-3">
+                                            <p className="font-medium text-slate-900">
+                                                {row.partnerName}
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 font-mono">
+                                                {row.partnerVat || 'P.IVA n/d'}
+                                            </p>
+                                            {row.receiptUrl && (
+                                                <a
+                                                    href={row.receiptUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-teal-700 hover:underline"
+                                                >
+                                                    <Paperclip size={10} /> Scontrino
+                                                </a>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {orderRef ? (
+                                                <div>
+                                                    <p className="font-mono text-xs font-semibold text-slate-800">
+                                                        {orderRef}
+                                                    </p>
+                                                    {row.orderMatchSource === 'auto' && (
+                                                        <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-teal-50 border border-teal-200 text-teal-800">
+                                                            Match automatico
+                                                        </span>
+                                                    )}
+                                                    {row.orderMatchSource === 'manual' && (
+                                                        <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100 border border-slate-200 text-slate-600">
+                                                            Associato
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-[11px] text-slate-400 italic">
+                                                    Non associato
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                                            <div>{formatFinanceDate(row.paymentDate)}</div>
+                                            {row.bankPaymentDate &&
+                                                row.bankPaymentDate !== row.paymentDate && (
+                                                    <div className="text-[10px] text-slate-400">
+                                                        bon. {formatFinanceDate(row.bankPaymentDate)}
+                                                    </div>
                                                 )}
-                                                {row.orderMatchSource === 'manual' && (
-                                                    <span className="inline-flex mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-100 border border-slate-200 text-slate-600">
-                                                        Associato
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span className="text-[11px] text-slate-400 italic">
-                                                Non associato
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
+                                            €{euro(row.amountCents)}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-700">
+                                            {row.daysSincePayment}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span
+                                                className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                                                    row.severity === 'critical'
+                                                        ? 'bg-rose-100 text-rose-800'
+                                                        : 'bg-amber-100 text-amber-800'
+                                                }`}
+                                            >
+                                                {row.statusLabel}
                                             </span>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
-                                        {formatFinanceDate(row.paymentDate)}
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900">
-                                        €{euro(row.amountCents)}
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-700">{row.daysSincePayment}</td>
-                                    <td className="px-4 py-3">
-                                        <span
-                                            className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                                                row.severity === 'critical'
-                                                    ? 'bg-rose-100 text-rose-800'
-                                                    : 'bg-amber-100 text-amber-800'
-                                            }`}
-                                        >
-                                            {row.statusLabel}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex flex-wrap justify-end gap-1.5">
-                                            <button
-                                                type="button"
-                                                disabled={!!busyId || !row.partnerEmail}
-                                                onClick={() => void remind(row, 'email')}
-                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
-                                            >
-                                                {busyId === `${row.id}-email` ? (
-                                                    <Loader2 size={12} className="animate-spin" />
-                                                ) : (
-                                                    <Mail size={12} />
-                                                )}
-                                                Email
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={!!busyId || !row.partnerWhatsapp}
-                                                onClick={() => void remind(row, 'whatsapp')}
-                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
-                                            >
-                                                {busyId === `${row.id}-whatsapp` ? (
-                                                    <Loader2 size={12} className="animate-spin" />
-                                                ) : (
-                                                    <MessageCircle size={12} />
-                                                )}
-                                                WhatsApp
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={!row.bankLineId || !row.documentId}
-                                                onClick={() => {
-                                                    setLinkRow(row);
-                                                    setOrderQuery('');
-                                                    setOrderHits([]);
-                                                }}
-                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/10 text-[#8a6d45] text-[10px] font-bold uppercase tracking-wide hover:bg-[#c5a880]/20 disabled:opacity-40"
-                                            >
-                                                <Search size={12} />
-                                                Associa ordine
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    onLinkInvoice?.({
-                                                        vendorName: row.partnerName,
-                                                        totalEuro: (row.amountCents / 100).toFixed(2),
-                                                        expenseDate: row.paymentDate,
-                                                        notes: `Collegamento manuale pagamento ${row.id}`,
-                                                    })
-                                                }
-                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-slate-800"
-                                            >
-                                                <Link2 size={12} />
-                                                Collega fattura
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-wrap justify-end gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    title="Modifica"
+                                                    onClick={() => openEdit(row)}
+                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-white"
+                                                >
+                                                    <Pencil size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Elimina / archivia"
+                                                    disabled={!!busyId}
+                                                    onClick={() => void dismissRow(row)}
+                                                    className="inline-flex items-center justify-center p-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                                                >
+                                                    {busyId === `${row.id}-delete` ? (
+                                                        <Loader2 size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <Trash2 size={14} />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={!!busyId || !row.partnerEmail}
+                                                    onClick={() => void remind(row, 'email')}
+                                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
+                                                >
+                                                    {busyId === `${row.id}-email` ? (
+                                                        <Loader2 size={12} className="animate-spin" />
+                                                    ) : (
+                                                        <Mail size={12} />
+                                                    )}
+                                                    Email
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={!!busyId || !row.partnerWhatsapp}
+                                                    onClick={() => void remind(row, 'whatsapp')}
+                                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-white disabled:opacity-40"
+                                                >
+                                                    {busyId === `${row.id}-whatsapp` ? (
+                                                        <Loader2 size={12} className="animate-spin" />
+                                                    ) : (
+                                                        <MessageCircle size={12} />
+                                                    )}
+                                                    WhatsApp
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={!row.bankLineId}
+                                                    onClick={() => {
+                                                        setLinkRow(row);
+                                                        setOrderQuery('');
+                                                        setOrderHits([]);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/10 text-[#8a6d45] text-[10px] font-bold uppercase tracking-wide hover:bg-[#c5a880]/20 disabled:opacity-40"
+                                                >
+                                                    <Search size={12} />
+                                                    Associa ordine
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onLinkInvoice?.({
+                                                            vendorName: row.partnerName,
+                                                            totalEuro: (row.amountCents / 100).toFixed(
+                                                                2
+                                                            ),
+                                                            expenseDate: row.paymentDate,
+                                                            notes: `Collegamento manuale pagamento ${row.id}`,
+                                                        })
+                                                    }
+                                                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-slate-800"
+                                                >
+                                                    <Link2 size={12} />
+                                                    Collega fattura
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 );
                             })}
                         </tbody>
@@ -397,23 +557,37 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             )}
 
             {linkRow && (
+                <OrderSearchModal
+                    title="Associa ordine"
+                    subtitle={`${linkRow.partnerName} · €${euro(linkRow.amountCents)} · ${formatFinanceDate(linkRow.paymentDate)}`}
+                    orderQuery={orderQuery}
+                    setOrderQuery={setOrderQuery}
+                    orderHits={orderHits}
+                    searchingOrders={searchingOrders}
+                    linking={linking}
+                    onClose={() => setLinkRow(null)}
+                    onPick={(o) => void associateOrder(o, linkRow)}
+                />
+            )}
+
+            {editRow && (
                 <div
                     className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4"
                     role="dialog"
                     aria-modal="true"
                 >
-                    <div className="w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
+                    <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
                         <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-white z-10">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-800">Associa ordine</h3>
+                                <h3 className="text-sm font-bold text-slate-800">Modifica riga</h3>
                                 <p className="text-[11px] text-slate-500 mt-0.5">
-                                    {linkRow.partnerName} · €{euro(linkRow.amountCents)} ·{' '}
-                                    {formatFinanceDate(linkRow.paymentDate)}
+                                    {editRow.partnerName}
+                                    {editRow.orderNumber ? ` · ${editRow.orderNumber}` : ''}
                                 </p>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setLinkRow(null)}
+                                onClick={() => setEditRow(null)}
                                 className="p-2 rounded-lg hover:bg-slate-50 text-slate-500"
                             >
                                 <X size={16} />
@@ -421,63 +595,219 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                         </div>
                         <div className="p-4 space-y-3">
                             <label className="block text-[10px] font-bold uppercase text-slate-500">
-                                Cerca ordine (numero, cliente, email…)
-                                <div className="mt-1 relative">
-                                    <Search
-                                        size={14}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                    />
-                                    <input
-                                        value={orderQuery}
-                                        onChange={(e) => setOrderQuery(e.target.value)}
-                                        placeholder="Es. PT-MI-26-001"
-                                        className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
-                                        autoFocus
-                                    />
-                                </div>
+                                Data riferimento
+                                <input
+                                    type="date"
+                                    value={editDate}
+                                    onChange={(e) => setEditDate(e.target.value)}
+                                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                />
                             </label>
-                            {searchingOrders && (
-                                <p className="text-xs text-slate-400 inline-flex items-center gap-1">
-                                    <Loader2 size={12} className="animate-spin" /> Ricerca…
+                            <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                Importo compenso (€)
+                                <input
+                                    value={editAmount}
+                                    onChange={(e) => setEditAmount(e.target.value)}
+                                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                />
+                            </label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                Note
+                                <textarea
+                                    value={editNotes}
+                                    onChange={(e) => setEditNotes(e.target.value)}
+                                    rows={3}
+                                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                />
+                            </label>
+
+                            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 space-y-2">
+                                <p className="text-[10px] font-bold uppercase text-slate-500">
+                                    Scontrino / ricevuta
                                 </p>
-                            )}
-                            <ul className="divide-y divide-slate-100 border border-slate-100 rounded-xl max-h-64 overflow-y-auto">
-                                {orderHits.length === 0 ? (
-                                    <li className="px-3 py-6 text-center text-xs text-slate-400">
-                                        {orderQuery.trim().length < 2
-                                            ? 'Digita almeno 2 caratteri'
-                                            : 'Nessun ordine trovato'}
-                                    </li>
+                                {editRow.receiptUrl ? (
+                                    <a
+                                        href={editRow.receiptUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs text-teal-700 font-semibold hover:underline inline-flex items-center gap-1"
+                                    >
+                                        <Paperclip size={12} /> Apri allegato
+                                    </a>
                                 ) : (
-                                    orderHits.map((o) => (
-                                        <li key={o.id}>
-                                            <button
-                                                type="button"
-                                                disabled={linking}
-                                                onClick={() => void associateOrder(o)}
-                                                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 disabled:opacity-50"
-                                            >
-                                                <p className="text-sm font-semibold text-slate-800 font-mono">
-                                                    {o.orderNumber || o.id.slice(0, 10)}
-                                                </p>
-                                                <p className="text-[11px] text-slate-500 truncate">
-                                                    {o.buyerFullName || 'Cliente n/d'}
-                                                    {o.partner?.shopName
-                                                        ? ` · ${o.partner.shopName}`
-                                                        : ''}
-                                                    {typeof o.totalPriceCents === 'number'
-                                                        ? ` · €${euro(o.totalPriceCents)}`
-                                                        : ''}
-                                                </p>
-                                            </button>
-                                        </li>
-                                    ))
+                                    <p className="text-[11px] text-slate-400">Nessun allegato</p>
                                 )}
-                            </ul>
+                                <input
+                                    ref={fileRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                                    className="block w-full text-xs text-slate-600"
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) void uploadReceipt(editRow, f);
+                                    }}
+                                />
+                                {uploading && (
+                                    <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                                        <Loader2 size={12} className="animate-spin" /> Caricamento…
+                                    </p>
+                                )}
+                            </div>
+
+                            {editRow.bankLineId && (
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase text-slate-500 mb-1">
+                                        Cambia ordine associato
+                                    </p>
+                                    <div className="relative">
+                                        <Search
+                                            size={14}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                        />
+                                        <input
+                                            value={orderQuery}
+                                            onChange={(e) => setOrderQuery(e.target.value)}
+                                            placeholder="Cerca FF-… / FT-…"
+                                            className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                        />
+                                    </div>
+                                    {searchingOrders && (
+                                        <p className="text-xs text-slate-400 mt-1 inline-flex items-center gap-1">
+                                            <Loader2 size={12} className="animate-spin" /> Ricerca…
+                                        </p>
+                                    )}
+                                    <ul className="mt-2 divide-y divide-slate-100 border border-slate-100 rounded-xl max-h-40 overflow-y-auto">
+                                        {orderHits.map((o) => (
+                                            <li key={o.id}>
+                                                <button
+                                                    type="button"
+                                                    disabled={linking}
+                                                    onClick={() => void associateOrder(o, editRow)}
+                                                    className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs disabled:opacity-50"
+                                                >
+                                                    <span className="font-mono font-semibold">
+                                                        {o.orderNumber || o.id.slice(0, 10)}
+                                                    </span>
+                                                    {o.buyerFullName ? ` · ${o.buyerFullName}` : ''}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditRow(null)}
+                                    className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold uppercase text-slate-600"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => void saveEdit()}
+                                    className="px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold uppercase disabled:opacity-50 inline-flex items-center gap-1"
+                                >
+                                    {saving ? <Loader2 size={12} className="animate-spin" /> : null}
+                                    Salva
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function OrderSearchModal(props: {
+    title: string;
+    subtitle: string;
+    orderQuery: string;
+    setOrderQuery: (v: string) => void;
+    orderHits: OrderHit[];
+    searchingOrders: boolean;
+    linking: boolean;
+    onClose: () => void;
+    onPick: (o: OrderHit) => void;
+}) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div className="w-full sm:max-w-lg max-h-[88vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
+                <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-white z-10">
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800">{props.title}</h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{props.subtitle}</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={props.onClose}
+                        className="p-2 rounded-lg hover:bg-slate-50 text-slate-500"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+                <div className="p-4 space-y-3">
+                    <label className="block text-[10px] font-bold uppercase text-slate-500">
+                        Cerca ordine (numero, cliente, email…)
+                        <div className="mt-1 relative">
+                            <Search
+                                size={14}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <input
+                                value={props.orderQuery}
+                                onChange={(e) => props.setOrderQuery(e.target.value)}
+                                placeholder="Es. FF-VI-26-003"
+                                className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#c5a880]"
+                                autoFocus
+                            />
+                        </div>
+                    </label>
+                    {props.searchingOrders && (
+                        <p className="text-xs text-slate-400 inline-flex items-center gap-1">
+                            <Loader2 size={12} className="animate-spin" /> Ricerca…
+                        </p>
+                    )}
+                    <ul className="divide-y divide-slate-100 border border-slate-100 rounded-xl max-h-64 overflow-y-auto">
+                        {props.orderHits.length === 0 ? (
+                            <li className="px-3 py-6 text-center text-xs text-slate-400">
+                                {props.orderQuery.trim().length < 2
+                                    ? 'Digita almeno 2 caratteri'
+                                    : 'Nessun ordine trovato'}
+                            </li>
+                        ) : (
+                            props.orderHits.map((o) => (
+                                <li key={o.id}>
+                                    <button
+                                        type="button"
+                                        disabled={props.linking}
+                                        onClick={() => props.onPick(o)}
+                                        className="w-full text-left px-3 py-2.5 hover:bg-slate-50 disabled:opacity-50"
+                                    >
+                                        <p className="text-sm font-semibold text-slate-800 font-mono">
+                                            {o.orderNumber || o.id.slice(0, 10)}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500 truncate">
+                                            {o.buyerFullName || 'Cliente n/d'}
+                                            {o.partner?.shopName ? ` · ${o.partner.shopName}` : ''}
+                                            {typeof o.totalPriceCents === 'number'
+                                                ? ` · €${euro(o.totalPriceCents)}`
+                                                : ''}
+                                        </p>
+                                    </button>
+                                </li>
+                            ))
+                        )}
+                    </ul>
+                </div>
+            </div>
         </div>
     );
 }

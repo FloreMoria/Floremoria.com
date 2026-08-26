@@ -94,19 +94,29 @@ export default function OrderDetailProofUpload({
             const form = new FormData();
             form.append('action', 'delete');
             form.append('orderId', orderId);
-            form.append('url', url.split('?')[0] ?? url);
+            form.append('url', url);
 
             const res = await fetch('/api/dashboard/delivery-proof/photo', {
                 method: 'POST',
                 body: form,
             });
-            const data = await res.json();
+            const data = (await res.json()) as { ok?: boolean; error?: string };
             if (!res.ok || !data.ok) {
                 throw new Error(data.error || 'Eliminazione foto non riuscita.');
             }
 
-            const nextBefore = beforePhotos.filter((u) => u !== url);
-            const nextAfter = afterPhotos.filter((u) => u !== url);
+            const isMatch = (target: string, candidate: string) => {
+                if (target === candidate) return true;
+                const a = target.split('?')[0]?.split('#')[0]?.trim().toLowerCase();
+                const b = candidate.split('?')[0]?.split('#')[0]?.trim().toLowerCase();
+                if (a && b && a === b) return true;
+                const baseA = a?.split('/').filter(Boolean).pop();
+                const baseB = b?.split('/').filter(Boolean).pop();
+                return Boolean(baseA && baseB && baseA.length > 5 && baseA === baseB);
+            };
+
+            const nextBefore = beforePhotos.filter((u) => !isMatch(u, url));
+            const nextAfter = afterPhotos.filter((u) => !isMatch(u, url));
 
             setBeforePhotos(nextBefore);
             setAfterPhotos(nextAfter);

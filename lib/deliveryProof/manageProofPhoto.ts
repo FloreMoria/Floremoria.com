@@ -41,14 +41,64 @@ function setSlotUrls(arrays: ProofArrays, slot: ProofPhotoSlot, urls: string[]):
     };
 }
 
-function findPhotoInProof(proof: ProofArrays, url: string): { slot: ProofPhotoSlot; index: number } | null {
-    const beforeIdx = proof.photosBeforeUrls.indexOf(url);
-    if (beforeIdx >= 0) return { slot: 'before', index: beforeIdx };
-    if (proof.photoBeforeUrl === url) return { slot: 'before', index: 0 };
+export function normalizePhotoUrlForMatching(url: string): string {
+    if (!url) return '';
+    try {
+        let cleaned = url.trim();
+        cleaned = cleaned.replace(/^["']|["']$/g, '');
+        try {
+            cleaned = decodeURIComponent(cleaned);
+        } catch {
+            // ignora malformed URI
+        }
+        cleaned = cleaned.split('?')[0] || cleaned;
+        cleaned = cleaned.split('#')[0] || cleaned;
 
-    const afterIdx = proof.photosAfterUrls.indexOf(url);
-    if (afterIdx >= 0) return { slot: 'after', index: afterIdx };
-    if (proof.photoAfterUrl === url) return { slot: 'after', index: 0 };
+        if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+            const parsed = new URL(cleaned);
+            cleaned = parsed.pathname;
+        }
+
+        return cleaned.replace(/\/+/g, '/').toLowerCase();
+    } catch {
+        return url.split('?')[0]?.trim().toLowerCase() || url.toLowerCase();
+    }
+}
+
+export function arePhotoUrlsMatching(urlA: string | null | undefined, urlB: string | null | undefined): boolean {
+    if (!urlA || !urlB) return false;
+    const cleanA = urlA.trim();
+    const cleanB = urlB.trim();
+    if (cleanA === cleanB) return true;
+
+    const normA = normalizePhotoUrlForMatching(cleanA);
+    const normB = normalizePhotoUrlForMatching(cleanB);
+    if (normA && normB && normA === normB) return true;
+
+    const baseA = normA.split('/').filter(Boolean).pop();
+    const baseB = normB.split('/').filter(Boolean).pop();
+    if (baseA && baseB && baseA.length > 5 && baseA === baseB) return true;
+
+    return false;
+}
+
+function findPhotoInProof(
+    proof: ProofArrays,
+    targetUrl: string
+): { slot: ProofPhotoSlot; index: number; matchedUrl: string } | null {
+    const beforeIdx = proof.photosBeforeUrls.findIndex((u) => arePhotoUrlsMatching(u, targetUrl));
+    if (beforeIdx >= 0) return { slot: 'before', index: beforeIdx, matchedUrl: proof.photosBeforeUrls[beforeIdx]! };
+
+    if (arePhotoUrlsMatching(proof.photoBeforeUrl, targetUrl)) {
+        return { slot: 'before', index: 0, matchedUrl: proof.photoBeforeUrl! };
+    }
+
+    const afterIdx = proof.photosAfterUrls.findIndex((u) => arePhotoUrlsMatching(u, targetUrl));
+    if (afterIdx >= 0) return { slot: 'after', index: afterIdx, matchedUrl: proof.photosAfterUrls[afterIdx]! };
+
+    if (arePhotoUrlsMatching(proof.photoAfterUrl, targetUrl)) {
+        return { slot: 'after', index: 0, matchedUrl: proof.photoAfterUrl! };
+    }
 
     return null;
 }
@@ -124,9 +174,9 @@ export async function rotateProofPhoto(orderId: string, url: string): Promise<{ 
     }
 
     try {
-        const buffer = await fetchProofImageBuffer(url);
+        const buffer = await fetchProofImageBuffer(located.matchedUrl);
         const rotated = await normalizeProofImageBuffer(buffer, 90);
-        const newUrl = await overwriteProofBlob(url, rotated);
+        const newUrl = await overwriteProofBlob(located.matchedUrl, rotated);
 
         let arrays: ProofArrays = {
             photosBeforeUrls: [...order.deliveryProof.photosBeforeUrls],
@@ -168,7 +218,7 @@ export async function replaceProofPhoto(
 
     try {
         const processed = await normalizeProofImageBuffer(Buffer.from(await file.arrayBuffer()));
-        const newUrl = await overwriteProofBlob(url, processed);
+        const newUrl = await overwriteProofBlob(located.matchedUrl, processed);
 
         let arrays: ProofArrays = {
             photosBeforeUrls: [...order.deliveryProof.photosBeforeUrls],
@@ -196,39 +246,122 @@ export async function replaceProofPhoto(
 
 export async function deleteProofPhoto(
     orderId: string,
-    url: string
+    targetUrl: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
-        include: { deliveryProof: true },
+        include: {
+            deliveryProof: true,
+            deceasedProfile: true,
+        },
     });
 
-    if (!order?.deliveryProof) {
-        return { ok: false, error: 'Prova di consegna non trovata.' };
+    if (!order) {
+        return { ok: false, error: 'Ordine non trovato.' };
     }
 
-    const located = findPhotoInProof(order.deliveryProof, url);
-    if (!located) {
+    const proof = order.deliveryProof;
+    const locatedInProof = proof ? findPhotoInProof(proof, targetUrl) : null;
+    const inOrderPhotos = (order.photos || []).some((u) => arePhotoUrlsMatching(u, targetUrl));
+    const inDeceasedGallery = (order.deceasedProfile?.deliveryPhotoUrls || []).some((u) => arePhotoUrlsMatching(u, targetUrl));
+    const inDeceasedCover = arePhotoUrlsMatching(order.deceasedProfile?.coverUrl, targetUrl);
+
+    const isAssociated = Boolean(locatedInProof || inOrderPhotos || inDeceasedGallery || inDeceasedCover);
+
+    if (!isAssociated) {
         return { ok: false, error: 'Foto non associata a questo ordine.' };
     }
 
+    const physicalUrlToDelete = locatedInProof?.matchedUrl || targetUrl;
+
     try {
-        await deleteProofBlob(url);
+        await deleteProofBlob(physicalUrlToDelete);
     } catch (err) {
         console.warn('[deleteProofPhoto] Blob delete skipped:', err);
     }
 
-    let arrays: ProofArrays = {
-        photosBeforeUrls: [...order.deliveryProof.photosBeforeUrls],
-        photosAfterUrls: [...order.deliveryProof.photosAfterUrls],
-        photoBeforeUrl: order.deliveryProof.photoBeforeUrl,
-        photoAfterUrl: order.deliveryProof.photoAfterUrl,
-    };
+    let photosBeforeUrls: string[] = proof?.photosBeforeUrls || [];
+    let photosAfterUrls: string[] = proof?.photosAfterUrls || [];
+    let photoBeforeUrl: string | null = proof?.photoBeforeUrl || null;
+    let photoAfterUrl: string | null = proof?.photoAfterUrl || null;
+    let socialReadyAfterUrls: string[] = proof?.socialReadyAfterUrls || [];
+    let socialReadyPrimaryUrl: string | null = proof?.socialReadyPrimaryUrl || null;
 
-    const slotUrls = getSlotUrls(arrays, located.slot).filter((u) => u !== url);
-    arrays = setSlotUrls(arrays, located.slot, slotUrls);
+    if (proof) {
+        photosBeforeUrls = photosBeforeUrls.filter((u) => !arePhotoUrlsMatching(u, targetUrl));
+        photosAfterUrls = photosAfterUrls.filter((u) => !arePhotoUrlsMatching(u, targetUrl));
+        socialReadyAfterUrls = socialReadyAfterUrls.filter((u) => !arePhotoUrlsMatching(u, targetUrl));
 
-    await persistProofUpdate(order.id, order.orderNumber, order.deliveryProof.id, arrays);
+        if (arePhotoUrlsMatching(photoBeforeUrl, targetUrl)) {
+            photoBeforeUrl = photosBeforeUrls[0] ?? null;
+        }
+        if (arePhotoUrlsMatching(photoAfterUrl, targetUrl)) {
+            photoAfterUrl = photosAfterUrls[0] ?? null;
+        }
+        if (arePhotoUrlsMatching(socialReadyPrimaryUrl, targetUrl)) {
+            socialReadyPrimaryUrl = socialReadyAfterUrls[0] ?? null;
+        }
+    }
+
+    const nextOrderPhotos = (order.photos || []).filter((u) => !arePhotoUrlsMatching(u, targetUrl));
+
+    let nextDeceasedGallery: string[] | undefined;
+    let nextDeceasedCover: string | null | undefined;
+    if (order.deceasedProfile) {
+        nextDeceasedGallery = (order.deceasedProfile.deliveryPhotoUrls || []).filter(
+            (u) => !arePhotoUrlsMatching(u, targetUrl)
+        );
+        if (arePhotoUrlsMatching(order.deceasedProfile.coverUrl, targetUrl)) {
+            nextDeceasedCover = nextDeceasedGallery.at(-1) || null;
+        }
+    }
+
+    const hasRemainingPhotos = photosBeforeUrls.length > 0 || photosAfterUrls.length > 0 || nextOrderPhotos.length > 0;
+
+    await prisma.$transaction([
+        ...(proof
+            ? [
+                  prisma.deliveryProof.update({
+                      where: { id: proof.id },
+                      data: {
+                          photosBeforeUrls,
+                          photosAfterUrls,
+                          photoBeforeUrl,
+                          photoAfterUrl,
+                          socialReadyAfterUrls,
+                          socialReadyPrimaryUrl,
+                          status: hasRemainingPhotos ? 'COMPLETED' : 'PENDING',
+                      },
+                  }),
+              ]
+            : []),
+        prisma.order.update({
+            where: { id: order.id },
+            data: { photos: nextOrderPhotos },
+        }),
+        ...(order.deceasedProfileId && nextDeceasedGallery
+            ? [
+                  prisma.deceasedProfile.update({
+                      where: { id: order.deceasedProfileId },
+                      data: {
+                          deliveryPhotoUrls: nextDeceasedGallery,
+                          ...(nextDeceasedCover !== undefined ? { coverUrl: nextDeceasedCover } : {}),
+                      },
+                  }),
+              ]
+            : []),
+    ]);
+
+    revalidatePath('/dashboard/user');
+    revalidatePath('/dashboard/users');
+    revalidatePath('/dashboard/orders');
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/defunti');
+    revalidatePath(`/fiorista/consegna/${order.id}`);
+    if (order.orderNumber) {
+        revalidatePath(`/fiorista/consegna/${order.orderNumber}`);
+    }
+
     return { ok: true };
 }
 

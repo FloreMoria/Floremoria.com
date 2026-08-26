@@ -315,7 +315,10 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Upload fallito');
-            setFlash(parsed.data?.message || 'Scontrino salvato');
+            setFlash(
+                parsed.data?.message ||
+                    'Scontrino fiscale salvato in Contabilità (non pubblicato in GdM/bacheche).'
+            );
             if (editRow?.id === row.id && parsed.data?.receiptUrl) {
                 setEditRow({ ...editRow, receiptUrl: parsed.data.receiptUrl });
             }
@@ -346,7 +349,8 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                         <p className="text-xs mt-0.5 opacity-90">
                             {rows.length} bonifici/compensi senza fattura ricevuta
                             {critical > 0 ? ` · ${critical} oltre soglia critica (≥15 gg)` : ''}.
-                            Date e giorni calcolati dall’ordine collegato quando presente.
+                            Date e giorni dall’ordine collegato. Gli scontrini fiscali restano
+                            solo in Contabilità (mai in GdM / bacheche).
                         </p>
                     </div>
                     <button
@@ -413,8 +417,9 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-teal-700 hover:underline"
+                                                    title="Allegato fiscale — solo Contabilità"
                                                 >
-                                                    <Paperclip size={10} /> Scontrino
+                                                    <Paperclip size={10} /> Scontrino fiscale
                                                 </a>
                                             )}
                                         </td>
@@ -623,7 +628,12 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
 
                             <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 space-y-2">
                                 <p className="text-[10px] font-bold uppercase text-slate-500">
-                                    Scontrino / ricevuta
+                                    Scontrino / ricevuta fiscale
+                                </p>
+                                <p className="text-[11px] text-slate-500 leading-snug">
+                                    Solo Contabilità (Passivo). Non viene pubblicato nel Giardino
+                                    della Memoria, nelle bacheche utente/ordine/defunto né nelle
+                                    foto di consegna.
                                 </p>
                                 {editRow.receiptUrl ? (
                                     <a
@@ -632,7 +642,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                         rel="noreferrer"
                                         className="text-xs text-teal-700 font-semibold hover:underline inline-flex items-center gap-1"
                                     >
-                                        <Paperclip size={12} /> Apri allegato
+                                        <Paperclip size={12} /> Apri allegato fiscale
                                     </a>
                                 ) : (
                                     <p className="text-[11px] text-slate-400">Nessun allegato</p>

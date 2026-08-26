@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { syncOrderPhotosArray } from '@/lib/deliveryProof/proofPhotoUrls';
 import { uniqueAppendPhotoUrls } from '@/lib/deliveryProof/uniqueAppendPhotoUrls';
+import { isFiscalOnlyMediaUrl } from '@/lib/financial/fiscalMediaGuard';
 
 /**
  * Inietta esplicitamente le URL foto sul record Order (oltre a DeliveryProof / Giardino / defunto).
@@ -14,7 +15,9 @@ export async function injectDeliveryPhotosOnOrder(
     photosAfterUrls: string[],
     extra?: { latitude?: number | null; longitude?: number | null }
 ): Promise<string[]> {
-    const photos = syncOrderPhotosArray(photosBeforeUrls, photosAfterUrls);
+    const photos = syncOrderPhotosArray(photosBeforeUrls, photosAfterUrls).filter(
+        (u) => !isFiscalOnlyMediaUrl(u)
+    );
 
     await tx.order.update({
         where: { id: orderId },
@@ -52,7 +55,10 @@ export async function propagateDeliveryPhotosToLinkedProfiles(
     deliveryPhotoCount: number;
     orderPhotoCount: number;
 }> {
-    const incoming = (newPhotoUrls || []).map((u) => u.trim()).filter(Boolean);
+    const incoming = (newPhotoUrls || [])
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .filter((u) => !isFiscalOnlyMediaUrl(u));
     if (!incoming.length) {
         return { deceasedProfileId: null, deliveryPhotoCount: 0, orderPhotoCount: 0 };
     }

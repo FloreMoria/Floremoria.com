@@ -1,42 +1,23 @@
 /**
  * Mutazioni atomiche per alert "Fatture non arrivate dai fioristi".
+ *
+ * Scontrini fiscali: SOLO Contabilità (ManualFinanceExpense).
+ * Vietato scrivere su Order.photos / DeliveryProof / DeceasedProfile / GdM / bacheche.
  */
 
 import prisma from '@/lib/prisma';
-import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
+import { createManualExpense } from '@/lib/financial/manualExpenses';
 import {
     mergeFloristAlertMeta,
     readFloristAlertMeta,
     type FloristAlertMeta,
 } from '@/lib/financial/floristMissingInvoices';
+import type { Prisma } from '@prisma/client';
 
 function parseRowId(rowId: string): { kind: 'bank' | 'order'; id: string } | null {
     if (rowId.startsWith('bank-')) return { kind: 'bank', id: rowId.slice(5) };
     if (rowId.startsWith('order-')) return { kind: 'order', id: rowId.slice(6) };
     return null;
-}
-
-function getBlobToken(): string | null {
-    return process.env.BLOB_READ_WRITE_TOKEN?.trim() || null;
-}
-
-async function storeReceipt(
-    buffer: Buffer,
-    fileName: string,
-    contentType: string,
-    rowKey: string
-): Promise<{ url: string; path: string }> {
-    const token = getBlobToken();
-    if (!token) throw new Error('BLOB_READ_WRITE_TOKEN assente: impossibile salvare lo scontrino.');
-    const safe = fileName.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 120);
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const pathname = `floremoria-finance/florist-receipts/${rowKey}/${stamp}_${safe}`;
-    const result = await putBlobWithAccessFallback(pathname, buffer, {
-        contentType,
-        token,
-        addRandomSuffix: false,
-    });
-    return { url: result.url, path: result.pathname || pathname };
 }
 
 export async function linkFloristMissingOrder(input: {
@@ -128,7 +109,7 @@ export async function linkFloristMissingExpense(input: {
             prisma.bankStatementLine.update({
                 where: { id: line.id },
                 data: {
-                    rawJson: rawJson as any,
+                    rawJson: rawJson as Prisma.InputJsonValue,
                     matchStatus: 'MATCHED',
                     matchType: line.matchType || 'FLORIST_INVOICE',
                     matchNotes: `Fattura passiva associata da Contabilità: ${expense.id}`,
@@ -156,7 +137,7 @@ export async function linkFloristMissingExpense(input: {
             prisma.order.update({
                 where: { id: order.id },
                 data: {
-                    veraWorkflowFlags: flags,
+                    veraWorkflowFlags: flags as Prisma.InputJsonValue,
                     floristSettlementStatus: 'RICEVUTA',
                 },
             }),
@@ -231,7 +212,13 @@ export async function updateFloristMissingRow(input: {
             }
         }
 
-        await prisma.bankStatementLine.update({ where: { id: line.id }, data: data as any });
+        await prisma.bankStatementLine.update({
+            where: { id: line.id },
+            data: {
+                ...data,
+                rawJson: data.rawJson as Prisma.InputJsonValue,
+            },
+        });
 
         if (input.partnerId && data.matchedOrderId) {
             await prisma.order.update({
@@ -285,7 +272,7 @@ export async function dismissFloristMissingRow(rowId: string): Promise<void> {
         await prisma.bankStatementLine.update({
             where: { id: line.id },
             data: {
-                rawJson: rawJson as any,
+                rawJson: rawJson as Prisma.InputJsonValue,
                 matchNotes: `${line.matchNotes || ''} | Archiviato da alert fioristi ${new Date().toISOString().slice(0, 10)}`.trim(),
             },
         });
@@ -303,55 +290,157 @@ export async function dismissFloristMissingRow(rowId: string): Promise<void> {
     };
     await prisma.order.update({
         where: { id: order.id },
-        data: { veraWorkflowFlags: flags as any },
+        data: { veraWorkflowFlags: flags as Prisma.InputJsonValue },
     });
 }
 
+/**
+ * Allega scontrino/ricevuta fiscale al pagamento fiorista.
+ * Persistenza: ManualFinanceExpense (docType SCONTRINO) + link bank line / orderId in metadata.
+ * Non tocca mai foto consegna, GdM, bacheche utente/ordine/defunto.
+ */
 export async function uploadFloristMissingReceipt(input: {
     rowId: string;
     buffer: Buffer;
     fileName: string;
     contentType: string;
-}): Promise<{ receiptUrl: string; receiptPath: string }> {
+}): Promise<{
+    receiptUrl: string | null;
+    receiptPath: string | null;
+    expenseId: string;
+    fiscalOnly: true;
+}> {
     const parsed = parseRowId(input.rowId);
     if (!parsed) throw new Error('rowId non valido.');
 
-    const stored = await storeReceipt(
-        input.buffer,
-        input.fileName,
-        input.contentType,
-        input.rowId
-    );
+    let partnerName = 'Fiorista';
+    let amountCents = 0;
+    let expenseDate = new Date().toISOString().slice(0, 10);
+    let orderId: string | null = null;
+    let orderNumber: string | null = null;
+    let bankLineId: string | null = null;
 
     if (parsed.kind === 'bank') {
         const line = await prisma.bankStatementLine.findUnique({ where: { id: parsed.id } });
         if (!line) throw new Error('Movimento bancario non trovato.');
-        const rawJson = mergeFloristAlertMeta(line.rawJson, {
-            receiptUrl: stored.url,
-            receiptPath: stored.path,
-        });
-        await prisma.bankStatementLine.update({
-            where: { id: line.id },
-            data: { rawJson: rawJson as any },
-        });
+        bankLineId = line.id;
+        amountCents = Math.abs(line.amountCents);
+        const pay = line.accountingDate || line.valueDate;
+        if (pay) expenseDate = pay.toISOString().slice(0, 10);
+        orderId = line.matchedOrderId;
+        if (orderId) {
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    floristCompensationCents: true,
+                    partner: { select: { shopName: true } },
+                },
+            });
+            if (order) {
+                orderNumber = order.orderNumber;
+                partnerName = order.partner?.shopName || partnerName;
+                if (order.floristCompensationCents && order.floristCompensationCents > 0) {
+                    amountCents = order.floristCompensationCents;
+                }
+            }
+        }
+        if (amountCents <= 0) amountCents = Math.abs(line.amountCents) || 1;
     } else {
         const order = await prisma.order.findUnique({
             where: { id: parsed.id },
-            select: { id: true, veraWorkflowFlags: true },
+            select: {
+                id: true,
+                orderNumber: true,
+                floristCompensationCents: true,
+                createdAt: true,
+                deliveryDate: true,
+                partner: { select: { shopName: true } },
+            },
         });
         if (!order) throw new Error('Ordine non trovato.');
-        const flags = {
-            ...((order.veraWorkflowFlags as Record<string, unknown>) || {}),
-            floristReceiptUrl: stored.url,
-            floristReceiptPath: stored.path,
-        };
+        orderId = order.id;
+        orderNumber = order.orderNumber;
+        partnerName = order.partner?.shopName || partnerName;
+        amountCents = order.floristCompensationCents || 1;
+        const ref = order.deliveryDate && order.deliveryDate.getTime() <= Date.now()
+            ? order.deliveryDate
+            : order.createdAt;
+        expenseDate = ref.toISOString().slice(0, 10);
+    }
+
+    const expense = await createManualExpense({
+        expenseDate,
+        docType: 'SCONTRINO',
+        vendorName: partnerName,
+        description: `Scontrino/ricevuta fiscale compenso fiorista${
+            orderNumber ? ` — ordine ${orderNumber}` : ''
+        } (solo Contabilità)`,
+        totalCents: amountCents,
+        vatRate: 0,
+        file: {
+            buffer: input.buffer,
+            fileName: input.fileName,
+            contentType: input.contentType,
+        },
+        notes:
+            'FISCAL_ONLY — non propagare a GdM, bacheche, Order.photos, DeliveryProof, DeceasedProfile',
+        metadataJson: {
+            fiscalOnly: true,
+            neverPropagateToGdm: true,
+            neverPropagateToBacheca: true,
+            source: 'florist_missing_receipt_upload',
+            orderId,
+            orderNumber,
+            bankLineId,
+            rowId: input.rowId,
+        },
+        matchedStatementLineId: bankLineId,
+        reconciled: Boolean(bankLineId),
+    });
+
+    if (parsed.kind === 'bank' && bankLineId) {
+        const line = await prisma.bankStatementLine.findUnique({ where: { id: bankLineId } });
+        if (line) {
+            const rawJson = mergeFloristAlertMeta(line.rawJson, {
+                linkedExpenseId: expense.id,
+                // URL solo in Contabilità (expense); riferimento leggero sulla riga bank
+                receiptUrl: expense.blobUrl || undefined,
+                receiptPath: expense.blobPath || undefined,
+            });
+            await prisma.bankStatementLine.update({
+                where: { id: line.id },
+                data: {
+                    rawJson: rawJson as Prisma.InputJsonValue,
+                    matchNotes: `${line.matchNotes || ''} | Scontrino fiscale ${expense.id}`.trim(),
+                },
+            });
+        }
+    } else if (orderId) {
+        // Solo ID spesa in flags ordine — MAI URL foto (evita leak verso UI ordine/GdM).
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            select: { veraWorkflowFlags: true },
+        });
+        const prev = (order?.veraWorkflowFlags as Record<string, unknown>) || {};
+        const next = { ...prev };
+        delete next.floristReceiptUrl;
+        delete next.floristReceiptPath;
+        next.floristLinkedExpenseId = expense.id;
+        next.floristFiscalReceiptAt = new Date().toISOString();
         await prisma.order.update({
-            where: { id: order.id },
-            data: { veraWorkflowFlags: flags },
+            where: { id: orderId },
+            data: { veraWorkflowFlags: next as Prisma.InputJsonValue },
         });
     }
 
-    return { receiptUrl: stored.url, receiptPath: stored.path };
+    return {
+        receiptUrl: expense.blobUrl,
+        receiptPath: expense.blobPath,
+        expenseId: expense.id,
+        fiscalOnly: true,
+    };
 }
 
 export { parseRowId, readFloristAlertMeta };

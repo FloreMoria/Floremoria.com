@@ -720,13 +720,32 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             orderMatchSource: 'manual',
             description: `Compenso ordine ${order.orderNumber || order.id.slice(0, 8)}`,
             notes: order.financeNotes || null,
-            receiptUrl: typeof flags.floristReceiptUrl === 'string' ? flags.floristReceiptUrl : null,
-            receiptPath: typeof flags.floristReceiptPath === 'string' ? flags.floristReceiptPath : null,
+            receiptUrl: null,
+            receiptPath: null,
             linkedExpenseId:
                 typeof flags.floristLinkedExpenseId === 'string' ? flags.floristLinkedExpenseId : null,
             severity,
             statusLabel: `In attesa fattura da ${days} giorni`,
         });
+    }
+
+    // Risolvi URL scontrino SOLO da ManualFinanceExpense (Contabilità), mai da Order.photos/GdM.
+    const expenseIds = [
+        ...new Set(rows.map((r) => r.linkedExpenseId).filter(Boolean)),
+    ] as string[];
+    if (expenseIds.length) {
+        const expenses = await prisma.manualFinanceExpense.findMany({
+            where: { id: { in: expenseIds } },
+            select: { id: true, blobUrl: true, blobPath: true },
+        });
+        const byExp = new Map(expenses.map((e) => [e.id, e]));
+        for (const r of rows) {
+            if (!r.linkedExpenseId) continue;
+            const exp = byExp.get(r.linkedExpenseId);
+            if (!exp) continue;
+            r.receiptUrl = exp.blobUrl || r.receiptUrl;
+            r.receiptPath = exp.blobPath || r.receiptPath;
+        }
     }
 
     const orderIds = [...new Set(rows.map((r) => r.orderId).filter(Boolean))] as string[];

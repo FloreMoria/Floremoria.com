@@ -13,6 +13,7 @@ import prisma from '@/lib/prisma';
 import { propagateDeliveryPhotosToLinkedProfiles } from '@/lib/deliveryProof/injectOrderDeliveryPhotos';
 import { uniqueAppendPhotoUrls } from '@/lib/deliveryProof/uniqueAppendPhotoUrls';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
+import { assertNotFiscalMediaForDelivery } from '@/lib/financial/fiscalMediaGuard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,15 @@ export async function POST(
 
         if (!mediaUrl) {
             return NextResponse.json({ ok: false, error: 'Parametro mediaUrl obbligatorio.' }, { status: 400 });
+        }
+
+        try {
+            assertNotFiscalMediaForDelivery(mediaUrl);
+        } catch (guardErr) {
+            return NextResponse.json(
+                { ok: false, error: guardErr instanceof Error ? guardErr.message : 'Media fiscale non ammesso' },
+                { status: 400 }
+            );
         }
 
         // 1. Cerca l'ordine sia per ID Prisma (cuid/uuid) sia per codice ordine (es. FT-CO-26-001)

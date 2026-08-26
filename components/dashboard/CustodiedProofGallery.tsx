@@ -91,7 +91,7 @@ function PhotoTile({
                 const form = new FormData();
                 form.append('action', action);
                 form.append('orderId', orderId);
-                form.append('url', url.split('?')[0] ?? url);
+                form.append('url', url);
                 if (file) form.append('file', file);
 
                 const res = await fetch('/api/dashboard/delivery-proof/photo', {

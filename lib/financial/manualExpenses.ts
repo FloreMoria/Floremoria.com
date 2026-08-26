@@ -14,6 +14,7 @@ import {
     FOREIGN_AUTOFATTURA_SOURCE,
     SAAS_FOREIGN_VENDOR_RE,
 } from '@/lib/financial/foreignAutofattura';
+import type { Prisma } from '@prisma/client';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'manual-expenses');
 const BLOB_PREFIX = 'floremoria-finance/manual-expenses';
@@ -76,6 +77,10 @@ export async function createManualExpense(input: {
     vatRate: number;
     file?: { buffer: Buffer; fileName: string; contentType: string } | null;
     notes?: string | null;
+    /** Metadati fiscali (es. orderId) — mai usati per GdM/bacheche. */
+    metadataJson?: Record<string, unknown> | null;
+    matchedStatementLineId?: string | null;
+    reconciled?: boolean;
 }) {
     const expenseDate = new Date(`${input.expenseDate.slice(0, 10)}T12:00:00.000Z`);
     if (Number.isNaN(expenseDate.getTime())) throw new Error('Data non valida');
@@ -131,6 +136,9 @@ export async function createManualExpense(input: {
             storageKind: stored.storageKind,
             periodKey: periodKeyFromDate(expenseDate),
             notes: input.notes?.trim() || null,
+            metadataJson: (input.metadataJson as Prisma.InputJsonValue | undefined) ?? undefined,
+            matchedStatementLineId: input.matchedStatementLineId ?? null,
+            reconciled: Boolean(input.reconciled),
         },
     });
 

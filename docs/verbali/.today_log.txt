@@ -32,3 +32,6 @@
 [2026-08-26 17:43] arch: Scaffold YouDOX SOAP/SFTP client + route /api/v1/finance/youdox/* (GetToken live, SOAP stub fino a WSDL prod).
 [2026-08-26 18:15] privacy: epurazione totale e definitiva foto scontrino ordine FF-VI-26-003 (Silvia Tregnaghi / Maria Silvia De Zotti) — eliminazione fisica del file da Vercel Blob Storage (`del`), azzeramento completo a NULL di tutti i campi photoBeforeUrl/photoAfterUrl/socialReadyPrimaryUrl e array su DeliveryProof Neon DB e messaggi chat WhatsApp.
 [2026-08-26 18:19] fix(finance): Date fatture fioristi da Order (FF-VI-26-003=0gg); CRUD modifica/elimina; persistenza associazioni; upload scontrino.
+[2026-08-26 18:26] fix(finance): scontrino fiorista solo Contabilità (ManualFinanceExpense); blocco leak GdM/bacheche/foto consegna.
+[2026-08-26 18:28] fix(finance): scontrino fiorista → ManualFinanceExpense fiscal-only; guard anti-leak GdM/bacheche/DeliveryProof.
+[2026-08-26 18:37] style(finance): allineamento card Passivo/Documenti, dicitura YouDOX, Storico Autofatture max-h-280px.

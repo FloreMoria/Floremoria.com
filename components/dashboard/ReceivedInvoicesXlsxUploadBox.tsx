@@ -116,9 +116,9 @@ export default function ReceivedInvoicesXlsxUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm h-[520px] flex flex-col gap-3 overflow-hidden">
-            <div className="flex items-start gap-3 shrink-0">
-                <div className="mt-0.5 rounded-2xl bg-emerald-50 p-2.5 text-emerald-700">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[520px] flex flex-col gap-3 overflow-hidden">
+            <div className="flex items-start gap-3 shrink-0 min-h-[4.5rem]">
+                <div className="mt-0.5 rounded-xl bg-emerald-50 p-2.5 text-emerald-700">
                     <FileSpreadsheet size={20} />
                 </div>
                 <div>

@@ -89,7 +89,7 @@ function formatItDate(iso: string | null): string {
 }
 
 const SCROLL_TABLE =
-    'min-h-[450px] max-h-[600px] overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
+    'max-h-[280px] overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
 
 export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -301,26 +301,26 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-indigo-100 rounded-3xl p-5 shadow-sm min-h-[720px] flex flex-col gap-3 overflow-hidden">
-            <div className="flex items-start gap-3 shrink-0">
-                <div className="mt-0.5 rounded-2xl bg-indigo-50 p-2.5 text-indigo-700">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[520px] flex flex-col gap-3 overflow-hidden">
+            <div className="flex items-start gap-3 shrink-0 min-h-[4.5rem]">
+                <div className="mt-0.5 rounded-xl bg-indigo-50 p-2.5 text-indigo-700">
                     <Globe2 size={20} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-700">
-                        Autofatture Estere (TD17 / TD18)
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                        Autofatture estere
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                        Genera XML FatturaPA FPR12 (SDI <span className="font-mono">K0ROACV</span>,
-                        SoggettoEmittente CC) pronto per YouDoox, oppure carica XML/ZIP/PDF già
+                        Genera XML FatturaPA FPR12 TD17/TD18 (SDI <span className="font-mono">K0ROACV</span>,
+                        SoggettoEmittente CC) pronto per YouDOX, oppure carica XML/ZIP/PDF già
                         emessi.
                     </p>
                 </div>
             </div>
 
             {/* Generatore */}
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/30 p-3 space-y-2 shrink-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
+            <div className="rounded-xl border border-slate-200 bg-indigo-50/30 p-3 space-y-2 shrink-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                     Creazione rapida XML
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -382,33 +382,33 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 </div>
                 <p className="text-[10px] text-slate-500">
                     Numero doc. progressivo <span className="font-mono">00000N-AAAA-EST</span> · IVA
-                    22% in reverse charge · XML YouDoox + PDF leggibile · Contabilità + Fineco
+                    22% in reverse charge · XML YouDOX + PDF leggibile · Contabilità + Fineco
                 </p>
             </div>
 
             {/* Storico autofatture */}
-            <div className="rounded-2xl border border-indigo-100 overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="rounded-xl border border-slate-200 overflow-hidden flex flex-col flex-1 min-h-0">
                 <button
                     type="button"
                     onClick={() => {
                         setHistoryOpen((o) => !o);
                         if (!historyOpen) void loadHistory();
                     }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-indigo-50/50 hover:bg-indigo-50 text-left shrink-0"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 hover:bg-slate-100/80 text-left shrink-0"
                 >
-                    <span className="text-[11px] font-bold text-indigo-900">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                         Storico Autofatture
-                        <span className="ml-2 inline-flex min-w-[1.5rem] justify-center px-1.5 py-0.5 rounded-full bg-indigo-700 text-white text-[10px]">
+                        <span className="ml-2 inline-flex min-w-[1.5rem] justify-center px-1.5 py-0.5 rounded-full bg-slate-800 text-white text-[10px]">
                             {history.length}
                         </span>
                     </span>
                     <ChevronDown
                         size={16}
-                        className={`text-indigo-700 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
+                        className={`text-slate-500 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
                     />
                 </button>
                 {historyOpen && (
-                    <div className={`flex-1 min-h-0 border-t border-indigo-100 ${SCROLL_TABLE}`}>
+                    <div className={`flex-1 min-h-0 border-t border-slate-200 ${SCROLL_TABLE}`}>
                         {historyLoading ? (
                             <p className="px-3 py-4 text-xs text-slate-400 flex items-center gap-2">
                                 <Loader2 size={14} className="animate-spin" /> Caricamento storico…

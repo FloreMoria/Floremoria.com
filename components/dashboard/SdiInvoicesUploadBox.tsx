@@ -131,17 +131,17 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm h-[520px] flex flex-col gap-3 overflow-hidden">
-            <div className="flex items-start gap-3 shrink-0">
-                <div className="mt-0.5 rounded-2xl bg-slate-900/5 p-2.5 text-slate-700">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[520px] flex flex-col gap-3 overflow-hidden">
+            <div className="flex items-start gap-3 shrink-0 min-h-[4.5rem]">
+                <div className="mt-0.5 rounded-xl bg-slate-900/5 p-2.5 text-slate-700">
                     <FileArchive size={20} />
                 </div>
                 <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                        Fatture Passive SDI / YouDoox
+                        Fatture Passive SDI / YouDOX
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                        Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDoox/SDI.
+                        Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDOX/SDI.
                         Deduplica automatica; correzioni e note di credito (TD04) aggiornano i documenti già presenti
                         e riconciliano Fineco.
                     </p>

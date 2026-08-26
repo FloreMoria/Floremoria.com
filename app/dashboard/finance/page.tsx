@@ -770,7 +770,7 @@ export default function FinanceDashboardPage() {
 
                 {activeTab === 'passivo' && (
                     <div className="p-4 space-y-4">
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
                             <SdiInvoicesUploadBox onImported={() => void loadLedger()} />
                             <ReceivedInvoicesXlsxUploadBox onImported={() => void loadLedger()} />
                             <ForeignAutofattureUploadBox onImported={() => void loadLedger()} />

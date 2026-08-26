@@ -85,14 +85,9 @@ async function loadGardenOrdersForUser(user: {
     });
 }
 
-export default async function GiardinoPage({ params }: GiardinoPageProps) {
-    const resolvedParams = await params;
-    const userIdOrCode = resolvedParams.id;
-
-    let user: GiardinoUserData | null = null;
-
-    if (userIdOrCode === 'UT-DEMO') {
-        user = {
+async function resolveGardenUser(idOrSlug: string): Promise<GiardinoUserData | null> {
+    if (idOrSlug === 'UT-DEMO') {
+        return {
             id: 'demo-user-123',
             name: 'Mario Rossi',
             uniqueCode: 'UT-DEMO',
@@ -129,24 +124,139 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                 },
             ],
         } as unknown as GiardinoUserData;
-    } else {
-        const dbUser = await prisma.user.findFirst({
-            where: {
-                OR: [{ uniqueCode: userIdOrCode }, { id: userIdOrCode }],
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                uniqueCode: true,
-                avatarUrl: true,
-            },
-        });
-        if (dbUser) {
-            const orders = await loadGardenOrdersForUser(dbUser);
-            user = { ...dbUser, orders };
-        }
     }
+
+    // 1. Prova risoluzione per Utente (id o uniqueCode)
+    const dbUser = await prisma.user.findFirst({
+        where: {
+            OR: [{ uniqueCode: idOrSlug }, { id: idOrSlug }],
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            uniqueCode: true,
+            avatarUrl: true,
+        },
+    });
+
+    if (dbUser) {
+        const orders = await loadGardenOrdersForUser(dbUser);
+        return { ...dbUser, orders };
+    }
+
+    // 2. Prova risoluzione per Profilo Defunto (id o uniqueCode)
+    const deceasedProfile = await prisma.deceasedProfile.findFirst({
+        where: {
+            deletedAt: null,
+            OR: [{ id: idOrSlug }, { uniqueCode: idOrSlug }],
+        },
+        include: {
+            userLinks: { include: { user: true } },
+        },
+    });
+
+    if (deceasedProfile) {
+        const ordersForDeceased = await prisma.order.findMany({
+            where: {
+                deletedAt: null,
+                status: { not: 'CANCELLED' },
+                OR: [
+                    { deceasedProfileId: deceasedProfile.id },
+                    { deceasedName: { equals: deceasedProfile.fullName, mode: 'insensitive' } },
+                ],
+            },
+            include: orderInclude,
+            orderBy: [{ deliveryDate: 'desc' }, { createdAt: 'desc' }],
+        });
+
+        const linkedUserId = deceasedProfile.userLinks[0]?.userId || ordersForDeceased.find((o) => o.userId)?.userId;
+        const linkedEmail = ordersForDeceased.find((o) => o.buyerEmail)?.buyerEmail;
+
+        let ownerUser: { id: string; name: string | null; email: string | null; uniqueCode: string | null; avatarUrl?: string | null } | null = null;
+
+        if (linkedUserId) {
+            ownerUser = await prisma.user.findUnique({
+                where: { id: linkedUserId },
+                select: { id: true, name: true, email: true, uniqueCode: true, avatarUrl: true },
+            });
+        } else if (linkedEmail) {
+            ownerUser = await prisma.user.findFirst({
+                where: { email: { equals: linkedEmail.trim(), mode: 'insensitive' } },
+                select: { id: true, name: true, email: true, uniqueCode: true, avatarUrl: true },
+            });
+        }
+
+        if (ownerUser) {
+            const allUserOrders = await loadGardenOrdersForUser(ownerUser);
+            return { ...ownerUser, orders: allUserOrders };
+        }
+
+        const buyerName = ordersForDeceased.find((o) => o.buyerFullName)?.buyerFullName || deceasedProfile.fullName;
+        return {
+            id: deceasedProfile.id,
+            name: buyerName,
+            email: linkedEmail || null,
+            uniqueCode: deceasedProfile.uniqueCode || deceasedProfile.id,
+            avatarUrl: deceasedProfile.photoUrl || null,
+            orders: ordersForDeceased,
+        };
+    }
+
+    // 3. Prova risoluzione per Ordine (id, orderNumber, o proofFotoCode)
+    const orderMatch = await prisma.order.findFirst({
+        where: {
+            deletedAt: null,
+            OR: [{ id: idOrSlug }, { orderNumber: idOrSlug }, { proofFotoCode: idOrSlug }],
+        },
+        include: {
+            user: true,
+            deceasedProfile: true,
+        },
+    });
+
+    if (orderMatch) {
+        if (orderMatch.userId || orderMatch.buyerEmail) {
+            const ownerUser = orderMatch.user || (orderMatch.buyerEmail ? await prisma.user.findFirst({ where: { email: { equals: orderMatch.buyerEmail.trim(), mode: 'insensitive' } } }) : null);
+            if (ownerUser) {
+                const userOrders = await loadGardenOrdersForUser(ownerUser);
+                return {
+                    id: ownerUser.id,
+                    name: ownerUser.name || orderMatch.buyerFullName,
+                    email: ownerUser.email || orderMatch.buyerEmail,
+                    uniqueCode: ownerUser.uniqueCode,
+                    avatarUrl: ownerUser.avatarUrl,
+                    orders: userOrders,
+                };
+            }
+        }
+
+        if (orderMatch.deceasedProfileId) {
+            return resolveGardenUser(orderMatch.deceasedProfileId);
+        }
+
+        const singleOrderFull = await prisma.order.findUnique({
+            where: { id: orderMatch.id },
+            include: orderInclude,
+        });
+
+        return {
+            id: orderMatch.id,
+            name: orderMatch.buyerFullName || 'Cliente FloreMoria',
+            email: orderMatch.buyerEmail || null,
+            uniqueCode: null,
+            orders: singleOrderFull ? [singleOrderFull] : [],
+        };
+    }
+
+    return null;
+}
+
+export default async function GiardinoPage({ params }: GiardinoPageProps) {
+    const resolvedParams = await params;
+    const userIdOrCode = resolvedParams.id;
+
+    const user: GiardinoUserData | null = await resolveGardenUser(userIdOrCode);
 
     if (!user) {
         notFound();

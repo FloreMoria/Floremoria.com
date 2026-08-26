@@ -57,7 +57,7 @@ export async function runVeraPostPaymentWorkflowWithResults(
 ): Promise<VeraPostPaymentResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
-        select: { id: true, partnerId: true, status: true },
+        select: { id: true, partnerId: true, status: true, confirmationMessageSent: true },
     });
 
     if (!order) {

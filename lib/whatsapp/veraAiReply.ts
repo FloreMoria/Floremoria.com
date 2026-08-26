@@ -1014,6 +1014,9 @@ export async function generateVeraReply(
         replyText = stripClosingSignature(replyText);
     }
 
+    // ── Sanitizzazione Anti-Boilerplate: blocco reinvio conferma presa in carico ──
+    replyText = stripRecycledConfirmationBoilerplate(replyText);
+
     // ── Firma di chiusura (solo su congedo esplicito dell'Utente) ─────────────
     replyText = stripClosingSignature(replyText);
     if (shouldAppendSignature(message) && !replyText.includes(VERA_CLOSING_SIGNATURE)) {
@@ -1021,4 +1024,19 @@ export async function generateVeraReply(
     }
 
     return { text: replyText, source, shouldEscalate: false };
+}
+
+/**
+ * Rimuove dal testo finale di risposta frasi fotocopia del template di benvenuto/conferma ordine iniziale.
+ * Impedisce che in risposte automatiche o chat di follow-up venga ripetuto il boilerplate di presa in carico.
+ */
+export function stripRecycledConfirmationBoilerplate(text: string): string {
+    if (!text) return text;
+    let cleaned = text;
+
+    cleaned = cleaned.replace(/Gentile\s+[^,]+,\s*La\s+ringraziamo\s+per\s+aver\s+scelto\s+FloreMoria\.\s*Le\s+confermiamo\s+abbiamo\s+preso\s+in\s+carico\s+[^\n.]*[\n.]*/gi, '');
+    cleaned = cleaned.replace(/La\s+ringraziamo\s+per\s+aver\s+scelto\s+FloreMoria\.\s*Le\s+confermiamo\s+abbiamo\s+preso\s+in\s+carico\s+[^\n.]*[\n.]*/gi, '');
+    cleaned = cleaned.replace(/Le\s+confermiamo\s+abbiamo\s+preso\s+in\s+carico\s+il\s+Suo\s+omaggio\s+floreale\s+nel\s+ricordo\s+di\s+[^\n.]*[\n.]*/gi, '');
+
+    return cleaned.trim();
 }

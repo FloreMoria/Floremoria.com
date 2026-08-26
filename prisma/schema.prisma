@@ -219,6 +219,8 @@ model Order {
   isFirstOrderForPartner Boolean?          @map("is_first_order_for_partner")
   /** Idempotenza step workflow VERA (puntoA, puntoB, …). */
   veraWorkflowFlags      Json?             @map("vera_workflow_flags")
+  /** Flag blocco reinvio: true se il messaggio iniziale di presa in carico (Punto B) è già stato inviato. */
+  confirmationMessageSent Boolean           @default(false) @map("confirmation_message_sent")
   veraAlertType          String?           @map("vera_alert_type") @db.VarChar(64)
   veraAlertMessage       String?           @map("vera_alert_message") @db.Text
   veraAlertAt            DateTime?         @map("vera_alert_at")

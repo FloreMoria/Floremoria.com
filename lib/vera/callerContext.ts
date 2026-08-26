@@ -300,6 +300,7 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
             ctx.photosAlreadySentInChat
                 ? `- Foto già inviate in questa chat: SÌ — VIETATO dire "in preparazione" / "non appena sarà posizionato"; se l'utente contesta foto uguali/sbagliate → escalate Staff, non ripetere "già inviate"`
                 : `- Foto già inviate in questa chat: no o non rilevate`,
+            'REGOLA REINVIO CONFERMA ORDINE (CRITICAL): Il messaggio formale di presa in carico ordine iniziale ("La ringraziamo per aver scelto FloreMoria", "Le confermiamo abbiamo preso in carico...") è GIÀ STATO INVIATO a questo cliente. È SEVERAMENTE VIETATO inviarlo di nuovo o ripetere il testo di benvenuto/conferma. Rispondi in modo diretto, organico e naturale all\'ultima domanda dell\'utente.',
             'REGOLA DATI: rispondi solo con questi campi. Se un dato operativo manca, non inventarlo e non ripetere richieste di attesa: scala allo Staff con i pezzi già noti.',
             'REGOLA MODIFICA UTENTE: se chiede cambio data/orario/varietà fiori, presa in carico + staff — nessuna conferma arbitraria di fattibilità. Pagamenti PayPal/Stripe non sono modifiche ordine.'
         );

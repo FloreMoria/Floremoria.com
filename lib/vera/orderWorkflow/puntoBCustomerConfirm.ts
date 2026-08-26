@@ -117,12 +117,16 @@ export async function runPuntoBCustomerOrderConfirm(
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
 
     if (!options.force) {
-        if (isWorkflowStepDone(flags, 'puntoB_customer')) {
+        if (order.confirmationMessageSent || isWorkflowStepDone(flags, 'puntoB_customer')) {
             return { ok: true, skipped: 'already_sent' };
         }
 
         if (await wasOrderTemplateSent(order.id, 'customer_order_confirm', order.orderNumber)) {
             await tryClaimWorkflowStep(order.id, 'puntoB_customer');
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { confirmationMessageSent: true },
+            }).catch(() => null);
             console.info(
                 `[vera-workflow] Punto B BLOCCATO duplicato chat ordine ${order.orderNumber || order.id}`
             );
@@ -222,7 +226,7 @@ export async function runPuntoBCustomerOrderConfirm(
         console.error('[vera-workflow] Punto B inviato ma sessione dashboard non registrata:', logErr);
     }
 
-    // Assicura flag puntoB_customer anche con force (che salta tryClaim).
+    // Assicura flag puntoB_customer e confirmationMessageSent anche con force (che salta tryClaim).
     const freshFlags = await prisma.order.findUnique({
         where: { id: order.id },
         select: { veraWorkflowFlags: true },
@@ -230,6 +234,7 @@ export async function runPuntoBCustomerOrderConfirm(
     await prisma.order.update({
         where: { id: order.id },
         data: {
+            confirmationMessageSent: true,
             veraWorkflowFlags: markWorkflowStep(
                 parseWorkflowFlags(freshFlags?.veraWorkflowFlags),
                 'puntoB_customer'

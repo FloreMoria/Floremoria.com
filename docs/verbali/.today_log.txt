@@ -30,3 +30,4 @@
 [2026-08-26 16:36] fix(finance): Fineco — dedup non usa più IBAN/LU96ZZZ come TRN; paste importi −/trailing; tabella anno+scroll; fingerprint ricalcolati su Neon.
 
 [2026-08-26 17:43] arch: Scaffold YouDOX SOAP/SFTP client + route /api/v1/finance/youdox/* (GetToken live, SOAP stub fino a WSDL prod).
+[2026-08-26 18:15] privacy: epurazione totale e definitiva foto scontrino ordine FF-VI-26-003 (Silvia Tregnaghi / Maria Silvia De Zotti) — eliminazione fisica del file da Vercel Blob Storage (`del`), azzeramento completo a NULL di tutti i campi photoBeforeUrl/photoAfterUrl/socialReadyPrimaryUrl e array su DeliveryProof Neon DB e messaggi chat WhatsApp.

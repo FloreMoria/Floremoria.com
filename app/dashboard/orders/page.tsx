@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import ClientOrdersTable from './ClientOrdersTable';
-import { visibleDashboardOrdersWhere, ordersListPageWhere } from '@/lib/dashboardOrdersFilter';
+import { visibleDashboardOrdersWhere, ordersListPageWhere, abandonedDashboardOrdersWhere } from '@/lib/dashboardOrdersFilter';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
@@ -43,7 +43,7 @@ export default async function OrdersPage() {
         }
     }
 
-    // Query ordini: consegne reali + annullati (evidenziati in tabella); no carrelli abbandonati.
+    // Query ordini: consegne reali con pagamento confermato / ordini da evadere.
     const ordersQuery: { where: Record<string, unknown> } = {
         where: ordersListPageWhere(testModeActive) as Record<string, unknown>,
     };
@@ -53,6 +53,7 @@ export default async function OrdersPage() {
     }
 
     let ordersData: any[] = [];
+    let abandonedOrdersData: any[] = [];
     let florists: Array<{ id: string; shopName: string; ownerName: string | null }> = [];
     let products: any[] = [];
     let dashboardUsers: any[] = [];
@@ -65,7 +66,6 @@ export default async function OrdersPage() {
                 ...ordersQuery,
                 orderBy: [{ deliveryDate: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }],
                 include: {
-
                     user: true,
                     partner: true,
                     deliveryProof: true,
@@ -79,6 +79,27 @@ export default async function OrdersPage() {
         );
         ordersData = ordersResult.data;
         if (!ordersResult.ok) dbErrors.push(ordersResult.error);
+
+        if (isGlobalAdmin) {
+            const abandonedResult = await runDashboardQuery('orders/abandoned', [], () =>
+                prisma.order.findMany({
+                    where: abandonedDashboardOrdersWhere(testModeActive) as Record<string, unknown>,
+                    orderBy: [{ createdAt: 'desc' }],
+                    take: 100,
+                    include: {
+                        user: true,
+                        partner: true,
+                        deliveryProof: true,
+                        items: {
+                            include: {
+                                product: true,
+                            },
+                        },
+                    },
+                })
+            );
+            abandonedOrdersData = abandonedResult.data;
+        }
 
         const floristsResult = await runDashboardQuery('orders/florists', [], () =>
             prisma.partner.findMany({
@@ -135,12 +156,20 @@ export default async function OrdersPage() {
         })
     );
 
+    const displayAbandonedOrders = abandonedOrdersData.map((o) =>
+        enrichOrderWithShareableLinks({
+            ...o,
+            specialNotes: o.additionalInstructions || '',
+        })
+    );
+
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <DashboardDbAlert page="Ordini" errors={dbErrors} />
             <Suspense fallback={<div className="p-8 text-sm text-slate-500">Caricamento ordini…</div>}>
                 <ClientOrdersTable
                     orders={displayOrders}
+                    abandonedOrders={displayAbandonedOrders}
                     florists={florists}
                     products={products}
                     users={dashboardUsers}

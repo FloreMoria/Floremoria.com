@@ -24,6 +24,7 @@ import type { ProfileUserType } from '@prisma/client';
 
 interface ClientOrdersTableProps {
     orders: any[];
+    abandonedOrders?: any[];
     florists: any[];
     products: any[];
     users: any[];
@@ -32,11 +33,12 @@ interface ClientOrdersTableProps {
     isGlobalAdmin?: boolean;
 }
 
-export default function ClientOrdersTable({ orders, florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
+export default function ClientOrdersTable({ orders, abandonedOrders = [], florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+    const [mainTab, setMainTab] = useState<'OPERATIVE' | 'ABANDONED'>('OPERATIVE');
     const [currentFilter, setCurrentFilter] = useState('TUTTI');
     const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
 
@@ -47,7 +49,9 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
     const [filterDate, setFilterDate] = useState('tutti');
 
     const [localOrders, setLocalOrders] = useState<any[]>(orders);
+    const [localAbandonedOrders, setLocalAbandonedOrders] = useState<any[]>(abandonedOrders);
     React.useEffect(() => { setLocalOrders(orders); }, [orders]);
+    React.useEffect(() => { setLocalAbandonedOrders(abandonedOrders); }, [abandonedOrders]);
 
     // Deep-link da Overview Live Stream: /dashboard/orders?open=<orderId>
     React.useEffect(() => {
@@ -358,7 +362,8 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
         );
     };
 
-    let filteredOrders = localOrders.filter(o => currentFilter === 'TUTTI' || o.status === currentFilter);
+    const activeBaseList = mainTab === 'OPERATIVE' ? localOrders : localAbandonedOrders;
+    let filteredOrders = activeBaseList.filter(o => currentFilter === 'TUTTI' || o.status === currentFilter);
 
     // Filter Logic
     if (filterDate !== 'tutti') {
@@ -420,7 +425,7 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
             'Fiorista': o.partner?.shopName || o.partner?.ownerName || 'Nessuno',
             'Stato': (statusMap as any)[o.status]?.label || o.status
         }));
-        exportToCSV(exportData, 'FloreMoria_Ordini.csv');
+        exportToCSV(exportData, mainTab === 'OPERATIVE' ? 'FloreMoria_Ordini_Operativi.csv' : 'FloreMoria_Carrelli_Abbandonati.csv');
     };
 
     // Salvataggio effettivo nel DB del cambio status
@@ -615,16 +620,45 @@ export default function ClientOrdersTable({ orders, florists, products, users, d
                 </div>
             )}
 
+            {/* Selettore Macro Tab: Ordini Operativi vs Carrelli Abbandonati */}
+            {isGlobalAdmin && (
+                <div className="flex items-center gap-2 mb-4 bg-gray-100 p-1.5 rounded-2xl w-fit">
+                    <button
+                        type="button"
+                        onClick={() => { setMainTab('OPERATIVE'); setCurrentFilter('TUTTI'); }}
+                        className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                            mainTab === 'OPERATIVE'
+                                ? 'bg-black text-white shadow-sm'
+                                : 'text-gray-600 hover:text-black hover:bg-white/50'
+                        }`}
+                    >
+                        📦 Ordini Operativi ({localOrders.length})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setMainTab('ABANDONED'); setCurrentFilter('TUTTI'); }}
+                        className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                            mainTab === 'ABANDONED'
+                                ? 'bg-amber-600 text-white shadow-sm'
+                                : 'text-gray-600 hover:text-amber-800 hover:bg-white/50'
+                        }`}
+                    >
+                        🛒 Carrelli Abbandonati / Non Pagati ({localAbandonedOrders.length})
+                    </button>
+                </div>
+            )}
+
             {/* Filter Tabs */}
             <div className="flex items-center gap-6 border-b border-gray-200 overflow-x-auto custom-scrollbar">
-                <button onClick={() => setCurrentFilter('TUTTI')} className={`pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${currentFilter === 'TUTTI' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}>Tutti ({localOrders.length})</button>
+                <button onClick={() => setCurrentFilter('TUTTI')} className={`pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${currentFilter === 'TUTTI' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}>Tutti ({activeBaseList.length})</button>
                 {statusTabOrder.map(st => {
-                    const count = localOrders.filter(o => o.status === st).length;
+                    const count = activeBaseList.filter(o => o.status === st).length;
+                    if (count === 0 && currentFilter !== st) return null;
                     return (
                         <button key={st} onClick={() => setCurrentFilter(st)} className={`pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${currentFilter === st ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}>
-                            {statusMap[st as keyof typeof statusMap].label} ({count})
+                            {statusMap[st as keyof typeof statusMap]?.label || st} ({count})
                         </button>
-                    )
+                    );
                 })}
             </div>
 

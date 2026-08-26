@@ -79,14 +79,23 @@ export async function PUT(request: Request, context: any) {
             safeData.additionalInstructions = newNotes;
         }
 
-        // Normalizzazione sicura del valore dello stato ordine rispetto all'enum Prisma
+        // Normalizzazione e validazione dello stato ordine rispetto all'enum Prisma
         if (body.status !== undefined) {
             let s = String(body.status).trim();
             if (s === 'WAITING') s = 'PENDING';
-            if (s === 'PAID' || s === 'PAID_TO_DELIVER') s = 'ACCEPTED';
+            if (s === 'PAID') s = 'PAID_TO_DELIVER';
             if (s === 'GDM_PLANNED' || s === 'GDM_ANNIVERSARY') s = 'IN_PROGRESS';
 
-            const validOrderStatuses = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
+            const validOrderStatuses = [
+                'PENDING',
+                'ACCEPTED',
+                'IN_PROGRESS',
+                'DELIVERING',
+                'DELIVERED_UNPAID',
+                'PAID_TO_DELIVER',
+                'COMPLETED',
+                'CANCELLED',
+            ];
             if (validOrderStatuses.includes(s)) {
                 safeData.status = s;
             }

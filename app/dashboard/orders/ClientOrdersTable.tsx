@@ -84,57 +84,60 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
     const statusMap: Record<string, { label: string; line1: string; line2?: string; color: string }> = {
         'ACCEPTED': {
             label: 'Ricevuto',
-            line1: 'Ordine',
-            line2: 'Ricevuto',
-            color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            line1: 'Ricevuto',
+            color: 'bg-yellow-100 text-yellow-800 border-yellow-200 font-medium',
+        },
+        'PENDING': {
+            label: 'In Attesa',
+            line1: 'In',
+            line2: 'Attesa',
+            color: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold',
         },
         'WAITING': {
-            label: 'In attesa',
+            label: 'In Attesa',
             line1: 'In',
-            line2: 'attesa',
+            line2: 'Attesa',
             color: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold',
         },
         'IN_PROGRESS': {
             label: 'In Lavorazione',
             line1: 'In',
             line2: 'Lavorazione',
-            color: 'bg-blue-100 text-blue-800 border-blue-200',
-        },
-        'PAID': {
-            label: 'Pagato',
-            line1: 'Ordine',
-            line2: 'Pagato',
-            color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        },
-        'PAID_TO_DELIVER': {
-            label: 'Pagato da consegnare',
-            line1: 'Pagato',
-            line2: 'Da consegnare',
-            color: 'bg-sky-100 text-sky-800 border-sky-200',
-        },
-        'PENDING': {
-            label: 'In attesa',
-            line1: 'In',
-            line2: 'attesa',
-            color: 'bg-amber-100 text-amber-900 border-amber-300 font-semibold',
+            color: 'bg-blue-100 text-blue-800 border-blue-200 font-medium',
         },
         'DELIVERING': {
             label: 'In Consegna',
             line1: 'In',
             line2: 'Consegna',
-            color: 'bg-purple-100 text-purple-800 border-purple-200',
+            color: 'bg-purple-100 text-purple-800 border-purple-200 font-medium',
+        },
+        'DELIVERED_UNPAID': {
+            label: 'Consegnato (Da Pagare)',
+            line1: 'Consegnato',
+            line2: 'Da Pagare',
+            color: 'bg-orange-100 text-orange-800 border-orange-200 font-semibold',
+        },
+        'PAID_TO_DELIVER': {
+            label: 'Pagato (Da Consegnare)',
+            line1: 'Pagato',
+            line2: 'Da Consegnare',
+            color: 'bg-sky-100 text-sky-800 border-sky-200 font-semibold',
+        },
+        'PAID': {
+            label: 'Pagato (Da Consegnare)',
+            line1: 'Pagato',
+            line2: 'Da Consegnare',
+            color: 'bg-sky-100 text-sky-800 border-sky-200 font-semibold',
         },
         'COMPLETED': {
-            label: 'Completato Da pagare',
+            label: 'Completato',
             line1: 'Completato',
-            line2: 'Da pagare',
             color: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold',
         },
         'CANCELLED': {
             label: 'Annullato',
-            line1: 'Ordine',
-            line2: 'Annullato',
-            color: 'bg-red-100 text-red-800 border-red-200',
+            line1: 'Annullato',
+            color: 'bg-red-100 text-red-800 border-red-200 font-medium',
         },
         'GDM_PLANNED': {
             label: 'Ricorrenza GdM',
@@ -152,14 +155,25 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
 
     const uniqueStatusOptions = React.useMemo(() => [
         { key: 'ACCEPTED', label: 'Ricevuto' },
-        { key: 'PENDING', label: 'In attesa' },
+        { key: 'PENDING', label: 'In Attesa' },
         { key: 'IN_PROGRESS', label: 'In Lavorazione' },
         { key: 'DELIVERING', label: 'In Consegna' },
-        { key: 'COMPLETED', label: 'Completato (Da pagare)' },
+        { key: 'DELIVERED_UNPAID', label: 'Consegnato (Da Pagare)' },
+        { key: 'PAID_TO_DELIVER', label: 'Pagato (Da Consegnare)' },
+        { key: 'COMPLETED', label: 'Completato' },
         { key: 'CANCELLED', label: 'Annullato' },
     ], []);
 
-    const statusTabOrder = ['ACCEPTED', 'WAITING', 'IN_PROGRESS', 'PAID', 'PAID_TO_DELIVER', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
+    const statusTabOrder = [
+        'ACCEPTED',
+        'PENDING',
+        'IN_PROGRESS',
+        'DELIVERING',
+        'DELIVERED_UNPAID',
+        'PAID_TO_DELIVER',
+        'COMPLETED',
+        'CANCELLED',
+    ];
 
     const formatDeliveryDate = (order: { deliveryDate?: string | Date | null; funeralDate?: string | Date | null }) => {
         const raw = order.deliveryDate || order.funeralDate;

@@ -131,7 +131,7 @@ export function buildMagicLinkHtml(setupLink: string): string {
                 </div>
 
                 <div class="description" style="font-size: 13px; color: #64748b;">
-                    <em>Nota di sicurezza: Questo collegamento è valido esclusivamente per i prossimi 15 minuti. Se non ha richiesto questo accesso, può ignorare questa comunicazione in tutta sicurezza.</em>
+                    <em>Nota di sicurezza: Questo collegamento è valido per 24 ore. Dopo il click Le chiederemo una conferma di accesso. Se non ha richiesto questo accesso, può ignorare questa comunicazione in tutta sicurezza.</em>
                 </div>
 
                 <div class="raw-link">
@@ -160,7 +160,7 @@ export async function sendMagicLinkEmail(params: SendMagicLinkEmailParams): Prom
     const plainText = `
 Gentile Utente,
 Ha richiesto l'accesso senza password a FloreMoria.
-Clicchi su questo collegamento entro 15 minuti per accedere alla Sua bacheca personale:
+Clicchi su questo collegamento entro 24 ore per accedere alla Sua bacheca personale:
 ${params.setupLink}
 
 Firma:

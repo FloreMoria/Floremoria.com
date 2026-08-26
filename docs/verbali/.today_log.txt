@@ -20,3 +20,4 @@
 [2026-08-26] feat(partner-api): generazione credenziali test per Annunci Funebri
 - Generata e salvata su Neon DB la credenziale Partner API per Annunci Funebri (Public Key: `fmp_test_annuncifunebri_2026`).
 - Verificata con successo l'autenticazione API v1 su `GET /api/v1/partner/catalog` (risposta HTTP 200 con 29 prodotti attivi).
+[2026-08-26 10:45] fix(auth): Magic Link login — TTL 24h, landing anti-prefetch /auth/magic-link, sanitize token, cookie Secure/SameSite=Lax, errori login espliciti.

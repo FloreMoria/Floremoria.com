@@ -47,6 +47,28 @@ export default function LoginPage() {
             setErrorMsg('Questo link non è valido o non è più utilizzabile. Accedi con email o telefono se hai già ricevuto una consegna.');
             return;
         }
+        if (error === 'magic_link_expired') {
+            setErrorMsg(
+                'Il collegamento di accesso è scaduto (valido 24 ore). Richiedi un nuovo Magic Link inserendo la tua email.'
+            );
+            return;
+        }
+        if (error === 'magic_link_invalid') {
+            setErrorMsg(
+                'Il collegamento di accesso non è valido. Richiedi un nuovo Magic Link dalla pagina di accesso.'
+            );
+            return;
+        }
+        if (error === 'unauthorized_role') {
+            setErrorMsg(
+                'Questo metodo di accesso è riservato agli utenti privati. Staff e fioristi partner usano il codice personale.'
+            );
+            return;
+        }
+        if (error === 'server_error') {
+            setErrorMsg('Si è verificato un errore durante l\'accesso. Riprova tra poco o richiedi un nuovo link.');
+            return;
+        }
         if (expired === '1') {
             setErrorMsg('La sessione è scaduta. Accedi di nuovo con email o telefono per continuare.');
         }
@@ -410,8 +432,8 @@ export default function LoginPage() {
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
                                 {isRegisterMode
-                                    ? 'Apri il messaggio e tocca il collegamento per completare l\'attivazione. È valido per 15 minuti.'
-                                    : 'Apri il messaggio e tocca il collegamento per entrare. È valido per 15 minuti.'}
+                                    ? 'Apri il messaggio, tocca il collegamento e conferma l\'accesso. È valido per 24 ore.'
+                                    : 'Apri il messaggio, tocca il collegamento e conferma l\'accesso. È valido per 24 ore.'}
                             </p>
                             <button type="button" onClick={() => { setIsRegisterMode(false); backToStart(); }} className="text-xs text-slate-500 hover:text-fm-gold underline font-semibold transition-colors">
                                 Torna all&apos;accesso

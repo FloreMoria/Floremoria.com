@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { generateMagicLinkToken } from '@/lib/auth/magicLink';
+import { buildMagicLinkLoginUrl } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { findUserByEmail, findOrderByEmail, createUserFromOrder, isProfessionalRole, linkHistoricalOrders } from '@/lib/auth/identity';
 import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
-import { getSiteBaseUrl } from '@/lib/site/config';
 
 export async function POST(request: Request) {
     try {
@@ -46,8 +45,7 @@ export async function POST(request: Request) {
             }
         }
 
-        const token = generateMagicLinkToken(email);
-        const setupLink = `${getSiteBaseUrl()}/api/auth/magic-link/callback?token=${token}`;
+        const setupLink = buildMagicLinkLoginUrl(email);
 
         const mailResult = await sendMagicLinkEmail({
             email,
@@ -64,7 +62,7 @@ export async function POST(request: Request) {
 
         let sentWhatsApp = false;
         if (user.phone) {
-            const waText = `FloreMoria — accedi al tuo profilo con questo link (valido 15 minuti): ${setupLink}`;
+            const waText = `FloreMoria — accedi al tuo profilo con questo link (valido 24 ore): ${setupLink}`;
             const waResult = await sendAuthWhatsAppMessage(user.phone, waText);
             sentWhatsApp = waResult.ok;
             if (!waResult.ok) {

@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { generateMagicLinkToken } from '@/lib/auth/magicLink';
+import { buildMagicLinkLoginUrl } from '@/lib/auth/magicLink';
 import { sendMagicLinkEmail } from '@/lib/auth/magicLinkEmail';
 import { parseIdentifier, registerPasswordlessUser } from '@/lib/auth/identity';
 import { generateOtpToken } from '@/lib/auth/otp';
 import { sendAuthWhatsAppMessage } from '@/lib/auth/sendAuthWhatsApp';
-import { getSiteBaseUrl } from '@/lib/site/config';
 import { checkHoneypot, checkRateLimit, getClientIp } from '@/lib/security/antiBot';
 
 /**
@@ -55,8 +54,7 @@ export async function POST(request: Request) {
 
 
         if (channel === 'email' && parsed.email) {
-            const token = generateMagicLinkToken(parsed.email);
-            const setupLink = `${getSiteBaseUrl()}/api/auth/magic-link/callback?token=${token}`;
+            const setupLink = buildMagicLinkLoginUrl(parsed.email);
 
             const mailResult = await sendMagicLinkEmail({ email: parsed.email, setupLink });
             if (!mailResult.ok) {
@@ -68,7 +66,7 @@ export async function POST(request: Request) {
 
             let sentWhatsApp = false;
             if (user.phone) {
-                const waText = `FloreMoria — attiva il tuo profilo con questo link (valido 15 minuti): ${setupLink}`;
+                const waText = `FloreMoria — attiva il tuo profilo con questo link (valido 24 ore): ${setupLink}`;
                 const waResult = await sendAuthWhatsAppMessage(user.phone, waText);
                 sentWhatsApp = waResult.ok;
                 if (!waResult.ok) {

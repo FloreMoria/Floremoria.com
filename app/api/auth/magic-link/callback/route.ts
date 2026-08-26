@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { verifyMagicLinkToken } from '@/lib/auth/magicLink';
+import {
+    isLikelyEmailLinkScanner,
+    sanitizeMagicLinkToken,
+    verifyMagicLinkTokenDetailed,
+} from '@/lib/auth/magicLink';
 import { findUserByEmail } from '@/lib/auth/identity';
+import { getSiteBaseUrl } from '@/lib/site/config';
 
 function setAuthCookies(response: NextResponse, request: Request, roleName: string, email: string, expiresAt: Date) {
     const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
-    
-    // Cookie principale con il ruolo dell'utente
+
     response.cookies.set({
         name: 'fm_user_role',
         value: roleName,
@@ -17,10 +21,9 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
         ...(base.domain ? { domain: base.domain } : {}),
         secure: base.secure,
         sameSite: base.sameSite,
-        maxAge: 60 * 60 * 24 * 7, // 7 giorni
+        maxAge: 60 * 60 * 24 * 7,
     });
 
-    // Cookie con l'email dell'utente per riconoscerlo nella bacheca
     const normalizedEmail = email.trim().toLowerCase();
     response.cookies.set({
         name: 'fm_user_email',
@@ -30,10 +33,9 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
         ...(base.domain ? { domain: base.domain } : {}),
         secure: base.secure,
         sameSite: base.sameSite,
-        maxAge: 60 * 60 * 24 * 7, // 7 giorni
+        maxAge: 60 * 60 * 24 * 7,
     });
 
-    // Cookie per la scadenza della sessione (letto dal Middleware)
     response.cookies.set({
         name: 'fm_role_expires_at',
         value: expiresAt.toISOString(),
@@ -42,60 +44,79 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
         ...(base.domain ? { domain: base.domain } : {}),
         secure: base.secure,
         sameSite: base.sameSite,
-        maxAge: 60 * 60 * 24 * 7, // 7 giorni
+        maxAge: 60 * 60 * 24 * 7,
+    });
+}
+
+function scannerHoldPage(token: string, baseUrl: string): NextResponse {
+    // Perché: Outlook/Gmail SafeLinks fanno GET automatici; senza cookie di sessione
+    // e con pagina di conferma, il token resta valido per il click umano.
+    const confirmUrl = `${baseUrl}/auth/magic-link?token=${encodeURIComponent(token)}`;
+    const html = `<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conferma accesso — FloreMoria</title></head>
+<body style="font-family:system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#FAF9F6;margin:0;">
+  <div style="max-width:420px;padding:28px;background:#fff;border-radius:16px;border:1px solid #e2e8f0;text-align:center;">
+    <p style="letter-spacing:0.2em;font-size:11px;color:#c5a880;text-transform:uppercase;font-weight:700;">FloreMoria</p>
+    <h1 style="font-size:20px;color:#0f172a;">Conferma l'accesso</h1>
+    <p style="color:#475569;font-size:14px;line-height:1.5;">Per sicurezza, apri questo collegamento nel browser e conferma l'accesso.</p>
+    <a href="${confirmUrl}" style="display:inline-block;margin-top:18px;background:#0f172a;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;">Continua</a>
+  </div>
+</body></html>`;
+    return new NextResponse(html, {
+        status: 200,
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+        },
     });
 }
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token') || '';
-
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.floremoria.com';
-    const loginErrorUrl = `${baseUrl}/login?error=magic_link_invalid`;
+    const token = sanitizeMagicLinkToken(searchParams.get('token') || '');
+    const baseUrl = getSiteBaseUrl();
 
     if (!token) {
-        return NextResponse.redirect(loginErrorUrl);
+        return NextResponse.redirect(`${baseUrl}/login?error=magic_link_invalid`);
     }
 
-    // Valida il token
-    const email = verifyMagicLinkToken(token);
+    const ua = request.headers.get('user-agent');
+    if (isLikelyEmailLinkScanner(ua)) {
+        console.info('[magic-link-callback] Scanner email intercettato (nessuna sessione impostata).');
+        return scannerHoldPage(token, baseUrl);
+    }
 
-    if (!email) {
-        return NextResponse.redirect(loginErrorUrl);
+    const verified = verifyMagicLinkTokenDetailed(token);
+    if (!verified.ok) {
+        const err = verified.reason === 'expired' ? 'magic_link_expired' : 'magic_link_invalid';
+        return NextResponse.redirect(`${baseUrl}/login?error=${err}`);
     }
 
     try {
-        // Cerca o crea l'utente per garantire l'esistenza del record
-        let user = await findUserByEmail(email);
+        let user = await findUserByEmail(verified.email);
 
         if (!user) {
             user = await prisma.user.create({
                 data: {
-                    email: email.trim().toLowerCase(),
+                    email: verified.email.trim().toLowerCase(),
                     systemRole: UserRole.USER,
                     isActive: true,
                 },
             });
         }
 
-        // Se l'utente non è di tipo USER, blocca e rimanda a login con errore
         if (user.systemRole !== UserRole.USER) {
             return NextResponse.redirect(`${baseUrl}/login?error=unauthorized_role`);
         }
 
-        // Aggiorna l'ultimo login a database (audit e tracciamento)
         await prisma.user.update({
             where: { id: user.id },
-            data: {
-                lastLoginAt: new Date(),
-            },
+            data: { lastLoginAt: new Date() },
         });
 
-        // Genera la risposta di reindirizzamento alla bacheca privata dell'utente
         const dashboardUrl = `${baseUrl}/dashboard/user`;
         const response = NextResponse.redirect(dashboardUrl);
-
-        // Imposta i cookie di sessione per 7 giorni
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         setAuthCookies(response, request, UserRole.USER, user.email, expiresAt);
 

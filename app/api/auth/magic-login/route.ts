@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getFloremAuthCookieBase } from '@/lib/authCookieDomain';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { verifyMagicLinkToken } from '@/lib/auth/magicLink';
+import { sanitizeMagicLinkToken, verifyMagicLinkTokenDetailed } from '@/lib/auth/magicLink';
+import { getSiteBaseUrl } from '@/lib/site/config';
 
 function setAuthCookies(response: NextResponse, request: Request, roleName: string, email: string, expiresAt: Date) {
     const base = getFloremAuthCookieBase({ headers: request.headers, url: request.url });
@@ -20,7 +21,7 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
 
     response.cookies.set({
         name: 'fm_user_email',
-        value: email,
+        value: email.trim().toLowerCase(),
         httpOnly: true,
         path: base.path,
         ...(base.domain ? { domain: base.domain } : {}),
@@ -44,27 +45,26 @@ function setAuthCookies(response: NextResponse, request: Request, roleName: stri
 /** Accesso automatico area riservata via token firmato (es. link WhatsApp post-consegna, 24h). */
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token') || '';
-
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.floremoria.com';
-    const loginErrorUrl = `${baseUrl}/login?error=magic_link_invalid`;
+    const token = sanitizeMagicLinkToken(searchParams.get('token') || '');
+    const baseUrl = getSiteBaseUrl();
 
     if (!token) {
-        return NextResponse.redirect(loginErrorUrl);
+        return NextResponse.redirect(`${baseUrl}/login?error=magic_link_invalid`);
     }
 
-    const email = verifyMagicLinkToken(token);
-    if (!email) {
-        return NextResponse.redirect(loginErrorUrl);
+    const verified = verifyMagicLinkTokenDetailed(token);
+    if (!verified.ok) {
+        const err = verified.reason === 'expired' ? 'magic_link_expired' : 'magic_link_invalid';
+        return NextResponse.redirect(`${baseUrl}/login?error=${err}`);
     }
 
     try {
-        let user = await prisma.user.findUnique({ where: { email } });
+        let user = await prisma.user.findUnique({ where: { email: verified.email } });
 
         if (!user) {
             user = await prisma.user.create({
                 data: {
-                    email,
+                    email: verified.email,
                     systemRole: UserRole.USER,
                     isActive: true,
                 },

@@ -128,7 +128,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
             label: 'Completato Da pagare',
             line1: 'Completato',
             line2: 'Da pagare',
-            color: 'bg-green-100 text-green-800 border-green-200',
+            color: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-semibold',
         },
         'CANCELLED': {
             label: 'Annullato',
@@ -150,18 +150,14 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
         },
     };
 
-    const uniqueStatusOptions = React.useMemo(() => {
-        const seen = new Set<string>();
-        const opts: Array<{ key: string; label: string }> = [];
-        for (const [key, val] of Object.entries(statusMap)) {
-            const displayLabel = `${val.line1} ${val.line2 || ''}`.trim();
-            if (!seen.has(displayLabel)) {
-                seen.add(displayLabel);
-                opts.push({ key, label: displayLabel });
-            }
-        }
-        return opts;
-    }, []);
+    const uniqueStatusOptions = React.useMemo(() => [
+        { key: 'ACCEPTED', label: 'Ricevuto' },
+        { key: 'PENDING', label: 'In attesa' },
+        { key: 'IN_PROGRESS', label: 'In Lavorazione' },
+        { key: 'DELIVERING', label: 'In Consegna' },
+        { key: 'COMPLETED', label: 'Completato (Da pagare)' },
+        { key: 'CANCELLED', label: 'Annullato' },
+    ], []);
 
     const statusTabOrder = ['ACCEPTED', 'WAITING', 'IN_PROGRESS', 'PAID', 'PAID_TO_DELIVER', 'PENDING', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
 
@@ -432,6 +428,9 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
     const updateStatus = async (orderId: string, newStatus: string) => {
         if (!canChangeStatus) return alert("Non hai i permessi per questa azione.");
 
+        const previousOrder = localOrders.find((o) => o.id === orderId);
+        const previousStatus = previousOrder?.status;
+
         // Optimistic Update UI
         setLocalOrders((prev: any[]) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
         setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, status: newStatus } : prev);
@@ -442,12 +441,23 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
             });
+            const data = await res.json().catch(() => null);
+
             if (res.ok) {
-                showToast('Stato ordine aggiornato!');
+                showToast('Stato ordine aggiornato con successo');
             } else {
-                alert('Errore aggiornamento stato nel database.');
+                // Rollback in caso di errore
+                if (previousStatus) {
+                    setLocalOrders((prev: any[]) => prev.map(o => o.id === orderId ? { ...o, status: previousStatus } : o));
+                    setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, status: previousStatus } : prev);
+                }
+                alert(data?.error || 'Errore aggiornamento stato nel database.');
             }
         } catch {
+            if (previousStatus) {
+                setLocalOrders((prev: any[]) => prev.map(o => o.id === orderId ? { ...o, status: previousStatus } : o));
+                setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, status: previousStatus } : prev);
+            }
             alert('Errore di connessione durante l\'aggiornamento dello stato.');
         }
     };

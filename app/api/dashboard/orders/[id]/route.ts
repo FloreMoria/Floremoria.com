@@ -18,7 +18,7 @@ export async function PUT(request: Request, context: any) {
 
         const previousOrder = await prisma.order.findUnique({
             where: { id },
-            select: { status: true, partnerId: true, gravePosition: true, veraAlertType: true },
+            select: { status: true, partnerId: true, userId: true, gravePosition: true, veraAlertType: true },
         });
 
         // Filtra nel Body solo i campi utili omettendo chiavi non volute per maggiore sicurezza
@@ -79,23 +79,53 @@ export async function PUT(request: Request, context: any) {
             safeData.additionalInstructions = newNotes;
         }
 
-        // Gestione relazioni annidate in Prisma per evitare l'errore ReadOnly di partnerId/userId
-        if (body.partnerId !== undefined) {
-            safeData.partner = body.partnerId ? { connect: { id: body.partnerId } } : { disconnect: true };
-        }
-        if (body.userId !== undefined) {
-            safeData.user = body.userId ? { connect: { id: body.userId } } : { disconnect: true };
+        // Normalizzazione sicura del valore dello stato ordine rispetto all'enum Prisma
+        if (body.status !== undefined) {
+            let s = String(body.status).trim();
+            if (s === 'WAITING') s = 'PENDING';
+            if (s === 'PAID' || s === 'PAID_TO_DELIVER') s = 'ACCEPTED';
+            if (s === 'GDM_PLANNED' || s === 'GDM_ANNIVERSARY') s = 'IN_PROGRESS';
+
+            const validOrderStatuses = ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING', 'COMPLETED', 'CANCELLED'];
+            if (validOrderStatuses.includes(s)) {
+                safeData.status = s;
+            }
         }
 
-        if (body.status === 'CANCELLED') {
+        // Gestione relazioni annidate in Prisma per evitare l'errore P2025 in assenza di relazione precedente
+        if (body.partnerId !== undefined) {
+            if (body.partnerId && String(body.partnerId).trim()) {
+                safeData.partner = { connect: { id: String(body.partnerId).trim() } };
+            } else if (previousOrder?.partnerId) {
+                safeData.partner = { disconnect: true };
+            }
+        }
+        if (body.userId !== undefined) {
+            if (body.userId && String(body.userId).trim()) {
+                safeData.user = { connect: { id: String(body.userId).trim() } };
+            } else if (previousOrder?.userId) {
+                safeData.user = { disconnect: true };
+            }
+        }
+
+        if (safeData.status === 'CANCELLED') {
             const cancelled = await cancelDashboardOrder(id);
             return NextResponse.json(cancelled);
         }
 
-        const updatedOrder = await prisma.order.update({
-            where: { id },
-            data: safeData
-        });
+        let updatedOrder;
+        try {
+            updatedOrder = await prisma.order.update({
+                where: { id },
+                data: safeData
+            });
+        } catch (dbError: any) {
+            console.error('[orders-put] Errore prisma.order.update:', dbError);
+            return NextResponse.json(
+                { error: 'Errore aggiornamento stato nel database', details: dbError?.message || String(dbError) },
+                { status: 500 }
+            );
+        }
 
         const nextStatus = typeof safeData.status === 'string' ? safeData.status : previousOrder?.status;
 
@@ -135,9 +165,12 @@ export async function PUT(request: Request, context: any) {
         }
 
         return NextResponse.json(updatedOrder);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating order:', error);
-        return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Errore aggiornamento stato nel database', details: error?.message || String(error) },
+            { status: 500 }
+        );
     }
 }
 

@@ -22,7 +22,9 @@ export function isAdminRole(role: string | undefined | null): boolean {
 
 /** ADMIN o SUPER_ADMIN: accesso bacheca staff, ma Ruoli resta solo SUPER_ADMIN. */
 export function isDashboardAdminRole(role: string | undefined | null): boolean {
-    return isAdminRole(role) || isSuperAdminRole(role);
+    if (!role) return false;
+    const r = String(role).trim().toUpperCase();
+    return isAdminRole(r) || isSuperAdminRole(r) || r === 'OPERATOR' || r === 'OPERATORE';
 }
 
 /** Blocca qualsiasi assegnazione web del ruolo Super Admin (solo script offline). */

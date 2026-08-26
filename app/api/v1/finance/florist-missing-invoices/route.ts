@@ -6,13 +6,15 @@ import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { hasValidAdminApiKeyHeader } from '@/lib/auth/verbaleSyncAuth';
 import {
-    listFloristMissingInvoices,
-    sendFloristInvoiceReminder,
-} from '@/lib/financial/floristMissingInvoices';
+    listFloristCompensationRegister,
+    isFloristDocStatus,
+} from '@/lib/financial/floristCompensationRegister';
+import { sendFloristInvoiceReminder } from '@/lib/financial/floristMissingInvoices';
 import {
     dismissFloristMissingRow,
     linkFloristMissingExpense,
     linkFloristMissingOrder,
+    setFloristDocStatus,
     updateFloristMissingRow,
     uploadFloristMissingReceipt,
 } from '@/lib/financial/floristMissingInvoicesMutations';
@@ -39,12 +41,18 @@ export async function GET(request: Request) {
     try {
         const access = await requireAccess(request);
         if (!access.ok) return access.response;
-        const rows = await listFloristMissingInvoices();
-        const critical = rows.filter((r) => r.severity === 'critical').length;
+        const rows = await listFloristCompensationRegister();
+        const waiting = rows.filter((r) => r.docStatus === 'WAITING_INVOICE').length;
         return NextResponse.json({
             ok: true,
             rows,
-            summary: { total: rows.length, critical, warning: rows.length - critical },
+            summary: {
+                total: rows.length,
+                waiting,
+                critical: rows.filter(
+                    (r) => r.docStatus === 'WAITING_INVOICE' && r.daysSinceOrder >= 15
+                ).length,
+            },
         });
     } catch (error) {
         console.error('[v1/florist-missing-invoices GET]', error);
@@ -82,6 +90,20 @@ export async function POST(request: Request) {
         const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
         const action = String(body?.action || '');
         if (!action) return jsonError('Azione mancante.', 400);
+
+        if (action === 'set_doc_status') {
+            const rowId = String(body?.rowId || '');
+            const docStatus = body?.docStatus;
+            if (!rowId || !isFloristDocStatus(docStatus)) {
+                return jsonError('rowId e docStatus validi obbligatori.', 400);
+            }
+            const updated = await setFloristDocStatus({ rowId, docStatus });
+            return NextResponse.json({
+                ok: true,
+                message: 'Stato documento aggiornato.',
+                ...updated,
+            });
+        }
 
         if (action === 'link_order') {
             const linked = await linkFloristMissingOrder({

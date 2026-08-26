@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import { sendFloristInvoiceReminder } from '@/lib/financial/floristMissingInvoices';
 import {
-    listFloristMissingInvoices,
-    sendFloristInvoiceReminder,
-} from '@/lib/financial/floristMissingInvoices';
+    listFloristCompensationRegister,
+    isFloristDocStatus,
+} from '@/lib/financial/floristCompensationRegister';
 import {
     dismissFloristMissingRow,
     linkFloristMissingExpense,
     linkFloristMissingOrder,
+    setFloristDocStatus,
     updateFloristMissingRow,
     uploadFloristMissingReceipt,
 } from '@/lib/financial/floristMissingInvoicesMutations';
@@ -28,21 +30,37 @@ export async function GET() {
         const auth = await requireDashboardAdmin();
         if (!auth.ok) return auth.response;
 
-        const rows = await listFloristMissingInvoices();
-        const critical = rows.filter((r) => r.severity === 'critical').length;
+        const rows = await listFloristCompensationRegister();
+        const byStatus = {
+            WAITING_INVOICE: 0,
+            INVOICE_ASSOCIATED: 0,
+            RECEIPT_ASSOCIATED: 0,
+            NOT_DUE: 0,
+            CANCELLED: 0,
+        };
+        for (const r of rows) {
+            byStatus[r.docStatus] += 1;
+        }
         return NextResponse.json({
             ok: true,
             rows,
             summary: {
                 total: rows.length,
-                critical,
-                warning: rows.length - critical,
+                waiting: byStatus.WAITING_INVOICE,
+                invoiceAssociated: byStatus.INVOICE_ASSOCIATED,
+                receiptAssociated: byStatus.RECEIPT_ASSOCIATED,
+                notDue: byStatus.NOT_DUE,
+                cancelled: byStatus.CANCELLED,
+                critical: rows.filter(
+                    (r) => r.docStatus === 'WAITING_INVOICE' && r.daysSinceOrder >= 15
+                ).length,
+                byStatus,
             },
         });
     } catch (error) {
         console.error('[florist-missing-invoices GET]', error);
         return jsonError(
-            error instanceof Error ? error.message : 'Caricamento alert fallito',
+            error instanceof Error ? error.message : 'Caricamento registro fallito',
             500
         );
     }
@@ -81,7 +99,7 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({
                     ok: true,
-                    message: 'Scontrino allegato e salvato.',
+                    message: 'Scontrino fiscale salvato in Contabilità (stato: Scontrino Associato).',
                     ...result,
                 });
             }
@@ -105,10 +123,25 @@ export async function POST(request: Request) {
             orderId?: string;
             expenseId?: string;
             notes?: string | null;
+            docStatus?: string;
         } | null;
 
         if (!body?.action) {
             return jsonError('Azione mancante.', 400);
+        }
+
+        if (body.action === 'set_doc_status') {
+            const rowId = String(body.rowId || '').trim();
+            const docStatus = body.docStatus;
+            if (!rowId || !isFloristDocStatus(docStatus)) {
+                return jsonError('rowId e docStatus validi obbligatori.', 400);
+            }
+            const updated = await setFloristDocStatus({ rowId, docStatus });
+            return NextResponse.json({
+                ok: true,
+                message: 'Stato documento aggiornato.',
+                ...updated,
+            });
         }
 
         if (body.action === 'link_order') {
@@ -164,7 +197,7 @@ export async function POST(request: Request) {
 
         if (body.action !== 'remind') {
             return jsonError(
-                'Azione non supportata (remind | link_order | link_expense | update | dismiss).',
+                'Azione non supportata (remind | link_order | link_expense | update | set_doc_status | dismiss).',
                 400
             );
         }

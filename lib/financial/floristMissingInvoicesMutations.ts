@@ -13,6 +13,10 @@ import {
     type FloristAlertMeta,
 } from '@/lib/financial/floristMissingInvoices';
 import type { Prisma } from '@prisma/client';
+import {
+    isFloristDocStatus,
+    type FloristDocStatus,
+} from '@/lib/financial/floristDocStatus';
 
 function parseRowId(rowId: string): { kind: 'bank' | 'order'; id: string } | null {
     if (rowId.startsWith('bank-')) return { kind: 'bank', id: rowId.slice(5) };
@@ -123,15 +127,50 @@ export async function linkFloristMissingExpense(input: {
                 },
             }),
         ]);
+        if (line.matchedOrderId) {
+            const order = await prisma.order.findUnique({
+                where: { id: line.matchedOrderId },
+                select: { veraWorkflowFlags: true },
+            });
+            const docType = (await prisma.manualFinanceExpense.findUnique({
+                where: { id: expense.id },
+                select: { docType: true },
+            }))?.docType;
+            const status =
+                docType === 'SCONTRINO' || docType === 'RICEVUTA'
+                    ? 'RECEIPT_ASSOCIATED'
+                    : 'INVOICE_ASSOCIATED';
+            const flags = {
+                ...((order?.veraWorkflowFlags as Record<string, unknown>) || {}),
+                floristLinkedExpenseId: expense.id,
+                floristDocStatus: status,
+            };
+            await prisma.order.update({
+                where: { id: line.matchedOrderId },
+                data: {
+                    veraWorkflowFlags: flags as Prisma.InputJsonValue,
+                    floristSettlementStatus: 'RICEVUTA',
+                },
+            });
+        }
     } else {
         const order = await prisma.order.findUnique({
             where: { id: parsed.id },
             select: { id: true, veraWorkflowFlags: true },
         });
         if (!order) throw new Error('Ordine non trovato.');
+        const exp = await prisma.manualFinanceExpense.findUnique({
+            where: { id: expense.id },
+            select: { docType: true },
+        });
+        const status =
+            exp?.docType === 'SCONTRINO' || exp?.docType === 'RICEVUTA'
+                ? 'RECEIPT_ASSOCIATED'
+                : 'INVOICE_ASSOCIATED';
         const flags = {
             ...((order.veraWorkflowFlags as Record<string, unknown>) || {}),
             floristLinkedExpenseId: expense.id,
+            floristDocStatus: status,
         };
         await prisma.$transaction([
             prisma.order.update({
@@ -405,7 +444,6 @@ export async function uploadFloristMissingReceipt(input: {
         if (line) {
             const rawJson = mergeFloristAlertMeta(line.rawJson, {
                 linkedExpenseId: expense.id,
-                // URL solo in Contabilità (expense); riferimento leggero sulla riga bank
                 receiptUrl: expense.blobUrl || undefined,
                 receiptPath: expense.blobPath || undefined,
             });
@@ -417,8 +455,10 @@ export async function uploadFloristMissingReceipt(input: {
                 },
             });
         }
-    } else if (orderId) {
-        // Solo ID spesa in flags ordine — MAI URL foto (evita leak verso UI ordine/GdM).
+    }
+
+    // Sempre aggiorna ordine collegato (stato + expense id) — mai URL su Order.photos/GdM.
+    if (orderId) {
         const order = await prisma.order.findUnique({
             where: { id: orderId },
             select: { veraWorkflowFlags: true },
@@ -429,9 +469,13 @@ export async function uploadFloristMissingReceipt(input: {
         delete next.floristReceiptPath;
         next.floristLinkedExpenseId = expense.id;
         next.floristFiscalReceiptAt = new Date().toISOString();
+        next.floristDocStatus = 'RECEIPT_ASSOCIATED';
         await prisma.order.update({
             where: { id: orderId },
-            data: { veraWorkflowFlags: next as Prisma.InputJsonValue },
+            data: {
+                veraWorkflowFlags: next as Prisma.InputJsonValue,
+                floristSettlementStatus: 'RICEVUTA',
+            },
         });
     }
 
@@ -441,6 +485,67 @@ export async function uploadFloristMissingReceipt(input: {
         expenseId: expense.id,
         fiscalOnly: true,
     };
+}
+
+/**
+ * Imposta lo stato documento fiscale sul registro fioristi (persistente su Order).
+ */
+export async function setFloristDocStatus(input: {
+    rowId: string;
+    docStatus: FloristDocStatus;
+}): Promise<{ orderId: string; docStatus: FloristDocStatus }> {
+    if (!isFloristDocStatus(input.docStatus)) {
+        throw new Error('Stato documento non valido.');
+    }
+    const parsed = parseRowId(input.rowId);
+    if (!parsed) throw new Error('rowId non valido.');
+
+    let orderId = parsed.kind === 'order' ? parsed.id : null;
+    if (parsed.kind === 'bank') {
+        const line = await prisma.bankStatementLine.findUnique({
+            where: { id: parsed.id },
+            select: { matchedOrderId: true },
+        });
+        orderId = line?.matchedOrderId || null;
+        if (!orderId) {
+            throw new Error('Collega prima un ordine al movimento, poi imposta lo stato.');
+        }
+    }
+    if (!orderId) throw new Error('Ordine non trovato.');
+
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { id: true, veraWorkflowFlags: true },
+    });
+    if (!order) throw new Error('Ordine non trovato.');
+
+    const flags: Record<string, unknown> = {
+        ...((order.veraWorkflowFlags as Record<string, unknown>) || {}),
+        floristDocStatus: input.docStatus,
+        floristDocStatusAt: new Date().toISOString(),
+    };
+    if (input.docStatus === 'NOT_DUE' || input.docStatus === 'CANCELLED') {
+        flags.floristMissingDismissedAt = new Date().toISOString();
+    } else {
+        delete flags.floristMissingDismissedAt;
+    }
+
+    const settlementPatch =
+        input.docStatus === 'INVOICE_ASSOCIATED' || input.docStatus === 'RECEIPT_ASSOCIATED'
+            ? { floristSettlementStatus: 'RICEVUTA' as const }
+            : input.docStatus === 'WAITING_INVOICE'
+              ? { floristSettlementStatus: 'PENDING' as const }
+              : {};
+
+    await prisma.order.update({
+        where: { id: order.id },
+        data: {
+            veraWorkflowFlags: flags as Prisma.InputJsonValue,
+            ...settlementPatch,
+        },
+    });
+
+    return { orderId: order.id, docStatus: input.docStatus };
 }
 
 export { parseRowId, readFloristAlertMeta };

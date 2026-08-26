@@ -91,15 +91,8 @@ function toDateOnlyIso(d: Date): string {
  * Data di riferimento per attesa fattura: consegna se già avvenuta, altrimenti createdAt.
  * Perché: evita updatedAt (toccato da sync/foto) e date bonifico di altri movimenti.
  */
-export function orderReferenceDate(
-    order: { createdAt: Date; deliveryDate: Date | null },
-    now = new Date()
-): Date {
-    if (order.deliveryDate && order.deliveryDate.getTime() <= now.getTime()) {
-        return order.deliveryDate;
-    }
-    return order.createdAt;
-}
+export { orderReferenceDate } from '@/lib/financial/floristDocStatus';
+import { orderReferenceDate } from '@/lib/financial/floristDocStatus';
 
 export function readFloristAlertMeta(raw: unknown): FloristAlertMeta {
     if (!raw || typeof raw !== 'object') return {};

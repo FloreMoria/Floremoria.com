@@ -8,7 +8,7 @@
 
 import prisma from '@/lib/prisma';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
-import { listFloristMissingInvoices } from '@/lib/financial/floristMissingInvoices';
+import { countFloristWaitingDocuments } from '@/lib/financial/floristCompensationRegister';
 
 export type FinanceQuadratura = {
     /** Saldo reale (manuale Fineco) in centesimi; null se non impostato. */
@@ -39,12 +39,12 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
     const yearStart = new Date(Date.UTC(year, 0, 1));
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
-    const [manual, unmatchedBank, floristMissing, docs, bankSumAgg] = await Promise.all([
+    const [manual, unmatchedBank, floristWaiting, docs, bankSumAgg] = await Promise.all([
         getFinecoManualBalance(),
         prisma.bankStatementLine.count({
             where: { matchStatus: { not: 'MATCHED' } },
         }),
-        listFloristMissingInvoices(),
+        countFloristWaitingDocuments(),
         prisma.bankStatementDocument.findMany({
             where: {
                 OR: [
@@ -170,6 +170,6 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         isBalanceSquared,
         unmatchedBankLines: unmatchedBank,
         unmatchedTotal: unmatchedBank,
-        missingDocuments: floristMissing.length,
+        missingDocuments: floristWaiting,
     };
 }

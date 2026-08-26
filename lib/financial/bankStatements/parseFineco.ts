@@ -49,7 +49,10 @@ function findCol(row: Record<string, unknown>, candidates: string[]): string | n
 function parseItalianNumber(raw: unknown): number | null {
     if (raw == null || raw === '') return null;
     if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-    let s = String(raw).trim();
+    let s = String(raw)
+        .trim()
+        .replace(/[\u2212\u2013\u2014]/g, '-')
+        .replace(/\u00a0/g, ' ');
     if (!s || s === '-' || s === '—') return null;
     s = s.replace(/\s/g, '').replace(/€/g, '').replace(/EUR/gi, '');
     // Fineco a volte usa segno trailing: 34,50-

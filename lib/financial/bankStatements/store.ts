@@ -52,6 +52,49 @@ export function movementFingerprint(
         .digest('hex');
 }
 
+/**
+ * Ricalcola fingerprint su tutte le righe (dopo fix dedup IBAN/PayPal SDD).
+ * Idempotente. Se due righe collidono sulla stessa chiave naturale (duplicati storici),
+ * disambigua con l'id riga così restano entrambe visibili in tabella.
+ */
+export async function recomputeAllBankStatementFingerprints(): Promise<{
+    updated: number;
+    total: number;
+    disambiguated: number;
+}> {
+    const lines = await prisma.bankStatementLine.findMany({
+        select: {
+            id: true,
+            accountingDate: true,
+            valueDate: true,
+            amountCents: true,
+            description: true,
+            fingerprint: true,
+        },
+        orderBy: { id: 'asc' },
+    });
+    let updated = 0;
+    let disambiguated = 0;
+    const claimed = new Set<string>();
+
+    for (const l of lines) {
+        const dateIso = (l.accountingDate || l.valueDate)?.toISOString().slice(0, 10) ?? null;
+        let fp = movementFingerprint(dateIso, l.amountCents, l.description);
+        if (claimed.has(fp)) {
+            fp = createHash('sha256').update(`${fp}|row:${l.id}`).digest('hex');
+            disambiguated += 1;
+        }
+        claimed.add(fp);
+        if (fp === l.fingerprint) continue;
+        await prisma.bankStatementLine.update({
+            where: { id: l.id },
+            data: { fingerprint: fp },
+        });
+        updated += 1;
+    }
+    return { updated, total: lines.length, disambiguated };
+}
+
 async function storeOriginalFile(
     buffer: Buffer,
     fileName: string,
@@ -167,6 +210,10 @@ export async function listBankStatementMovements(params?: {
                                   },
                               },
                           ],
+                      },
+                      // Righe senza data: non nasconderle col filtro anno
+                      {
+                          AND: [{ accountingDate: null }, { valueDate: null }],
                       },
                   ],
               }

@@ -44,9 +44,9 @@ function formatSignedSaldo(cents: number): { text: string; className: string } {
     };
 }
 
-/** Header ~2.75rem + 15 righe ~2.85rem (py-3 + testo) → ~15 movimenti a colpo d'occhio. */
+/** Scroll più alto: ~28 righe visibili; resto accessibile con scroll (nessun take nascosto). */
 const BANK_TABLE_SCROLL_CLASS =
-    'max-h-[calc(2.75rem+15*2.85rem)] overflow-y-auto overflow-x-auto';
+    'max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto';
 
 function originBadge(fileName: string | null | undefined): { label: string; className: string } {
     const n = (fileName || '').toLowerCase();
@@ -66,26 +66,33 @@ type Props = { searchTerm?: string };
 
 export default function BankMovementsStatementTable({ searchTerm = '' }: Props) {
     const [lines, setLines] = useState<MovementLine[]>([]);
+    const [years, setYears] = useState<number[]>([]);
+    const [year, setYear] = useState<number | 'all'>(new Date().getFullYear());
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
     const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
-    const year = new Date().getFullYear();
 
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
+            const yearParam = year === 'all' ? 'all' : String(year);
             const res = await fetch(
-                `/api/dashboard/finance/bank-statements?view=movements&year=${year}`
+                `/api/dashboard/finance/bank-statements?view=movements&year=${encodeURIComponent(yearParam)}`
             );
             const parsed = await readJsonResponse<{
                 ok?: boolean;
                 lines?: MovementLine[];
+                years?: number[];
+                count?: number;
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Caricamento movimenti fallito');
             setLines(parsed.data?.lines || []);
+            if (Array.isArray(parsed.data?.years) && parsed.data.years.length) {
+                setYears(parsed.data.years);
+            }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore caricamento');
             setLines([]);
@@ -181,21 +188,48 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
         );
     }
 
+    const yearOptions = years.length
+        ? years
+        : [new Date().getFullYear(), new Date().getFullYear() - 1];
+
     return (
         <div className="space-y-2">
-            <div className="px-4 pt-3 flex items-center justify-between gap-2">
+            <div className="px-4 pt-3 flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-[11px] text-slate-500">
-                    Movimenti bancari · anno {year} · {displayRows.length} righe · clicca la
-                    categoria per modificarla
+                    Movimenti bancari · {year === 'all' ? 'tutti gli anni' : `anno ${year}`} ·{' '}
+                    <strong className="text-slate-700">{displayRows.length}</strong> righe caricate
+                    (nessun limite nascosto) · scorri per vederle tutte · clicca la categoria per
+                    modificarla
                 </p>
-                <button
-                    type="button"
-                    onClick={() => void load()}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900"
-                >
-                    <RefreshCw size={12} />
-                    Aggiorna
-                </button>
+                <div className="flex items-center gap-2">
+                    <label className="text-[11px] text-slate-500 font-semibold" htmlFor="fineco-year">
+                        Anno
+                    </label>
+                    <select
+                        id="fineco-year"
+                        value={year === 'all' ? 'all' : String(year)}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            setYear(v === 'all' ? 'all' : Number(v));
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                    >
+                        <option value="all">Tutti</option>
+                        {yearOptions.map((y) => (
+                            <option key={y} value={y}>
+                                {y}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        onClick={() => void load()}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900"
+                    >
+                        <RefreshCw size={12} />
+                        Aggiorna
+                    </button>
+                </div>
             </div>
             {error && (
                 <div className="mx-4 text-xs bg-rose-50 border border-rose-100 text-rose-700 rounded-xl px-3 py-2">
@@ -233,8 +267,7 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                 const debit =
                                     line.amountCents < 0 ? Math.abs(line.amountCents) : 0;
                                 const saldo = formatSignedSaldo(line.progressiveCents);
-                                const displayDate =
-                                    line.accountingDate || line.valueDate;
+                                const displayDate = line.accountingDate || line.valueDate;
                                 return (
                                     <tr key={line.id} className="hover:bg-slate-50/60">
                                         <td className="px-3 py-3 font-mono text-xs text-slate-700 whitespace-nowrap align-top">

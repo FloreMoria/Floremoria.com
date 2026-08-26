@@ -23,9 +23,9 @@ const MONTH_MAP: Record<string, number> = {
 const MONTH_NAMES = Object.keys(MONTH_MAP).join('|');
 
 const AMOUNT_RE =
-    /^([+-]?\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*(?:€|EUR|euro)?\s*$/i;
+    /^([+-]?\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}-?|[+-]?\d+,\d{2}|\(\d{1,3}(?:\.\d{3})*,\d{2}\)|\(\d+,\d{2}\))\s*(?:€|EUR|euro)?\s*$/i;
 const AMOUNT_INLINE_RE =
-    /([+-]?\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*(?:€|EUR)\b/i;
+    /([+-]?\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}-|[+-]?\d+,\d{2}|\(\d{1,3}(?:\.\d{3})*,\d{2}\))\s*(?:€|EUR)?\b/i;
 const MONTH_YEAR_RE = new RegExp(`^(${MONTH_NAMES})(?:\\s+(\\d{4}))?$`, 'i');
 const DAY_RE = /^(\d{1,2})$/;
 const DAY_MONTH_RE = new RegExp(`^(\\d{1,2})\\s+(${MONTH_NAMES})(?:\\s+(\\d{4}))?$`, 'i');
@@ -33,18 +33,42 @@ const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const IT_DATE_RE = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/;
 
 const TYPE_HINT_RE =
-    /^(bonifico|sepa\b|addebito|accredito|canone|imposta\b|pagamento\b|prelievo|versamento|giroconto|stipendio|ricarica|carta\b|pos\b|sdd\b|rid\b|f24\b|competenz)/i;
+    /^(bonifico|sepa\b|addebito|accredito|canone|imposta\b|bollo\b|commissione|pagamento\b|prelievo|versamento|giroconto|stipendio|ricarica|carta\b|pos\b|sdd\b|rid\b|f24\b|competenz|visa\b|mastercard|direct\s*debit)/i;
 
 export type FinecoPasteMovement = ParsedBankMovement & {
     typology: string | null;
     dedupKey: string;
 };
 
+function normalizeAmountToken(raw: string): string {
+    return raw
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u2212\u2013\u2014]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function parseEuroToCents(raw: string): number | null {
-    const cleaned = raw.replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-    const n = Number(cleaned);
+    let s = normalizeAmountToken(raw).replace(/\s/g, '').replace(/€/gi, '').replace(/EUR/gi, '');
+    if (!s || s === '-' || s === '—') return null;
+    let negative = false;
+    if (s.endsWith('-')) {
+        negative = true;
+        s = s.slice(0, -1);
+    } else if (s.startsWith('+')) {
+        s = s.slice(1);
+    } else if (s.startsWith('-')) {
+        negative = true;
+        s = s.slice(1);
+    } else if (s.startsWith('(') && s.endsWith(')')) {
+        negative = true;
+        s = s.slice(1, -1);
+    }
+    s = s.replace(/\./g, '').replace(',', '.');
+    const n = Number(s);
     if (!Number.isFinite(n)) return null;
-    return Math.round(n * 100);
+    const cents = Math.round(Math.abs(n) * 100);
+    return negative ? -cents : cents;
 }
 
 function pad2(n: number): string {
@@ -76,26 +100,44 @@ export function normalizeCausale(desc: string): string {
         .replace(/\s+/g, ' ');
 }
 
-/** Chiave dedup: TRN/TransID se presente, altrimenti data|importo|causale normalizzata. */
+/** IBAN / creditor ID SDD (es. LU96ZZZ…) — non sono TRN univoci per movimento. */
+export function looksLikeIbanOrCreditorId(token: string): boolean {
+    const t = token.replace(/\s+/g, '').toUpperCase();
+    if (t.length < 12) return false;
+    if (/^[A-Z]{2}\d{2}ZZZ/i.test(t)) return true;
+    if (/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/i.test(t)) return true;
+    return false;
+}
+
+/**
+ * Chiave dedup naturale Fineco.
+ * - TRN/CRO/TransID espliciti (mai IBAN / LU96ZZZ…)
+ * - Altrimenti data|importo|causale (distingue due bonifici stesso giorno/importo)
+ */
 export function buildFinecoDedupKey(
     dateIso: string | null,
     amountCents: number,
     description: string
 ): string {
-    const u = description.toUpperCase();
-    const trn =
-        u.match(/\b(?:TRN|TRANS(?:ACTION)?\s*ID|TRANSID|ID\s*TRN|CRO|C\.?R\.?O\.?)[:\s#]*([A-Z0-9]{6,})/)?.[1] ||
-        u.match(/\b([A-Z0-9]{16,34})\b/)?.[1];
-    if (trn && /[A-Z]/.test(trn) && /\d/.test(trn)) {
-        return `trn:${trn}`;
+    const u = description.toUpperCase().replace(/\s+/g, ' ');
+    const labeled = u.match(
+        /\b(?:TRN|TRANS(?:ACTION)?\s*ID|TRANSID|ID\s*TRN|CRO|C\.?R\.?O\.?)\s*[:.#]?\s*([A-Z0-9][A-Z0-9\s]{5,48})/
+    )?.[1];
+    let trn = labeled ? labeled.replace(/\s+/g, '') : null;
+    if (trn && looksLikeIbanOrCreditorId(trn)) {
+        trn = null;
     }
+
     const date = dateIso || 'nodate';
     const norm = normalizeCausale(description).slice(0, 160);
+    if (trn && /[A-Z]/.test(trn) && /\d/.test(trn) && trn.length >= 8) {
+        return `trn:${trn}|${date}|${amountCents}`;
+    }
     return `${date}|${amountCents}|${norm}`;
 }
 
 function extractAmount(line: string): { cents: number; rest: string } | null {
-    const trimmed = line.trim();
+    const trimmed = normalizeAmountToken(line);
     const full = trimmed.match(AMOUNT_RE);
     if (full) {
         const cents = parseEuroToCents(full[1]);
@@ -126,7 +168,7 @@ export function parseFinecoPasteText(
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
         .split('\n')
-        .map((l) => l.replace(/\u00a0/g, ' ').trim())
+        .map((l) => normalizeAmountToken(l.replace(/\u00a0/g, ' ')))
         .filter((l) => l.length > 0 && !/^lista\s+movimenti/i.test(l) && !/^saldo\b/i.test(l));
 
     let ctxYear = defaultYear;
@@ -190,7 +232,6 @@ export function parseFinecoPasteText(
         if (monthOnly) {
             ctxMonth = MONTH_MAP[monthOnly[1].toLowerCase()] || ctxMonth;
             if (monthOnly[2]) ctxYear = Number(monthOnly[2]);
-            // Aggiorna il draft aperto (es. giorno "20" seguito da "agosto")
             if (current) {
                 if (ctxMonth != null) current.month = ctxMonth;
                 current.year = ctxYear;
@@ -235,7 +276,6 @@ export function parseFinecoPasteText(
         }
 
         if (DAY_RE.test(line) && Number(line) >= 1 && Number(line) <= 31) {
-            // Giorno standalone: nuovo movimento
             pushCurrent();
             ctxDay = Number(line);
             current = {
@@ -260,18 +300,15 @@ export function parseFinecoPasteText(
                     d.descParts.push(amount.rest);
                 }
             }
-            // Tipologia tipicamente subito sopra l'importo: già nel draft
             pushCurrent();
             continue;
         }
 
         if (TYPE_HINT_RE.test(line)) {
             const d = ensureDraft();
-            // Se c'è già descrizione e tipologia, questa riga è tipologia
             if (d.descParts.length > 0 && !d.typology) {
                 d.typology = line;
             } else if (!d.typology && d.descParts.length === 0) {
-                // Tipologia prima della causale (raro): tieni come typology
                 d.typology = line;
             } else if (d.typology) {
                 d.descParts.push(line);
@@ -316,16 +353,13 @@ export function parseFinecoPasteText(
         }
 
         let description = draft.descParts.join(' · ').replace(/\s+/g, ' ').trim();
-        // Evita doppione causale === tipologia
         if (
             draft.typology &&
             normalizeCausale(description) === normalizeCausale(draft.typology)
         ) {
             description = draft.typology;
         } else if (draft.typology) {
-            description = description
-                ? `${description} · ${draft.typology}`
-                : draft.typology;
+            description = description ? `${description} · ${draft.typology}` : draft.typology;
         }
         if (!description) description = draft.typology || 'Movimento Fineco (incolla)';
 
@@ -351,7 +385,6 @@ export function parseFinecoPasteText(
         });
     });
 
-    // Dedup interno al paste
     const seen = new Set<string>();
     const unique: FinecoPasteMovement[] = [];
     for (const m of pasteMovements) {

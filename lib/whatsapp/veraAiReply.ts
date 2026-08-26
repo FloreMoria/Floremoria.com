@@ -725,7 +725,7 @@ export async function generateVeraReply(
         }
     }
 
-    if (session.userType !== 'FLORIST' && callerContext.phoneE164) {
+    if (session.userType !== 'FLORIST' && callerContext.phoneE164 && !isIsolatedCourtesyMessage(message) && !isShortAckWithoutOperationalIntent(message)) {
         const activeOrder = await lookupActiveOrderByPhone(callerContext.phoneE164);
         const orderForMod = activeOrder || (await lookupLastOrderByPhone(callerContext.phoneE164));
         if (orderForMod && orderForMod.status !== 'COMPLETED' && orderForMod.status !== 'CANCELLED') {

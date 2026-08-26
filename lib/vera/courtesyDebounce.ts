@@ -2,7 +2,12 @@ import type { ChatSession } from '@/lib/chatStore';
 import { getItalyOpeningGreeting } from '@/lib/datetime/italyGreeting';
 
 function normalizeForCourtesy(value: string): string {
-    return value
+    const clean = (value || '')
+        .replace(/^\[Sequenza messaggi aggregati[^\]]*\]\s*/i, '')
+        .replace(/^\d+\.\s*\[\d{2}:\d{2}(?::\d{2})?\]\s*/i, '')
+        .trim();
+
+    return clean
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')

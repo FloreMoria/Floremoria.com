@@ -300,8 +300,13 @@ export function composeAggregatedInboundContext(items: InboundDebounceItem[]): {
             ? `[Sequenza messaggi aggregati — ${items.length} pezzi in ~60s. Rispondi UNA sola volta, in modo organico, a TUTTI i punti. Non salutare di nuovo se il dialogo è già in corso. Non chiedere conferme ridondanti su "ok"/"ricevuto"/foto già arrivate.]\n`
             : '';
 
+    const singleTextItem = items.length === 1 && !items[0].mediaUrl && !items[0].unsupportedMedia;
+    const aggregatedBody = singleTextItem
+        ? (items[0].body || '').trim()
+        : `${header}${lines.join('\n')}`.trim() || '[media]';
+
     return {
-        aggregatedBody: `${header}${lines.join('\n')}`.trim() || '[media]',
+        aggregatedBody,
         primaryMediaUrl,
         mediaCount,
         textParts,

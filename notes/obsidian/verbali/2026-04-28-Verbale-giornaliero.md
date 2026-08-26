@@ -2,12 +2,31 @@
 date: 28-04-2026
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sommario: "UX Dashboard \\"Servizi Civici\\"."
+sommario: "Trust Identity \\"Made in Italy\\"."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-08-26T09:27:49.025Z
+synced_at: 2026-08-26T10:05:54.222Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# PROTOCOLLO 107 - Trust Identity "Made in Italy"
+
+**Riassunto (BARBARA):** Trust Identity "Made in Italy".
+
+STATO: Trust Identity "Made in Italy".
+DISPOSIZIONI: Approvazione del logo "Made in Italy" come sigillo di garanzia per residenti all'estero. Posizionamento: Footer, Checkout e sezione Identità.
+
+## Dettagli operativi
+
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 107
+- **Punti Discussi:** N/A
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** N/A
+- **Risultati Raggiunti:** N/A
+
+---
+
+## Sviluppo tecnico (repo DEVIN)
 
 # PROTOCOLLO 109 - UX Dashboard "Servizi Civici"
 

@@ -16,3 +16,7 @@
 [2026-08-24 21:20] fix(finance): bonifica retroattiva 2026 FinancialLedgerEntry — falsi ricavi SaaS, Importo pagato/esborso, auth dupes, bankfee JSON, conti 10100/10200/10300; harden classify/sync/parser.
 
 [2026-08-24 21:55] fix(finance): saldo iniziale/finale Fineco da PDF → openingBalanceCents + quadratura (apertura+movimenti / ultima chiusura); backfill Q1-Q2; UI Reale/Libro/Diff.
+
+[2026-08-26] feat(partner-api): generazione credenziali test per Annunci Funebri
+- Generata e salvata su Neon DB la credenziale Partner API per Annunci Funebri (Public Key: `fmp_test_annuncifunebri_2026`).
+- Verificata con successo l'autenticazione API v1 su `GET /api/v1/partner/catalog` (risposta HTTP 200 con 29 prodotti attivi).

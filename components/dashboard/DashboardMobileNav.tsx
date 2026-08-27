@@ -19,6 +19,7 @@ const PRIMARY_LINKS: NavItem[] = [
 
 const SISTEMA_LINKS: NavItem[] = [
     { href: '/dashboard/partner', label: 'Partner B2B' },
+    { href: '/dashboard/agenzie', label: 'Agenzie Funebri' },
     { href: '/dashboard/logs', label: 'Log di Sistema' },
     { href: '/dashboard/offers', label: 'Buoni' },
 ];

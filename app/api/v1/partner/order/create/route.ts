@@ -4,9 +4,12 @@ import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
 import { generatePartnerTunnelOrderNumber } from '@/lib/partnerV1OrderNumber';
-import { sendFloremTransactionalMail } from '@/lib/serverMail';
-import { buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
+import {
+    findFuneralAgency,
+    resolveFloristPartnerIdForAgency,
+} from '@/lib/orders/resolveAgencyFlorist';
+import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
 
 export const runtime = 'nodejs';
 
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
 
         const partner = await prisma.partner.findFirst({
             where: { id: auth.partnerId, deletedAt: null, isActive: true },
-            select: { id: true, shopName: true, isB2B: true },
+            select: { id: true, shopName: true, isB2B: true, partnerType: true },
         });
         if (!partner) {
             return NextResponse.json(
@@ -106,7 +109,19 @@ export async function POST(request: Request) {
         const buyerPhone = typeof b.buyerPhone === 'string' ? b.buyerPhone.trim() : undefined;
         const gravePosition = typeof b.gravePosition === 'string' ? b.gravePosition.trim() : undefined;
         const ticketMessage = typeof b.ticketMessage === 'string' ? b.ticketMessage : undefined;
-        const agencyName = typeof b.agencyName === 'string' ? b.agencyName.trim().slice(0, 255) : undefined;
+        const agencyNameBody = typeof b.agencyName === 'string' ? b.agencyName.trim().slice(0, 255) : undefined;
+        const agencyIdBody =
+            typeof b.agencyId === 'string'
+                ? b.agencyId.trim()
+                : typeof b.agency_id === 'string'
+                  ? b.agency_id.trim()
+                  : '';
+        const agencyCodeBody =
+            typeof b.agencyCode === 'string'
+                ? b.agencyCode.trim().slice(0, 64)
+                : typeof b.agency_code === 'string'
+                  ? b.agency_code.trim().slice(0, 64)
+                  : '';
         const partnerNotifyEmail =
             typeof b.partnerNotifyEmail === 'string' && b.partnerNotifyEmail.trim()
                 ? b.partnerNotifyEmail.trim().toLowerCase().slice(0, 255)
@@ -208,6 +223,32 @@ export async function POST(request: Request) {
             );
         }
 
+        const resolvedAgency =
+            agencyIdBody || agencyCodeBody
+                ? await findFuneralAgency({ agencyId: agencyIdBody || null, agencyCode: agencyCodeBody || null })
+                : null;
+
+        if ((agencyIdBody || agencyCodeBody) && !resolvedAgency) {
+            return NextResponse.json(
+                { error: 'Agenzia non trovata per agencyId/agencyCode forniti.' },
+                { status: 400, headers: jsonHeaders(request) }
+            );
+        }
+
+        // Fiorista: default agenzia → copertura geografica; senza agenzia resta il partner API (legacy).
+        let floristPartnerId: string | null = auth.partnerId;
+        if (resolvedAgency) {
+            floristPartnerId = await resolveFloristPartnerIdForAgency({
+                agency: resolvedAgency,
+                cemeteryCity: cemeteryCity.trim(),
+            });
+        } else if (partner.partnerType === 'AGGREGATOR' || partner.partnerType === 'FUNERAL_AGENCY') {
+            floristPartnerId = await resolveFloristPartnerIdForAgency({
+                agency: null,
+                cemeteryCity: cemeteryCity.trim(),
+            });
+        }
+
         const resolved: { productId: string; quantity: number; priceCents: number }[] = [];
         for (const item of lineItems) {
             const pid = typeof item.productId === 'string' ? item.productId.trim() : '';
@@ -239,7 +280,7 @@ export async function POST(request: Request) {
             return tx.order.create({
                 data: {
                     orderNumber,
-                    status: 'ACCEPTED',
+                    status: floristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
                     partnerPaymentStatus: partnerAlreadyPaid ? 'PAID' : 'UNPAID',
                     deceasedName: deceasedName.trim(),
                     cemeteryName: cemeteryName.trim(),
@@ -254,8 +295,11 @@ export async function POST(request: Request) {
                     customerPhone: buyerPhone || null,
                     totalPriceCents: subtotalCents,
                     currency: 'EUR',
-                    partnerId: auth.partnerId,
-                    agencyName: agencyName || null,
+                    partnerId: floristPartnerId,
+                    agencyId: resolvedAgency?.agencyId ?? null,
+                    agencyCode: resolvedAgency?.agencyCode ?? (agencyCodeBody || null),
+                    agencyName: resolvedAgency?.agencyName ?? agencyNameBody ?? null,
+                    partnershipChannel: resolvedAgency?.partnershipChannel ?? null,
                     funeralDate: funeralDate || null,
                     partnerNotifyEmail: partnerNotifyEmail || null,
                     externalAnnouncementId: externalAnnouncementId || null,
@@ -274,26 +318,10 @@ export async function POST(request: Request) {
                         },
                     },
                     partner: true,
+                    agency: true,
                 },
             });
         });
-
-        try {
-            const staffTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || 'ordini@floremoria.com';
-            const staffHtml = buildOrderStaffHtml({
-                order: order as Parameters<typeof buildOrderStaffHtml>[0]['order'],
-                stripeSessionId: stripeCheckoutSessionId || 'B2B Partner Integration',
-            });
-
-            await sendFloremTransactionalMail({
-                to: staffTo,
-                subject: `[B2B Partner Order] Nuovo ordine ${order.orderNumber} da ${order.partner?.shopName || 'Partner B2B'}`,
-                html: staffHtml,
-            });
-            console.log(`[B2B Order Email] Notifica inviata a ${staffTo} per l'ordine ${order.orderNumber}`);
-        } catch (mailErr) {
-            console.error("[B2B Order Email Error] Errore durante l'invio della notifica email:", mailErr);
-        }
 
         try {
             await touchPartnerCredentialLastUsed(auth.credentialId);
@@ -301,11 +329,16 @@ export async function POST(request: Request) {
             console.error('[B2B Partner API] touchPartnerCredentialLastUsed failed (non-blocking):', touchErr);
         }
 
-        if (partnerAlreadyPaid) {
+        if (partnerAlreadyPaid && !floristPartnerId) {
             await autoAssignKnownTombOrder(order.id).catch((autoErr) => {
                 console.error('[B2B Partner API] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
             });
         }
+
+        // Dispatcher multi-canale (non bloccante sulla risposta HTTP).
+        void sendPartnerOrderNotifications(order.id).catch((notifyErr) => {
+            console.error('[B2B Partner API] sendPartnerOrderNotifications failed (non-blocking):', notifyErr);
+        });
 
         return NextResponse.json(
             {
@@ -314,6 +347,8 @@ export async function POST(request: Request) {
                     orderNumber: order.orderNumber,
                     totalPriceCents: order.totalPriceCents,
                     currency: order.currency,
+                    agencyId: order.agencyId,
+                    partnerId: order.partnerId,
                 },
             },
             { status: 201, headers: jsonHeaders(request) }

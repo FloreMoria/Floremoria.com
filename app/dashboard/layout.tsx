@@ -75,6 +75,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                             label="Sistema" 
                             items={[
                                 { href: '/dashboard/partner', label: 'Partner B2B' },
+                                { href: '/dashboard/agenzie', label: 'Agenzie Funebri' },
                                 { href: '/dashboard/logs', label: 'Log di Sistema' },
                                 { href: '/dashboard/offers', label: 'Buoni' }
                             ]} 

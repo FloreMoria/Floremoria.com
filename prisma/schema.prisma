@@ -202,9 +202,17 @@ model Order {
   longitude              Float?
   partnerId              String?
   /**
+   * Agenzia funebre B2B collegata (Partner.partnerType = FUNERAL_AGENCY).
+   */
+  agencyId               String?           @map("agency_id")
+  /** Codice esterno agenzia (es. codice AF / legacy). */
+  agencyCode             String?           @map("agency_code") @db.VarChar(64)
+  /**
    * Ragione sociale o nome agenzia lato partner (AnnunciFunebri / integrazioni B2B).
    */
   agencyName             String?           @map("agency_name") @db.VarChar(255)
+  /** Canale partnership ereditato dall'agenzia (AF / Diretta FloreMoria). */
+  partnershipChannel     String?           @map("partnership_channel") @db.VarChar(120)
   /**
    * Email azienda partner (handoff da siti esterni) per notifiche / rendicontazione.
    */
@@ -230,7 +238,8 @@ model Order {
   externalAnnouncementId String?           @map("external_announcement_id") @db.VarChar(255)
   deceasedProfileId      String?
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
-  partner                Partner?          @relation(fields: [partnerId], references: [id])
+  partner                Partner?          @relation("OrderFloristPartner", fields: [partnerId], references: [id])
+  agency                 Partner?          @relation("OrderFuneralAgency", fields: [agencyId], references: [id], onDelete: SetNull)
   user                   User?             @relation(fields: [userId], references: [id])
   items                  OrderItem[]
   offerRedemptions       OfferRedemption[]
@@ -397,6 +406,12 @@ model NewsletterLog {
   createdAt DateTime @default(now())
 }
 
+enum PartnerType {
+  FLORIST
+  FUNERAL_AGENCY
+  AGGREGATOR
+}
+
 model Partner {
   id              String                  @id @default(cuid())
   coverageArea    String?
@@ -421,7 +436,20 @@ model Partner {
   paymentStatus   PaymentStatus           @default(UNPAID)
   province        String?                 @db.VarChar(2)
   uniqueCode      String?                 @unique
-  orders          Order[]
+  /** Tipologia partner: fiorista, agenzia funebre o aggregatore (es. AF). */
+  partnerType     PartnerType             @default(FLORIST) @map("partner_type")
+  /** Canale commerciale: "Annunci Funebri (AF)", "Diretta (FloreMoria)", … */
+  partnershipChannel String?              @map("partnership_channel") @db.VarChar(120)
+  /** Fiorista di riferimento predefinito (solo per FUNERAL_AGENCY). */
+  defaultFloristId String?                @map("default_florist_id")
+  defaultFlorist  Partner?                @relation("AgencyDefaultFlorist", fields: [defaultFloristId], references: [id], onDelete: SetNull)
+  linkedAgencies  Partner[]               @relation("AgencyDefaultFlorist")
+  /** Email agenzia per avviso ordini B2B. */
+  agencyNotificationEmail String?         @map("agency_notification_email") @db.VarChar(255)
+  /** Email provider/aggregatore (default operativa: assistenza@floremoria.com). */
+  aggregatorNotificationEmail String?     @map("aggregator_notification_email") @db.VarChar(255)
+  orders          Order[]                 @relation("OrderFloristPartner")
+  agencyOrders    Order[]                 @relation("OrderFuneralAgency")
   deliveryProofs  DeliveryProof[]
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
@@ -429,6 +457,9 @@ model Partner {
 
   userId          String?                 @unique @map("user_id")
   user            User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([partnerType, deletedAt])
+  @@index([defaultFloristId])
 }
 
 /**

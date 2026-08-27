@@ -38,4 +38,4 @@
 [2026-08-26 18:48] privacy: bonifica completa Giardino della Memoria (cmt9rswr10005k104jwg0nwjp) — azzeramento coverUrl e deliveryPhotoUrls su DeceasedProfile, eliminazione fisica del file da Vercel Blob e re-sync ordine.
 [2026-08-26 18:55] feat(finance): registro globale fatture fioristi con stati persistenti e badge Fattura/Scontrino.
 [2026-08-26 18:57] feat(finance): tabella globale fatture/ricevute fioristi — filtri stato, badge Fattura (emerald) vs Scontrino (teal), persistenza Order.veraWorkflowFlags.floristDocStatus.
-[2026-08-27 18:34] feat(b2b): sezione Dashboard Agenzie Funebri + agencyId in Partner API + dispatcher notifiche multi-canale (WA fiorista/cliente, email ops/AF/agenzia).
+[2026-08-27 18:35] feat(b2b): sezione Dashboard Agenzie Funebri (/dashboard/agenzie) + ingestion agencyId in Partner API + dispatcher notifiche 5 canali (WA fiorista + mini-app, WA cliente Punto B, email ricevuta utente, email ordini@, email trasparenza AF assistenza@, email agenzia) + sync schema Neon DB (commit 7bcf0a81).

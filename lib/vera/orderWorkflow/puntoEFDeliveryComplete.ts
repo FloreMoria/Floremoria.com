@@ -14,12 +14,15 @@ import {
     isWhatsAppAutoNotifyDisabledForOrder,
     shouldSkipTestOrderMetaSend,
 } from '@/lib/whatsapp/outboundGuards';
-import { addMessage } from '@/lib/chatStore';
-import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
-import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
+import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { sendVeraTemplate } from '@/lib/whatsapp/sendVeraTemplate';
+import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
+import { buildFloristRingraziamentoParams } from '@/lib/whatsapp/veraTemplateParams';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { toWhatsAppSessionPhone } from '@/lib/whatsapp/sessionPhone';
+import { addMessage } from '@/lib/chatStore';
+import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
 export interface PuntoEFResult {
     ok: boolean;
@@ -29,7 +32,7 @@ export interface PuntoEFResult {
     error?: string;
 }
 
-function buildFloristCompletionThanksMessage(input: {
+function buildFloristCompletionThanksFallbackText(input: {
     floristFirstName: string;
     orderCode: string;
 }): string {
@@ -42,7 +45,7 @@ function buildFloristCompletionThanksMessage(input: {
 }
 
 /**
- * PUNTO E/F — Un solo messaggio cliente (claim atomico) + ringraziamento fiorista.
+ * PUNTO E/F — Un solo messaggio cliente (claim atomico) + ringraziamento fiorista via template Meta.
  */
 export async function runPuntoEFDeliveryComplete(orderId: string): Promise<PuntoEFResult> {
     const orderEarly = await prisma.order.findFirst({
@@ -71,7 +74,6 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
         return { ok: true, skipped: 'already_done', giardinoUrl };
     }
 
-    // Claim prima dell'invio: evita doppio WhatsApp su invocazioni parallele (mini-app + status).
     const claimed = await tryClaimWorkflowStep(orderEarly.id, 'puntoEF_delivery');
     if (!claimed) {
         const giardinoUrl = await buildProofFotoAccessUrl(
@@ -108,47 +110,71 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
             order.partner?.ownerName || order.partner?.shopName || ''
         );
         const orderCode = order.orderNumber || order.id;
-        const thanksText = buildFloristCompletionThanksMessage({
-            floristFirstName: floristName || 'Partner',
-            orderCode,
-        });
         const sessionPhone =
             toWhatsAppSessionPhone(floristPhoneE164) || `whatsapp:${floristPhoneE164}`;
 
-        const send = await sendWhatsAppMessage(floristPhoneE164, thanksText, {
-            recipientName: floristName || order.partner?.ownerName || 'Partner',
+        const bodyParams = buildFloristRingraziamentoParams({
+            floristFirstName: floristName || 'Partner',
             orderCode,
-            userType: 'FLORIST',
-            source: 'punto_f_florist_thanks',
-            sessionPhone,
+        });
+
+        const send = await sendVeraTemplate(floristPhoneE164, 'florist_ringraziamento', bodyParams, {
+            orderId: order.id,
+            orderNumber: orderCode,
+            skipOrderDedup: true,
         });
 
         if (send.ok) {
-            if (!send.fallbackExecuted) {
+            await logVeraTemplateOutbound({
+                phoneE164: floristPhoneE164,
+                templateId: 'florist_ringraziamento',
+                bodyParams,
+                eventType: 'FLORIST_DELIVERY_THANKS',
+                orderId: order.id,
+                orderNumber: orderCode,
+                messageId: send.messageId,
+                contactName: floristName || order.partner?.ownerName || 'Partner',
+                userType: 'FLORIST',
+            }).catch((err) => console.warn('[punto-ef] Log chat fiorista fallito:', err));
+        } else {
+            console.warn('[punto-ef] Template ringraziamento fiorista fallito, fallback free-text:', {
+                orderId: order.id,
+                orderNumber: orderCode,
+                error: send.error,
+                errorCode: send.errorCode,
+            });
+
+            const thanksText = buildFloristCompletionThanksFallbackText({
+                floristFirstName: floristName || 'Partner',
+                orderCode,
+            });
+            const fallback = await sendWhatsAppMessage(floristPhoneE164, thanksText, {
+                recipientName: floristName || order.partner?.ownerName || 'Partner',
+                orderCode,
+                userType: 'FLORIST',
+                source: 'punto_f_florist_thanks_fallback',
+                sessionPhone,
+                disableTemplateFallback: true,
+            });
+
+            if (fallback.ok && !fallback.fallbackExecuted) {
                 await addMessage(sessionPhone, 'OUTBOUND', thanksText, undefined, {
                     eventType: 'FLORIST_DELIVERY_THANKS',
                     orderId: order.id,
                     orderNumber: orderCode,
-                    source: 'punto_f_florist_thanks',
-                    ...buildOutboundWamidMetadata(send.messageId),
-                }).catch((err) =>
-                    console.warn('[punto-ef] Log chat fiorista fallito:', err)
-                );
-            } else {
-                console.info('[punto-ef] Ringraziamento fiorista inviato via template 24h', {
+                    source: 'punto_f_florist_thanks_fallback',
+                    ...buildOutboundWamidMetadata(fallback.messageId),
+                }).catch((err) => console.warn('[punto-ef] Log chat fallback fallito:', err));
+            } else if (!fallback.ok) {
+                console.error('[punto-ef] Ringraziamento fiorista fallito (template + fallback):', {
                     orderId: order.id,
                     orderNumber: orderCode,
-                    messageId: send.messageId,
+                    phone: floristPhoneE164,
+                    templateError: send.error,
+                    fallbackError: fallback.error,
+                    errorCode: fallback.errorCode,
                 });
             }
-        } else {
-            console.error('[punto-ef] Ringraziamento fiorista fallito:', {
-                orderId: order.id,
-                orderNumber: orderCode,
-                phone: floristPhoneE164,
-                error: send.error,
-                errorCode: send.errorCode,
-            });
         }
     } else if (floristPhoneRaw) {
         console.error('[punto-ef] Numero fiorista non normalizzabile:', {

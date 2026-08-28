@@ -78,6 +78,7 @@ const SLOT_UI: Record<
 
 export const FLORIST_LIBRARY_IDS: VeraTemplateId[] = [
     'florist_bonifico_ricevuta',
+    'florist_ringraziamento',
     'florist_repeat',
     'florist_reminder',
     'florist_tomb_not_found',
@@ -97,6 +98,7 @@ export const USER_LIBRARY_IDS: VeraTemplateId[] = [
 
 const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
     florist_bonifico_ricevuta: 'Conferma Bonifico Fiorista',
+    florist_ringraziamento: 'Ringraziamento post-consegna fiorista',
     florist_first_001: 'Nuovo ordine fiorista · parte 1 (nome/codice/compenso)',
     florist_first_002: 'Nuovo ordine fiorista · parte 2 (lumino/biglietto)',
     florist_first_003: 'Nuovo ordine fiorista · parte 3 (defunto/luogo)',

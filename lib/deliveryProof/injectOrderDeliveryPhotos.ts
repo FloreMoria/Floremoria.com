@@ -71,12 +71,16 @@ export async function propagateDeliveryPhotosToLinkedProfiles(
             deceasedProfileId: true,
             partnerId: true,
             userId: true,
+            latitude: true,
+            longitude: true,
             deliveryProof: {
                 select: {
                     photosBeforeUrls: true,
                     photosAfterUrls: true,
                     photoBeforeUrl: true,
                     photoAfterUrl: true,
+                    gpsLatitude: true,
+                    gpsLongitude: true,
                 },
             },
             deceasedProfile: {
@@ -114,6 +118,9 @@ export async function propagateDeliveryPhotosToLinkedProfiles(
     let deceasedProfileId = order.deceasedProfileId;
     let deliveryPhotoCount = 0;
 
+    const gpsLatitude = order.latitude ?? order.deliveryProof?.gpsLatitude ?? null;
+    const gpsLongitude = order.longitude ?? order.deliveryProof?.gpsLongitude ?? null;
+
     if (deceasedProfileId) {
         const existingGallery = order.deceasedProfile?.deliveryPhotoUrls || [];
         const mergedGallery = uniqueAppendPhotoUrls(existingGallery, incoming);
@@ -124,6 +131,8 @@ export async function propagateDeliveryPhotosToLinkedProfiles(
             data: {
                 deliveryPhotoUrls: mergedGallery,
                 ...(coverUrl ? { coverUrl } : {}),
+                ...(gpsLatitude != null ? { latitude: gpsLatitude } : {}),
+                ...(gpsLongitude != null ? { longitude: gpsLongitude } : {}),
             },
         });
         deliveryPhotoCount = mergedGallery.length;

@@ -118,6 +118,9 @@ model DeceasedProfile {
    * Perché: scheda defunto e GdM devono mostrare tutte le foto anche se arrivate a raffica via WhatsApp.
    */
   deliveryPhotoUrls String[] @default([]) @map("delivery_photo_urls")
+  /** Coordinate GPS tomba (ultima consegna verificata via mini-app fiorista). */
+  latitude          Float?   @map("latitude")
+  longitude         Float?   @map("longitude")
   /**
    * Date future commemorative/consegna (max 10, YYYY-MM-DD) — senza impegno d'acquisto.
    * Fonte primaria lato scheda defunto; sincronizzate con gli Utenti collegati in salvataggio.

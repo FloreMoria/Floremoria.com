@@ -225,6 +225,25 @@ export function buildProactiveStaffParams(input: {
 }
 
 /**
+ * Template Meta `floremoria_ringraziamento_fiorista` — post-consegna fiorista (2 body params).
+ */
+export function buildFloristRingraziamentoParams(input: {
+    floristFirstName?: string | null;
+    orderCode?: string | null;
+}): string[] {
+    const params = buildVeraTemplateBodyParams('florist_ringraziamento', {
+        floristFirstName: extractFirstName(input.floristFirstName || 'Partner') || 'Partner',
+        orderCode: requireText(
+            normalizeOrderCode(input.orderCode || '') || '-',
+            'orderCode',
+            META_TEMPLATE_LIMITS.orderCode
+        ),
+    });
+    logBuiltTemplateParams('florist_ringraziamento', params);
+    return params;
+}
+
+/**
  * Template Meta `floremoria_bonifico_ricevuta` — 4 body params.
  * {{4}} note opzionali: se vuote → " " (Meta #132000).
  */

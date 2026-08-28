@@ -23,6 +23,7 @@ export type VeraTemplateId =
     | 'florist_reminder'
     | 'florist_tomb_not_found'
     | 'florist_bonifico_ricevuta'
+    | 'florist_ringraziamento'
     | 'customer_cemetery_closed'
     | 'anniversary_gdm_reminder';
 
@@ -278,6 +279,27 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'Buon lavoro da tutto lo Staff di FloreMoria🌹',
         description:
             '{{1}} nome fiorista, {{2}} importo/compenso, {{3}} codice ordine, {{4}} note staff (opz. → spazio)',
+    },
+    /**
+     * Template Meta `floremoria_ringraziamento_fiorista` — ringraziamento post-consegna + richiesta fattura.
+     * UTILITY · evita Meta 131047 fuori finestra 24h.
+     */
+    florist_ringraziamento: {
+        id: 'florist_ringraziamento',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLORIST_RINGRAZIAMENTO',
+            'floremoria_ringraziamento_fiorista'
+        ),
+        language: 'it',
+        bodyParamCount: 2,
+        bodySlots: ['floristFirstName', 'orderCode'],
+        library: 'FLORIST',
+        bodyCanonical:
+            'Grazie {{1}} per aver completato la consegna con successo! ' +
+            'Abbiamo notificato il cliente con il link alle foto. ' +
+            "Ti ricordiamo, se non l'hai già fatto, di inviarci la fattura relativa all'ordine {{2}}. " +
+            'Buon lavoro da FloreMoria! 🌹',
+        description: '{{1}} nome fiorista/partner, {{2}} codice ordine',
     },
     customer_cemetery_closed: {
         id: 'customer_cemetery_closed',

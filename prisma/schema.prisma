@@ -243,6 +243,15 @@ model Order {
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
   partner                Partner?          @relation("OrderFloristPartner", fields: [partnerId], references: [id])
   agency                 Partner?          @relation("OrderFuneralAgency", fields: [agencyId], references: [id], onDelete: SetNull)
+  /**
+   * Partner commerciale che matura la fee (aggregatore o agenzia diretta).
+   */
+  referralPartnerId      String?           @map("referral_partner_id")
+  referralPartner        Partner?          @relation("OrderReferralPartner", fields: [referralPartnerId], references: [id], onDelete: SetNull)
+  /** Quota spettante al partner/agenzia (10% lordo ordine, IVA compresa). */
+  partnerCommissionCents Int?              @map("partner_commission_cents")
+  /** Stato liquidazione mensile fee partner/agenzia. */
+  partnerCommissionSettlementStatus PartnerCommissionSettlementStatus @default(PENDING) @map("partner_commission_settlement_status")
   user                   User?             @relation(fields: [userId], references: [id])
   items                  OrderItem[]
   offerRedemptions       OfferRedemption[]
@@ -453,6 +462,7 @@ model Partner {
   aggregatorNotificationEmail String?     @map("aggregator_notification_email") @db.VarChar(255)
   orders          Order[]                 @relation("OrderFloristPartner")
   agencyOrders    Order[]                 @relation("OrderFuneralAgency")
+  referralOrders  Order[]                 @relation("OrderReferralPartner")
   deliveryProofs  DeliveryProof[]
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
@@ -662,6 +672,12 @@ enum FloristSettlementStatus {
   PENDING
   BONIFICATO
   RICEVUTA
+}
+
+/** Liquidazione fee partner/agenzia (provvigione 10% lordo). */
+enum PartnerCommissionSettlementStatus {
+  PENDING
+  LIQUIDATO
 }
 
 enum OfferType {

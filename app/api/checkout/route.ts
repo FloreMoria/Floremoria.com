@@ -14,6 +14,8 @@ import {
     normalizeOrderCategory,
 } from '@/lib/orders/orderNumber';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { resolveCheckoutPartnerAssociations } from '@/lib/orders/resolveCheckoutPartners';
+import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
             buyerPhone,
             deceasedName,
             cemeteryName,
+            cemeteryCity,
             gravePosition,
             deliveryProvince,
             deliveryDate,
@@ -203,32 +206,26 @@ export async function POST(request: Request) {
 
         const prefix = normalizeOrderCategory(orderCategory);
         const prov = normalizeDeliveryProvince(deliveryProvince);
-        let partner = null;
-        let finalInstructions = null;
+        const cemeteryCityValue =
+            typeof cemeteryCity === 'string' && cemeteryCity.trim()
+                ? cemeteryCity.trim()
+                : typeof cemeteryName === 'string' && cemeteryName.trim()
+                  ? cemeteryName.trim()
+                  : 'Non specificato';
 
-        if (referralRef) {
-            partner = await prisma.partner.findFirst({
-                where: {
-                    isActive: true,
-                    deletedAt: null,
-                    OR: [{ id: String(referralRef) }, { uniqueCode: String(referralRef) }],
-                },
-            });
-            if (partner) {
-                finalInstructions = `Referral: ${partner.shopName} (codice: ${referralRef})`;
-            }
-        }
+        const notify =
+            typeof partnerNotifyEmail === 'string' && partnerNotifyEmail.trim()
+                ? partnerNotifyEmail.trim().slice(0, 255)
+                : null;
 
-        if (!partner) {
-            // We prioritize active florists in that province with the best rating
-            partner = await prisma.partner.findFirst({
-                where: {
-                    isActive: true,
-                    province: prov
-                },
-                orderBy: { adminRating: 'desc' }
-            });
-        }
+        const partnerAssoc = await resolveCheckoutPartnerAssociations({
+            referralRef: referralRef ? String(referralRef) : null,
+            deliveryProvince: prov,
+            cemeteryCity: cemeteryCityValue,
+            partnerNotifyEmail: notify,
+        });
+
+        let finalInstructions: string | null = partnerAssoc.referralInstructions;
 
         // 4. Create the Order in the database
         let finalGravePosition = gravePosition;
@@ -251,12 +248,9 @@ export async function POST(request: Request) {
             additionalInstructions = additionalInstructions ? `${additionalInstructions} | ${tag}` : tag;
         }
 
-        const notify =
-            typeof partnerNotifyEmail === 'string' && partnerNotifyEmail.trim()
-                ? partnerNotifyEmail.trim().slice(0, 255)
-                : null;
+        const notifyEmail = partnerAssoc.partnerNotifyEmail;
 
-        // Normalizza i productId del carrello (ID frontend statici) verso gli ID reali nel DB Prisma.
+        // Normalizza i productId del carrello
         const resolvedItems: { productId: string; quantity: number; priceCents: number }[] = [];
         for (const rawItem of cart as any[]) {
             const incomingId = String(rawItem.productId || rawItem.id || '').trim();
@@ -344,6 +338,10 @@ export async function POST(request: Request) {
             }
         }
 
+        const partnerCommissionCents = partnerAssoc.referralPartnerId
+            ? calculatePartnerCommissionCents(finalTotalCents)
+            : null;
+
         let order: Awaited<ReturnType<typeof prisma.order.create>> | undefined;
         for (let attempt = 0; attempt < 6; attempt += 1) {
             try {
@@ -361,14 +359,20 @@ export async function POST(request: Request) {
                             deceasedName,
                             cemeteryName,
                             gravePosition: finalGravePosition,
-                            cemeteryCity: 'Non specificato',
+                            cemeteryCity: cemeteryCityValue,
                             deliveryProvince: prov,
                             deliveryDate: new Date(deliveryDate),
                             ticketMessage,
                             additionalInstructions,
                             totalPriceCents: finalTotalCents,
-                            partnerId: partner?.id || null,
-                            ...(notify ? { partnerNotifyEmail: notify } : {}),
+                            partnerId: partnerAssoc.partnerId,
+                            agencyId: partnerAssoc.agencyId,
+                            agencyCode: partnerAssoc.agencyCode,
+                            agencyName: partnerAssoc.agencyName,
+                            partnershipChannel: partnerAssoc.partnershipChannel,
+                            referralPartnerId: partnerAssoc.referralPartnerId,
+                            partnerCommissionCents,
+                            ...(notifyEmail ? { partnerNotifyEmail: notifyEmail } : {}),
                             status: 'PENDING',
                             items: {
                                 create: resolvedItems,
@@ -483,7 +487,7 @@ export async function POST(request: Request) {
             totalMarginCents = Math.round(finalTotalCents * 0.35);
         }
 
-        console.log(`[Notification] Auto-assegnazione effettuata per ordine ${order.orderNumber} al Partner ${partner?.shopName || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
+        console.log(`[Notification] Auto-assegnazione effettuata per ordine ${order.orderNumber} al Partner ${partnerAssoc.partnerId || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
 
         // Create Stripe Session — PayPal esplicito (non Dynamic PM Dashboard: evita sparizioni silenziose).
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51MockKey', {

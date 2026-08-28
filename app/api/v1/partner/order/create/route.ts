@@ -10,6 +10,7 @@ import {
     resolveFloristPartnerIdForAgency,
 } from '@/lib/orders/resolveAgencyFlorist';
 import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
+import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
 
 export const runtime = 'nodejs';
 
@@ -275,6 +276,17 @@ export async function POST(request: Request) {
         const partnerAlreadyPaid =
             Boolean(stripeCheckoutSessionId || stripePaymentIntentId) || partner.isB2B;
 
+        const referralPartnerId = resolvedAgency
+            ? partner.partnerType === 'FUNERAL_AGENCY'
+                ? resolvedAgency.agencyId
+                : auth.partnerId
+            : partner.partnerType === 'AGGREGATOR'
+              ? auth.partnerId
+              : null;
+        const partnerCommissionCents = referralPartnerId
+            ? calculatePartnerCommissionCents(subtotalCents)
+            : null;
+
         const order = await prisma.$transaction(async (tx) => {
             const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
             return tx.order.create({
@@ -300,6 +312,8 @@ export async function POST(request: Request) {
                     agencyCode: resolvedAgency?.agencyCode ?? (agencyCodeBody || null),
                     agencyName: resolvedAgency?.agencyName ?? agencyNameBody ?? null,
                     partnershipChannel: resolvedAgency?.partnershipChannel ?? null,
+                    referralPartnerId,
+                    partnerCommissionCents,
                     funeralDate: funeralDate || null,
                     partnerNotifyEmail: partnerNotifyEmail || null,
                     externalAnnouncementId: externalAnnouncementId || null,

@@ -4,6 +4,7 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { createDashboardManualOrder } from '@/lib/orders/createDashboardManualOrder';
 import { peekNextOrderNumber } from '@/lib/orders/orderNumber';
 import { runVeraAfterDashboardManualOrder } from '@/lib/orders/triggerVeraOnDashboardManualOrder';
+import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
 
 export const maxDuration = 120;
 
@@ -82,6 +83,10 @@ export async function POST(request: Request) {
         if (veraBlocked) {
             console.error('[dashboard/orders POST] VERA notifiche bloccate da env runtime:', vera);
         }
+
+        void sendPartnerOrderNotifications(order.id, { emailsOnly: true }).catch((emailErr) => {
+            console.error('[dashboard/orders POST] Email ordine fallite (non bloccante):', emailErr);
+        });
 
         return NextResponse.json({
             ok: true,

@@ -7,6 +7,8 @@ import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
+import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
+import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -139,6 +141,8 @@ export async function POST(request: Request) {
         include: {
             items: { include: { product: true } },
             partner: true,
+            agency: true,
+            referralPartner: true,
         },
     });
 
@@ -149,6 +153,20 @@ export async function POST(request: Request) {
 
     // Prima transizione a pagato: allinea DB locale, benvenuto WhatsApp VERA.
     if (isFirstPaidTransition) {
+        const commissionUpdate =
+            order.referralPartnerId && !order.partnerCommissionCents
+                ? {
+                      partnerCommissionCents: calculatePartnerCommissionCents(order.totalPriceCents),
+                  }
+                : {};
+
+        if (Object.keys(commissionUpdate).length > 0) {
+            await prisma.order.update({
+                where: { id: orderId },
+                data: commissionUpdate,
+            });
+        }
+
         await ensurePaidOrderEntities(orderId).catch((entityErr) => {
             console.error('[stripe-webhook] Allineamento User/Defunto fallito (non bloccante):', entityErr);
         });
@@ -248,6 +266,15 @@ export async function POST(request: Request) {
             console.error('[stripe-webhook] Invio email cliente fallito:', custResult.error);
         }
     }
+
+    // Email partner/agenzia/fiorista (cliente + ops già inviati sopra).
+    void sendPartnerOrderNotifications(orderId, {
+        emailsOnly: true,
+        skipCustomer: true,
+        skipOps: true,
+    }).catch((notifyErr) => {
+        console.error('[stripe-webhook] sendPartnerOrderNotifications failed (non-blocking):', notifyErr);
+    });
 
     // Archivia ricevuta di cortesia (HTML + Blob) per export ZIP fiscale — non bloccante.
     if (isFirstPaidTransition) {

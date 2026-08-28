@@ -27,12 +27,12 @@ export async function GET(request: Request) {
     const queryAgencyId = searchParams.get('agencyId')?.trim();
 
     const where: Record<string, unknown> = {
-        partnerId: auth.partnerId,
+        OR: [{ referralPartnerId: auth.partnerId }, { partnerId: auth.partnerId }],
         ...visibleDashboardOrdersWhere(),
     };
 
     if (queryAgencyId) {
-        where.agencyName = queryAgencyId;
+        where.agencyId = queryAgencyId;
     }
 
     const [total, rows] = await Promise.all([

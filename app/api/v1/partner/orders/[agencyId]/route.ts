@@ -35,8 +35,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ agencyId: s
     const offset = Math.max(0, Number(searchParams.get('offset')) || 0);
 
     const where = {
-        partnerId: auth.partnerId,
-        agencyName: agencyId,
+        OR: [{ referralPartnerId: auth.partnerId }, { partnerId: auth.partnerId }],
+        agencyId,
         ...visibleDashboardOrdersWhere(),
     };
 

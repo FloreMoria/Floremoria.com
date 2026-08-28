@@ -18,6 +18,7 @@ export type PartnerOrderNotificationChannel =
     | 'whatsapp_customer'
     | 'email_customer'
     | 'email_ops'
+    | 'email_florist'
     | 'email_aggregator'
     | 'email_agency';
 
@@ -110,7 +111,10 @@ async function ensureInProgressForNotifications(orderId: string, partnerId: stri
 /**
  * Scatena in parallelo tutte le notifiche B2B (errori isolati per canale).
  */
-export async function sendPartnerOrderNotifications(orderId: string): Promise<PartnerOrderNotificationResult[]> {
+export async function sendPartnerOrderNotifications(
+    orderId: string,
+    options?: { emailsOnly?: boolean; skipCustomer?: boolean; skipOps?: boolean }
+): Promise<PartnerOrderNotificationResult[]> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
         include: {
@@ -124,10 +128,16 @@ export async function sendPartnerOrderNotifications(orderId: string): Promise<Pa
         return [{ channel: 'email_ops', ok: false, skipped: 'order_not_found' }];
     }
 
-    await ensureInProgressForNotifications(order.id, order.partnerId);
+    if (!options?.emailsOnly) {
+        await ensureInProgressForNotifications(order.id, order.partnerId);
+    }
 
     const agency = order.agency;
     const floristName = order.partner?.shopName ?? null;
+    const floristEmail =
+        order.partner?.email?.trim() ||
+        order.partner?.pecAddress?.trim() ||
+        null;
     const opsTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || DEFAULT_OPS_EMAIL;
     const aggregatorTo =
         agency?.aggregatorNotificationEmail?.trim() ||
@@ -137,91 +147,124 @@ export async function sendPartnerOrderNotifications(orderId: string): Promise<Pa
 
     const tasks: Array<Promise<PartnerOrderNotificationResult>> = [];
 
-    // 1) WhatsApp fiorista (Punto A / mini-app)
-    tasks.push(
-        (async (): Promise<PartnerOrderNotificationResult> => {
-            try {
-                const res = await notifyFloristDeliveryLinkForOrder(order.id, { force: true, bypassWindow: true });
-                return {
-                    channel: 'whatsapp_florist',
-                    ok: res.ok,
-                    skipped: res.skipped,
-                    error: res.error,
-                };
-            } catch (e) {
-                return {
-                    channel: 'whatsapp_florist',
-                    ok: false,
-                    error: e instanceof Error ? e.message : String(e),
-                };
-            }
-        })()
-    );
+    if (!options?.emailsOnly) {
+        // 1) WhatsApp fiorista (Punto A / mini-app)
+        tasks.push(
+            (async (): Promise<PartnerOrderNotificationResult> => {
+                try {
+                    const res = await notifyFloristDeliveryLinkForOrder(order.id, { force: true, bypassWindow: true });
+                    return {
+                        channel: 'whatsapp_florist',
+                        ok: res.ok,
+                        skipped: res.skipped,
+                        error: res.error,
+                    };
+                } catch (e) {
+                    return {
+                        channel: 'whatsapp_florist',
+                        ok: false,
+                        error: e instanceof Error ? e.message : String(e),
+                    };
+                }
+            })()
+        );
 
-    // 2) WhatsApp utente (Punto B)
-    tasks.push(
-        (async (): Promise<PartnerOrderNotificationResult> => {
-            try {
-                const res = await runPuntoBCustomerOrderConfirm(order.id, { force: true });
-                return {
-                    channel: 'whatsapp_customer',
-                    ok: res.ok,
-                    skipped: res.skipped,
-                    error: res.error,
-                };
-            } catch (e) {
-                return {
-                    channel: 'whatsapp_customer',
-                    ok: false,
-                    error: e instanceof Error ? e.message : String(e),
-                };
-            }
-        })()
-    );
+        // 2) WhatsApp utente (Punto B)
+        tasks.push(
+            (async (): Promise<PartnerOrderNotificationResult> => {
+                try {
+                    const res = await runPuntoBCustomerOrderConfirm(order.id, { force: true });
+                    return {
+                        channel: 'whatsapp_customer',
+                        ok: res.ok,
+                        skipped: res.skipped,
+                        error: res.error,
+                    };
+                } catch (e) {
+                    return {
+                        channel: 'whatsapp_customer',
+                        ok: false,
+                        error: e instanceof Error ? e.message : String(e),
+                    };
+                }
+            })()
+        );
+    }
 
     // 3) Email utente (ricevuta)
-    tasks.push(
-        (async (): Promise<PartnerOrderNotificationResult> => {
-            const buyer = order.buyerEmail?.trim();
-            if (!buyer || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer)) {
-                return { channel: 'email_customer', ok: true, skipped: 'no_buyer_email' };
-            }
-            try {
-                const html = buildOrderCustomerHtml({ order });
-                const r = await sendFloremTransactionalMail({
-                    to: buyer,
-                    replyTo: process.env.FLOREM_MAIL_REPLY_TO?.trim() || DEFAULT_AGGREGATOR_EMAIL,
-                    subject: `Conferma ordine ${order.orderNumber || ''} — FloreMoria`.trim(),
-                    html,
-                });
-                return { channel: 'email_customer', ok: r.ok, error: r.error };
-            } catch (e) {
-                return {
-                    channel: 'email_customer',
-                    ok: false,
-                    error: e instanceof Error ? e.message : String(e),
-                };
-            }
-        })()
-    );
+    if (!options?.skipCustomer) {
+        tasks.push(
+            (async (): Promise<PartnerOrderNotificationResult> => {
+                const buyer = order.buyerEmail?.trim();
+                if (!buyer || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer)) {
+                    return { channel: 'email_customer', ok: true, skipped: 'no_buyer_email' };
+                }
+                try {
+                    const html = buildOrderCustomerHtml({ order });
+                    const r = await sendFloremTransactionalMail({
+                        to: buyer,
+                        replyTo: process.env.FLOREM_MAIL_REPLY_TO?.trim() || DEFAULT_AGGREGATOR_EMAIL,
+                        subject: `Conferma ordine ${order.orderNumber || ''} — FloreMoria`.trim(),
+                        html,
+                    });
+                    return { channel: 'email_customer', ok: r.ok, error: r.error };
+                } catch (e) {
+                    return {
+                        channel: 'email_customer',
+                        ok: false,
+                        error: e instanceof Error ? e.message : String(e),
+                    };
+                }
+            })()
+        );
+    }
 
     // 4) Email operativa FloreMoria
+    if (!options?.skipOps) {
+        tasks.push(
+            (async (): Promise<PartnerOrderNotificationResult> => {
+                try {
+                    const html = buildOrderStaffHtml({
+                        order,
+                        stripeSessionId: 'B2B Partner Integration',
+                    });
+                    const r = await sendFloremTransactionalMail({
+                        to: opsTo,
+                        subject: `[B2B] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
+                        html,
+                    });
+                    return { channel: 'email_ops', ok: r.ok, error: r.error };
+                } catch (e) {
+                    return {
+                        channel: 'email_ops',
+                        ok: false,
+                        error: e instanceof Error ? e.message : String(e),
+                    };
+                }
+            })()
+        );
+    }
+
+    // 4b) Email fiorista assegnato
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (!floristEmail) {
+                return { channel: 'email_florist', ok: true, skipped: 'no_florist_email' };
+            }
             try {
                 const html = buildOrderStaffHtml({
                     order,
-                    stripeSessionId: 'B2B Partner Integration',
+                    stripeSessionId: 'Nuovo ordine assegnato',
                 });
                 const r = await sendFloremTransactionalMail({
-                    to: opsTo,
-                    subject: `[B2B] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
+                    to: floristEmail,
+                    subject: `Nuovo ordine FloreMoria ${order.orderNumber} — consegna da effettuare`,
                     html,
                 });
-                return { channel: 'email_ops', ok: r.ok, error: r.error };
+                return { channel: 'email_florist', ok: r.ok, error: r.error };
             } catch (e) {
                 return {
-                    channel: 'email_ops',
+                    channel: 'email_florist',
                     ok: false,
                     error: e instanceof Error ? e.message : String(e),
                 };

@@ -49,3 +49,4 @@
 [2026-08-28 16:28] fix: pipeline social bloccata — migrazione Imagen 4 → gemini-2.5-flash-image (shutdown 17/08); backfill script bozze senza media.
 [2026-08-28 16:48] fix: WhatsApp fiorista — bigliettino/dedica in sezione Optional anche senza riga catalogo (ticketMessage).
 [2026-08-28 17:05] feat: Template Meta floremoria_ringraziamento_fiorista in Punto E/F post-consegna; GPS su DeceasedProfile da proof upload.
+[2026-08-28 17:12] fix(marketing): correzione prompt stagionali tardo-estivi e copy checkpoint social — aggiornati prompt botanici con fiori estivi (dalie, gladioli, gigli, rose), risolto refuso [object Object] su Shorts e hashtag #reelempatico su IG, generata immagine Pinterest mancante ed approvate tutte le 7 campagne su status APPROVED.

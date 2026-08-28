@@ -17,7 +17,15 @@ export const metadata = {
     title: 'Gestione Ordini - FloreMoria Dashboard',
 };
 
-export default async function OrdersPage() {
+export default async function OrdersPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ agencyId?: string; partnerId?: string }>;
+}) {
+    const sp = await searchParams;
+    const filterAgencyId = sp.agencyId?.trim() || '';
+    const filterPartnerId = sp.partnerId?.trim() || '';
+
     const cookieStore = await cookies();
     const roleName = cookieStore.get('fm_user_role')?.value || 'USER';
     const testModeActive = await getDashboardTestModeActive();
@@ -47,6 +55,15 @@ export default async function OrdersPage() {
     const ordersQuery: { where: Record<string, unknown> } = {
         where: ordersListPageWhere(testModeActive) as Record<string, unknown>,
     };
+    if (filterAgencyId) {
+        ordersQuery.where = { ...ordersQuery.where, agencyId: filterAgencyId };
+    }
+    if (filterPartnerId) {
+        ordersQuery.where = {
+            ...ordersQuery.where,
+            OR: [{ partnerId: filterPartnerId }, { referralPartnerId: filterPartnerId }],
+        };
+    }
     if (!isGlobalAdmin) {
         // Partner B2B: solo ordini assegnati al proprio account.
         ordersQuery.where = { ...ordersQuery.where, userId: MOCK_FLORIST_ID };

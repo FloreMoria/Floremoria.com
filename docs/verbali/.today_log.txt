@@ -43,3 +43,4 @@
 [2026-08-28 14:31] fix(whatsapp): header template consegna_foto_utente + link GdM per defunto; re-invio FT-TO-26-001/002 a Erika.
 [2026-08-28 15:02] fix(whatsapp): rimossa formula «con immensa gioia» — allineamento copy sobrio template consegna cliente Meta + fallback.
 [2026-08-28 15:10] feat(dashboard): tabella agenzie collegate in anagrafica partner e badge cromatici canale agenzie — aggiunto componente PartnerLinkedAgenciesCard in /dashboard/fioristi/[id], componente reusable ChannelBadge per differenziare Diretta (FloreMoria), Annunci Funebri (AF), Fiorista Convenzionato e API Esterna.
+[2026-08-28 15:50] feat: avviato modulo mobile-app PWA — manifest pubblico, app shell con header compatto, bottom nav, safe areas, touch targets e sw-public per installabilità.

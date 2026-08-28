@@ -42,7 +42,7 @@ export default function Navbar() {
     ];
 
     return (
-        <header className="bg-fm-section border-b border-fm-rose-soft/30 shadow-sm fixed w-full z-[999] top-[var(--fm-maint-banner-h,0px)] left-0">
+        <header className="hidden md:block bg-fm-section border-b border-fm-rose-soft/30 shadow-sm fixed w-full z-[999] top-[var(--fm-maint-banner-h,0px)] left-0">
             <div className="w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px]">
                 <div className="flex justify-between items-center h-[72px]">
                     <div className="flex items-center">

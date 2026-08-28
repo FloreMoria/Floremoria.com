@@ -1,20 +1,14 @@
 {
-  "name": "FloreMoria",
-  "short_name": "FloreMoria",
-  "description": "Consegna fiori sulle tombe con foto di conferma. Presenza delegata e testimoniata.",
-  "start_url": "/",
-  "scope": "/",
+  "name": "FloreMoria Staff",
+  "short_name": "FM Staff",
+  "description": "Messaggi WhatsApp e assistenza FloreMoria per lo staff.",
+  "start_url": "/dashboard/communications",
+  "scope": "/dashboard/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#C0A062",
   "icons": [
-    {
-      "src": "/icon-v2.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
     {
       "src": "/icon-v2.png",
       "sizes": "512x512",

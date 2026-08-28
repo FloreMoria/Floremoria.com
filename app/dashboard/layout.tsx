@@ -15,7 +15,7 @@ import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
 export const metadata: Metadata = {
     title: 'FloreMoria Dashboard',
     description: 'Sistema gestionale avanzato FloreMoria.',
-    manifest: '/manifest.webmanifest',
+    manifest: '/manifest-staff.webmanifest',
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',

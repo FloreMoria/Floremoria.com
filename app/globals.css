@@ -94,3 +94,46 @@ body {
 .theme-system-clean .shadow-xl {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* -----------------------------------------------------------------
+   PWA / Mobile app shell — touch feel e safe areas
+   ----------------------------------------------------------------- */
+:root {
+    --fm-safe-top: env(safe-area-inset-top, 0px);
+    --fm-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --fm-mobile-header-h: 3.5rem;
+    --fm-mobile-bottom-nav-h: 4rem;
+}
+
+.fm-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.fm-snap-x {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.fm-snap-x::-webkit-scrollbar {
+    display: none;
+}
+
+.fm-snap-x > * {
+    scroll-snap-align: start;
+}
+
+@media (max-width: 767px) {
+    html {
+        overscroll-behavior-y: none;
+    }
+
+    body {
+        -webkit-tap-highlight-color: transparent;
+    }
+}

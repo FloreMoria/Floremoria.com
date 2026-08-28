@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Inter, Manrope, Great_Vibes } from 'next/font/google';
 import './globals.css';
@@ -51,15 +51,28 @@ function FooterLegalLink({ href, children }: { href: string; children: ReactNode
     );
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#C0A062',
+};
+
 export const metadata: Metadata = {
   title: 'FloreMoria | Consegna Fiori in Cimitero',
   description: 'Un servizio dedicato per onorare e ricordare. Consegna fiori sulle tombe, composizioni, lumini e molto altro. Affidati a FloreMoria.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'FloreMoria',
+  },
   icons: {
     icon: [
-      { url: '/images/brand/Logo FloreMoria.png', type: 'image/png' },
-      { url: '/favicon.ico', sizes: 'any' }
+      { url: '/icon-v2.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
     ],
-    apple: '/images/brand/Logo FloreMoria.png'
+    apple: [{ url: '/apple-icon-v2.png', sizes: '180x180', type: 'image/png' }],
   },
   verification: {
     other: {

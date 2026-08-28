@@ -5,6 +5,9 @@ import { usePathname } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import FloatingWhatsAppButton from '@/components/FloatingWhatsAppButton';
 import WhatsAppMaintenanceBanner from '@/components/WhatsAppMaintenanceBanner';
+import MobileAppHeader from '@/components/mobile/MobileAppHeader';
+import MobileBottomNav from '@/components/mobile/MobileBottomNav';
+import PwaPublicRegister from '@/components/mobile/PwaPublicRegister';
 import {
     WHATSAPP_MAINTENANCE_BANNER_ENABLED,
     WHATSAPP_MAINTENANCE_BANNER_OFFSET,
@@ -44,11 +47,14 @@ export default function ConditionalLayout({ children, footer }: ConditionalLayou
 
     return (
         <div style={{ '--fm-maint-banner-h': bannerOffset } as React.CSSProperties}>
+            <PwaPublicRegister />
             {WHATSAPP_MAINTENANCE_BANNER_ENABLED && <WhatsAppMaintenanceBanner />}
+            <MobileAppHeader />
             <Navbar />
-            <main className="flex-grow w-full max-w-[1200px] mx-auto px-[20px] lg:px-[32px] py-12 lg:py-20 mt-[calc(72px+var(--fm-maint-banner-h,0px))]">
+            <main className="flex-grow w-full max-w-[1200px] mx-auto px-[16px] sm:px-[20px] lg:px-[32px] py-6 md:py-12 lg:py-20 mt-[calc(3.5rem+var(--fm-maint-banner-h,0px)+env(safe-area-inset-top,0px))] md:mt-[calc(72px+var(--fm-maint-banner-h,0px))] pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-0">
                 {children}
             </main>
+            <MobileBottomNav />
             {!WHATSAPP_MAINTENANCE_BANNER_ENABLED && <FloatingWhatsAppButton />}
             {footer}
         </div>

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Building2, Plus, Pencil, ExternalLink, X, Check } from 'lucide-react';
+import { ChannelBadge } from '@/components/dashboard/ChannelBadge';
 
 export type FloristOption = {
     id: string;
@@ -291,9 +292,7 @@ export default function AgenciesTable({
                                     </td>
                                     <td className="px-4 py-3 text-gray-700">{cityLabel(a)}</td>
                                     <td className="px-4 py-3">
-                                        <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
-                                            {a.partnershipChannel || '—'}
-                                        </span>
+                                        <ChannelBadge channel={a.partnershipChannel} />
                                     </td>
                                     <td className="px-4 py-3 text-gray-600 text-xs">
                                         {a.agencyNotificationEmail || '—'}

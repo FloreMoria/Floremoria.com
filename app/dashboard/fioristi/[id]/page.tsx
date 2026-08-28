@@ -6,6 +6,8 @@ import ClientFloristDossier from './ClientFloristDossier';
 import ClientFloristDossierHeader from './ClientFloristDossierHeader';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 
+import PartnerLinkedAgenciesCard, { type LinkedAgency } from '@/components/dashboard/PartnerLinkedAgenciesCard';
+
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
     const { id } = await params;
 
@@ -37,6 +39,47 @@ export default async function FloristDossierPage({ params }: { params: { id: str
         where: { deletedAt: null, isActive: true },
         select: { id: true, shopName: true, ownerName: true },
     });
+
+    const linkedAgenciesRaw = await prisma.partner.findMany({
+        where: {
+            deletedAt: null,
+            partnerType: 'FUNERAL_AGENCY',
+            OR: [
+                { defaultFloristId: id },
+                ...(partner.partnershipChannel
+                    ? [{ partnershipChannel: partner.partnershipChannel }]
+                    : partner.partnerType === 'AGGREGATOR'
+                    ? [{ partnershipChannel: partner.shopName }]
+                    : []),
+            ],
+        },
+        include: {
+            agencyOrders: {
+                where: { deletedAt: null, status: { not: 'CANCELLED' } },
+                select: { id: true },
+            },
+            _count: {
+                select: { agencyOrders: true },
+            },
+        },
+        orderBy: { shopName: 'asc' },
+    });
+
+    const linkedAgencies: LinkedAgency[] = linkedAgenciesRaw.map((a) => ({
+        id: a.id,
+        shopName: a.shopName,
+        ownerName: a.ownerName,
+        province: a.province,
+        coverageArea: a.coverageArea,
+        address: a.address,
+        uniqueCode: a.uniqueCode,
+        whatsappNumber: a.whatsappNumber,
+        email: a.email,
+        agencyNotificationEmail: a.agencyNotificationEmail,
+        partnershipChannel: a.partnershipChannel,
+        isActive: a.isActive,
+        ordersCount: a._count?.agencyOrders ?? a.agencyOrders.length,
+    }));
 
     return (
         <div className="fixed top-14 left-0 right-0 bottom-0 z-40 bg-[#FAF9F6] flex flex-col print:static print:inset-auto print:z-auto">
@@ -147,6 +190,11 @@ export default async function FloristDossierPage({ params }: { params: { id: str
                             </div>
                         </div>
                     </section>
+
+                    <PartnerLinkedAgenciesCard
+                        agencies={linkedAgencies}
+                        partnerName={partner.shopName}
+                    />
 
                     <ClientFloristDossier
                         partner={partner}

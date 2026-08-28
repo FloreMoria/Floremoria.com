@@ -14,6 +14,9 @@ import {
     CheckCircle2,
     Truck,
     AlertCircle,
+    Building2,
+    ExternalLink,
+    Filter,
 } from 'lucide-react';
 import CreateOrderModal from '@/components/dashboard/CreateOrderModal';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
@@ -41,11 +44,12 @@ export interface CalendarOrder {
         } | null;
     }> | null;
     partner?: {
+        id?: string;
         shopName?: string | null;
         ownerName?: string | null;
     } | null;
 
-    // Nuovi campi per Ricorrenze / Date GdM (Giardino della Memoria)
+    // Campi per Ricorrenze / Date GdM (Giardino della Memoria)
     isGdm?: boolean;
     gdmType?: 'PLANNED' | 'BIRTH' | 'DEATH';
     gdmTitle?: string;
@@ -79,6 +83,7 @@ const MONTH_NAMES_IT = [
 
 const WEEKDAY_NAMES_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 
+/** Riconosce la tipologia di ordine / GdM */
 export function getCategoryBadge(
     orderNumber?: string | null,
     isGdm?: boolean,
@@ -137,7 +142,8 @@ export function getCategoryBadge(
     }
 }
 
-export function getStatusBadge(
+/** Mappatura degli stati per la legenda ed i badge visivi ufficiali */
+export function getOrderStatusMeta(
     status?: string | null,
     isGdm?: boolean,
     gdmType?: string
@@ -149,49 +155,88 @@ export function getStatusBadge(
                     ? 'Nascita GdM 🎂'
                     : gdmType === 'DEATH'
                     ? 'Ricorrenza GdM 🕊️'
-                    : 'Data Pianificata GdM 🌹',
+                    : 'Pianificato GdM 🌹',
+            badgeClass:
+                'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700 font-semibold',
             colorClass: 'bg-amber-500 text-white',
-            textClass:
-                'text-amber-800 bg-amber-50 border-amber-300 dark:text-amber-200 dark:bg-amber-950 dark:border-amber-700 font-semibold',
+            dotClass: 'bg-amber-500',
             icon: Flower2,
         };
     }
+
     const s = (status || 'PENDING').toUpperCase();
-    if (s === 'DELIVERED' || s === 'COMPLETED') {
+
+    // 🟢 Consegnato con Foto / Completato (Verde Smeraldo)
+    if (s === 'COMPLETED' || s === 'DELIVERED') {
         return {
-            label: 'Consegnato',
+            label: 'Consegnato con Foto',
+            badgeClass:
+                'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700 font-semibold',
             colorClass: 'bg-emerald-500 text-white',
-            textClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+            dotClass: 'bg-emerald-500',
             icon: CheckCircle2,
         };
     }
-    if (
-        s === 'DELIVERING' ||
-        s === 'ACCEPTED' ||
-        s === 'IN_PROGRESS' ||
-        s === 'PROCESSING' ||
-        s === 'CONFIRMED'
-    ) {
+
+    // 🟣 In Preparazione / In Consegna (Viola/Ciano)
+    if (s === 'DELIVERING' || s === 'IN_PROGRESS') {
         return {
-            label: 'In consegna',
-            colorClass: 'bg-blue-500 text-white',
-            textClass: 'text-blue-700 bg-blue-50 border-blue-200',
+            label: 'In Consegna',
+            badgeClass:
+                'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-700 font-semibold',
+            colorClass: 'bg-purple-500 text-white',
+            dotClass: 'bg-purple-500',
             icon: Truck,
         };
     }
-    if (s === 'CANCELLED') {
+
+    // 🔵 Preso in Carico dal Fiorista (Blu/Indaco)
+    if (s === 'ACCEPTED' || s === 'CONFIRMED' || s === 'PROCESSING') {
         return {
-            label: 'Annullato',
-            colorClass: 'bg-gray-400 text-white',
-            textClass: 'text-gray-600 bg-gray-50 border-gray-200',
+            label: 'Preso in Carico',
+            badgeClass:
+                'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:border-indigo-700 font-semibold',
+            colorClass: 'bg-indigo-500 text-white',
+            dotClass: 'bg-indigo-500',
+            icon: Building2,
+        };
+    }
+
+    // 🔴 Anomalia / In Ritardo / Da Verificare (Rosso/Rosa)
+    if (s === 'CANCELLED' || s === 'FAILED' || s === 'DELAYED') {
+        return {
+            label: s === 'CANCELLED' ? 'Annullato' : 'Anomalia / Verificare',
+            badgeClass:
+                'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700 font-semibold',
+            colorClass: 'bg-rose-500 text-white',
+            dotClass: 'bg-rose-500',
             icon: AlertCircle,
         };
     }
+
+    // 🟡 In Assegnazione / In Attesa Fiorista (Giallo/Ambra)
     return {
-        label: 'In attesa',
+        label: 'In Attesa Fiorista',
+        badgeClass:
+            'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700 font-semibold',
         colorClass: 'bg-amber-500 text-white',
-        textClass: 'text-amber-700 bg-amber-50 border-amber-200',
+        dotClass: 'bg-amber-500',
         icon: Clock,
+    };
+}
+
+/** Legacy export per retrocompatibilità */
+export function getStatusBadge(
+    status?: string | null,
+    isGdm?: boolean,
+    gdmType?: string
+) {
+    const meta = getOrderStatusMeta(status, isGdm, gdmType);
+    return {
+        label: meta.label,
+        colorClass: meta.colorClass,
+        textClass: meta.badgeClass,
+        icon: meta.icon,
     };
 }
 
@@ -206,9 +251,38 @@ function toDateKey(date: Date | string | null | undefined): string | null {
     return `${year}-${month}-${day}`;
 }
 
+/** Verifica se due date appartengono al medesimo giorno solare */
+function isSameDay(d1: Date, d2: Date): boolean {
+    return (
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate()
+    );
+}
+
+/** Calcola l'inizio e la fine della settimana (Lunedì-Domenica) per una data */
+function getWeekBounds(date: Date): { start: Date; end: Date; weekNumber: number } {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // Calcolo numero settimana (ISO 8601)
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((d.getTime() - jan1.getTime()) / (24 * 60 * 60 * 1000));
+    const weekNumber = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
+
+    return { start: monday, end: sunday, weekNumber };
+}
+
 /**
- * Converte le anagrafiche GdM (DeceasedProfile) con birthDate, deathDate e plannedDeliveryDates
- * in oggetti CalendarOrder visualizzabili sul calendario come date/ricorrenze GdM.
+ * Converte le anagrafiche GdM (DeceasedProfile) in oggetti CalendarOrder.
  */
 function buildGdmCalendarItems(
     deceasedProfiles: any[],
@@ -223,7 +297,7 @@ function buildGdmCalendarItems(
         const cemetery = profile.cemeteryName || '';
         const city = profile.cemeteryCity || '';
 
-        // 1. Date Pianificate dall'utente nel GdM (plannedDeliveryDates: string[])
+        // 1. Date Pianificate sul GdM
         if (Array.isArray(profile.plannedDeliveryDates)) {
             profile.plannedDeliveryDates.forEach((dStr: string) => {
                 if (!dStr || typeof dStr !== 'string') return;
@@ -244,7 +318,7 @@ function buildGdmCalendarItems(
             });
         }
 
-        // 2. Anniversario Nascita GdM (birthDate)
+        // 2. Anniversario Nascita GdM
         if (profile.birthDate) {
             const bDate = new Date(profile.birthDate);
             if (!isNaN(bDate.getTime())) {
@@ -268,7 +342,7 @@ function buildGdmCalendarItems(
             }
         }
 
-        // 3. Anniversario Morte/Ricorrenza GdM (deathDate)
+        // 3. Anniversario Morte/Ricorrenza GdM
         if (profile.deathDate) {
             const dDate = new Date(profile.deathDate);
             if (!isNaN(dDate.getTime())) {
@@ -296,6 +370,8 @@ function buildGdmCalendarItems(
     return items;
 }
 
+type ViewModeType = 'day' | 'week' | 'month' | 'year';
+
 export default function OrdersCalendar({
     orders = [],
     florists = [],
@@ -306,9 +382,8 @@ export default function OrdersCalendar({
     darkMode = false,
 }: OrdersCalendarProps) {
     const today = useMemo(() => new Date(), []);
-    const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
-    const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth()); // 0..11
-    const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
+    const [focusedDate, setFocusedDate] = useState<Date>(today);
+    const [viewMode, setViewMode] = useState<ViewModeType>('month');
     const [liveOrders, setLiveOrders] = useState<CalendarOrder[]>(orders);
 
     useEffect(() => {
@@ -335,37 +410,50 @@ export default function OrdersCalendar({
     const [selectedDateForNewOrder, setSelectedDateForNewOrder] = useState<Date | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    // Navigazione Mese
-    const handlePrevMonth = () => {
-        if (currentMonth === 0) {
-            setCurrentMonth(11);
-            setCurrentYear((y) => y - 1);
-        } else {
-            setCurrentMonth((m) => m - 1);
-        }
+    // Controls per la navigazione temporale avanti/indietro
+    const handlePrev = () => {
+        setFocusedDate((prev) => {
+            const next = new Date(prev);
+            if (viewMode === 'day') {
+                next.setDate(next.getDate() - 1);
+            } else if (viewMode === 'week') {
+                next.setDate(next.getDate() - 7);
+            } else if (viewMode === 'month') {
+                next.setMonth(next.getMonth() - 1);
+            } else if (viewMode === 'year') {
+                next.setFullYear(next.getFullYear() - 1);
+            }
+            return next;
+        });
     };
 
-    const handleNextMonth = () => {
-        if (currentMonth === 11) {
-            setCurrentMonth(0);
-            setCurrentYear((y) => y + 1);
-        } else {
-            setCurrentMonth((m) => m + 1);
-        }
+    const handleNext = () => {
+        setFocusedDate((prev) => {
+            const next = new Date(prev);
+            if (viewMode === 'day') {
+                next.setDate(next.getDate() + 1);
+            } else if (viewMode === 'week') {
+                next.setDate(next.getDate() + 7);
+            } else if (viewMode === 'month') {
+                next.setMonth(next.getMonth() + 1);
+            } else if (viewMode === 'year') {
+                next.setFullYear(next.getFullYear() + 1);
+            }
+            return next;
+        });
     };
 
-    const handleToday = () => {
-        setCurrentYear(today.getFullYear());
-        setCurrentMonth(today.getMonth());
+    const handleTodayReset = () => {
+        setFocusedDate(new Date());
     };
 
-    // Genera lista unificata Ordini Reali + Ricorrenze / Date GdM degli Utenti
+    // Genera lista unificata Ordini + Eventi GdM
     const allCalendarItems = useMemo(() => {
-        const gdmItems = buildGdmCalendarItems(deceasedProfiles, currentYear);
+        const gdmItems = buildGdmCalendarItems(deceasedProfiles, focusedDate.getFullYear());
         return [...liveOrders, ...gdmItems];
-    }, [liveOrders, deceasedProfiles, currentYear]);
+    }, [liveOrders, deceasedProfiles, focusedDate]);
 
-    // Mappa degli ordini ed eventi GdM indicizzati per YYYY-MM-DD
+    // Mappa degli ordini ed eventi GdM per YYYY-MM-DD
     const ordersByDateKey = useMemo(() => {
         const map = new Map<string, CalendarOrder[]>();
         allCalendarItems.forEach((item) => {
@@ -378,14 +466,63 @@ export default function OrdersCalendar({
         return map;
     }, [allCalendarItems]);
 
-    // Genera la griglia dei giorni per il mese corrente (incluso offset Lun-Dom)
-    const calendarDays = useMemo(() => {
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    // Titolo dinamico del periodo in base alla vista temporale
+    const periodTitle = useMemo(() => {
+        if (viewMode === 'day') {
+            const isTod = isSameDay(focusedDate, today);
+            const dateStr = focusedDate.toLocaleDateString('it-IT', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+            });
+            return isTod ? `Oggi: ${dateStr}` : dateStr;
+        }
+        if (viewMode === 'week') {
+            const { start, end, weekNumber } = getWeekBounds(focusedDate);
+            const startStr = `${start.getDate()} ${MONTH_NAMES_IT[start.getMonth()].slice(0, 3)}`;
+            const endStr = `${end.getDate()} ${MONTH_NAMES_IT[end.getMonth()].slice(0, 3)} ${end.getFullYear()}`;
+            return `Settimana ${weekNumber} (${startStr} - ${endStr})`;
+        }
+        if (viewMode === 'month') {
+            return `${MONTH_NAMES_IT[focusedDate.getMonth()]} ${focusedDate.getFullYear()}`;
+        }
+        return `Anno ${focusedDate.getFullYear()}`;
+    }, [viewMode, focusedDate, today]);
 
-        // In Italia la settimana inizia di Lunedì (0=Lun, 6=Dom)
+    // Ordini del giorno per vista OGGI
+    const dayOrders = useMemo(() => {
+        const key = toDateKey(focusedDate);
+        return key ? ordersByDateKey.get(key) || [] : [];
+    }, [focusedDate, ordersByDateKey]);
+
+    // Giorni per vista SETTIMANA (Lunedì -> Domenica)
+    const weekDays = useMemo(() => {
+        const { start } = getWeekBounds(focusedDate);
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            const key = toDateKey(d)!;
+            days.push({
+                date: d,
+                dateKey: key,
+                isToday: isSameDay(d, today),
+                orders: ordersByDateKey.get(key) || [],
+            });
+        }
+        return days;
+    }, [focusedDate, today, ordersByDateKey]);
+
+    // Giorni per vista MESE
+    const monthCalendarDays = useMemo(() => {
+        const year = focusedDate.getFullYear();
+        const month = focusedDate.getMonth();
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+
         let firstDayIndex = firstDayOfMonth.getDay() - 1;
-        if (firstDayIndex === -1) firstDayIndex = 6; // Domenica
+        if (firstDayIndex === -1) firstDayIndex = 6;
 
         const daysInMonth = lastDayOfMonth.getDate();
         const days: Array<{
@@ -396,66 +533,169 @@ export default function OrdersCalendar({
             orders: CalendarOrder[];
         }> = [];
 
-        // Giorni del mese precedente per riempire la prima riga
-        const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
         for (let i = firstDayIndex - 1; i >= 0; i--) {
-            const prevDate = new Date(currentYear, currentMonth - 1, prevMonthLastDay - i);
+            const prevDate = new Date(year, month - 1, prevMonthLastDay - i);
             const dateKey = toDateKey(prevDate)!;
             days.push({
                 date: prevDate,
                 dateKey,
                 isCurrentMonth: false,
-                isToday: dateKey === toDateKey(today),
+                isToday: isSameDay(prevDate, today),
                 orders: ordersByDateKey.get(dateKey) || [],
             });
         }
 
-        // Giorni del mese corrente
         for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
-            const currDate = new Date(currentYear, currentMonth, dayNum);
+            const currDate = new Date(year, month, dayNum);
             const dateKey = toDateKey(currDate)!;
             days.push({
                 date: currDate,
                 dateKey,
                 isCurrentMonth: true,
-                isToday: dateKey === toDateKey(today),
+                isToday: isSameDay(currDate, today),
                 orders: ordersByDateKey.get(dateKey) || [],
             });
         }
 
-        // Giorni del mese successivo per completare la griglia a multipli di 7 (max 42 celle)
         const remainingCells = (7 - (days.length % 7)) % 7;
         for (let i = 1; i <= remainingCells; i++) {
-            const nextDate = new Date(currentYear, currentMonth + 1, i);
+            const nextDate = new Date(year, month + 1, i);
             const dateKey = toDateKey(nextDate)!;
             days.push({
                 date: nextDate,
                 dateKey,
                 isCurrentMonth: false,
-                isToday: dateKey === toDateKey(today),
+                isToday: isSameDay(nextDate, today),
                 orders: ordersByDateKey.get(dateKey) || [],
             });
         }
 
         return days;
-    }, [currentYear, currentMonth, today, ordersByDateKey]);
+    }, [focusedDate, today, ordersByDateKey]);
 
-    // Lista per vista Agenda (ordini ed eventi GdM del mese corrente ordinati per data)
-    const agendaOrders = useMemo(() => {
-        const list: Array<{ dateKey: string; date: Date; order: CalendarOrder }> = [];
-        calendarDays.forEach((day) => {
-            if (day.isCurrentMonth && day.orders.length > 0) {
-                day.orders.forEach((o) => {
-                    list.push({ dateKey: day.dateKey, date: day.date, order: o });
-                });
-            }
+    // Mesi per vista ANNO
+    const yearMonthsSummary = useMemo(() => {
+        const year = focusedDate.getFullYear();
+        return MONTH_NAMES_IT.map((mName, mIdx) => {
+            const monthStart = new Date(year, mIdx, 1);
+            const monthEnd = new Date(year, mIdx + 1, 0);
+            let total = 0;
+            let completed = 0;
+            let active = 0;
+
+            allCalendarItems.forEach((ord) => {
+                const d = ord.deliveryDate ? new Date(ord.deliveryDate) : ord.createdAt ? new Date(ord.createdAt) : null;
+                if (d && d.getFullYear() === year && d.getMonth() === mIdx) {
+                    total += 1;
+                    const status = (ord.status || '').toUpperCase();
+                    if (status === 'COMPLETED' || status === 'DELIVERED') {
+                        completed += 1;
+                    } else if (status !== 'CANCELLED') {
+                        active += 1;
+                    }
+                }
+            });
+
+            return {
+                monthIndex: mIdx,
+                monthName: mName,
+                total,
+                completed,
+                active,
+                isCurrentMonth: today.getFullYear() === year && today.getMonth() === mIdx,
+            };
         });
-        return list.sort((a, b) => a.date.getTime() - b.date.getTime());
-    }, [calendarDays]);
+    }, [focusedDate, allCalendarItems, today]);
 
     const openNewOrderModalForDate = (date: Date) => {
         setSelectedDateForNewOrder(date);
         setIsCreateModalOpen(true);
+    };
+
+    /** Render della card programma per un singolo ordine */
+    const renderOrderProgramCard = (ord: CalendarOrder) => {
+        const cat = getCategoryBadge(ord.orderNumber, ord.isGdm, ord.gdmType);
+        const statusMeta = getOrderStatusMeta(ord.status, ord.isGdm, ord.gdmType);
+        const StatusIcon = statusMeta.icon;
+
+        const productList =
+            ord.items && ord.items.length > 0
+                ? ord.items.map((i) => `${i.quantity || 1}x ${i.product?.name || 'Omaggio'}`).join(', ')
+                : 'Omaggio Floreale Programmato';
+
+        const floristName = ord.partner?.shopName || ord.partner?.ownerName || 'Fiorista Territoriale';
+        const floristStatus = ord.status === 'ACCEPTED' ? 'Accettato dal Fiorista' : ord.status === 'DELIVERED' || ord.status === 'COMPLETED' ? 'Consegna Effettuata' : 'In Assegnazione';
+
+        return (
+            <div
+                key={ord.id}
+                onClick={() => setSelectedOrder(ord)}
+                className="p-4 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 bg-white dark:bg-slate-900 shadow-2xs hover:shadow-md transition-all cursor-pointer space-y-3 group"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-md text-xs font-mono font-bold border ${cat.badgeClass}`}>
+                            {ord.orderNumber || 'GdM'}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusMeta.badgeClass}`}>
+                            <StatusIcon size={12} /> {statusMeta.label}
+                        </span>
+                    </div>
+                    <div className="text-xs font-semibold text-gray-500 dark:text-slate-400 flex items-center gap-1">
+                        <Clock size={13} className="text-gray-400 shrink-0" />
+                        {ord.deliveryDate
+                            ? new Date(ord.deliveryDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) !== '00:00'
+                                ? `Fascia Oraria: ${new Date(ord.deliveryDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+                                : 'Giornata Intera'
+                            : 'Fascia Oraria da Definire'}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    {/* Defunto & Cimitero */}
+                    <div>
+                        <span className="font-bold text-gray-400 uppercase tracking-wider text-[10px] block mb-0.5">
+                            Defunto & Cimitero
+                        </span>
+                        <p className="font-bold text-gray-900 dark:text-slate-100 text-sm group-hover:text-indigo-600 transition-colors">
+                            🕊️ {ord.deceasedName || 'Defunto non specificato'}
+                        </p>
+                        <p className="text-gray-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <MapPin size={12} className="text-gray-400 shrink-0" />
+                            {[ord.cemeteryName, ord.cemeteryCity].filter(Boolean).join(', ') || 'Cimitero non specificato'}
+                        </p>
+                    </div>
+
+                    {/* Prodotto Floreale */}
+                    <div>
+                        <span className="font-bold text-gray-400 uppercase tracking-wider text-[10px] block mb-0.5">
+                            Omaggio Floreale
+                        </span>
+                        <p className="font-semibold text-gray-800 dark:text-slate-200 truncate" title={productList}>
+                            🌸 {productList}
+                        </p>
+                        <p className="text-gray-400 text-[11px] mt-0.5">
+                            Acquirente: {ord.buyerFullName || ord.customerPhone || 'Cliente'}
+                        </p>
+                    </div>
+
+                    {/* Fiorista Assegnato */}
+                    <div>
+                        <span className="font-bold text-gray-400 uppercase tracking-wider text-[10px] block mb-0.5">
+                            Fiorista Incaricato
+                        </span>
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-1">
+                            <Building2 size={13} className="text-indigo-500 shrink-0" />
+                            {floristName}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5">
+                            Stato: <span className="font-medium text-gray-700 dark:text-slate-300">{floristStatus}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -464,83 +704,221 @@ export default function OrdersCalendar({
                 darkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
             }`}
         >
-            {/* INTESTAZIONE CALENDARIO */}
-            <div className="p-4 md:p-5 border-b border-gray-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/80">
+            {/* INTESTAZIONE E CONTROLLI VISTA TEMPORALE */}
+            <div className="p-4 md:p-5 border-b border-gray-100 dark:border-slate-700 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/80">
+                
+                {/* Titolo Periodo con Frecce Navigazione e Reset Oggi */}
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-fm-gold/10 text-fm-gold">
-                        <CalendarIcon size={20} />
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <CalendarIcon size={22} />
                     </div>
                     <div>
-                        <h3 className="font-display font-bold text-lg leading-tight flex items-center gap-2">
-                            <span>{MONTH_NAMES_IT[currentMonth]} {currentYear}</span>
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Ordini di Consegna e Date Commemorative GdM
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                onClick={handlePrev}
+                                className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200 transition-colors shadow-2xs"
+                                title="Periodo precedente"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200 transition-colors shadow-2xs"
+                                title="Periodo successivo"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            
+                            <h3 className="font-display font-bold text-lg leading-tight text-gray-900 dark:text-slate-100 capitalize">
+                                {periodTitle}
+                            </h3>
+
+                            <button
+                                onClick={handleTodayReset}
+                                className="ml-1 px-2.5 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-lg transition-colors shadow-2xs"
+                            >
+                                Oggi
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Programma consegne floreali cimiteriali e ricorrenze del Giardino della Memoria
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Pulsanti Navigazione Mese */}
-                    <div className="flex items-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
+                {/* Selettore Vista Temporale (OGGI / Settimana / Mese / Anno) */}
+                <div className="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+                    <div className="flex items-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-2xs text-xs font-semibold">
                         <button
-                            onClick={handlePrevMonth}
-                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-600 dark:text-slate-300 transition-colors"
-                            title="Mese precedente"
+                            onClick={() => setViewMode('day')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${
+                                viewMode === 'day'
+                                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'
+                            }`}
                         >
-                            <ChevronLeft size={18} />
+                            OGGI
                         </button>
                         <button
-                            onClick={handleToday}
-                            className="px-2.5 py-1 text-xs font-bold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+                            onClick={() => setViewMode('week')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${
+                                viewMode === 'week'
+                                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'
+                            }`}
                         >
-                            Oggi
+                            Settimana
                         </button>
-                        <button
-                            onClick={handleNextMonth}
-                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-600 dark:text-slate-300 transition-colors"
-                            title="Mese successivo"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
-
-                    {/* Switcher Mese / Agenda */}
-                    <div className="flex items-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm text-xs font-semibold">
                         <button
                             onClick={() => setViewMode('month')}
-                            className={`px-3 py-1.5 rounded-lg transition-colors ${
+                            className={`px-3 py-1.5 rounded-all ${
                                 viewMode === 'month'
-                                    ? 'bg-slate-900 text-white dark:bg-slate-700'
-                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900'
+                                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'
                             }`}
                         >
-                            Vista Mese
+                            Mese
                         </button>
                         <button
-                            onClick={() => setViewMode('agenda')}
-                            className={`px-3 py-1.5 rounded-lg transition-colors ${
-                                viewMode === 'agenda'
-                                    ? 'bg-slate-900 text-white dark:bg-slate-700'
-                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900'
+                            onClick={() => setViewMode('year')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${
+                                viewMode === 'year'
+                                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                                    : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'
                             }`}
                         >
-                            Agenda ({agendaOrders.length})
+                            Anno
                         </button>
                     </div>
 
-                    {/* Nuova Pianificazione */}
                     <button
-                        onClick={() => openNewOrderModalForDate(new Date())}
-                        className="px-3.5 py-1.5 rounded-xl bg-fm-gold hover:bg-yellow-600 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                        onClick={() => openNewOrderModalForDate(focusedDate)}
+                        className="px-3.5 py-2 rounded-xl bg-fm-gold hover:bg-yellow-600 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
                     >
-                        <Plus size={14} />
-                        <span>Pianifica</span>
+                        <Plus size={15} />
+                        <span>Nuovo Ordine</span>
                     </button>
                 </div>
             </div>
 
-            {/* VISTA MESE */}
+            {/* LEGENDA STATI ORDINE UFFICIALE */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 py-2.5 px-4 bg-slate-50/80 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-800 text-xs">
+                <span className="font-bold text-gray-500 dark:text-slate-400 uppercase text-[10px] tracking-wider shrink-0 flex items-center gap-1">
+                    <Filter size={11} /> Legenda Stati:
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" /> In Attesa Fiorista
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500" /> Preso in Carico
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-800 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-purple-500" /> In Consegna
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Consegnato con Foto
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800 text-[11px] font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" /> Anomalia / Annullato
+                </span>
+            </div>
+
+            {/* 1. VISTA OGGI (DAY) */}
+            {viewMode === 'day' && (
+                <div className="p-4 md:p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                            Programma Consegne per {focusedDate.toLocaleDateString('it-IT', { dateStyle: 'full' })}
+                        </h4>
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                            {dayOrders.length} {dayOrders.length === 1 ? 'consegna' : 'consegne'}
+                        </span>
+                    </div>
+
+                    {dayOrders.length === 0 ? (
+                        <div className="py-12 text-center rounded-xl bg-gray-50/50 dark:bg-slate-900/30 border border-dashed border-gray-200 dark:border-slate-800">
+                            <Clock size={28} className="mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+                                Nessuna consegna programmata per questa data.
+                            </p>
+                            <button
+                                onClick={() => openNewOrderModalForDate(focusedDate)}
+                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                            >
+                                <Plus size={14} /> Pianifica ordine per oggi
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {dayOrders.map(renderOrderProgramCard)}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 2. VISTA SETTIMANA (WEEK) */}
+            {viewMode === 'week' && (
+                <div className="p-3 md:p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+                        {weekDays.map((wDay) => (
+                            <div
+                                key={wDay.dateKey}
+                                className={`rounded-xl border p-3 flex flex-col min-h-[220px] transition-all ${
+                                    wDay.isToday
+                                        ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/20'
+                                        : 'bg-white dark:bg-slate-900/60 border-gray-100 dark:border-slate-800'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-2">
+                                    <div className="text-left">
+                                        <p className="text-[10px] uppercase font-bold text-gray-400">
+                                            {wDay.date.toLocaleDateString('it-IT', { weekday: 'short' })}
+                                        </p>
+                                        <p className={`text-sm font-extrabold ${wDay.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-slate-100'}`}>
+                                            {wDay.date.getDate()} {MONTH_NAMES_IT[wDay.date.getMonth()].slice(0, 3)}
+                                        </p>
+                                    </div>
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300">
+                                        {wDay.orders.length}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2 flex-1 overflow-y-auto max-h-[300px] custom-scrollbar">
+                                    {wDay.orders.length === 0 ? (
+                                        <p className="text-[11px] text-gray-400 italic text-center py-4">Libero</p>
+                                    ) : (
+                                        wDay.orders.map((ord) => {
+                                            const cat = getCategoryBadge(ord.orderNumber, ord.isGdm, ord.gdmType);
+                                            const statusMeta = getOrderStatusMeta(ord.status, ord.isGdm, ord.gdmType);
+
+                                            return (
+                                                <div
+                                                    key={ord.id}
+                                                    onClick={() => setSelectedOrder(ord)}
+                                                    className={`p-2 rounded-lg border text-xs cursor-pointer hover:scale-[1.02] transition-all ${cat.badgeClass}`}
+                                                >
+                                                    <div className="flex items-center justify-between font-bold text-[11px]">
+                                                        <span>{ord.orderNumber || 'GdM'}</span>
+                                                        <span className={`w-2 h-2 rounded-full ${statusMeta.dotClass}`} />
+                                                    </div>
+                                                    <p className="font-semibold truncate text-gray-900 dark:text-slate-100 mt-1">
+                                                        🕊️ {ord.deceasedName || 'Defunto'}
+                                                    </p>
+                                                    <p className="text-[10px] opacity-80 truncate">
+                                                        {ord.cemeteryCity || 'Cimitero'}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 3. VISTA MESE (MONTH) */}
             {viewMode === 'month' && (
                 <div className="p-3 md:p-4">
                     {/* Intestazione giorni della settimana */}
@@ -557,9 +935,9 @@ export default function OrdersCalendar({
                         ))}
                     </div>
 
-                    {/* Griglia giorni */}
+                    {/* Griglia giorni mese */}
                     <div className="grid grid-cols-7 gap-1 md:gap-2">
-                        {calendarDays.map((day, idx) => {
+                        {monthCalendarDays.map((day, idx) => {
                             const hasOrders = day.orders.length > 0;
                             return (
                                 <div
@@ -571,20 +949,19 @@ export default function OrdersCalendar({
                                             openNewOrderModalForDate(day.date);
                                         }
                                     }}
-                                    className={`min-h-[75px] md:min-h-[100px] p-1.5 md:p-2 rounded-xl border transition-all flex flex-col justify-between cursor-pointer group ${
+                                    className={`min-h-[75px] md:min-h-[105px] p-1.5 md:p-2 rounded-xl border transition-all flex flex-col justify-between cursor-pointer group ${
                                         day.isToday
-                                            ? 'border-fm-gold ring-2 ring-fm-gold/30 bg-amber-50/20 dark:bg-amber-950/20'
+                                            ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-indigo-950/20'
                                             : day.isCurrentMonth
                                             ? 'bg-white dark:bg-slate-900/60 border-gray-100 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
                                             : 'bg-gray-50/50 dark:bg-slate-900/20 border-transparent opacity-40'
                                     }`}
                                 >
-                                    {/* Numero del giorno */}
                                     <div className="flex items-center justify-between w-full">
                                         <span
                                             className={`text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center ${
                                                 day.isToday
-                                                    ? 'bg-fm-gold text-white shadow-sm'
+                                                    ? 'bg-indigo-600 text-white shadow-xs'
                                                     : day.isCurrentMonth
                                                     ? 'text-gray-800 dark:text-slate-200'
                                                     : 'text-gray-400'
@@ -598,18 +975,17 @@ export default function OrdersCalendar({
                                                 e.stopPropagation();
                                                 openNewOrderModalForDate(day.date);
                                             }}
-                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-fm-gold transition-opacity rounded-md hover:bg-gray-100 dark:hover:bg-slate-800"
-                                            title="Pianifica ordine per questo giorno"
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-indigo-600 transition-opacity rounded-md hover:bg-gray-100 dark:hover:bg-slate-800"
+                                            title="Pianifica ordine"
                                         >
                                             <Plus size={12} />
                                         </button>
                                     </div>
 
-                                    {/* Mini Badge Ordini ed Eventi GdM previsti per il giorno */}
                                     <div className="mt-1 space-y-1 overflow-hidden flex-1">
                                         {day.orders.slice(0, 2).map((ord) => {
                                             const cat = getCategoryBadge(ord.orderNumber, ord.isGdm, ord.gdmType);
-                                            const statusInfo = getStatusBadge(ord.status, ord.isGdm, ord.gdmType);
+                                            const statusMeta = getOrderStatusMeta(ord.status, ord.isGdm, ord.gdmType);
 
                                             return (
                                                 <div
@@ -624,7 +1000,7 @@ export default function OrdersCalendar({
                                                     <span className="font-mono font-bold truncate">
                                                         {ord.orderNumber || 'GdM'}
                                                     </span>
-                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.colorClass}`} />
+                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusMeta.dotClass}`} />
                                                 </div>
                                             );
                                         })}
@@ -642,79 +1018,57 @@ export default function OrdersCalendar({
                 </div>
             )}
 
-            {/* VISTA AGENDA */}
-            {viewMode === 'agenda' && (
-                <div className="p-4 max-h-[420px] overflow-y-auto custom-scrollbar">
-                    {agendaOrders.length === 0 ? (
-                        <div className="py-12 text-center text-slate-400 text-sm italic">
-                            Nessun ordine o ricorrenza GdM per il mese di {MONTH_NAMES_IT[currentMonth]} {currentYear}.
-                        </div>
-                    ) : (
-                        <div className="space-y-2.5">
-                            {agendaOrders.map(({ date, order }) => {
-                                const cat = getCategoryBadge(order.orderNumber, order.isGdm, order.gdmType);
-                                const statusInfo = getStatusBadge(order.status, order.isGdm, order.gdmType);
-                                const StatusIcon = statusInfo.icon;
+            {/* 4. VISTA ANNO (YEAR) */}
+            {viewMode === 'year' && (
+                <div className="p-4 md:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {yearMonthsSummary.map((m) => (
+                            <div
+                                key={m.monthIndex}
+                                onClick={() => {
+                                    const nextDate = new Date(focusedDate.getFullYear(), m.monthIndex, 1);
+                                    setFocusedDate(nextDate);
+                                    setViewMode('month');
+                                }}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                                    m.isCurrentMonth
+                                        ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/20'
+                                        : 'bg-white dark:bg-slate-900/60 border-gray-100 dark:border-slate-800 hover:border-gray-300'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2 mb-3">
+                                    <h4 className="font-bold text-base text-gray-900 dark:text-slate-100">
+                                        {m.monthName}
+                                    </h4>
+                                    <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                        {m.total} ordini
+                                    </span>
+                                </div>
 
-                                return (
-                                    <div
-                                        key={order.id}
-                                        onClick={() => setSelectedOrder(order)}
-                                        className="p-3.5 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-fm-gold/50 bg-white dark:bg-slate-900/70 transition-all flex items-center justify-between gap-3 cursor-pointer group shadow-sm hover:shadow"
-                                    >
-                                        <div className="flex items-center gap-3.5 min-w-0">
-                                            {/* Data Badge */}
-                                            <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
-                                                <span className="text-[10px] uppercase font-bold text-slate-400">
-                                                    {WEEKDAY_NAMES_SHORT[date.getDay() === 0 ? 6 : date.getDay() - 1]}
-                                                </span>
-                                                <span className="text-base font-bold text-slate-800 dark:text-slate-100">
-                                                    {date.getDate()}
-                                                </span>
-                                            </div>
-
-                                            {/* Dettagli Ordine / GdM */}
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${cat.badgeClass}`}>
-                                                        {order.orderNumber || 'GdM'}
-                                                    </span>
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border ${statusInfo.textClass}`}>
-                                                        <StatusIcon size={10} />
-                                                        {statusInfo.label}
-                                                    </span>
-                                                </div>
-                                                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate mt-1 group-hover:text-fm-cta transition-colors">
-                                                    🕊️ {order.deceasedName || 'Defunto'}
-                                                </h4>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 mt-0.5">
-                                                    <MapPin size={12} className="shrink-0 text-slate-400" />
-                                                    <span>{[order.cemeteryName, order.cemeteryCity].filter(Boolean).join(', ') || 'Cimitero non specificato'}</span>
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedOrder(order);
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-                                        >
-                                            Dettaglio
-                                        </button>
+                                <div className="space-y-1.5 text-xs">
+                                    <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                                        <span>Consegnati:</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{m.completed}</span>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                                    <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                                        <span>In Lavorazione:</span>
+                                        <span className="font-bold text-indigo-600 dark:text-indigo-400">{m.active}</span>
+                                    </div>
+                                </div>
+
+                                <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold mt-3 flex items-center justify-end gap-1">
+                                    Apri mese <ChevronRight size={12} />
+                                </p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
             {/* QUICK ORDER / GDM DETAIL MODAL */}
             {selectedOrder && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 fade-in"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 fade-in"
                     onClick={() => setSelectedOrder(null)}
                 >
                     <div
@@ -727,8 +1081,8 @@ export default function OrdersCalendar({
                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${getCategoryBadge(selectedOrder.orderNumber, selectedOrder.isGdm, selectedOrder.gdmType).badgeClass}`}>
                                     {selectedOrder.orderNumber || 'GdM'}
                                 </span>
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 border ${getStatusBadge(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).textClass}`}>
-                                    {getStatusBadge(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).label}
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 border ${getOrderStatusMeta(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).badgeClass}`}>
+                                    {getOrderStatusMeta(selectedOrder.status, selectedOrder.isGdm, selectedOrder.gdmType).label}
                                 </span>
                             </div>
                             <button
@@ -740,7 +1094,7 @@ export default function OrdersCalendar({
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 text-left">
                             <div>
                                 <h3 className="text-xl font-display font-bold text-slate-900 dark:text-slate-100">
                                     🕊️ {selectedOrder.deceasedName || 'Defunto non specificato'}
@@ -780,7 +1134,7 @@ export default function OrdersCalendar({
                                 </div>
                             </div>
 
-                            {/* Prodotti Ordinati (se ordine reale) */}
+                            {/* Prodotti Ordinati */}
                             {selectedOrder.items && selectedOrder.items.length > 0 && (
                                 <div className="space-y-1.5">
                                     <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Prodotti Ordinati</span>
@@ -817,7 +1171,7 @@ export default function OrdersCalendar({
                                         openNewOrderModalForDate(dDate);
                                         setSelectedOrder(null);
                                     }}
-                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
                                 >
                                     <Plus size={14} />
                                     <span>Pianifica Ordine per questo GdM</span>
@@ -828,7 +1182,7 @@ export default function OrdersCalendar({
                                         setDrawerOrder(selectedOrder);
                                         setSelectedOrder(null);
                                     }}
-                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                                    className="px-4 py-2 bg-fm-gold hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
                                 >
                                     <Eye size={14} />
                                     <span>Vedi Dossier Completo</span>

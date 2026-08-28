@@ -30,9 +30,15 @@ export function resolveVeoModel(): string {
   );
 }
 
+export function resolveGeminiImageModel(): string {
+  const configured = process.env.MARKETING_IMAGEN_MODEL?.trim();
+  if (!configured || configured.toLowerCase().startsWith('imagen-')) {
+    return 'gemini-2.5-flash-image';
+  }
+  return configured;
+}
+
+/** @deprecated Usa resolveGeminiImageModel — alias per compatibilità reel. */
 export function resolveImagenModel(): string {
-  return (
-    process.env.MARKETING_IMAGEN_MODEL?.trim() ||
-    'imagen-4.0-generate-001'
-  );
+  return resolveGeminiImageModel();
 }

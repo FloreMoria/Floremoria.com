@@ -2,7 +2,7 @@
  * GET /api/cron/publish-campaigns
  *
  * Trigger Vercel Cron giornaliero marketing (05:00 UTC):
- * 1. Pipeline produzione — copy Gemini + Imagen + checkpoint Guardiani (calendario editoriale)
+ * 1. Pipeline produzione — copy Gemini + Gemini Image + checkpoint Guardiani (calendario editoriale)
  * 2. Pubblicazione POSTMAN — 1 contenuto per slot: IG/FB/TikTok post, story giornaliera, reel ogni 3 giorni
  */
 import { NextRequest, NextResponse } from 'next/server';

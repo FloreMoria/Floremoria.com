@@ -4,6 +4,7 @@ import { getVeraTemplate, type VeraTemplateId } from '@/lib/whatsapp/veraTemplat
 import {
     CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL,
 } from '@/lib/vera/customerOrderConfirmCopy';
+import { resolveCustomerDeliveryPhotoBodyTemplate } from '@/lib/whatsapp/deliveryProofCopy';
 import { buildContactInitials } from '@/lib/whatsapp/sessionPhone';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
@@ -41,7 +42,9 @@ export function renderVeraTemplateBodyPreview(
     let template =
         templateId === 'customer_order_confirm'
             ? resolveCustomerOrderConfirmBodyTemplate()
-            : (envKey ? process.env[envKey]?.trim() : '') || spec.bodyCanonical;
+            : templateId === 'customer_delivery_photo' || templateId === 'ordine_completato'
+              ? resolveCustomerDeliveryPhotoBodyTemplate()
+              : (envKey ? process.env[envKey]?.trim() : '') || spec.bodyCanonical;
 
     return bodyParams.reduce((text, param, index) => {
         return text.replace(new RegExp(`\\{\\{${index + 1}\\}\\}`, 'g'), param);

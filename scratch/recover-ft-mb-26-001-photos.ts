@@ -138,7 +138,7 @@ async function main() {
     const sessionPhone = `whatsapp:${phoneE164}`;
     const partnerCity = resolvePartnerCity(order);
     const caption =
-        `Buongiorno Carolina, con immensa gioia Le confermiamo che i fiori nel ricordo di ${order.deceasedName || 'Elio Bertelli'} ` +
+        `Buongiorno Carolina, Le confermiamo che i fiori nel ricordo di ${order.deceasedName || 'Elio Bertelli'} ` +
         `sono stati posati dal nostro partner di ${partnerCity}. In allegato la foto della consegna 🌹`;
 
     for (let i = 0; i < selected.length; i += 1) {

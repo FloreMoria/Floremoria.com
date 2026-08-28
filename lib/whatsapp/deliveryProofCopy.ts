@@ -74,7 +74,7 @@ export function formatDeliverySalutation(buyerFullName?: string | null): string 
 }
 
 /**
- * Testo caldo post-consegna allineato al template Meta `floremoria_consegna_foto_utente`.
+ * Prima riga body post-consegna — allineata al template Meta `floremoria_consegna_foto_utente`.
  */
 export function renderDeliveryProofCaption(params: {
     buyerFullName?: string | null;
@@ -87,13 +87,45 @@ export function renderDeliveryProofCaption(params: {
 
     return (
         `Gentile ${firstName},\n` +
-        `con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}.`
+        `Le confermiamo che abbiamo consegnato i Suoi fiori a ${city} nel ricordo di ${defunto}.`
     );
 }
 
 /** Chiusura ufficiale messaggi post-consegna (SOFIA + ALMA / Meta). */
 export const DELIVERY_CONFIRMATION_CLOSING =
     'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹';
+
+/** Header testo approvato Meta `floremoria_consegna_foto_utente` (param {{1}} = comune). */
+export const CUSTOMER_DELIVERY_PHOTO_HEADER_CANONICAL =
+    'Fiori posati a {{1}} da FloreMoria';
+
+/** Body approvato Meta — unica fonte di verità per registry, fallback e anteprima dashboard. */
+export const CUSTOMER_DELIVERY_PHOTO_BODY_CANONICAL =
+    'Gentile {{1}},\n' +
+    'Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}.\n' +
+    'Le alleghiamo il MagicLink per rivedere tutte le foto nel Suo Giardino della Memoria: {{4}}\n\n' +
+    'Vuole ricevere qui la foto della posa?\n' +
+    DELIVERY_CONFIRMATION_CLOSING;
+
+function isUsableCustomerDeliveryPhotoBody(value: string): boolean {
+    const v = value.trim();
+    if (!v) return false;
+    if (/immensa\s+gioia/i.test(v)) return false;
+    return (
+        /\{\{1\}\}/.test(v) &&
+        /\{\{2\}\}/.test(v) &&
+        /\{\{3\}\}/.test(v) &&
+        /\{\{4\}\}/.test(v) &&
+        /Le confermiamo che abbiamo consegnato/i.test(v)
+    );
+}
+
+/** Body template per anteprima: env solo se allineato a Meta (no formule inappropriate). */
+export function resolveCustomerDeliveryPhotoBodyTemplate(): string {
+    const fromEnv = process.env.WHATSAPP_TEMPLATE_CUSTOMER_DELIVERY_PHOTO_BODY?.trim();
+    if (fromEnv && isUsableCustomerDeliveryPhotoBody(fromEnv)) return fromEnv;
+    return CUSTOMER_DELIVERY_PHOTO_BODY_CANONICAL;
+}
 
 export function renderGiardinoDellaMemoriaLinkMessage(giardinoUrl: string): string {
     return (

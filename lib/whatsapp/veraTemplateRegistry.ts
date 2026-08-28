@@ -4,6 +4,10 @@
  */
 
 import { CUSTOMER_ORDER_CONFIRM_BODY_CANONICAL } from '@/lib/vera/customerOrderConfirmCopy';
+import {
+    CUSTOMER_DELIVERY_PHOTO_BODY_CANONICAL,
+    CUSTOMER_DELIVERY_PHOTO_HEADER_CANONICAL,
+} from '@/lib/whatsapp/deliveryProofCopy';
 
 export type VeraTemplateId =
     | 'proactive_staff'
@@ -189,14 +193,9 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         headerTextParamCount: 1,
         headerSlots: ['partnerCity'],
         library: 'UTENTE',
-        bodyCanonical:
-            'Gentile {{1}},\n' +
-            'con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}.\n' +
-            'Le alleghiamo il MagicLink per rivedere tutte le foto nel Suo Giardino della Memoria: {{4}}\n\n' +
-            'Vuole ricevere qui la foto della posa?\n' +
-            'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹',
+        bodyCanonical: CUSTOMER_DELIVERY_PHOTO_BODY_CANONICAL,
         description:
-            'Header {{1}} comune · body {{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} URL Giardino della Memoria',
+            `Header: ${CUSTOMER_DELIVERY_PHOTO_HEADER_CANONICAL} · body {{1}} nome, {{2}} comune, {{3}} defunto, {{4}} URL GdM`,
     },
     /**
      * @deprecated Preferire customer_delivery_photo (floremoria_consegna_foto_utente).
@@ -212,12 +211,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         bodyParamCount: 4,
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
         library: 'UTENTE',
-        bodyCanonical:
-            'Gentile {{1}},\n' +
-            'con immensa gioia Le confermiamo che abbiamo consegnato i Suoi fiori a {{2}} nel ricordo di {{3}}.\n' +
-            'Le alleghiamo il MagicLink per rivedere tutte le foto nel Suo Giardino della Memoria: {{4}}\n\n' +
-            'Vuole ricevere qui la foto della posa?\n' +
-            'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹',
+        bodyCanonical: CUSTOMER_DELIVERY_PHOTO_BODY_CANONICAL,
         description: 'Legacy alias — stesso Meta name e copy di floremoria_consegna_foto_utente',
     },
     customer_waiting_update: {

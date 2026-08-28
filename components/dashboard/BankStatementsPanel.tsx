@@ -1426,7 +1426,7 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                             {docs.length} file
                         </span>
                     </summary>
-                    <div className="overflow-x-auto border-t border-slate-100">
+                    <div className="dashboard-table-scroll overflow-x-auto border-t border-slate-100">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">
@@ -1570,7 +1570,7 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                     </div>
                 </details>
             ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            <div className="dashboard-table-scroll overflow-x-auto rounded-2xl border border-slate-100">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400">

@@ -224,7 +224,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                 </p>
             )}
 
-            <div className="overflow-x-auto rounded-xl border border-slate-100 max-h-[520px] overflow-y-auto [scrollbar-width:thin]">
+            <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-slate-100 max-h-[520px] overflow-y-auto [scrollbar-width:thin]">
                 <table className="w-full text-left text-[11px] min-w-[1100px]">
                     <thead className="sticky top-0 z-10 bg-slate-50">
                         <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">

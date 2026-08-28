@@ -188,7 +188,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                     <PartnerHistoricalLedgerSnippet partnerId={partner.id} />
 
                     <div className="bg-white border text-left border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto w-full custom-scrollbar">
+                        <div className="dashboard-table-scroll overflow-x-auto w-full custom-scrollbar">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-500">

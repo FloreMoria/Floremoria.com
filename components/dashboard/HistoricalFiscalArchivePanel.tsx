@@ -346,7 +346,7 @@ export default function HistoricalFiscalArchivePanel() {
                 </label>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            <div className="dashboard-table-scroll overflow-x-auto rounded-2xl border border-slate-100">
                 {loading ? (
                     <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
                         <Loader2 className="animate-spin" size={16} />

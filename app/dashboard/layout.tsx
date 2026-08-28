@@ -1,5 +1,5 @@
 import { ReactNode, type CSSProperties } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { Search } from 'lucide-react';
@@ -11,6 +11,15 @@ import DashboardSwipeBack from '@/components/dashboard/DashboardSwipeBack';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import TestModeBanner from '@/components/dashboard/TestModeBanner';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
+
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+    themeColor: '#C0A062',
+};
 
 export const metadata: Metadata = {
     title: 'FloreMoria Dashboard',
@@ -43,13 +52,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     return (
         <div
-            className={`flex flex-col h-screen w-full font-sans antialiased overflow-hidden transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}
-            style={chromeStyle}
+            className={`dashboard-shell flex flex-col min-h-screen h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-hidden font-sans antialiased transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}
+            style={{
+                ...chromeStyle,
+                paddingTop: 'env(safe-area-inset-top, 0px)',
+            }}
         >
 
             {testModeActive ? <TestModeBanner /> : null}
             {/* Top Navbar */}
-            <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 print:hidden">
+            <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-white border-b border-gray-200 sticky top-0 z-30 shrink-0 min-w-0 max-w-full print:hidden">
 
                 <div className="flex items-center gap-4 md:gap-8 min-w-0">
                     {/* Brand */}
@@ -113,8 +125,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </header>
 
             {/* Dynamic Page Content */}
-            <main className={`flex-1 overflow-y-auto overflow-x-hidden ${userRole === 'USER' ? 'p-0' : 'p-4 md:p-6 lg:p-8'} relative w-full bg-white z-10 custom-scrollbar`}>
-                {children}
+            <main
+                className={`flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden relative w-full bg-white z-10 custom-scrollbar ${userRole === 'USER' ? 'p-0 dashboard-main-fullbleed' : 'p-4 md:p-6 lg:p-8 dashboard-main-padded'}`}
+                style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
+            >
+                <div className="w-full min-w-0 max-w-full overflow-x-hidden">{children}</div>
             </main>
 
             <StaffAlertPoller />

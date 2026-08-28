@@ -324,7 +324,7 @@ export default function ClientDeceasedTable({
             ) : null}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto sm:overflow-x-visible">
+                <div className="dashboard-table-scroll overflow-x-auto sm:overflow-x-visible">
                     <table className="w-full text-left border-collapse table-fixed text-xs">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wider">

@@ -60,7 +60,7 @@ export default function PartnerLinkedAgenciesCard({ agencies, partnerName }: Par
                     </p>
                 </div>
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-2xs">
+                <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-2xs">
                     <table className="w-full text-sm text-left">
                         <thead>
                             <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] uppercase tracking-wider font-bold text-gray-500">

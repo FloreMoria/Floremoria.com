@@ -367,7 +367,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     {error}
                 </div>
             )}
-            <div className="overflow-x-auto max-h-[720px] overflow-y-auto [scrollbar-width:thin]">
+            <div className="dashboard-table-scroll overflow-x-auto max-h-[720px] overflow-y-auto [scrollbar-width:thin]">
                 <table className="w-full text-left border-collapse min-w-[1100px]">
                     <thead className="sticky top-0 z-10">
                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">

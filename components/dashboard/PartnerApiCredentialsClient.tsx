@@ -220,7 +220,7 @@ export default function PartnerApiCredentialsClient({ partners, initialCredentia
                 <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/80">
                     <h2 className="text-lg font-semibold text-gray-900">Credenziali esistenti</h2>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="dashboard-table-scroll overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
                             <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
@@ -307,7 +307,7 @@ export default function PartnerApiCredentialsClient({ partners, initialCredentia
 
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-700">
                 <p className="font-semibold text-gray-900 mb-2">Esempio richiesta (server del partner)</p>
-                <pre className="overflow-x-auto text-xs leading-relaxed text-gray-800">
+                <pre className="dashboard-table-scroll overflow-x-auto text-xs leading-relaxed text-gray-800">
 {`curl -X POST "https://tuodominio.it/api/external/order-data" \\
   -H "X-Florem-Api-Key: ${newSecret?.publicId ?? 'fmp_…'}" \\
   -H "Authorization: Bearer ${newSecret?.secret ?? 'fms_…'}" \\

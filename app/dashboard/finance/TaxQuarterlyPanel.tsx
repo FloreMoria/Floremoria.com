@@ -346,7 +346,7 @@ export default function TaxQuarterlyPanel() {
                                 Ricevute archiviate: {report.summary.receiptCount}
                             </span>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="dashboard-table-scroll overflow-x-auto">
                             <table className="w-full text-left text-xs min-w-[1280px]">
                                 <thead>
                                     <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 bg-white">
@@ -436,7 +436,7 @@ export default function TaxQuarterlyPanel() {
                                 Fatture Mensili Stripe (commissioni)
                             </h4>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="dashboard-table-scroll overflow-x-auto">
                             <table className="w-full text-left text-sm min-w-[520px]">
                                 <thead>
                                     <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100">
@@ -521,7 +521,7 @@ export default function TaxQuarterlyPanel() {
                                 Scarica CSV
                             </button>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="dashboard-table-scroll overflow-x-auto">
                             <table className="w-full text-left text-sm min-w-[520px]">
                                 <thead>
                                     <tr className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100">

@@ -673,7 +673,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
             )}
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-6 border-b border-gray-200 overflow-x-auto custom-scrollbar">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-gray-200">
                 <button onClick={() => setCurrentFilter('TUTTI')} className={`pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${currentFilter === 'TUTTI' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}`}>Tutti ({activeBaseList.length})</button>
                 {statusTabOrder.map(st => {
                     const count = activeBaseList.filter(o => o.status === st).length;
@@ -688,7 +688,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
 
             {/* Table Card */}
             <div className="bg-white border text-left border-gray-200 rounded-3xl shadow-sm overflow-hidden mt-6">
-                <div className="overflow-x-auto w-full">
+                <div className="dashboard-table-scroll overflow-x-auto w-full">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">

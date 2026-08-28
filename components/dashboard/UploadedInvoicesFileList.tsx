@@ -49,7 +49,7 @@ type InvoiceDetailExtended = InvoiceDetail & {
 };
 
 const SCROLL_TABLE =
-    'overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
+    'dashboard-table-scroll overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
 
 function formatBytes(n: number): string {
     if (!n || n < 0) return '—';

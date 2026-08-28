@@ -401,7 +401,7 @@ export default function OffersManagerClient() {
             {loading && <span className="text-xs text-gray-500">Aggiornamento...</span>}
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="dashboard-table-scroll overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>

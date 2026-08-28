@@ -277,7 +277,7 @@ export default function RolesMatrixClient() {
 
             {/* MATRICE DEI PERMESSI - Tabellone Orizzontale Scrollabile */}
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200/60 overflow-hidden relative">
-                <div className="overflow-x-auto w-full custom-scrollbar">
+                <div className="dashboard-table-scroll overflow-x-auto w-full custom-scrollbar">
                     <table className="w-full text-left font-body">
                         <thead>
                             <tr className="bg-gray-50/80 border-b-2 border-gray-200">

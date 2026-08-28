@@ -489,7 +489,7 @@ export default function FinanceDashboardPage() {
                             </span>
                         </p>
                     </div>
-                    <div className="shrink-0 font-mono text-sm space-y-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 min-w-[260px]">
+                    <div className="shrink-0 w-full sm:w-auto font-mono text-sm space-y-2 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 sm:min-w-[260px]">
                         <div>
                             <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
                                 Istituto
@@ -974,7 +974,7 @@ export default function FinanceDashboardPage() {
                                             Aggiorna logs
                                         </button>
                                     </div>
-                                    <div className="overflow-x-auto border-t border-slate-100 p-5">
+                                    <div className="dashboard-table-scroll overflow-x-auto border-t border-slate-100 p-5">
                                         <table className="w-full text-left border-collapse min-w-[800px]">
                                             <thead>
                                                 <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -1104,7 +1104,7 @@ export default function FinanceDashboardPage() {
                                 </div>
                             )}
 
-                            <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                            <div className="dashboard-table-scroll overflow-x-auto rounded-2xl border border-slate-100">
                                 <table className="w-full text-left border-collapse min-w-[800px]">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">

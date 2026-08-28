@@ -399,7 +399,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 }`}
             >
                 <AlertTriangle className="shrink-0 mt-0.5" size={18} />
-                <div className="text-sm flex-1">
+                <div className="text-sm flex-1 min-w-0">
                     <p className="font-semibold">Registro fatture / ricevute fioristi</p>
                     <p className="text-xs mt-0.5 opacity-90">
                         {rows.length} ordini con compenso · {waitingCount} in attesa documento
@@ -469,7 +469,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                     Nessun record per il filtro selezionato.
                 </div>
             ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-slate-200">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                             <tr>

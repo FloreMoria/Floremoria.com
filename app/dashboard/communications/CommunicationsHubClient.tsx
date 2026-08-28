@@ -96,8 +96,8 @@ export default function CommunicationsHubClient({ initialProofs, isDashboardAdmi
   ];
 
   return (
-    <div className="space-y-6 md:space-y-12">
-      <div className="bg-white rounded-none md:rounded-[32px] shadow-none md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-y md:border border-[#EAE3D9] overflow-hidden font-body -mx-4 md:mx-0">
+    <div className="space-y-6 md:space-y-12 max-w-full min-w-0 overflow-x-hidden">
+      <div className="bg-white rounded-none md:rounded-[32px] shadow-none md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-y md:border border-[#EAE3D9] overflow-hidden font-body max-w-full -mx-4 md:mx-0">
         <div className="px-3 pt-3 md:px-8 md:pt-8">
           <StaffPushNotifications />
         </div>
@@ -456,7 +456,7 @@ function VisioneTab({
           </div>
         </div>
       )}
-      <div className="flex border-0 md:border border-[#EAE3D9] rounded-none md:rounded-3xl overflow-hidden h-[calc(100dvh-110px)] min-h-[440px] md:h-[680px] bg-[#FAF9F6] shadow-none md:shadow-sm">
+      <div className="flex border-0 md:border border-[#EAE3D9] rounded-none md:rounded-3xl overflow-hidden h-[calc(100dvh-110px)] min-h-[440px] md:h-[680px] bg-[#FAF9F6] shadow-none md:shadow-sm min-w-0 max-w-full">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
         <div
@@ -1066,7 +1066,7 @@ function ControlloTab() {
               <span>Nessun errore FAILED registrato nel campione analizzato.</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="dashboard-table-scroll overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#EAE3D9] text-[#6F6F6F] text-xs uppercase tracking-wider font-semibold">
@@ -1127,7 +1127,7 @@ function ControlloTab() {
           ) : data.gdmOpens.length === 0 ? (
             <div className="py-6 text-center text-gray-400 text-sm">Nessuna attività di apertura registrata.</div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="dashboard-table-scroll overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#EAE3D9] text-[#6F6F6F] text-xs uppercase tracking-wider font-semibold">

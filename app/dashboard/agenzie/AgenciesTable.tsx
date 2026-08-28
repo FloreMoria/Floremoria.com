@@ -258,7 +258,7 @@ export default function AgenciesTable({
                 </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                 <table className="min-w-full text-sm">
                     <thead>
                         <tr className="border-b border-gray-100 bg-gray-50 text-left text-[11px] uppercase tracking-wider text-gray-500">

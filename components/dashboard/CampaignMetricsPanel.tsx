@@ -119,7 +119,7 @@ export default function CampaignMetricsPanel({
         <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-100">{error}</div>
       ) : null}
 
-      <div className="overflow-auto max-h-[calc(100vh-220px)] min-h-[300px] relative w-full border-t border-b border-slate-100 bg-white">
+      <div className="dashboard-table-scroll overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] min-h-[300px] relative w-full max-w-full min-w-0 border-t border-b border-slate-100 bg-white">
         <table className="w-full min-w-[1050px] text-sm text-left border-collapse">
           <thead className="sticky top-0 z-20 bg-slate-900 text-slate-100 shadow-md">
             <tr>

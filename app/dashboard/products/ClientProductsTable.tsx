@@ -380,7 +380,7 @@ export default function ClientProductsTable({ initialProducts, initialCategories
 
             {/* Prodotti Table (Full Width) */}
             <div className="bg-white border text-left border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto w-full custom-scrollbar">
+                <div className="dashboard-table-scroll overflow-x-auto w-full custom-scrollbar">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">

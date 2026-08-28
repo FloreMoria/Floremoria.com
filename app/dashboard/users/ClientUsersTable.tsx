@@ -394,7 +394,7 @@ export default function ClientUsersTable({
 
             {/* Users Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="w-full overflow-x-auto lg:overflow-x-visible">
+                <div className="dashboard-table-scroll w-full overflow-x-auto lg:overflow-x-visible">
                     <table className="w-full text-left border-collapse table-auto lg:table-fixed">
                         <thead>
                             <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">

@@ -136,4 +136,41 @@ body {
     body {
         -webkit-tap-highlight-color: transparent;
     }
+
+    .dashboard-shell {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .dashboard-shell main {
+        width: 100%;
+        max-width: 100%;
+    }
 }
+
+/* Scroll orizzontale isolato per tabelle dashboard (mobile) */
+.dashboard-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+@media (max-width: 767px) {
+    .dashboard-shell main.dashboard-main-padded .dashboard-table-scroll {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+.dashboard-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+

@@ -46,7 +46,7 @@ function formatSignedSaldo(cents: number): { text: string; className: string } {
 
 /** Scroll più alto: ~28 righe visibili; resto accessibile con scroll (nessun take nascosto). */
 const BANK_TABLE_SCROLL_CLASS =
-    'max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto';
+    'dashboard-table-scroll max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto';
 
 function originBadge(fileName: string | null | undefined): { label: string; className: string } {
     const n = (fileName || '').toLowerCase();

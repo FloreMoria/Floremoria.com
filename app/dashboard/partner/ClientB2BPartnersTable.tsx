@@ -310,7 +310,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
 
                     {/* Table */}
                     <div className="bg-white border text-left border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto w-full custom-scrollbar">
+                        <div className="dashboard-table-scroll overflow-x-auto w-full custom-scrollbar">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-gray-50/50 border-b border-gray-100 text-gray-500">
@@ -502,7 +502,7 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                         <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/80">
                             <h2 className="text-sm font-bold text-gray-900">Chiavi API B2B Autorizzate</h2>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="dashboard-table-scroll overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead>
                                     <tr className="border-b border-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-500">

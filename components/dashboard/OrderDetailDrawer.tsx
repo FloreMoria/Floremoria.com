@@ -187,7 +187,7 @@ export default function OrderDetailDrawer({
             ></div>
 
             {/* ORDER DETAIL DRAWER */}
-            <div className={`fixed top-16 right-0 w-[50vw] min-w-[320px] max-w-[600px] h-[calc(100vh-4rem)] bg-white shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col translate-x-0`}>
+            <div className={`fixed top-14 right-0 w-full max-w-full sm:w-[50vw] sm:min-w-[320px] sm:max-w-[600px] h-[calc(100dvh-3.5rem)] sm:h-[calc(100vh-4rem)] bg-white shadow-2xl z-50 overflow-y-auto overflow-x-hidden transform transition-transform duration-300 ease-in-out border-l border-gray-200 flex flex-col translate-x-0`}>
                 {isOrderCancelled(localOrder) ? (
                     <div className="shrink-0 border-b border-red-200 bg-red-600 px-6 py-3 text-center text-sm font-bold uppercase tracking-wider text-white">
                         Ordine cancellato — non visibile al fiorista né alle altre bacheche

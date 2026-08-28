@@ -12,11 +12,10 @@ export default async function B2BPartnersPage() {
             where: { deletedAt: null, isB2B: true },
             orderBy: { shopName: 'asc' },
             include: {
-                orders: {
-                    orderBy: { createdAt: 'desc' },
-                    include: {
-                        user: true,
-                        items: { include: { product: true } },
+                _count: {
+                    select: {
+                        referralOrders: true,
+                        orders: true,
                     },
                 },
                 apiCredentials: true,

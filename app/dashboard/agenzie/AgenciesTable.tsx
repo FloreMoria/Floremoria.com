@@ -284,7 +284,12 @@ export default function AgenciesTable({
                             filtered.map((a) => (
                                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                                     <td className="px-4 py-3">
-                                        <p className="font-semibold text-gray-900">{a.shopName}</p>
+                                        <Link
+                                            href={`/dashboard/agenzie/${encodeURIComponent(a.id)}`}
+                                            className="font-semibold text-gray-900 hover:underline"
+                                        >
+                                            {a.shopName}
+                                        </Link>
                                         <p className="text-xs text-gray-400">
                                             {a.uniqueCode || a.id.slice(0, 8)}
                                             {!a.isActive ? ' · inattiva' : ''}
@@ -318,7 +323,7 @@ export default function AgenciesTable({
                                     </td>
                                     <td className="px-4 py-3">
                                         <Link
-                                            href={`/dashboard/orders?agencyId=${encodeURIComponent(a.id)}`}
+                                            href={`/dashboard/agenzie/${encodeURIComponent(a.id)}`}
                                             className="inline-flex items-center gap-1 text-xs font-semibold text-gray-800 hover:underline"
                                         >
                                             {a.ordersCount} <ExternalLink size={12} />

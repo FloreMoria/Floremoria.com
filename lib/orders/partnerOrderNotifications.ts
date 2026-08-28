@@ -121,6 +121,7 @@ export async function sendPartnerOrderNotifications(
             items: { include: { product: true } },
             partner: true,
             agency: true,
+            referralPartner: true,
         },
     });
 
@@ -133,6 +134,7 @@ export async function sendPartnerOrderNotifications(
     }
 
     const agency = order.agency;
+    const referral = order.referralPartner;
     const floristName = order.partner?.shopName ?? null;
     const floristEmail =
         order.partner?.email?.trim() ||
@@ -141,6 +143,8 @@ export async function sendPartnerOrderNotifications(
     const opsTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || DEFAULT_OPS_EMAIL;
     const aggregatorTo =
         agency?.aggregatorNotificationEmail?.trim() ||
+        referral?.aggregatorNotificationEmail?.trim() ||
+        referral?.email?.trim() ||
         order.partnerNotifyEmail?.trim() ||
         DEFAULT_AGGREGATOR_EMAIL;
     const agencyTo = agency?.agencyNotificationEmail?.trim() || null;

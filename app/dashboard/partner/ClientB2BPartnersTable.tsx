@@ -9,7 +9,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export type ExtendedPartner = Partner & { orders?: any[] };
+export type ExtendedPartner = Partner & {
+    orders?: any[];
+    _count?: { referralOrders?: number; orders?: number };
+};
 export type CredentialRow = {
     id: string;
     label: string;
@@ -344,7 +347,13 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                                                             <Globe size={18} className="text-stone-500" />
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <div className="font-bold text-gray-900 text-sm">{partner.shopName}</div>
+                                                            <Link
+                                                                href={`/dashboard/partners/${partner.id}`}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="font-bold text-gray-900 text-sm hover:underline"
+                                                            >
+                                                                {partner.shopName}
+                                                            </Link>
                                                             {partner.pecAddress && (
                                                                 <div className="text-[11px] text-gray-400 font-mono">{partner.pecAddress}</div>
                                                             )}
@@ -360,9 +369,13 @@ export default function ClientB2BPartnersTable({ initialPartners, initialCredent
                                                     {partner.sdiCode && <div><span className="font-semibold">SDI:</span> {partner.sdiCode}</div>}
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
-                                                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-stone-100 text-stone-700 font-bold border border-stone-200 text-xs">
-                                                        {(partner.orders || []).length} ordini
-                                                    </div>
+                                                    <Link
+                                                        href={`/dashboard/partners/${partner.id}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-stone-100 text-stone-700 font-bold border border-stone-200 text-xs hover:bg-stone-200"
+                                                    >
+                                                        {partner._count?.referralOrders ?? (partner.orders || []).length} ordini
+                                                    </Link>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
                                                     <div className="flex items-center justify-center gap-2">

@@ -22,7 +22,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-    title: 'FloreMoria Dashboard',
+    title: {
+        template: '%s | FloreMoria',
+        default: 'Dashboard | FloreMoria',
+    },
     description: 'Sistema gestionale avanzato FloreMoria.',
     manifest: '/manifest-staff.webmanifest',
     appleWebApp: {

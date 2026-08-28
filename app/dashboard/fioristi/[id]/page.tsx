@@ -8,6 +8,17 @@ import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderSharea
 
 import PartnerLinkedAgenciesCard, { type LinkedAgency } from '@/components/dashboard/PartnerLinkedAgenciesCard';
 
+export async function generateMetadata({ params }: { params: { id: string } }) {
+    const { id } = await params;
+    const partner = await prisma.partner.findUnique({
+        where: { id },
+        select: { shopName: true },
+    });
+    return {
+        title: partner?.shopName ? `Scheda Partner (${partner.shopName})` : 'Scheda Partner',
+    };
+}
+
 export default async function FloristDossierPage({ params }: { params: { id: string } }) {
     const { id } = await params;
 

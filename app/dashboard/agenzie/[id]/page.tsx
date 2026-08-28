@@ -9,6 +9,17 @@ import { ArrowLeft, Building2 } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const agency = await prisma.partner.findFirst({
+        where: { id, deletedAt: null, partnerType: 'FUNERAL_AGENCY' },
+        select: { shopName: true },
+    });
+    return {
+        title: agency?.shopName ? `Scheda Agenzia (${agency.shopName})` : 'Scheda Agenzia',
+    };
+}
+
 export default async function AgencyDossierPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
     const testModeActive = await getDashboardTestModeActive();

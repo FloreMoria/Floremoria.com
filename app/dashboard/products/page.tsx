@@ -6,7 +6,7 @@ import { getImagesFromFilesystem } from '@/lib/getImages';
 const prisma = new PrismaClient();
 
 export const metadata = {
-    title: 'Catalogo Prodotti - FloreMoria Dashboard',
+    title: 'Catalogo Prodotti',
 };
 
 // Forziamo dinamicità per evitare la cache di build (così i DB live si vedono subito)

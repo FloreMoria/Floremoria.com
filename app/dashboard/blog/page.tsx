@@ -1,5 +1,9 @@
 import { Pen, Sparkles } from 'lucide-react';
 
+export const metadata = {
+    title: 'Blog & Articoli',
+};
+
 export default function BlogPage() {
     return (
         <div className="max-w-[1200px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

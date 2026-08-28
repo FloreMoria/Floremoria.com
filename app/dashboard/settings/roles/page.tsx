@@ -4,6 +4,10 @@ import RolesMatrixClient from './RolesMatrixClient';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Gestione Ruoli',
+};
+
 export default async function RolesMatrixPage() {
     if (!(await isSessionSuperAdmin())) {
         redirect('/dashboard');

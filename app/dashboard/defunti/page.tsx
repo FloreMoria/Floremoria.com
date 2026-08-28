@@ -7,7 +7,7 @@ import ClientDeceasedTable from './ClientDeceasedTable';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: 'Defunti | FloreMoria Dashboard',
+    title: 'Defunti & Giardino',
 };
 
 export default async function DefuntiPage() {

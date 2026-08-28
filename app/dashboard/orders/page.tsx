@@ -14,7 +14,7 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 const MOCK_FLORIST_ID = 'mock-florist-id';
 
 export const metadata = {
-    title: 'Gestione Ordini - FloreMoria Dashboard',
+    title: 'Ordini',
 };
 
 export default async function OrdersPage({

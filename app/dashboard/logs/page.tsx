@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { floremoriaLogPublicWhere } from '@/lib/floremoriaLogFilters';
 
 export const metadata = {
-    title: 'Log di Sistema | Floremoria Admin',
+    title: 'Diagnostica & Log',
 };
 
 export const dynamic = 'force-dynamic';

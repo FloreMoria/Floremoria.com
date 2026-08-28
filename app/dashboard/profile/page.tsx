@@ -33,6 +33,10 @@ async function getRevenueData(role: string, userId: string | null) {
     return { total: 0, count: 0 };
 }
 
+export const metadata = {
+    title: 'Profilo Utente',
+};
+
 export default async function ProfilePage() {
     const cookieStore = await cookies();
     const userRole = cookieStore.get('fm_user_role')?.value || 'USER';

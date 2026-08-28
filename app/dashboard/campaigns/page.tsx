@@ -2,7 +2,7 @@ import React from 'react';
 import CampaignsDashboardClient from './CampaignsDashboardClient';
 
 export const metadata = {
-  title: 'Social Control & Campaigns | FloreMoria Dashboard',
+  title: 'Campagne Marketing',
   description: 'Manage and oversee automatic social campaigns, editorial themes and metrics.',
 };
 

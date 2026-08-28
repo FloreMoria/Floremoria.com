@@ -5,6 +5,10 @@ import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Partner & Fioristi',
+};
+
 export default async function PartnersPage() {
     const partnersResult = await runDashboardQuery('fioristi/partners', [], () =>
         prisma.partner.findMany({

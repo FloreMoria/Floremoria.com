@@ -6,7 +6,7 @@ import { isDashboardAdminRole } from '@/lib/superAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 export const metadata: Metadata = {
-  title: 'FloreMoria | Communication Hub',
+  title: 'Comunicazioni & Chat',
 };
 
 export const dynamic = 'force-dynamic';

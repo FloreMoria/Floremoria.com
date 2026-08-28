@@ -9,6 +9,10 @@ import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Gestione Utenti',
+};
+
 export default async function UsersPage() {
     const testModeActive = await getDashboardTestModeActive();
 

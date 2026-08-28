@@ -6,9 +6,18 @@ import { notFound } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { isLogHiddenFromDashboard } from '@/lib/floremoriaLogFilters';
 
-export const metadata = {
-    title: 'Memoria Storica | Dettaglio Verbale | Floremoria',
-};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const logId = parseInt(id, 10);
+    if (!isNaN(logId)) {
+        const log = await prisma.floremoriaLog.findUnique({
+            where: { id: logId },
+            select: { topic: true },
+        });
+        if (log?.topic) return { title: `Dettaglio Log (${log.topic})` };
+    }
+    return { title: 'Dettaglio Log' };
+}
 
 export const dynamic = 'force-dynamic';
 

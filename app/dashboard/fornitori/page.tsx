@@ -2,6 +2,10 @@ import prisma from '@/lib/prisma';
 import ClientSuppliersTable from './ClientSuppliersTable';
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Fornitori',
+};
+
 export default async function SuppliersPage() {
     if (!prisma?.supplier) {
         return (

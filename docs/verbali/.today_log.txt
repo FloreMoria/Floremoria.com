@@ -54,3 +54,4 @@
 [2026-08-28 17:20] fix: prisma.config.ts carica .env.local via dotenv; db push Neon DeceasedProfile GPS + schema sync.
 [2026-08-28 17:45] fix: mini-app fiorista link riapribile fino a foto+GPS+submit; schermata completamento post-consegna.
 [2026-08-28 18:00] feat: partnerOrderService B2B API — fee 10%, metriche live, revalidate dashboard, log ingestion.
+[2026-08-28 18:15] feat(dashboard): personalizzazione dinamica dei titoli delle schede browser [Nome Pagina] | FloreMoria — configurato title template '%s | FloreMoria' in layout.tsx ed assegnati i titoli specifici a tutte le sezioni e schede di dettaglio (Panoramica, Ordini, Partner & Fioristi, Scheda Partner, Agenzie, Scheda Agenzia, Finanza & Contabilità, Defunti & Giardino, Comunicazioni & Chat, Catalogo Prodotti, Campagne Marketing, Blog & Articoli, Fornitori, Scheda Fornitore, Diagnostica & Log, Buoni & Offerte, Profilo Utente, Gestione Ruoli, Gestione Utenti, Area Personale).

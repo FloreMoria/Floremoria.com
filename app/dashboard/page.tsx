@@ -11,9 +11,14 @@ import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { floremoriaLogPublicWhere } from '@/lib/floremoriaLogFilters';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import TestModeOverviewBar from '@/components/dashboard/TestModeOverviewBar';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+    title: 'Panoramica',
+};
 
 function loadCSV() {
     try {

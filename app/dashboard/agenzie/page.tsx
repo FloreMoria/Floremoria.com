@@ -6,6 +6,10 @@ import AgenciesTable, { type AgencyRow, type FloristOption } from './AgenciesTab
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Agenzie',
+};
+
 export default async function AgenzieFunebriPage() {
     const agenciesResult = await runDashboardQuery('agenzie/list', [], () =>
         prisma.partner.findMany({

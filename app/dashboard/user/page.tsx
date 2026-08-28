@@ -20,7 +20,7 @@ import GardenSharePanel from '@/components/memorial/GardenSharePanel';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: 'Bacheca Personale | FloreMoria',
+    title: 'Area Personale',
 };
 
 const BACHECA_COOKIE_ROLES: UserRole[] = [UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN];

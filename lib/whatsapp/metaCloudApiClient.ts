@@ -427,14 +427,17 @@ function validateTemplateComponents(
 ): string | null {
     if (options?.expectedHeaderTextParamCount !== undefined) {
         const header = components.find((c) => c.type === 'header');
-        const headerTextCount =
-            header?.parameters?.filter((p) => p.type === 'text').length ?? 0;
-        if (headerTextCount !== options.expectedHeaderTextParamCount) {
-            return `Template Meta: attesi ${options.expectedHeaderTextParamCount} parametri header testo, ricevuti ${headerTextCount}.`;
-        }
-        for (const param of header?.parameters ?? []) {
-            if (param.type === 'text' && !param.text?.trim()) {
-                return 'Parametro header testo vuoto.';
+        const hasImageParam = header?.parameters?.some((p) => p.type === 'image');
+        if (!hasImageParam) {
+            const headerTextCount =
+                header?.parameters?.filter((p) => p.type === 'text').length ?? 0;
+            if (headerTextCount !== options.expectedHeaderTextParamCount) {
+                return `Template Meta: attesi ${options.expectedHeaderTextParamCount} parametri header testo, ricevuti ${headerTextCount}.`;
+            }
+            for (const param of header?.parameters ?? []) {
+                if (param.type === 'text' && !param.text?.trim()) {
+                    return 'Parametro header testo vuoto.';
+                }
             }
         }
     }
@@ -482,7 +485,10 @@ export async function sendWhatsAppTemplateMessage(
 
     const expectedHeaderText = options?.expectedHeaderTextParamCount ?? 0;
     const allowImageHeader = Boolean(options?.allowImageHeader);
-    const headerAllowed = expectedHeaderText > 0 || allowImageHeader;
+    const hasImageHeaderParam = components.some(
+        (c) => c.type === 'header' && c.parameters?.some((p) => p.type === 'image')
+    );
+    const headerAllowed = expectedHeaderText > 0 || allowImageHeader || hasImageHeaderParam;
 
     // Controllo rigido: se il template Meta NON ha header variabile/media,
     // rimuovi QUALSIASI blocco { type: "header" } (anche con parameters).
@@ -505,7 +511,7 @@ export async function sendWhatsAppTemplateMessage(
     if (removedHeaders > 0) {
         console.warn(
             `[meta-cloud-api] Template "${templateName}": rimossi ${removedHeaders} componenti header ` +
-                `(expectedHeaderText=${expectedHeaderText}, allowImageHeader=${allowImageHeader}).`
+                `(expectedHeaderText=${expectedHeaderText}, allowImageHeader=${allowImageHeader}, hasImageHeaderParam=${hasImageHeaderParam}).`
         );
     }
 

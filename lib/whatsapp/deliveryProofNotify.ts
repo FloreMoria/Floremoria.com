@@ -106,6 +106,7 @@ export async function sendDeliveryProofWhatsApp(
             bodyParams,
             {
                 headerTextParams: headerParams,
+                headerImageUrl: input.photoAfterUrl || undefined,
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
                 // Dedup attivo di default: un solo template per ordine / 24h.

@@ -26,7 +26,7 @@ export class VeraTemplateParamError extends Error {
     }
 }
 
-const NAME_SLOT_PATTERN = /name|firstName|floristName|buyerFirstName/i;
+const FIRST_NAME_SLOT_PATTERN = /^(firstName|floristFirstName|buyerFirstName|userFirstName)$/i;
 const MAX_NAME_LEN = META_TEMPLATE_LIMITS.shortName;
 
 function assertShortName(value: string, slot: string): string {
@@ -34,7 +34,7 @@ function assertShortName(value: string, slot: string): string {
     if (!sanitized) {
         throw new VeraTemplateParamError(`Parametro "${slot}" vuoto.`);
     }
-    if (NAME_SLOT_PATTERN.test(slot)) {
+    if (FIRST_NAME_SLOT_PATTERN.test(slot)) {
         const words = sanitized.split(/\s+/).filter(Boolean);
         if (words.length > 3) {
             throw new VeraTemplateParamError(
@@ -73,7 +73,7 @@ export function buildVeraTemplateBodyParams(
             );
             return '-';
         }
-        if (NAME_SLOT_PATTERN.test(slot)) {
+        if (FIRST_NAME_SLOT_PATTERN.test(slot)) {
             return assertShortName(raw, slot);
         }
         return requireText(raw, slot);

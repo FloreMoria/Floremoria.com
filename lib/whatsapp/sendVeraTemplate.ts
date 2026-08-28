@@ -106,10 +106,25 @@ export async function sendVeraTemplate(
     }
 
     const components: WhatsAppTemplateComponent[] = [];
-
-    // Header testo se specificato nelle opzioni o nel registro del template
     const headerParams = options?.headerTextParams || [];
-    if (headerParams.length > 0) {
+
+    // Header immagine se specificato nelle opzioni
+    if (options?.headerImageUrl && options.headerImageUrl.trim()) {
+        const { stripUrlQueryAndFragment } = await import('@/lib/whatsapp/metaPublicImageUrl');
+        const cleanImageLink = stripUrlQueryAndFragment(options.headerImageUrl.trim());
+        if (/^https:\/\//i.test(cleanImageLink)) {
+            components.push({
+                type: 'header',
+                parameters: [
+                    {
+                        type: 'image',
+                        image: { link: cleanImageLink },
+                    },
+                ],
+            });
+        }
+    } else if (headerParams.length > 0) {
+        // Header testo se specificato nelle opzioni o nel registro del template
         components.push({
             type: 'header',
             parameters: headerParams.map((text) => ({

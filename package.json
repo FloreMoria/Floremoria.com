@@ -40,6 +40,7 @@
     "log:seed-operational": "tsx Script/seed-operational-logs.ts",
     "pdf:volantino": "node Script/export-volantino-pdf.mjs",
     "master-key": "tsx scripts/master-key.ts",
+    "partner:key": "tsx scripts/generate-partner-api-key.ts",
     "auth:backfill-users": "tsx scripts/backfill-users-from-orders.ts",
     "auth:migrate-elevated-emails": "tsx scripts/migrate-elevated-user-emails.ts",
     "verify-super-admin": "tsx scripts/verify-super-admin.ts",

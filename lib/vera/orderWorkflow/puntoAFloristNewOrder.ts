@@ -251,6 +251,7 @@ export async function runPuntoAFloristNewOrder(
         cemeteryName: order.cemeteryName,
         cemeteryCity: order.cemeteryCity,
         province: order.deliveryProvince,
+        gravePosition: order.gravePosition,
         ticketMessage: order.ticketMessage,
         items: order.items,
         partnerNotes: order.partner?.internalNotes,

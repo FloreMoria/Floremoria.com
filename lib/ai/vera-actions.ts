@@ -21,6 +21,7 @@ import {
     type VeraAlertType,
 } from '@/lib/vera/operationalAlerts';
 import { sendWhatsAppTextMessage, normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
+import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
 import { sendStaffPushNotification } from '@/lib/push/staffPush';
 
 /** Classi informative per routing fiorista / staff. */
@@ -456,15 +457,28 @@ export async function notifyFloristIfApplicable(
         `${content.trim().slice(0, 400)}\n\n` +
         `— Vera | Staff FloreMoria`;
 
-    const send = await sendWhatsAppTextMessage(phone, body);
-    console.info('[vera-actions] notifyFloristIfApplicable', {
-        orderId,
-        updateType,
-        phone: phone.slice(-4),
-        ok: send.ok,
-    });
+    try {
+        const send = await sendWhatsAppMessage(phone, body, {
+            recipientName: order?.partner?.ownerName || order?.partner?.shopName || 'Fiorista',
+            orderCode,
+            source: 'vera_action_florist_update',
+            userType: 'FLORIST',
+        });
 
-    return { sent: send.ok, blocked: false };
+        console.info('[vera-actions] notifyFloristIfApplicable', {
+            orderId,
+            updateType,
+            phone: phone.slice(-4),
+            ok: send.ok,
+            fallbackExecuted: send.fallbackExecuted,
+            error: send.error,
+        });
+
+        return { sent: send.ok, blocked: false, reason: send.error };
+    } catch (err: any) {
+        console.error('[vera-actions] Errore eccezione in notifyFloristIfApplicable:', err);
+        return { sent: false, blocked: false, reason: err?.message || String(err) };
+    }
 }
 
 function mapAlertReasonToType(reason: string): VeraAlertType {

@@ -169,6 +169,11 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     // Spazio obbligatorio dopo ":" prima dell'URL → link blu + card anteprima WhatsApp.
     const miniAppLine = formatFloristMiniAppInstructionLine(deliveryUrl);
 
+    const gravePositionLabel =
+        input.gravePosition?.trim() && !isUnspecifiedPlaceValue(input.gravePosition)
+            ? input.gravePosition.trim()
+            : 'In aggiornamento dallo Staff';
+
     // Scadenza subito sopra il luogo (cimitero / loculo) per massima visibilità operativa.
     const body =
         `Ciao ${floristName}! 🌸\n` +
@@ -176,6 +181,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         `🕊️ In memoria di: ${deceased}\n` +
         `📅 CONSEGNA : ${deadline.label}\n` +
         `📍 Luogo: ${luogo}\n` +
+        `📍 Posizione nel cimitero: ${gravePositionLabel}\n` +
         `💐 Prodotto: ${prodotto}\n` +
         `➕ Optional / Accessori: ${accessori}\n` +
         `📝 Testo: ${ticket}\n` +

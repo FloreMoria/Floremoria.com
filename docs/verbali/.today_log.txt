@@ -38,3 +38,4 @@
 [2026-08-26 18:48] privacy: bonifica completa Giardino della Memoria (cmt9rswr10005k104jwg0nwjp) — azzeramento coverUrl e deliveryPhotoUrls su DeceasedProfile, eliminazione fisica del file da Vercel Blob e re-sync ordine.
 [2026-08-26 18:55] feat(finance): registro globale fatture fioristi con stati persistenti e badge Fattura/Scontrino.
 [2026-08-26 18:57] feat(finance): tabella globale fatture/ricevute fioristi — filtri stato, badge Fattura (emerald) vs Scontrino (teal), persistenza Order.veraWorkflowFlags.floristDocStatus.
+[2026-08-28 10:21] fix(whatsapp): aggiunta riga posizione cimitero nel primo messaggio fiorista (Meta template var6 e free-text "📍 Posizione nel cimitero:") e fix dispatch messaggi integrativi (uso sendWhatsAppMessage con fallback template 24h, E.164 normalization e gestione sicura eccezioni).

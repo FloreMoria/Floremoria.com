@@ -38,6 +38,8 @@ export interface FloristNuovoOrdineInput {
     province?: string | null;
     /** Indirizzo consegna alternativo se non c'è nome cimitero. */
     deliveryAddress?: string | null;
+    /** Posizione della tomba / loculo nel cimitero. */
+    gravePosition?: string | null;
     ticketMessage?: string | null;
     items: FloristNuovoOrdineItem[];
     partnerNotes?: string | null;
@@ -84,7 +86,7 @@ export function formatFloristComuneParam(input: {
 }
 
 /**
- * {{6}} Luogo (slot Meta accanto a {{5}} comune) — solo toponimo cimitero/indirizzo.
+ * {{6}} Luogo (slot Meta accanto a {{5}} comune) — toponimo cimitero/indirizzo + posizione tomba se disponibile.
  * Mai "Non specificato". Fallback: «Cimitero Comunale di ${city}».
  */
 export function formatFloristLuogoParam(input: {
@@ -92,8 +94,10 @@ export function formatFloristLuogoParam(input: {
     cemeteryCity?: string | null;
     province?: string | null;
     deliveryAddress?: string | null;
+    gravePosition?: string | null;
 }): string {
     const city = isUnspecifiedPlaceValue(input.cemeteryCity) ? '' : stripNoise(input.cemeteryCity);
+    const grave = isUnspecifiedPlaceValue(input.gravePosition) ? '' : stripNoise(input.gravePosition);
 
     let place = '';
     if (!isUnspecifiedPlaceValue(input.cemeteryName)) {
@@ -102,13 +106,23 @@ export function formatFloristLuogoParam(input: {
         place = stripNoise(input.deliveryAddress);
     }
 
+    let luogoBase = '';
     if (place) {
-        if (/^(cimitero|casa funeraria|chiesa|area)\b/i.test(place)) return place;
-        return `Cimitero di ${place}`;
+        luogoBase = /^(cimitero|casa funeraria|chiesa|area)\b/i.test(place) ? place : `Cimitero di ${place}`;
+    } else if (city) {
+        luogoBase = `Cimitero Comunale di ${city}`;
+    } else {
+        luogoBase = '-';
     }
 
-    if (city) return `Cimitero Comunale di ${city}`;
-    return '-';
+    if (luogoBase === '-') {
+        return grave ? `Posizione tomba: ${grave}` : '-';
+    }
+
+    if (grave) {
+        return `${luogoBase} (Posizione: ${grave})`;
+    }
+    return `${luogoBase} (Posizione: In aggiornamento dallo Staff)`;
 }
 
 /**
@@ -120,6 +134,7 @@ export function formatFloristLuogoDisplayLine(input: {
     cemeteryCity?: string | null;
     province?: string | null;
     deliveryAddress?: string | null;
+    gravePosition?: string | null;
 }): string {
     const city = isUnspecifiedPlaceValue(input.cemeteryCity) ? '' : stripNoise(input.cemeteryCity);
     const provSuffix = formatProvinceSuffix(input.province);
@@ -221,6 +236,7 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
             cemeteryCity: input.cemeteryCity,
             province: input.province,
             deliveryAddress: input.deliveryAddress,
+            gravePosition: input.gravePosition,
         }),
         150
     );

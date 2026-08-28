@@ -7,8 +7,7 @@ import { buildFloristDeliveryUrl } from '@/lib/orders/resolveOrderIdentifier';
 import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
 import { formatFloristOrderProductsLabel } from '@/lib/orders/formatFloristProductLabel';
 import {
-    buildOrderOptionalsList,
-    hasPhotoBeforeOption,
+    formatFloristAccessoriesLine,
     type OrderItemLike,
 } from '@/lib/orders/orderOptionals';
 import {
@@ -179,13 +178,14 @@ export function formatFloristMiniAppInstructionLine(url: string): string {
 }
 
 /** {{8}} Accessori. */
-export function formatFloristAccessoriParam(items: OrderItemLike[]): string {
-    const optionals = buildOrderOptionalsList(items).map(stripNoise).filter(Boolean);
-    if (hasPhotoBeforeOption(items)) {
-        optionals.unshift('Foto stato di fatto prima della consegna');
-    }
-    if (!optionals.length) return 'Nessun accessorio extra';
-    return optionals.join(', ');
+export function formatFloristAccessoriParam(
+    items: OrderItemLike[],
+    ticketMessage?: string | null
+): string {
+    return formatFloristAccessoriesLine(items, ticketMessage, {
+        includePhotoBefore: true,
+        photoBeforeLabel: 'Foto stato di fatto prima della consegna',
+    });
 }
 
 /**
@@ -248,7 +248,7 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     const var7 = metaParamOrDash(prodotto, 150);
 
     // Var 8: Accessori (etichetta gestita da template "➕ Optional / Accessori: {{8}}")
-    let rawAccessori = stripNoise(formatFloristAccessoriParam(input.items));
+    let rawAccessori = stripNoise(formatFloristAccessoriParam(input.items, input.ticketMessage));
     rawAccessori = rawAccessori.replace(/^➕\s*Accessori:\s*/i, '').replace(/^➕\s*Optional\s*\/\s*Accessori:\s*/i, '').trim();
     const accessori = rawAccessori && rawAccessori !== '-' ? rawAccessori : 'Nessuno';
     const var8 = metaParamOrDash(accessori, 220);

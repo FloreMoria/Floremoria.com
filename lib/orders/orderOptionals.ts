@@ -4,6 +4,8 @@
  * correttamente a clienti e fioristi.
  */
 
+import { parseTicketMessageParts } from '@/lib/orders/productCustomText';
+
 export interface OrderItemLike {
     quantity?: number | null;
     product: { id?: string | null; slug?: string | null; name?: string | null };
@@ -76,6 +78,68 @@ export function orderHasBigliettinoOrRibbon(
 ): boolean {
     if (ticketMessage?.trim()) return true;
     return items.some(isMessageItem);
+}
+
+function listHasCardAccessory(labels: string[]): boolean {
+    return labels.some((l) => /bigliett|messaggio/i.test(l) && !/nastro/i.test(l));
+}
+
+function listHasRibbonAccessory(labels: string[]): boolean {
+    return labels.some((l) => /nastro/i.test(l));
+}
+
+function isEmptyTicketMessage(ticketMessage?: string | null): boolean {
+    const raw = (ticketMessage || '').trim();
+    if (!raw) return true;
+    return /^(nessuno|non\s*specificato|-)$/i.test(raw);
+}
+
+/**
+ * Elenco accessori per WhatsApp/fiorista: include bigliettino/nastro anche se salvati
+ * solo in `ticketMessage` (senza riga catalogo negli items).
+ */
+export function buildFloristAccessoriesDisplayList(
+    items: OrderItemLike[],
+    ticketMessage?: string | null
+): string[] {
+    const out = buildOrderOptionalsList(items);
+    const { cardText, ribbonText } = parseTicketMessageParts(ticketMessage);
+
+    if (cardText && !listHasCardAccessory(out)) {
+        out.push('Biglietto con dedica');
+    }
+    if (ribbonText && !listHasRibbonAccessory(out)) {
+        out.push('Nastro commemorativo');
+    }
+
+    if (
+        !isEmptyTicketMessage(ticketMessage) &&
+        !cardText &&
+        !ribbonText &&
+        !items.some(isMessageItem)
+    ) {
+        out.push('Biglietto con dedica');
+    }
+
+    return out;
+}
+
+/** Riga {{8}} / sezione Optional — "Nessun accessorio extra" solo se davvero assente tutto. */
+export function formatFloristAccessoriesLine(
+    items: OrderItemLike[],
+    ticketMessage?: string | null,
+    options?: { includePhotoBefore?: boolean; photoBeforeLabel?: string }
+): string {
+    const optionals = buildFloristAccessoriesDisplayList(items, ticketMessage);
+
+    if (options?.includePhotoBefore && hasPhotoBeforeOption(items)) {
+        optionals.unshift(
+            options.photoBeforeLabel ?? 'Foto stato di fatto prima della consegna'
+        );
+    }
+
+    if (!optionals.length) return 'Nessun accessorio extra';
+    return optionals.join(', ');
 }
 
 /** Rimuove blocchi B2B / VERA internal / audit e restituisce solo la nota operativa leggibile. */

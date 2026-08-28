@@ -47,3 +47,4 @@
 [2026-08-28 16:12] fix: dashboard mobile iPhone — overflow-x bloccato, viewport scale 1, tabelle in scroll isolato, drawer ordini full-width.
 [2026-08-28 16:16] feat(dashboard): selettore Oggi/Settimana/Mese/Anno con frecce, dettaglio programma e legenda stati nel calendario consegne — aggiornato OrdersCalendar.tsx con 4 viste temporali, controlli di navigazione ◀ ▶, reset Oggi, scheda programma ordini estesa e legenda stati cromatici ufficiale.
 [2026-08-28 16:28] fix: pipeline social bloccata — migrazione Imagen 4 → gemini-2.5-flash-image (shutdown 17/08); backfill script bozze senza media.
+[2026-08-28 16:48] fix: WhatsApp fiorista — bigliettino/dedica in sezione Optional anche senza riga catalogo (ticketMessage).

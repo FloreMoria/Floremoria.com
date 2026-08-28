@@ -111,6 +111,32 @@ function main(): void {
     assert(!text.includes('Gramato'), 'niente Gramato');
     assert(!text.includes('IMPORT_MANUALE'), 'niente tag import');
 
+    const withCard = buildFloristNewOrderWhatsAppText({
+        floristFirstName: 'Simone',
+        orderCode: 'FT-MB-26-002',
+        city: 'Milano',
+        deceasedName: 'Mario Rossi',
+        cemeteryName: 'Cimitero Maggiore',
+        cemeteryCity: 'Milano',
+        gravePosition: 'Campo C, Tomba 83',
+        ticketMessage: 'Con affetto, la famiglia Rossi',
+        items: [
+            {
+                quantity: 1,
+                product: { name: 'Bouquet Memoria Eterna', slug: 'bouquet-memoria-eterna', isBouquet: true },
+            },
+        ],
+        deliveryUrl: 'https://www.floremoria.com/fiorista/consegna/FT-MB-26-002',
+    });
+    assert(
+        withCard.includes('➕ Optional / Accessori: Biglietto con dedica'),
+        'bigliettino da ticketMessage in accessori'
+    );
+    assert(
+        !withCard.includes('➕ Optional / Accessori: Nessun accessorio extra'),
+        'no falso nessun accessorio con bigliettino'
+    );
+
     console.log('\nTutti i test messaggio fiorista OK.');
 }
 

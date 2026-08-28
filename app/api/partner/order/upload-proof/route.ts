@@ -28,6 +28,19 @@ export async function POST(request: Request) {
             updatedAt: true,
             deletedAt: true,
             partnerPaymentStatus: true,
+            latitude: true,
+            longitude: true,
+            deliveryProof: {
+                select: {
+                    status: true,
+                    photosBeforeUrls: true,
+                    photosAfterUrls: true,
+                    photoBeforeUrl: true,
+                    photoAfterUrl: true,
+                    gpsLatitude: true,
+                    gpsLongitude: true,
+                },
+            },
         });
 
         if (!order) {
@@ -56,6 +69,7 @@ export async function POST(request: Request) {
             afterFiles,
             gpsLatitude,
             gpsLongitude,
+            adminBypass: adminBypassRequested,
         });
 
         if (!result.ok) {

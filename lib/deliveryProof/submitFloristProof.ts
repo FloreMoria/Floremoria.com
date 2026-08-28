@@ -10,6 +10,7 @@ import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
 import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelations';
 import { triggerSocialSanitizationForOrder } from '@/lib/deliveryProof/triggerSocialSanitization';
+import { isFloristDeliveryFullyComplete } from '@/lib/deliveryProof/floristAccess';
 
 export type SubmitFloristProofInput = {
     orderId: string;
@@ -17,6 +18,8 @@ export type SubmitFloristProofInput = {
     afterFiles: File[];
     gpsLatitude?: number | null;
     gpsLongitude?: number | null;
+    /** Solo upload admin dashboard: salta guard completamento e GPS obbligatorio. */
+    adminBypass?: boolean;
 };
 
 export type SubmitFloristProofResult =
@@ -28,7 +31,8 @@ const MAX_PHOTOS_PER_SLOT = 3;
 export async function submitFloristDeliveryProof(
     input: SubmitFloristProofInput
 ): Promise<SubmitFloristProofResult> {
-    const { orderId, beforeFiles, afterFiles, gpsLatitude, gpsLongitude } = input;
+    const { orderId, beforeFiles, afterFiles, gpsLatitude, gpsLongitude, adminBypass = false } =
+        input;
 
     // "Prima" e "Dopo" obbligatori: almeno 1 scatto per fase.
     if (!beforeFiles.length || !afterFiles.length) {
@@ -60,6 +64,24 @@ export async function submitFloristDeliveryProof(
             ok: false,
             error:
                 'Ordine non ancora assegnato a un fiorista. Contatta FloreMoria prima di caricare le foto.',
+        };
+    }
+
+    if (
+        !adminBypass &&
+        isFloristDeliveryFullyComplete(order, order.deliveryProof)
+    ) {
+        return {
+            ok: false,
+            error: 'Consegna già completata per questo ordine. Grazie per il tuo lavoro!',
+        };
+    }
+
+    if (!adminBypass && (gpsLatitude == null || gpsLongitude == null)) {
+        return {
+            ok: false,
+            error:
+                'Per completare la consegna serve la posizione GPS del cimitero. Autorizza la geolocalizzazione e riprova.',
         };
     }
 

@@ -189,14 +189,42 @@ export default function FloristProofUploadClient({
     const gpsRequestedRef = useRef(false);
     const abortRef = useRef<AbortController | null>(null);
 
+    const requestGps = useCallback(() => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            setError('Geolocalizzazione non disponibile su questo dispositivo.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const coords = {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                };
+                setGpsCoords(coords);
+                writeCachedGps(orderId, coords);
+                setError(null);
+            },
+            () => {
+                setGpsCoords(null);
+                setError(
+                    'Posizione non acquisita. Autorizza la geolocalizzazione nelle impostazioni del browser e riprova.'
+                );
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }, [orderId]);
+
     const beforePreviews = useMemo(() => readFilesAsPreviews(beforeFiles), [beforeFiles]);
     const afterPreviews = useMemo(() => readFilesAsPreviews(afterFiles), [afterFiles]);
 
-    // Completa Consegna: almeno 1 scatto Prima e 1 scatto Dopo.
-    const canSubmit = beforeFiles.length > 0 && afterFiles.length > 0 && !submitting;
+    // Completa Consegna: foto Prima+Dopo + GPS obbligatorio (salvo upload admin).
+    const canSubmit =
+        beforeFiles.length > 0 &&
+        afterFiles.length > 0 &&
+        (adminUpload || gpsCoords != null) &&
+        !submitting;
 
-    // Una sola richiesta GPS all'apertura (no doppio pop-up iOS / remount React).
-    // Negato / timeout → null: upload prosegue senza GPS.
+    // Una sola richiesta GPS automatica all'apertura; il fiorista può riprovare manualmente.
     useEffect(() => {
         const cached = readCachedGps(orderId);
         if (cached) {
@@ -207,24 +235,8 @@ export default function FloristProofUploadClient({
             return;
         }
         gpsRequestedRef.current = true;
-
-        try {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const coords = {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                    };
-                    setGpsCoords(coords);
-                    writeCachedGps(orderId, coords);
-                },
-                () => setGpsCoords(null),
-                { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
-            );
-        } catch {
-            setGpsCoords(null);
-        }
-    }, [orderId]);
+        requestGps();
+    }, [orderId, requestGps]);
 
     useEffect(() => {
         return () => {
@@ -406,11 +418,21 @@ export default function FloristProofUploadClient({
 
             <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-500">
                 <MapPin size={14} className="mt-0.5 shrink-0 text-[#c5a880]" />
-                All&apos;apertura possiamo chiedere il permesso di posizione una sola volta (opzionale).
-                {gpsCoords
-                    ? ' Posizione acquisita: l’invio userà queste coordinate.'
-                    : ' Se non autorizzi la posizione, la consegna viene registrata comunque.'}
+                {adminUpload
+                    ? 'Posizione GPS opzionale in upload admin.'
+                    : gpsCoords
+                      ? 'Posizione GPS acquisita: verrà salvata con la consegna.'
+                      : 'La posizione GPS del cimitero è obbligatoria per completare la consegna.'}
             </p>
+            {!adminUpload && !gpsCoords ? (
+                <button
+                    type="button"
+                    onClick={requestGps}
+                    className="w-full rounded-xl border border-[#c5a880]/40 bg-amber-50/80 px-3 py-2.5 text-sm font-semibold text-amber-900"
+                >
+                    Acquisisci posizione GPS
+                </button>
+            ) : null}
 
             {statusMsg ? (
                 <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">

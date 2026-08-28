@@ -51,3 +51,5 @@
 [2026-08-28 17:05] feat: Template Meta floremoria_ringraziamento_fiorista in Punto E/F post-consegna; GPS su DeceasedProfile da proof upload.
 [2026-08-28 17:12] fix(marketing): correzione prompt stagionali tardo-estivi e copy checkpoint social — aggiornati prompt botanici con fiori estivi (dalie, gladioli, gigli, rose), risolto refuso [object Object] su Shorts e hashtag #reelempatico su IG, generata immagine Pinterest mancante ed approvate tutte le 7 campagne su status APPROVED.
 [2026-08-28 17:35] feat: Fee 10% partner/agenzie, fix registri ordini collegati, dispatch email multi-canale (fiorista/cliente/agenzia/ops).
+[2026-08-28 17:20] fix: prisma.config.ts carica .env.local via dotenv; db push Neon DeceasedProfile GPS + schema sync.
+[2026-08-28 17:45] fix: mini-app fiorista link riapribile fino a foto+GPS+submit; schermata completamento post-consegna.

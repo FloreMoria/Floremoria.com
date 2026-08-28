@@ -3,47 +3,74 @@ import { resolve } from 'node:path';
 
 /**
  * Carica .env poi .env.local (come Next.js).
- * Necessario per Prisma CLI: prisma.config.ts non legge .env.local da solo.
+ * Necessario per Prisma CLI e script Node che non passano da Next.
+ *
+ * .env.local vince sempre su .env e su variabili già presenti in process.env
+ * per le chiavi database (evita localhost da .env quando in .env.local c'è Neon).
  */
+const DB_ENV_KEYS = new Set([
+    'DATABASE_URL',
+    'DATABASE_URL_UNPOOLED',
+    'DATABASE_POSTGRES_URL',
+    'DATABASE_POSTGRES_PRISMA_URL',
+    'POSTGRES_URL',
+    'POSTGRES_URL_NON_POOLING',
+    'DATABASE_POSTGRES_PASSWORD',
+    'DATABASE_PGHOST',
+    'DATABASE_PGHOST_UNPOOLED',
+    'DATABASE_PGPASSWORD',
+    'DATABASE_PGDATABASE',
+    'DATABASE_PGUSER',
+]);
+
 export function loadEnvFiles(cwd = process.cwd()): void {
-    /** Variabili già nel processo (es. `export DATABASE_URL=...neon`) non vanno sovrascritte da .env.local. */
+    const fromEnv: Record<string, string> = {};
+    const fromLocal: Record<string, string> = {};
+
+    for (const line of readEnvLines(resolve(cwd, '.env'))) {
+        fromEnv[line.key] = line.val;
+    }
+    for (const line of readEnvLines(resolve(cwd, '.env.local'))) {
+        fromLocal[line.key] = line.val;
+    }
+
     const presetKeys = new Set(Object.keys(process.env));
 
-    const fromFiles: Record<string, string> = {};
-
-    for (const name of ['.env', '.env.local']) {
-        const p = resolve(cwd, name);
-        if (!existsSync(p)) continue;
-        for (const line of readFileSync(p, 'utf8').split('\n')) {
-            const t = line.trim();
-            if (!t || t.startsWith('#')) continue;
-            const i = t.indexOf('=');
-            if (i === -1) continue;
-            const key = t.slice(0, i).trim();
-            let val = t.slice(i + 1).trim();
-            if (
-                (val.startsWith('"') && val.endsWith('"')) ||
-                (val.startsWith("'") && val.endsWith("'"))
-            ) {
-                val = val.slice(1, -1);
-            } else {
-                const hashIdx = val.indexOf('#');
-                if (hashIdx >= 0) {
-                    val = val.slice(0, hashIdx).trim();
-                }
-            }
-            // Evita che una riga vuota in fondo al file sovrascriva un token gia impostato.
-            if (val === '' && fromFiles[key]?.trim()) {
-                continue;
-            }
-            fromFiles[key] = val;
-        }
-    }
-
-    for (const [key, val] of Object.entries(fromFiles)) {
-        if (presetKeys.has(key)) continue;
+    for (const [key, val] of Object.entries(fromEnv)) {
+        if (fromLocal[key] !== undefined) continue;
+        if (presetKeys.has(key) && !DB_ENV_KEYS.has(key)) continue;
         process.env[key] = val;
     }
+
+    for (const [key, val] of Object.entries(fromLocal)) {
+        process.env[key] = val;
+    }
+}
+
+function readEnvLines(path: string): Array<{ key: string; val: string }> {
+    if (!existsSync(path)) return [];
+    const out: Array<{ key: string; val: string }> = [];
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+        const t = line.trim();
+        if (!t || t.startsWith('#')) continue;
+        const i = t.indexOf('=');
+        if (i === -1) continue;
+        const key = t.slice(0, i).trim();
+        let val = t.slice(i + 1).trim();
+        if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+        ) {
+            val = val.slice(1, -1);
+        } else {
+            const hashIdx = val.indexOf('#');
+            if (hashIdx >= 0) {
+                val = val.slice(0, hashIdx).trim();
+            }
+        }
+        out.push({ key, val });
+    }
+    return out;
 }
 
 export function printDatabaseReachabilityHelp(): void {

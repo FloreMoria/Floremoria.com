@@ -1,7 +1,4 @@
-import type { Order, OrderStatus, PaymentStatus } from '@prisma/client';
-
-const ACTIVE_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS', 'DELIVERING'];
-const POST_COMPLETION_WINDOW_MS = 48 * 60 * 60 * 1000;
+import type { DeliveryProofStatus, Order, PaymentStatus } from '@prisma/client';
 
 /** Ordine AF di test — accesso mini-app sempre aperto fino a rimozione esplicita. */
 export const FLORIST_TEST_ORDER_ID = 'cmqgpyptm0001i6041bwgjpjg';
@@ -21,16 +18,69 @@ export function isFloristTestOrder(order: Pick<Order, 'id' | 'orderNumber'>): bo
     return order.id === FLORIST_TEST_ORDER_ID || order.orderNumber === FLORIST_TEST_ORDER_NUMBER;
 }
 
+export type FloristDeliveryProofSnapshot = {
+    status: DeliveryProofStatus;
+    photosBeforeUrls?: string[];
+    photosAfterUrls?: string[];
+    photoBeforeUrl?: string | null;
+    photoAfterUrl?: string | null;
+    gpsLatitude?: number | null;
+    gpsLongitude?: number | null;
+};
+
+export type FloristOrderAccessSnapshot = Pick<
+    Order,
+    'id' | 'orderNumber' | 'status' | 'updatedAt' | 'deletedAt' | 'partnerPaymentStatus' | 'latitude' | 'longitude'
+> & {
+    deliveryProof?: FloristDeliveryProofSnapshot | null;
+};
+
 export type FloristAccessResult =
-    | { allowed: true; reason: 'in_progress' | 'recently_completed' | 'test_bypass' }
-    | { allowed: false; reason: 'not_found' | 'cancelled' | 'expired' | 'pending_unpaid' };
+    | { allowed: true; reason: 'in_progress' | 'completed_view' | 'test_bypass' }
+    | { allowed: false; reason: 'not_found' | 'cancelled' | 'pending_unpaid' };
+
+function countProofPhotos(proof: FloristDeliveryProofSnapshot, slot: 'before' | 'after'): number {
+    if (slot === 'before') {
+        const fromArray = proof.photosBeforeUrls?.filter(Boolean).length ?? 0;
+        if (fromArray > 0) return fromArray;
+        return proof.photoBeforeUrl ? 1 : 0;
+    }
+    const fromArray = proof.photosAfterUrls?.filter(Boolean).length ?? 0;
+    if (fromArray > 0) return fromArray;
+    return proof.photoAfterUrl ? 1 : 0;
+}
+
+function hasSavedGps(
+    order: Pick<Order, 'latitude' | 'longitude'>,
+    proof: FloristDeliveryProofSnapshot
+): boolean {
+    const lat = proof.gpsLatitude ?? order.latitude;
+    const lng = proof.gpsLongitude ?? order.longitude;
+    return lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
+}
 
 /**
- * Link mini-app persistente finché l'ordine è in corso o completato da meno di 48h.
- * Per PT-UD-26-002 / CUID test: sempre `{ allowed: true }` indipendentemente dallo stato DB.
+ * Consegna definitiva solo se foto Prima+Dopo, GPS e ordine COMPLETED sono tutti presenti.
+ */
+export function isFloristDeliveryFullyComplete(
+    order: Pick<Order, 'status' | 'latitude' | 'longitude'>,
+    proof: FloristDeliveryProofSnapshot | null | undefined
+): boolean {
+    if (order.status !== 'COMPLETED' || !proof || proof.status !== 'COMPLETED') {
+        return false;
+    }
+    if (countProofPhotos(proof, 'before') < 1 || countProofPhotos(proof, 'after') < 1) {
+        return false;
+    }
+    return hasSavedGps(order, proof);
+}
+
+/**
+ * Link mini-app sempre riapribile finché la consegna non è completata al 100%.
+ * Nessuna scadenza temporale né invalidazione al primo accesso.
  */
 export function evaluateFloristDeliveryAccess(
-    order: Pick<Order, 'id' | 'orderNumber' | 'status' | 'updatedAt' | 'deletedAt' | 'partnerPaymentStatus'> | null,
+    order: Pick<Order, 'id' | 'orderNumber' | 'status' | 'deletedAt' | 'partnerPaymentStatus'> | null,
     publicRef?: string
 ): FloristAccessResult {
     if (publicRef && isFloristTestOrderRef(publicRef)) {
@@ -48,18 +98,28 @@ export function evaluateFloristDeliveryAccess(
     if (order.status === 'PENDING' && order.partnerPaymentStatus === 'UNPAID') {
         return { allowed: false, reason: 'pending_unpaid' };
     }
-    if (ACTIVE_STATUSES.includes(order.status)) {
-        return { allowed: true, reason: 'in_progress' };
-    }
     if (order.status === 'COMPLETED') {
-        const elapsed = Date.now() - order.updatedAt.getTime();
-        if (elapsed <= POST_COMPLETION_WINDOW_MS) {
-            return { allowed: true, reason: 'recently_completed' };
-        }
-        return { allowed: false, reason: 'expired' };
+        return { allowed: true, reason: 'completed_view' };
     }
-    if (order.status === 'PENDING') {
-        return { allowed: true, reason: 'in_progress' };
+    return { allowed: true, reason: 'in_progress' };
+}
+
+export function describeFloristDeliveryIncompleteReason(
+    order: Pick<Order, 'status' | 'latitude' | 'longitude'>,
+    proof: FloristDeliveryProofSnapshot | null | undefined
+): string | null {
+    if (isFloristDeliveryFullyComplete(order, proof)) return null;
+    if (!proof || proof.status !== 'COMPLETED') {
+        return 'Mancano foto e conferma di invio.';
     }
-    return { allowed: false, reason: 'expired' };
+    if (countProofPhotos(proof, 'before') < 1 || countProofPhotos(proof, 'after') < 1) {
+        return 'Servono almeno una foto Prima e una Dopo.';
+    }
+    if (!hasSavedGps(order, proof)) {
+        return 'Manca la posizione GPS del cimitero.';
+    }
+    if (order.status !== 'COMPLETED') {
+        return 'Conferma di consegna non ancora registrata.';
+    }
+    return 'Consegna non ancora completata.';
 }

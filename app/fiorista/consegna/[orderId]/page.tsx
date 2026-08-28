@@ -1,4 +1,9 @@
-import { evaluateFloristDeliveryAccess, isFloristTestOrder, isFloristTestOrderRef } from '@/lib/deliveryProof/floristAccess';
+import {
+    evaluateFloristDeliveryAccess,
+    isFloristDeliveryFullyComplete,
+    isFloristTestOrder,
+    isFloristTestOrderRef,
+} from '@/lib/deliveryProof/floristAccess';
 import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
 import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
@@ -26,6 +31,29 @@ function BlockedPage({ title, message }: { title: string; message: string }) {
     );
 }
 
+function CompletedPage({ orderNumber }: { orderNumber: string | null }) {
+    return (
+        <div
+            className="mx-auto flex min-h-[100dvh] max-w-lg flex-col items-center justify-center px-6 text-center"
+            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        >
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
+                ✅
+            </div>
+            <h1 className="text-xl font-display font-semibold text-emerald-900">
+                Consegna già completata per questo ordine
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Grazie per il tuo lavoro! Foto e posizione GPS sono state registrate correttamente.
+                {orderNumber ? ` (${orderNumber})` : ''}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+                Puoi chiudere questa pagina. Per assistenza contatta FloreMoria.
+            </p>
+        </div>
+    );
+}
+
 const orderSelect = {
     id: true,
     orderNumber: true,
@@ -36,8 +64,20 @@ const orderSelect = {
     updatedAt: true,
     deletedAt: true,
     partnerPaymentStatus: true,
+    latitude: true,
+    longitude: true,
     ticketMessage: true,
-    deliveryProof: { select: { status: true } },
+    deliveryProof: {
+        select: {
+            status: true,
+            photosBeforeUrls: true,
+            photosAfterUrls: true,
+            photoBeforeUrl: true,
+            photoAfterUrl: true,
+            gpsLatitude: true,
+            gpsLongitude: true,
+        },
+    },
     items: {
         select: {
             quantity: true,
@@ -75,11 +115,19 @@ export default async function FloristConsegnaPage({
 
     const access = evaluateFloristDeliveryAccess(order, orderRef);
     if (!access.allowed) {
-        if (access.reason === 'expired') {
+        if (access.reason === 'pending_unpaid') {
             return (
                 <BlockedPage
-                    title="Link non più attivo"
-                    message="Questo ordine è stato completato da più di 48 ore. Per assistenza contatta FloreMoria."
+                    title="Ordine in attesa di pagamento"
+                    message="Il link sarà disponibile non appena il pagamento sarà confermato."
+                />
+            );
+        }
+        if (access.reason === 'cancelled') {
+            return (
+                <BlockedPage
+                    title="Ordine annullato"
+                    message="Questo ordine non è più attivo. Per assistenza contatta FloreMoria."
                 />
             );
         }
@@ -91,24 +139,22 @@ export default async function FloristConsegnaPage({
         );
     }
 
-    if (order!.deliveryProof?.status === 'COMPLETED' && !isFloristTestOrder(order!)) {
-        return (
-            <BlockedPage
-                title="Consegna già registrata"
-                message="Le foto per questo ordine sono già state inviate correttamente. Grazie per il servizio. Se serve correggere qualcosa, contatta FloreMoria."
-            />
-        );
+    if (
+        isFloristDeliveryFullyComplete(order, order.deliveryProof) &&
+        !isFloristTestOrder(order)
+    ) {
+        return <CompletedPage orderNumber={order.orderNumber} />;
     }
 
     return (
         <FloristProofUploadClient
-            orderId={order!.id}
-            orderNumber={order!.orderNumber}
-            deceasedName={order!.deceasedName}
-            cemeteryName={order!.cemeteryName}
-            cemeteryCity={order!.cemeteryCity}
-            ticketMessage={order!.ticketMessage}
-            accessories={buildOrderOptionalsList(order!.items || [])}
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            deceasedName={order.deceasedName}
+            cemeteryName={order.cemeteryName}
+            cemeteryCity={order.cemeteryCity}
+            ticketMessage={order.ticketMessage}
+            accessories={buildOrderOptionalsList(order.items || [])}
         />
     );
 }

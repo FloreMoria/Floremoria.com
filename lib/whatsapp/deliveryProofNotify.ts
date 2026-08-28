@@ -92,7 +92,6 @@ export async function sendDeliveryProofWhatsApp(
     const sessionPhone = `whatsapp:${phoneE164}`;
 
     try {
-        const headerParams = buildCustomerDeliveryPhotoHeaderParams(partnerCity);
         const bodyParams = buildCustomerDeliveryPhotoParams({
             buyerFirstName,
             partnerCity,
@@ -105,8 +104,6 @@ export async function sendDeliveryProofWhatsApp(
             'customer_delivery_photo',
             bodyParams,
             {
-                headerTextParams: headerParams,
-                headerImageUrl: input.photoAfterUrl || undefined,
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
                 // Dedup attivo di default: un solo template per ordine / 24h.

@@ -175,8 +175,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
     },
     /**
      * Template Meta `floremoria_consegna_foto_utente` — notifica post-posa PRIMARIA.
-     * Intestazione Header: "Fiori posati a {{1}} da FloreMoria" ({{1}} = Comune di consegna)
-     * Testo Body: 4 variabili ({{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} MagicLink GdM)
+     * Body-only: 4 variabili ({{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} MagicLink GdM)
      */
     customer_delivery_photo: {
         id: 'customer_delivery_photo',
@@ -185,8 +184,6 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floremoria_consegna_foto_utente'
         ),
         language: 'it',
-        headerTextParamCount: 1,
-        headerSlots: ['partnerCity'],
         bodyParamCount: 4,
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
         library: 'UTENTE',
@@ -197,7 +194,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'Vuole ricevere qui la foto della posa?\n' +
             'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹',
         description:
-            'Header: Fiori posati a {{1}} da FloreMoria. Body: {{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} URL Giardino della Memoria',
+            'Body-only 4 variabili: {{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} URL Giardino della Memoria',
     },
     /**
      * @deprecated Preferire customer_delivery_photo (floremoria_consegna_foto_utente).
@@ -210,8 +207,6 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'floremoria_consegna_foto_utente'
         ),
         language: process.env.WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_LANGUAGE?.trim() || 'it',
-        headerTextParamCount: 1,
-        headerSlots: ['partnerCity'],
         bodyParamCount: 4,
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
         library: 'UTENTE',

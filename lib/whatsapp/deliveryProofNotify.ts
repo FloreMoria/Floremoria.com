@@ -1,4 +1,5 @@
 import { buildProofFotoAccessUrl } from '@/lib/auth/proofFotoAccess';
+import { buildCustomerGardenAccessUrl } from '@/lib/memoryGarden/customerGardenUrl';
 import { getSession } from '@/lib/chatStore';
 import {
     renderDeliveryConfirmationFreeText,
@@ -13,6 +14,7 @@ import {
     buildCustomerDeliveryPhotoHeaderParams,
 } from '@/lib/whatsapp/veraTemplateParams';
 import { logVeraTemplateOutbound } from '@/lib/whatsapp/logVeraTemplateOutbound';
+import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 import {
     isMetaCloudConfigured,
     normalizePhoneE164,
@@ -88,8 +90,12 @@ export async function sendDeliveryProofWhatsApp(
     const deceasedName = (input.deceasedName || 'chi ama').trim();
     const buyerName = (input.buyerFullName || 'Utente').trim();
     const buyerFirstName = extractBuyerFirstName(buyerName) || 'Cliente';
-    const giardinoUrl = await buildProofFotoAccessUrl(input.orderId, input.orderNumber);
+    const garden = await buildCustomerGardenAccessUrl(input.orderId, input.orderNumber);
+    const giardinoUrl = garden.url;
+    // Mantieni anche il codice corto /f/{code} attivo per accesso rapido 24h.
+    await buildProofFotoAccessUrl(input.orderId, input.orderNumber).catch(() => undefined);
     const sessionPhone = `whatsapp:${phoneE164}`;
+    const headerTextParams = buildCustomerDeliveryPhotoHeaderParams(partnerCity);
 
     try {
         const bodyParams = buildCustomerDeliveryPhotoParams({
@@ -106,6 +112,7 @@ export async function sendDeliveryProofWhatsApp(
             {
                 orderId: input.orderId,
                 orderNumber: input.orderNumber,
+                headerTextParams,
                 // Dedup attivo di default: un solo template per ordine / 24h.
                 skipOrderDedup: Boolean(input.forceResend),
             }
@@ -113,16 +120,27 @@ export async function sendDeliveryProofWhatsApp(
 
         if (!templateSend.ok) {
             if (templateSend.errorCode === 409 || templateSend.error?.startsWith('duplicate_prevented')) {
-                console.info(
-                    '[delivery-proof-whatsapp] Template già inviato (dedup): nessun secondo messaggio.',
+                const alreadyLogged = await wasOrderTemplateSent(
+                    input.orderId,
+                    'customer_delivery_photo',
+                    input.orderNumber
+                );
+                if (alreadyLogged) {
+                    console.info(
+                        '[delivery-proof-whatsapp] Template già inviato (dedup verificato): nessun secondo messaggio.',
+                        { orderId: input.orderId }
+                    );
+                    return {
+                        ok: true,
+                        skipped: 'duplicate_prevented',
+                        giardinoUrl,
+                        photosSent: 0,
+                    };
+                }
+                console.warn(
+                    '[delivery-proof-whatsapp] Dedup bloccato invio ma nessun outbound in chat — retry consentito.',
                     { orderId: input.orderId }
                 );
-                return {
-                    ok: true,
-                    skipped: 'duplicate_prevented',
-                    giardinoUrl,
-                    photosSent: 0,
-                };
             }
 
             const session = await getSession(sessionPhone);

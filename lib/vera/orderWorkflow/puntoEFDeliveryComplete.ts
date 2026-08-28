@@ -82,7 +82,7 @@ export async function runPuntoEFDeliveryComplete(orderId: string): Promise<Punto
     }
 
     const customerResult = await notifyCustomerDeliveryComplete(orderId);
-    if (!customerResult.ok) {
+    if (!customerResult.ok || customerResult.skipped) {
         await releaseWorkflowStep(orderEarly.id, 'puntoEF_delivery').catch((err) =>
             console.warn('[punto-ef] release claim fallito:', err)
         );

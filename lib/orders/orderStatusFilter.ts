@@ -33,7 +33,11 @@ export async function onOrderStatusChanged(orderId: string, nextStatus: string):
                 orderId,
                 result: floristResult,
             });
-        } else if (nextStatus === 'DELIVERING' || nextStatus === 'COMPLETED') {
+        } else if (
+            nextStatus === 'DELIVERING' ||
+            nextStatus === 'COMPLETED' ||
+            nextStatus === 'DELIVERED_UNPAID'
+        ) {
             // Mini-app e foto WhatsApp chiudono in COMPLETED; DELIVERING resta supportato per legacy.
             await runPuntoEFDeliveryComplete(orderId).catch((err) => {
                 console.error('[order-status-filter] Errore in runPuntoEFDeliveryComplete:', err);

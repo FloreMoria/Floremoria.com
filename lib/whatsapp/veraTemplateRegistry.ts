@@ -175,7 +175,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
     },
     /**
      * Template Meta `floremoria_consegna_foto_utente` — notifica post-posa PRIMARIA.
-     * Body-only: 4 variabili ({{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} MagicLink GdM)
+     * Header {{1}} comune/città · body 4 variabili (nome, comune, defunto, MagicLink GdM).
      */
     customer_delivery_photo: {
         id: 'customer_delivery_photo',
@@ -186,6 +186,8 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         language: 'it',
         bodyParamCount: 4,
         bodySlots: ['buyerFirstName', 'partnerCity', 'deceasedName', 'magicLink'],
+        headerTextParamCount: 1,
+        headerSlots: ['partnerCity'],
         library: 'UTENTE',
         bodyCanonical:
             'Gentile {{1}},\n' +
@@ -194,7 +196,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'Vuole ricevere qui la foto della posa?\n' +
             'Tutto lo Staff di FloreMoria resta a Sua completa disposizione.🌹',
         description:
-            'Body-only 4 variabili: {{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} URL Giardino della Memoria',
+            'Header {{1}} comune · body {{1}} nome cliente, {{2}} comune, {{3}} defunto, {{4}} URL Giardino della Memoria',
     },
     /**
      * @deprecated Preferire customer_delivery_photo (floremoria_consegna_foto_utente).

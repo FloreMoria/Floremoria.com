@@ -53,3 +53,4 @@
 [2026-08-28 17:35] feat: Fee 10% partner/agenzie, fix registri ordini collegati, dispatch email multi-canale (fiorista/cliente/agenzia/ops).
 [2026-08-28 17:20] fix: prisma.config.ts carica .env.local via dotenv; db push Neon DeceasedProfile GPS + schema sync.
 [2026-08-28 17:45] fix: mini-app fiorista link riapribile fino a foto+GPS+submit; schermata completamento post-consegna.
+[2026-08-28 18:00] feat: partnerOrderService B2B API — fee 10%, metriche live, revalidate dashboard, log ingestion.

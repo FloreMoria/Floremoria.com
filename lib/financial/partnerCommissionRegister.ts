@@ -39,6 +39,82 @@ function orderMatchesPartner(partnerId: string): Prisma.OrderWhereInput {
     };
 }
 
+function commissionEligibleWhere(testModeActive?: boolean): Prisma.OrderWhereInput {
+    return {
+        ...visibleDashboardOrdersWhere(testModeActive),
+        OR: [
+            { partnerCommissionCents: { not: null } },
+            { referralPartnerId: { not: null } },
+            { agencyId: { not: null } },
+        ],
+    };
+}
+
+export type GlobalPartnerCommissionMetrics = {
+    totalOrders: number;
+    totalSalesCents: number;
+    totalCommissionCents: number;
+    currentMonthCommissionCents: number;
+    pendingCommissionCents: number;
+    settledCommissionCents: number;
+    partnerCount: number;
+    agencyCount: number;
+};
+
+/** Metriche aggregate B2B per dashboard finance / metrics API (query live, no cache). */
+export async function getGlobalPartnerCommissionMetrics(
+    testModeActive?: boolean
+): Promise<GlobalPartnerCommissionMetrics> {
+    const monthPrefix = currentMonthKey();
+    const orders = await prisma.order.findMany({
+        where: commissionEligibleWhere(testModeActive),
+        select: {
+            id: true,
+            totalPriceCents: true,
+            partnerCommissionCents: true,
+            partnerCommissionSettlementStatus: true,
+            referralPartnerId: true,
+            agencyId: true,
+            createdAt: true,
+        },
+    });
+
+    const partnerIds = new Set<string>();
+    const agencyIds = new Set<string>();
+    let totalSalesCents = 0;
+    let totalCommissionCents = 0;
+    let currentMonthCommissionCents = 0;
+    let pendingCommissionCents = 0;
+    let settledCommissionCents = 0;
+
+    for (const o of orders) {
+        if (o.referralPartnerId) partnerIds.add(o.referralPartnerId);
+        if (o.agencyId) agencyIds.add(o.agencyId);
+        const fee = o.partnerCommissionCents ?? calculatePartnerCommissionCents(o.totalPriceCents);
+        totalSalesCents += o.totalPriceCents;
+        totalCommissionCents += fee;
+        if (o.createdAt.toISOString().slice(0, 7) === monthPrefix) {
+            currentMonthCommissionCents += fee;
+        }
+        if (o.partnerCommissionSettlementStatus === 'PENDING') {
+            pendingCommissionCents += fee;
+        } else if (o.partnerCommissionSettlementStatus === 'LIQUIDATO') {
+            settledCommissionCents += fee;
+        }
+    }
+
+    return {
+        totalOrders: orders.length,
+        totalSalesCents,
+        totalCommissionCents,
+        currentMonthCommissionCents,
+        pendingCommissionCents,
+        settledCommissionCents,
+        partnerCount: partnerIds.size,
+        agencyCount: agencyIds.size,
+    };
+}
+
 export async function getPartnerCommissionSummary(
     partnerId: string,
     testModeActive?: boolean
@@ -54,7 +130,6 @@ export async function getPartnerCommissionSummary(
         where: {
             ...visibleDashboardOrdersWhere(testModeActive),
             ...orderMatchesPartner(partnerId),
-            partnerPaymentStatus: 'PAID',
         },
         select: {
             id: true,

@@ -10,7 +10,12 @@ import {
     resolveFloristPartnerIdForAgency,
 } from '@/lib/orders/resolveAgencyFlorist';
 import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
-import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
+import {
+    buildB2bOrderCreateData,
+    logPartnerOrderIngestion,
+    revalidatePartnerOrderDashboardCaches,
+    resolveB2bOrderAssociations,
+} from '@/lib/partners/partnerOrderService';
 
 export const runtime = 'nodejs';
 
@@ -84,7 +89,14 @@ export async function POST(request: Request) {
 
         const partner = await prisma.partner.findFirst({
             where: { id: auth.partnerId, deletedAt: null, isActive: true },
-            select: { id: true, shopName: true, isB2B: true, partnerType: true },
+            select: {
+                id: true,
+                shopName: true,
+                isB2B: true,
+                partnerType: true,
+                partnershipChannel: true,
+                uniqueCode: true,
+            },
         });
         if (!partner) {
             return NextResponse.json(
@@ -276,19 +288,24 @@ export async function POST(request: Request) {
         const partnerAlreadyPaid =
             Boolean(stripeCheckoutSessionId || stripePaymentIntentId) || partner.isB2B;
 
-        const referralPartnerId = resolvedAgency
-            ? partner.partnerType === 'FUNERAL_AGENCY'
-                ? resolvedAgency.agencyId
-                : auth.partnerId
-            : partner.partnerType === 'AGGREGATOR'
-              ? auth.partnerId
-              : null;
-        const partnerCommissionCents = referralPartnerId
-            ? calculatePartnerCommissionCents(subtotalCents)
-            : null;
+        const partnershipChannelBody =
+            typeof b.partnershipChannel === 'string'
+                ? b.partnershipChannel.trim()
+                : typeof b.channel === 'string'
+                  ? b.channel.trim()
+                  : null;
+
+        const association = resolveB2bOrderAssociations({
+            authPartner: partner,
+            resolvedAgency,
+            totalPriceCents: subtotalCents,
+            partnershipChannelOverride: partnershipChannelBody,
+            agencyNameOverride: agencyNameBody,
+        });
 
         const order = await prisma.$transaction(async (tx) => {
             const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
+            const b2bFields = buildB2bOrderCreateData(association, floristPartnerId);
             return tx.order.create({
                 data: {
                     orderNumber,
@@ -307,13 +324,7 @@ export async function POST(request: Request) {
                     customerPhone: buyerPhone || null,
                     totalPriceCents: subtotalCents,
                     currency: 'EUR',
-                    partnerId: floristPartnerId,
-                    agencyId: resolvedAgency?.agencyId ?? null,
-                    agencyCode: resolvedAgency?.agencyCode ?? (agencyCodeBody || null),
-                    agencyName: resolvedAgency?.agencyName ?? agencyNameBody ?? null,
-                    partnershipChannel: resolvedAgency?.partnershipChannel ?? null,
-                    referralPartnerId,
-                    partnerCommissionCents,
+                    ...b2bFields,
                     funeralDate: funeralDate || null,
                     partnerNotifyEmail: partnerNotifyEmail || null,
                     externalAnnouncementId: externalAnnouncementId || null,
@@ -349,10 +360,44 @@ export async function POST(request: Request) {
             });
         }
 
-        // Dispatcher multi-canale (non bloccante sulla risposta HTTP).
-        void sendPartnerOrderNotifications(order.id).catch((notifyErr) => {
-            console.error('[B2B Partner API] sendPartnerOrderNotifications failed (non-blocking):', notifyErr);
+        logPartnerOrderIngestion({
+            source: 'api_v1_partner_order_create',
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            authPartner: partner,
+            association,
+            floristPartnerId,
+            totalPriceCents: subtotalCents,
         });
+
+        revalidatePartnerOrderDashboardCaches({
+            referralPartnerId: association.referralPartnerId,
+            agencyId: association.agencyId,
+            floristPartnerId,
+        });
+
+        // Dispatcher multi-canale (email cliente/fiorista/partner + WhatsApp VERA).
+        void sendPartnerOrderNotifications(order.id)
+            .then((results) => {
+                console.info('[B2B Partner API] sendPartnerOrderNotifications', {
+                    tag: `partner:${partner.id}`,
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                    results: results.map((r) => ({
+                        channel: r.channel,
+                        ok: r.ok,
+                        skipped: r.skipped,
+                        error: r.error,
+                    })),
+                });
+            })
+            .catch((notifyErr) => {
+                console.error('[B2B Partner API] sendPartnerOrderNotifications failed (non-blocking):', {
+                    tag: `partner:${partner.id}`,
+                    orderId: order.id,
+                    error: notifyErr,
+                });
+            });
 
         return NextResponse.json(
             {
@@ -363,6 +408,10 @@ export async function POST(request: Request) {
                     currency: order.currency,
                     agencyId: order.agencyId,
                     partnerId: order.partnerId,
+                    referralPartnerId: order.referralPartnerId,
+                    partnershipChannel: order.partnershipChannel,
+                    partnerCommissionCents: order.partnerCommissionCents,
+                    partnerCommissionSettlementStatus: order.partnerCommissionSettlementStatus,
                 },
             },
             { status: 201, headers: jsonHeaders(request) }

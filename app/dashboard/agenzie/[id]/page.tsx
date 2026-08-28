@@ -7,6 +7,7 @@ import PartnerCommissionPanel from '@/components/dashboard/PartnerCommissionPane
 import { ArrowLeft, Building2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AgencyDossierPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;

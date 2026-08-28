@@ -13,8 +13,11 @@ import {
     type DeadlineStatus,
 } from '@/lib/financial/financeDeadlineStore';
 import { computeFinanceQuadratura } from '@/lib/financial/financeQuadratura';
+import { getGlobalPartnerCommissionMetrics } from '@/lib/financial/partnerCommissionRegister';
+import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function ledgerWithNeonDeadlines() {
     const ledger = getLedger();
@@ -28,13 +31,16 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     try {
-        const [ledger, statements, finecoBalance, saasTotalEurCents, quadratura] =
+        const [ledger, statements, finecoBalance, saasTotalEurCents, quadratura, partnerCommissions] =
             await Promise.all([
                 ledgerWithNeonDeadlines(),
                 calculateFinancialStatements(),
                 getFinecoManualBalance(),
                 sumSaasForeignEurCents(),
                 computeFinanceQuadratura(),
+                getDashboardTestModeActive().then((testMode) =>
+                    getGlobalPartnerCommissionMetrics(testMode)
+                ),
             ]);
         return NextResponse.json({
             ok: true,
@@ -43,6 +49,9 @@ export async function GET() {
             finecoBalance,
             saasTotalEurCents,
             quadratura,
+            partnerCommissions,
+        }, {
+            headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
         });
     } catch (error) {
         console.error('[Finance API GET] Errore:', error);

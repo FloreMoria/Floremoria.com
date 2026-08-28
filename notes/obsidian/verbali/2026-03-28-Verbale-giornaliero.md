@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Applicazione metodo Verifica Codice, eliminazione dark mode bloccanti e nuovo layout editoriale bianco per la Memoria Storica aziendale."
 sync_source: docs/verbali/28-03-2026.md
-synced_at: 2026-08-27T18:28:05.310Z
+synced_at: 2026-08-28T03:01:04.354Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

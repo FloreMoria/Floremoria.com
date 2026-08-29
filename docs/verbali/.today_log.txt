@@ -60,3 +60,5 @@
 [2026-08-29 09:13] fix: cron dispatch social 09:00 Rome, sync media multicanale, force-publish-today; recupero IG/FB/LinkedIn/Pinterest 29-08
 [2026-08-29 09:23] refactor: tabella gateway finance raggruppata per ordine, link FM, vista semplificata vs log grezzo
 [2026-08-29 10:15] fix(finance): deduplicazione Prima Nota — consolidateReconciledPayments su bankLineId/ordine, badge documenti SDI/manuali, script clean-duplicate-accounting-entries, PnL senza doppio conteggio fioristi; tsc+build OK.
+[2026-08-29 10:20] feat(finance): client YouDOX SOAP/REST per ricezione automatica fatture passive e sync esiti SDI — creato FinancialYoudoxClient in lib/financial/youdoxClient.ts con auth cache OAuth 3600s, wrapper fetchUnreadInvoices/downloadInvoiceXml/markInvoiceAsRead/syncStatusReports, route unificata /api/v1/finance/youdox/sync con matching automatico P.IVA fornitori/fioristi e pulsante "Sincronizza YouDOX SDI" in SdiInvoicesUploadBox.
+

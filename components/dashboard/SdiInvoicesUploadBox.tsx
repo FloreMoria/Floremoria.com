@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FileArchive, Loader2, UploadCloud } from 'lucide-react';
+import { FileArchive, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import UploadedInvoicesFileList, {
     type UploadedFileRow,
@@ -32,6 +32,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [dragOver, setDragOver] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<IngestSummary | null>(null);
@@ -54,6 +55,29 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     useEffect(() => {
         void loadUploads();
     }, [loadUploads]);
+
+    const handleSyncYoudox = async () => {
+        setSyncing(true);
+        setError(null);
+        setMessage(null);
+        setSummary(null);
+        try {
+            const res = await fetch('/api/v1/finance/youdox/sync', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || 'Impossibile sincronizzare con YouDOX SDI');
+            }
+            setMessage(
+                `Sincronizzazione YouDOX completata! Polled: ${data.polled || 0}, Importate: ${data.imported || 0}, Aggiornate: ${data.updated || 0}.`
+            );
+            await loadUploads();
+            onImported?.();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Errore durante la sincronizzazione YouDOX');
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const uploadOne = async (file: File): Promise<string | null> => {
         try {
@@ -132,20 +156,36 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[520px] flex flex-col gap-3 overflow-hidden">
-            <div className="flex items-start gap-3 shrink-0 min-h-[4.5rem]">
-                <div className="mt-0.5 rounded-xl bg-slate-900/5 p-2.5 text-slate-700">
-                    <FileArchive size={20} />
+            <div className="flex items-start justify-between gap-3 shrink-0 min-h-[4.5rem]">
+                <div className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-xl bg-slate-900/5 p-2.5 text-slate-700">
+                        <FileArchive size={20} />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                            Fatture Passive SDI / YouDOX
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDOX/SDI.
+                            Deduplica automatica; correzioni e note di credito (TD04) aggiornano i documenti già presenti
+                            e riconciliano Fineco.
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                        Fatture Passive SDI / YouDOX
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                        Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDOX/SDI.
-                        Deduplica automatica; correzioni e note di credito (TD04) aggiornano i documenti già presenti
-                        e riconciliano Fineco.
-                    </p>
-                </div>
+
+                <button
+                    type="button"
+                    disabled={uploading || syncing}
+                    onClick={handleSyncYoudox}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50 transition-colors shrink-0 shadow-sm"
+                >
+                    {syncing ? (
+                        <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                        <RefreshCw size={14} />
+                    )}
+                    {syncing ? 'Sincronizzazione…' : 'Sincronizza YouDOX SDI'}
+                </button>
             </div>
 
             <div

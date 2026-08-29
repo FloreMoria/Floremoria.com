@@ -6,18 +6,24 @@
 import type { YoudoxConfig, YoudoxTokenError, YoudoxTokenResponse } from './types';
 
 export function loadYoudoxConfigFromEnv(): YoudoxConfig | null {
-    const apiBaseUrl = process.env.YOUDOX_API_BASE_URL?.trim();
-    const tokenUrl = process.env.YOUDOX_TOKEN_URL?.trim();
+    const endpoint =
+        process.env.YOUDOX_ENDPOINT?.trim() ||
+        process.env.YOUDOX_API_BASE_URL?.trim() ||
+        'https://servizi-demo.youdox.it/fatturazione/api';
+    const apiBaseUrl = endpoint.replace(/\/$/, '');
+    const tokenUrl =
+        process.env.YOUDOX_TOKEN_URL?.trim() ||
+        `${apiBaseUrl.replace(/\/api$/, '')}/GetToken.aspx`;
     const clientId = process.env.YOUDOX_CLIENT_ID?.trim();
     const username = process.env.YOUDOX_USERNAME?.trim();
     const password = process.env.YOUDOX_PASSWORD?.trim();
 
-    if (!apiBaseUrl || !tokenUrl || !clientId || !username || !password) {
+    if (!clientId || !username || !password) {
         return null;
     }
 
     return {
-        apiBaseUrl: apiBaseUrl.replace(/\/$/, ''),
+        apiBaseUrl,
         tokenUrl,
         clientId,
         username,

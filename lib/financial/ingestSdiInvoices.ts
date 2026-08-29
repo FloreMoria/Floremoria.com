@@ -161,6 +161,40 @@ function resolveMetadataSource(
     return channel;
 }
 
+async function findMatchingCounterparty(vendorVat: string | null) {
+    if (!vendorVat) return { supplierId: null, partnerId: null, matchedCounterpartyName: null };
+    const digits = vendorVat.replace(/\D/g, '');
+    if (digits.length < 7) return { supplierId: null, partnerId: null, matchedCounterpartyName: null };
+
+    try {
+        const supplier = await prisma.supplier.findFirst({
+            where: {
+                deletedAt: null,
+                vatNumber: { contains: digits },
+            },
+            select: { id: true, companyName: true },
+        });
+        if (supplier) {
+            return { supplierId: supplier.id, partnerId: null, matchedCounterpartyName: supplier.companyName };
+        }
+
+        const partner = await prisma.partner.findFirst({
+            where: {
+                deletedAt: null,
+                vatNumber: { contains: digits },
+            },
+            select: { id: true, shopName: true },
+        });
+        if (partner) {
+            return { supplierId: null, partnerId: partner.id, matchedCounterpartyName: partner.shopName };
+        }
+    } catch {
+        /* best-effort fallback */
+    }
+
+    return { supplierId: null, partnerId: null, matchedCounterpartyName: null };
+}
+
 function buildInvoiceMetadata(
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
@@ -454,11 +488,13 @@ async function persistInvoice(
         vatCents = Math.abs(inv.vatCents);
     }
 
+    const counterpartyMatch = await findMatchingCounterparty(inv.vendorVat);
+
     const row = await prisma.manualFinanceExpense.create({
         data: {
             expenseDate,
             docType: inv.docKind,
-            vendorName: inv.vendorName,
+            vendorName: counterpartyMatch.matchedCounterpartyName || inv.vendorName,
             description:
                 inv.causale ||
                 `${
@@ -484,6 +520,7 @@ async function persistInvoice(
             notes: `${metaSource} ${inv.dedupeKey}`,
             metadataJson: buildInvoiceMetadata(inv, archive, channel, {
                 uploadId: uploadId || null,
+                ...counterpartyMatch,
             }),
             reconciled: false,
         },

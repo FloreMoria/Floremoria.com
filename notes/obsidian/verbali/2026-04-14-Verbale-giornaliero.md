@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Standardizzazione Categorie Email."
 sync_source: docs/verbali/14-04-2026.md
-synced_at: 2026-08-29T07:29:06.294Z
+synced_at: 2026-08-29T08:15:52.250Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/14-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

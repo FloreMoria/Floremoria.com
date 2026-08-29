@@ -26,6 +26,10 @@ export const metadata: Metadata = {
         template: '%s | FloreMoria',
         default: 'Dashboard | FloreMoria',
     },
+    robots: {
+        index: false,
+        follow: false,
+    },
     description: 'Sistema gestionale avanzato FloreMoria.',
     manifest: '/manifest-staff.webmanifest',
     appleWebApp: {

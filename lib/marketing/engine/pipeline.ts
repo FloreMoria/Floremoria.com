@@ -6,7 +6,8 @@ import {
 } from './generation';
 import { generateAndStorageCampaignImage } from './images';
 import { getMarketingLaunchProducts, pickDailyLaunchProduct, type MarketingLaunchProduct } from './launchQueue';
-import { getDailyPublishSlots, getActiveTheme } from './contentCalendar';
+import { getDailyPublishSlots, getActiveTheme, getRomeCalendarDate } from './contentCalendar';
+import { syncMultichannelCampaignMedia } from '@/lib/marketing/syncCampaignMedia';
 
 export interface PipelineCampaignResult {
   campaignId: string;
@@ -133,6 +134,11 @@ async function runProductPipeline(product: MarketingLaunchProduct): Promise<Pipe
     const approved = campaigns.filter((c) => c.approved).length;
     const rejected = campaigns.filter((c) => c.approved === false && !c.error).length;
     const failed = campaigns.filter((c) => c.error).length;
+
+    const sync = await syncMultichannelCampaignMedia(getRomeCalendarDate());
+    console.log(
+      `[Marketing Pipeline] Sync media multicanale — copied: ${sync.mediaCopied}, promoted: ${sync.draftsPromoted}, clones: ${sync.clonesCreated}`
+    );
 
     console.log(
       `[Marketing Pipeline] ✔ Prodotto ${product.productName} — approved: ${approved}, rejected: ${rejected}, errori: ${failed}`

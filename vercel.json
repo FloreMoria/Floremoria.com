@@ -13,6 +13,10 @@
       "schedule": "0 5 * * *"
     },
     {
+      "path": "/api/cron/publish-campaigns-dispatch",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/vera-order-reminders",
       "schedule": "30 6 * * *"
     },

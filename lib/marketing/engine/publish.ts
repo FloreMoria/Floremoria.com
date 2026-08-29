@@ -6,6 +6,8 @@ import {
   getRomeCalendarDate,
   formatLabelForSlot,
 } from '@/lib/marketing/engine/contentCalendar';
+import { findApprovedCampaignForPublishSlot } from '@/lib/marketing/engine/findPublishCandidate';
+import { syncMultichannelCampaignMedia } from '@/lib/marketing/syncCampaignMedia';
 import {
   publishCampaignToChannel,
   type CampaignPublishResult,
@@ -29,10 +31,18 @@ export interface MarketingPublishSummary {
  * Foto consegna social-ready → Reel AI (Veo) ON di default (disattiva con =0).
  * Calendario: 1 contenuto per slot editoriale del giorno (IG/FB/TikTok post, story, reel).
  */
-export async function runMarketingPublishPipeline(limit = 50): Promise<MarketingPublishSummary> {
+export async function runMarketingPublishPipeline(
+  limit = 50,
+  referenceDate = getRomeCalendarDate()
+): Promise<MarketingPublishSummary> {
   const startedAt = new Date();
 
-  const campaignSummary = await runMarketingCampaignPublishPipeline(limit);
+  const sync = await syncMultichannelCampaignMedia(referenceDate);
+  console.log(
+    `[Marketing Publish] Sync media multicanale — copied: ${sync.mediaCopied}, promoted: ${sync.draftsPromoted}, clones: ${sync.clonesCreated}`
+  );
+
+  const campaignSummary = await runMarketingCampaignPublishPipeline(limit, referenceDate);
   const deliveryProofSummary = await runDeliveryProofSocialPublishPipeline(limit);
 
   const finishedAt = new Date();
@@ -50,7 +60,10 @@ export async function runMarketingPublishPipeline(limit = 50): Promise<Marketing
   };
 }
 
-async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
+async function runMarketingCampaignPublishPipeline(
+  limit: number,
+  referenceDate = getRomeCalendarDate()
+): Promise<{
   candidates: number;
   published: number;
   simulated: number;
@@ -58,8 +71,8 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
   results: CampaignPublishResult[];
   slotsTargeted: number;
 }> {
-  const slots = getDailyPublishSlots();
-  const today = getRomeCalendarDate();
+  const slots = getDailyPublishSlots(referenceDate);
+  const today = referenceDate;
 
   console.log(
     `[Marketing Publish] ═══ Avvio pubblicazione calendario (${slots.length} slot) — ${today.toISOString().slice(0, 10)} ═══`
@@ -69,16 +82,7 @@ async function runMarketingCampaignPublishPipeline(limit: number): Promise<{
   let candidates = 0;
 
   for (const slot of slots) {
-    const campaign = await prisma.marketingCampaign.findFirst({
-      where: {
-        status: CampaignStatus.APPROVED,
-        targetChannel: slot.channel,
-        contentFormat: slot.contentFormat,
-        imageUrl: { not: '' },
-        OR: [{ scheduledFor: today }, { scheduledFor: null }],
-      },
-      orderBy: { updatedAt: 'asc' },
-    });
+    const campaign = await findApprovedCampaignForPublishSlot(slot, today);
 
     if (!campaign) {
       console.log(`[Marketing Publish] Nessuna campagna APPROVED per ${formatLabelForSlot(slot)}`);

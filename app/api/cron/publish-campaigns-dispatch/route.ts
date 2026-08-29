@@ -1,14 +1,10 @@
 /**
- * GET /api/cron/publish-campaigns
+ * GET /api/cron/publish-campaigns-dispatch
  *
- * Trigger Vercel Cron giornaliero marketing (05:00 UTC = 07:00 Rome):
- * 1. Pipeline produzione — copy Gemini + Gemini Image + checkpoint Guardiani (calendario editoriale)
- * 2. Pubblicazione POSTMAN — 1 contenuto per slot: IG/FB/TikTok post, story giornaliera, reel ogni 4 giorni
- *
- * Recupero mattina: /api/cron/publish-campaigns-dispatch alle 07:00 UTC (09:00 Rome).
+ * Secondo trigger giornaliero (09:00 Europe/Rome): sync media multicanale + pubblicazione POSTMAN
+ * per recuperare campagne approvate dopo il cron produzione delle 07:00.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { runMarketingProductionPipeline } from '@/lib/marketing/engine/pipeline';
 import { runMarketingPublishPipeline } from '@/lib/marketing/engine/publish';
 
 export const runtime = 'nodejs';
@@ -32,22 +28,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log('[Marketing Cron] publish-campaigns — trigger ricevuto');
-
-    const production = await runMarketingProductionPipeline();
+    console.log('[Marketing Cron] publish-campaigns-dispatch — sync + publish');
     const publish = await runMarketingPublishPipeline();
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Cron marketing eseguito con successo',
-        production,
+        message: 'Dispatch marketing multicanale completato',
         publish,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('❌ Errore nel cron job publish-campaigns:', error);
+    console.error('❌ Errore nel cron publish-campaigns-dispatch:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }

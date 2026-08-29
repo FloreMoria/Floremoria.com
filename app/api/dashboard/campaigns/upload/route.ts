@@ -3,6 +3,7 @@ import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { withProxiedCampaignMedia } from '@/lib/dashboard/campaignMediaUrl';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { overlayFloreMoriaWatermark } from '@/lib/marketing/engine/watermark';
+import { getRomeCalendarDate } from '@/lib/marketing/engine/contentCalendar';
 import prisma from '@/lib/prisma';
 import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 
@@ -88,6 +89,7 @@ async function createCampaignsFromMedia(params: {
         category: params.category,
         targetChannel,
         contentFormat: resolvedFormat,
+        scheduledFor: getRomeCalendarDate(),
         copy: params.copy.trim(),
         hashtags: params.hashtags,
         imageUrl: params.mediaUrl,

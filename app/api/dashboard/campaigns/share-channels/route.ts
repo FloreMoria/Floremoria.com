@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withProxiedCampaignMedia } from '@/lib/dashboard/campaignMediaUrl';
 import prisma from '@/lib/prisma';
+import { getRomeCalendarDate } from '@/lib/marketing/engine/contentCalendar';
 import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 
 const SHARED_ORGANIC_CHANNELS: MarketingChannel[] = [
@@ -75,10 +76,12 @@ export async function POST(request: Request) {
           category: source.category,
           targetChannel: channel,
           contentFormat: formatForChannel(channel, hasVideo, source.contentFormat),
+          scheduledFor: source.scheduledFor ?? getRomeCalendarDate(),
           copy: source.copy,
           hashtags: source.hashtags,
           imageUrl: source.imageUrl,
           videoUrl: source.videoUrl,
+          imagePrompt: source.imagePrompt,
         },
       });
       created.push(withProxiedCampaignMedia(row));

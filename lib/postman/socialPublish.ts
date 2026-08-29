@@ -36,6 +36,20 @@ import { publishCampaignToPinterest } from '@/src/agents/platforms/pinterestPubl
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 const LINKEDIN_API_BASE = 'https://api.linkedin.com/v2';
+const META_GRAPH_MAX_RETRIES = 3;
+
+function metaGraphRetryDelayMs(attempt: number): number {
+  return Math.min(8000, 1500 * 2 ** attempt);
+}
+
+function isMetaRateLimitError(message: string, status: number): boolean {
+  const lower = message.toLowerCase();
+  return status === 429 || lower.includes('rate limit') || lower.includes('too many calls');
+}
+
+async function sleepMs(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export interface CampaignPublishInput {
   id: string;
@@ -265,12 +279,29 @@ async function metaGraphUploadPhoto(
     body: formData,
   });
 
-  const payload = (await res.json()) as {
+  let payload = (await res.json()) as {
     id?: string;
     post_id?: string;
     error?: { message?: string };
   };
-  if (!res.ok || payload.error) {
+  let finalOk = res.ok;
+
+  if ((!finalOk || payload.error) && isMetaRateLimitError(payload.error?.message || '', res.status)) {
+    for (let attempt = 0; attempt < META_GRAPH_MAX_RETRIES - 1; attempt++) {
+      const delay = metaGraphRetryDelayMs(attempt);
+      console.warn(`[POSTMAN] Meta upload rate-limit — retry ${attempt + 1} tra ${delay}ms`);
+      await sleepMs(delay);
+      const retryRes = await fetch(`${META_GRAPH_BASE}/${fbPageId}/photos`, {
+        method: 'POST',
+        body: formData,
+      });
+      payload = (await retryRes.json()) as typeof payload;
+      finalOk = retryRes.ok;
+      if (finalOk && !payload.error) break;
+    }
+  }
+
+  if (!finalOk || payload.error) {
     throw new Error(payload.error?.message || `Meta Graph API upload error (${res.status})`);
   }
   return payload;
@@ -281,18 +312,31 @@ async function metaGraphPost<T>(
   accessToken: string,
   body: Record<string, string>
 ): Promise<T> {
-  const params = new URLSearchParams({ ...body, access_token: accessToken });
-  const res = await fetch(`${META_GRAPH_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
-  });
+  let lastError = 'Meta Graph API error';
+  for (let attempt = 0; attempt < META_GRAPH_MAX_RETRIES; attempt++) {
+    const params = new URLSearchParams({ ...body, access_token: accessToken });
+    const res = await fetch(`${META_GRAPH_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
 
-  const payload = (await res.json()) as T & { error?: { message?: string } };
-  if (!res.ok || payload.error) {
-    throw new Error(payload.error?.message || `Meta Graph API error (${res.status})`);
+    const payload = (await res.json()) as T & { error?: { message?: string } };
+    if (res.ok && !payload.error) {
+      return payload;
+    }
+
+    lastError = payload.error?.message || `Meta Graph API error (${res.status})`;
+    if (!isMetaRateLimitError(lastError, res.status) || attempt === META_GRAPH_MAX_RETRIES - 1) {
+      throw new Error(lastError);
+    }
+
+    const delay = metaGraphRetryDelayMs(attempt);
+    console.warn(`[POSTMAN] Meta rate-limit su ${path} — retry ${attempt + 1}/${META_GRAPH_MAX_RETRIES} tra ${delay}ms`);
+    await sleepMs(delay);
   }
-  return payload;
+
+  throw new Error(lastError);
 }
 
 async function getFacebookPageAccessToken(

@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * Tabella unificata Stripe + PayPal: date reali, dedupe, filtri, colonne complete.
+ * Tabella unificata Stripe + PayPal — vista semplificata per ordine + log tecnico opzionale.
  */
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Loader2, RefreshCw, Search } from 'lucide-react';
 import {
     formatGatewayDateTime,
+    type GatewaySyncGroupedRow,
     type GatewaySyncRow,
     type MovementKind,
 } from '@/lib/financial/gatewaySyncRows';
@@ -53,6 +55,14 @@ function movementBadgeClass(kind: MovementKind): string {
     }
 }
 
+function movementEmoji(kind: MovementKind, label: string): string {
+    if (kind === 'incasso') return `🟢 ${label}`;
+    if (kind === 'payout') return `🟣 ${label}`;
+    if (kind === 'rimborso') return `🔴 ${label}`;
+    if (kind === 'commissione' || kind === 'altro' || kind === 'riserva') return `⚪ ${label}`;
+    return label;
+}
+
 function CopyIdButton({ value }: { value: string }) {
     const [copied, setCopied] = useState(false);
     return (
@@ -73,13 +83,37 @@ function CopyIdButton({ value }: { value: string }) {
     );
 }
 
+function TechIdsBadge({ ids }: { ids: string[] }) {
+    if (!ids.length) return <span className="text-slate-400">—</span>;
+    const primary = ids[0];
+    const rest = ids.slice(1);
+    return (
+        <div className="flex flex-col gap-0.5">
+            <span
+                className="inline-flex items-center gap-1 max-w-[120px] font-mono text-[9px] text-slate-500 bg-slate-100 border border-slate-200 rounded px-1 py-0.5 truncate"
+                title={ids.join('\n')}
+            >
+                {primary}
+                <CopyIdButton value={primary} />
+            </span>
+            {rest.length > 0 && (
+                <span className="text-[9px] text-slate-400" title={rest.join('\n')}>
+                    +{rest.length} ID
+                </span>
+            )}
+        </div>
+    );
+}
+
 export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
     const [rows, setRows] = useState<GatewaySyncRow[]>([]);
+    const [groupedRows, setGroupedRows] = useState<GatewaySyncGroupedRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [gatewayFilter, setGatewayFilter] = useState<GatewayFilter>('all');
     const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
     const [search, setSearch] = useState('');
+    const [simplifiedView, setSimplifiedView] = useState(true);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -89,13 +123,16 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
             const data = (await res.json()) as {
                 ok?: boolean;
                 rows?: GatewaySyncRow[];
+                groupedRows?: GatewaySyncGroupedRow[];
                 error?: string;
             };
             if (!data.ok) throw new Error(data.error || 'Caricamento fallito');
             setRows(data.rows || []);
+            setGroupedRows(data.groupedRows || []);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore');
             setRows([]);
+            setGroupedRows([]);
         } finally {
             setLoading(false);
         }
@@ -105,7 +142,32 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
         void load();
     }, [load, refreshToken]);
 
-    const filtered = useMemo(() => {
+    const filteredGrouped = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return groupedRows.filter((r) => {
+            if (simplifiedView && r.eventKind === 'technical') return false;
+            if (gatewayFilter === 'stripe' && r.gateway !== 'stripe') return false;
+            if (gatewayFilter === 'paypal' && r.gateway !== 'paypal') return false;
+            if (typeFilter !== 'all' && r.movementKind !== typeFilter) return false;
+            if (!q) return true;
+            const hay = [
+                r.orderNumber,
+                r.customerName,
+                r.customerEmail,
+                r.description,
+                r.movementLabel,
+                ...r.transactionIds,
+                euro(r.grossCents),
+                euro(r.netCents),
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return hay.includes(q);
+        });
+    }, [groupedRows, gatewayFilter, typeFilter, search, simplifiedView]);
+
+    const filteredTechnical = useMemo(() => {
         const q = search.trim().toLowerCase();
         return rows.filter((r) => {
             if (gatewayFilter === 'stripe' && r.gateway !== 'stripe') return false;
@@ -118,6 +180,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                 r.customerName,
                 r.customerEmail,
                 r.reference,
+                r.orderNumber,
                 r.accountLabel,
                 r.movementLabel,
                 euro(r.grossCents),
@@ -129,6 +192,9 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
             return hay.includes(q);
         });
     }, [rows, gatewayFilter, typeFilter, search]);
+
+    const visibleCount = simplifiedView ? filteredGrouped.length : filteredTechnical.length;
+    const totalCount = simplifiedView ? groupedRows.length : rows.length;
 
     const filterBtn = (active: boolean) =>
         `px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
@@ -167,7 +233,6 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                         [
                             ['all', 'Tutti'],
                             ['incasso', 'Incassi'],
-                            ['commissione', 'Commissioni'],
                             ['payout', 'Payout'],
                             ['rimborso', 'Rimborsi'],
                         ] as const
@@ -182,7 +247,16 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                         </button>
                     ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <label className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[10px] font-semibold text-slate-700 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={!simplifiedView}
+                            onChange={(e) => setSimplifiedView(!e.target.checked)}
+                            className="rounded border-slate-300"
+                        />
+                        Mostra log grezzi di riconciliazione
+                    </label>
                     <div className="relative flex-1 lg:w-56">
                         <Search
                             size={12}
@@ -192,7 +266,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                             type="search"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cerca ID, cliente, importo…"
+                            placeholder="Cerca ordine, cliente, importo…"
                             className="w-full pl-7 pr-2 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-white"
                         />
                     </div>
@@ -213,9 +287,11 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
             </div>
 
             <p className="text-[10px] text-slate-500">
-                {filtered.length} movimenti
-                {filtered.length !== rows.length ? ` (filtro su ${rows.length})` : ''} · Stripe COM +
-                EU + PayPal
+                {visibleCount} {simplifiedView ? 'eventi' : 'movimenti'}
+                {visibleCount !== totalCount ? ` (filtro su ${totalCount})` : ''} ·{' '}
+                {simplifiedView
+                    ? 'Vista semplificata per ordine/payout/rimborso'
+                    : 'Vista tecnica completa (ogni riga gateway)'}
             </p>
 
             {error && (
@@ -225,185 +301,214 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
             )}
 
             <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-slate-100 max-h-[520px] overflow-y-auto [scrollbar-width:thin]">
-                <table className="w-full text-left text-[11px] min-w-[1100px]">
-                    <thead className="sticky top-0 z-10 bg-slate-50">
-                        <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                            <th className="px-3 py-2.5 font-bold whitespace-nowrap">Data &amp; Ora</th>
-                            <th className="px-3 py-2.5 font-bold">Gateway / Account</th>
-                            <th className="px-3 py-2.5 font-bold">Tipo movimento</th>
-                            <th className="px-3 py-2.5 font-bold min-w-[180px]">
-                                Descrizione / Cliente / Riferimento
-                            </th>
-                            <th className="px-3 py-2.5 font-bold">ID Transazione</th>
-                            <th className="px-3 py-2.5 font-bold text-right">Lordo</th>
-                            <th className="px-3 py-2.5 font-bold text-right">Fee</th>
-                            <th className="px-3 py-2.5 font-bold text-right">Netto</th>
-                            <th className="px-3 py-2.5 font-bold">Stato &amp; Fonte</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading && rows.length === 0 ? (
-                            <tr>
-                                <td colSpan={9} className="px-3 py-10 text-center text-slate-400">
-                                    <Loader2 size={16} className="inline animate-spin mr-2" />
-                                    Caricamento movimenti gateway…
-                                </td>
+                {simplifiedView ? (
+                    <table className="w-full text-left text-[11px] min-w-[980px]">
+                        <thead className="sticky top-0 z-10 bg-slate-50">
+                            <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <th className="px-3 py-2.5 font-bold whitespace-nowrap">Data</th>
+                                <th className="px-3 py-2.5 font-bold">Gateway</th>
+                                <th className="px-3 py-2.5 font-bold">Tipo</th>
+                                <th className="px-3 py-2.5 font-bold min-w-[220px]">Ordine / Cliente</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Lordo</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Fee tot.</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Netto</th>
+                                <th className="px-3 py-2.5 font-bold">ID tecnici</th>
                             </tr>
-                        ) : filtered.length === 0 ? (
-                            <tr>
-                                <td colSpan={9} className="px-3 py-10 text-center text-slate-400 italic">
-                                    Nessun movimento con i filtri selezionati. Sincronizza Stripe/PayPal
-                                    o carica un CSV PayPal.
-                                </td>
-                            </tr>
-                        ) : (
-                            filtered.map((r) => (
-                                <tr
-                                    key={r.id}
-                                    className="border-t border-slate-50 hover:bg-slate-50/80 align-top"
-                                >
-                                    <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-700">
-                                        {formatGatewayDateTime(r.occurredAt)}
-                                    </td>
-                                    <td className="px-3 py-2.5">
-                                        <span
-                                            className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${gatewayBadgeClass(r.accountCode || (r.gateway === 'paypal' ? 'PAYPAL' : 'COM'))}`}
-                                        >
-                                            {r.accountLabel ||
-                                                (r.gateway === 'paypal'
-                                                    ? 'PayPal'
-                                                    : r.accountCode === 'EU'
-                                                      ? 'Stripe EU'
-                                                      : 'Stripe COM')}
-                                        </span>
-                                    </td>
-                                    <td className="px-3 py-2.5">
-                                        <select
-                                            className={`w-full max-w-[150px] rounded border px-1.5 py-0.5 font-bold text-[10px] cursor-pointer ${movementBadgeClass(r.movementKind || 'altro')}`}
-                                            value={r.movementKind || 'altro'}
-                                            onChange={(e) => {
-                                                const kind = e.target.value as MovementKind;
-                                                void (async () => {
-                                                    const res = await fetch(
-                                                        '/api/dashboard/finance/sync/gateways',
-                                                        {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                            },
-                                                            body: JSON.stringify({
-                                                                action: 'set_movement_kind',
-                                                                transactionId: r.transactionId,
-                                                                movementKind: kind,
-                                                            }),
-                                                        }
-                                                    );
-                                                    const data = (await res.json()) as {
-                                                        ok?: boolean;
-                                                    };
-                                                    if (data.ok) {
-                                                        setRows((prev) =>
-                                                            prev.map((row) =>
-                                                                row.id === r.id
-                                                                    ? {
-                                                                          ...row,
-                                                                          movementKind: kind,
-                                                                          movementLabel:
-                                                                              kind === 'incasso'
-                                                                                  ? 'Incasso Ordine'
-                                                                                  : kind ===
-                                                                                      'commissione'
-                                                                                    ? 'Commissione Gateway'
-                                                                                    : kind ===
-                                                                                        'payout'
-                                                                                      ? 'Payout Bancario'
-                                                                                      : kind ===
-                                                                                          'rimborso'
-                                                                                        ? 'Rimborso'
-                                                                                        : kind ===
-                                                                                            'riserva'
-                                                                                          ? 'Riserva'
-                                                                                          : 'Altro movimento',
-                                                                      }
-                                                                    : row
-                                                            )
-                                                        );
-                                                    }
-                                                })();
-                                            }}
-                                        >
-                                            <option value="incasso">Incasso Ordine</option>
-                                            <option value="commissione">Commissione Gateway</option>
-                                            <option value="payout">Payout Bancario</option>
-                                            <option value="rimborso">Rimborso</option>
-                                            <option value="riserva">Riserva</option>
-                                            <option value="altro">Altro movimento</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-3 py-2.5">
-                                        <div className="font-medium text-slate-800 line-clamp-2">
-                                            {r.description}
-                                        </div>
-                                        {(r.customerName || r.customerEmail) && (
-                                            <div className="text-[10px] text-slate-500 mt-0.5">
-                                                {[r.customerName, r.customerEmail]
-                                                    .filter(Boolean)
-                                                    .join(' · ')}
-                                            </div>
-                                        )}
-                                        {r.reference && (
-                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                                Rif. {r.reference}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-3 py-2.5">
-                                        <div className="inline-flex items-center gap-1 max-w-[140px]">
-                                            <span
-                                                className="font-mono text-[10px] text-slate-700 truncate"
-                                                title={r.transactionId}
-                                            >
-                                                {r.transactionId}
-                                            </span>
-                                            <CopyIdButton value={r.transactionId} />
-                                        </div>
-                                    </td>
-                                    <td
-                                        className={`px-3 py-2.5 text-right font-mono whitespace-nowrap rounded-sm ${
-                                            r.grossCents > 0
-                                                ? 'bg-emerald-50 text-emerald-800 font-semibold'
-                                                : r.grossCents < 0
-                                                  ? 'bg-rose-50 text-rose-800 font-semibold'
-                                                  : 'text-slate-600'
-                                        }`}
-                                    >
-                                        {euro(r.grossCents)}
-                                    </td>
-                                    <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap bg-rose-50/80 text-rose-800">
-                                        {r.feeCents > 0 ? euro(-r.feeCents) : '—'}
-                                    </td>
-                                    <td
-                                        className={`px-3 py-2.5 text-right font-mono font-bold whitespace-nowrap ${
-                                            r.netCents > 0
-                                                ? 'bg-emerald-50 text-emerald-900'
-                                                : r.netCents < 0
-                                                  ? 'bg-rose-50 text-rose-900'
-                                                  : 'text-slate-900'
-                                        }`}
-                                    >
-                                        {euro(r.netCents)}
-                                    </td>
-                                    <td className="px-3 py-2.5">
-                                        <div className="text-[10px] font-semibold text-slate-700">
-                                            {r.statusLabel}
-                                        </div>
-                                        <div className="text-[10px] text-slate-400">{r.sourceLabel}</div>
+                        </thead>
+                        <tbody>
+                            {loading && groupedRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-3 py-10 text-center text-slate-400">
+                                        <Loader2 size={16} className="inline animate-spin mr-2" />
+                                        Caricamento…
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : filteredGrouped.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-3 py-10 text-center text-slate-400 italic">
+                                        Nessun evento con i filtri selezionati.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredGrouped.map((r) => (
+                                    <tr
+                                        key={r.id}
+                                        className="border-t border-slate-50 hover:bg-slate-50/80 align-top"
+                                    >
+                                        <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-700">
+                                            {formatGatewayDateTime(r.occurredAt)}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <span
+                                                className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${gatewayBadgeClass(r.accountCode)}`}
+                                            >
+                                                {r.accountLabel}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <span
+                                                className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${movementBadgeClass(r.movementKind)}`}
+                                            >
+                                                {movementEmoji(r.movementKind, r.movementLabel)}
+                                            </span>
+                                            {r.rawRowCount > 1 && (
+                                                <div className="text-[9px] text-slate-400 mt-0.5">
+                                                    {r.rawRowCount} mov. consolidati
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            {r.orderNumber && r.orderId ? (
+                                                <Link
+                                                    href={`/dashboard/orders?open=${encodeURIComponent(r.orderId)}`}
+                                                    className="font-bold text-indigo-700 hover:underline"
+                                                >
+                                                    {r.orderNumber}
+                                                </Link>
+                                            ) : r.orderNumber ? (
+                                                <span className="font-bold text-slate-800">{r.orderNumber}</span>
+                                            ) : null}
+                                            <div className="text-slate-700 mt-0.5 line-clamp-2">{r.description}</div>
+                                            {(r.customerName || r.customerEmail) && (
+                                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                                    {[r.customerName, r.customerEmail]
+                                                        .filter(Boolean)
+                                                        .join(' · ')}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td
+                                            className={`px-3 py-2.5 text-right font-mono whitespace-nowrap ${
+                                                r.grossCents > 0
+                                                    ? 'text-emerald-800 font-semibold'
+                                                    : r.grossCents < 0
+                                                      ? 'text-rose-800 font-semibold'
+                                                      : 'text-slate-600'
+                                            }`}
+                                        >
+                                            {euro(r.grossCents)}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap text-rose-800">
+                                            {r.feeCents > 0 ? euro(-r.feeCents) : '—'}
+                                        </td>
+                                        <td
+                                            className={`px-3 py-2.5 text-right font-mono font-bold whitespace-nowrap ${
+                                                r.netCents > 0
+                                                    ? 'text-emerald-900'
+                                                    : r.netCents < 0
+                                                      ? 'text-rose-900'
+                                                      : 'text-slate-900'
+                                            }`}
+                                        >
+                                            {euro(r.netCents)}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <TechIdsBadge ids={r.transactionIds} />
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                ) : (
+                    <table className="w-full text-left text-[11px] min-w-[1100px]">
+                        <thead className="sticky top-0 z-10 bg-slate-50">
+                            <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <th className="px-3 py-2.5 font-bold whitespace-nowrap">Data</th>
+                                <th className="px-3 py-2.5 font-bold">Gateway</th>
+                                <th className="px-3 py-2.5 font-bold">Tipo</th>
+                                <th className="px-3 py-2.5 font-bold min-w-[180px]">Descrizione</th>
+                                <th className="px-3 py-2.5 font-bold">ID Transazione</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Lordo</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Fee</th>
+                                <th className="px-3 py-2.5 font-bold text-right">Netto</th>
+                                <th className="px-3 py-2.5 font-bold">Fonte</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-3 py-10 text-center text-slate-400">
+                                        <Loader2 size={16} className="inline animate-spin mr-2" />
+                                        Caricamento log grezzi…
+                                    </td>
+                                </tr>
+                            ) : filteredTechnical.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-3 py-10 text-center text-slate-400 italic">
+                                        Nessun movimento grezzo con i filtri selezionati.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredTechnical.map((r) => (
+                                    <tr
+                                        key={r.id}
+                                        className="border-t border-slate-50 hover:bg-slate-50/80 align-top"
+                                    >
+                                        <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-700">
+                                            {formatGatewayDateTime(r.occurredAt)}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <span
+                                                className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${gatewayBadgeClass(r.accountCode || (r.gateway === 'paypal' ? 'PAYPAL' : 'COM'))}`}
+                                            >
+                                                {r.accountLabel}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <span
+                                                className={`inline-flex px-1.5 py-0.5 rounded border font-bold text-[10px] ${movementBadgeClass(r.movementKind || 'altro')}`}
+                                            >
+                                                {movementEmoji(r.movementKind || 'altro', r.movementLabel)}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            {r.orderNumber && r.orderId ? (
+                                                <Link
+                                                    href={`/dashboard/orders?open=${encodeURIComponent(r.orderId)}`}
+                                                    className="font-bold text-indigo-700 hover:underline text-[10px]"
+                                                >
+                                                    {r.orderNumber}
+                                                </Link>
+                                            ) : null}
+                                            <div className="text-slate-800 line-clamp-2">{r.description}</div>
+                                            {(r.customerName || r.customerEmail) && (
+                                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                                    {[r.customerName, r.customerEmail]
+                                                        .filter(Boolean)
+                                                        .join(' · ')}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <div className="inline-flex items-center gap-1 max-w-[140px]">
+                                                <span
+                                                    className="font-mono text-[10px] text-slate-700 truncate"
+                                                    title={r.transactionId}
+                                                >
+                                                    {r.transactionId}
+                                                </span>
+                                                <CopyIdButton value={r.transactionId} />
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap">
+                                            {euro(r.grossCents)}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-mono whitespace-nowrap text-rose-800">
+                                            {r.feeCents > 0 ? euro(-r.feeCents) : '—'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-mono font-bold whitespace-nowrap">
+                                            {euro(r.netCents)}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-[10px] text-slate-400">
+                                            {r.sourceLabel}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

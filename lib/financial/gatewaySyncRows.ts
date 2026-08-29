@@ -35,6 +35,12 @@ export type GatewaySyncRow = {
     customerName: string | null;
     customerEmail: string | null;
     reference: string | null;
+    orderId?: string | null;
+    orderNumber?: string | null;
+    /** Charge Stripe (ch_…) per raggruppare fee/climate sulla stessa riga business */
+    sourceChargeId?: string | null;
+    /** Micro-movimento nascosto in vista semplificata (fee climate, regolazioni) */
+    isTechnical?: boolean;
     transactionId: string;
     grossCents: number;
     feeCents: number;
@@ -43,6 +49,34 @@ export type GatewaySyncRow = {
     statusLabel: string;
     sourceLabel: GatewaySourceLabel;
     dedupeKey: string;
+};
+
+export type GatewayEventKind = 'order' | 'payout' | 'refund' | 'technical';
+
+/** Riga business consolidata (1 ordine / 1 payout / 1 rimborso). */
+export type GatewaySyncGroupedRow = {
+    id: string;
+    groupKey: string;
+    eventKind: GatewayEventKind;
+    occurredAt: string;
+    gateway: GatewayKind;
+    accountCode: string;
+    accountLabel: string;
+    movementKind: MovementKind;
+    movementLabel: string;
+    description: string;
+    orderId: string | null;
+    orderNumber: string | null;
+    customerName: string | null;
+    customerEmail: string | null;
+    grossCents: number;
+    feeCents: number;
+    netCents: number;
+    currency: string;
+    statusLabel: string;
+    sourceLabel: GatewaySourceLabel;
+    transactionIds: string[];
+    rawRowCount: number;
 };
 
 const SKIP_STRIPE_TYPES = new Set([
@@ -107,22 +141,32 @@ export function formatGatewayDateTime(iso: string | null | undefined): string {
     return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
 }
 
+/** Estrae codice ordine FloreMoria (FM-YY-MMDD) da testo libero. */
+export function extractFloreOrderNumber(text: string | null | undefined): string | null {
+    if (!text) return null;
+    const m = text.match(/\b(FM-\d{2,4}-\d{3,6})\b/i);
+    return m ? m[1].toUpperCase() : null;
+}
+
 function classifyStripeType(type: string, amountCents: number): {
     kind: MovementKind;
     label: string;
+    isTechnical?: boolean;
 } {
     const t = (type || '').toLowerCase();
+    if (t.includes('climate'))
+        return { kind: 'commissione', label: 'Contributo Stripe Climate', isTechnical: true };
     if (t === 'charge' || t === 'payment') return { kind: 'incasso', label: 'Incasso Ordine' };
     if (t === 'payment_refund' || t === 'refund' || t === 'refund_failure')
-        return { kind: 'rimborso', label: 'Rimborso' };
+        return { kind: 'rimborso', label: 'Rimborso Cliente' };
     if (t === 'stripe_fee' || t === 'network_cost')
-        return { kind: 'commissione', label: 'Commissione Gateway' };
+        return { kind: 'commissione', label: 'Commissione Gateway', isTechnical: true };
     if (t === 'payout' || t === 'payout_cancel' || t === 'payout_failure')
-        return { kind: 'payout', label: 'Payout Bancario' };
+        return { kind: 'payout', label: 'Bonifico Payout → Banca' };
     if (t.includes('reserve')) return { kind: 'riserva', label: 'Riserva' };
     if (amountCents < 0 && (t === 'adjustment' || t === 'fee'))
-        return { kind: 'commissione', label: 'Commissione Gateway' };
-    return { kind: 'altro', label: 'Altro movimento' };
+        return { kind: 'commissione', label: 'Regolazione / Fee', isTechnical: true };
+    return { kind: 'altro', label: 'Movimento Tecnico' };
 }
 
 function classifyPaypal(description: string, grossCents: number): {
@@ -195,7 +239,7 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
     const amountCents = Number(m.amountCents || 0);
     const feeCents = Math.abs(Number(m.feeCents || 0));
     const netCents = Number(m.netCents ?? amountCents - feeCents);
-    const { kind, label } = classifyStripeType(type, amountCents);
+    const { kind, label, isTechnical } = classifyStripeType(type, amountCents);
 
     const occurredAt =
         parseIsoDate(m.createdAtStripe) ||
@@ -221,13 +265,26 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
         str(m.order?.orderNumber) ||
         str(meta.orderNumber) ||
         str(meta.order_number) ||
+        extractFloreOrderNumber(str(m.description)) ||
         null;
 
+    const sourceId = str(m.sourceId);
+    const metaSource = str(meta.source) || str(meta.charge) || sourceId;
+    const sourceChargeId =
+        metaSource && (metaSource.startsWith('ch_') || metaSource.startsWith('py_'))
+            ? metaSource
+            : sourceId && (sourceId.startsWith('ch_') || sourceId.startsWith('py_'))
+              ? sourceId
+              : rawId.startsWith('ch_') || rawId.startsWith('py_')
+                ? rawId
+                : null;
+
     const description =
-        str(m.description) || (orderRef ? `Ordine ${orderRef}` : null) || label;
+        orderRef && kind === 'incasso'
+            ? `Incasso ordine ${orderRef}`
+            : str(m.description) || (orderRef ? `Ordine ${orderRef}` : null) || label;
 
     // Chiave canonica: charge/po/txn preferendo sourceId/payoutId
-    const sourceId = str(m.sourceId);
     const payoutIdRaw = str(m.payoutId)?.replace(/^stripe_tx_/, '') || null;
     let transactionId = rawId || stripeId;
     if (kind === 'payout') {
@@ -261,6 +318,10 @@ export function mapStripeMovementToRow(m: StripeMovementInput): GatewaySyncRow |
         customerName,
         customerEmail,
         reference: orderRef || sourceId || null,
+        orderId: str(m.orderId) || null,
+        orderNumber: orderRef,
+        sourceChargeId,
+        isTechnical: Boolean(isTechnical) || kind === 'commissione',
         transactionId,
         grossCents: amountCents,
         feeCents,
@@ -295,6 +356,7 @@ export function mapPaypalTxToRow(tx: PaypalTxInput): GatewaySyncRow | null {
     );
     const description = str(tx.description) || `PayPal ${id}`;
     const { kind, label } = classifyPaypal(description, grossCents);
+    const orderNumber = extractFloreOrderNumber(description);
     const occurredAt = parseIsoDate(tx.transactionDate);
     if (!occurredAt) return null;
 
@@ -312,11 +374,16 @@ export function mapPaypalTxToRow(tx: PaypalTxInput): GatewaySyncRow | null {
         accountLabel: sourceLabel === 'CSV Import' ? 'PayPal CSV' : 'PayPal',
         movementKind: kind,
         movementLabel: label,
-        description,
+        description:
+            orderNumber && kind === 'incasso'
+                ? `Incasso ordine ${orderNumber}`
+                : description,
         customerName: null,
         customerEmail: str(tx.payerEmail),
-        reference: null,
-        transactionId: id,
+        reference: orderNumber,
+        orderNumber,
+        isTechnical: kind === 'commissione',
+        transactionId: normalizePaypalTransactionId(id) || id,
         grossCents,
         feeCents,
         netCents,
@@ -377,6 +444,11 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
     else if (meta.webhook || meta.source === 'webhook') sourceLabel = 'Webhook PayPal';
     else if (meta.syncedFromApi) sourceLabel = 'API PayPal';
 
+    const orderNumber =
+        extractFloreOrderNumber(entry.description) ||
+        extractFloreOrderNumber(str(meta.referenceId)) ||
+        extractFloreOrderNumber(str(meta.invoiceId));
+
     return {
         id: `paypal-ledger:${entry.id}`,
         occurredAt,
@@ -385,10 +457,15 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
         accountLabel: sourceLabel === 'CSV Import' ? 'PayPal CSV' : 'PayPal',
         movementKind: kind,
         movementLabel: label,
-        description: entry.description || label,
+        description:
+            orderNumber && kind === 'incasso'
+                ? `Incasso ordine ${orderNumber}`
+                : entry.description || label,
         customerName: str(entry.counterpartyName),
         customerEmail: str(meta.payerEmail),
-        reference: str(meta.referenceId),
+        reference: orderNumber || str(meta.referenceId),
+        orderNumber,
+        isTechnical: false,
         transactionId: txId,
         grossCents: totalCents,
         feeCents,
@@ -460,11 +537,13 @@ export function dedupeGatewayRows(rows: GatewaySyncRow[]): GatewaySyncRow[] {
             byTxId.set(`fallback:${row.id}`, ensureGatewayBadges(row));
             continue;
         }
-        // Commissioni separate solo se ID distinto; altrimenti merge fee sulla riga padre
+        // PayPal: una chiave per txn (incasso + fee + ledger)
         const key =
-            row.movementKind === 'commissione'
-                ? `${row.gateway}:fee:${tx}`
-                : `${row.gateway}:${tx}`;
+            row.gateway === 'paypal'
+                ? `paypal:${normalizePaypalTransactionId(row.transactionId) || tx}`
+                : row.movementKind === 'commissione'
+                  ? `${row.gateway}:fee:${tx}`
+                  : `${row.gateway}:${tx}`;
         const prev = byTxId.get(key);
         const enriched = ensureGatewayBadges(row);
         if (!prev) {
@@ -603,4 +682,203 @@ export function buildGatewaySyncRows(input: {
         rows.push(row);
     }
     return dedupeGatewayRows(rows);
+}
+
+function extractStripeChargeKey(row: GatewaySyncRow): string | null {
+    const hay = [row.sourceChargeId, row.transactionId, row.reference, row.description]
+        .filter(Boolean)
+        .join(' ');
+    const ch = hay.match(/ch_[A-Za-z0-9]+/i);
+    if (ch) return ch[0].toLowerCase();
+    const pi = hay.match(/pi_[A-Za-z0-9]+/i);
+    if (pi) return pi[0].toLowerCase();
+    return null;
+}
+
+function resolveBusinessGroupKey(row: GatewaySyncRow): string {
+    if (row.movementKind === 'payout') {
+        const po = row.transactionId.match(/po_[A-Za-z0-9]+/i);
+        return `payout:${row.gateway}:${row.accountCode}:${(po?.[0] || row.transactionId).toLowerCase()}`;
+    }
+    if (row.movementKind === 'rimborso') {
+        if (row.gateway === 'paypal') {
+            return `refund:paypal:${normalizePaypalTransactionId(row.transactionId)}`;
+        }
+        const ch = extractStripeChargeKey(row);
+        return `refund:stripe:${row.accountCode}:${ch || row.transactionId.toLowerCase()}`;
+    }
+    if (row.orderNumber) return `order:${row.orderNumber.toLowerCase()}`;
+    if (row.orderId) return `order-id:${row.orderId}`;
+    if (row.gateway === 'paypal') {
+        const pp = normalizePaypalTransactionId(row.transactionId);
+        if (pp) return `paypal:tx:${pp}`;
+    }
+    const ch = extractStripeChargeKey(row);
+    if (ch) return `stripe:charge:${row.accountCode}:${ch}`;
+    return `solo:${row.id}`;
+}
+
+function pickBestSourceLabel(rows: GatewaySyncRow[]): GatewaySourceLabel {
+    const priority: GatewaySourceLabel[] = [
+        'API Stripe',
+        'API PayPal',
+        'Webhook PayPal',
+        'CSV Import',
+        'PayPal',
+    ];
+    for (const p of priority) {
+        if (rows.some((r) => r.sourceLabel === p)) return p;
+    }
+    return rows[0]?.sourceLabel || 'PayPal';
+}
+
+function groupedMovementLabel(eventKind: GatewayEventKind, movementKind: MovementKind): string {
+    if (eventKind === 'order' || movementKind === 'incasso') return 'Incasso Ordine';
+    if (movementKind === 'payout') return 'Bonifico Payout → Banca';
+    if (movementKind === 'rimborso') return 'Rimborso Cliente';
+    if (eventKind === 'technical') return 'Movimento Tecnico / Regolazione';
+    return 'Altro movimento';
+}
+
+function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyncGroupedRow {
+    const sorted = [...rows].sort(
+        (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+    );
+    const primary =
+        sorted.find((r) => r.movementKind === 'incasso' && r.grossCents > 0) ||
+        sorted.find((r) => r.movementKind === 'payout') ||
+        sorted.find((r) => r.movementKind === 'rimborso') ||
+        sorted.find((r) => !r.isTechnical) ||
+        sorted[0];
+
+    const movementKind = primary.movementKind;
+    let eventKind: GatewayEventKind = 'order';
+    if (movementKind === 'payout') eventKind = 'payout';
+    else if (movementKind === 'rimborso') eventKind = 'refund';
+    else if (rows.every((r) => r.isTechnical || r.movementKind === 'commissione' || r.movementKind === 'altro'))
+        eventKind = 'technical';
+    else if (movementKind === 'incasso') eventKind = 'order';
+
+    let grossCents = 0;
+    let feeCents = 0;
+
+    const incasso = rows.filter((r) => r.movementKind === 'incasso' && r.grossCents > 0);
+    if (incasso.length) {
+        grossCents = Math.max(...incasso.map((r) => r.grossCents));
+    } else if (movementKind === 'payout' || movementKind === 'rimborso') {
+        grossCents = primary.grossCents;
+    } else {
+        grossCents = Math.max(...rows.map((r) => r.grossCents));
+    }
+
+    for (const r of rows) {
+        if (r.movementKind === 'incasso') {
+            feeCents = Math.max(feeCents, r.feeCents || 0);
+        } else if (r.isTechnical || r.movementKind === 'commissione') {
+            feeCents += Math.abs(r.grossCents || r.feeCents || 0);
+        }
+    }
+
+    let netCents: number;
+    if (movementKind === 'payout' || movementKind === 'rimborso') {
+        netCents = rows.reduce((sum, r) => sum + (r.netCents || 0), 0) || primary.netCents;
+    } else {
+        netCents = grossCents - (grossCents >= 0 ? feeCents : -feeCents);
+    }
+
+    const orderNumber =
+        rows.map((r) => r.orderNumber).find(Boolean) ||
+        rows.map((r) => r.reference).find((r) => r && /^FM-/i.test(r)) ||
+        null;
+    const orderId = rows.map((r) => r.orderId).find(Boolean) || null;
+    const customerName = rows.map((r) => r.customerName).find(Boolean) || null;
+    const customerEmail = rows.map((r) => r.customerEmail).find(Boolean) || null;
+
+    const transactionIds = [
+        ...new Set(rows.map((r) => r.transactionId).filter(Boolean)),
+    ].slice(0, 8);
+
+    let description = primary.description;
+    if (eventKind === 'order' && orderNumber) {
+        description = `Incasso ordine ${orderNumber}`;
+    } else if (eventKind === 'payout') {
+        description = `Bonifico Payout ${primary.accountLabel} → Banca FloreMoria`;
+    } else if (eventKind === 'refund' && orderNumber) {
+        description = `Rimborso ordine ${orderNumber}`;
+    }
+
+    return {
+        id: `group:${groupKey}`,
+        groupKey,
+        eventKind,
+        occurredAt: primary.occurredAt,
+        gateway: primary.gateway,
+        accountCode: primary.accountCode,
+        accountLabel: primary.accountLabel,
+        movementKind,
+        movementLabel: groupedMovementLabel(eventKind, movementKind),
+        description,
+        orderId: orderId || null,
+        orderNumber: orderNumber || null,
+        customerName,
+        customerEmail,
+        grossCents,
+        feeCents,
+        netCents,
+        currency: primary.currency,
+        statusLabel: primary.statusLabel,
+        sourceLabel: pickBestSourceLabel(rows),
+        transactionIds,
+        rawRowCount: rows.length,
+    };
+}
+
+/**
+ * Raggruppa movimenti deduplicati in eventi business (1 ordine / 1 payout / 1 rimborso).
+ */
+export function groupGatewaySyncRowsForDisplay(rows: GatewaySyncRow[]): GatewaySyncGroupedRow[] {
+    const groups = new Map<string, GatewaySyncRow[]>();
+
+    for (const row of rows) {
+        let key = resolveBusinessGroupKey(row);
+        if (row.isTechnical && row.sourceChargeId) {
+            key = `stripe:charge:${row.accountCode}:${row.sourceChargeId.toLowerCase()}`;
+        } else if (row.isTechnical && row.gateway === 'paypal') {
+            const pp = normalizePaypalTransactionId(row.transactionId);
+            if (pp) key = `paypal:tx:${pp}`;
+        }
+        const bucket = groups.get(key) || [];
+        bucket.push(row);
+        groups.set(key, bucket);
+    }
+
+    return Array.from(groups.entries())
+        .map(([key, bucket]) => mergeGatewayGroup(key, bucket))
+        .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+}
+
+export function enrichGatewayRowsWithOrders(
+    rows: GatewaySyncRow[],
+    ordersByNumber: Map<
+        string,
+        { id: string; orderNumber: string; buyerFullName: string | null; buyerEmail: string | null }
+    >
+): GatewaySyncRow[] {
+    return rows.map((row) => {
+        const code =
+            row.orderNumber ||
+            (row.reference && /^FM-/i.test(row.reference) ? row.reference : null) ||
+            extractFloreOrderNumber(row.description);
+        if (!code) return row;
+        const order = ordersByNumber.get(code.toUpperCase());
+        if (!order) return { ...row, orderNumber: code };
+        return {
+            ...row,
+            orderId: row.orderId || order.id,
+            orderNumber: order.orderNumber || code,
+            customerName: row.customerName || order.buyerFullName,
+            customerEmail: row.customerEmail || order.buyerEmail,
+            reference: order.orderNumber || code,
+        };
+    });
 }

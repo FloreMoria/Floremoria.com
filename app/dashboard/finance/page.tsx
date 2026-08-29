@@ -888,8 +888,8 @@ export default function FinanceDashboardPage() {
                                                 Sincronizzazione API Gateway (dal 01/01/2026)
                                             </h4>
                                             <p className="text-xs text-slate-500 mt-0.5">
-                                                Movimenti Stripe COM/EU + PayPal (API, Webhook, CSV) —
-                                                date reali, deduplicati, con lordo/fee/netto
+                                                Stripe COM/EU + PayPal — vista per ordine (lordo, fee totale,
+                                                netto) con log grezzo opzionale
                                             </p>
                                         </div>
                                         <span className="inline-flex self-start px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-indigo-50 border border-indigo-200 text-indigo-700">

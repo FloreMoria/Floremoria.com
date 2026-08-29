@@ -3,7 +3,7 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import prisma from '@/lib/prisma';
 import { getPaypalSyncStatus } from '@/lib/financial/paypalSync';
 import { stripeAccountBadgeFromMovement } from '@/lib/financial/stripeSync';
-import { buildGatewaySyncRows } from '@/lib/financial/gatewaySyncRows';
+import { buildGatewaySyncRows, enrichGatewayRowsWithOrders, extractFloreOrderNumber, groupGatewaySyncRowsForDisplay } from '@/lib/financial/gatewaySyncRows';
 import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export const runtime = 'nodejs';
@@ -101,7 +101,7 @@ export async function GET() {
             };
         });
 
-        const rows = buildGatewaySyncRows({
+        const rowsRaw = buildGatewaySyncRows({
             stripeMovements: stripeEnriched,
             paypalTransactions: paypalStatus.transactions.map((t) => ({
                 id: t.id,
@@ -126,7 +126,37 @@ export async function GET() {
                 totalCents: e.totalCents,
                 metadataJson: e.metadataJson,
             })),
-        }).map((r) => {
+        });
+
+        const orderCodes = new Set<string>();
+        for (const r of rowsRaw) {
+            if (r.orderNumber) orderCodes.add(r.orderNumber.toUpperCase());
+            const fromDesc = extractFloreOrderNumber(r.description);
+            if (fromDesc) orderCodes.add(fromDesc);
+            if (r.reference && /^FM-/i.test(r.reference)) orderCodes.add(r.reference.toUpperCase());
+        }
+
+        const ordersByNumber =
+            orderCodes.size > 0
+                ? await prisma.order.findMany({
+                      where: { orderNumber: { in: [...orderCodes] }, deletedAt: null },
+                      select: {
+                          id: true,
+                          orderNumber: true,
+                          buyerFullName: true,
+                          buyerEmail: true,
+                      },
+                  })
+                : [];
+        const orderMap = new Map(
+            ordersByNumber
+                .filter((o): o is typeof o & { orderNumber: string } => Boolean(o.orderNumber))
+                .map((o) => [o.orderNumber.toUpperCase(), o])
+        );
+
+        const rowsEnriched = enrichGatewayRowsWithOrders(rowsRaw, orderMap);
+
+        const rows = rowsEnriched.map((r) => {
             const ov = kindOverrides[r.transactionId] || kindOverrides[r.id];
             if (!ov) return r;
             const labelMap: Record<string, { kind: typeof r.movementKind; label: string }> = {
@@ -145,11 +175,15 @@ export async function GET() {
             };
         });
 
+        const groupedRows = groupGatewaySyncRowsForDisplay(rows);
+
         return NextResponse.json({
             ok: true,
             from: FROM.toISOString(),
             rows,
+            groupedRows,
             count: rows.length,
+            groupedCount: groupedRows.length,
             stripeLastSyncAt: stripeMeta?.value || null,
             paypalLastSyncAt: paypalStatus.lastSyncAt,
             stripeRecordCount: stripeMovements.length,

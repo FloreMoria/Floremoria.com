@@ -10,6 +10,7 @@ import { FileText, Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatFinanceDate';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
+import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { AccountingEntry } from '@/lib/financial/types';
 
 type NeonRow = {
@@ -21,6 +22,9 @@ type NeonRow = {
     sourceKey?: string | null;
     documentRef?: string | null;
     orderId?: string | null;
+    bankLineId?: string | null;
+    counterpartyName?: string | null;
+    attachmentUrl?: string | null;
     totalCents: number;
     netCents: number;
     vatCents: number;
@@ -45,7 +49,21 @@ type DisplayEntry = {
     /** true = entrata/ricavo (verde); false = uscita/costo (rosso) */
     isEntrata: boolean;
     sourceLabel: string;
+    attachments: ConsolidatedFiscalAttachment[];
 };
+
+function attachmentBadgeEmoji(kind: ConsolidatedFiscalAttachment['kind']): string {
+    switch (kind) {
+        case 'FATTURA':
+            return '📄';
+        case 'SCONTRINO':
+            return '🧾';
+        case 'COMPENSO':
+            return '💐';
+        default:
+            return '📎';
+    }
+}
 
 function euro(cents: number): string {
     return (Math.abs(cents) / 100).toLocaleString('it-IT', {
@@ -255,15 +273,25 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 totalCents: r.totalCents,
                 direction: r.direction,
                 category: r.category,
+                bankLineId: r.bankLineId,
+                description: r.description,
+                counterpartyName: r.counterpartyName,
+                attachmentUrl: r.attachmentUrl,
                 metadataJson: r.metadataJson,
             }))
         );
+        const fiscalById = new Map(fiscalRows.map((r) => [r.id, r]));
         const keepNeonIds = new Set(fiscalRows.map((r) => r.id).filter(Boolean) as string[]);
 
         const map = new Map<string, DisplayEntry>();
 
         for (const r of cleanedNeon) {
             if (!keepNeonIds.has(r.id)) continue;
+            const enriched = fiscalById.get(r.id);
+            const meta = (enriched?.metadataJson || r.metadataJson || {}) as Record<string, unknown>;
+            const attachments = Array.isArray(meta.consolidatedAttachments)
+                ? (meta.consolidatedAttachments as ConsolidatedFiscalAttachment[])
+                : [];
             const accounts = accountsFromNeon(r);
             map.set(r.id, {
                 id: r.id,
@@ -276,10 +304,9 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 sourceLabel: sourceLabel(
                     r.sourceType,
                     fonteOverrides[r.id] ||
-                        (typeof r.metadataJson?.displayFonte === 'string'
-                            ? r.metadataJson.displayFonte
-                            : null)
+                        (typeof meta.displayFonte === 'string' ? meta.displayFonte : null)
                 ),
+                attachments,
             });
         }
 
@@ -319,6 +346,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 amountCents: e.amountCents,
                 isEntrata: isEntrataFromLocal(e.dareAccount, e.avereAccount),
                 sourceLabel: fonteOverrides[e.id] || 'Manuale',
+                attachments: [],
             });
         }
 
@@ -350,8 +378,8 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         <div className="space-y-2">
             <div className="px-4 pt-3 flex items-center justify-between gap-2">
                 <p className="text-[11px] text-slate-500">
-                    Solo scritture reali (gateway/banca prioritari; ordini esclusi se già
-                    incassati) · {rows.length} voci
+                    Solo scritture reali (bonifico Fineco unico per pagamento; documenti SDI/manuali
+                    allegati, non sommati) · {rows.length} voci
                 </p>
                 <button
                     type="button"
@@ -414,7 +442,20 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                         className="px-5 py-3.5 font-medium text-slate-800 min-w-[280px] max-w-[420px] whitespace-normal break-words"
                                         title={entry.description}
                                     >
-                                        {entry.description}
+                                        <div>{entry.description}</div>
+                                        {entry.attachments.length > 0 && (
+                                            <div className="mt-1.5 flex flex-wrap gap-1">
+                                                {entry.attachments.map((att) => (
+                                                    <span
+                                                        key={`${att.kind}-${att.label}-${att.entryId || ''}`}
+                                                        className="inline-flex items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+                                                        title={att.label}
+                                                    >
+                                                        {attachmentBadgeEmoji(att.kind)} {att.label}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-5 py-3.5 text-xs font-mono text-slate-600 whitespace-nowrap">
                                         {entry.dareAccount}

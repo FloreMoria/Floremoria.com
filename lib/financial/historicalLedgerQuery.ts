@@ -138,12 +138,6 @@ export async function computeHistoricalPnl(opts: {
             continue;
         }
 
-        // Costi fioristi: se esiste scrittura da ordine liquidato, ignora il doppione bancario
-        if (r.sourceType === 'BANK_LINE' && r.category === 'COSTI_FIORISTI') {
-            const hasFloristPayout = usable.some((x) => x.sourceType === 'FLORIST_PAYOUT');
-            if (hasFloristPayout) continue;
-        }
-
         if (r.direction === 'ENTRATA' || r.totalCents > 0) {
             if (r.category === 'RICAVI_VENDITE' || r.category === 'ALTRI_RICAVI' || r.category === 'RIMBORSI') {
                 ricaviLordiCents += Math.abs(r.totalCents);

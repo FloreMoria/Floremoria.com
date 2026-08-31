@@ -6,6 +6,7 @@ import {
     computeHistoricalPnl,
     listHistoricalLedgerEntries,
     listPartnerLedgerExtract,
+    listRelatedLedgerEntries,
 } from '@/lib/financial/historicalLedgerQuery';
 import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
@@ -56,6 +57,31 @@ export async function GET(request: Request) {
             return NextResponse.json({ ok: true, ...data });
         }
 
+        if (view === 'related') {
+            const entryId = url.searchParams.get('entryId') || '';
+            if (!entryId.trim()) {
+                return jsonError('entryId obbligatorio per view=related', 400);
+            }
+            const { anchor, rows } = await listRelatedLedgerEntries(entryId.trim());
+            if (!anchor) {
+                return NextResponse.json({ ok: true, rows: [], anchor: null });
+            }
+            return NextResponse.json({
+                ok: true,
+                anchor: { id: anchor.id },
+                rows: rows.map((r) => ({
+                    id: r.id,
+                    accountingDate: r.accountingDate.toISOString(),
+                    description: r.description,
+                    totalCents: r.totalCents,
+                    direction: r.direction,
+                    category: r.category,
+                    sourceType: r.sourceType,
+                    reconciliationStatus: r.reconciliationStatus,
+                })),
+            });
+        }
+
         const data = await listHistoricalLedgerEntries({
             fiscalYear,
             fiscalQuarter:
@@ -101,7 +127,32 @@ export async function POST(request: Request) {
             action?: string;
             entryId?: string;
             fonteLabel?: string;
+            reconciliationStatus?: string;
         };
+
+        if (body.action === 'set_reconciliation_status') {
+            const entryId = String(body.entryId || '').trim();
+            const reconciliationStatus = String(body.reconciliationStatus || '')
+                .trim()
+                .toUpperCase();
+            const allowed = new Set(['MATCHED', 'UNMATCHED', 'PARTIAL', 'N/A']);
+            if (!entryId || !allowed.has(reconciliationStatus)) {
+                return jsonError('entryId e reconciliationStatus validi obbligatori', 400);
+            }
+            const prisma = (await import('@/lib/prisma')).default;
+            const row = await prisma.financialLedgerEntry.findUnique({
+                where: { id: entryId },
+                select: { id: true },
+            });
+            if (!row) {
+                return jsonError('Voce registro non trovata', 404);
+            }
+            await prisma.financialLedgerEntry.update({
+                where: { id: entryId },
+                data: { reconciliationStatus },
+            });
+            return NextResponse.json({ ok: true, entryId, reconciliationStatus });
+        }
 
         if (body.action === 'set_fonte') {
             const entryId = String(body.entryId || '').trim();
@@ -142,7 +193,7 @@ export async function POST(request: Request) {
 
         if (body.action !== 'sync') {
             return jsonError(
-                'Usa action: "sync" o action: "set_fonte".',
+                'Usa action: "sync", "set_fonte" o "set_reconciliation_status".',
                 400
             );
         }

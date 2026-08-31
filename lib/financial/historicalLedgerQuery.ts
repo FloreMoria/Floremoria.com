@@ -255,6 +255,39 @@ export async function listPartnerLedgerExtract(partnerId: string) {
     });
 }
 
+/** Movimenti collegati allo stesso evento economico (ordine, documento, partner, riga banca). */
+export async function listRelatedLedgerEntries(entryId: string) {
+    const anchor = await prisma.financialLedgerEntry.findUnique({
+        where: { id: entryId },
+    });
+    if (!anchor || anchor.reversedAt) {
+        return { anchor: null, rows: [] as Awaited<ReturnType<typeof prisma.financialLedgerEntry.findMany>> };
+    }
+
+    const or: Record<string, unknown>[] = [];
+    if (anchor.orderId) or.push({ orderId: anchor.orderId });
+    if (anchor.documentRef) or.push({ documentRef: anchor.documentRef });
+    if (anchor.partnerId) or.push({ partnerId: anchor.partnerId });
+    if (anchor.bankLineId) or.push({ bankLineId: anchor.bankLineId });
+    if (anchor.sourceId) or.push({ sourceId: anchor.sourceId });
+
+    if (or.length === 0) {
+        return { anchor, rows: [] as Awaited<ReturnType<typeof prisma.financialLedgerEntry.findMany>> };
+    }
+
+    const rows = await prisma.financialLedgerEntry.findMany({
+        where: {
+            reversedAt: null,
+            id: { not: entryId },
+            OR: or,
+        },
+        orderBy: [{ accountingDate: 'desc' }, { createdAt: 'desc' }],
+        take: 50,
+    });
+
+    return { anchor, rows };
+}
+
 function csvEscape(v: unknown): string {
     const s = v == null ? '' : String(v);
     if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;

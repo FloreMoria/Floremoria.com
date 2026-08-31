@@ -81,3 +81,4 @@
 [2026-08-31 16:46] fix: Vercel Ignored Build Step senza git diff; deploy prod floremoria-dashboard OK (6017f366)
 [2026-08-31 17:12] ux: Prima Nota tabella compatta con tutti i campi fiscali (dir, cat, impon/IVA, doc, tipo)
 [2026-08-31 17:15] ux: Prima Nota colonne tecniche ID ordine/partner/Fineco + link allegato; commit push deploy
+[2026-08-31 17:35] feat(accounting): Prima Nota vista essenziale 8 col, IVA 10/22%, stato editabile, drawer dettaglio + movimenti correlati; dedup visiva

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createYoudoxClient, YoudoxClient } from '@/lib/youdox/client';
 import { loadYoudoxConfigFromEnv } from '@/lib/youdox/auth';
+import { resolveInvoicesServiceCandidates } from '@/lib/youdox/endpoints';
 import { requireYoudoxApiAccess } from '@/lib/youdox/requireAccess';
 
 /**
@@ -35,6 +36,7 @@ export async function GET(request: Request) {
             services: {
                 exchange: client.serviceUrl('ExchangeService'),
                 invoices: client.serviceUrl('InvoicesService'),
+                invoicesCandidates: resolveInvoicesServiceCandidates(config),
             },
             folders: YoudoxClient.sftpFolderMap(),
             via: access.via,

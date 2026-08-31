@@ -30,6 +30,7 @@ YOUDOX_CLIENT_ID=
 YOUDOX_USERNAME=
 YOUDOX_PASSWORD=
 YOUDOX_DRY_RUN=true   # stub locali senza SOAP
+YOUDOX_INVOICES_SERVICE_URL=   # override esplicito endpoint SOAP InvoicesService
 # opzionale SFTP
 YOUDOX_SFTP_HOST=
 YOUDOX_SFTP_USER=

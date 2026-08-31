@@ -3,6 +3,7 @@
  * WSDL: {apiBaseUrl}/InvoicesService.svc?wsdl
  */
 import type { YoudoxConfig, YoudoxInvoice, YoudoxInvoicesFilter } from './types';
+import { invoicesServiceEndpoint, resolveInvoicesServiceCandidates } from './endpoints';
 
 const SOAP_NS = 'http://schemas.xmlsoap.org/soap/envelope/';
 const TNS = 'http://tempuri.org/';
@@ -41,14 +42,7 @@ function nilDateTimeElement(name: string, value?: string | null): string {
     return `<tns:${name} xsi:nil="true" xmlns:xsi="${XSI}"/>`;
 }
 
-export function invoicesServiceEndpoint(config: YoudoxConfig): string {
-    return (
-        config.invoicesServiceUrl?.trim() ||
-        `${config.apiBaseUrl.replace(/\/$/, '')}/InvoicesService.svc`
-    );
-}
-
-/** Default filtri sync passivo: ultimi N giorni + OnlyUnread se richiesto. */
+export { invoicesServiceEndpoint, resolveInvoicesServiceCandidates } from './endpoints';
 export function normalizeReceivedFilter(filter: YoudoxInvoicesFilter = {}): YoudoxInvoicesFilter {
     const now = new Date();
     const from = new Date(now.getTime() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
@@ -113,9 +107,16 @@ function parseSoapFault(xml: string): string | null {
     return faultCode ? `SOAP Fault: ${faultCode}` : null;
 }
 
-function logSoapPhase(operation: string, httpStatus: number, snippet: string): void {
+function logSoapPhase(
+    operation: string,
+    endpoint: string,
+    httpStatus: number,
+    snippet: string
+): void {
     const preview = snippet.replace(/\s+/g, ' ').slice(0, 500);
-    console.log(`[youdox][SOAP][${operation}] HTTP ${httpStatus} · ${preview}`);
+    console.log(
+        `[youdox][SOAP][${operation}] POST ${endpoint} → HTTP ${httpStatus} · ${preview}`
+    );
 }
 
 async function invokeSoap(
@@ -124,30 +125,66 @@ async function invokeSoap(
     soapAction: string,
     bodyInnerXml: string
 ): Promise<string> {
-    const endpoint = invoicesServiceEndpoint(config);
+    const candidates = resolveInvoicesServiceCandidates(config);
     const envelope = buildSoapEnvelope(bodyInnerXml);
-    const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/xml; charset=utf-8',
-            SOAPAction: `"${soapAction}"`,
-        },
-        body: envelope,
-    });
+    const tried: string[] = [];
+    let lastStatus = 0;
+    let lastBody = '';
+    let lastEndpoint = '';
 
-    const text = await res.text();
-    logSoapPhase(operation, res.status, text);
+    for (let i = 0; i < candidates.length; i += 1) {
+        const endpoint = candidates[i];
+        tried.push(endpoint);
+        lastEndpoint = endpoint;
 
-    const fault = parseSoapFault(text);
-    if (!res.ok) {
-        throw new Error(
-            fault || `[youdox] SOAP ${operation} fallita (HTTP ${res.status}).`
+        console.info(
+            `[youdox][SOAP][${operation}] tentativo ${i + 1}/${candidates.length}: ${endpoint}`
         );
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/xml; charset=utf-8',
+                SOAPAction: `"${soapAction}"`,
+            },
+            body: envelope,
+        });
+
+        const text = await res.text();
+        lastStatus = res.status;
+        lastBody = text;
+        logSoapPhase(operation, endpoint, res.status, text);
+
+        if (res.status === 404 && i < candidates.length - 1) {
+            console.warn(
+                `[youdox][SOAP][${operation}] HTTP 404 su ${endpoint} — provo endpoint alternativo`
+            );
+            continue;
+        }
+
+        const fault = parseSoapFault(text);
+        if (!res.ok) {
+            const triedList = tried.join(' | ');
+            throw new Error(
+                fault ||
+                    `[youdox] SOAP ${operation} fallita (HTTP ${res.status}) su ${endpoint}. URL provati: ${triedList}`
+            );
+        }
+        if (fault) {
+            throw new Error(`[youdox] SOAP ${operation} su ${endpoint}: ${fault}`);
+        }
+        if (i > 0) {
+            console.info(
+                `[youdox][SOAP][${operation}] endpoint risolto: ${endpoint} (dopo ${i} fallback)`
+            );
+        }
+        return text;
     }
-    if (fault) {
-        throw new Error(`[youdox] SOAP ${operation}: ${fault}`);
-    }
-    return text;
+
+    const triedList = tried.join(' | ');
+    throw new Error(
+        `[youdox] SOAP ${operation} fallita (HTTP ${lastStatus}) su ${lastEndpoint}. URL provati: ${triedList}. Ultima risposta: ${lastBody.replace(/\s+/g, ' ').slice(0, 200)}`
+    );
 }
 
 function parseInvoiceBlock(block: string): YoudoxInvoice {

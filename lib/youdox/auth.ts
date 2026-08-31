@@ -5,6 +5,7 @@
 
 import type { YoudoxConfig, YoudoxTokenError, YoudoxTokenResponse } from './types';
 import { YOUDOX_ER05_USER_MESSAGE, YoudoxAuthError } from './types';
+import { normalizeYoudoxApiBaseUrl } from './endpoints';
 
 export { YOUDOX_ER05_USER_MESSAGE, YoudoxAuthError } from './types';
 
@@ -13,11 +14,12 @@ export function loadYoudoxConfigFromEnv(): YoudoxConfig | null {
         process.env.YOUDOX_ENDPOINT?.trim() ||
         process.env.YOUDOX_API_BASE_URL?.trim() ||
         'https://servizi-demo.youdox.it/fatturazione/api';
-    const apiBaseUrl = endpoint.replace(/\/$/, '');
+    const rawApiBaseUrl = endpoint.replace(/\/$/, '');
     const tokenUrl = (
         process.env.YOUDOX_TOKEN_URL?.trim() ||
-        `${apiBaseUrl.replace(/\/api$/, '')}/GetToken.aspx`
+        `${rawApiBaseUrl.replace(/\/api$/, '')}/GetToken.aspx`
     ).trim();
+    const apiBaseUrl = normalizeYoudoxApiBaseUrl(rawApiBaseUrl, tokenUrl);
     const clientId = process.env.YOUDOX_CLIENT_ID?.trim();
     const username = process.env.YOUDOX_USERNAME?.trim();
     const password = process.env.YOUDOX_PASSWORD?.trim();
@@ -28,9 +30,7 @@ export function loadYoudoxConfigFromEnv(): YoudoxConfig | null {
 
     return {
         apiBaseUrl,
-        invoicesServiceUrl:
-            process.env.YOUDOX_INVOICES_SERVICE_URL?.trim() ||
-            `${apiBaseUrl}/InvoicesService.svc`,
+        invoicesServiceUrl: process.env.YOUDOX_INVOICES_SERVICE_URL?.trim() || undefined,
         tokenUrl,
         clientId,
         username,

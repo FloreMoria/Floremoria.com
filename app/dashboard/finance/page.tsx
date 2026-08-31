@@ -37,6 +37,10 @@ import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingIn
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
 import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
+import {
+    FINANCE_TAB_STYLES,
+    type FinanceMainTabId,
+} from '@/components/dashboard/finance/financePassivoUi';
 import { formatFinanceDate, formatFinanceDateTime } from '@/lib/financial/formatFinanceDate';
 import { FLOREMORIA_FINECO_BANK, FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
@@ -693,20 +697,25 @@ export default function FinanceDashboardPage() {
                             ['gateway', 'Stripe & PayPal'],
                             ['fisco', 'Fisco & Scadenze'],
                         ] as const
-                    ).map(([id, label]) => (
+                    ).map(([id, label]) => {
+                        const tabId = id as FinanceMainTabId;
+                        const styles = FINANCE_TAB_STYLES[tabId];
+                        const isActive = activeTab === id;
+                        return (
                         <button
                             key={id}
                             type="button"
                             onClick={() => setActiveTab(id)}
-                            className={`flex-1 min-w-[120px] py-4 text-center text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-                                activeTab === id
-                                    ? 'border-[#c5a880] text-slate-900 bg-white'
-                                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                            className={`flex-1 min-w-[120px] py-3.5 px-2 mx-0.5 mt-1 rounded-t-xl text-center text-xs font-bold uppercase tracking-wider transition-all border ${
+                                isActive
+                                    ? `${styles.active} border-b-2 shadow-sm z-[1]`
+                                    : `${styles.inactive} border-b-transparent hover:border-b-2`
                             }`}
                         >
                             {label}
                         </button>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {activeTab === 'bank' && (

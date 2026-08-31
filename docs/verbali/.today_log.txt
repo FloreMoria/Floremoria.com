@@ -67,3 +67,4 @@
 [2026-08-31 12:20] feat(orders): Florist Scout AI — Gemini Search/Maps, ranking vicinanza ingresso+telefono, email operatore, pannello dashboard Chiama/Assegna provvisorio; tsc+build OK.
 [2026-08-31 13:40] fix(social): disaccoppiamento canali dispatch, gestione timeout video e routing isolato per Facebook Reels — separazione rami di pubblicazione con try/catch dedicati per META_INSTAGRAM, META_FACEBOOK, TIKTOK, LINKEDIN e PINTEREST; supporto FACEBOOK_PAGE_ACCESS_TOKEN e FACEBOOK_PAGE_ID diretti con fallback trasparente; risoluzione URL video pubblici HTTPS senza leak di errori TikTok su Facebook; rimozione messaggi di errore incongrui TikTok da dashboard e API route; tsc+build OK.
 
+[2026-08-31 14:15] feat(finance): tab a colori tenui, box Passivo uniformi scroll 10 righe + ricerca multifiltro, colonna Data documento, diagnostica ER05 YouDOX; tsc+build OK.

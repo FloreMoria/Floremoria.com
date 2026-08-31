@@ -14,6 +14,10 @@ export type InvoiceUploadRecord = {
     channel: InvoiceUploadChannel;
     fileName: string;
     uploadedAt: string; // ISO
+    /** Data documento più recente nel batch (ISO date YYYY-MM-DD). */
+    documentDate?: string | null;
+    /** Testo per filtro rapido lato UI. */
+    searchHaystack?: string;
     sizeBytes: number;
     invoiceCount: number;
     imported: number;
@@ -93,7 +97,86 @@ export async function listInvoiceUploads(
 ): Promise<InvoiceUploadRecord[]> {
     const all = await readHistory();
     const filtered = channel ? all.filter((r) => r.channel === channel) : all;
-    return filtered.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+    const sorted = filtered.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+    return enrichUploadRecordsWithDocumentMeta(sorted);
+}
+
+function formatItDateForSearch(iso: string): string {
+    const m = iso.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[1]}-${m[2]}-${m[3]}`;
+    return iso;
+}
+
+async function enrichUploadRecordsWithDocumentMeta(
+    records: InvoiceUploadRecord[]
+): Promise<InvoiceUploadRecord[]> {
+    if (!records.length) return records;
+
+    const expenses = await prisma.manualFinanceExpense.findMany({
+        select: {
+            expenseDate: true,
+            vendorName: true,
+            description: true,
+            fileName: true,
+            metadataJson: true,
+        },
+        orderBy: { expenseDate: 'desc' },
+        take: 8000,
+    });
+
+    return records.map((upload) => {
+        const matched = expenses.filter((e) => expenseBelongsToUpload(e, upload));
+        if (!matched.length) {
+            return {
+                ...upload,
+                documentDate: upload.documentDate || upload.uploadedAt.slice(0, 10),
+                searchHaystack:
+                    upload.searchHaystack ||
+                    [upload.fileName, upload.uploadedAt.slice(0, 10)].join(' '),
+            };
+        }
+
+        let maxDate = matched[0].expenseDate;
+        const parts: string[] = [upload.fileName];
+        for (const e of matched) {
+            if (e.expenseDate > maxDate) maxDate = e.expenseDate;
+            const meta = (e.metadataJson || {}) as Record<string, unknown>;
+            parts.push(
+                e.vendorName,
+                e.description,
+                e.expenseDate.toISOString().slice(0, 10),
+                formatItDateForSearch(e.expenseDate.toISOString()),
+                typeof meta.invoiceNumber === 'string' ? meta.invoiceNumber : '',
+                typeof meta.documentNumber === 'string' ? meta.documentNumber : '',
+                typeof meta.orderNumber === 'string' ? meta.orderNumber : '',
+                typeof meta.vendorComune === 'string' ? meta.vendorComune : '',
+                typeof meta.vendorCity === 'string' ? meta.vendorCity : '',
+                typeof meta.cemeteryCity === 'string' ? meta.cemeteryCity : ''
+            );
+        }
+
+        return {
+            ...upload,
+            documentDate: maxDate.toISOString().slice(0, 10),
+            searchHaystack: parts.filter(Boolean).join(' '),
+        };
+    });
+}
+
+function expenseBelongsToUpload(
+    expense: {
+        fileName: string | null;
+        metadataJson: unknown;
+    },
+    upload: InvoiceUploadRecord
+): boolean {
+    const meta = (expense.metadataJson || {}) as Record<string, unknown>;
+    if (meta.uploadId === upload.id) return true;
+    if (expense.fileName && expense.fileName === upload.fileName) return true;
+    if (typeof meta.archiveFileName === 'string' && meta.archiveFileName === upload.fileName) {
+        return true;
+    }
+    return false;
 }
 
 export async function findUploadByFileName(

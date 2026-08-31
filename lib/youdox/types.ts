@@ -35,6 +35,20 @@ export type YoudoxTokenError = {
     error_message: string;
 };
 
+/** Messaggio operatore quando GetToken restituisce ER05. */
+export const YOUDOX_ER05_USER_MESSAGE =
+    'Credenziali API non riconosciute da YouDOX. Verificare se l\'utenza per Web Service richiede una password API specifica rilasciata da DocuMI.';
+
+export class YoudoxAuthError extends Error {
+    readonly code: string;
+
+    constructor(message: string, code = 'ER05') {
+        super(message);
+        this.name = 'YoudoxAuthError';
+        this.code = code;
+    }
+}
+
 export type YoudoxExchangeState = {
     Filename: string;
     IsErrorExchange: boolean;

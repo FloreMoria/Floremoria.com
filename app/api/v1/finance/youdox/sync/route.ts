@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireYoudoxApiAccess } from '@/lib/youdox/requireAccess';
 import { getFinancialYoudoxClient } from '@/lib/financial/youdoxClient';
+import { YoudoxAuthError } from '@/lib/youdox/auth';
 import { ingestSdiInvoiceUpload } from '@/lib/financial/ingestSdiInvoices';
 import prisma from '@/lib/prisma';
 
@@ -112,6 +113,12 @@ async function handleSync(request: Request) {
     } catch (e) {
         const message = e instanceof Error ? e.message : 'Sincronizzazione YouDOX fallita';
         console.error('[youdox/sync]', message);
+        if (e instanceof YoudoxAuthError || message.includes('Credenziali API non riconosciute')) {
+            return NextResponse.json(
+                { ok: false, error: message, code: 'ER05' },
+                { status: 401 }
+            );
+        }
         const status = message.includes('Credenziali mancanti') || message.includes('Config assente')
             ? 503
             : message.includes('non ancora cablato')

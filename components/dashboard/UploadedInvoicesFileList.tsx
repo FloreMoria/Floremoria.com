@@ -4,14 +4,21 @@
  * Elenco file caricati SDI/XLSX: tabella scrollabile, dettaglio al clic, eliminazione batch/singola.
  */
 
-import { useState } from 'react';
-import { CheckCircle2, Eye, Loader2, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CheckCircle2, Eye, Loader2, Search, Trash2, X } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import {
+    FINANCE_PASSIVO_TABLE_SCROLL,
+    matchesPassivoSearch,
+} from '@/components/dashboard/finance/financePassivoUi';
 
 export type UploadedFileRow = {
     id: string;
     fileName: string;
     uploadedAt: string;
+    /** Data documento / fattura (ISO YYYY-MM-DD), non timestamp upload. */
+    documentDate?: string | null;
+    searchHaystack?: string;
     sizeBytes: number;
     invoiceCount: number;
     totalNetCents?: number;
@@ -48,8 +55,7 @@ type InvoiceDetailExtended = InvoiceDetail & {
     isReverseCharge?: boolean;
 };
 
-const SCROLL_TABLE =
-    'dashboard-table-scroll overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
+const SCROLL_TABLE = FINANCE_PASSIVO_TABLE_SCROLL;
 
 function formatBytes(n: number): string {
     if (!n || n < 0) return '—';
@@ -107,6 +113,18 @@ export default function UploadedInvoicesFileList({
     const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
     const [busyId, setBusyId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredUploads = useMemo(() => {
+        if (!searchQuery.trim()) return uploads;
+        return uploads.filter((u) =>
+            matchesPassivoSearch(
+                u.searchHaystack ||
+                    [u.fileName, u.documentDate, u.uploadedAt].filter(Boolean).join(' '),
+                searchQuery
+            )
+        );
+    }, [uploads, searchQuery]);
 
     const openBatchDetail = async (id: string, fileName: string) => {
         setBatchDetailId(id);
@@ -209,10 +227,23 @@ export default function UploadedInvoicesFileList({
 
     const tableWrapClass = fillHeight
         ? `flex-1 min-h-0 rounded-xl border border-slate-100 ${SCROLL_TABLE}`
-        : `max-h-[220px] rounded-xl border border-slate-100 ${SCROLL_TABLE}`;
+        : `rounded-xl border border-slate-100 ${SCROLL_TABLE}`;
 
     return (
         <div className={fillHeight ? 'flex flex-col flex-1 min-h-0 gap-2' : 'space-y-2'}>
+            <div className="relative shrink-0">
+                <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                />
+                <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cerca fornitore, data, n. doc, descrizione, comune…"
+                    className="w-full pl-9 pr-3 py-2 text-[11px] rounded-xl border border-slate-200 bg-white outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]"
+                />
+            </div>
             {error && (
                 <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-100 rounded-lg px-2 py-1.5 shrink-0">
                     {error}
@@ -223,7 +254,7 @@ export default function UploadedInvoicesFileList({
                     <thead className="sticky top-0 z-10 bg-slate-50">
                         <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
                             <th className="px-2.5 py-2 font-bold w-[28%]">File</th>
-                            <th className="px-2.5 py-2 font-bold w-[18%] whitespace-nowrap">Caricato</th>
+                            <th className="px-2.5 py-2 font-bold w-[18%] whitespace-nowrap">Data</th>
                             <th className="px-2.5 py-2 font-bold w-[10%] text-right">Fatture</th>
                             <th className="px-2.5 py-2 font-bold w-[14%] text-right">Imponibile</th>
                             <th className="px-2.5 py-2 font-bold w-[14%] text-right">Stato</th>
@@ -231,7 +262,17 @@ export default function UploadedInvoicesFileList({
                         </tr>
                     </thead>
                     <tbody>
-                        {uploads.map((u) => (
+                        {filteredUploads.length === 0 ? (
+                            <tr>
+                                <td
+                                    colSpan={6}
+                                    className="px-2.5 py-6 text-center text-[11px] text-slate-400"
+                                >
+                                    Nessun file corrisponde alla ricerca.
+                                </td>
+                            </tr>
+                        ) : (
+                        filteredUploads.map((u) => (
                             <tr
                                 key={u.id}
                                 onClick={() => void openBatchDetail(u.id, u.fileName)}
@@ -248,8 +289,8 @@ export default function UploadedInvoicesFileList({
                                         {formatBytes(u.sizeBytes)}
                                     </span>
                                 </td>
-                                <td className="px-2.5 py-2 whitespace-nowrap text-slate-500">
-                                    {formatItDateTime(u.uploadedAt)}
+                                <td className="px-2.5 py-2 whitespace-nowrap text-slate-600">
+                                    {formatItDate(u.documentDate || u.uploadedAt.slice(0, 10))}
                                 </td>
                                 <td className="px-2.5 py-2 text-right font-mono text-slate-700">
                                     {u.invoiceCount}
@@ -288,7 +329,8 @@ export default function UploadedInvoicesFileList({
                                     </div>
                                 </td>
                             </tr>
-                        ))}
+                        ))
+                        )}
                     </tbody>
                 </table>
             </div>

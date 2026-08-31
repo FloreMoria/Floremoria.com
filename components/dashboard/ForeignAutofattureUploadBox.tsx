@@ -4,7 +4,7 @@
  * Autofatture Estere: generatore XML TD17/TD18 (YouDoox) + upload XML/ZIP/PDF.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ChevronDown,
     Code2,
@@ -12,10 +12,16 @@ import {
     Eye,
     Globe2,
     Loader2,
+    Search,
     Trash2,
     UploadCloud,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import {
+    FINANCE_PASSIVO_CARD_CLASS,
+    FINANCE_PASSIVO_TABLE_SCROLL,
+    matchesPassivoSearch,
+} from '@/components/dashboard/finance/financePassivoUi';
 
 type Props = {
     onImported?: () => void;
@@ -88,8 +94,23 @@ function formatItDate(iso: string | null): string {
     return iso;
 }
 
-const SCROLL_TABLE =
-    'max-h-[280px] overflow-y-auto overflow-x-auto [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300';
+const SCROLL_TABLE = FINANCE_PASSIVO_TABLE_SCROLL;
+
+function autofatturaSearchHaystack(h: AutofatturaHistoryItem): string {
+    return [
+        h.documentNumber,
+        h.vendorName,
+        h.foreignInvoiceNumber,
+        h.docType,
+        h.autofatturaDate,
+        h.foreignInvoiceDate,
+        formatItDate(h.autofatturaDate),
+        formatItDate(h.foreignInvoiceDate),
+        h.fileName,
+    ]
+        .filter(Boolean)
+        .join(' ');
+}
 
 export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +143,12 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const [actionId, setActionId] = useState<string | null>(null);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [detailItem, setDetailItem] = useState<AutofatturaHistoryItem | null>(null);
+    const [historySearch, setHistorySearch] = useState('');
+
+    const filteredHistory = useMemo(() => {
+        if (!historySearch.trim()) return history;
+        return history.filter((h) => matchesPassivoSearch(autofatturaSearchHaystack(h), historySearch));
+    }, [history, historySearch]);
 
     const loadHistory = useCallback(async () => {
         setHistoryLoading(true);
@@ -301,7 +328,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     };
 
     return (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[520px] flex flex-col gap-3 overflow-hidden">
+        <div className={FINANCE_PASSIVO_CARD_CLASS}>
             <div className="flex items-start gap-3 shrink-0 min-h-[4.5rem]">
                 <div className="mt-0.5 rounded-xl bg-indigo-50 p-2.5 text-indigo-700">
                     <Globe2 size={20} />
@@ -408,14 +435,32 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     />
                 </button>
                 {historyOpen && (
-                    <div className={`flex-1 min-h-0 border-t border-slate-200 ${SCROLL_TABLE}`}>
+                    <div className="flex flex-col flex-1 min-h-0 border-t border-slate-200">
+                        <div className="px-3 py-2 shrink-0 border-b border-slate-100 bg-white">
+                            <div className="relative">
+                                <Search
+                                    size={14}
+                                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                                />
+                                <input
+                                    type="search"
+                                    value={historySearch}
+                                    onChange={(e) => setHistorySearch(e.target.value)}
+                                    placeholder="Cerca fornitore, data, n. doc, descrizione…"
+                                    className="w-full pl-8 pr-2 py-1.5 text-[11px] rounded-lg border border-slate-200 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+                                />
+                            </div>
+                        </div>
+                        <div className={`flex-1 min-h-0 ${SCROLL_TABLE}`}>
                         {historyLoading ? (
                             <p className="px-3 py-4 text-xs text-slate-400 flex items-center gap-2">
                                 <Loader2 size={14} className="animate-spin" /> Caricamento storico…
                             </p>
-                        ) : history.length === 0 ? (
+                        ) : filteredHistory.length === 0 ? (
                             <p className="px-3 py-4 text-xs text-slate-400">
-                                Nessuna autofattura generata ancora.
+                                {history.length === 0
+                                    ? 'Nessuna autofattura generata ancora.'
+                                    : 'Nessun risultato per la ricerca.'}
                             </p>
                         ) : (
                             <table className="w-full text-[11px] table-fixed min-w-[580px]">
@@ -430,7 +475,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {history.map((h) => (
+                                    {filteredHistory.map((h) => (
                                         <tr
                                             key={h.id}
                                             onClick={() => setDetailItem(h)}
@@ -526,6 +571,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                 </tbody>
                             </table>
                         )}
+                        </div>
                     </div>
                 )}
             </div>

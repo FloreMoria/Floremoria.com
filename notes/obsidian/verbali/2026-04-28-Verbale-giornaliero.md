@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "UX Dashboard \\"Servizi Civici\\"."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-08-31T11:46:32.202Z
+synced_at: 2026-08-31T12:13:21.878Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

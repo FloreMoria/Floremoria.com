@@ -37,6 +37,67 @@ function toMergedFields(line: {
     };
 }
 
+function asLedgerMeta(raw: unknown): Record<string, unknown> {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        return raw as Record<string, unknown>;
+    }
+    return {};
+}
+
+function bankLineSourceKey(lineId: string): string {
+    return `BANK_LINE:${lineId}`;
+}
+
+async function findKeeperLedgerEntry(toLineId: string) {
+    return prisma.financialLedgerEntry.findFirst({
+        where: {
+            reversedAt: null,
+            OR: [{ sourceKey: bankLineSourceKey(toLineId) }, { bankLineId: toLineId }],
+        },
+        orderBy: { createdAt: 'asc' },
+    });
+}
+
+function enrichKeeperLedgerFromDuplicate(
+    keeper: {
+        description: string;
+        counterpartyName: string | null;
+        documentRef: string | null;
+        attachmentUrl: string | null;
+        attachmentPath: string | null;
+        reconciliationStatus: string;
+        metadataJson: unknown;
+    },
+    duplicate: {
+        description: string;
+        counterpartyName: string | null;
+        documentRef: string | null;
+        attachmentUrl: string | null;
+        attachmentPath: string | null;
+        reconciliationStatus: string;
+        metadataJson: unknown;
+    }
+) {
+    const keeperMeta = asLedgerMeta(keeper.metadataJson);
+    const dupMeta = asLedgerMeta(duplicate.metadataJson);
+    return {
+        counterpartyName: keeper.counterpartyName || duplicate.counterpartyName,
+        documentRef: keeper.documentRef || duplicate.documentRef,
+        attachmentUrl: keeper.attachmentUrl || duplicate.attachmentUrl,
+        attachmentPath: keeper.attachmentPath || duplicate.attachmentPath,
+        reconciliationStatus:
+            keeper.reconciliationStatus === 'MATCHED' ||
+            duplicate.reconciliationStatus === 'MATCHED'
+                ? 'MATCHED'
+                : keeper.reconciliationStatus,
+        metadataJson: {
+            ...dupMeta,
+            ...keeperMeta,
+            bankLineDedupMergedAt: new Date().toISOString(),
+        },
+    };
+}
+
 /** Carica righe esistenti nel range date/importi dei movimenti in import. */
 export async function loadExistingLinesForImport(
     movements: ParsedBankMovement[]
@@ -98,23 +159,99 @@ export async function loadExistingLinesForImport(
 export async function repointBankLineReferences(
     fromLineId: string,
     toLineId: string
-): Promise<{ ledgerEntries: number; manualExpenses: number }> {
-    const ledger = await prisma.financialLedgerEntry.updateMany({
-        where: { bankLineId: fromLineId },
-        data: {
-            bankLineId: toLineId,
-            sourceKey: `BANK_LINE:${toLineId}`,
-            sourceId: toLineId,
+): Promise<{ ledgerEntries: number; ledgerReversed: number; manualExpenses: number }> {
+    const now = new Date();
+    let keeperEntry = await findKeeperLedgerEntry(toLineId);
+
+    const fromEntries = await prisma.financialLedgerEntry.findMany({
+        where: {
+            reversedAt: null,
+            OR: [{ bankLineId: fromLineId }, { sourceKey: bankLineSourceKey(fromLineId) }],
         },
+        orderBy: { createdAt: 'asc' },
     });
-    const expenses = await prisma.manualFinanceExpense.updateMany({
+
+    let ledgerEntries = 0;
+    let ledgerReversed = 0;
+
+    for (const entry of fromEntries) {
+        if (keeperEntry?.id === entry.id) continue;
+
+        if (keeperEntry) {
+            const enriched = enrichKeeperLedgerFromDuplicate(keeperEntry, entry);
+            keeperEntry = await prisma.financialLedgerEntry.update({
+                where: { id: keeperEntry.id },
+                data: enriched,
+            });
+
+            await prisma.financialLedgerEntry.update({
+                where: { id: entry.id },
+                data: {
+                    reversedAt: now,
+                    metadataJson: {
+                        ...asLedgerMeta(entry.metadataJson),
+                        sanitizeReason: 'bank_line_dedup_source_key_conflict',
+                        sanitizedAt: now.toISOString(),
+                        consolidatedInto: keeperEntry.id,
+                        supersededByBankLineId: toLineId,
+                    },
+                },
+            });
+            ledgerReversed += 1;
+            continue;
+        }
+
+        keeperEntry = await prisma.financialLedgerEntry.update({
+            where: { id: entry.id },
+            data: {
+                bankLineId: toLineId,
+                sourceKey: bankLineSourceKey(toLineId),
+                sourceId: toLineId,
+            },
+        });
+        ledgerEntries += 1;
+    }
+
+    const fromExpenses = await prisma.manualFinanceExpense.findMany({
         where: { matchedStatementLineId: fromLineId },
-        data: { matchedStatementLineId: toLineId },
     });
-    return {
-        ledgerEntries: ledger.count,
-        manualExpenses: expenses.count,
-    };
+    const targetExpense = await prisma.manualFinanceExpense.findFirst({
+        where: { matchedStatementLineId: toLineId },
+    });
+
+    let manualExpenses = 0;
+    for (const expense of fromExpenses) {
+        if (targetExpense && targetExpense.id !== expense.id) {
+            await prisma.manualFinanceExpense.update({
+                where: { id: targetExpense.id },
+                data: {
+                    notes: targetExpense.notes || expense.notes,
+                    reconciled: targetExpense.reconciled || expense.reconciled,
+                    metadataJson: {
+                        ...(asLedgerMeta(targetExpense.metadataJson) as object),
+                        mergedFromExpenseId: expense.id,
+                        bankLineDedupMergedAt: now.toISOString(),
+                    },
+                },
+            });
+            await prisma.manualFinanceExpense.update({
+                where: { id: expense.id },
+                data: {
+                    matchedStatementLineId: null,
+                    reconciled: false,
+                },
+            });
+            continue;
+        }
+
+        await prisma.manualFinanceExpense.update({
+            where: { id: expense.id },
+            data: { matchedStatementLineId: toLineId },
+        });
+        manualExpenses += 1;
+    }
+
+    return { ledgerEntries, ledgerReversed, manualExpenses };
 }
 
 export async function supersedeBankLineSafe(params: {
@@ -224,6 +361,7 @@ export type CleanDuplicateBankLinesResult = {
     groups: number;
     removed: number;
     repointedLedger: number;
+    reversedLedger: number;
     repointedExpenses: number;
     dryRun: boolean;
     samples: Array<{ keptId: string; removedIds: string[]; date: string; amountCents: number }>;
@@ -288,6 +426,7 @@ export async function cleanDuplicateBankLines(params?: {
     }
 
     let repointedLedger = 0;
+    let reversedLedger = 0;
     let repointedExpenses = 0;
     let removedCount = 0;
     const samples: CleanDuplicateBankLinesResult['samples'] = [];
@@ -345,6 +484,7 @@ export async function cleanDuplicateBankLines(params?: {
 
             const repointed = await repointBankLineReferences(removedId, keeperId);
             repointedLedger += repointed.ledgerEntries;
+            reversedLedger += repointed.ledgerReversed;
             repointedExpenses += repointed.manualExpenses;
 
             await prisma.bankStatementLine.delete({ where: { id: removedId } });
@@ -357,6 +497,7 @@ export async function cleanDuplicateBankLines(params?: {
         groups: removalGroups.size,
         removed: removedCount,
         repointedLedger,
+        reversedLedger,
         repointedExpenses,
         dryRun,
         samples: samples.slice(0, 20),

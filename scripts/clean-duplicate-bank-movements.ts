@@ -3,9 +3,29 @@
  * Uso: npx tsx scripts/clean-duplicate-bank-movements.ts
  * Opzioni: --from=2026-01-01  --dry-run
  */
-import { config } from 'dotenv';
-config({ path: '.env.local' });
-config({ path: '.env' });
+import { loadEnvFiles } from '../lib/loadEnvFiles';
+
+loadEnvFiles();
+
+const dbUrl =
+    process.env.DATABASE_URL_UNPOOLED?.trim() ||
+    process.env.DATABASE_URL?.trim() ||
+    '';
+
+if (!dbUrl) {
+    console.error(
+        'Manca DATABASE_URL: imposta DATABASE_URL_UNPOOLED o DATABASE_URL in .env.local / .env'
+    );
+    process.exit(1);
+}
+
+process.env.DATABASE_URL = dbUrl;
+if (!process.env.DATABASE_URL_UNPOOLED?.trim()) {
+    process.env.DATABASE_URL_UNPOOLED = dbUrl;
+}
+
+const host = dbUrl.match(/@([^/:?]+)/)?.[1] ?? '?';
+console.log(`→ database host: ${host}`);
 
 async function main() {
     const fromArg = process.argv.find((a) => a.startsWith('--from='));

@@ -71,3 +71,4 @@
 [2026-08-31 14:22] feat(orders): Florist Scout AI con ranking prioritario per vicinanza assoluta all'ingresso del cimitero e telefono obbligatorio — modulo Gemini Search/Maps grounding con regole rigide (prossimità ingresso cancello/chiosco piazzale #1, recapito telefonico verificato obbligatorio, reputazione/recensioni tie-breaker), trigger automatico su checkout e ordini non assegnati, invio email automatica operatore con tel rapido in cima, pannello dashboard con badge 'Più vicino all\'ingresso - Primo da contattare', 'Chiama subito' e opzioni 'Assegna provvisorio / Registra partner'; tsc+build OK.
 
 [2026-08-31 14:45] fix(social): Facebook Reels upload binario diretto rupload, polling 2s/20s, stato IN_PUBBLICAZIONE non bloccante, log Graph API per fase; tsc+build OK.
+[2026-08-31 15:00] feat(finance): SOAP Invoices_ListReceivedByFilter + GetDownloadLink/SetFlagRead/GetStatusReport YouDOX, sync passivo con messaggio conteggio import; tsc+build OK.

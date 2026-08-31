@@ -7,14 +7,18 @@
  * - **YouDOX inCloud** / piattaforma web — fuori scope API FloreMoria
  *
  * Non è un’API REST JSON per i documenti: solo GetToken.aspx risponde in JSON.
- * I metodi SOAP richiedono WSDL di produzione (YOUDOX_API_BASE_URL + *.svc?wsdl)
- * e token ottenuto da GetToken.
- *
- * FloreMoria oggi: ingest manuale XML/ZIP/CSV (`ingestSdiInvoices`) → questo client
- * automatizza invio attivo + poll passivo/stati verso lo stesso pipeline.
+ * InvoicesService: chiamate SOAP document/literal via lib/youdox/soap.ts.
  */
 
 import { getYoudoxAccessToken, loadYoudoxConfigFromEnv } from './auth';
+import {
+    invoicesServiceEndpoint,
+    normalizeReceivedFilter,
+    soapGetDownloadLink,
+    soapGetStatusReport,
+    soapListReceivedByFilter,
+    soapSetFlagRead,
+} from './soap';
 import type {
     YoudoxConfig,
     YoudoxDownloadType,
@@ -25,7 +29,7 @@ import type {
 
 export type YoudoxClientOptions = {
     config?: YoudoxConfig;
-    /** Se true, non chiama SOAP finché non è cablato il binding WSDL. */
+    /** Se true, non chiama SOAP (stub locali). */
     dryRun?: boolean;
 };
 
@@ -40,8 +44,6 @@ function requireConfig(config: YoudoxConfig | null): YoudoxConfig {
 
 /**
  * Facade typed verso i metodi WS essenziali.
- * Le chiamate SOAP reali vanno completate quando DocuMI comunica endpoint+WSDL di produzione
- * (oggi: stub strutturato + GetToken verificabile).
  */
 export class YoudoxClient {
     readonly config: YoudoxConfig;
@@ -61,15 +63,14 @@ export class YoudoxClient {
     }
 
     serviceUrl(serviceName: 'ExchangeService' | 'InvoicesService' | 'AccountService' | 'VendorService'): string {
+        if (serviceName === 'InvoicesService') {
+            return invoicesServiceEndpoint(this.config);
+        }
         return `${this.config.apiBaseUrl}/${serviceName}.svc`;
     }
 
-    // ——— Ciclo attivo (ExchangeService) ———
+    // ——— Ciclo attivo (ExchangeService) — stub fino a cablaggio Exchange ———
 
-    /**
-     * Exchange_ImportXMLToSend — invio singola fattura XML FatturaPA.
-     * please_validate=false → bozza web; true → controlli + coda SdI.
-     */
     async importXmlToSend(
         xml: Buffer | string,
         originalFilename: string,
@@ -91,7 +92,6 @@ export class YoudoxClient {
         );
     }
 
-    /** Exchange_ImportZipXMLPackToSend — invio multi XML in .zip. */
     async importZipXmlPackToSend(
         zip: Buffer,
         pleaseValidate = true
@@ -114,7 +114,6 @@ export class YoudoxClient {
         );
     }
 
-    /** Exchange_ValidateXML — controlli preliminari senza invio SdI. */
     async validateXml(xml: Buffer | string, originalFilename: string): Promise<YoudoxExchangeState> {
         await this.getAccessToken();
         if (this.dryRun) {
@@ -131,19 +130,17 @@ export class YoudoxClient {
 
     // ——— Stati / notifiche SdI (InvoicesService) ———
 
-    /** Invoices_GetStatusReport — CSV/XLSX cambi stato (RC/NS/NE/DT/MC/AT). */
     async getStatusReport(params: {
         from: string;
         to: string;
         useXlsx?: boolean;
     }): Promise<Buffer> {
-        await this.getAccessToken();
         if (this.dryRun) {
             const csv = 'original_filename;progressivo_id;timestamp;status;status_message\n';
             return Buffer.from(csv, 'utf-8');
         }
-        void params;
-        throw new Error('[youdox] SOAP Invoices_GetStatusReport non ancora cablato.');
+        const token = await this.getAccessToken();
+        return soapGetStatusReport(this.config, token, params);
     }
 
     async listSentByFilter(filter: YoudoxInvoicesFilter): Promise<YoudoxInvoice[]> {
@@ -163,39 +160,39 @@ export class YoudoxClient {
     // ——— Ciclo passivo ———
 
     async listReceivedByFilter(filter: YoudoxInvoicesFilter): Promise<YoudoxInvoice[]> {
-        await this.getAccessToken();
         if (this.dryRun) return [];
-        void filter;
-        throw new Error('[youdox] SOAP Invoices_ListReceivedByFilter non ancora cablato.');
+        const token = await this.getAccessToken();
+        const normalized = normalizeReceivedFilter(filter);
+        console.info(
+            `[youdox] Invoices_ListReceivedByFilter OnlyUnread=${normalized.OnlyUnread} ` +
+                `${normalized.TimestampFrom?.slice(0, 10)} → ${normalized.TimestampTo?.slice(0, 10)}`
+        );
+        return soapListReceivedByFilter(this.config, token, normalized);
     }
 
     async listReceivedUnread(): Promise<YoudoxInvoice[]> {
         return this.listReceivedByFilter({ OnlyUnread: true });
     }
 
-    /**
-     * Invoices_GetDownloadLink — URL firmato (validità ~5 minuti).
-     * type: XML | XMLunsigned | PdfADE | EvidencesPack | …
-     */
     async getDownloadLink(
         invoiceKey: string,
         type: YoudoxDownloadType
     ): Promise<{ url: string; expiresInSeconds: number }> {
-        await this.getAccessToken();
         if (this.dryRun) {
             return {
                 url: `https://example.invalid/youdox-dry-run/${encodeURIComponent(invoiceKey)}?type=${type}`,
                 expiresInSeconds: 300,
             };
         }
-        throw new Error('[youdox] SOAP Invoices_GetDownloadLink non ancora cablato.');
+        const token = await this.getAccessToken();
+        const url = await soapGetDownloadLink(this.config, token, invoiceKey, type);
+        return { url, expiresInSeconds: 300 };
     }
 
     async setFlagRead(invoiceKey: string): Promise<void> {
-        await this.getAccessToken();
         if (this.dryRun) return;
-        void invoiceKey;
-        throw new Error('[youdox] SOAP Invoices_SetFlagRead non ancora cablato.');
+        const token = await this.getAccessToken();
+        await soapSetFlagRead(this.config, token, invoiceKey, true);
     }
 
     /** Mappa cartelle SFTP (riferimento operativo, non client SSH). */

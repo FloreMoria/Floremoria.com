@@ -95,6 +95,8 @@ export type YoudoxInvoicesFilter = {
 export type YoudoxConfig = {
     /** Base SOAP demo: https://servizi-demo.youdox.it/fatturazione/api */
     apiBaseUrl: string;
+    /** Endpoint InvoicesService.svc (override opzionale). */
+    invoicesServiceUrl?: string;
     /** Path GetToken.aspx (risposta JSON OAuth-like). */
     tokenUrl: string;
     clientId: string;

@@ -28,6 +28,9 @@ export function loadYoudoxConfigFromEnv(): YoudoxConfig | null {
 
     return {
         apiBaseUrl,
+        invoicesServiceUrl:
+            process.env.YOUDOX_INVOICES_SERVICE_URL?.trim() ||
+            `${apiBaseUrl}/InvoicesService.svc`,
         tokenUrl,
         clientId,
         username,

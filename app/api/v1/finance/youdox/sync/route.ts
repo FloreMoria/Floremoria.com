@@ -5,6 +5,31 @@ import { YoudoxAuthError } from '@/lib/youdox/auth';
 import { ingestSdiInvoiceUpload } from '@/lib/financial/ingestSdiInvoices';
 import prisma from '@/lib/prisma';
 
+export const maxDuration = 120;
+
+function buildSyncMessage(params: {
+    polled: number;
+    imported: number;
+    updated: number;
+    failed: number;
+}): string {
+    const { polled, imported, updated, failed } = params;
+    if (polled === 0) {
+        return 'Nessuna nuova fattura passiva da YouDOX SDI.';
+    }
+    if (imported > 0) {
+        const tail = updated > 0 ? `, ${updated} aggiornate` : '';
+        return `${imported} nuove fatture passive SDI importate con successo${tail}.`;
+    }
+    if (updated > 0) {
+        return `${updated} fatture passive SDI aggiornate con successo.`;
+    }
+    if (failed > 0) {
+        return `Sincronizzazione completata: ${polled} documenti letti, ${failed} non importati (vedi log).`;
+    }
+    return `Sincronizzazione YouDOX completata (${polled} documenti elaborati).`;
+}
+
 async function handleSync(request: Request) {
     const access = await requireYoudoxApiAccess(request);
     if (!access.ok) return access.response;
@@ -26,6 +51,7 @@ async function handleSync(request: Request) {
 
         let importedCount = 0;
         let updatedCount = 0;
+        let failedCount = 0;
 
         for (const inv of unreadInvoices) {
             const key = inv.InvoiceKey;
@@ -58,6 +84,7 @@ async function handleSync(request: Request) {
                     ingested: summary.imported + summary.updated,
                 });
             } catch (innerErr) {
+                failedCount += 1;
                 results.push({
                     invoiceKey: key,
                     ok: false,
@@ -102,11 +129,20 @@ async function handleSync(request: Request) {
             console.warn('[youdox/sync] Log creation skipped:', logErr);
         }
 
-        return NextResponse.json({
-            ok: true,
+        const message = buildSyncMessage({
             polled: unreadInvoices.length,
             imported: importedCount,
             updated: updatedCount,
+            failed: failedCount,
+        });
+
+        return NextResponse.json({
+            ok: true,
+            message,
+            polled: unreadInvoices.length,
+            imported: importedCount,
+            updated: updatedCount,
+            failed: failedCount,
             statusReportSynced,
             results,
         });

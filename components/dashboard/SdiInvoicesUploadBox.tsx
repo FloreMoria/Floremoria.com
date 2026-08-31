@@ -74,7 +74,9 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                 throw new Error(msg);
             }
             setMessage(
-                `Sincronizzazione YouDOX completata! Polled: ${data.polled || 0}, Importate: ${data.imported || 0}, Aggiornate: ${data.updated || 0}.`
+                typeof data.message === 'string' && data.message.trim()
+                    ? data.message
+                    : `Sincronizzazione YouDOX completata! Polled: ${data.polled || 0}, Importate: ${data.imported || 0}, Aggiornate: ${data.updated || 0}.`
             );
             await loadUploads();
             onImported?.();

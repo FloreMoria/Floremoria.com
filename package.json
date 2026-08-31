@@ -6,7 +6,7 @@
     "postinstall": "prisma generate",
     "predev": "node Script/generate-images-manifest.mjs",
     "dev": "next dev",
-    "prebuild": "node Script/generate-images-manifest.mjs",
+    "prebuild": "node Script/generate-images-manifest.mjs && npm run merchant:feed",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -53,7 +53,8 @@
     "ga4:list-properties": "node scripts/ga4-list-properties.mjs",
     "postman:setup-resend": "tsx scripts/setup-resend-assistenza.ts",
     "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts",
-    "push:generate-vapid": "tsx scripts/generate-vapid-keys.ts"
+    "push:generate-vapid": "tsx scripts/generate-vapid-keys.ts",
+    "merchant:feed": "tsx scripts/generate-merchant-feed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

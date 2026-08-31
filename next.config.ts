@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/merchant-feed.csv',
+        destination: '/merchant-feed',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

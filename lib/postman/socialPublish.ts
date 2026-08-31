@@ -88,6 +88,9 @@ export interface CampaignPublishResult {
   usedPexelsFallback?: boolean;
   /** Avviso UI (es. fallback Pexels). */
   notice?: string | null;
+  /** Meta accetta il reel ma codifica/publish ancora in background. */
+  processing?: boolean;
+  publishPhase?: string;
 }
 
 interface SocialPublishEnv extends MetaEnv {
@@ -772,6 +775,8 @@ export async function publishCampaignToChannel(
     let videoSource: string | undefined;
     let usedPexelsFallback = false;
     let reelNotice: string | null = null;
+    let publishProcessing = false;
+    let publishPhase: string | undefined;
     const contentFormat = resolveEffectiveContentFormat({
       contentFormat: payload.contentFormat,
       videoUrl,
@@ -818,6 +823,13 @@ export async function publishCampaignToChannel(
             );
             externalId = fbReel.externalId;
             permalink = fbReel.permalink;
+            if (fbReel.processing) {
+              publishProcessing = true;
+              publishPhase = fbReel.publishPhase;
+              reelNotice =
+                `Facebook Reel inviato (IN_PUBBLICAZIONE). Meta completa la codifica in background — ID ${fbReel.externalId}.` +
+                (fbReel.publishPhase ? ` Stato: ${fbReel.publishPhase}.` : '');
+            }
           } else if (contentFormat === ContentFormat.STORY) {
             externalId = await publishToFacebookStory(payload, env);
           } else {
@@ -951,6 +963,8 @@ export async function publishCampaignToChannel(
       videoSource,
       usedPexelsFallback,
       notice: reelNotice,
+      processing: publishProcessing || undefined,
+      publishPhase,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

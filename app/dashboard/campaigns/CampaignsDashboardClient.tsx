@@ -429,6 +429,8 @@ export default function CampaignsDashboardClient() {
         notice?: string | null;
         videoSource?: string | null;
         channel?: string | null;
+        processing?: boolean;
+        publishPhase?: string | null;
       };
       try {
         data = await res.json();
@@ -446,6 +448,10 @@ export default function CampaignsDashboardClient() {
       }
 
       if (data.success) {
+        const processingNote = data.processing
+          ? data.notice ||
+            `Reel inviato a ${channelLabel} (IN_PUBBLICAZIONE). Meta completa la codifica in background.`
+          : null;
         const pexelsNote =
           data.usedPexelsFallback || data.videoSource === 'pexels'
             ? data.notice ||
@@ -454,13 +460,15 @@ export default function CampaignsDashboardClient() {
         setSuccessMessage(
           data.simulated
             ? `Pubblicazione simulata con successo su ${channelLabel} (credenziali reali assenti).`
-            : data.privatePost
-              ? pexelsNote
-                ? `${pexelsNote} Post TikTok in modalità privata (Solo io).`
-                : 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
-              : pexelsNote
-                ? `${pexelsNote} Pubblicato su ${channelLabel}.`
-                : `Post pubblicato con successo su ${channelLabel}!`
+            : processingNote
+              ? processingNote
+              : data.privatePost
+                ? pexelsNote
+                  ? `${pexelsNote} Post TikTok in modalità privata (Solo io).`
+                  : 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
+                : pexelsNote
+                  ? `${pexelsNote} Pubblicato su ${channelLabel}.`
+                  : `Post pubblicato con successo su ${channelLabel}!`
         );
         setCampaigns(prev =>
           prev.map(c => (c.id === campaignId ? { ...c, status: 'PUBLISHED' as const } : c))

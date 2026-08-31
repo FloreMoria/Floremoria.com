@@ -149,10 +149,25 @@ export async function POST(request: Request) {
                 metricsJson: {
                   ...existingMetrics,
                   permalink: result.permalink,
+                  ...(result.processing
+                    ? {
+                        publishPhase: result.publishPhase || 'IN_PUBBLICAZIONE',
+                        metaProcessing: true,
+                      }
+                    : {}),
                 },
                 metricsSyncedAt: new Date(),
               }
-            : {}),
+            : result.processing
+              ? {
+                  metricsJson: {
+                    ...existingMetrics,
+                    publishPhase: result.publishPhase || 'IN_PUBBLICAZIONE',
+                    metaProcessing: true,
+                  },
+                  metricsSyncedAt: new Date(),
+                }
+              : {}),
         },
       });
 
@@ -167,6 +182,8 @@ export async function POST(request: Request) {
         videoSource: result.videoSource ?? null,
         usedPexelsFallback: Boolean(result.usedPexelsFallback),
         notice: result.notice ?? null,
+        processing: Boolean(result.processing),
+        publishPhase: result.publishPhase ?? null,
       });
     }
 

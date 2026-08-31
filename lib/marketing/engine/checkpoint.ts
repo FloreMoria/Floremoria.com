@@ -2,6 +2,11 @@ import { GoogleGenAI } from '@google/genai';
 import { CampaignStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { MarketingEngineConfigError } from './generation';
+import {
+  enforceNoTextImagePrompt,
+  imagePromptRequestsGeneratedText,
+} from '@/lib/marketing/imagePromptGuard';
+import { validateItalianMarketingCopy } from '@/lib/marketing/italianCopyGuard';
 
 export interface GuardianReport {
   passed: boolean;
@@ -46,7 +51,9 @@ Tu sei il Comitato di Controllo e Compliance di FloreMoria. Devi scansionare una
 2. SOFIA: Garantisci la massima dignità morale ed etica del messaggio.
 3. MARTINA: Controlla la verità botanica. Se il testo o il prompt d'immagine menzionano fiori invernali in una campagna estiva (o viceversa), segnalalo come errore.
 4. BARBARA: Verifica che non ci siano violazioni legali o ambiguità di prezzo.
-5. PROF: Caccia ogni refuso ortografico o grammaticale.
+5. PROF: Caccia ogni refuso ortografico o grammaticale, termini inventati o calchi dall'inglese/spagnolo.
+
+6. ZIGGY (immagine): Se il prompt immagine chiede testo, slogan, logo o tipografia NEI PIXEL, rifiuta. Il testo visibile va solo in copy/caption o overlay deterministico post-produzione, mai generato dall'AI nell'immagine.
 
 Se lo stato "approved" è false, devi obbligatoriamente fornire nel campo "rejectionReason" le indicazioni correttive precise che i generatori di copy ed immagini dovranno seguire per correggere i problemi riscontrati. Ad esempio: "MARTINA ha rifiutato: il bouquet contiene tulipani ma siamo a luglio. INDICAZIONI DI CORREZIONE: Sostituire i tulipani con rose o girasoli estivi nel copy e nel prompt d'immagine."
 
@@ -169,6 +176,38 @@ export async function evaluateCampaignDraft(
 
   if (campaign.status === CampaignStatus.APPROVED || campaign.status === CampaignStatus.PUBLISHED) {
     return { approved: true };
+  }
+
+  const copyLint = validateItalianMarketingCopy(campaign.copy);
+  const imagePromptRaw = campaign.imagePrompt?.trim() || '';
+  const programmaticIssues: string[] = [];
+  if (!copyLint.ok) {
+    programmaticIssues.push(`PROF/ALMA: ${copyLint.issues.slice(0, 2).join(' · ')}`);
+  }
+  if (imagePromptRaw && imagePromptRequestsGeneratedText(imagePromptRaw)) {
+    programmaticIssues.push(
+      'ZIGGY: il prompt immagine chiede testo/slogan/logo nei pixel — vietato. Usa solo fotografia pulita; slogan in overlay Sharp/ffmpeg.'
+    );
+  }
+
+  if (programmaticIssues.length > 0) {
+    const rejectionReason = programmaticIssues.join(' | ');
+    await prisma.marketingCampaign.update({
+      where: { id: campaignId },
+      data: {
+        status: CampaignStatus.REJECTED,
+        rejectionReason,
+      },
+    });
+    console.log(`[Marketing Checkpoint] Campagna ${campaignId} REJECTED (lint) — ${rejectionReason}`);
+    return { approved: false, reason: rejectionReason };
+  }
+
+  if (imagePromptRaw) {
+    await prisma.marketingCampaign.update({
+      where: { id: campaignId },
+      data: { imagePrompt: enforceNoTextImagePrompt(imagePromptRaw) },
+    });
   }
 
   const apiKey =

@@ -10,6 +10,8 @@ import {
     type SkillChannel,
     type SocialSkillId,
 } from '@/src/agents/skillsLoader';
+import { ITALIAN_COPY_SYSTEM_DIRECTIVE } from '@/lib/marketing/italianCopyGuard';
+import { AI_IMAGE_NO_TEXT_DIRECTIVE } from '@/lib/marketing/imagePromptGuard';
 
 export type SocialAgentKey =
     | 'instagram_agent'
@@ -106,7 +108,7 @@ senza mai speculare sul dolore o usare urgenza artificiale.
 1. HOOK NEI PRIMI 3 SECONDI (Reels / Shorts / TikTok / video verticali):
    - Fermare lo scroll con curiosità botanica, significato dei fiori, segreti di manutenzione,
      storie di cura e presenza a distanza — mai griefbait o shock.
-   - Una sola idea chiara on-screen; testo grande, contrasto alto.
+   - Una sola idea chiara on-screen; testo overlay solo in post-produzione (ffmpeg/Sharp), MAI generato dall'AI nei pixel del video/foto.
 
 2. CTA ORIENTATA A SALVATAGGIO / CONDIVISIONE (oltre al sito, dove coerente):
    - Esempi ammessi: "Salva questo video per la prossima ricorrenza",
@@ -132,7 +134,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido:
       "channel": "META_INSTAGRAM | META_FACEBOOK | TIKTOK | YOUTUBE_SHORTS | PINTEREST | LINKEDIN",
       "contentFormat": "FEED_POST | STORY | REEL",
       "copy": "Testo / script",
-      "imagePrompt": "[STYLE]: Quiet Luxury... [LIGHTING]: ... [SUBJECT]: ... [AVOID]: ...",
+      "imagePrompt": "[STYLE]: Quiet Luxury... [LIGHTING]: ... [SUBJECT]: solo scena fotografica floreale... [AVOID]: scritte, loghi, tipografia... ${AI_IMAGE_NO_TEXT_DIRECTIVE}",
       "hashtags": ["#floremoria", "#..."]
     }
   ]
@@ -140,6 +142,10 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido:
 
 Formati: FEED_POST, STORY (max 2 frasi + traino al feed), REEL (script 15–35s verticale).
 Per YOUTUBE_SHORTS preferisci REEL; per PINTEREST preferisci FEED_POST (Pin 2:3 nel imagePrompt).
+
+## IMMAGINI — DIVIETO ASSOLUTO TESTO NEI PIXEL
+${AI_IMAGE_NO_TEXT_DIRECTIVE}
+Mai chiedere slogan, headline, logo o watermark nel imagePrompt. Solo scena fotografica.
 `.trim();
 
 export function getChannelAgentSpec(channel: MarketingChannel): ChannelAgentSpec {
@@ -184,6 +190,8 @@ export async function buildChannelSystemPrompt(channel: MarketingChannel): Promi
         '',
         VIRALITY_RESPECTFUL_DIRECTIVE,
         '',
+        ITALIAN_COPY_SYSTEM_DIRECTIVE,
+        '',
         OUTPUT_JSON_CONTRACT,
     ].join('\n');
 
@@ -208,6 +216,8 @@ export async function buildMultiChannelSystemPrompt(
         'Tu sei il Core Creativo di FloreMoria. Ogni post deve essere scritto dal suo Agente Social dedicato.',
         '',
         VIRALITY_RESPECTFUL_DIRECTIVE,
+        '',
+        ITALIAN_COPY_SYSTEM_DIRECTIVE,
         '',
         '## Agenti assegnati in questo batch',
     ];

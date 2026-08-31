@@ -1,7 +1,16 @@
 import { ContentFormat, MarketingChannel } from '@prisma/client';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import prisma from '@/lib/prisma';
+import {
+  AI_IMAGE_NO_TEXT_DIRECTIVE,
+  IMAGE_PROMPT_AVOID_BLOCK,
+  enforceNoTextImagePrompt,
+} from '@/lib/marketing/imagePromptGuard';
 import { MarketingEngineConfigError } from './generation';
+import {
+  composeBrandedFeedLayout,
+  shouldApplyBrandedFeedLayout,
+} from './brandedLayoutOverlay';
 import { generateGeminiImageBytes } from './geminiImageGeneration';
 import { overlayFloreMoriaWatermark } from './watermark';
 
@@ -49,18 +58,16 @@ function aspectRatioForCampaign(campaign: {
 function buildFallbackImagePrompt(campaign: {
   category: string;
   targetChannel: MarketingChannel;
-  copy: string;
 }): string {
-  const copyExcerpt = campaign.copy.replace(/\s+/g, ' ').trim().slice(0, 400);
-
   return [
     '[STYLE]: Quiet Luxury floreale sobrio per FloreMoria.',
     `[CATEGORY]: ${campaign.category}.`,
     `[CHANNEL]: ${campaign.targetChannel}.`,
-    `[SUBJECT]: Composizione elegante ispirata al copy: ${copyExcerpt}.`,
+    '[SUBJECT]: Composizione floreale elegante — solo scena fotografica, mai testo nel frame.',
     '[LIGHTING]: Luce naturale morbida, ora d\'oro o finestra nord.',
     '[PALETTE]: Avorio, salvia, cipria, terracotta desaturati.',
-    '[AVOID]: Loghi, scritte, grafiche, colori neon, effetto stock photo.',
+    IMAGE_PROMPT_AVOID_BLOCK,
+    AI_IMAGE_NO_TEXT_DIRECTIVE,
   ].join(' ');
 }
 
@@ -92,13 +99,13 @@ export async function generateAndStorageCampaignImage(
     console.log(`[Marketing Images] force=true — rigenerazione immagine per ${campaignId}`);
   }
 
-  const imagePrompt =
+  const imagePrompt = enforceNoTextImagePrompt(
     campaign.imagePrompt?.trim() ||
-    buildFallbackImagePrompt({
-      category: campaign.category,
-      targetChannel: campaign.targetChannel,
-      copy: campaign.copy,
-    });
+      buildFallbackImagePrompt({
+        category: campaign.category,
+        targetChannel: campaign.targetChannel,
+      })
+  );
 
   const aspectRatio = aspectRatioForCampaign({
     targetChannel: campaign.targetChannel,
@@ -109,12 +116,27 @@ export async function generateAndStorageCampaignImage(
     aspectRatio
   );
 
-  console.log(`[Marketing Images] Applicazione watermark FloreMoria su campagna ${campaignId}`);
-  const buffer = await overlayFloreMoriaWatermark(originalBuffer);
+  let buffer: Buffer;
+  let outMime = mimeType;
+  let outExt = extension;
+  if (shouldApplyBrandedFeedLayout(campaign.targetChannel, campaign.contentFormat)) {
+    console.log(
+      `[Marketing Images] Layout brand deterministico (colonna beige + slogan) campagna ${campaignId}`
+    );
+    buffer = await composeBrandedFeedLayout({
+      photoBuffer: originalBuffer,
+      sloganSeed: campaign.id,
+    });
+    outMime = 'image/jpeg';
+    outExt = 'jpg';
+  } else {
+    console.log(`[Marketing Images] Applicazione watermark FloreMoria su campagna ${campaignId}`);
+    buffer = await overlayFloreMoriaWatermark(originalBuffer);
+  }
 
-  const blobPath = `${BLOB_PREFIX}/${campaignId}.${extension}`;
+  const blobPath = `${BLOB_PREFIX}/${campaignId}.${outExt}`;
   const { url } = await putBlobWithAccessFallback(blobPath, buffer, {
-    contentType: mimeType,
+    contentType: outMime,
     token: getBlobToken(),
     addRandomSuffix: false,
     allowOverwrite: true,

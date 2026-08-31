@@ -12,6 +12,7 @@ import {
   buildSocialProofCopy,
   type SocialProofCategoryCode,
 } from '@/lib/marketing/socialProofCopy';
+import { validateItalianMarketingCopy } from '@/lib/marketing/italianCopyGuard';
 
 export type SuggestManualPostCopyResult = {
   copy: string;
@@ -89,6 +90,7 @@ function channelCopyGuidance(channel: MarketingChannel, contentFormat: ContentFo
     lengthHint,
     'Hashtag 3–6, senza # nel JSON (solo parole), in italiano o brand.',
     'Niente dark pattern, niente urgenza sul dolore, niente griefbait (SOFIA + ALMA).',
+    'Italiano impeccabile, naturale, sobrio ed elegante — niente calchi dall\'inglese o parole inventate.',
     'Categoria: FF=funerale, FT=tombe/cimitero, FA=animali, FP=accessori/piante.',
   ].join('\n');
 }
@@ -166,6 +168,12 @@ export async function suggestManualPostCopy(params: {
 
     const parsed = parseSuggestPayload(rawText);
     if (!parsed) return fallback();
+
+    const lint = validateItalianMarketingCopy(parsed.copy);
+    if (!lint.ok) {
+      console.warn('[suggestManualPostCopy] copy AI non valido, fallback:', lint.issues[0]);
+      return fallback();
+    }
 
     if (parsed.hashtags.length === 0) {
       parsed.hashtags = buildSocialProofCopy(parsed.category).hashtags;

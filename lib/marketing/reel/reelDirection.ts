@@ -12,6 +12,9 @@ export const REEL_NEGATIVE_PROMPT = [
   'no floating petals',
   'no dramatic effects',
   'no text',
+  'no letters',
+  'no words',
+  'no typography',
   'no logos',
   'no subtitles',
   'no captions',
@@ -91,20 +94,15 @@ export function imagenQuietLuxuryStillPrompt(input: {
   copy?: string | null;
   category?: string | null;
 }): string {
-  const copyExcerpt = String(input.copy || '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 220);
-
   return [
     'Ultra-photorealistic vertical 9:16 still for FloreMoria / Ziggy Veo plate.',
     'Intimate macro close-up: fresh white roses and solemn memorial blooms on pale Carrara marble.',
     'Italian monumental cemetery atmosphere (San Michele Venice / Monumentale mood) as soft bokeh — cypress, stone arches, no readable names.',
     'Golden hour warm natural light, dew drops on petals, creamy depth of field.',
     'Quiet Luxury palette: ivory, sage, blush, warm stone.',
-    input.category ? `Service mood hint: ${input.category}.` : '',
-    copyExcerpt ? `Emotional tone (never literal text in image): ${copyExcerpt}.` : '',
-    'STRICT AVOID: people, faces, hands, floating petals, dramatic effects, engraved names, logos, typography, CGI, griefbait.',
+    input.category ? `Service mood hint (visual only, no text): ${input.category}.` : '',
+    'NO TEXT, NO LETTERS, NO WORDS, NO WATERMARK, NO TYPOGRAPHY, CLEAN PHOTOGRAPHY ONLY.',
+    'STRICT AVOID: people, faces, hands, floating petals, dramatic effects, engraved names, logos, typography, captions, lettering, CGI, griefbait.',
   ]
     .filter(Boolean)
     .join(' ');

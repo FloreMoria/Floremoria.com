@@ -15,6 +15,7 @@ import {
   coerceSocialCategoryCode,
 } from '@/lib/marketing/socialProofCopy';
 import { assertDeliveryServiceSocialPrivacy } from '@/lib/marketing/socialPrivacyGuard';
+import { validateItalianMarketingCopy } from '@/lib/marketing/italianCopyGuard';
 import {
   publishToFacebookReel,
   publishToFacebookStory,
@@ -689,6 +690,18 @@ export async function publishCampaignToChannel(
 
   if (!payload.imageUrl?.trim()) {
     const msg = 'imageUrl mancante — impossibile pubblicare.';
+    console.error(`[POSTMAN] ${msg} (campagna ${payload.id})`);
+    return {
+      success: false,
+      channel: payload.targetChannel,
+      campaignId: payload.id,
+      error: msg,
+    };
+  }
+
+  const copyLint = validateItalianMarketingCopy(payload.copy);
+  if (!copyLint.ok) {
+    const msg = `Pubblicazione bloccata: copy non valido (${copyLint.issues.slice(0, 2).join(' · ')})`;
     console.error(`[POSTMAN] ${msg} (campagna ${payload.id})`);
     return {
       success: false,

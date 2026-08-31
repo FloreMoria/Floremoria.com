@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { enforceNoTextImagePrompt } from '@/lib/marketing/imagePromptGuard';
 import { MarketingEngineConfigError } from './generation';
 
 /** Imagen 4 dismesso 2026-08-17 — default Gemini Image (Nano Banana). */
@@ -53,6 +54,7 @@ export async function generateGeminiImageBytes(
   prompt: string,
   aspectRatio: string
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
+  const safePrompt = enforceNoTextImagePrompt(prompt);
   const model = resolveGeminiImageModel();
   const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
   let lastError: Error | undefined;
@@ -61,7 +63,7 @@ export async function generateGeminiImageBytes(
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: prompt,
+        contents: safePrompt,
         config: {
           responseModalities: ['IMAGE'],
           imageConfig: { aspectRatio },

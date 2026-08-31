@@ -62,9 +62,9 @@ export const ZIGGY_PLATFORM_GUIDELINES: Record<string, SocialPlatformGuidelines>
       "Utilizzare un linguaggio semplice, diretto e colloquiale."
     ],
     imageRules: [
-      "Visual in formato verticale (9:16) con montaggio ritmato su B-roll 4K d'archivio (cimiteri monumentali, marmo, fiori in luce naturale, viali al tramonto).",
+      "Visual in formato verticale (9:16) con B-roll 4K d'archivio (cimiteri monumentali, marmo, fiori in luce naturale).",
       "Vietato usare foto o video inviati dai fioristi come sorgente per Reel/social automatici.",
-      "Testo on-screen breve (slogan/CTA), typography elegante; audio solo strumentale/ambiente — mai TTS o voce sintetica."
+      "Vietato generare testo/slogan/logo nei pixel (AI image/video). Testo on-screen solo via overlay ffmpeg deterministico da catalogo slogan approvato; audio solo strumentale/ambiente — mai TTS."
     ],
     hashtagsCount: 4
   }

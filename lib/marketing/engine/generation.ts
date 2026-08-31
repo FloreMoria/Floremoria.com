@@ -2,6 +2,11 @@ import { GoogleGenAI } from '@google/genai';
 import { CampaignStatus, ContentFormat, MarketingChannel } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import {
+  enforceNoTextImagePrompt,
+  imagePromptRequestsGeneratedText,
+} from '@/lib/marketing/imagePromptGuard';
+import { validateItalianMarketingCopy } from '@/lib/marketing/italianCopyGuard';
+import {
   buildChannelSystemPrompt,
   describeContentFormatGuidance,
   formatFocusHintForUserPrompt,
@@ -187,12 +192,28 @@ function parseGeminiCampaignPayload(
       continue;
     }
 
-    // Forza il canale dell’agente preposto (anti-drift multi-canale).
+    const copyCheck = validateItalianMarketingCopy(copy);
+    if (!copyCheck.ok) {
+      console.warn(
+        `[Marketing Engine] Copy scartato (${forcedChannel}): ${copyCheck.issues.slice(0, 2).join(' · ')}`
+      );
+      continue;
+    }
+
+    if (imagePromptRequestsGeneratedText(imagePrompt)) {
+      console.warn(
+        `[Marketing Engine] imagePrompt scartato (${forcedChannel}): richiede testo nei pixel`
+      );
+      continue;
+    }
+
+    const safeImagePrompt = enforceNoTextImagePrompt(imagePrompt);
+
     posts.push({
       channel: forcedChannel,
       contentFormat,
       copy,
-      imagePrompt,
+      imagePrompt: safeImagePrompt,
       hashtags,
     });
   }
@@ -442,11 +463,21 @@ Genera ora la versione corretta in formato JSON.
   }
 
   const copy = String(parsed.copy || '').trim();
-  const imagePrompt = String(parsed.imagePrompt || '').trim();
+  let imagePrompt = enforceNoTextImagePrompt(String(parsed.imagePrompt || '').trim());
   const hashtags = normalizeHashtags(parsed.hashtags);
 
   if (!copy || !imagePrompt) {
     throw new Error('La rigenerazione ha restituito copy o prompt immagine vuoti.');
+  }
+
+  const copyCheck = validateItalianMarketingCopy(copy);
+  if (!copyCheck.ok) {
+    throw new Error(
+      `Copy rigenerato non valido: ${copyCheck.issues.slice(0, 3).join(' · ')}`
+    );
+  }
+  if (imagePromptRequestsGeneratedText(imagePrompt)) {
+    imagePrompt = enforceNoTextImagePrompt(imagePrompt);
   }
 
   await prisma.marketingCampaign.update({

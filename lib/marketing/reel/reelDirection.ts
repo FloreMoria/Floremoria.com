@@ -4,10 +4,10 @@
  * System prompt automatico: macro Quiet Luxury, dettagli realistici, cimiteri monumentali IT/EU, golden hour.
  */
 
-/** Durata standard delle scene generate per micro-clip a loop continuo (2.0–3.0s). */
-export const MIN_SCENE_DURATION_SEC = 2.0;
-export const MAX_SCENE_DURATION_SEC = 3.0;
-export const STANDARD_SCENE_DURATION_SEC = 2.5;
+/** Durata standard delle scene generate per micro-clip a loop continuo (>= 3.0s per requisiti Meta Reels). */
+export const MIN_SCENE_DURATION_SEC = 3.0;
+export const MAX_SCENE_DURATION_SEC = 4.0;
+export const STANDARD_SCENE_DURATION_SEC = 3.0;
 
 /** Divieto assoluto testo nei frame video. */
 export const STRICT_NO_TEXT_VIDEO_RULE =

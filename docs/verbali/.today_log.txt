@@ -83,3 +83,6 @@
 [2026-08-31 17:15] ux: Prima Nota colonne tecniche ID ordine/partner/Fineco + link allegato; commit push deploy
 [2026-08-31 17:35] feat(accounting): Prima Nota vista essenziale 8 col, IVA 10/22%, stato editabile, drawer dettaglio + movimenti correlati; dedup visiva
 [2026-08-31 17:55] fix(accounting): persistenza scontrini passivi, upload Blob obbligatorio su Vercel, sync Prima Nota con orderId/partnerId/IVA 10%, toast e anteprima allegato
+[2026-08-31 21:10] feat: FloristScoutPanel sempre visibile senza partner; CTA Cerca Fiorista in Zona + Google Maps/directory; API POST /orders/[id]/scout; coords cimitero nel drawer.
+[2026-08-31 21:15] fix(social): corretta procedura di upload binario e polling stato per Facebook Reels API — validazione formato MP4 (H.264/AAC, 9:16, durata >= 3s), trasmissione file_size e offset rigorosi su rupload.facebook.com, fallback multipart automatico su Graph Video (/videos) per errore 6000, polling stato transcodifica video pre e post-finish con logging diagnostico errori Meta; tsc+build OK.
+

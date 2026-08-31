@@ -471,6 +471,9 @@ export default function OrderDetailDrawer({
                                 orderNumber={localOrder.orderNumber}
                                 cemeteryName={localOrder.cemeteryName}
                                 cemeteryCity={localOrder.cemeteryCity}
+                                gravePosition={localOrder.gravePosition}
+                                latitude={localOrder.latitude}
+                                longitude={localOrder.longitude}
                                 veraWorkflowFlags={localOrder.veraWorkflowFlags}
                                 hasPartner={Boolean(localOrder.partnerId)}
                                 canChangeStatus={canChangeStatus}
@@ -491,11 +494,20 @@ export default function OrderDetailDrawer({
                                     setLocalOrder(merged);
                                     onOrderUpdated?.(merged);
                                 }}
+                                onScoutUpdated={(flags) => {
+                                    const merged = { ...localOrder, veraWorkflowFlags: flags };
+                                    setLocalOrder(merged);
+                                    onOrderUpdated?.(merged);
+                                }}
                             />
                         ) : null}
                         {canChangeStatus ? (
                             <select
-                                className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm font-semibold"
+                                className={`w-full text-sm text-gray-700 bg-white border p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm font-semibold ${
+                                    !localOrder.partnerId
+                                        ? 'border-orange-300 ring-1 ring-orange-100'
+                                        : 'border-gray-200'
+                                }`}
                                 value={localOrder.partnerId || ''}
                                 onChange={(e) => setLocalOrder({ ...localOrder, partnerId: e.target.value || null })}
                             >

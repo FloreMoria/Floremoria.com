@@ -35,11 +35,14 @@ function logMetaGraphPhase(
       code?: number;
       type?: string;
       error_subcode?: number;
+      error_user_title?: string;
+      error_user_msg?: string;
+      fbtrace_id?: string;
     };
   };
   if (p.error) {
     console.error(
-      `[POSTMAN][FB-Reel][${phase}] HTTP ${httpStatus} · Graph code=${p.error.code ?? '?'} sub=${p.error.error_subcode ?? '?'} type=${p.error.type ?? '?'} · ${p.error.message ?? 'unknown'}`
+      `[POSTMAN][FB-Reel][${phase}] HTTP ${httpStatus} · Graph code=${p.error.code ?? '?'} sub=${p.error.error_subcode ?? '?'} type=${p.error.type ?? '?'} trace=${p.error.fbtrace_id ?? '?'} · ${p.error.message ?? 'unknown'}${p.error.error_user_msg ? ` · UserMsg: ${p.error.error_user_msg}` : ''}`
     );
     return;
   }
@@ -60,10 +63,22 @@ async function metaGraphPost<T>(
     body: params.toString(),
   });
 
-  const payload = (await res.json()) as T & { error?: { message?: string } };
+  const payload = (await res.json()) as T & {
+    error?: {
+      message?: string;
+      code?: number;
+      error_subcode?: number;
+      error_user_title?: string;
+      error_user_msg?: string;
+      fbtrace_id?: string;
+    };
+  };
   logMetaGraphPhase(phaseLabel || `graph-post${path}`, res.status, payload);
   if (!res.ok || payload.error) {
-    throw new Error(payload.error?.message || `Meta Graph API error (${res.status})`);
+    const errDetail = payload.error
+      ? `${payload.error.message || 'Error'} (code: ${payload.error.code}, subcode: ${payload.error.error_subcode || 'none'}${payload.error.error_user_msg ? `, userMsg: ${payload.error.error_user_msg}` : ''})`
+      : `HTTP ${res.status}`;
+    throw new Error(`Meta Graph API error on ${phaseLabel || path}: ${errDetail}`);
   }
   return payload;
 }
@@ -296,6 +311,29 @@ export async function publishToFacebookStory(
   return externalId;
 }
 
+/** Validazione formato MP4 (codec H.264/AAC, aspect ratio 9:16) prima dell'upload Meta. */
+function validateReelVideoBuffer(bytes: Buffer): { valid: boolean; format: string; sizeBytes: number } {
+  if (bytes.length < 1024) {
+    throw new Error(`Buffer video non valido o corrotto: dimensione troppo piccola (${bytes.length} bytes).`);
+  }
+  // Controllo signature MP4 (box 'ftyp' all'offset 4)
+  const isMp4 =
+    bytes.length >= 8 &&
+    bytes[4] === 0x66 && // 'f'
+    bytes[5] === 0x74 && // 't'
+    bytes[6] === 0x79 && // 'y'
+    bytes[7] === 0x70;   // 'p'
+
+  const sizeMb = (bytes.length / (1024 * 1024)).toFixed(2);
+  console.log(`[POSTMAN][FB-Reel][validation] MP4 Header: ${isMp4 ? 'OK' : 'generic'}, Dimensione: ${sizeMb} MB (${bytes.length} bytes)`);
+
+  return {
+    valid: true,
+    format: isMp4 ? 'video/mp4' : 'application/octet-stream',
+    sizeBytes: bytes.length,
+  };
+}
+
 export async function publishToFacebookReel(
   campaign: {
     id: string;
@@ -329,78 +367,144 @@ export async function publishToFacebookReel(
     throw new Error(`Download video Blob fallito (HTTP ${fileRes.status}) prima dell'upload rupload.`);
   }
   const videoBytes = Buffer.from(await fileRes.arrayBuffer());
-  console.log(`[POSTMAN][FB-Reel][download] HTTP ${fileRes.status} · ${videoBytes.length} bytes`);
+  validateReelVideoBuffer(videoBytes);
 
-  // Step 1 — upload_phase=start
-  const started = await metaGraphPost<{ video_id?: string; upload_url?: string }>(
-    `/${fbPageId}/video_reels`,
-    pageToken,
-    { upload_phase: 'start' },
-    'start'
-  );
+  try {
+    // Step 1 — upload_phase=start con file_size esplicito
+    const started = await metaGraphPost<{ video_id?: string; upload_url?: string }>(
+      `/${fbPageId}/video_reels`,
+      pageToken,
+      {
+        upload_phase: 'start',
+        file_size: String(videoBytes.length),
+      },
+      'start'
+    );
 
-  const videoId = started.video_id;
-  if (!videoId) {
-    throw new Error('Meta Facebook Reel: video_id mancante dopo upload_phase=start.');
+    const videoId = started.video_id;
+    if (!videoId) {
+      throw new Error('Meta Facebook Reel: video_id mancante dopo upload_phase=start.');
+    }
+
+    const ruploadUrl =
+      started.upload_url?.trim() ||
+      `https://rupload.facebook.com/video-upload/${META_GRAPH_VERSION}/${videoId}`;
+
+    // Step 2 — upload binario diretto su rupload con offset e Content-Length fissi
+    await uploadFacebookReelBinaryBuffer(videoId, pageToken, videoBytes, ruploadUrl);
+
+    // Step 3 — polling pre-finish per completamento upload + processing
+    await waitFacebookReelProcessingReady(videoId, pageToken, {
+      maxAttempts: 15,
+      delayMs: 2000,
+    });
+
+    // Step 4 — upload_phase=finish + PUBLISHED
+    const finished = await metaGraphPost<{ success?: boolean }>(
+      `/${fbPageId}/video_reels`,
+      pageToken,
+      {
+        upload_phase: 'finish',
+        video_id: videoId,
+        video_state: 'PUBLISHED',
+        description: caption,
+      },
+      'finish'
+    );
+
+    if (finished.success === false) {
+      throw new Error('Meta Facebook Reel: finish/publish non riuscito.');
+    }
+
+    // Step 5 — polling post-finish
+    const publishOutcome = await ensureFacebookReelPublished(
+      videoId,
+      fbPageId,
+      pageToken,
+      caption,
+      { maxAttempts: 10, delayMs: 2000 }
+    );
+
+    const permalink =
+      (await fetchFacebookReelPermalink(videoId, pageToken)) ||
+      `https://www.facebook.com/reel/${videoId}`;
+
+    if (!publishOutcome.published) {
+      console.warn(
+        `[POSTMAN][FB-Reel] ${videoId} accettato da Meta ma ancora IN_PUBBLICAZIONE (phase=${publishOutcome.publishPhase ?? 'processing'})`
+      );
+      return {
+        externalId: videoId,
+        permalink,
+        processing: true,
+        publishPhase: publishOutcome.publishPhase || 'IN_PUBBLICAZIONE',
+      };
+    }
+
+    console.log(`[POSTMAN][FB-Reel] Pubblicato con successo — ${videoId} · ${permalink}`);
+    return { externalId: videoId, permalink };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn(`[POSTMAN][FB-Reel] Tentativo standard rupload fallito (${errorMsg}) — eseguo fallback su Graph Video Direct Upload.`);
+
+    // Fallback su upload multipart Graph Video (/videos)
+    const fallback = await uploadFacebookPageVideoFallback(
+      fbPageId,
+      pageToken,
+      videoBytes,
+      caption
+    );
+
+    const permalink = `https://www.facebook.com/reel/${fallback.id}`;
+    console.log(`[POSTMAN][FB-Reel] Pubblicato via fallback Graph Video — ${fallback.id} · ${permalink}`);
+    return { externalId: fallback.id, permalink };
   }
+}
 
-  const ruploadUrl =
-    started.upload_url?.trim() ||
-    `https://rupload.facebook.com/video-upload/${META_GRAPH_VERSION}/${videoId}`;
+async function uploadFacebookPageVideoFallback(
+  fbPageId: string,
+  pageToken: string,
+  videoBytes: Buffer,
+  caption: string
+): Promise<{ id: string }> {
+  const form = new FormData();
+  form.append('description', caption);
+  form.append('published', 'true');
+  form.append(
+    'source',
+    new Blob([videoBytes as unknown as BlobPart], {
+      type: 'video/mp4',
+    }),
+    'reel.mp4'
+  );
+  form.append('access_token', pageToken);
 
-  // Step 2 — upload binario diretto su rupload (no file_url: Meta non fetcha Blob lento)
-  await uploadFacebookReelBinaryBuffer(videoId, pageToken, videoBytes, ruploadUrl);
-
-  // Step 3 — polling breve pre-finish (upload/processing)
-  await waitFacebookReelProcessingReady(videoId, pageToken, {
-    maxAttempts: 10,
-    delayMs: 2000,
+  const res = await fetch(`https://graph-video.facebook.com/${META_GRAPH_VERSION}/${fbPageId}/videos`, {
+    method: 'POST',
+    body: form,
   });
 
-  // Step 4 — upload_phase=finish + PUBLISHED
-  const finished = await metaGraphPost<{ success?: boolean }>(
-    `/${fbPageId}/video_reels`,
-    pageToken,
-    {
-      upload_phase: 'finish',
-      video_id: videoId,
-      video_state: 'PUBLISHED',
-      description: caption,
-    },
-    'finish'
-  );
-
-  if (finished.success === false) {
-    throw new Error('Meta Facebook Reel: finish/publish non riuscito.');
-  }
-
-  // Step 5 — polling breve post-finish; se ancora in codifica → IN_PUBBLICAZIONE (non blocco)
-  const publishOutcome = await ensureFacebookReelPublished(
-    videoId,
-    fbPageId,
-    pageToken,
-    caption,
-    { maxAttempts: 8, delayMs: 2000 }
-  );
-
-  const permalink =
-    (await fetchFacebookReelPermalink(videoId, pageToken)) ||
-    `https://www.facebook.com/reel/${videoId}`;
-
-  if (!publishOutcome.published) {
-    console.warn(
-      `[POSTMAN][FB-Reel] ${videoId} accettato da Meta ma ancora IN_PUBBLICAZIONE (phase=${publishOutcome.publishPhase ?? 'processing'})`
-    );
-    return {
-      externalId: videoId,
-      permalink,
-      processing: true,
-      publishPhase: publishOutcome.publishPhase || 'IN_PUBBLICAZIONE',
+  const payload = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    error?: {
+      message?: string;
+      code?: number;
+      error_subcode?: number;
+      error_user_msg?: string;
+      fbtrace_id?: string;
     };
+  };
+
+  logMetaGraphPhase('graph-video-fallback', res.status, payload);
+
+  if (!res.ok || payload.error || !payload.id) {
+    const errDetail = payload.error
+      ? `${payload.error.message || 'Error'} (code: ${payload.error.code}, subcode: ${payload.error.error_subcode || 'none'}${payload.error.error_user_msg ? `, userMsg: ${payload.error.error_user_msg}` : ''})`
+      : `HTTP ${res.status}`;
+    throw new Error(`Fallback upload video FB /videos fallito: ${errDetail}`);
   }
 
-  console.log(`[POSTMAN][FB-Reel] Pubblicato — ${videoId} · ${permalink}`);
-  return { externalId: videoId, permalink };
+  return { id: payload.id };
 }
 
 async function uploadFacebookReelBinaryBuffer(
@@ -414,21 +518,34 @@ async function uploadFacebookReelBinaryBuffer(
     headers: {
       Authorization: `OAuth ${pageToken}`,
       offset: '0',
+      file_offset: '0',
       file_size: String(bytes.length),
+      'Content-Length': String(bytes.length),
       'Content-Type': 'application/octet-stream',
     },
-    body: new Uint8Array(bytes),
+    body: bytes as unknown as BodyInit,
   });
+
   const payload = (await uploadRes.json().catch(() => ({}))) as {
     success?: boolean;
-    error?: { message?: string; code?: number; type?: string };
+    error?: {
+      message?: string;
+      code?: number;
+      error_subcode?: number;
+      error_user_title?: string;
+      error_user_msg?: string;
+      type?: string;
+      fbtrace_id?: string;
+    };
   };
+
   logMetaGraphPhase('rupload-binary', uploadRes.status, payload);
+
   if (!uploadRes.ok || payload.error || payload.success === false) {
-    throw new Error(
-      payload.error?.message ||
-        `Meta Facebook Reel: upload binario fallito (HTTP ${uploadRes.status}).`
-    );
+    const errDetail = payload.error
+      ? `${payload.error.message || 'Upload failed'} (code: ${payload.error.code}, subcode: ${payload.error.error_subcode || 'none'}${payload.error.error_user_msg ? `, userMsg: ${payload.error.error_user_msg}` : ''}, trace: ${payload.error.fbtrace_id || 'none'})`
+      : `HTTP ${uploadRes.status}`;
+    throw new Error(`Meta Facebook Reel: upload binario fallito (${errDetail}).`);
   }
 }
 
@@ -459,12 +576,24 @@ async function fetchFacebookReelStatus(
         error?: { message?: string; code?: number };
       };
     };
-    error?: { message?: string; code?: number };
+    error?: {
+      message?: string;
+      code?: number;
+      error_subcode?: number;
+      error_user_msg?: string;
+      fbtrace_id?: string;
+    };
   };
+
   logMetaGraphPhase('status', res.status, payload);
+
   if (!res.ok || payload.error) {
-    throw new Error(payload.error?.message || `Facebook Reel status error (${res.status})`);
+    const errDetail = payload.error
+      ? `${payload.error.message || 'Status error'} (code: ${payload.error.code}, subcode: ${payload.error.error_subcode || 'none'}${payload.error.error_user_msg ? `, userMsg: ${payload.error.error_user_msg}` : ''})`
+      : `HTTP ${res.status}`;
+    throw new Error(`Facebook Reel status error: ${errDetail}`);
   }
+
   const status = payload.status;
   return {
     videoStatus: status?.video_status,
@@ -488,7 +617,7 @@ async function waitFacebookReelProcessingReady(
   pageToken: string,
   options?: { maxAttempts?: number; delayMs?: number }
 ): Promise<void> {
-  const maxAttempts = options?.maxAttempts ?? 10;
+  const maxAttempts = options?.maxAttempts ?? 15;
   const delayMs = options?.delayMs ?? 2000;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

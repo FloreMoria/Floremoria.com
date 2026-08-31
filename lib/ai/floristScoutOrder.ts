@@ -62,11 +62,17 @@ async function sendFloristScoutStaffEmail(input: {
 
 /**
  * Esegue scout se ordine senza partner e salva in veraWorkflowFlags.suggestedFlorists.
- * Idempotente: non riscouta se già presente per lo stesso cimitero (7 giorni).
+ * Idempotente: non riscouta se già presente per lo stesso cimitero (7 giorni), salvo force.
  */
-export async function runFloristScoutForOrderIfNeeded(
-  orderId: string
-): Promise<{ ran: boolean; recommendations: number; reason?: string }> {
+export async function runFloristScoutForOrder(
+  orderId: string,
+  opts?: { force?: boolean }
+): Promise<{
+  ran: boolean;
+  recommendations: number;
+  reason?: string;
+  scout?: FloristScoutOrderPayload | null;
+}> {
   const order = await prisma.order.findFirst({
     where: { id: orderId, deletedAt: null },
     select: {
@@ -76,20 +82,25 @@ export async function runFloristScoutForOrderIfNeeded(
       cemeteryName: true,
       cemeteryCity: true,
       gravePosition: true,
+      latitude: true,
+      longitude: true,
       partnerId: true,
       status: true,
       veraWorkflowFlags: true,
     },
   });
 
-  if (!order) return { ran: false, recommendations: 0, reason: 'order_not_found' };
-  if (order.partnerId) return { ran: false, recommendations: 0, reason: 'partner_assigned' };
+  if (!order) return { ran: false, recommendations: 0, reason: 'order_not_found', scout: null };
+  if (order.partnerId) {
+    return { ran: false, recommendations: 0, reason: 'partner_assigned', scout: null };
+  }
   if (order.status === 'CANCELLED') {
-    return { ran: false, recommendations: 0, reason: 'cancelled' };
+    return { ran: false, recommendations: 0, reason: 'cancelled', scout: null };
   }
 
   const existing = readFloristScoutFromFlags(order.veraWorkflowFlags);
   if (
+    !opts?.force &&
     existing &&
     existing.cemetery.includes(order.cemeteryName) &&
     existing.scoutedAt &&
@@ -99,6 +110,7 @@ export async function runFloristScoutForOrderIfNeeded(
       ran: false,
       recommendations: existing.recommendations.length,
       reason: 'already_scouted',
+      scout: existing,
     };
   }
 
@@ -135,5 +147,13 @@ export async function runFloristScoutForOrderIfNeeded(
     });
   }
 
-  return { ran: true, recommendations: payload.recommendations.length };
+  return { ran: true, recommendations: payload.recommendations.length, scout: payload };
+}
+
+/** @deprecated Usare runFloristScoutForOrder — alias per checkout/sync automatici. */
+export async function runFloristScoutForOrderIfNeeded(
+  orderId: string
+): Promise<{ ran: boolean; recommendations: number; reason?: string }> {
+  const result = await runFloristScoutForOrder(orderId);
+  return { ran: result.ran, recommendations: result.recommendations, reason: result.reason };
 }

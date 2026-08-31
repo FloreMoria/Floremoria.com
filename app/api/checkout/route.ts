@@ -489,6 +489,13 @@ export async function POST(request: Request) {
 
         console.log(`[Notification] Auto-assegnazione effettuata per ordine ${order.orderNumber} al Partner ${partnerAssoc.partnerId || 'Nessuno'}. Margine: €${(totalMarginCents / 100).toFixed(2)}`);
 
+        if (!partnerAssoc.partnerId) {
+            const { runFloristScoutForOrderIfNeeded } = await import('@/lib/ai/floristScoutOrder');
+            void runFloristScoutForOrderIfNeeded(order.id).catch((scoutErr) => {
+                console.error('[checkout] Florist Scout AI fallito (non bloccante):', scoutErr);
+            });
+        }
+
         // Create Stripe Session — PayPal esplicito (non Dynamic PM Dashboard: evita sparizioni silenziose).
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51MockKey', {
             apiVersion: '2023-10-16' as any,

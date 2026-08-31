@@ -88,6 +88,13 @@ export async function POST(request: Request) {
             console.error('[dashboard/orders POST] Email ordine fallite (non bloccante):', emailErr);
         });
 
+        if (!order.partnerId) {
+            const { runFloristScoutForOrderIfNeeded } = await import('@/lib/ai/floristScoutOrder');
+            void runFloristScoutForOrderIfNeeded(order.id).catch((scoutErr) => {
+                console.error('[dashboard/orders POST] Florist Scout AI fallito (non bloccante):', scoutErr);
+            });
+        }
+
         return NextResponse.json({
             ok: true,
             order,

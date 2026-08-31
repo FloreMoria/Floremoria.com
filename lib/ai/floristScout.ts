@@ -61,12 +61,22 @@ function getGeminiApiKey(): string | null {
 /**
  * Interroga Gemini (Google Search + Maps grounding) per i 3 fioristi più vicini
  * all'ingresso del cimitero, con telefono verificato.
+ * Supporta sia la firma (cemeteryName, city, address) sia la firma a oggetto.
  */
-export async function findNearbyFloristsForCemetery(input: {
-  cemeteryName: string;
-  city: string;
-  address?: string | null;
-}): Promise<FloristScoutResult> {
+export async function findNearbyFloristsForCemetery(
+  cemeteryNameOrInput: string | { cemeteryName: string; city: string; address?: string | null },
+  cityArg?: string,
+  addressArg?: string | null
+): Promise<FloristScoutResult> {
+  const input =
+    typeof cemeteryNameOrInput === 'string'
+      ? {
+          cemeteryName: cemeteryNameOrInput,
+          city: cityArg || '',
+          address: addressArg || null,
+        }
+      : cemeteryNameOrInput;
+
   const cemeteryName = input.cemeteryName.trim();
   const city = input.city.trim();
   const address = input.address?.trim() || null;
@@ -74,6 +84,7 @@ export async function findNearbyFloristsForCemetery(input: {
 
   const empty: FloristScoutResult = {
     cemetery: cemeteryLabel,
+    city,
     cemeteryCity: city,
     cemeteryAddress: address,
     recommendations: [],
@@ -169,6 +180,7 @@ export async function findNearbyFloristsForCemetery(input: {
 
     return {
       cemetery: parsed.cemetery?.trim() || cemeteryLabel,
+      city,
       cemeteryCity: city,
       cemeteryAddress: address,
       recommendations,

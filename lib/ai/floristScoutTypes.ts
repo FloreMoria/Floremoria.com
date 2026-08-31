@@ -18,6 +18,7 @@ export type FloristScoutRecommendation = {
 
 export type FloristScoutResult = {
   cemetery: string;
+  city: string;
   cemeteryCity: string;
   cemeteryAddress?: string | null;
   recommendations: FloristScoutRecommendation[];
@@ -36,9 +37,11 @@ export function readFloristScoutFromFlags(
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   if (!Array.isArray(o.recommendations)) return null;
+  const resolvedCity = String(o.city || o.cemeteryCity || '');
   return {
     cemetery: String(o.cemetery || ''),
-    cemeteryCity: String(o.cemeteryCity || ''),
+    city: resolvedCity,
+    cemeteryCity: resolvedCity,
     cemeteryAddress: o.cemeteryAddress ? String(o.cemeteryAddress) : null,
     scoutedAt: String(o.scoutedAt || ''),
     source: 'florist_scout_ai',

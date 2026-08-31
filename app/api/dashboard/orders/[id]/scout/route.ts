@@ -57,8 +57,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       partnerDirectoryUrl,
       message:
         result.recommendations > 0
-          ? `Trovati ${result.recommendations} fioristi vicino al cimitero.`
-          : 'Nessun candidato con telefono verificato. Apri Google Maps o la directory partner.',
+          ? `Trovati ${result.recommendations} fioristi vicino al cimitero${
+              result.scout?.lookupMethod === 'google_places' ? ' (via Google Places)' : ''
+            }.`
+          : result.reason ||
+            'Nessun candidato con telefono verificato. Apri Google Maps o la directory partner.',
+      lookupMethod: result.scout?.lookupMethod || 'none',
+      failureReason: result.reason || result.scout?.failureReason || null,
     });
   } catch (error) {
     console.error('[orders scout POST]', error);

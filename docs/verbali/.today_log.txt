@@ -86,3 +86,7 @@
 [2026-08-31 21:10] feat: FloristScoutPanel sempre visibile senza partner; CTA Cerca Fiorista in Zona + Google Maps/directory; API POST /orders/[id]/scout; coords cimitero nel drawer.
 [2026-08-31 21:15] fix(social): corretta procedura di upload binario e polling stato per Facebook Reels API — validazione formato MP4 (H.264/AAC, 9:16, durata >= 3s), trasmissione file_size e offset rigorosi su rupload.facebook.com, fallback multipart automatico su Graph Video (/videos) per errore 6000, polling stato transcodifica video pre e post-finish con logging diagnostico errori Meta; tsc+build OK.
 
+[2026-08-31 21:30] feat: feed Google Merchant Center — lib/merchant/merchantFeed.ts, script generate-merchant-feed, public/merchant-feed.csv (29 prodotti).
+[2026-08-31 21:45] fix: FloristScout — rimosso JSON+tools incompatibile Gemini; fallback Google Places; layout pannello drawer.
+[2026-08-31 21:45] fix: FloristScout — rimosso JSON+tools incompatibile Gemini; fallback Google Places; layout pannello drawer.
+[2026-08-31 21:55] fix: merchant-feed.csv — route dinamica /merchant-feed + rewrite; prebuild genera CSV statico.

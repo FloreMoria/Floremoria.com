@@ -118,12 +118,16 @@ export async function runFloristScoutForOrder(
     cemeteryName: order.cemeteryName,
     city: order.cemeteryCity,
     address: order.gravePosition || undefined,
+    latitude: order.latitude,
+    longitude: order.longitude,
   });
 
   const payload: FloristScoutOrderPayload = {
     ...scoutResult,
     scoutedAt: new Date().toISOString(),
     source: 'florist_scout_ai',
+    lookupMethod: scoutResult.lookupMethod,
+    failureReason: scoutResult.failureReason || undefined,
   };
 
   await prisma.order.update({
@@ -147,7 +151,7 @@ export async function runFloristScoutForOrder(
     });
   }
 
-  return { ran: true, recommendations: payload.recommendations.length, scout: payload };
+  return { ran: true, recommendations: payload.recommendations.length, scout: payload, reason: scoutResult.failureReason || undefined };
 }
 
 /** @deprecated Usare runFloristScoutForOrder — alias per checkout/sync automatici. */

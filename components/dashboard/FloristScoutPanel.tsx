@@ -39,6 +39,20 @@ type Props = {
   onScoutUpdated?: (flags: unknown) => void;
 };
 
+function buildCemeteryLabel(cemeteryName?: string, cemeteryCity?: string): string {
+  const name = (cemeteryName || '').trim();
+  const city = (cemeteryCity || '').trim();
+  if (!name && !city) return 'Cimitero indicato';
+  if (!city || name.toLowerCase().includes(city.toLowerCase())) return name || city;
+  return `${name}, ${city}`;
+}
+
+function lookupMethodLabel(method?: string): string {
+  if (method === 'google_places') return 'Google Places';
+  if (method === 'gemini') return 'Scout AI (Gemini)';
+  return 'Scout';
+}
+
 function telHref(phone: string): string {
   return `tel:${phone.replace(/\s/g, '')}`;
 }
@@ -217,7 +231,7 @@ export default function FloristScoutPanel({
     setScout(readFloristScoutFromFlags(veraWorkflowFlags));
   }, [veraWorkflowFlags]);
 
-  const cemeteryLabel = [cemeteryName, cemeteryCity].filter(Boolean).join(', ') || 'cimitero indicato';
+  const cemeteryLabel = buildCemeteryLabel(cemeteryName, cemeteryCity);
   const googleMapsUrl = useMemo(
     () =>
       buildFloristScoutGoogleMapsUrl({
@@ -250,11 +264,27 @@ export default function FloristScoutPanel({
         message?: string;
         error?: string;
         recommendations?: number;
+        lookupMethod?: string;
+        failureReason?: string | null;
       }>(res);
       if (!parsed.ok) throw new Error(parsed.error || 'Ricerca fallita');
       const payload = parsed.data?.scout || null;
       setScout(payload);
-      setSearchMessage(parsed.data?.message || null);
+      const recCount = parsed.data?.recommendations ?? payload?.recommendations.length ?? 0;
+      if (recCount > 0) {
+        setSearchMessage(
+          parsed.data?.message ||
+            `Trovati ${recCount} fioristi (${lookupMethodLabel(parsed.data?.lookupMethod || payload?.lookupMethod)}).`
+        );
+        setSearchError(null);
+      } else {
+        setSearchMessage(null);
+        setSearchError(
+          parsed.data?.failureReason ||
+            parsed.data?.message ||
+            'Nessun fiorista con telefono verificato. Prova Google Maps manualmente.'
+        );
+      }
       if (payload) {
         onScoutUpdated?.({
           ...(typeof veraWorkflowFlags === 'object' && veraWorkflowFlags
@@ -276,70 +306,82 @@ export default function FloristScoutPanel({
   const hasResults = Boolean(scout?.recommendations.length);
 
   return (
-    <div className="space-y-3 rounded-2xl border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-2 min-w-0">
-          <Sparkles size={20} className="mt-0.5 shrink-0 text-orange-700" />
-          <div>
-            <h4 className="text-sm font-bold text-orange-950">
-              Zona non servita — nessun partner attivo
-            </h4>
-            <p className="text-xs leading-relaxed text-orange-900/85 mt-0.5">
-              {cemeteryLabel}
-              {orderNumber ? ` · ordine #${orderNumber}` : ''}. Cerca fioristi vicini al cimitero
-              (Google Maps / Scout AI) e assegna rapidamente o invia richiesta di collaborazione.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => void runScoutSearch()}
-            disabled={searching || !canChangeStatus}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-orange-800 disabled:opacity-60"
-          >
-            {searching ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Search size={16} />
-            )}
-            Cerca Fiorista in Zona
-          </button>
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-300 bg-white px-3 py-2.5 text-xs font-bold text-orange-900 hover:bg-orange-50"
-          >
-            <MapPin size={14} />
-            Google Maps
-            <ExternalLink size={12} />
-          </a>
-          <Link
-            href={partnerDirectoryUrl}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-50"
-          >
-            <Users size={14} />
-            Directory partner
-          </Link>
+    <div className="w-full min-w-0 space-y-4 rounded-2xl border-2 border-orange-300 bg-gradient-to-br from-orange-50 to-amber-50/80 p-4 shadow-sm">
+      <div className="flex w-full min-w-0 items-start gap-3">
+        <Sparkles size={20} className="mt-0.5 shrink-0 text-orange-700" />
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm font-bold text-orange-950">
+            Zona non servita — nessun partner attivo
+          </h4>
+          <p className="mt-1 text-sm leading-snug text-orange-900/90">
+            <span className="font-semibold">{cemeteryLabel}</span>
+            {orderNumber ? (
+              <>
+                {' '}
+                · ordine <span className="font-mono">#{orderNumber}</span>
+              </>
+            ) : null}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-orange-900/75">
+            Cerca fioristi vicini al cimitero e assegna rapidamente, oppure invia una richiesta di
+            collaborazione.
+          </p>
         </div>
       </div>
 
+      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => void runScoutSearch()}
+          disabled={searching || !canChangeStatus}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-800 disabled:opacity-60"
+        >
+          {searching ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Search size={16} />
+          )}
+          Cerca Fiorista in Zona
+        </button>
+        <a
+          href={googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-orange-300 bg-white px-3 py-3 text-xs font-bold text-orange-900 hover:bg-orange-50"
+        >
+          <MapPin size={14} />
+          Google Maps
+          <ExternalLink size={12} />
+        </a>
+        <Link
+          href={partnerDirectoryUrl}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-800 hover:bg-slate-50"
+        >
+          <Users size={14} />
+          Directory partner
+        </Link>
+      </div>
+
+      {searching ? (
+        <p className="rounded-lg border border-orange-200 bg-white/70 px-3 py-2 text-xs text-orange-900">
+          Ricerca in corso… prima Scout AI, poi Google Places se necessario.
+        </p>
+      ) : null}
+
       {searchError ? (
-        <p className="text-xs font-medium text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-900">
           {searchError}
         </p>
       ) : null}
       {searchMessage ? (
-        <p className="text-xs font-medium text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
           {searchMessage}
         </p>
       ) : null}
 
-      {!hasResults && !searching ? (
-        <p className="text-xs text-orange-900/70 italic px-1">
-          Premi <strong>Cerca Fiorista in Zona</strong> per avviare lo Scout AI (Gemini + Google
-          Maps) oppure apri Google Maps / directory partner manualmente.
+      {!hasResults && !searching && !searchError ? (
+        <p className="text-xs italic text-orange-900/70">
+          Premi <strong>Cerca Fiorista in Zona</strong> oppure apri Google Maps / directory partner.
         </p>
       ) : null}
 

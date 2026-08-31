@@ -27,6 +27,8 @@ export type FloristScoutResult = {
 export type FloristScoutOrderPayload = FloristScoutResult & {
   scoutedAt: string;
   source: 'florist_scout_ai';
+  lookupMethod?: 'gemini' | 'google_places' | 'none';
+  failureReason?: string;
 };
 
 export function readFloristScoutFromFlags(

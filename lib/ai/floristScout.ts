@@ -1,6 +1,6 @@
 /**
  * Florist Scout AI — HYDRA/OSCAR: fioristi di prossimità al cimitero via Gemini + Google Search/Maps.
- * Regola assoluta: distanza dall'ingresso principale, telefono obbligatorio, rating come tie-breaker.
+ * Fallback deterministico: Google Places API (stesso motore di Google Maps manuale).
  */
 import { GoogleGenAI } from '@google/genai';
 import {
@@ -8,39 +8,14 @@ import {
   type FloristScoutRecommendation,
   type FloristScoutResult,
 } from '@/lib/ai/floristScoutTypes';
+import { findNearbyFloristsViaGooglePlaces } from '@/lib/ai/floristScoutPlaces';
 
-const SCOUT_JSON_SCHEMA = {
-  type: 'object',
-  properties: {
-    cemetery: { type: 'string' },
-    recommendations: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          address: { type: 'string' },
-          distanceMeters: { type: 'number' },
-          distanceDescription: { type: 'string' },
-          phone: { type: 'string' },
-          rating: { type: 'number' },
-          reviewsCount: { type: 'number' },
-          aiReasoning: { type: 'string' },
-          isDirectKiosk: { type: 'boolean' },
-        },
-        required: [
-          'name',
-          'address',
-          'distanceMeters',
-          'distanceDescription',
-          'phone',
-          'aiReasoning',
-        ],
-      },
-    },
-  },
-  required: ['cemetery', 'recommendations'],
-} as const;
+export type FloristScoutLookupMethod = 'gemini' | 'google_places' | 'none';
+
+export type FloristScoutLookupResult = FloristScoutResult & {
+  lookupMethod: FloristScoutLookupMethod;
+  failureReason?: string | null;
+};
 
 function stripJsonFences(raw: string): string {
   return raw
@@ -58,42 +33,29 @@ function getGeminiApiKey(): string | null {
   );
 }
 
-/**
- * Interroga Gemini (Google Search + Maps grounding) per i 3 fioristi più vicini
- * all'ingresso del cimitero, con telefono verificato.
- * Supporta sia la firma (cemeteryName, city, address) sia la firma a oggetto.
- */
-export async function findNearbyFloristsForCemetery(
-  cemeteryNameOrInput: string | { cemeteryName: string; city: string; address?: string | null },
-  cityArg?: string,
-  addressArg?: string | null
-): Promise<FloristScoutResult> {
-  const input =
-    typeof cemeteryNameOrInput === 'string'
-      ? {
-          cemeteryName: cemeteryNameOrInput,
-          city: cityArg || '',
-          address: addressArg || null,
-        }
-      : cemeteryNameOrInput;
-
+async function findNearbyFloristsViaGemini(input: {
+  cemeteryName: string;
+  city: string;
+  address?: string | null;
+}): Promise<FloristScoutLookupResult> {
   const cemeteryName = input.cemeteryName.trim();
   const city = input.city.trim();
   const address = input.address?.trim() || null;
   const cemeteryLabel = [cemeteryName, city].filter(Boolean).join(', ');
 
-  const empty: FloristScoutResult = {
+  const empty: FloristScoutLookupResult = {
     cemetery: cemeteryLabel,
     city,
     cemeteryCity: city,
     cemeteryAddress: address,
     recommendations: [],
+    lookupMethod: 'none',
+    failureReason: null,
   };
 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    console.warn('[FloristScout] GEMINI_API_KEY assente — skip scout.');
-    return empty;
+    return { ...empty, failureReason: 'GEMINI_API_KEY assente' };
   }
 
   const model =
@@ -113,26 +75,20 @@ export async function findNearbyFloristsForCemetery(
     'Sei HYDRA/OSCAR — scout operativo FloreMoria per fioristi di prossimità ai cimiteri italiani.',
     'Usa Google Search e Google Maps per dati reali e aggiornati.',
     '',
-    'REGOLA 1 — Vicinanza fisica assoluta: ordina per distanza dall\'ingresso principale del cimitero.',
-    'Chioschi sul piazzale o negozi a pochi metri dal cancello hanno priorità assoluta (rank implicito per distanza).',
-    'REGOLA 2 — Telefono obbligatorio: includi SOLO attività con numero di telefono pubblico verificato (no placeholder).',
-    'REGOLA 3 — Reputazione: a parità di distanza, preferisci rating/recensioni Google più alti; spiega in aiReasoning.',
+    "REGOLA 1 — Vicinanza fisica assoluta: ordina per distanza dall'ingresso principale del cimitero.",
+    'Chioschi sul piazzale o negozi a pochi metri dal cancello hanno priorità assoluta.',
+    'REGOLA 2 — Telefono obbligatorio: includi SOLO attività con numero di telefono pubblico verificato.',
+    'REGOLA 3 — Reputazione: a parità di distanza, preferisci rating/recensioni Google più alti.',
     '',
-    'Restituisci al massimo 3 candidati, già ordinati dal più vicino al più lontano.',
-    'distanceDescription in italiano naturale (es. "Di fronte all\'ingresso principale", "150 m dal cancello est").',
-    'isDirectKiosk=true per chioschi/banchetti sul piazzale del cimitero.',
-    'aiReasoning: una frase sobria in italiano (prossimità + eventuale rating).',
+    'Restituisci SOLO JSON valido (nessun markdown) con chiavi cemetery e recommendations (max 3).',
+    'Ogni recommendation: name, address, distanceMeters, distanceDescription, phone, rating, reviewsCount, aiReasoning, isDirectKiosk.',
   ].join('\n');
 
   const userPrompt = [
-    'Seleziona i fioristi più vicini all\'ingresso del cimitero specificato.',
-    'Ordina prioritariamente in base alla vicinanza fisica all\'ingresso (chioschi sul piazzale o negozi a pochi metri hanno priorità assoluta).',
+    'Seleziona i fioristi più vicini all ingresso del cimitero specificato.',
     'Includi esclusivamente attività con recapito telefonico verificato.',
-    'Aggiungi punteggio recensioni Google e sintesi aiReasoning.',
     '',
     locationBlock,
-    '',
-    'Output JSON conforme allo schema richiesto.',
   ].join('\n');
 
   try {
@@ -143,22 +99,29 @@ export async function findNearbyFloristsForCemetery(
       config: {
         systemInstruction,
         tools: [{ googleSearch: {} }, { googleMaps: {} }],
-        responseMimeType: 'application/json',
-        responseJsonSchema: SCOUT_JSON_SCHEMA,
+        // responseMimeType application/json + tools = 400 INVALID_ARGUMENT su Gemini.
         temperature: 0.2,
       },
     });
 
     const rawText = response.text?.trim();
     if (!rawText) {
-      console.warn('[FloristScout] Risposta Gemini vuota.');
-      return empty;
+      return { ...empty, failureReason: 'Gemini: risposta vuota' };
     }
 
-    const parsed = JSON.parse(stripJsonFences(rawText)) as {
+    let parsed: {
       cemetery?: string;
       recommendations?: Array<Partial<FloristScoutRecommendation>>;
     };
+    try {
+      parsed = JSON.parse(stripJsonFences(rawText));
+    } catch {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return { ...empty, failureReason: 'Gemini: output non JSON' };
+      }
+      parsed = JSON.parse(stripJsonFences(jsonMatch[0]));
+    }
 
     const rawItems = (parsed.recommendations || []).map((r) => ({
       name: String(r.name || '').trim(),
@@ -178,15 +141,74 @@ export async function findNearbyFloristsForCemetery(
       `[FloristScout] ${cemeteryLabel} → ${recommendations.length} candidati (model=${model})`
     );
 
+    const cemeteryRaw = parsed.cemetery;
+    const cemeteryResolved =
+      typeof cemeteryRaw === 'string' && cemeteryRaw.trim()
+        ? cemeteryRaw.trim()
+        : cemeteryLabel;
+
     return {
-      cemetery: parsed.cemetery?.trim() || cemeteryLabel,
+      cemetery: cemeteryResolved,
       city,
       cemeteryCity: city,
       cemeteryAddress: address,
       recommendations,
+      lookupMethod: recommendations.length > 0 ? 'gemini' : 'none',
+      failureReason:
+        recommendations.length > 0 ? null : 'Gemini: nessun candidato con telefono verificato',
     };
   } catch (err) {
-    console.error('[FloristScout] Errore Gemini:', err instanceof Error ? err.message : err);
-    return empty;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[FloristScout] Errore Gemini:', msg);
+    return {
+      ...empty,
+      failureReason: `Gemini: ${msg.slice(0, 180)}`,
+    };
   }
+}
+
+/**
+ * Scout fioristi: Gemini (se disponibile) + fallback Google Places API.
+ */
+export async function findNearbyFloristsForCemetery(
+  cemeteryNameOrInput:
+    | string
+    | {
+        cemeteryName: string;
+        city: string;
+        address?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
+      },
+  cityArg?: string,
+  addressArg?: string | null
+): Promise<FloristScoutLookupResult> {
+  const input =
+    typeof cemeteryNameOrInput === 'string'
+      ? {
+          cemeteryName: cemeteryNameOrInput,
+          city: cityArg || '',
+          address: addressArg || null,
+          latitude: null as number | null,
+          longitude: null as number | null,
+        }
+      : cemeteryNameOrInput;
+
+  const geminiResult = await findNearbyFloristsViaGemini(input);
+  if (geminiResult.recommendations.length > 0) {
+    return geminiResult;
+  }
+
+  const placesResult = await findNearbyFloristsViaGooglePlaces(input);
+  if (placesResult.recommendations.length > 0) {
+    return placesResult;
+  }
+
+  return {
+    ...placesResult,
+    failureReason:
+      placesResult.failureReason ||
+      geminiResult.failureReason ||
+      'Nessun fiorista con telefono verificato',
+  };
 }

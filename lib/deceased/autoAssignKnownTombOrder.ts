@@ -3,6 +3,7 @@ import { syncDeceasedRelationsForOrder } from '@/lib/deceased/syncDeceasedRelati
 import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdentity';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { runFloristScoutForOrderIfNeeded } from '@/lib/ai/floristScoutOrder';
 
 export type AutoAssignKnownTombResult =
     | { assigned: true; deceasedProfileId: string; partnerId: string; becameInProgress: boolean }
@@ -93,6 +94,9 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
     }
 
     if (!partnerId) {
+        await runFloristScoutForOrderIfNeeded(orderId).catch((err) => {
+            console.error('[auto-assign-known-tomb] Florist Scout AI fallito (non bloccante):', err);
+        });
         return { assigned: false, reason: 'no_censited_tomb_with_florist' };
     }
 

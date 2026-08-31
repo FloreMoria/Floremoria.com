@@ -1,4 +1,5 @@
 import type { Order, OrderItem, Product, Partner } from '@prisma/client';
+import type { FloristScoutOrderPayload } from '@/lib/ai/floristScoutTypes';
 
 type OrderWithItems = Order & {
     items: (OrderItem & { product: Product })[];
@@ -212,4 +213,68 @@ export function buildOrderCustomerHtml(params: { order: OrderWithItems }): strin
   </div>
 </body>
 </html>`.trim();
+}
+
+export function buildFloristScoutStaffHtml(params: {
+  orderNumber: string;
+  orderId: string;
+  deceasedName: string;
+  scout: FloristScoutOrderPayload;
+}): string {
+  const top = params.scout.recommendations[0];
+  const telHref = top?.phone ? `tel:${top.phone.replace(/\s/g, '')}` : '#';
+
+  const rows = params.scout.recommendations
+    .map((r) => {
+      const tel = r.phone ? `tel:${r.phone.replace(/\s/g, '')}` : '#';
+      const badge =
+        r.rank === 1
+          ? '<span style="background:#166534;color:#fff;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:8px;">#1 — Primo da contattare</span>'
+          : `<span style="color:#666;font-size:11px;margin-left:8px;">#${r.rank}</span>`;
+      return `<tr>
+        <td style="padding:12px;border:1px solid #e5e7eb;vertical-align:top;">
+          <strong>${esc(r.name)}</strong>${badge}<br/>
+          <span style="color:#555;font-size:13px;">${esc(r.address)}</span><br/>
+          <span style="color:#555;font-size:13px;">${esc(r.distanceDescription)} · ~${r.distanceMeters} m</span><br/>
+          ${r.rating > 0 ? `<span style="font-size:12px;color:#92400e;">★ ${r.rating.toFixed(1)} (${r.reviewsCount} rec.)</span><br/>` : ''}
+          <span style="font-size:12px;color:#374151;font-style:italic;">${esc(r.aiReasoning)}</span>
+        </td>
+        <td style="padding:12px;border:1px solid #e5e7eb;text-align:center;white-space:nowrap;">
+          <a href="${tel}" style="display:inline-block;background:#166534;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;">Chiama</a><br/>
+          <span style="font-size:13px;color:#111;margin-top:8px;display:inline-block;">${esc(r.phone)}</span>
+        </td>
+      </tr>`;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Fiorista richiesto — ${esc(params.orderNumber)}</title></head>
+<body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111;padding:20px;max-width:640px;margin:0 auto;background:#f8fafc;">
+  <div style="background:#fff;padding:24px;border-radius:12px;border:1px solid #e5e7eb;">
+    <h2 style="margin:0 0 8px;font-size:20px;">Nuovo fiorista richiesto — Scout AI</h2>
+    <p style="margin:0 0 16px;color:#555;font-size:14px;">
+      Ordine <strong>${esc(params.orderNumber)}</strong> · ${esc(params.deceasedName)}<br/>
+      Cimitero: <strong>${esc(params.scout.cemetery)}</strong> (${esc(params.scout.cemeteryCity)})
+    </p>
+    ${
+      top
+        ? `<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">Più vicino all'ingresso — contattare per primo</p>
+      <p style="margin:0 0 12px;font-size:16px;font-weight:600;">${esc(top.name)}</p>
+      <a href="${telHref}" style="display:inline-block;background:#166534;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Chiama ora · ${esc(top.phone)}</a>
+    </div>`
+        : ''
+    }
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px;border-bottom:2px solid #e5e7eb;">Fiorista</th>
+        <th style="text-align:center;padding:8px;border-bottom:2px solid #e5e7eb;">Telefono</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin:20px 0 0;font-size:12px;color:#666;">
+      Dashboard: <a href="https://www.floremoria.com/dashboard/orders">Ordini</a> · ID ordine ${esc(params.orderId)}
+    </p>
+  </div>
+</body></html>`;
 }

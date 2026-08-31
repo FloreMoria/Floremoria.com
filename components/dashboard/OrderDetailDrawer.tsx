@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import OrderDetailProofUpload from './OrderDetailProofUpload';
 import ShareableLinkPanel from './ShareableLinkPanel';
+import FloristScoutPanel from './FloristScoutPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
@@ -464,6 +465,34 @@ export default function OrderDetailDrawer({
                         <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                             <Users size={16} className="text-gray-400" /> Fiorista Assegnato
                         </h4>
+                        {!localOrder.partnerId ? (
+                            <FloristScoutPanel
+                                orderId={localOrder.id}
+                                orderNumber={localOrder.orderNumber}
+                                cemeteryName={localOrder.cemeteryName}
+                                cemeteryCity={localOrder.cemeteryCity}
+                                veraWorkflowFlags={localOrder.veraWorkflowFlags}
+                                hasPartner={Boolean(localOrder.partnerId)}
+                                canChangeStatus={canChangeStatus}
+                                onPartnerAssigned={(partnerId, shopName) => {
+                                    const partner =
+                                        florists.find((f) => f.id === partnerId) ||
+                                        { id: partnerId, shopName, ownerName: shopName };
+                                    const merged = {
+                                        ...localOrder,
+                                        partnerId,
+                                        partner,
+                                        status:
+                                            localOrder.status === 'ACCEPTED' ||
+                                            localOrder.status === 'PENDING'
+                                                ? 'IN_PROGRESS'
+                                                : localOrder.status,
+                                    };
+                                    setLocalOrder(merged);
+                                    onOrderUpdated?.(merged);
+                                }}
+                            />
+                        ) : null}
                         {canChangeStatus ? (
                             <select
                                 className="w-full text-sm text-gray-700 bg-white border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none transition-all shadow-sm font-semibold"

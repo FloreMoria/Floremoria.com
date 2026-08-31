@@ -6,9 +6,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText, Loader2, RefreshCw } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatFinanceDate';
+import { labelSourceTypeIt } from '@/lib/financial/fiscalItalianLabels';
+import { CATEGORY_LABELS } from '@/lib/financial/historicalLedgerTypes';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { AccountingEntry } from '@/lib/financial/types';
@@ -22,6 +24,7 @@ type NeonRow = {
     sourceKey?: string | null;
     documentRef?: string | null;
     orderId?: string | null;
+    partnerId?: string | null;
     bankLineId?: string | null;
     counterpartyName?: string | null;
     attachmentUrl?: string | null;
@@ -46,11 +49,35 @@ type DisplayEntry = {
     dareAccount: string;
     avereAccount: string;
     amountCents: number;
+    netCents: number;
+    vatCents: number;
+    direction: string;
+    category: string;
+    counterpartyName: string | null;
+    documentRef: string | null;
+    sourceType: string;
+    sourceId: string | null;
+    orderId: string | null;
+    partnerId: string | null;
+    bankLineId: string | null;
+    attachmentUrl: string | null;
     /** true = entrata/ricavo (verde); false = uscita/costo (rosso) */
     isEntrata: boolean;
     sourceLabel: string;
     attachments: ConsolidatedFiscalAttachment[];
 };
+
+const PRIMA_NOTA_TABLE_SCROLL_CLASS =
+    'dashboard-table-scroll max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto [scrollbar-width:thin]';
+
+function categoryLabel(category: string): string {
+    return (CATEGORY_LABELS as Record<string, string>)[category] || category || '—';
+}
+
+function truncateCell(value: string | null | undefined, max = 28): string {
+    if (!value) return '—';
+    return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
 
 function attachmentBadgeEmoji(kind: ConsolidatedFiscalAttachment['kind']): string {
     switch (kind) {
@@ -300,6 +327,18 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 dareAccount: accounts.dare,
                 avereAccount: accounts.avere,
                 amountCents: Math.abs(r.totalCents || r.netCents || 0),
+                netCents: Math.abs(r.netCents || r.totalCents || 0),
+                vatCents: Math.abs(r.vatCents || 0),
+                direction: r.direction || (r.totalCents >= 0 ? 'ENTRATA' : 'USCITA'),
+                category: r.category || '—',
+                counterpartyName: r.counterpartyName || null,
+                documentRef: r.documentRef || null,
+                sourceType: r.sourceType,
+                sourceId: r.sourceId || null,
+                orderId: r.orderId || null,
+                partnerId: r.partnerId || null,
+                bankLineId: r.bankLineId || null,
+                attachmentUrl: r.attachmentUrl || null,
                 isEntrata: isEntrataFromNeon(r),
                 sourceLabel: sourceLabel(
                     r.sourceType,
@@ -344,6 +383,18 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 dareAccount: e.dareAccount,
                 avereAccount: e.avereAccount,
                 amountCents: e.amountCents,
+                netCents: Math.max(0, e.amountCents - (e.vatAmountCents || 0)),
+                vatCents: e.vatAmountCents || 0,
+                direction: isEntrataFromLocal(e.dareAccount, e.avereAccount) ? 'ENTRATA' : 'USCITA',
+                category: 'JSON_ENTRY',
+                counterpartyName: null,
+                documentRef: e.invoiceReference,
+                sourceType: 'JSON_ENTRY',
+                sourceId: e.id,
+                orderId: null,
+                partnerId: null,
+                bankLineId: null,
+                attachmentUrl: null,
                 isEntrata: isEntrataFromLocal(e.dareAccount, e.avereAccount),
                 sourceLabel: fonteOverrides[e.id] || 'Manuale',
                 attachments: [],
@@ -358,7 +409,16 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     e.description.toLowerCase().includes(q) ||
                     e.dareAccount.toLowerCase().includes(q) ||
                     e.avereAccount.toLowerCase().includes(q) ||
-                    e.id.toLowerCase().includes(q)
+                    e.id.toLowerCase().includes(q) ||
+                    (e.counterpartyName || '').toLowerCase().includes(q) ||
+                    (e.documentRef || '').toLowerCase().includes(q) ||
+                    (e.sourceId || '').toLowerCase().includes(q) ||
+                    (e.orderId || '').toLowerCase().includes(q) ||
+                    (e.partnerId || '').toLowerCase().includes(q) ||
+                    (e.bankLineId || '').toLowerCase().includes(q) ||
+                    (e.attachmentUrl || '').toLowerCase().includes(q) ||
+                    categoryLabel(e.category).toLowerCase().includes(q) ||
+                    labelSourceTypeIt(e.sourceType).toLowerCase().includes(q)
             );
         }
         list.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
@@ -395,25 +455,41 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     {error}
                 </div>
             )}
-            <div className="dashboard-table-scroll overflow-x-auto max-h-[720px] overflow-y-auto [scrollbar-width:thin]">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+            <div className={PRIMA_NOTA_TABLE_SCROLL_CLASS}>
+                <table className="border-collapse text-left text-sm table-auto w-max">
                     <thead className="sticky top-0 z-10">
-                        <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            <th className="px-5 py-3">Data</th>
-                            <th className="px-5 py-3">Numero / ID</th>
-                            <th className="px-5 py-3 min-w-[280px]">Descrizione / Causale</th>
-                            <th className="px-5 py-3">Conto Dare</th>
-                            <th className="px-5 py-3">Conto Avere</th>
-                            <th className="px-5 py-3 text-right">Importo (€)</th>
-                            <th className="px-5 py-3">Fonte</th>
+                        <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Data</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">ID</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Dir.</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Categoria</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap min-w-[12rem] max-w-[16rem]">
+                                Descrizione
+                            </th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap min-w-[7rem] max-w-[10rem]">
+                                Controparte
+                            </th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Conto Dare</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Conto Avere</th>
+                            <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap">Impon.</th>
+                            <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap">IVA</th>
+                            <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap">Totale</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Rif. doc.</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Tipo</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Fonte</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">ID fonte</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">ID ordine</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">ID partner</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Riga Fineco</th>
+                            <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap">Allegato</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-100">
                         {rows.length === 0 ? (
                             <tr>
                                 <td
-                                    colSpan={7}
-                                    className="px-5 py-10 text-center text-slate-400 italic"
+                                    colSpan={19}
+                                    className="px-3 py-10 text-center text-slate-400 italic"
                                 >
                                     Nessuna scrittura contabile reale. Allinea l&apos;Archivio
                                     Storico o importa fatture/gateway.
@@ -426,29 +502,47 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                     entry.isEntrata
                                 );
                                 return (
-                                <tr key={entry.id} className="hover:bg-slate-50/50">
-                                    <td className="px-5 py-3.5 text-xs text-slate-600 whitespace-nowrap">
+                                <tr key={entry.id} className="hover:bg-slate-50/60 align-top">
+                                    <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-nowrap">
                                         {formatFinanceDate(entry.date)}
                                     </td>
-                                    <td className="px-5 py-3.5">
-                                        <span className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-700">
-                                            <FileText size={11} />
-                                            {entry.id.length > 18
-                                                ? `${entry.id.slice(0, 8)}…${entry.id.slice(-6)}`
-                                                : entry.id}
+                                    <td className="px-2 py-2">
+                                        <span
+                                            className="inline-flex items-center gap-0.5 font-mono text-[10px] text-slate-700 whitespace-nowrap"
+                                            title={entry.id}
+                                        >
+                                            <FileText size={10} />
+                                            {truncateCell(entry.id, 14)}
+                                        </span>
+                                    </td>
+                                    <td className="px-2 py-2 whitespace-nowrap">
+                                        <span
+                                            className={`text-[10px] font-bold uppercase ${
+                                                entry.direction === 'ENTRATA'
+                                                    ? 'text-emerald-700'
+                                                    : 'text-rose-700'
+                                            }`}
+                                        >
+                                            {entry.direction === 'ENTRATA' ? 'IN' : 'OUT'}
                                         </span>
                                     </td>
                                     <td
-                                        className="px-5 py-3.5 font-medium text-slate-800 min-w-[280px] max-w-[420px] whitespace-normal break-words"
+                                        className="px-2 py-2 text-[10px] text-slate-600 max-w-[9rem] whitespace-normal break-words"
+                                        title={categoryLabel(entry.category)}
+                                    >
+                                        {categoryLabel(entry.category)}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 font-medium text-slate-800 min-w-[12rem] max-w-[16rem] whitespace-normal break-words text-xs leading-snug"
                                         title={entry.description}
                                     >
                                         <div>{entry.description}</div>
                                         {entry.attachments.length > 0 && (
-                                            <div className="mt-1.5 flex flex-wrap gap-1">
+                                            <div className="mt-1 flex flex-wrap gap-0.5">
                                                 {entry.attachments.map((att) => (
                                                     <span
                                                         key={`${att.kind}-${att.label}-${att.entryId || ''}`}
-                                                        className="inline-flex items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+                                                        className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1 py-0.5 text-[9px] font-medium text-slate-600"
                                                         title={att.label}
                                                     >
                                                         {attachmentBadgeEmoji(att.kind)} {att.label}
@@ -457,22 +551,52 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600 whitespace-nowrap">
-                                        {entry.dareAccount}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-xs font-mono text-slate-600 whitespace-nowrap">
-                                        {entry.avereAccount}
+                                    <td
+                                        className="px-2 py-2 text-[10px] text-slate-600 min-w-[7rem] max-w-[10rem] whitespace-normal break-words"
+                                        title={entry.counterpartyName || undefined}
+                                    >
+                                        {entry.counterpartyName || '—'}
                                     </td>
                                     <td
-                                        className={`px-5 py-3.5 font-bold font-mono text-right whitespace-nowrap ${amount.className}`}
+                                        className="px-2 py-2 text-[10px] font-mono text-slate-600 whitespace-nowrap"
+                                        title={entry.dareAccount}
+                                    >
+                                        {entry.dareAccount}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 text-[10px] font-mono text-slate-600 whitespace-nowrap"
+                                        title={entry.avereAccount}
+                                    >
+                                        {entry.avereAccount}
+                                    </td>
+                                    <td className="px-2 py-2 font-mono text-[11px] text-right whitespace-nowrap text-slate-700">
+                                        € {euro(entry.netCents)}
+                                    </td>
+                                    <td className="px-2 py-2 font-mono text-[11px] text-right whitespace-nowrap text-slate-500">
+                                        € {euro(entry.vatCents)}
+                                    </td>
+                                    <td
+                                        className={`px-2 py-2 font-bold font-mono text-[11px] text-right whitespace-nowrap ${amount.className}`}
                                     >
                                         {amount.text}
                                     </td>
-                                    <td className="px-5 py-3.5">
+                                    <td
+                                        className="px-2 py-2 text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={entry.documentRef || undefined}
+                                    >
+                                        {truncateCell(entry.documentRef, 16)}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={labelSourceTypeIt(entry.sourceType)}
+                                    >
+                                        {truncateCell(labelSourceTypeIt(entry.sourceType), 18)}
+                                    </td>
+                                    <td className="px-2 py-2 whitespace-nowrap">
                                         {editingFonteId === entry.id ? (
                                             <select
                                                 autoFocus
-                                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700"
+                                                className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700"
                                                 value={entry.sourceLabel}
                                                 onChange={(e) =>
                                                     void saveFonte(entry.id, e.target.value)
@@ -489,11 +613,51 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                             <button
                                                 type="button"
                                                 onClick={() => setEditingFonteId(entry.id)}
-                                                className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600"
+                                                className="inline-flex px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-600"
                                                 title="Modifica fonte"
                                             >
                                                 {entry.sourceLabel}
                                             </button>
+                                        )}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 font-mono text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={entry.sourceId || undefined}
+                                    >
+                                        {truncateCell(entry.sourceId, 14)}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 font-mono text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={entry.orderId || undefined}
+                                    >
+                                        {truncateCell(entry.orderId, 14)}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 font-mono text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={entry.partnerId || undefined}
+                                    >
+                                        {truncateCell(entry.partnerId, 14)}
+                                    </td>
+                                    <td
+                                        className="px-2 py-2 font-mono text-[10px] text-slate-600 whitespace-nowrap"
+                                        title={entry.bankLineId || undefined}
+                                    >
+                                        {truncateCell(entry.bankLineId, 14)}
+                                    </td>
+                                    <td className="px-2 py-2 whitespace-nowrap">
+                                        {entry.attachmentUrl ? (
+                                            <a
+                                                href={entry.attachmentUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-700 hover:text-blue-900"
+                                                title={entry.attachmentUrl}
+                                            >
+                                                <ExternalLink size={10} />
+                                                Apri
+                                            </a>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-400">—</span>
                                         )}
                                     </td>
                                 </tr>

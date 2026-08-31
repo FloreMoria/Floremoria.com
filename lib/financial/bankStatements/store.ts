@@ -18,6 +18,11 @@ import {
 import { reconcileAllMovements } from './reconcileStatement';
 import type { BankReconciliationReport, ParsedBankMovement } from './types';
 import type { Prisma } from '@prisma/client';
+import { inferBankMovementSource, mergeBankLineMatchFields, deduplicateBankMovements, bankMovementSourcePriority } from './deduplicateBankMovements';
+import {
+    planBankMovementsImport,
+    supersedeBankLineSafe,
+} from './deduplicateBankLinesDb';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'bank-statements');
 const BLOB_PREFIX = 'floremoria-finance/bank-statements';
@@ -159,6 +164,14 @@ function toDate(iso: string | null | undefined): Date | null {
     return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function documentSourceMeta(fileName: string, contentType: string): string {
+    const source = inferBankMovementSource({ fileName, contentType });
+    if (source === 'FINECO_PDF') return 'fineco_pdf';
+    if (source === 'IMPORT_CSV') return 'fineco_csv';
+    if (source === 'EXCEL') return 'fineco_xlsx';
+    return 'fineco_upload';
+}
+
 export async function listBankStatements() {
     return prisma.bankStatementDocument.findMany({
         orderBy: { uploadedAt: 'desc' },
@@ -227,6 +240,8 @@ export async function listBankStatementMovements(params?: {
                 select: {
                     id: true,
                     fileName: true,
+                    contentType: true,
+                    metadataJson: true,
                     periodStart: true,
                     periodEnd: true,
                 },
@@ -234,6 +249,60 @@ export async function listBankStatementMovements(params?: {
         },
         take: 20000,
     });
+
+    const mapped = lines.map((l) => {
+        const periodStart = l.document.periodStart;
+        const periodEnd = l.document.periodEnd;
+        let quarterLabel: string | null = null;
+        const ref: Date | null = l.accountingDate || l.valueDate || periodStart || null;
+        if (ref) {
+            const m = ref.getUTCMonth();
+            const y = ref.getUTCFullYear();
+            quarterLabel = `Q${Math.floor(m / 3) + 1} ${y}`;
+        }
+        const dateIso =
+            (l.accountingDate || l.valueDate)?.toISOString().slice(0, 10) ?? null;
+        return {
+            id: l.id,
+            documentId: l.documentId,
+            lineIndex: l.lineIndex,
+            valueDate: l.valueDate?.toISOString() ?? null,
+            accountingDate: l.accountingDate?.toISOString() ?? null,
+            description: l.description,
+            amountCents: l.amountCents,
+            debitCents: l.debitCents,
+            creditCents: l.creditCents,
+            balanceCents: l.balanceCents,
+            matchStatus: l.matchStatus,
+            matchType: l.matchType,
+            matchScore: l.matchScore,
+            matchedTxId: l.matchedTxId,
+            matchedOrderId: l.matchedOrderId,
+            matchNotes: l.matchNotes,
+            fileName: l.document.fileName,
+            periodStart: periodStart?.toISOString() ?? null,
+            periodEnd: periodEnd?.toISOString() ?? null,
+            quarterLabel,
+            dateIso,
+            source: inferBankMovementSource({
+                fileName: l.document.fileName,
+                contentType: l.document.contentType,
+                metadataJson: l.document.metadataJson,
+            }),
+        };
+    });
+
+    const sortedForDedup = [...mapped].sort(
+        (a, b) => bankMovementSourcePriority(b.source) - bankMovementSourcePriority(a.source)
+    );
+    const { kept } = deduplicateBankMovements(sortedForDedup);
+    const visibleLines = kept
+        .sort((a, b) => {
+            const da = a.accountingDate || a.valueDate || '';
+            const db = b.accountingDate || b.valueDate || '';
+            return db.localeCompare(da);
+        })
+        .map(({ source: _source, dateIso: _dateIso, ...row }) => row);
 
     // Anni disponibili su tutto l'archivio (non solo sul filtro corrente)
     const yearRows = await prisma.$queryRaw<Array<{ y: number }>>`
@@ -253,39 +322,7 @@ export async function listBankStatementMovements(params?: {
 
     return {
         years,
-        lines: lines.map((l) => {
-            const periodStart = l.document.periodStart;
-            const periodEnd = l.document.periodEnd;
-            let quarterLabel: string | null = null;
-            const ref: Date | null = l.accountingDate || l.valueDate || periodStart || null;
-            if (ref) {
-                const m = ref.getUTCMonth();
-                const y = ref.getUTCFullYear();
-                quarterLabel = `Q${Math.floor(m / 3) + 1} ${y}`;
-            }
-            return {
-                id: l.id,
-                documentId: l.documentId,
-                lineIndex: l.lineIndex,
-                valueDate: l.valueDate?.toISOString() ?? null,
-                accountingDate: l.accountingDate?.toISOString() ?? null,
-                description: l.description,
-                amountCents: l.amountCents,
-                debitCents: l.debitCents,
-                creditCents: l.creditCents,
-                balanceCents: l.balanceCents,
-                matchStatus: l.matchStatus,
-                matchType: l.matchType,
-                matchScore: l.matchScore,
-                matchedTxId: l.matchedTxId,
-                matchedOrderId: l.matchedOrderId,
-                matchNotes: l.matchNotes,
-                fileName: l.document.fileName,
-                periodStart: periodStart?.toISOString() ?? null,
-                periodEnd: periodEnd?.toISOString() ?? null,
-                quarterLabel,
-            };
-        }),
+        lines: visibleLines,
     };
 }
 
@@ -569,6 +606,7 @@ export async function uploadAndProcessBankStatement(input: {
     }
 
     const stored = await storeOriginalFile(buffer, fileName, contentType);
+    const sourceMeta = documentSourceMeta(fileName, contentType);
 
     const doc = await prisma.bankStatementDocument.create({
         data: {
@@ -580,13 +618,13 @@ export async function uploadAndProcessBankStatement(input: {
             storageKind: stored.storageKind,
             sha256Hash: fileHash,
             status: 'PARSING',
+            metadataJson: { source: sourceMeta },
         },
     });
 
     try {
         const parsed = await parseBankStatementFile(buffer, fileName, contentType);
 
-        // Dedup per fingerprint: evita raddoppio se stessi movimenti già da paste/altro file.
         const fingerprints = parsed.movements.map((m) =>
             movementFingerprint(m.accountingDate || m.valueDate || null, m.amountCents, m.description)
         );
@@ -599,21 +637,60 @@ export async function uploadAndProcessBankStatement(input: {
         const existingFpSet = new Set(
             existingFp.map((r) => r.fingerprint).filter((f): f is string => Boolean(f))
         );
-        const newMovements = parsed.movements.filter(
-            (m, i) => !existingFpSet.has(fingerprints[i])
-        );
-        const skippedByFingerprint = parsed.movements.length - newMovements.length;
 
-        const matches = await reconcileAllMovements(newMovements);
+        const { toInsert, skippedDuplicates, skippedByFingerprint } =
+            await planBankMovementsImport({
+                movements: parsed.movements,
+                fileName,
+                contentType,
+                metadataJson: { source: sourceMeta },
+                fingerprintExists: (m) =>
+                    existingFpSet.has(
+                        movementFingerprint(
+                            m.accountingDate || m.valueDate || null,
+                            m.amountCents,
+                            m.description
+                        )
+                    ),
+            });
+
+        const matches = await reconcileAllMovements(toInsert);
 
         let matchedCount = 0;
         let unmatchedCount = 0;
-        const lineRows: Prisma.BankStatementLineCreateManyInput[] = newMovements.map(
+        const supersedeQueue: Array<{
+            lineIndex: number;
+            supersedeLineId: string;
+            mergeMatchFrom: NonNullable<(typeof toInsert)[0]['mergeMatchFrom']>;
+        }> = [];
+
+        const lineRows: Prisma.BankStatementLineCreateManyInput[] = toInsert.map(
             (m, i) => {
                 const match = matches[i];
                 if (match.matchStatus === 'MATCHED') matchedCount += 1;
                 else unmatchedCount += 1;
                 const dateIso = m.accountingDate || m.valueDate || null;
+
+                const reconciled = {
+                    matchStatus: match.matchStatus,
+                    matchType: match.matchType,
+                    matchScore: match.matchScore,
+                    matchedTxId: match.matchedTxId,
+                    matchedOrderId: match.matchedOrderId,
+                    matchNotes: match.matchNotes,
+                };
+                const merged = m.mergeMatchFrom
+                    ? mergeBankLineMatchFields(reconciled, m.mergeMatchFrom)
+                    : reconciled;
+
+                if (m.supersedeLineId && m.mergeMatchFrom) {
+                    supersedeQueue.push({
+                        lineIndex: m.lineIndex,
+                        supersedeLineId: m.supersedeLineId,
+                        mergeMatchFrom: m.mergeMatchFrom,
+                    });
+                }
+
                 return {
                     documentId: doc.id,
                     lineIndex: m.lineIndex,
@@ -624,12 +701,12 @@ export async function uploadAndProcessBankStatement(input: {
                     debitCents: m.debitCents,
                     creditCents: m.creditCents,
                     balanceCents: m.balanceCents,
-                    matchStatus: match.matchStatus,
-                    matchType: match.matchType,
-                    matchScore: match.matchScore,
-                    matchedTxId: match.matchedTxId,
-                    matchedOrderId: match.matchedOrderId,
-                    matchNotes: match.matchNotes,
+                    matchStatus: merged.matchStatus,
+                    matchType: merged.matchType,
+                    matchScore: merged.matchScore,
+                    matchedTxId: merged.matchedTxId,
+                    matchedOrderId: merged.matchedOrderId,
+                    matchNotes: merged.matchNotes,
                     rawJson: (m.raw ?? undefined) as Prisma.InputJsonValue | undefined,
                     fingerprint: movementFingerprint(dateIso, m.amountCents, m.description),
                 };
@@ -663,9 +740,12 @@ export async function uploadAndProcessBankStatement(input: {
                         ? warnAnomalies.map((a) => a.message).slice(0, 3).join(' | ')
                         : null,
                     metadataJson: {
+                        source: sourceMeta,
                         warnings: parsed.warnings,
-                        movementCount: newMovements.length,
+                        movementCount: toInsert.length,
                         skippedByFingerprint,
+                        skippedSemanticDuplicates: skippedDuplicates,
+                        supersededManualLines: supersedeQueue.length,
                         ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
                         parseSummary: parsed.parseSummary || parseInfoMessage,
                         ...(parsed.textPreview?.length
@@ -676,6 +756,22 @@ export async function uploadAndProcessBankStatement(input: {
                 },
             }),
         ]);
+
+        if (supersedeQueue.length > 0) {
+            const inserted = await prisma.bankStatementLine.findMany({
+                where: { documentId: doc.id },
+                select: { id: true, lineIndex: true },
+            });
+            for (const item of supersedeQueue) {
+                const replacement = inserted.find((r) => r.lineIndex === item.lineIndex);
+                if (!replacement) continue;
+                await supersedeBankLineSafe({
+                    supersededLineId: item.supersedeLineId,
+                    replacementLineId: replacement.id,
+                    mergeMatchFrom: item.mergeMatchFrom,
+                });
+            }
+        }
 
         if (parsed.movements.length === 0) {
             await prisma.bankStatementDocument.update({
@@ -697,18 +793,20 @@ export async function uploadAndProcessBankStatement(input: {
                     },
                 },
             });
-        } else if (newMovements.length === 0) {
+        } else if (toInsert.length === 0) {
             await prisma.bankStatementDocument.update({
                 where: { id: doc.id },
                 data: {
                     status: 'RECONCILED',
                     parseError: null,
                     metadataJson: {
+                        source: sourceMeta,
                         warnings: parsed.warnings,
                         movementCount: 0,
                         skippedByFingerprint,
+                        skippedSemanticDuplicates: skippedDuplicates,
                         parseSummary:
-                            'Tutti i movimenti del file risultano già presenti (fingerprint).',
+                            'Tutti i movimenti del file risultano già presenti (dedup fingerprint/semantica).',
                         ...(parsed.textPreview?.length
                             ? { textPreview: parsed.textPreview }
                             : {}),
@@ -726,6 +824,8 @@ export async function uploadAndProcessBankStatement(input: {
                   ignoredMarginNotes: parsed.ignoredMarginNotes ?? 0,
                   parseSummary: parsed.parseSummary || parseInfoMessage,
                   skippedByFingerprint,
+                  skippedSemanticDuplicates: skippedDuplicates,
+                  supersededManualLines: supersedeQueue.length,
               }
             : detail;
     } catch (err) {

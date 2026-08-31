@@ -10,6 +10,7 @@ const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 
 export type MetaEnv = {
   metaAccessToken?: string;
+  facebookPageAccessToken?: string;
   fbPageId?: string;
   igBusinessAccountId?: string;
   blobToken?: string;
@@ -104,21 +105,33 @@ async function publishInstagramContainer(
   return published.id;
 }
 
-async function getFacebookPageAccessToken(
+export async function getFacebookPageAccessToken(
   fbPageId: string,
-  userAccessToken: string
+  userOrPageAccessToken: string
 ): Promise<string> {
-  const res = await fetch(
-    `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
-  );
-  const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
-  if (!res.ok || payload.error || !payload.access_token) {
-    throw new Error(
-      payload.error?.message ||
-        `Page Access Token non recuperabile per ${fbPageId}. Evitato fallback user token (post dark).`
-    );
+  const directToken =
+    process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ||
+    process.env.FB_PAGE_ACCESS_TOKEN?.trim();
+  if (directToken) {
+    return directToken;
   }
-  return payload.access_token;
+
+  try {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${encodeURIComponent(userOrPageAccessToken)}`
+    );
+    const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
+    if (res.ok && payload.access_token) {
+      return payload.access_token;
+    }
+    console.warn(
+      `[POSTMAN] Impossibile estrarre access_token per pagina FB ${fbPageId} (${payload.error?.message || res.status}); utilizzo token diretto come fallback.`
+    );
+    return userOrPageAccessToken;
+  } catch (err) {
+    console.warn(`[POSTMAN] Errore connessione durante recupero page token Facebook:`, err);
+    return userOrPageAccessToken;
+  }
 }
 
 export async function publishToInstagramStory(
@@ -221,12 +234,13 @@ export async function publishToFacebookStory(
   },
   env: MetaEnv
 ): Promise<string> {
-  const { metaAccessToken, fbPageId, blobToken } = env;
-  if (!metaAccessToken || !fbPageId) {
-    throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
+  const { metaAccessToken, facebookPageAccessToken, fbPageId, blobToken } = env;
+  const rawToken = facebookPageAccessToken || metaAccessToken;
+  if (!rawToken || !fbPageId) {
+    throw new Error('Credenziali Facebook mancanti: imposta FACEBOOK_PAGE_ACCESS_TOKEN (o META_ACCESS_TOKEN) e FB_PAGE_ID.');
   }
 
-  const pageToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
+  const pageToken = await getFacebookPageAccessToken(fbPageId, rawToken);
   const photoUrl = await ensureMetaFetchableImageUrl(campaign.id, campaign.imageUrl, blobToken);
 
   const photo = await metaGraphPost<{ id?: string }>(`/${fbPageId}/photos`, pageToken, {
@@ -259,12 +273,13 @@ export async function publishToFacebookReel(
   },
   env: MetaEnv
 ): Promise<{ externalId: string; permalink?: string }> {
-  const { metaAccessToken, fbPageId, blobToken } = env;
-  if (!metaAccessToken || !fbPageId) {
-    throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
+  const { metaAccessToken, facebookPageAccessToken, fbPageId, blobToken } = env;
+  const rawToken = facebookPageAccessToken || metaAccessToken;
+  if (!rawToken || !fbPageId) {
+    throw new Error('Credenziali Facebook mancanti: imposta FACEBOOK_PAGE_ACCESS_TOKEN (o META_ACCESS_TOKEN) e FB_PAGE_ID (o FACEBOOK_PAGE_ID).');
   }
 
-  const pageToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
+  const pageToken = await getFacebookPageAccessToken(fbPageId, rawToken);
   const caption = captionForFormat(campaign.contentFormat, campaign.copy, campaign.hashtags);
 
   // Meta richiede URL pubblico fetchabile da facebookexternalhit (no Blob privato).
@@ -273,6 +288,8 @@ export async function publishToFacebookReel(
     campaign.videoUrl,
     blobToken
   );
+
+  console.log(`[POSTMAN] Avvio pubblicazione Facebook Reel per pagina ${fbPageId} (campagna ${campaign.id})`);
 
   // Step 1 — inizializza sessione upload
   const started = await metaGraphPost<{ video_id?: string; upload_url?: string }>(
@@ -293,27 +310,31 @@ export async function publishToFacebookReel(
     started.upload_url?.trim() ||
     `https://rupload.facebook.com/video-upload/${META_GRAPH_VERSION}/${videoId}`;
 
-  const uploadRes = await fetch(ruploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `OAuth ${pageToken}`,
-      file_url: publicVideoUrl,
-    },
-  });
+  try {
+    const uploadRes = await fetch(ruploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${pageToken}`,
+        file_url: publicVideoUrl,
+      },
+    });
 
-  const uploadPayload = (await uploadRes.json().catch(() => ({}))) as {
-    success?: boolean;
-    error?: { message?: string };
-  };
+    const uploadPayload = (await uploadRes.json().catch(() => ({}))) as {
+      success?: boolean;
+      error?: { message?: string };
+    };
 
-  if (!uploadRes.ok || uploadPayload.error || uploadPayload.success === false) {
-    // Fallback: upload binario se file_url viene rifiutato (CDN/robots).
-    console.warn(
-      `[POSTMAN] Facebook Reel file_url fallito (${uploadPayload.error?.message || uploadRes.status}); provo upload binario.`
-    );
+    if (!uploadRes.ok || uploadPayload.error || uploadPayload.success === false) {
+      console.warn(
+        `[POSTMAN] Facebook Reel rupload file_url fallito (${uploadPayload.error?.message || uploadRes.status}); provo upload binario diretto.`
+      );
+      await uploadFacebookReelBinary(videoId, pageToken, campaign.videoUrl, blobToken);
+    } else {
+      console.log(`[POSTMAN] Facebook Reel rupload file_url OK — video_id ${videoId}`);
+    }
+  } catch (netErr) {
+    console.warn(`[POSTMAN] Errore di rete su rupload file_url, fallback su upload binario:`, netErr);
     await uploadFacebookReelBinary(videoId, pageToken, campaign.videoUrl, blobToken);
-  } else {
-    console.log(`[POSTMAN] Facebook Reel rupload file_url OK — ${videoId}`);
   }
 
   await waitFacebookReelProcessingReady(videoId, pageToken);

@@ -91,6 +91,7 @@ export interface CampaignPublishResult {
 }
 
 interface SocialPublishEnv extends MetaEnv {
+  facebookPageAccessToken?: string;
   linkedInAccessToken?: string;
   linkedInOrganizationId?: string;
   linkedInUserId?: string;
@@ -98,10 +99,22 @@ interface SocialPublishEnv extends MetaEnv {
 }
 
 function readSocialPublishEnv(): SocialPublishEnv {
+  const metaAccessToken = process.env.META_ACCESS_TOKEN?.trim();
+  const facebookPageAccessToken =
+    process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ||
+    process.env.FB_PAGE_ACCESS_TOKEN?.trim();
+  const fbPageId =
+    process.env.FB_PAGE_ID?.trim() ||
+    process.env.FACEBOOK_PAGE_ID?.trim();
+  const igBusinessAccountId =
+    process.env.IG_BUSINESS_ACCOUNT_ID?.trim() ||
+    process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim();
+
   return {
-    metaAccessToken: process.env.META_ACCESS_TOKEN?.trim(),
-    fbPageId: process.env.FB_PAGE_ID?.trim(),
-    igBusinessAccountId: process.env.IG_BUSINESS_ACCOUNT_ID?.trim(),
+    metaAccessToken: metaAccessToken || facebookPageAccessToken,
+    facebookPageAccessToken,
+    fbPageId,
+    igBusinessAccountId,
     linkedInAccessToken: process.env.LINKEDIN_ACCESS_TOKEN?.trim(),
     linkedInOrganizationId: process.env.LINKEDIN_ORGANIZATION_ID?.trim(),
     linkedInUserId: process.env.LINKEDIN_USER_ID?.trim(),
@@ -342,35 +355,45 @@ async function metaGraphPost<T>(
 
 async function getFacebookPageAccessToken(
   fbPageId: string,
-  userAccessToken: string
+  userOrPageAccessToken: string
 ): Promise<string> {
-  const res = await fetch(
-    `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${userAccessToken}`
-  );
-  const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
-  if (!res.ok || payload.error) {
-    throw new Error(
-      payload.error?.message ||
-        `Page Access Token non recuperabile (${res.status}). Senza page token Meta pubblica post invisibili al pubblico.`
+  const directToken =
+    process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ||
+    process.env.FB_PAGE_ACCESS_TOKEN?.trim();
+  if (directToken) {
+    return directToken;
+  }
+
+  try {
+    const res = await fetch(
+      `${META_GRAPH_BASE}/${fbPageId}?fields=access_token&access_token=${encodeURIComponent(userOrPageAccessToken)}`
     );
+    const payload = (await res.json()) as { access_token?: string; error?: { message?: string } };
+    if (res.ok && payload.access_token) {
+      return payload.access_token;
+    }
+    console.warn(
+      `[POSTMAN] Impossibile estrarre access_token per pagina FB ${fbPageId} (${payload.error?.message || res.status}); utilizzo token diretto come fallback.`
+    );
+    return userOrPageAccessToken;
+  } catch (err) {
+    console.warn(`[POSTMAN] Errore connessione durante recupero page token Facebook:`, err);
+    return userOrPageAccessToken;
   }
-  if (!payload.access_token) {
-    throw new Error('Page access token non restituito da Meta API');
-  }
-  return payload.access_token;
 }
 
 async function publishToFacebook(
   campaign: CampaignPublishInput,
   env: SocialPublishEnv
 ): Promise<string> {
-  const { metaAccessToken, fbPageId, blobToken } = env;
-  if (!metaAccessToken || !fbPageId) {
-    throw new Error('META_ACCESS_TOKEN o FB_PAGE_ID assenti');
+  const { metaAccessToken, facebookPageAccessToken, fbPageId, blobToken } = env;
+  const rawToken = facebookPageAccessToken || metaAccessToken;
+  if (!rawToken || !fbPageId) {
+    throw new Error('Credenziali Facebook mancanti: imposta FACEBOOK_PAGE_ACCESS_TOKEN (o META_ACCESS_TOKEN) e FB_PAGE_ID.');
   }
 
   // Page token obbligatorio: fallback su user token → post "dark" (solo admin / app roles).
-  const pageAccessToken = await getFacebookPageAccessToken(fbPageId, metaAccessToken);
+  const pageAccessToken = await getFacebookPageAccessToken(fbPageId, rawToken);
 
   const caption = captionForFormat(
     campaign.contentFormat ?? ContentFormat.FEED_POST,
@@ -625,11 +648,16 @@ function channelCredentialsReady(
   env: SocialPublishEnv
 ): { ready: boolean; reason: string } {
   switch (channel) {
-    case MarketingChannel.META_FACEBOOK:
-      if (!env.metaAccessToken || !env.fbPageId) {
-        return { ready: false, reason: 'META_ACCESS_TOKEN / FB_PAGE_ID' };
+    case MarketingChannel.META_FACEBOOK: {
+      const hasFbToken = Boolean(env.facebookPageAccessToken || env.metaAccessToken);
+      if (!hasFbToken || !env.fbPageId) {
+        return {
+          ready: false,
+          reason: 'FACEBOOK_PAGE_ACCESS_TOKEN (o META_ACCESS_TOKEN) / FB_PAGE_ID',
+        };
       }
       return { ready: true, reason: '' };
+    }
     case MarketingChannel.META_INSTAGRAM:
       if (!env.metaAccessToken || !env.igBusinessAccountId) {
         return { ready: false, reason: 'META_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID' };
@@ -776,102 +804,129 @@ export async function publishCampaignToChannel(
     }
 
     switch (payload.targetChannel) {
-      case MarketingChannel.META_FACEBOOK:
-        if (contentFormat === ContentFormat.REEL) {
-          if (!videoUrl) {
-            throw new Error(
-              'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+      case MarketingChannel.META_FACEBOOK: {
+        try {
+          if (contentFormat === ContentFormat.REEL) {
+            if (!videoUrl) {
+              throw new Error(
+                'Video reel mancante per Facebook. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+              );
+            }
+            const fbReel = await publishToFacebookReel(
+              { ...payload, videoUrl, contentFormat },
+              env
             );
+            externalId = fbReel.externalId;
+            permalink = fbReel.permalink;
+          } else if (contentFormat === ContentFormat.STORY) {
+            externalId = await publishToFacebookStory(payload, env);
+          } else {
+            externalId = await publishToFacebook(payload, env);
           }
-          const fbReel = await publishToFacebookReel(
-            { ...payload, videoUrl, contentFormat },
-            env
-          );
-          externalId = fbReel.externalId;
-          permalink = fbReel.permalink;
-        } else if (contentFormat === ContentFormat.STORY) {
-          externalId = await publishToFacebookStory(payload, env);
-        } else {
-          externalId = await publishToFacebook(payload, env);
+        } catch (fbErr) {
+          const msg = fbErr instanceof Error ? fbErr.message : String(fbErr);
+          throw new Error(`Errore durante la pubblicazione su Facebook: ${msg}`);
         }
         break;
-      case MarketingChannel.META_INSTAGRAM:
-        if (contentFormat === ContentFormat.REEL) {
-          if (!videoUrl?.trim()) {
-            throw new Error(
-              'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
-            );
-          }
-          const igReel = await publishToInstagramReel(
-            { ...payload, videoUrl, contentFormat: ContentFormat.REEL },
-            env
-          );
-          externalId = igReel.externalId;
-          permalink = igReel.permalink;
-        } else if (contentFormat === ContentFormat.STORY) {
-          externalId = await publishToInstagramStory(
-            { ...payload, contentFormat },
-            env
-          );
-        } else {
-          externalId = await publishToInstagram(payload, env);
-        }
-        break;
-      case MarketingChannel.TIKTOK: {
-        if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
-          throw new Error(
-            'Video reel mancante dopo Veo e fallback Pexels. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
-          );
-        }
-        const tiktokResult = await publishToTikTok({
-          campaignId: payload.id,
-          contentFormat,
-          copy: payload.copy,
-          hashtags: payload.hashtags,
-          imageUrl: payload.imageUrl,
-          videoUrl,
-          tiktokUx: payload.tiktokUx,
-        });
-        if (!tiktokResult.success) {
-          throw new Error(tiktokResult.error || 'TikTok publish failed');
-        }
-        return {
-          success: true,
-          simulated: tiktokResult.simulated,
-          channel: payload.targetChannel,
-          campaignId: payload.id,
-          externalId: tiktokResult.externalId,
-          videoUrl,
-          contentFormat,
-          privatePost: tiktokResult.privatePost,
-          videoSource,
-          usedPexelsFallback,
-          notice: reelNotice,
-        };
       }
-      case MarketingChannel.LINKEDIN:
-        externalId = await publishToLinkedIn(payload, env);
-        break;
-      case MarketingChannel.PINTEREST: {
-        // Pinterest Agent → publisher v5 con continuous refresh token
-        const pinResult = await publishCampaignToPinterest({
-          campaignId: payload.id,
-          copy: payload.copy,
-          hashtags: payload.hashtags,
-          imageUrl: payload.imageUrl,
-          link: 'https://www.floremoria.com',
-        });
-        if (!pinResult.success) {
-          throw new Error(pinResult.error || 'Pinterest publish failed');
+      case MarketingChannel.META_INSTAGRAM: {
+        try {
+          if (contentFormat === ContentFormat.REEL) {
+            if (!videoUrl?.trim()) {
+              throw new Error(
+                'Video reel mancante per Instagram. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+              );
+            }
+            const igReel = await publishToInstagramReel(
+              { ...payload, videoUrl, contentFormat: ContentFormat.REEL },
+              env
+            );
+            externalId = igReel.externalId;
+            permalink = igReel.permalink;
+          } else if (contentFormat === ContentFormat.STORY) {
+            externalId = await publishToInstagramStory(
+              { ...payload, contentFormat },
+              env
+            );
+          } else {
+            externalId = await publishToInstagram(payload, env);
+          }
+        } catch (igErr) {
+          const msg = igErr instanceof Error ? igErr.message : String(igErr);
+          throw new Error(`Errore durante la pubblicazione su Instagram: ${msg}`);
         }
-        return {
-          success: true,
-          simulated: pinResult.simulated,
-          channel: payload.targetChannel,
-          campaignId: payload.id,
-          externalId: pinResult.pinId,
-          contentFormat,
-        };
+        break;
+      }
+      case MarketingChannel.TIKTOK: {
+        try {
+          if (contentFormat === ContentFormat.REEL && !videoUrl?.trim()) {
+            throw new Error(
+              'Video reel mancante per TikTok. Configura PEXELS_API_KEY o MARKETING_REEL_BROLL_URLS.'
+            );
+          }
+          const tiktokResult = await publishToTikTok({
+            campaignId: payload.id,
+            contentFormat,
+            copy: payload.copy,
+            hashtags: payload.hashtags,
+            imageUrl: payload.imageUrl,
+            videoUrl,
+            tiktokUx: payload.tiktokUx,
+          });
+          if (!tiktokResult.success) {
+            throw new Error(tiktokResult.error || 'TikTok publish failed');
+          }
+          return {
+            success: true,
+            simulated: tiktokResult.simulated,
+            channel: payload.targetChannel,
+            campaignId: payload.id,
+            externalId: tiktokResult.externalId,
+            videoUrl,
+            contentFormat,
+            privatePost: tiktokResult.privatePost,
+            videoSource,
+            usedPexelsFallback,
+            notice: reelNotice,
+          };
+        } catch (ttErr) {
+          const msg = ttErr instanceof Error ? ttErr.message : String(ttErr);
+          throw new Error(`Errore durante la pubblicazione su TikTok: ${msg}`);
+        }
+      }
+      case MarketingChannel.LINKEDIN: {
+        try {
+          externalId = await publishToLinkedIn(payload, env);
+        } catch (liErr) {
+          const msg = liErr instanceof Error ? liErr.message : String(liErr);
+          throw new Error(`Errore durante la pubblicazione su LinkedIn: ${msg}`);
+        }
+        break;
+      }
+      case MarketingChannel.PINTEREST: {
+        try {
+          const pinResult = await publishCampaignToPinterest({
+            campaignId: payload.id,
+            copy: payload.copy,
+            hashtags: payload.hashtags,
+            imageUrl: payload.imageUrl,
+            link: 'https://www.floremoria.com',
+          });
+          if (!pinResult.success) {
+            throw new Error(pinResult.error || 'Pinterest publish failed');
+          }
+          return {
+            success: true,
+            simulated: pinResult.simulated,
+            channel: payload.targetChannel,
+            campaignId: payload.id,
+            externalId: pinResult.pinId,
+            contentFormat,
+          };
+        } catch (pinErr) {
+          const msg = pinErr instanceof Error ? pinErr.message : String(pinErr);
+          throw new Error(`Errore durante la pubblicazione su Pinterest: ${msg}`);
+        }
       }
       default:
         logSimulatedPublish(payload.targetChannel, payload.id, reason);

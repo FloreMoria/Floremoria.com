@@ -14,29 +14,57 @@ function classifyPublishRouteError(err: unknown, channel?: string): {
 } {
   const message = err instanceof Error ? err.message : String(err || 'Unknown error');
   const lower = message.toLowerCase();
-  const isTikTok = channel === MarketingChannel.TIKTOK || /tiktok/i.test(message);
+
+  const channelLabel =
+    channel === MarketingChannel.META_FACEBOOK
+      ? 'Facebook'
+      : channel === MarketingChannel.META_INSTAGRAM
+        ? 'Instagram'
+        : channel === MarketingChannel.TIKTOK
+          ? 'TikTok'
+          : channel === MarketingChannel.LINKEDIN
+            ? 'LinkedIn'
+            : channel === MarketingChannel.PINTEREST
+              ? 'Pinterest'
+              : channel === MarketingChannel.YOUTUBE_SHORTS
+                ? 'YouTube Shorts'
+                : 'social';
 
   if (/timeout|aborted|aborterror/i.test(lower)) {
+    let specificError = `Timeout durante la pubblicazione su ${channelLabel}: ${message}`;
+    if (channel === MarketingChannel.TIKTOK) {
+      specificError = `Timeout durante la pubblicazione TikTok: ${message}. Verifica che l'URL del video sia HTTPS raggiungibile e che l'Access Token TikTok sia valido (Riautorizza se scaduto).`;
+    } else if (channel === MarketingChannel.META_FACEBOOK) {
+      specificError = `Timeout durante la pubblicazione Facebook: ${message}. Verifica che il video su Vercel Blob sia raggiungibile e che FACEBOOK_PAGE_ACCESS_TOKEN sia valido.`;
+    } else if (channel === MarketingChannel.META_INSTAGRAM) {
+      specificError = `Timeout durante la pubblicazione Instagram: ${message}. Verifica la raggiungibilità del media e che META_ACCESS_TOKEN sia valido.`;
+    } else if (channel === MarketingChannel.LINKEDIN) {
+      specificError = `Timeout durante la pubblicazione LinkedIn: ${message}. Verifica LINKEDIN_ACCESS_TOKEN e la connessione di rete.`;
+    }
     return {
       status: 504,
       errorKind: 'timeout',
-      error: isTikTok
-        ? `Timeout durante la pubblicazione TikTok: ${message}. Verifica che l'URL del video B-roll sia HTTPS raggiungibile e che l'Access Token TikTok sia valido (Riautorizza se scaduto).`
-        : `Timeout durante la pubblicazione: ${message}`,
+      error: specificError,
     };
   }
 
   if (/fetch failed|econnreset|enotfound|eai_again|socket|network|failed to fetch|pre-flight video/i.test(lower)) {
+    let specificError = `Errore di connessione durante la pubblicazione su ${channelLabel}: ${message}`;
+    if (channel === MarketingChannel.TIKTOK) {
+      specificError = `Errore di connessione TikTok: ${message}. Controlla raggiungibilità del video (HTTPS) e rinnovo Access Token TikTok.`;
+    } else if (channel === MarketingChannel.META_FACEBOOK) {
+      specificError = `Errore di connessione Facebook: ${message}. Verifica la connessione a Meta Graph API e le credenziali della pagina.`;
+    } else if (channel === MarketingChannel.META_INSTAGRAM) {
+      specificError = `Errore di connessione Instagram: ${message}. Verifica la connessione a Meta Graph API.`;
+    }
     return {
       status: 502,
       errorKind: 'network',
-      error: isTikTok
-        ? `Errore di connessione TikTok: ${message}. Controlla raggiungibilità del video B-roll (HTTPS) e rinnovo Access Token.`
-        : `Errore di connessione in pubblicazione: ${message}`,
+      error: specificError,
     };
   }
 
-  if (/access token|token scadut|token refresh|riautorizza tiktok|systemstate/i.test(lower)) {
+  if (/access token|token scadut|token refresh|riautorizza|systemstate/i.test(lower)) {
     return {
       status: 401,
       errorKind: 'token',

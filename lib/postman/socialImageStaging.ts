@@ -197,52 +197,65 @@ export async function ensureMetaFetchableImageUrl(
 
 /**
  * Copia temporanea video su Blob privato + URL pubblico firmato per TikTok PULL_FROM_URL.
- * Accetta Blob pubblici, staging già pubblici, o URL HTTPS scaricabili (es. Pexels → restage).
+/**
+ * Assicura che l'URL video sia un URL HTTPS pubblico e diretto per Meta (FB/IG) e TikTok.
+ * Riconosce Blob pubblici, staging già pubblici, o URL HTTPS scaricabili.
  */
 export async function ensureSocialFetchableVideoUrl(
   campaignId: string,
   videoUrl: string,
   blobToken?: string
 ): Promise<string> {
-  if (videoUrl.includes('public.blob.vercel-storage.com')) {
-    return videoUrl;
+  const cleanUrl = videoUrl.trim();
+
+  // Blob pubblico standard Vercel (Meta e TikTok possono scaricarlo direttamente)
+  if (
+    cleanUrl.includes('public.blob.vercel-storage.com') ||
+    (cleanUrl.includes('blob.vercel-storage.com') && !cleanUrl.includes('private.blob.vercel-storage.com'))
+  ) {
+    return cleanUrl;
   }
 
-  // Già URL staging pubblico sul dominio verificato TikTok.
-  if (/\/api\/social-publish\/staging\//i.test(videoUrl) && /^https:\/\//i.test(videoUrl)) {
-    return videoUrl;
+  // Già URL staging pubblico sul dominio verificato
+  if (/\/api\/social-publish\/staging\//i.test(cleanUrl) && /^https:\/\//i.test(cleanUrl)) {
+    return cleanUrl;
   }
 
-  const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim();
+  // Se è un URL HTTPS generico non-privato, verifichiamo che sia utilizzabile direttamente
+  if (/^https:\/\//i.test(cleanUrl) && !cleanUrl.includes('private.blob.vercel-storage.com')) {
+    return cleanUrl;
+  }
+
+  const token = blobToken?.replace(/[^\x20-\x7E]/g, '').trim() || process.env.BLOB_READ_WRITE_TOKEN?.trim();
   if (!token) {
-    throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre video a TikTok.');
+    throw new Error('BLOB_READ_WRITE_TOKEN mancante per esporre video pubblico ai social.');
   }
 
   let sourceBytes: Buffer;
-  if (/private\.blob\.vercel-storage\.com/i.test(videoUrl) || /blob\.vercel-storage\.com/i.test(videoUrl)) {
-    sourceBytes = await fetchPrivateBlobBytes(videoUrl, token);
-  } else if (/^https:\/\//i.test(videoUrl)) {
-    const res = await fetch(videoUrl, {
+  if (/private\.blob\.vercel-storage\.com/i.test(cleanUrl)) {
+    sourceBytes = await fetchPrivateBlobBytes(cleanUrl, token);
+  } else if (/^https:\/\//i.test(cleanUrl)) {
+    const res = await fetch(cleanUrl, {
       redirect: 'follow',
       headers: {
         Accept: 'video/mp4,video/*,*/*',
-        'User-Agent': 'Mozilla/5.0 (compatible; FloreMoriaTikTok/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; FloreMoriaSocial/1.0)',
       },
     });
     if (!res.ok) {
-      throw new Error(`Download video sorgente fallito (${res.status}) per staging TikTok.`);
+      throw new Error(`Download video sorgente fallito (${res.status}) per staging social.`);
     }
     sourceBytes = Buffer.from(await res.arrayBuffer());
   } else {
-    throw new Error('videoUrl non HTTPS: impossibile esporre a TikTok.');
+    throw new Error('videoUrl non valido o non HTTPS: impossibile esporre ai canali social.');
   }
 
-  const ext = videoUrl.toLowerCase().includes('.mov')
+  const ext = cleanUrl.toLowerCase().includes('.mov')
     ? 'mov'
-    : videoUrl.toLowerCase().includes('.webm')
+    : cleanUrl.toLowerCase().includes('.webm')
       ? 'webm'
       : 'mp4';
-  const contentType = contentTypeFromUrl(videoUrl);
+  const contentType = contentTypeFromUrl(cleanUrl);
   const pathname = `${STAGING_PREFIX}/${sanitizeStagingKey(campaignId)}-video.${ext}`;
 
   const { putBlobWithAccessFallback } = await import('@/lib/blob/storeAccess');
@@ -258,7 +271,7 @@ export async function ensureSocialFetchableVideoUrl(
   const publicUrl = `${getSiteBaseUrl()}/api/social-publish/staging/${stagingToken}`;
 
   console.log(
-    `[POSTMAN] Staging TikTok video — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
+    `[POSTMAN] Staging social video — ${pathname} → URL pubblico temporaneo (scade ${new Date(expiresAt).toISOString()})`
   );
 
   return publicUrl;

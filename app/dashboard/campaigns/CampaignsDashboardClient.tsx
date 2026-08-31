@@ -392,6 +392,23 @@ export default function CampaignsDashboardClient() {
       musicUsageConsent: boolean;
     }
   ) => {
+    const targetCampaign = campaigns.find(c => c.id === campaignId);
+    const channel = targetCampaign?.targetChannel;
+    const channelLabel =
+      channel === 'META_FACEBOOK'
+        ? 'Facebook'
+        : channel === 'META_INSTAGRAM'
+          ? 'Instagram'
+          : channel === 'TIKTOK'
+            ? 'TikTok'
+            : channel === 'LINKEDIN'
+              ? 'LinkedIn'
+              : channel === 'PINTEREST'
+                ? 'Pinterest'
+                : channel === 'YOUTUBE_SHORTS'
+                  ? 'YouTube Shorts'
+                  : 'social';
+
     setPublishingId(campaignId);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -411,16 +428,19 @@ export default function CampaignsDashboardClient() {
         usedPexelsFallback?: boolean;
         notice?: string | null;
         videoSource?: string | null;
+        channel?: string | null;
       };
       try {
         data = await res.json();
       } catch {
         setErrorMessage(
           res.status === 413
-            ? 'File/payload troppo grande (HTTP 413). I video TikTok devono usare URL HTTPS (PULL_FROM_URL), non il binario nel body.'
+            ? `File/payload troppo grande (HTTP 413) per la pubblicazione su ${channelLabel}.`
             : res.status === 504 || res.status === 502
-              ? 'Timeout/gateway durante la pubblicazione TikTok. Verifica URL video B-roll (HTTPS) e Access Token, poi riprova.'
-              : `Risposta non valida dal server di pubblicazione (HTTP ${res.status}).`
+              ? channel === 'TIKTOK'
+                ? 'Timeout/gateway durante la pubblicazione TikTok. Verifica URL video (HTTPS) e rinnova l\'Access Token TikTok, poi riprova.'
+                : `Timeout/gateway durante la pubblicazione su ${channelLabel}. Verifica la connessione e la raggiungibilità del video, poi riprova.`
+              : `Risposta non valida dal server di pubblicazione ${channelLabel} (HTTP ${res.status}).`
         );
         return;
       }
@@ -433,28 +453,28 @@ export default function CampaignsDashboardClient() {
             : null;
         setSuccessMessage(
           data.simulated
-            ? 'Pubblicazione simulata con successo (credenziali reali assenti).'
+            ? `Pubblicazione simulata con successo su ${channelLabel} (credenziali reali assenti).`
             : data.privatePost
               ? pexelsNote
                 ? `${pexelsNote} Post TikTok in modalità privata (Solo io).`
                 : 'Post inviato a TikTok in modalità privata (Solo io). Potrebbe richiedere alcuni minuti per essere visibile sul profilo.'
               : pexelsNote
-                ? `${pexelsNote} Pubblicato sui canali ufficiali.`
-                : 'Post pubblicato con successo sui canali ufficiali!'
+                ? `${pexelsNote} Pubblicato su ${channelLabel}.`
+                : `Post pubblicato con successo su ${channelLabel}!`
         );
         setCampaigns(prev =>
           prev.map(c => (c.id === campaignId ? { ...c, status: 'PUBLISHED' as const } : c))
         );
         setTimeout(() => setSuccessMessage(null), 7000);
       } else {
-        setErrorMessage(data.error || 'Errore durante la pubblicazione.');
+        setErrorMessage(data.error || `Errore durante la pubblicazione su ${channelLabel}.`);
       }
     } catch (err) {
       const detail = err instanceof Error ? err.message : '';
       setErrorMessage(
         detail
-          ? `Errore di connessione in pubblicazione: ${detail}. Se è TikTok, controlla video HTTPS e rinnovo Access Token.`
-          : 'Errore di connessione in pubblicazione. Verifica rete, URL video B-roll e Access Token TikTok.'
+          ? `Errore di connessione in pubblicazione su ${channelLabel}: ${detail}.`
+          : `Errore di connessione durante la pubblicazione su ${channelLabel}. Verifica rete e credenziali.`
       );
     } finally {
       setPublishingId(null);

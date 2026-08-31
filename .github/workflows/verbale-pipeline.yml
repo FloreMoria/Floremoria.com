@@ -5,12 +5,8 @@ name: Verbale pipeline (BARBARA + DEVIN)
 
 on:
   schedule:
-    # Ogni 4 ore + allineamento notturno
-    - cron: '0 */4 * * *'
-  push:
-    branches: [main]
-    paths:
-      - 'docs/verbali/**'
+    # Schedulazione notturna (03:00 UTC = 05:00 Europe/Rome)
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       verbale_iso:
@@ -101,6 +97,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Verbali già allineati."
           else
-            git commit -m "chore(verbali): pipeline BARBARA + DEVIN → Obsidian"
+            git commit -m "chore(verbali): [skip ci] pipeline BARBARA + DEVIN → Obsidian"
             git push || echo "Warning: Push su GitHub saltato (nessuna modifica o permessi limitati)."
           fi

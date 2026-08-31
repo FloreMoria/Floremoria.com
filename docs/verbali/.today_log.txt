@@ -75,3 +75,5 @@
 [2026-08-31 15:10] fix(finance): z-index e portal body per drawer Gestione SaaS / Spese estere sopra header dashboard; tsc+build OK.
 [2026-08-31 15:35] fix(finance): risoluzione endpoint SOAP YouDOX multi-candidato + log URL su 404, allineamento apiBase da GetToken; tsc+build OK.
 [2026-08-31 16:05] feat(finance): deduplica movimenti Fineco per priorità fonte PDF>CSV>manuale, merge categorie e script clean-duplicate-bank-movements; tsc+build OK.
+[2026-08-31 16:10] fix(ci): rimozione trigger automatico verbali diurni e skip ci per evitare fallimenti Vercel — eliminato trigger on-push paths docs/verbali/** da verbale-pipeline.yml, schedulazione notturna consolidata (03:00 UTC), inserimento tag [skip ci] in tutti i commit generati da workflow GitHub Actions e script di sync verbali (daily-verbale.yml, verbale-docs-sync.yml, daily-verbale-cron.sh, sync_verbali_to_github.ts, force_push.ts); tsc+build OK.
+

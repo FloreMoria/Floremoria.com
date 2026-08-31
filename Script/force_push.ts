@@ -8,7 +8,7 @@ try {
   console.log('Adding and committing...');
   execSync('git add .', { cwd: SYNC_DIR, stdio: 'inherit' });
   try {
-    execSync('git commit -m "Auto-sync: Aggiornamento Verbali di sistema"', { cwd: SYNC_DIR, stdio: 'inherit' });
+    execSync('git commit -m "Auto-sync: [skip ci] Aggiornamento Verbali di sistema"', { cwd: SYNC_DIR, stdio: 'inherit' });
   } catch (e) {
     console.log('Nothing new to commit.');
   }

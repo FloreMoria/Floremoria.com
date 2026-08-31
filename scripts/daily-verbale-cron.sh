@@ -121,7 +121,7 @@ git add \
 if git diff --cached --quiet; then
   log "Nessuna differenza da committare dopo sync."
 else
-  COMMIT_MSG="docs(verbali): auto-sync verbale del giorno precedente"
+  COMMIT_MSG="docs(verbali): [skip ci] auto-sync verbale del giorno precedente"
   git commit -m "${COMMIT_MSG}"
   log "Commit creato: ${COMMIT_MSG}"
   if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then

@@ -80,7 +80,7 @@ ${log.fullText || ''}
     console.log('Changes detected. Committing and pushing to GitHub...');
     try {
       execSync('git add .', { cwd: SYNC_DIR, stdio: 'inherit' });
-      execSync('git commit -m "Auto-sync: Aggiornamento Verbali di sistema"', { cwd: SYNC_DIR, stdio: 'inherit' });
+      execSync('git commit -m "Auto-sync: [skip ci] Aggiornamento Verbali di sistema"', { cwd: SYNC_DIR, stdio: 'inherit' });
       
       console.log('Pulling latest changes from remote...');
       execSync('git pull origin main --rebase', { cwd: SYNC_DIR, stdio: 'inherit' });

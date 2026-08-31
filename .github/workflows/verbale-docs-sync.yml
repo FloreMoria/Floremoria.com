@@ -24,4 +24,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add notes/obsidian/verbali/
-          git diff --staged --quiet || (git commit -m "chore(verbali): sync docs → Obsidian" && git push)
+          git diff --staged --quiet || (git commit -m "chore(verbali): [skip ci] sync docs → Obsidian" && git push)

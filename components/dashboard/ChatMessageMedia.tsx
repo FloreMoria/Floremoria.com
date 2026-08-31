@@ -39,7 +39,8 @@ export default function ChatMessageMedia({
 
     if (!viewUrl) return null;
 
-    const showImage = isImageMediaUrl(mediaUrl);
+    const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(mediaUrl);
+    const showImage = !isVideo && isImageMediaUrl(mediaUrl);
     const textCaption = typeof caption === 'string' ? caption : '';
 
     const handleDownload = async () => {
@@ -48,10 +49,11 @@ export default function ChatMessageMedia({
         setDownloadError(null);
         try {
             const targetUrl = downloadUrl || viewUrl;
+            const ext = isVideo ? 'mp4' : 'jpg';
             const res = await downloadMedia({
                 url: targetUrl,
-                filename: `floremoria-foto-chat-${Date.now()}.jpg`,
-                title: 'Foto Chat FloreMoria',
+                filename: `floremoria-media-chat-${Date.now()}.${ext}`,
+                title: 'Media Chat FloreMoria',
             });
             if (!res.success) {
                 setDownloadError(res.error || 'Errore durante il download.');
@@ -95,7 +97,17 @@ export default function ChatMessageMedia({
 
     return (
         <div className="space-y-2">
-            {showImage ? (
+            {isVideo ? (
+                <div className="block w-full overflow-hidden rounded-lg border border-gray-100 bg-slate-900">
+                    <video
+                        src={viewUrl}
+                        controls
+                        loop
+                        playsInline
+                        className="w-full h-auto max-h-[280px] object-contain"
+                    />
+                </div>
+            ) : showImage ? (
                 <button
                     type="button"
                     onClick={() => setLightboxOpen(true)}

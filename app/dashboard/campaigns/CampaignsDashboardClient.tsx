@@ -1416,10 +1416,13 @@ export default function CampaignsDashboardClient() {
                         <video
                           src={videoSrc}
                           controls
+                          loop
+                          playsInline
+                          preload="metadata"
                           className="w-full h-full object-contain"
                         />
-                        <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
-                          <Video size={10} /> CONTENUTO VIDEO
+                        <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
+                          <Video size={10} /> MICRO-VIDEO 2-3s LOOP (9:16)
                         </div>
                       </div>
                     );
@@ -1444,10 +1447,13 @@ export default function CampaignsDashboardClient() {
                           <video
                             src={proxiedUrl || undefined}
                             controls
+                            loop
+                            playsInline
+                            preload="metadata"
                             className="w-full h-full object-contain"
                           />
-                          <div className="absolute top-3 left-3 bg-slate-900/80 px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
-                            <Video size={10} /> CONTENUTO VIDEO
+                          <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[9px] font-black text-amber-400 uppercase flex items-center gap-1 shadow-sm">
+                            <Video size={10} /> MICRO-VIDEO 2-3s LOOP (9:16)
                           </div>
                         </div>
                       );
@@ -2052,6 +2058,7 @@ export default function CampaignsDashboardClient() {
                     src={manualVideoPreviewUrl}
                     className="w-full h-full object-cover"
                     controls
+                    loop
                     playsInline
                     muted
                   />
@@ -2061,7 +2068,7 @@ export default function CampaignsDashboardClient() {
               {ziggySlogans.length > 0 && (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                    <Video size={12} /> Preview slogan overlay (8s)
+                    <Video size={12} /> Preview slogan overlay (Micro-video 2-3s Loop)
                   </p>
                   <ol className="space-y-1.5">
                     {ziggySlogans.map((s, i) => (

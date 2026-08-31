@@ -41,24 +41,25 @@ Più narrativo e disteso di Instagram. Paragrafi corti, domande gentili in chius
 
 ---
 
-## 2. Hook visivi e testuali dei primi 3 secondi
+## 2. Strategia 100% Video: Micro-Clip 2-3s a Loop Continuo
 
-*Priorità su **Reels Facebook 9:16**; nei post statici l’hook è la prima frase + immagine di copertina.*
+*Standard Facebook FloreMoria: **Micro-Clip 9:16 da 2.0 a 3.0 secondi** a loop continuo, abbinati a narrazione calda, chiara e accessibile con link diretto al servizio.*
 
-### 2.1 Struttura temporale (Reels)
+### 2.1 Regia visiva e Micro-Video (2–3 secondi)
 
-| Tempo | Obiettivo | Esecuzione |
-|-------|-----------|------------|
-| **0–1 s** | Attenzione calma | Visivo confortante: bouquet, luce calda, gesto di consegna |
-| **1–3 s** | Domanda o affermazione chiara | Testo grande on-screen + voce rassicurante |
-| **3–20 s** | Spiegazione | 3 passaggi del servizio (ordine → posa → foto) |
-| **20–35 s** | Close | CTA soft + invito a salvare / scrivere in privato |
+| Elemento | Standard FloreMoria | Esecuzione Facebook |
+|----------|---------------------|---------------------|
+| **Durata scena** | **2.0–3.0 secondi** | Micro-clip rilassante e rassicurante a loop continuo |
+| **Dettagli Macro** | Gesti di cura familiare | Mani che legano un nastro di seta, mani che scrivono una dedica con inchiostro, luce calda del mattino |
+| **Trasparenza** | Spiegazione chiara | Il video mostra il gesto; il copy racconta la semplicità (ordine → posa → foto di conferma) |
+| **Divieto Testo** | Tassativo nei frame | "NO TEXT, NO LETTERS, CLEAN CINEMATOGRAPHIC FOOTAGE ONLY". Logo FloreMoria e slogan aggiunti via FFmpeg |
 
 ### 2.2 Hook visivi ammessi
 
-- Composizione floreale a fuoco morbido, contesto domestico o lapide in set controllato.
-- Sequenza “prima / dopo la posa” solo con materiale autorizzato.
-- Mani che sistemano l’omaggio (UGC-feel dignitoso).
+- Composizione floreale a fuoco morbido con riflessi di luce naturale calda.
+- Mani che curano e posano l'omaggio con discrezione e rispetto.
+- Camminata lenta di profilo in bokeh morbido nel verde, senza volti artefatti.
+- Loop fluido con chiusura morbida (cross-fade) che rende il video piacevole e continuo.
 
 ### 2.3 Hook testuali
 

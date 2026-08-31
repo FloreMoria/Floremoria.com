@@ -37,12 +37,16 @@ export type ChannelAgentSpec = {
  * Perché: ogni canale ha regole, formati e CTR diversi; una sola voce “ZIGGY”
  * non basta a rispettare le skill per-canale.
  */
+/**
+ * Mappa 1:1 MarketingChannel → Agente Social dedicato + skill.
+ * Strategia 100% video basata su micro-clip da 2-3 secondi a loop continuo.
+ */
 export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> = {
     [MarketingChannel.META_INSTAGRAM]: {
         agentKey: 'instagram_agent',
         displayName: 'Instagram Agent',
         focus:
-            'Reels 9:16, caroselli estetici Quiet Luxury, feed scansionabile, estetica visiva sobria e testimonianza della posa.',
+            "Copy incentrato sull'emozione, sul valore della memoria e dell'affetto a distanza. Micro-video 9:16 da 2-3s a loop continuo, caroselli estetici Quiet Luxury, feed scansionabile, estetica visiva sobria e testimonianza della posa (foto inviata alla famiglia).",
         skillId: 'instagram_skills',
         skillChannel: 'instagram',
     },
@@ -50,7 +54,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'facebook_agent',
         displayName: 'Facebook Agent',
         focus:
-            'Post di valore per famiglie, storie community, discussioni gentili, copy narrativo e rassicurante (accessibile over 60).',
+            'Tono caldo e comunitario, narrazione chiara con link al servizio. Post di valore per famiglie, micro-clip 9:16 da 2-3s a loop continuo e copy rassicurante e accessibile per over 60.',
         skillId: 'facebook_skills',
         skillChannel: 'facebook',
     },
@@ -58,7 +62,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'tiktok_agent',
         displayName: 'TikTok Agent',
         focus:
-            'Hook 0–3s obbligatorio, video verticali 9:16, trend audio rispettosi (mai griefbait), storytelling emozionale dignitoso.',
+            'Hook iniziale breve e coinvolgente (0–3s), focus su gesti autentici (mani che compongono fiori, legatura nastro seta, posa). Micro-video verticali 9:16 da 2-3s a loop continuo, storytelling emozionale dignitoso, zero griefbait.',
         skillId: 'tiktok_skills',
         skillChannel: 'tiktok',
     },
@@ -66,7 +70,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'youtube_shorts_agent',
         displayName: 'YouTube Shorts Agent',
         focus:
-            'Video verticali 9:16 evergreen, SEO YouTube (titoli ad alto CTR ma onesti), sottotitoli, descrizione keyword-first.',
+            'Micro-video verticali 9:16 da 2-3s a loop continuo evergreen, SEO YouTube (titoli ad alto CTR ma onesti), sottotitoli, descrizione keyword-first.',
         skillId: 'youtube_shorts_skills',
         skillChannel: 'youtube_shorts',
     },
@@ -74,7 +78,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'pinterest_agent',
         displayName: 'Pinterest Agent',
         focus:
-            'Pin verticali 2:3, keyword SEO botaniche/ricorrenze, focus piante e allestimenti tombali, link di spinta al sito. Pubblicazione via src/agents/platforms/pinterestPublisher.ts (OAuth v5 + continuous refresh).',
+            'Pin video e verticali 2:3, keyword SEO botaniche/ricorrenze, focus piante e allestimenti tombali, link di spinta al sito. Pubblicazione via src/agents/platforms/pinterestPublisher.ts (OAuth v5 + continuous refresh).',
         skillId: 'pinterest_skills',
         skillChannel: 'pinterest',
     },
@@ -82,7 +86,7 @@ export const CHANNEL_AGENT_REGISTRY: Record<MarketingChannel, ChannelAgentSpec> 
         agentKey: 'linkedin_agent',
         displayName: 'LinkedIn Agent',
         focus:
-            'B2B istituzionale: partnership, welfare, innovazione, tono formale. Nessuna skill consumer dedicata.',
+            'Focus su qualità artigianale, affidabilità della rete di fioristi e innovazione del modello di consegna. B2B istituzionale: partnership, welfare aziendale, modello logistico ed etico, tono professionale e autorevole.',
         skillId: null,
         skillChannel: null,
     },
@@ -172,10 +176,12 @@ function buildAgentIdentityBlock(spec: ChannelAgentSpec, channel: MarketingChann
 }
 
 const LINKEDIN_FALLBACK_RULES = `
-### Regole LinkedIn (senza skill file)
-- Tono professionale, istituzionale, orientato a partnership e welfare.
-- Niente intimismo consumer eccessivo; linguaggio elevato e chiaro.
-- Hashtag 3–4, sobri.
+### Regole LinkedIn (Focus B2B & Rete Fioristi)
+- Focus primario su qualità artigianale, affidabilità della rete di fioristi locali e innovazione del modello di consegna etico e tecnologico.
+- Tono professionale, autorevole e istituzionale, orientato a partnership B2B, welfare aziendale e logistica di precisione.
+- Niente intimismo consumer eccessivo né pathos da social consumer: linguaggio sobrio, chiaro ed elegante.
+- Struttura: Apertura sull'innovazione del servizio → Affidabilità e rispetto della rete artigianale fioristi → Call to action per partnership e collaborazioni.
+- Hashtag 3–5, professionali (#FloreMoria, #Innovazione, #ArtigianatoItaliano, #LogisticaEtica, #WelfareAziendale).
 `.trim();
 
 /**
@@ -253,16 +259,79 @@ export function describeContentFormatGuidance(
 ): string {
     const spec = getChannelAgentSpec(channel);
     if (channel === MarketingChannel.PINTEREST) {
-        return 'Pin verticale 2:3, keyword botaniche/ricorrenze, CTA link al sito; imagePrompt deve specificare ratio 2:3.';
+        return 'Pin video o verticale 2:3, keyword botaniche/ricorrenze, CTA link al sito; micro-video 2-3s a loop.';
     }
     if (channel === MarketingChannel.YOUTUBE_SHORTS) {
-        return 'Short 9:16, titolo ad alto CTR onesto, SEO in copy/descrizione, sottotitoli; imagePrompt 9:16.';
+        return 'Short 9:16, titolo ad alto CTR onesto, micro-video 2-3s a loop continuo, SEO in copy/descrizione; imagePrompt 9:16.';
     }
     if (contentFormat === ContentFormat.REEL || channel === MarketingChannel.TIKTOK) {
-        return `Video verticale 9:16 — hook 0–3s obbligatorio. Focus agente: ${spec.focus}`;
+        return `Micro-video verticale 9:16 da 2-3s a loop continuo — hook 0–3s obbligatorio. Focus agente: ${spec.focus}`;
     }
     if (contentFormat === ContentFormat.STORY) {
-        return 'Story breve: max 2 frasi + invito a vedere il post/reel del giorno sul profilo.';
+        return 'Story 9:16: micro-clip 2-3s a loop + max 2 frasi concise + invito a scoprire il post/servizio.';
     }
-    return spec.focus;
+    return `Micro-video 9:16 da 2-3s a loop continuo. ${spec.focus}`;
 }
+
+/**
+ * Regole editoriali specifiche per canale (utili per anteprime e generatori deterministici).
+ */
+export function getChannelSpecificEditorialRules(channel: MarketingChannel): {
+    tone: string;
+    hookStyle: string;
+    coreValue: string;
+    ctaStyle: string;
+} {
+    switch (channel) {
+        case MarketingChannel.META_INSTAGRAM:
+            return {
+                tone: 'Empatico, caldo, intimo e sobrio (Quiet Luxury).',
+                hookStyle: 'Verità emotiva sulla memoria e la vicinanza a distanza.',
+                coreValue: 'Valore della memoria, cura costante e testimonianza della posa con foto di conferma.',
+                ctaStyle: 'Invito delicato a salvare il post o visitare il link in bio per affidare un ricordo.',
+            };
+        case MarketingChannel.TIKTOK:
+            return {
+                tone: 'Autentico, diretto, dinamico e rispettoso (zero melodramma).',
+                hookStyle: 'Hook 0-3s su gesti concreti (composizione floreale, nastro di seta, posa).',
+                coreValue: 'Trasparenza del servizio e autenticità dei gesti.',
+                ctaStyle: 'Salva per la prossima ricorrenza o scopri come funziona senza fretta.',
+            };
+        case MarketingChannel.META_FACEBOOK:
+            return {
+                tone: 'Caldo, familiare, comunitario e rassicurante (accessibile a over 60).',
+                hookStyle: 'Narrazione familiare e comprensione delle difficoltà della distanza.',
+                coreValue: 'Semplicità in tre passi (ordine, consegna accurata, foto di conferma alla famiglia).',
+                ctaStyle: 'Link diretto al servizio con invito a commentare o condividere con i parenti.',
+            };
+        case MarketingChannel.LINKEDIN:
+            return {
+                tone: 'Istituzionale, autorevole, professionale e orientato al valore.',
+                hookStyle: 'Innovazione etica e digitalizzazione della tradizione floreale italiana.',
+                coreValue: 'Qualità artigianale, capillarità della rete di fioristi e logistica di precisione.',
+                ctaStyle: 'Approfondimento per partnership B2B, accordi di welfare e sinergie con agenzie.',
+            };
+        case MarketingChannel.YOUTUBE_SHORTS:
+            return {
+                tone: 'Chiaro, educativo, orientato alla ricerca e al valore permanente.',
+                hookStyle: 'Domanda o curiosità botanica/memoriale nei primi 3 secondi.',
+                coreValue: 'Tutorial sulla conservazione del ricordo e significato dei fiori.',
+                ctaStyle: 'Iscrizione al canale o link in descrizione.',
+            };
+        case MarketingChannel.PINTEREST:
+            return {
+                tone: 'Ispirazionale, visivo, focalizzato su estetica floreale e composizioni.',
+                hookStyle: 'Composizione botanica ad alta risoluzione.',
+                coreValue: 'Ispirazioni floreali per tombe e commemorazioni solenni.',
+                ctaStyle: 'Salva il Pin o clicca sul link.',
+            };
+        default:
+            return {
+                tone: 'Sobrio e rispettoso.',
+                hookStyle: 'Chiaro e immediato.',
+                coreValue: 'Presenza e memoria con cura.',
+                ctaStyle: 'Scopri il servizio FloreMoria.',
+            };
+    }
+}
+

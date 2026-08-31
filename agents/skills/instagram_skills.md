@@ -41,25 +41,24 @@ Frasi brevi, scansionabili da mobile. Una idea per post. Emoji al massimo 1–2,
 
 ---
 
-## 2. Hook visivi e testuali dei primi 3 secondi
+## 2. Strategia 100% Video: Micro-Clip 2-3s a Loop Continuo
 
-*Vale soprattutto per **Reels 9:16**; il feed statico usa l’equivalente nella prima riga di caption + thumbnail.*
+*Ogni post è supportato da **Micro-Video 9:16 da 2.0 a 3.0 secondi** a loop continuo, con focus su macro-dettagli realistici.*
 
-### 2.1 Struttura temporale (Reels)
+### 2.1 Regia visiva e Loop (2–3 secondi)
 
-| Tempo | Obiettivo | Esecuzione |
-|-------|-----------|------------|
-| **0–1 s** | Fermare lo scroll | Hook **visivo**: dettaglio floreale, luce naturale, mani che posano (mai volto in pianto) |
-| **1–3 s** | Dare senso | Hook **testuale** on-screen + voce soft: una verità umana, non uno slogan |
-| **3–12 s** | Valore | Come funziona / perché conta la foto di conferma |
-| **12–25 s** | Chiusura | Brand discreto + CTA soft |
+| Aspetto | Regola FloreMoria | Esecuzione |
+|---------|-------------------|------------|
+| **Durata clip** | **2.0–3.0 secondi** | Pacing perfetto per loop seamless continuo senza stacchi bruschi |
+| **Macro-Dettagli** | Realismo ed eleganza | Mani che scrivono una lettera con inchiostro, mani che legano un nastro di seta attorno a fiori freschi, riflessi di luce naturale morbida su pietra/marmo |
+| **Movimento** | Camminata lenta / tilt | Camminata lenta di profilo in bokeh morbido senza alcuna deformazione facciale |
+| **Divieto Testo** | Assoluto nei pixel | "NO TEXT, NO LETTERS, CLEAN CINEMATOGRAPHIC FOOTAGE ONLY". Testo e slogan solo in post-produzione FFmpeg |
 
 ### 2.2 Hook visivi ammessi
-
-- Macro di petali / composizione su pietra chiara o legno invecchiato.
-- POV della posa (dal basso o laterale), senza inquadrare tombe altrui riconoscibili.
-- Transizione lenta luce mattutina → omaggio già deposto.
-- Still life Quiet Luxury che “respira” (movimento minimo di foglia / vento leggero).
+- Mani che legano un nastro di seta attorno a un bouquet di rose bianche ed eucalipto.
+- Scrittura lenta a mano con inchiostro scuro su carta cotone texturizzata.
+- Riflessi di luce naturale calda (golden hour) che accarezzano marmo chiaro e petali freschi.
+- Dettaglio macro di composizione floreale che respira con brezza leggera.
 
 ### 2.3 Hook testuali (on-screen, max ~8 parole)
 

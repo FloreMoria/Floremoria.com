@@ -145,6 +145,9 @@ function buildUserContentForChannel(
     'Slot editoriali OBBLIGATORI (un post JSON per ciascuno, stessi channel e contentFormat):',
     ...slotLines,
     '',
+    'STRATEGIA 100% VIDEO: Micro-clip verticali 9:16 da 2.0 a 3.0 secondi a loop continuo.',
+    'Regia visiva AI: macro-dettagli realistici ed eleganti (mani che scrivono una lettera con inchiostro, mani che legano un nastro di seta attorno a fiori freschi, riflessi di luce naturale morbida, camminate lente di profilo senza deformazioni facciali).',
+    'Divieto assoluto testo nei frame: "NO TEXT, NO LETTERS, CLEAN CINEMATOGRAPHIC FOOTAGE ONLY".',
     'Applica la direttiva di viralità rispettosa (hook 0–3s, CTA salva/condividi, Quiet Luxury).',
     'Rispetta la categoria e adatta tono/immaginario di conseguenza.',
   );

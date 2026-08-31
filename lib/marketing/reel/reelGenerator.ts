@@ -157,13 +157,13 @@ export async function generateAutomaticReelVideoDetailed(
         : defaultVeoPromptForAiStill();
 
     console.log(
-      `[ReelGenerator] Campagna ${input.campaignId} · still=${still.kind} · Veo Ziggy · slogans=${overlayLines.length} · TTS=vietato`
+      `[ReelGenerator] Campagna ${input.campaignId} · still=${still.kind} · Veo Ziggy micro-video 2-3s loop · slogans=${overlayLines.length} · TTS=vietato`
     );
 
     let mp4 = await generateVeoReelClip({
       prompt,
       image: { buffer: still.buffer, mimeType: still.mimeType },
-      durationSeconds: 8,
+      durationSeconds: 3,
     });
 
     const burned = await burnZiggyTextOverlay({

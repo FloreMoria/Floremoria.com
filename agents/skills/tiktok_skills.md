@@ -38,25 +38,25 @@ Una idea per video. Voce calma o testo on-screen chiaro. Colloquiale sì; superf
 
 ---
 
-## 2. Hook visivi e testuali dei primi 3 secondi
+## 2. Strategia 100% Video: Micro-Clip 2-3s a Loop Continuo
 
-*Obbligatori per TikTok **9:16**. Se falliscono i primi 3 secondi, il video è perso.*
+*Standard TikTok FloreMoria: **Video 9:16 da 2.0 a 3.0 secondi** a loop continuo, con hook immediato 0–3s su gesti autentici.*
 
-### 2.1 Framework temporale (standard FloreMoria)
+### 2.1 Framework di Regia e Micro-Clip (2–3 secondi)
 
-| Tempo | Beat | Cosa fare |
-|-------|------|-----------|
-| **0–1 s** | Hook visivo | Dettaglio / gesto / testo grande a pieno schermo |
-| **1–3 s** | Hook verbale | **Una** domanda o verità (non due) |
-| **3–12 s** | Body | Come funziona o perché conta |
-| **12–25 s** | Close | CTA soft + brand riconoscibile |
+| Parametro | Regola FloreMoria | Esecuzione TikTok |
+|-----------|-------------------|-------------------|
+| **Durata scena** | **2.0–3.0 secondi** | Micro-clip ad altissima retention con loop continuo infinito |
+| **Focus Gestuale** | Gesti autentici e macro | Mani che legano il nastro di seta, mani che scrivono una lettera con inchiostro, posa delicata |
+| **Volti & Figure** | Nessuna deformazione | Camminata lenta di profilo in bokeh morbido, mai volti deformati né primi piani artefatti |
+| **Divieto Testo** | Tassativo nei frame | "NO TEXT, NO LETTERS, CLEAN CINEMATOGRAPHIC FOOTAGE ONLY". Overlay applicato solo da FFmpeg |
 
 ### 2.2 Hook visivi (9:16)
 
-- Macro petalo → pull-out sulla composizione completa.
-- Mani che legano il bouquet (dietro le quinte fiorista).
-- Transizione “ordine confermato” → “posa” → “foto inviata” (storyboard semplice).
-- Testo on-screen **alto contrasto**, safe zone TikTok (evitare UI laterali).
+- Macro mani che annodano con cura un nastro di seta attorno al gambo dei fiori freschi.
+- Macro inchiostro nero che tocca la carta scrivendo una parola di memoria.
+- Riflessi di luce naturale morbida su marmo chiaro o composizione floreale.
+- Transizione continua e loopable: l'ultimo fotogramma sfuma perfettamente nel primo.
 
 ### 2.3 Hook testuali / spoken (primi 3 s)
 

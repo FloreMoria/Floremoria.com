@@ -57,9 +57,7 @@ function buildEditorialCopy(
 
 function buildSloganTimeline(slogans: [string, string, string]) {
   return [
-    { text: slogans[0], startSec: 0.2, endSec: 4.2 },
-    { text: slogans[1], startSec: 2.4, endSec: 6.4 },
-    { text: slogans[2], startSec: 4.6, endSec: 8.0 },
+    { text: slogans[0], startSec: 0.15, endSec: 2.35 },
   ];
 }
 

@@ -1,8 +1,9 @@
 /**
- * Overlay testo slogan Ziggy su Reel ~8s.
- * Typography: Serif elegante, bianco + ombra morbida — solo catalogo approvato.
+ * Overlay testo slogan Ziggy su Micro-Video 2-3s a loop continuo.
+ * Typography: Serif elegante, bianco + ombra morbida — solo catalogo approvato da italianCopyGuard.ts.
  */
-import { pickApprovedReelSlogans } from '@/lib/marketing/italianCopyGuard';
+import { pickApprovedReelSlogans, pickApprovedSlogan } from '@/lib/marketing/italianCopyGuard';
+import { STANDARD_SCENE_DURATION_SEC } from '@/lib/marketing/reel/reelDirection';
 
 export type ReelOnScreenLine = {
   text: string;
@@ -10,33 +11,32 @@ export type ReelOnScreenLine = {
   startSec: number;
   /** Secondi di fine (fine fade-out) */
   endSec: number;
-  /** Durata fade-in / fade-out (default 1s) */
+  /** Durata fade-in / fade-out (default 0.35s) */
   fadeSec?: number;
 };
 
-export const REEL_OVERLAY_DURATION_SEC = 8;
-const FADE_SEC = 1;
-const HOLD_SEC = 2;
-/** Durata totale per slogan: fade+hold+fade = 4s */
-const SLOT_SEC = FADE_SEC + HOLD_SEC + FADE_SEC;
+/** Durata standard del micro-clip a loop: 2.5 secondi (target 2.0–3.0s). */
+export const REEL_OVERLAY_DURATION_SEC = STANDARD_SCENE_DURATION_SEC;
+const FADE_SEC = 0.35;
+const HOLD_SEC = 1.8;
 
 /**
- * 3 slogan brevi per overlay — sempre dal catalogo italiano approvato (mai hook AI troncati).
+ * 3 slogan brevi per catalogo / fallback.
  */
 export function buildZiggyReelSlogans(_copy?: string | null): [string, string, string] {
   return pickApprovedReelSlogans(_copy || '');
 }
 
-/** Timeline 8s: tre slot sfalsati con fade 1 / hold 2 / fade 1. */
+/**
+ * Timeline 2.5s per micro-clip a loop: 1 slogan principale ad alto impatto con fade-in / hold / fade-out morbido.
+ */
 export function buildReelOnScreenLines(copy?: string | null): ReelOnScreenLine[] {
-  const [a, b, c] = buildZiggyReelSlogans(copy);
+  const primarySlogan = pickApprovedSlogan(copy || '');
   return [
-    { text: a, startSec: 0.2, endSec: 0.2 + SLOT_SEC, fadeSec: FADE_SEC },
-    { text: b, startSec: 2.4, endSec: 2.4 + SLOT_SEC, fadeSec: FADE_SEC },
     {
-      text: c,
-      startSec: 4.6,
-      endSec: REEL_OVERLAY_DURATION_SEC,
+      text: primarySlogan,
+      startSec: 0.15,
+      endSec: REEL_OVERLAY_DURATION_SEC - 0.15,
       fadeSec: FADE_SEC,
     },
   ];
@@ -70,27 +70,41 @@ export function buildFadeAlphaExpr(
   );
 }
 
-/** Filtro video ffmpeg: scale/crop 9:16 + Serif bianco + ombra + fade. */
-export function buildElegantTextVideoFilter(lines: ReelOnScreenLine[]): string {
+/**
+ * Filtro video ffmpeg:
+ * - Scale & crop verticale 9:16 (1080x1920) per IG/TikTok/FB Reels
+ * - Dissolvenza morbida di loop (0.35s) per chiusura continua senza scatti
+ * - Serif bianco + ombra morbida per lo slogan approvato
+ */
+export function buildElegantTextVideoFilter(
+  lines: ReelOnScreenLine[],
+  durationSec = REEL_OVERLAY_DURATION_SEC
+): string {
   const fontFile = process.env.MARKETING_REEL_FONT_FILE?.trim();
   const fontPrefix = fontFile
     ? `fontfile='${fontFile}':`
     : `font='Georgia':`;
 
-  const base =
-    'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,eq=saturation=0.94:brightness=0.01';
+  const fadeOutStart = Math.max(0, durationSec - FADE_SEC);
+  const base = [
+    'scale=1080:1920:force_original_aspect_ratio=increase',
+    'crop=1080:1920',
+    'eq=saturation=0.94:brightness=0.01',
+    `fade=t=in:st=0:d=${FADE_SEC}`,
+    `fade=t=out:st=${fadeOutStart.toFixed(2)}:d=${FADE_SEC}`,
+  ].join(',');
 
-  const drawParts = lines.map((line, idx) => {
+  const drawParts = lines.map((line) => {
     const fade = line.fadeSec ?? FADE_SEC;
-    const y = idx === 2 ? 'h*0.78' : idx === 1 ? 'h*0.70' : 'h*0.62';
-    const fontsize = idx === 2 ? 56 : idx === 0 ? 44 : 40;
+    const y = 'h*0.74';
+    const fontsize = 52;
     const alpha = buildFadeAlphaExpr(line.startSec, line.endSec, fade);
     return (
       `drawtext=${fontPrefix}` +
       `text='${escapeDrawtext(line.text)}':` +
       `fontsize=${fontsize}:fontcolor=white:` +
       `borderw=0:` +
-      `shadowx=2:shadowy=2:shadowcolor=black@0.45:` +
+      `shadowx=2:shadowy=2:shadowcolor=black@0.55:` +
       `alpha='${alpha}':` +
       `x=(w-text_w)/2:y=${y}`
     );

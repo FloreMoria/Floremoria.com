@@ -12,6 +12,8 @@ import {
 } from '@/lib/marketing/reel/geminiClient';
 import {
   REEL_NEGATIVE_PROMPT,
+  STANDARD_SCENE_DURATION_SEC,
+  STRICT_NO_TEXT_VIDEO_RULE,
   veoPromptFromAiStill,
   veoPromptFromDeliveryFlowerPhoto,
 } from '@/lib/marketing/reel/reelDirection';
@@ -25,7 +27,7 @@ export type VeoClipInput = {
   prompt: string;
   /** Still di partenza (foto consegna o Imagen), opzionale. */
   image?: { buffer: Buffer; mimeType: string };
-  /** Secondi clip (Veo tipicamente 4–8). */
+  /** Secondi clip (standard FloreMoria: micro-clip da 2.0 a 3.0s a loop). */
   durationSeconds?: number;
 };
 
@@ -50,6 +52,7 @@ export async function generateVeoReelClip(input: VeoClipInput): Promise<Buffer> 
   const wantNativeAudio = process.env.MARKETING_VEO_NATIVE_AUDIO !== '0';
   // Qualità > velocità: enhancePrompt aiuta Veo a espandere la regia senza inventare persone.
   const enhancePrompt = process.env.MARKETING_VEO_ENHANCE_PROMPT !== '0';
+  const duration = Math.min(3, Math.max(2, input.durationSeconds ?? Math.round(STANDARD_SCENE_DURATION_SEC)));
 
   const imagePayload = input.image
     ? {
@@ -59,7 +62,7 @@ export async function generateVeoReelClip(input: VeoClipInput): Promise<Buffer> 
     : undefined;
 
   console.log(
-    `[ReelVeo] start model=${model} image=${Boolean(imagePayload)} audio=${wantNativeAudio} enhance=${enhancePrompt}`
+    `[ReelVeo] start model=${model} duration=${duration}s image=${Boolean(imagePayload)} audio=${wantNativeAudio} enhance=${enhancePrompt}`
   );
 
   try {
@@ -70,7 +73,7 @@ export async function generateVeoReelClip(input: VeoClipInput): Promise<Buffer> 
       config: {
         numberOfVideos: 1,
         aspectRatio: '9:16',
-        durationSeconds: input.durationSeconds ?? 8,
+        durationSeconds: duration,
         personGeneration: 'dont_allow',
         negativePrompt: REEL_NEGATIVE_PROMPT,
         generateAudio: wantNativeAudio,

@@ -2,9 +2,11 @@
 
 /**
  * Upload + archivio fatture SaaS / estere con export ZIP mensile.
+ * Portal su document.body + z-index elevato: evita clipping sotto header dashboard (stacking context main z-10).
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, FileUp, Loader2, Trash2, X } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 
@@ -32,6 +34,8 @@ const euro = (cents: number) => (cents / 100).toFixed(2);
 
 export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange }: Props) {
     const now = new Date();
+    const [mounted, setMounted] = useState(false);
+    const [chromeOffset, setChromeOffset] = useState('3.5rem');
     const [invoices, setInvoices] = useState<SaasInvoice[]>([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -71,6 +75,27 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
             setLoading(false);
         }
     }, [onTotalsChange]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!open) return;
+        const shell = document.querySelector('.dashboard-shell');
+        const chromeH =
+            shell && getComputedStyle(shell).getPropertyValue('--dashboard-chrome-h').trim();
+        if (chromeH) setChromeOffset(chromeH);
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [open]);
 
     useEffect(() => {
         if (open) void load();
@@ -123,15 +148,36 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
         await load();
     };
 
-    if (!open) return null;
+    if (!open || !mounted) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40">
-            <button type="button" className="flex-1 cursor-default" aria-label="Chiudi" onClick={onClose} />
-            <aside className="w-full max-w-3xl h-full bg-white shadow-2xl overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[60]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="saas-expenses-drawer-title"
+        >
+            <button
+                type="button"
+                className="absolute inset-0 cursor-default bg-slate-900/45 backdrop-blur-[1px]"
+                aria-label="Chiudi pannello SaaS"
+                onClick={onClose}
+            />
+            <aside
+                className="fixed right-0 z-[61] flex w-full max-w-4xl flex-col border-l border-slate-200 bg-white shadow-2xl overflow-hidden"
+                style={{
+                    top: chromeOffset,
+                    height: `calc(100dvh - ${chromeOffset})`,
+                }}
+            >
+                <div className="sticky top-0 z-[1] shrink-0 border-b border-slate-100 bg-white px-5 py-4 flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-display font-bold text-slate-900">Spese SaaS / Estere</h3>
+                        <h3
+                            id="saas-expenses-drawer-title"
+                            className="text-lg font-display font-bold text-slate-900"
+                        >
+                            Gestione SaaS / Spese estere
+                        </h3>
                         <p className="text-xs text-slate-500">
                             Fatture passive estere, autofattura TD17/TD18/TD19 ed export ZIP per il commercialista.
                         </p>
@@ -145,7 +191,7 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                     </button>
                 </div>
 
-                <div className="p-5 space-y-6">
+                <div className="flex-1 overflow-y-auto p-5 space-y-6">
                     <form
                         onSubmit={handleUpload}
                         className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4"
@@ -355,6 +401,7 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                     </div>
                 </div>
             </aside>
-        </div>
+        </div>,
+        document.body
     );
 }

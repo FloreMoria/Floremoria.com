@@ -72,3 +72,4 @@
 
 [2026-08-31 14:45] fix(social): Facebook Reels upload binario diretto rupload, polling 2s/20s, stato IN_PUBBLICAZIONE non bloccante, log Graph API per fase; tsc+build OK.
 [2026-08-31 15:00] feat(finance): SOAP Invoices_ListReceivedByFilter + GetDownloadLink/SetFlagRead/GetStatusReport YouDOX, sync passivo con messaggio conteggio import; tsc+build OK.
+[2026-08-31 15:10] fix(finance): z-index e portal body per drawer Gestione SaaS / Spese estere sopra header dashboard; tsc+build OK.

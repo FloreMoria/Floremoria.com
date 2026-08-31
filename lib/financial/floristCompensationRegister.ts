@@ -12,6 +12,7 @@ import {
     type FloristCompensationRow,
     type FloristDocStatus,
 } from '@/lib/financial/floristDocStatus';
+import { manualExpenseAttachmentUrl } from '@/lib/financial/manualExpenses';
 
 export type {
     FloristCompensationRow,
@@ -147,7 +148,9 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
             daysSinceOrder: daysBetween(refDate, now),
             docStatus,
             statusLabel: FLORIST_DOC_STATUS_LABELS[docStatus],
-            receiptUrl: expense?.blobUrl || null,
+            receiptUrl: expense
+                ? manualExpenseAttachmentUrl({ id: expense.id, blobUrl: expense.blobUrl })
+                : null,
             receiptPath: expense?.blobPath || null,
             linkedExpenseId,
             linkedExpenseDocType: expense?.docType || null,

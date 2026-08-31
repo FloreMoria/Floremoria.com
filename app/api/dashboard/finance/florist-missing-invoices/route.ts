@@ -80,17 +80,33 @@ export async function POST(request: Request) {
 
             if (action === 'upload_receipt') {
                 const file = form.get('file');
-                if (!(file instanceof Blob)) {
+                const isFile =
+                    typeof File !== 'undefined' && file instanceof File
+                        ? true
+                        : file instanceof Blob;
+                if (!isFile || !(file instanceof Blob)) {
                     return jsonError('File scontrino obbligatorio.', 400);
                 }
                 const blob = file as Blob & { name?: string };
-                const fileName = blob.name || String(form.get('fileName') || 'scontrino.jpg');
+                const fileName =
+                    (typeof File !== 'undefined' && file instanceof File && file.name) ||
+                    blob.name ||
+                    String(form.get('fileName') || 'scontrino.jpg');
                 if (!ALLOWED_RECEIPT.test(fileName)) {
                     return jsonError('Formato non supportato (JPEG, PNG, PDF, WebP).', 400);
                 }
                 if (blob.size > MAX_BYTES) {
                     return jsonError('Allegato troppo grande (max 12 MB).', 400);
                 }
+                if (blob.size < 32) {
+                    return jsonError('File allegato vuoto o troppo piccolo.', 400);
+                }
+                console.info('[florist-missing-invoices] upload_receipt', {
+                    rowId,
+                    fileName,
+                    size: blob.size,
+                    type: blob.type,
+                });
                 const result = await uploadFloristMissingReceipt({
                     rowId,
                     buffer: Buffer.from(await blob.arrayBuffer()),
@@ -99,7 +115,8 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({
                     ok: true,
-                    message: 'Scontrino fiscale salvato in Contabilità (stato: Scontrino Associato).',
+                    message:
+                        'Scontrino fiscale salvato e sincronizzato in Prima Nota (stato: Scontrino Associato).',
                     ...result,
                 });
             }

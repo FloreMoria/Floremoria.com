@@ -82,3 +82,4 @@
 [2026-08-31 17:12] ux: Prima Nota tabella compatta con tutti i campi fiscali (dir, cat, impon/IVA, doc, tipo)
 [2026-08-31 17:15] ux: Prima Nota colonne tecniche ID ordine/partner/Fineco + link allegato; commit push deploy
 [2026-08-31 17:35] feat(accounting): Prima Nota vista essenziale 8 col, IVA 10/22%, stato editabile, drawer dettaglio + movimenti correlati; dedup visiva
+[2026-08-31 17:55] fix(accounting): persistenza scontrini passivi, upload Blob obbligatorio su Vercel, sync Prima Nota con orderId/partnerId/IVA 10%, toast e anteprima allegato

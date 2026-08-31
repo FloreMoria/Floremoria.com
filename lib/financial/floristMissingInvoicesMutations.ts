@@ -295,7 +295,117 @@ export async function updateFloristMissingRow(input: {
         data.deliveryDate = new Date(`${input.paymentDate.slice(0, 10)}T12:00:00.000Z`);
     }
 
-    await prisma.order.update({ where: { id: order.id }, data });
+    const updated = await prisma.order.update({
+        where: { id: order.id },
+        data,
+        select: {
+            id: true,
+            orderNumber: true,
+            partnerId: true,
+            floristCompensationCents: true,
+            floristSettlementStatus: true,
+            deliveryDate: true,
+            createdAt: true,
+            updatedAt: true,
+            veraWorkflowFlags: true,
+        },
+    });
+
+    // Propaga importo aggiornato sulla scrittura Prima Nota (FLORIST_PAYOUT)
+    const comp = updated.floristCompensationCents || 0;
+    if (comp > 0) {
+        try {
+            const { scorporaIvaFloreale, VAT_PCT_FLORAL } = await import('@/lib/financial/vat');
+            const { upsertLedgerEntry } = await import('@/lib/financial/historicalLedgerSync');
+            const floristVat = scorporaIvaFloreale(comp);
+            const d = updated.deliveryDate || updated.createdAt || updated.updatedAt;
+            const flags = (updated.veraWorkflowFlags as Record<string, unknown>) || {};
+            const linkedExpenseId =
+                typeof flags.floristLinkedExpenseId === 'string'
+                    ? flags.floristLinkedExpenseId
+                    : null;
+            await upsertLedgerEntry({
+                sourceKey: `FLORIST_PAYOUT:${updated.id}`,
+                sourceType: 'FLORIST_PAYOUT',
+                sourceId: updated.id,
+                direction: 'USCITA',
+                category: 'COSTI_FIORISTI',
+                accountingDate: d,
+                description: `Compenso fiorista ordine ${updated.orderNumber || updated.id.slice(0, 8)}`,
+                netCents: -floristVat.imponibileCents,
+                vatRate: VAT_PCT_FLORAL,
+                vatCents: -floristVat.ivaCents,
+                totalCents: -comp,
+                reconciliationStatus:
+                    updated.floristSettlementStatus === 'RICEVUTA' ? 'MATCHED' : 'PARTIAL',
+                documentRef: updated.orderNumber || updated.id,
+                orderId: updated.id,
+                partnerId: updated.partnerId,
+                metadataJson: {
+                    floristSettlementStatus: updated.floristSettlementStatus,
+                    linkedExpenseId,
+                },
+            });
+
+            // Se c'è già scontrino collegato, aggiorna anche MANUAL_EXPENSE + ledger
+            if (linkedExpenseId) {
+                const exp = await prisma.manualFinanceExpense.findUnique({
+                    where: { id: linkedExpenseId },
+                });
+                if (exp) {
+                    const vatRate = exp.vatRate || VAT_PCT_FLORAL;
+                    const vatCents =
+                        vatRate > 0
+                            ? Math.round(comp - comp / (1 + vatRate / 100))
+                            : 0;
+                    const netCents = comp - vatCents;
+                    await prisma.manualFinanceExpense.update({
+                        where: { id: exp.id },
+                        data: {
+                            totalCents: comp,
+                            vatCents,
+                            netCents,
+                            expenseDate: input.paymentDate
+                                ? new Date(`${input.paymentDate.slice(0, 10)}T12:00:00.000Z`)
+                                : exp.expenseDate,
+                        },
+                    });
+                    const { manualExpenseAttachmentUrl } = await import(
+                        '@/lib/financial/manualExpenses'
+                    );
+                    await upsertLedgerEntry({
+                        sourceKey: `MANUAL_EXPENSE:${exp.id}`,
+                        sourceType: 'MANUAL_EXPENSE',
+                        sourceId: exp.id,
+                        direction: 'USCITA',
+                        category: 'COSTI_FIORISTI',
+                        accountingDate: input.paymentDate
+                            ? new Date(`${input.paymentDate.slice(0, 10)}T12:00:00.000Z`)
+                            : exp.expenseDate,
+                        description: exp.description,
+                        counterpartyName: exp.vendorName,
+                        netCents: -netCents,
+                        vatRate,
+                        vatCents: -vatCents,
+                        totalCents: -comp,
+                        reconciliationStatus: exp.reconciled ? 'MATCHED' : 'UNMATCHED',
+                        documentRef: updated.orderNumber || exp.fileName || exp.id,
+                        attachmentUrl: manualExpenseAttachmentUrl(exp),
+                        attachmentPath: exp.blobPath,
+                        bankLineId: exp.matchedStatementLineId,
+                        orderId: updated.id,
+                        partnerId: updated.partnerId,
+                        metadataJson: {
+                            docType: exp.docType,
+                            source: 'florist_missing_receipt_upload',
+                        },
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('[updateFloristMissingRow] sync Prima Nota', err);
+        }
+    }
 }
 
 export async function dismissFloristMissingRow(rowId: string): Promise<void> {
@@ -353,6 +463,8 @@ export async function uploadFloristMissingReceipt(input: {
     if (!parsed) throw new Error('rowId non valido.');
 
     let partnerName = 'Fiorista';
+    let partnerId: string | null = null;
+    let partnerVat: string | null = null;
     let amountCents = 0;
     let expenseDate = new Date().toISOString().slice(0, 10);
     let orderId: string | null = null;
@@ -374,12 +486,17 @@ export async function uploadFloristMissingReceipt(input: {
                     id: true,
                     orderNumber: true,
                     floristCompensationCents: true,
-                    partner: { select: { shopName: true } },
+                    partnerId: true,
+                    partner: {
+                        select: { id: true, shopName: true, vatNumber: true, taxCode: true },
+                    },
                 },
             });
             if (order) {
                 orderNumber = order.orderNumber;
+                partnerId = order.partnerId || order.partner?.id || null;
                 partnerName = order.partner?.shopName || partnerName;
+                partnerVat = order.partner?.vatNumber || order.partner?.taxCode || null;
                 if (order.floristCompensationCents && order.floristCompensationCents > 0) {
                     amountCents = order.floristCompensationCents;
                 }
@@ -395,19 +512,27 @@ export async function uploadFloristMissingReceipt(input: {
                 floristCompensationCents: true,
                 createdAt: true,
                 deliveryDate: true,
-                partner: { select: { shopName: true } },
+                partnerId: true,
+                partner: {
+                    select: { id: true, shopName: true, vatNumber: true, taxCode: true },
+                },
             },
         });
         if (!order) throw new Error('Ordine non trovato.');
         orderId = order.id;
         orderNumber = order.orderNumber;
+        partnerId = order.partnerId || order.partner?.id || null;
         partnerName = order.partner?.shopName || partnerName;
+        partnerVat = order.partner?.vatNumber || order.partner?.taxCode || null;
         amountCents = order.floristCompensationCents || 1;
-        const ref = order.deliveryDate && order.deliveryDate.getTime() <= Date.now()
-            ? order.deliveryDate
-            : order.createdAt;
+        const ref =
+            order.deliveryDate && order.deliveryDate.getTime() <= Date.now()
+                ? order.deliveryDate
+                : order.createdAt;
         expenseDate = ref.toISOString().slice(0, 10);
     }
+
+    const { VAT_PCT_FLORAL } = await import('@/lib/financial/vat');
 
     const expense = await createManualExpense({
         expenseDate,
@@ -417,7 +542,7 @@ export async function uploadFloristMissingReceipt(input: {
             orderNumber ? ` — ordine ${orderNumber}` : ''
         } (solo Contabilità)`,
         totalCents: amountCents,
-        vatRate: 0,
+        vatRate: VAT_PCT_FLORAL,
         file: {
             buffer: input.buffer,
             fileName: input.fileName,
@@ -432,6 +557,8 @@ export async function uploadFloristMissingReceipt(input: {
             source: 'florist_missing_receipt_upload',
             orderId,
             orderNumber,
+            partnerId,
+            vendorVat: partnerVat,
             bankLineId,
             rowId: input.rowId,
         },
@@ -439,12 +566,14 @@ export async function uploadFloristMissingReceipt(input: {
         reconciled: Boolean(bankLineId),
     });
 
+    const receiptUrl = expense.blobUrl;
+
     if (parsed.kind === 'bank' && bankLineId) {
         const line = await prisma.bankStatementLine.findUnique({ where: { id: bankLineId } });
         if (line) {
             const rawJson = mergeFloristAlertMeta(line.rawJson, {
                 linkedExpenseId: expense.id,
-                receiptUrl: expense.blobUrl || undefined,
+                receiptUrl: receiptUrl || undefined,
                 receiptPath: expense.blobPath || undefined,
             });
             await prisma.bankStatementLine.update({
@@ -480,7 +609,7 @@ export async function uploadFloristMissingReceipt(input: {
     }
 
     return {
-        receiptUrl: expense.blobUrl,
+        receiptUrl,
         receiptPath: expense.blobPath,
         expenseId: expense.id,
         fiscalOnly: true,

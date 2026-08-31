@@ -122,8 +122,15 @@ export function categorizeManualExpense(opts: {
     ) {
         return 'SPESE_SAAS';
     }
+    // Compensi / scontrini fioristi (upload Passivo o SDI)
+    if (
+        source === 'florist_missing_receipt_upload' ||
+        meta.orderId ||
+        /FIORIST|FIORER|COMPENSO|BONIFICATO|PARTNER/.test(blob)
+    ) {
+        return 'COSTI_FIORISTI';
+    }
     if (source.startsWith('SDI') || /FATTURA|SDI|YOUDOOX/.test(blob)) {
-        if (/FIORIST|FIORER|BONIFICATO|PARTNER/.test(blob)) return 'COSTI_FIORISTI';
         return 'SPESE_OPERATIVE';
     }
     if (/CURSOR|VERCEL|OPENAI|ANTHROPIC|CLAUDE|ANTIGRAVITY|GOOGLE|META|AWS|SAAS|SOFTWARE/.test(blob)) {

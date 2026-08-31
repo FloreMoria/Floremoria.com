@@ -314,7 +314,14 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
                     ? 'PDF'
                     : 'BLOB',
             bankLineId: e.matchedStatementLineId,
-            metadataJson: { docType: e.docType, source: meta.source, periodKey: e.periodKey },
+            orderId: (typeof meta.orderId === 'string' ? meta.orderId : null) || null,
+            partnerId: (typeof meta.partnerId === 'string' ? meta.partnerId : null) || null,
+            metadataJson: {
+                docType: e.docType,
+                source: meta.source,
+                periodKey: e.periodKey,
+                orderNumber: meta.orderNumber || null,
+            },
         });
         sources.MANUAL_EXPENSE = (sources.MANUAL_EXPENSE || 0) + 1;
     }

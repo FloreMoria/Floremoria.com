@@ -95,7 +95,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [busyId, setBusyId] = useState<string | null>(null);
-    const [flash, setFlash] = useState<string | null>(null);
+    const [flash, setFlash] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
     const [linkRow, setLinkRow] = useState<FloristCompensationRow | null>(null);
@@ -187,6 +187,10 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         setFlash(null);
     };
 
+    const showFlash = (type: 'ok' | 'err', text: string) => {
+        setFlash({ type, text });
+    };
+
     const remind = async (row: FloristCompensationRow, channel: 'email' | 'whatsapp') => {
         setBusyId(`${row.id}-${channel}`);
         setFlash(null);
@@ -214,9 +218,9 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Sollecito fallito');
-            setFlash(parsed.data?.message || 'Sollecito inviato');
+            showFlash('ok', parsed.data?.message || 'Sollecito inviato');
         } catch (e) {
-            setFlash(e instanceof Error ? e.message : 'Sollecito fallito');
+            showFlash('err', e instanceof Error ? e.message : 'Sollecito fallito');
         } finally {
             setBusyId(null);
         }
@@ -224,7 +228,10 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
 
     const associateOrder = async (order: OrderHit, target: FloristCompensationRow) => {
         if (!target.bankLineId) {
-            setFlash('Associazione bonifico disponibile solo se esiste un movimento bancario collegabile.');
+            showFlash(
+                'err',
+                'Associazione bonifico disponibile solo se esiste un movimento bancario collegabile.'
+            );
             return;
         }
         setLinking(true);
@@ -247,12 +254,12 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Associazione fallita');
-            setFlash(parsed.data?.message || 'Ordine associato');
+            showFlash('ok', parsed.data?.message || 'Ordine associato');
             setLinkRow(null);
             setEditRow(null);
             await load();
         } catch (e) {
-            setFlash(e instanceof Error ? e.message : 'Associazione fallita');
+            showFlash('err', e instanceof Error ? e.message : 'Associazione fallita');
         } finally {
             setLinking(false);
         }
@@ -264,7 +271,10 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         setFlash(null);
         try {
             const amount = Number(String(editAmount).replace(',', '.'));
-            const amountCents = Number.isFinite(amount) ? Math.round(amount * 100) : undefined;
+            if (!Number.isFinite(amount) || amount <= 0) {
+                throw new Error('Importo non valido.');
+            }
+            const amountCents = Math.round(amount * 100);
 
             const patchRes = await fetch(API, {
                 method: 'PATCH',
@@ -280,6 +290,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             });
             const patchParsed = await readJsonResponse<{
                 ok?: boolean;
+                message?: string;
                 error?: string;
             }>(patchRes);
             if (!patchParsed.ok) throw new Error(patchParsed.error || 'Salvataggio fallito');
@@ -301,11 +312,14 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 if (!stParsed.ok) throw new Error(stParsed.error || 'Aggiornamento stato fallito');
             }
 
-            setFlash('Modifiche salvate');
+            showFlash(
+                'ok',
+                'Modifiche salvate e sincronizzate con Prima Nota / Passivo.'
+            );
             setEditRow(null);
             await load();
         } catch (e) {
-            setFlash(e instanceof Error ? e.message : 'Salvataggio fallito');
+            showFlash('err', e instanceof Error ? e.message : 'Salvataggio fallito');
         } finally {
             setSaving(false);
         }
@@ -330,10 +344,10 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Aggiornamento stato fallito');
-            setFlash(parsed.data?.message || 'Stato aggiornato');
+            showFlash('ok', parsed.data?.message || 'Stato aggiornato');
             await load();
         } catch (e) {
-            setFlash(e instanceof Error ? e.message : 'Aggiornamento stato fallito');
+            showFlash('err', e instanceof Error ? e.message : 'Aggiornamento stato fallito');
         } finally {
             setBusyId(null);
         }
@@ -356,23 +370,28 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             const form = new FormData();
             form.set('action', 'upload_receipt');
             form.set('rowId', row.id);
-            form.set('file', file);
+            form.set('file', file, file.name);
+            form.set('fileName', file.name);
             const res = await fetch(API, { method: 'POST', body: form });
             const parsed = await readJsonResponse<{
                 ok?: boolean;
                 message?: string;
                 receiptUrl?: string;
+                expenseId?: string;
                 error?: string;
             }>(res);
             if (!parsed.ok) throw new Error(parsed.error || 'Upload fallito');
-            setFlash(
+            const receiptUrl = parsed.data?.receiptUrl || null;
+            showFlash(
+                'ok',
                 parsed.data?.message ||
-                    'Scontrino fiscale salvato (solo Contabilità — non in GdM/bacheche).'
+                    'Scontrino salvato e sincronizzato in Prima Nota (solo Contabilità).'
             );
-            if (editRow?.id === row.id && parsed.data?.receiptUrl) {
+            if (editRow?.id === row.id) {
                 setEditRow({
                     ...editRow,
-                    receiptUrl: parsed.data.receiptUrl,
+                    receiptUrl: receiptUrl || editRow.receiptUrl,
+                    linkedExpenseId: parsed.data?.expenseId || editRow.linkedExpenseId,
                     docStatus: 'RECEIPT_ASSOCIATED',
                     statusLabel: FLORIST_DOC_STATUS_LABELS.RECEIPT_ASSOCIATED,
                 });
@@ -380,7 +399,7 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             }
             await load();
         } catch (e) {
-            setFlash(e instanceof Error ? e.message : 'Upload fallito');
+            showFlash('err', e instanceof Error ? e.message : 'Upload fallito');
         } finally {
             setUploading(false);
             if (fileRef.current) fileRef.current.value = '';
@@ -449,8 +468,15 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
             </div>
 
             {flash && (
-                <div className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700">
-                    {flash}
+                <div
+                    className={`text-xs rounded-xl px-3 py-2 border ${
+                        flash.type === 'ok'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                            : 'bg-rose-50 border-rose-200 text-rose-800'
+                    }`}
+                    role="status"
+                >
+                    {flash.text}
                 </div>
             )}
             {error && (
@@ -757,16 +783,39 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                     Solo Contabilità. Non pubblicato in GdM né nelle bacheche.
                                 </p>
                                 {editRow.receiptUrl ? (
-                                    <a
-                                        href={editRow.receiptUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-xs text-teal-700 font-semibold hover:underline inline-flex items-center gap-1"
-                                    >
-                                        <Paperclip size={12} /> Apri allegato fiscale
-                                    </a>
+                                    <div className="space-y-2">
+                                        {/\.(jpe?g|png|webp)(\?|$)/i.test(editRow.receiptUrl) ||
+                                        editRow.receiptUrl.includes('/file') ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={editRow.receiptUrl}
+                                                alt="Anteprima scontrino"
+                                                className="max-h-40 rounded-lg border border-slate-200 object-contain bg-white"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display =
+                                                        'none';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <a
+                                            href={editRow.receiptUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-teal-700 font-semibold hover:underline inline-flex items-center gap-1"
+                                        >
+                                            <Paperclip size={12} /> Apri allegato fiscale
+                                        </a>
+                                    </div>
                                 ) : (
                                     <p className="text-[11px] text-slate-400">Nessun allegato</p>
+                                )}
+                                {flash?.type === 'err' && editRow && (
+                                    <p className="text-[11px] text-rose-700 font-medium">{flash.text}</p>
+                                )}
+                                {flash?.type === 'ok' && editRow && (
+                                    <p className="text-[11px] text-emerald-700 font-medium">
+                                        {flash.text}
+                                    </p>
                                 )}
                                 <input
                                     ref={fileRef}

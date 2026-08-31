@@ -14,6 +14,8 @@ import {
     FOREIGN_AUTOFATTURA_SOURCE,
     SAAS_FOREIGN_VENDOR_RE,
 } from '@/lib/financial/foreignAutofattura';
+import { categorizeManualExpense } from '@/lib/financial/historicalLedgerTypes';
+import { upsertLedgerEntry } from '@/lib/financial/historicalLedgerSync';
 import type { Prisma } from '@prisma/client';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'manual-expenses');
@@ -33,6 +35,15 @@ function sanitizeFileName(name: string): string {
     return name.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 180);
 }
 
+/** URL pubblico o proxy autenticato Contabilità per visualizzare l'allegato. */
+export function manualExpenseAttachmentUrl(expense: {
+    id: string;
+    blobUrl?: string | null;
+}): string {
+    if (expense.blobUrl) return expense.blobUrl;
+    return `/api/dashboard/finance/manual-expenses/${expense.id}/file`;
+}
+
 async function storeAttachment(
     buffer: Buffer,
     fileName: string,
@@ -43,12 +54,25 @@ async function storeAttachment(
     const token = getBlobToken();
     if (token) {
         const blobPath = `${BLOB_PREFIX}/${stamp}_${safe}`;
-        const result = await putBlobWithAccessFallback(blobPath, buffer, {
-            contentType,
-            token,
-            addRandomSuffix: false,
-        });
-        return { blobPath: result.pathname || blobPath, blobUrl: result.url, storageKind: 'blob' };
+        try {
+            const result = await putBlobWithAccessFallback(blobPath, buffer, {
+                contentType,
+                token,
+                addRandomSuffix: false,
+            });
+            return { blobPath: result.pathname || blobPath, blobUrl: result.url, storageKind: 'blob' };
+        } catch (err) {
+            console.error('[manual-expenses] upload Blob fallito', err);
+            throw new Error(
+                `Upload allegato su Vercel Blob fallito: ${err instanceof Error ? err.message : 'errore sconosciuto'}`
+            );
+        }
+    }
+    // Su Vercel il filesystem è effimero: senza token Blob l'allegato non è persistente.
+    if (process.env.VERCEL === '1') {
+        throw new Error(
+            'BLOB_READ_WRITE_TOKEN mancante su Vercel: impossibile salvare scontrino/allegato. Configura il token Blob nel progetto floremoria-dashboard.'
+        );
     }
     if (!fs.existsSync(LOCAL_DIR)) fs.mkdirSync(LOCAL_DIR, { recursive: true });
     const full = path.join(LOCAL_DIR, `${stamp}_${safe}`);
@@ -93,7 +117,14 @@ export async function createManualExpense(input: {
         vatRate > 0 ? Math.round(totalCents - totalCents / (1 + vatRate / 100)) : 0;
     const netCents = totalCents - vatCents;
 
-    let stored: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string | null; contentType: string | null; sizeBytes: number | null } = {
+    let stored: {
+        blobPath: string | null;
+        blobUrl: string | null;
+        storageKind: string;
+        fileName: string | null;
+        contentType: string | null;
+        sizeBytes: number | null;
+    } = {
         blobPath: null,
         blobUrl: null,
         storageKind: 'none',
@@ -142,13 +173,21 @@ export async function createManualExpense(input: {
         },
     });
 
-    // Prima nota uscite (conto costi generici / SaaS se suggerito dalla causale)
-    const descUpper = `${input.vendorName} ${input.description}`.toUpperCase();
-    const dareAccount =
-        /VERCEL|OPENAI|GOOGLE|AWS|CURSOR|ANTHROPIC|META|STRIPE|SAAS|SOFTWARE/.test(descUpper)
-            ? '70300 - Software SaaS (Estero)'
-            : '70900 - Spese Generali / Varie';
+    const meta = (input.metadataJson || {}) as Record<string, unknown>;
+    const category = categorizeManualExpense({
+        vendorName: input.vendorName,
+        description: input.description,
+        metadata: meta,
+    });
 
+    const dareAccount =
+        category === 'SPESE_SAAS'
+            ? '70300 - Software SaaS (Estero)'
+            : category === 'COSTI_FIORISTI'
+              ? '70100 - Costi Fioristi'
+              : '70900 - Spese Generali / Varie';
+
+    // Dual-write JSON locale (compat) + Registro permanente Neon (fonte di verità Contabilità)
     const entry: AccountingEntry = {
         id: `entry_manual_exp_${row.id}`,
         date: expenseDate.toISOString().slice(0, 10),
@@ -163,7 +202,59 @@ export async function createManualExpense(input: {
     };
     addAccountingEntries([entry]);
 
-    return row;
+    const attachmentUrl = manualExpenseAttachmentUrl(row);
+    const orderId = typeof meta.orderId === 'string' ? meta.orderId : null;
+    const partnerId = typeof meta.partnerId === 'string' ? meta.partnerId : null;
+    const orderNumber = typeof meta.orderNumber === 'string' ? meta.orderNumber : null;
+
+    try {
+        await upsertLedgerEntry({
+            sourceKey: `MANUAL_EXPENSE:${row.id}`,
+            sourceType: 'MANUAL_EXPENSE',
+            sourceId: row.id,
+            direction: 'USCITA',
+            category,
+            accountingDate: expenseDate,
+            description: entry.description,
+            counterpartyName: input.vendorName.trim(),
+            counterpartyVat: typeof meta.vendorVat === 'string' ? meta.vendorVat : null,
+            netCents: -Math.abs(netCents),
+            vatRate,
+            vatCents: -Math.abs(vatCents),
+            totalCents: -Math.abs(totalCents),
+            reconciliationStatus: row.reconciled ? 'MATCHED' : 'UNMATCHED',
+            documentRef: orderNumber || row.fileName || row.id,
+            attachmentUrl,
+            attachmentPath: row.blobPath,
+            attachmentKind: row.contentType?.includes('pdf')
+                ? 'PDF'
+                : row.contentType?.startsWith('image/')
+                  ? 'IMAGE'
+                  : 'BLOB',
+            bankLineId: row.matchedStatementLineId,
+            orderId,
+            partnerId,
+            metadataJson: {
+                docType: row.docType,
+                source: meta.source,
+                periodKey: row.periodKey,
+                dareAccount,
+                avereAccount: LEDGER_BANK_ACCOUNT,
+            },
+        });
+    } catch (err) {
+        // Spesa già persistita: non fare rollback silenzioso — log + prosegui con URL allegato
+        console.error('[manual-expenses] sync Prima Nota fallito (spesa comunque salvata)', {
+            expenseId: row.id,
+            err,
+        });
+    }
+
+    return {
+        ...row,
+        // Sempre un URL risolvibile (Blob pubblico o proxy autenticato)
+        blobUrl: attachmentUrl,
+    };
 }
 
 export async function deleteManualExpense(id: string) {

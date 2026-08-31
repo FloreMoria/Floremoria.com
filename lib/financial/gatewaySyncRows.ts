@@ -3,6 +3,8 @@
  * per la tabella "Sincronizzazione API Gateway".
  */
 
+import type { LedgerCategory } from '@/lib/financial/historicalLedgerTypes';
+import { isSaasPaypalDescription } from '@/lib/financial/paypalClassify';
 import { normalizePaypalTransactionId, parsePaypalSourceKey } from '@/lib/financial/paypalSourceKeys';
 
 export type GatewayKind = 'stripe' | 'paypal';
@@ -51,7 +53,7 @@ export type GatewaySyncRow = {
     dedupeKey: string;
 };
 
-export type GatewayEventKind = 'order' | 'payout' | 'refund' | 'technical';
+export type GatewayEventKind = 'order' | 'payout' | 'refund' | 'expense' | 'technical';
 
 /** Riga business consolidata (1 ordine / 1 payout / 1 rimborso). */
 export type GatewaySyncGroupedRow = {
@@ -179,8 +181,13 @@ function classifyPaypal(description: string, grossCents: number): {
         return { kind: 'commissione', label: 'Commissione Gateway' };
     if (/trasferimento|withdrawal|payout|bonifico|user initiated|prelievo/.test(d))
         return { kind: 'payout', label: 'Payout Bancario' };
-    if (grossCents >= 0) return { kind: 'incasso', label: 'Incasso Ordine' };
-    return { kind: 'altro', label: 'Movimento PayPal' };
+    if (grossCents < 0) {
+        if (isSaasPaypalDescription(description, null)) {
+            return { kind: 'altro', label: 'Spesa SaaS / Carta PayPal' };
+        }
+        return { kind: 'altro', label: 'Uscita PayPal' };
+    }
+    return { kind: 'incasso', label: 'Incasso Ordine' };
 }
 
 function rawStripeId(stripeId: string, meta: Record<string, unknown>): string {
@@ -423,6 +430,9 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
         normalizePaypalTransactionId(str(meta.paypalTransactionId)) ||
         entry.id;
 
+    const feeCents = Math.abs(Number(meta.feeCents || 0));
+    const totalCents = Number(entry.totalCents || 0);
+
     let kind: MovementKind = 'incasso';
     let label = 'Incasso Ordine';
     if (parsed?.kind === 'REFUND' || sourceKey.startsWith('PAYPAL_REFUND')) {
@@ -431,10 +441,22 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
     } else if (parsed?.kind === 'PAYOUT' || sourceKey.startsWith('PAYPAL_PAYOUT')) {
         kind = 'payout';
         label = 'Payout Bancario';
+    } else if (totalCents < 0) {
+        const cat = (entry.category || '') as LedgerCategory;
+        if (cat === 'SPESE_SAAS' || isSaasPaypalDescription(entry.description, entry.counterpartyName)) {
+            kind = 'altro';
+            label = 'Spesa SaaS / Carta PayPal';
+        } else if (cat === 'RIMBORSI') {
+            kind = 'rimborso';
+            label = 'Rimborso / Storno';
+        } else if (cat === 'ONERI_BANCARI') {
+            kind = 'commissione';
+            label = 'Commissione PayPal';
+        } else {
+            kind = 'altro';
+            label = 'Uscita PayPal';
+        }
     }
-
-    const feeCents = Math.abs(Number(meta.feeCents || 0));
-    const totalCents = Number(entry.totalCents || 0);
     const occurredAt =
         parseIsoDate(entry.accountingDate) || parseIsoDate(meta.transactionDate);
     if (!occurredAt) return null;
@@ -736,6 +758,7 @@ function groupedMovementLabel(eventKind: GatewayEventKind, movementKind: Movemen
     if (eventKind === 'order' || movementKind === 'incasso') return 'Incasso Ordine';
     if (movementKind === 'payout') return 'Bonifico Payout → Banca';
     if (movementKind === 'rimborso') return 'Rimborso Cliente';
+    if (eventKind === 'expense') return 'Spesa / Abbonamento PayPal';
     if (eventKind === 'technical') return 'Movimento Tecnico / Regolazione';
     return 'Altro movimento';
 }
@@ -755,7 +778,13 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
     let eventKind: GatewayEventKind = 'order';
     if (movementKind === 'payout') eventKind = 'payout';
     else if (movementKind === 'rimborso') eventKind = 'refund';
-    else if (rows.every((r) => r.isTechnical || r.movementKind === 'commissione' || r.movementKind === 'altro'))
+    else if (movementKind === 'altro' && primary.grossCents < 0) eventKind = 'expense';
+    else if (
+        rows.every(
+            (r) => r.isTechnical || r.movementKind === 'commissione' || r.movementKind === 'altro'
+        ) &&
+        movementKind !== 'incasso'
+    )
         eventKind = 'technical';
     else if (movementKind === 'incasso') eventKind = 'order';
 
@@ -782,6 +811,8 @@ function mergeGatewayGroup(groupKey: string, rows: GatewaySyncRow[]): GatewaySyn
     let netCents: number;
     if (movementKind === 'payout' || movementKind === 'rimborso') {
         netCents = rows.reduce((sum, r) => sum + (r.netCents || 0), 0) || primary.netCents;
+    } else if (eventKind === 'expense' || (movementKind === 'altro' && primary.grossCents < 0)) {
+        netCents = primary.netCents || primary.grossCents;
     } else {
         netCents = grossCents - (grossCents >= 0 ? feeCents : -feeCents);
     }

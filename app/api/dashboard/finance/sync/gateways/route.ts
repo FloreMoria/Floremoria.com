@@ -4,7 +4,9 @@ import prisma from '@/lib/prisma';
 import { getPaypalSyncStatus } from '@/lib/financial/paypalSync';
 import { stripeAccountBadgeFromMovement } from '@/lib/financial/stripeSync';
 import { buildGatewaySyncRows, enrichGatewayRowsWithOrders, extractFloreOrderNumber, groupGatewaySyncRowsForDisplay } from '@/lib/financial/gatewaySyncRows';
+import { computeGatewayQuadratura } from '@/lib/financial/gatewayQuadratura';
 import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
+import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -177,11 +179,34 @@ export async function GET() {
 
         const groupedRows = groupGatewaySyncRowsForDisplay(rows);
 
+        let stripeWalletCents: number | null = null;
+        const stripeKey = process.env.STRIPE_SECRET_KEY?.trim();
+        if (stripeKey) {
+            try {
+                const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any });
+                const bal = await stripe.balance.retrieve();
+                const eurAvailable = bal.available.find((b) => b.currency === 'eur');
+                const eurPending = bal.pending.find((b) => b.currency === 'eur');
+                stripeWalletCents =
+                    (eurAvailable?.amount || 0) + (eurPending?.amount || 0);
+            } catch {
+                stripeWalletCents = null;
+            }
+        }
+
+        const quadratura = computeGatewayQuadratura({
+            rows,
+            fromIso: FROM.toISOString(),
+            stripeWalletCents,
+            paypalWalletCents: null,
+        });
+
         return NextResponse.json({
             ok: true,
             from: FROM.toISOString(),
             rows,
             groupedRows,
+            quadratura,
             count: rows.length,
             groupedCount: groupedRows.length,
             stripeLastSyncAt: stripeMeta?.value || null,

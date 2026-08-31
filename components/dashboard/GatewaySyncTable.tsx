@@ -13,9 +13,14 @@ import {
     type GatewaySyncRow,
     type MovementKind,
 } from '@/lib/financial/gatewaySyncRows';
+import {
+    formatQuadraturaEuro,
+    type GatewayQuadraturaResult,
+    type GatewayWalletQuadratura,
+} from '@/lib/financial/gatewayQuadratura';
 
 type GatewayFilter = 'all' | 'stripe' | 'paypal';
-type TypeFilter = 'all' | 'incasso' | 'commissione' | 'payout' | 'rimborso';
+type TypeFilter = 'all' | 'incasso' | 'commissione' | 'payout' | 'rimborso' | 'altro';
 
 type Props = {
     refreshToken?: number;
@@ -63,6 +68,80 @@ function movementEmoji(kind: MovementKind, label: string): string {
     return label;
 }
 
+function QuadraturaCard({ q, title }: { q: GatewayWalletQuadratura; title: string }) {
+    const ok = q.isQuadrato;
+    return (
+        <div
+            className={`rounded-xl border p-4 space-y-3 ${
+                ok ? 'border-emerald-200 bg-emerald-50/40' : 'border-amber-200 bg-amber-50/50'
+            }`}
+        >
+            <div className="flex items-center justify-between gap-2">
+                <h5 className="text-sm font-bold text-slate-900">{title}</h5>
+                <span
+                    className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${
+                        ok
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            : 'bg-amber-100 text-amber-900 border-amber-200'
+                    }`}
+                >
+                    {ok ? 'Quadrato' : 'Scarto'}
+                </span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                <span className="text-slate-500">Entrate (lordo incassi)</span>
+                <span className="text-right font-mono font-semibold text-emerald-800">
+                    +{formatQuadraturaEuro(q.entrateLordoCents)}
+                </span>
+                <span className="text-slate-500">Commissioni gateway</span>
+                <span className="text-right font-mono text-orange-800">
+                    −{formatQuadraturaEuro(q.commissioniCents)}
+                </span>
+                <span className="text-slate-500">Payout → banca</span>
+                <span className="text-right font-mono text-violet-800">
+                    −{formatQuadraturaEuro(q.payoutCents)}
+                </span>
+                <span className="text-slate-500">Rimborsi</span>
+                <span className="text-right font-mono text-rose-800">
+                    −{formatQuadraturaEuro(q.rimborsiCents)}
+                </span>
+                <span className="text-slate-500">Spese SaaS / carta / altro</span>
+                <span className="text-right font-mono text-slate-800">
+                    −{formatQuadraturaEuro(q.speseCents)}
+                </span>
+                <span className="text-slate-700 font-semibold border-t border-slate-200 pt-1">
+                    Totale uscite
+                </span>
+                <span className="text-right font-mono font-semibold text-slate-900 border-t border-slate-200 pt-1">
+                    −{formatQuadraturaEuro(q.totaleUsciteCents)}
+                </span>
+                <span className="text-slate-700 font-semibold">Saldo teorico (E − U)</span>
+                <span className="text-right font-mono font-bold text-slate-900">
+                    {formatQuadraturaEuro(q.saldoTeoricoCents)}
+                </span>
+                <span className="text-slate-500">Σ movimenti netti</span>
+                <span className="text-right font-mono text-slate-700">
+                    {formatQuadraturaEuro(q.saldoNettoMovimentiCents)}
+                </span>
+            </div>
+            {!ok ? (
+                <p className="text-[10px] text-amber-900 leading-relaxed">
+                    Scarto formula: {formatQuadraturaEuro(q.quadraturaScartoCents)}
+                    {q.walletScartoCents != null
+                        ? ` · vs saldo API: ${formatQuadraturaEuro(q.walletScartoCents)}`
+                        : ''}
+                    . Verifica sync, CSV PayPal o movimenti mancanti.
+                </p>
+            ) : (
+                <p className="text-[10px] text-emerald-800">
+                    Entrate e uscite (fee, payout, spese) tornano a zero nel periodo sincronizzato.
+                </p>
+            )}
+            <p className="text-[9px] text-slate-400">{q.rowCount} movimenti deduplicati</p>
+        </div>
+    );
+}
+
 function CopyIdButton({ value }: { value: string }) {
     const [copied, setCopied] = useState(false);
     return (
@@ -107,6 +186,7 @@ function TechIdsBadge({ ids }: { ids: string[] }) {
 
 export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
     const [rows, setRows] = useState<GatewaySyncRow[]>([]);
+    const [quadratura, setQuadratura] = useState<GatewayQuadraturaResult | null>(null);
     const [groupedRows, setGroupedRows] = useState<GatewaySyncGroupedRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -124,15 +204,18 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                 ok?: boolean;
                 rows?: GatewaySyncRow[];
                 groupedRows?: GatewaySyncGroupedRow[];
+                quadratura?: GatewayQuadraturaResult;
                 error?: string;
             };
             if (!data.ok) throw new Error(data.error || 'Caricamento fallito');
             setRows(data.rows || []);
             setGroupedRows(data.groupedRows || []);
+            setQuadratura(data.quadratura || null);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore');
             setRows([]);
             setGroupedRows([]);
+            setQuadratura(null);
         } finally {
             setLoading(false);
         }
@@ -233,8 +316,10 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                         [
                             ['all', 'Tutti'],
                             ['incasso', 'Incassi'],
+                            ['commissione', 'Fee'],
                             ['payout', 'Payout'],
                             ['rimborso', 'Rimborsi'],
+                            ['altro', 'Spese'],
                         ] as const
                     ).map(([k, label]) => (
                         <button
@@ -299,6 +384,16 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                     {error}
                 </p>
             )}
+
+            {quadratura ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <QuadraturaCard q={quadratura.stripe} title="Quadratura Stripe (solo commissioni + payout)" />
+                    <QuadraturaCard
+                        q={quadratura.paypal}
+                        title="Quadratura PayPal (fee, payout, SaaS, carta)"
+                    />
+                </div>
+            ) : null}
 
             <div className="dashboard-table-scroll overflow-x-auto rounded-xl border border-slate-100 max-h-[520px] overflow-y-auto [scrollbar-width:thin]">
                 {simplifiedView ? (

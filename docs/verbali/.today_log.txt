@@ -90,3 +90,4 @@
 [2026-08-31 21:45] fix: FloristScout — rimosso JSON+tools incompatibile Gemini; fallback Google Places; layout pannello drawer.
 [2026-08-31 21:45] fix: FloristScout — rimosso JSON+tools incompatibile Gemini; fallback Google Places; layout pannello drawer.
 [2026-08-31 21:55] fix: merchant-feed.csv — route dinamica /merchant-feed + rewrite; prebuild genera CSV statico.
+[2026-08-31 22:10] feat: quadratura Stripe/PayPal in tab gateway — entrate vs fee/payout/spese SaaS; fix classificazione uscite PayPal.

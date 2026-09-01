@@ -77,13 +77,8 @@ export async function submitFloristDeliveryProof(
         };
     }
 
-    if (!adminBypass && (gpsLatitude == null || gpsLongitude == null)) {
-        return {
-            ok: false,
-            error:
-                'Per completare la consegna serve la posizione GPS del cimitero. Autorizza la geolocalizzazione e riprova.',
-        };
-    }
+    const effectiveLat = gpsLatitude ?? order.latitude ?? null;
+    const effectiveLng = gpsLongitude ?? order.longitude ?? null;
 
     const photosBeforeUrls: string[] = [];
     for (let i = 0; i < beforeFiles.length; i += 1) {
@@ -108,8 +103,8 @@ export async function submitFloristDeliveryProof(
                 photoAfterUrl,
                 timestampBefore: now,
                 timestampAfter: now,
-                gpsLatitude: gpsLatitude ?? undefined,
-                gpsLongitude: gpsLongitude ?? undefined,
+                gpsLatitude: effectiveLat,
+                gpsLongitude: effectiveLng,
                 status: 'COMPLETED',
             },
             create: {
@@ -121,15 +116,15 @@ export async function submitFloristDeliveryProof(
                 photoAfterUrl,
                 timestampBefore: now,
                 timestampAfter: now,
-                gpsLatitude: gpsLatitude ?? null,
-                gpsLongitude: gpsLongitude ?? null,
+                gpsLatitude: effectiveLat,
+                gpsLongitude: effectiveLng,
                 status: 'COMPLETED',
             },
         });
 
         await injectDeliveryPhotosOnOrder(tx, order.id, photosBeforeUrls, photosAfterUrls, {
-            latitude: gpsLatitude ?? order.latitude,
-            longitude: gpsLongitude ?? order.longitude,
+            latitude: effectiveLat,
+            longitude: effectiveLng,
         });
 
         // injectDeliveryPhotosOnOrder imposta già COMPLETED; conferma esplicita per chiarezza.

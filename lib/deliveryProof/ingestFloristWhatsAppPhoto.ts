@@ -23,7 +23,7 @@ export type IngestFloristWhatsAppPhotoInput = {
 };
 
 export type IngestFloristWhatsAppPhotoResult =
-    | { ok: true; orderId: string; photoAfterUrl: string; shouldNotify: boolean }
+    | { ok: true; orderId: string; orderNumber: string | null; photoAfterUrl: string; shouldNotify: boolean }
     | { ok: false; skipped: string };
 
 function extractOrderNumberFromText(text: string): string | null {
@@ -255,6 +255,7 @@ export async function ingestFloristWhatsAppPhoto(
     return {
         ok: true,
         orderId: order.id,
+        orderNumber: order.orderNumber,
         photoAfterUrl,
         shouldNotify,
     };

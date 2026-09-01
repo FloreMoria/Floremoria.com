@@ -50,6 +50,9 @@ function countProofPhotos(proof: FloristDeliveryProofSnapshot, slot: 'before' | 
     return proof.photoAfterUrl ? 1 : 0;
 }
 
+/** Finestra standard validità link consegna fiorista (7 giorni). */
+export const FLORIST_DELIVERY_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 function hasSavedGps(
     order: Pick<Order, 'latitude' | 'longitude'>,
     proof: FloristDeliveryProofSnapshot
@@ -60,7 +63,8 @@ function hasSavedGps(
 }
 
 /**
- * Consegna definitiva solo se foto Prima+Dopo, GPS e ordine COMPLETED sono tutti presenti.
+ * Consegna definitiva se foto Prima+Dopo e stato COMPLETED sono presenti.
+ * Il GPS è salvato se disponibile, ma non blocca lo stato di completamento.
  */
 export function isFloristDeliveryFullyComplete(
     order: Pick<Order, 'status' | 'latitude' | 'longitude'>,
@@ -72,15 +76,19 @@ export function isFloristDeliveryFullyComplete(
     if (countProofPhotos(proof, 'before') < 1 || countProofPhotos(proof, 'after') < 1) {
         return false;
     }
-    return hasSavedGps(order, proof);
+    return true;
 }
 
 /**
  * Link mini-app sempre riapribile finché la consegna non è completata al 100%.
- * Nessuna scadenza temporale né invalidazione al primo accesso.
+ * TTL standard 7 giorni con fallback amichevole (se aperto oltre 7 giorni ma ordine
+ * ancora attivo, permette comunque il caricamento).
  */
 export function evaluateFloristDeliveryAccess(
-    order: Pick<Order, 'id' | 'orderNumber' | 'status' | 'deletedAt' | 'partnerPaymentStatus'> | null,
+    order: (Pick<Order, 'id' | 'orderNumber' | 'status' | 'deletedAt' | 'partnerPaymentStatus'> & {
+        createdAt?: Date | null;
+        updatedAt?: Date | null;
+    }) | null,
     publicRef?: string
 ): FloristAccessResult {
     if (publicRef && isFloristTestOrderRef(publicRef)) {
@@ -114,9 +122,6 @@ export function describeFloristDeliveryIncompleteReason(
     }
     if (countProofPhotos(proof, 'before') < 1 || countProofPhotos(proof, 'after') < 1) {
         return 'Servono almeno una foto Prima e una Dopo.';
-    }
-    if (!hasSavedGps(order, proof)) {
-        return 'Manca la posizione GPS del cimitero.';
     }
     if (order.status !== 'COMPLETED') {
         return 'Conferma di consegna non ancora registrata.';

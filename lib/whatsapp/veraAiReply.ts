@@ -21,6 +21,7 @@ import {
     buildCourtesyConfirmIntentFingerprint,
     tryClaimConversationIntent,
 } from '@/lib/whatsapp/veraWebhookDedup';
+import { buildFloristDeliveryPhotoAckText } from '@/lib/deliveryProof/sendFloristDeliveryPhotoAck';
 import {
     buildDeliveryAlreadyDoneReply,
     buildPhotoProofDisputeReply,
@@ -455,10 +456,6 @@ export async function generateVeraReply(
             return { text: '', source: 'silence', shouldEscalate: false };
         }
 
-        const name = getDisplayNameFromSession(session, callerContext) || 'partner';
-        const orderHint = callerContext.orderNumber
-            ? ` per l'ordine ${callerContext.orderNumber}`
-            : '';
         const textBits = (options?.aggregatedTextParts || [])
             .map((t) => t.trim())
             .filter(Boolean);
@@ -468,10 +465,11 @@ export async function generateVeraReply(
             // fall through to normal routing with aggregated message
         } else {
             const multi = mediaCount > 1;
+            const orderCode = callerContext.orderNumber?.trim() || 'in corso';
             return {
                 text: multi
-                    ? `Grazie ${name}, ho ricevuto le ${mediaCount} foto${orderHint}: le registro come prova di posa. Se manca ancora qualcosa, mandalo pure qui — senza fretta. 🌹`
-                    : `Grazie ${name}, ho ricevuto la foto${orderHint}: la registro come prova di posa. Se serve altro scatto, invialo pure qui in chat. 🌹`,
+                    ? `Grazie! Foto di consegna ricevute e associate all'ordine ${orderCode}.`
+                    : buildFloristDeliveryPhotoAckText(orderCode),
                 source: 'deterministic',
                 shouldEscalate: false,
             };

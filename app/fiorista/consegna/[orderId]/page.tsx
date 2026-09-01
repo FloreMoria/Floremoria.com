@@ -34,22 +34,22 @@ function BlockedPage({ title, message }: { title: string; message: string }) {
 function CompletedPage({ orderNumber }: { orderNumber: string | null }) {
     return (
         <div
-            className="mx-auto flex min-h-[100dvh] max-w-lg flex-col items-center justify-center px-6 text-center"
-            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+            className="mx-auto flex min-h-[100dvh] max-w-lg flex-col items-center justify-center px-6 text-center bg-[#FAF9F6]"
+            style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
         >
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
-                ✅
+            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600 shadow-sm">
+                ✓
             </div>
-            <h1 className="text-xl font-display font-semibold text-emerald-900">
-                Consegna già completata per questo ordine
+            <h1 className="text-2xl font-display font-bold text-slate-900">
+                Consegna registrata con successo!
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Grazie per il tuo lavoro! Foto e posizione GPS sono state registrate correttamente.
+            <p className="mt-3 text-sm leading-relaxed text-slate-600 max-w-xs">
+                Grazie per il tuo lavoro! Le foto e i dettagli della consegna sono stati registrati correttamente.
                 {orderNumber ? ` (${orderNumber})` : ''}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
-                Puoi chiudere questa pagina. Per assistenza contatta FloreMoria.
-            </p>
+            <div className="mt-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-5 py-3 text-xs font-semibold text-emerald-800">
+                Puoi chiudere la pagina. Per assistenza contatta FloreMoria.
+            </div>
         </div>
     );
 }

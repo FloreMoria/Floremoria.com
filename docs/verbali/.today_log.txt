@@ -61,10 +61,3 @@
 [2026-08-29 09:23] refactor: tabella gateway finance raggruppata per ordine, link FM, vista semplificata vs log grezzo
 [2026-08-29 10:15] fix(finance): deduplicazione Prima Nota — consolidateReconciledPayments su bankLineId/ordine, badge documenti SDI/manuali, script clean-duplicate-accounting-entries, PnL senza doppio conteggio fioristi; tsc+build OK.
 [2026-08-29 10:20] feat(finance): client YouDOX SOAP/REST per ricezione automatica fatture passive e sync esiti SDI — creato FinancialYoudoxClient in lib/financial/youdoxClient.ts con auth cache OAuth 3600s, wrapper fetchUnreadInvoices/downloadInvoiceXml/markInvoiceAsRead/syncStatusReports, route unificata /api/v1/finance/youdox/sync con matching automatico P.IVA fornitori/fioristi e pulsante "Sincronizza YouDOX SDI" in SdiInvoicesUploadBox.
-[2026-09-01 18:08] fix: conferma utente post-pagamento +60s (WA/email), skip email B2B su ordini B2C, log strutturati dispatcher notifiche
-[2026-09-01 18:15] fix(partner-app): audit fotocamera, fallback galleria/GPS e magic link resiliente per fioristi — interfaccia mini-app 2 passaggi con opzioni Scatta Foto (capture=environment) e Dalla Galleria separate, compressione automatica client JPEG ≤1600px, geolocalizzazione non bloccante con fallback coordinate cimitero, gestione tollerante TTL 7 giorni e feedback finale chiaro; tsc+build OK.
-
-[2026-09-01 18:21] feat: ack immediato WhatsApp fiorista su foto consegna + allineamento ingest delivery automation
-[2026-09-01 18:30] fix(youdox): sync finestra estesa + chunk paginazione + parser imponibile FatturaPA e reparse XML a zero
-[2026-09-01 18:58] fix: quadratura gateway — filtro Fineco STRIPE/PAYPAL, match payout banca, T-code PayPal, chiusura residuo Stripe.
-[2026-09-01 19:12] fix(youdox): debug sync API agosto, ordinamento data desc, parser imponibile FatturaPA e reparse automatico.

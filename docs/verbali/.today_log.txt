@@ -65,3 +65,4 @@
 [2026-09-01 18:15] fix(partner-app): audit fotocamera, fallback galleria/GPS e magic link resiliente per fioristi — interfaccia mini-app 2 passaggi con opzioni Scatta Foto (capture=environment) e Dalla Galleria separate, compressione automatica client JPEG ≤1600px, geolocalizzazione non bloccante con fallback coordinate cimitero, gestione tollerante TTL 7 giorni e feedback finale chiaro; tsc+build OK.
 
 [2026-09-01 18:21] feat: ack immediato WhatsApp fiorista su foto consegna + allineamento ingest delivery automation
+[2026-09-01 18:30] fix(youdox): sync finestra estesa + chunk paginazione + parser imponibile FatturaPA e reparse XML a zero

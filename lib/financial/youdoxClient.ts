@@ -51,8 +51,13 @@ export class FinancialYoudoxClient {
     }
 
     /**
-     * 1. fetchUnreadInvoices: Scarica le fatture elettroniche passive non ancora lette.
+     * 1. fetchPassiveInvoicesForSync: tutte le passive nel periodo (letto + non letto).
      */
+    async fetchPassiveInvoicesForSync(): Promise<YoudoxInvoice[]> {
+        return this.rawClient.listAllReceivedForSync();
+    }
+
+    /** @deprecated Preferire fetchPassiveInvoicesForSync per il tasto sync dashboard. */
     async fetchUnreadInvoices(): Promise<YoudoxInvoice[]> {
         return this.rawClient.listReceivedUnread();
     }

@@ -238,7 +238,7 @@ function buildInvoiceMetadata(
     };
 }
 
-function toLedgerEntry(
+export function toLedgerEntry(
     rowId: string,
     inv: ParsedFatturaPa,
     channel: InvoiceIngestChannel

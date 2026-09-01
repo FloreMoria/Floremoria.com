@@ -9,7 +9,7 @@ const SOAP_NS = 'http://schemas.xmlsoap.org/soap/envelope/';
 const TNS = 'http://tempuri.org/';
 const XSI = 'http://www.w3.org/2001/XMLSchema-instance';
 
-const DEFAULT_LOOKBACK_DAYS = Number(process.env.YOUDOX_SYNC_LOOKBACK_DAYS || 60);
+const DEFAULT_LOOKBACK_DAYS = Number(process.env.YOUDOX_SYNC_LOOKBACK_DAYS || 120);
 
 function escapeXml(value: string): string {
     return value
@@ -46,11 +46,14 @@ export { invoicesServiceEndpoint, resolveInvoicesServiceCandidates } from './end
 export function normalizeReceivedFilter(filter: YoudoxInvoicesFilter = {}): YoudoxInvoicesFilter {
     const now = new Date();
     const from = new Date(now.getTime() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+    const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const defaultDataFatturaFrom = from < yearStart ? from : yearStart;
+
     return {
         TimestampFrom: filter.TimestampFrom || from.toISOString(),
         TimestampTo: filter.TimestampTo || now.toISOString(),
-        DataFatturaFrom: filter.DataFatturaFrom,
-        DataFatturaTo: filter.DataFatturaTo,
+        DataFatturaFrom: filter.DataFatturaFrom || defaultDataFatturaFrom.toISOString(),
+        DataFatturaTo: filter.DataFatturaTo || now.toISOString(),
         OnlyUnread: filter.OnlyUnread ?? false,
         ShowAlsoDeleted: filter.ShowAlsoDeleted ?? false,
         PartitaIVA: filter.PartitaIVA,

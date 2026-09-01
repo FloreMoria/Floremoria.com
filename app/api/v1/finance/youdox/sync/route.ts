@@ -3,6 +3,7 @@ import { requireYoudoxApiAccess } from '@/lib/youdox/requireAccess';
 import { getFinancialYoudoxClient } from '@/lib/financial/youdoxClient';
 import { YoudoxAuthError } from '@/lib/youdox/auth';
 import { ingestSdiInvoiceUpload } from '@/lib/financial/ingestSdiInvoices';
+import { reparseZeroNetSdiInvoices } from '@/lib/financial/reparseZeroNetSdiInvoices';
 import prisma from '@/lib/prisma';
 
 export const maxDuration = 120;
@@ -36,7 +37,7 @@ async function handleSync(request: Request) {
 
     try {
         const client = getFinancialYoudoxClient();
-        const unreadInvoices = await client.fetchUnreadInvoices();
+        const receivedInvoices = await client.fetchPassiveInvoicesForSync();
 
         const results: Array<{
             invoiceKey: string;
@@ -53,7 +54,7 @@ async function handleSync(request: Request) {
         let updatedCount = 0;
         let failedCount = 0;
 
-        for (const inv of unreadInvoices) {
+        for (const inv of receivedInvoices) {
             const key = inv.InvoiceKey;
             if (!key) continue;
 
@@ -107,21 +108,30 @@ async function handleSync(request: Request) {
             /* status report best effort */
         }
 
+        // Re-parsing imponibili a zero su XML già archiviati (fix parser retroattivo).
+        let reparsed = { scanned: 0, updated: 0, errors: [] as string[] };
+        try {
+            reparsed = await reparseZeroNetSdiInvoices({ limit: 300 });
+        } catch (reparseErr) {
+            console.warn('[youdox/sync] Re-parse imponibili fallito (non bloccante):', reparseErr);
+        }
+
         // Registra l'esito della sincronizzazione nei log di sistema
         try {
             await prisma.floremoriaLog.create({
                 data: {
                     tag: 'WEBHOOK,FINANCE,YOUDOX',
                     topic: 'SINCRONIZZAZIONE_YOUDOX_SDI',
-                    shortSummary: `Sincronizzate ${unreadInvoices.length} fatture passive YouDOX SDI (Importate: ${importedCount}, Aggiornate: ${updatedCount})`,
+                    shortSummary: `Sincronizzate ${receivedInvoices.length} fatture passive YouDOX SDI (Importate: ${importedCount}, Aggiornate: ${updatedCount})`,
                     fullText: JSON.stringify({
-                        polled: unreadInvoices.length,
+                        polled: receivedInvoices.length,
                         imported: importedCount,
                         updated: updatedCount,
+                        reparsed,
                         statusReportSynced,
                         results,
                     }, null, 2),
-                    achievedResults: `Sync YouDOX completata con successo. Poll: ${unreadInvoices.length}, Importate: ${importedCount}, Aggiornate: ${updatedCount}`,
+                    achievedResults: `Sync YouDOX completata con successo. Poll: ${receivedInvoices.length}, Importate: ${importedCount}, Aggiornate: ${updatedCount}, Re-parse: ${reparsed.updated}`,
                     sessionDate: new Date(),
                 },
             });
@@ -130,7 +140,7 @@ async function handleSync(request: Request) {
         }
 
         const message = buildSyncMessage({
-            polled: unreadInvoices.length,
+            polled: receivedInvoices.length,
             imported: importedCount,
             updated: updatedCount,
             failed: failedCount,
@@ -139,10 +149,11 @@ async function handleSync(request: Request) {
         return NextResponse.json({
             ok: true,
             message,
-            polled: unreadInvoices.length,
+            polled: receivedInvoices.length,
             imported: importedCount,
             updated: updatedCount,
             failed: failedCount,
+            reparsed,
             statusReportSynced,
             results,
         });

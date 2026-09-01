@@ -19,6 +19,7 @@ import {
     soapListReceivedByFilter,
     soapSetFlagRead,
 } from './soap';
+import { fetchAllReceivedInvoicesForSync } from './listReceivedInvoicesPaged';
 import type {
     YoudoxConfig,
     YoudoxDownloadType,
@@ -172,6 +173,13 @@ export class YoudoxClient {
 
     async listReceivedUnread(): Promise<YoudoxInvoice[]> {
         return this.listReceivedByFilter({ OnlyUnread: true });
+    }
+
+    /** Sync contabilità: tutte le passive nel periodo (non solo non lette), con chunking date. */
+    async listAllReceivedForSync(): Promise<YoudoxInvoice[]> {
+        if (this.dryRun) return [];
+        const token = await this.getAccessToken();
+        return fetchAllReceivedInvoicesForSync(this.config, token, { onlyUnread: false });
     }
 
     async getDownloadLink(

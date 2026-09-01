@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Successfully created the webhook endpoint to receive updates."
 sync_source: docs/verbali/14-03-2026.md
-synced_at: 2026-09-01T08:27:47.413Z
+synced_at: 2026-09-01T11:31:00.865Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/14-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

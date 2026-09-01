@@ -4,7 +4,10 @@
  */
 
 import type { LedgerCategory } from '@/lib/financial/historicalLedgerTypes';
-import { isSaasPaypalDescription } from '@/lib/financial/paypalClassify';
+import {
+    classifyPaypalGatewayMovement,
+    isSaasPaypalDescription,
+} from '@/lib/financial/paypalClassify';
 import { normalizePaypalTransactionId, parsePaypalSourceKey } from '@/lib/financial/paypalSourceKeys';
 
 export type GatewayKind = 'stripe' | 'paypal';
@@ -171,23 +174,27 @@ function classifyStripeType(type: string, amountCents: number): {
     return { kind: 'altro', label: 'Movimento Tecnico' };
 }
 
-function classifyPaypal(description: string, grossCents: number): {
+function classifyPaypal(
+    description: string,
+    grossCents: number,
+    eventCode?: string | null
+): {
     kind: MovementKind;
     label: string;
+    skip?: boolean;
 } {
-    const d = description.toLowerCase();
-    if (/rimborso|refund/.test(d)) return { kind: 'rimborso', label: 'Rimborso' };
-    if (/tariffa|fee|commissione/.test(d) && !/pagamento|payment|checkout/.test(d))
-        return { kind: 'commissione', label: 'Commissione Gateway' };
-    if (/trasferimento|withdrawal|payout|bonifico|user initiated|prelievo/.test(d))
-        return { kind: 'payout', label: 'Payout Bancario' };
-    if (grossCents < 0) {
-        if (isSaasPaypalDescription(description, null)) {
-            return { kind: 'altro', label: 'Spesa SaaS / Carta PayPal' };
-        }
-        return { kind: 'altro', label: 'Uscita PayPal' };
+    const classified = classifyPaypalGatewayMovement({
+        description,
+        grossCents,
+        eventCode,
+    });
+    if (!classified.record || classified.movementKind === 'skip') {
+        return { kind: 'altro', label: classified.label, skip: true };
     }
-    return { kind: 'incasso', label: 'Incasso Ordine' };
+    return {
+        kind: classified.movementKind as MovementKind,
+        label: classified.label,
+    };
 }
 
 function rawStripeId(stripeId: string, meta: Record<string, unknown>): string {
@@ -350,6 +357,7 @@ export type PaypalTxInput = {
     transactionDate?: string;
     description?: string;
     payerEmail?: string | null;
+    eventCode?: string | null;
     source?: string;
 };
 
@@ -362,7 +370,8 @@ export function mapPaypalTxToRow(tx: PaypalTxInput): GatewaySyncRow | null {
         tx.netCents ?? grossCents - (grossCents >= 0 ? feeCents : -feeCents)
     );
     const description = str(tx.description) || `PayPal ${id}`;
-    const { kind, label } = classifyPaypal(description, grossCents);
+    const { kind, label, skip } = classifyPaypal(description, grossCents, tx.eventCode);
+    if (skip) return null;
     const orderNumber = extractFloreOrderNumber(description);
     const occurredAt = parseIsoDate(tx.transactionDate);
     if (!occurredAt) return null;
@@ -432,16 +441,26 @@ export function mapPaypalLedgerToRow(entry: PaypalLedgerInput): GatewaySyncRow |
 
     const feeCents = Math.abs(Number(meta.feeCents || 0));
     const totalCents = Number(entry.totalCents || 0);
+    const eventCode = str(meta.eventCode);
 
-    let kind: MovementKind = 'incasso';
-    let label = 'Incasso Ordine';
+    const gatewayClass = classifyPaypalGatewayMovement({
+        description: entry.description || '',
+        grossCents: totalCents,
+        feeCents,
+        eventCode,
+        counterpartyName: entry.counterpartyName,
+    });
+    if (!gatewayClass.record || gatewayClass.movementKind === 'skip') return null;
+
+    let kind: MovementKind = gatewayClass.movementKind as MovementKind;
+    let label = gatewayClass.label;
     if (parsed?.kind === 'REFUND' || sourceKey.startsWith('PAYPAL_REFUND')) {
         kind = 'rimborso';
         label = 'Rimborso';
     } else if (parsed?.kind === 'PAYOUT' || sourceKey.startsWith('PAYPAL_PAYOUT')) {
         kind = 'payout';
         label = 'Payout Bancario';
-    } else if (totalCents < 0) {
+    } else if (totalCents < 0 && kind === 'incasso') {
         const cat = (entry.category || '') as LedgerCategory;
         if (cat === 'SPESE_SAAS' || isSaasPaypalDescription(entry.description, entry.counterpartyName)) {
             kind = 'altro';

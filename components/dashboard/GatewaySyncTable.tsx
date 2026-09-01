@@ -101,6 +101,14 @@ function QuadraturaCard({ q, title }: { q: GatewayWalletQuadratura; title: strin
                 <span className="text-right font-mono text-violet-800">
                     −{formatQuadraturaEuro(q.payoutCents)}
                 </span>
+                {q.payoutFinecoCents !== q.payoutCents ? (
+                    <>
+                        <span className="text-slate-500">Payout abbinati Fineco</span>
+                        <span className="text-right font-mono text-violet-900 font-semibold">
+                            −{formatQuadraturaEuro(q.payoutFinecoCents)}
+                        </span>
+                    </>
+                ) : null}
                 <span className="text-slate-500">Rimborsi</span>
                 <span className="text-right font-mono text-rose-800">
                     −{formatQuadraturaEuro(q.rimborsiCents)}
@@ -123,10 +131,42 @@ function QuadraturaCard({ q, title }: { q: GatewayWalletQuadratura; title: strin
                 <span className="text-right font-mono text-slate-700">
                     {formatQuadraturaEuro(q.saldoNettoMovimentiCents)}
                 </span>
+                {q.residuoStripeCents != null ? (
+                    <>
+                        <span className="text-slate-700 font-semibold border-t border-slate-200 pt-1">
+                            Residuo Stripe (vs Fineco)
+                        </span>
+                        <span
+                            className={`text-right font-mono font-bold border-t border-slate-200 pt-1 ${
+                                Math.abs(q.residuoStripeCents) <= 100
+                                    ? 'text-emerald-800'
+                                    : 'text-amber-900'
+                            }`}
+                        >
+                            {formatQuadraturaEuro(q.residuoStripeCents)}
+                        </span>
+                    </>
+                ) : null}
             </div>
+            {q.bankMatch ? (
+                <p className="text-[10px] text-slate-600 leading-relaxed">
+                    Fineco gateway: {q.bankMatch.matchCount} payout abbinati
+                    {q.bankMatch.unmatchedPayoutCount > 0
+                        ? ` · ${q.bankMatch.unmatchedPayoutCount} payout senza banca`
+                        : ''}
+                    {q.bankMatch.unmatchedBankCount > 0
+                        ? ` · ${q.bankMatch.unmatchedBankCount} accrediti senza payout API`
+                        : ''}
+                    .
+                </p>
+            ) : null}
             {!ok ? (
                 <p className="text-[10px] text-amber-900 leading-relaxed">
                     Scarto formula: {formatQuadraturaEuro(q.quadraturaScartoCents)}
+                    {q.residuoStripeCents != null &&
+                    Math.abs(q.residuoStripeCents) > 100
+                        ? ` · residuo Stripe/Fineco: ${formatQuadraturaEuro(q.residuoStripeCents)}`
+                        : ''}
                     {q.walletScartoCents != null
                         ? ` · vs saldo API: ${formatQuadraturaEuro(q.walletScartoCents)}`
                         : ''}

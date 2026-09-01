@@ -5,6 +5,7 @@ import { getPaypalSyncStatus } from '@/lib/financial/paypalSync';
 import { stripeAccountBadgeFromMovement } from '@/lib/financial/stripeSync';
 import { buildGatewaySyncRows, enrichGatewayRowsWithOrders, extractFloreOrderNumber, groupGatewaySyncRowsForDisplay } from '@/lib/financial/gatewaySyncRows';
 import { computeGatewayQuadratura } from '@/lib/financial/gatewayQuadratura';
+import { isGatewayRelatedFinecoMovement } from '@/lib/financial/gatewayBankMatch';
 import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 import Stripe from 'stripe';
 
@@ -22,7 +23,7 @@ export async function GET() {
         // Bonifica doppioni PayPal + anomalie partita doppia prima della tabella gateway
         const paypalSanitize = await sanitizeLedgerDoubleEntryAnomalies();
 
-        const [stripeMeta, paypalStatus, stripeMovements, paypalLedger, kindOverridesState] =
+        const [stripeMeta, paypalStatus, stripeMovements, paypalLedger, kindOverridesState, bankLinesRaw] =
             await Promise.all([
             prisma.systemState.findUnique({ where: { key: 'finance.stripe.last_sync' } }),
             getPaypalSyncStatus(),
@@ -42,6 +43,17 @@ export async function GET() {
             }),
             prisma.systemState.findUnique({
                 where: { key: 'finance.gateway.movement_kind_overrides' },
+            }),
+            prisma.bankStatementLine.findMany({
+                where: { accountingDate: { gte: FROM } },
+                orderBy: { accountingDate: 'desc' },
+                take: 5000,
+                select: {
+                    id: true,
+                    accountingDate: true,
+                    description: true,
+                    amountCents: true,
+                },
             }),
         ]);
 
@@ -115,6 +127,7 @@ export async function GET() {
                 transactionDate: t.transactionDate,
                 description: t.description,
                 payerEmail: t.payerEmail,
+                eventCode: t.eventCode,
                 source: 'api',
             })),
             paypalLedgerEntries: paypalLedger.map((e) => ({
@@ -194,11 +207,21 @@ export async function GET() {
             }
         }
 
+        const bankLines = bankLinesRaw
+            .filter((l) => isGatewayRelatedFinecoMovement(l.description, l.amountCents))
+            .map((l) => ({
+                id: l.id,
+                accountingDate: l.accountingDate?.toISOString() || null,
+                description: l.description,
+                amountCents: l.amountCents,
+            }));
+
         const quadratura = computeGatewayQuadratura({
             rows,
             fromIso: FROM.toISOString(),
             stripeWalletCents,
             paypalWalletCents: null,
+            bankLines,
         });
 
         return NextResponse.json({
@@ -207,6 +230,7 @@ export async function GET() {
             rows,
             groupedRows,
             quadratura,
+            finecoGatewayLineCount: bankLines.length,
             count: rows.length,
             groupedCount: groupedRows.length,
             stripeLastSyncAt: stripeMeta?.value || null,

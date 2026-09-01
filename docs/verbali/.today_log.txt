@@ -66,3 +66,4 @@
 
 [2026-09-01 18:21] feat: ack immediato WhatsApp fiorista su foto consegna + allineamento ingest delivery automation
 [2026-09-01 18:30] fix(youdox): sync finestra estesa + chunk paginazione + parser imponibile FatturaPA e reparse XML a zero
+[2026-09-01 18:58] fix: quadratura gateway — filtro Fineco STRIPE/PAYPAL, match payout banca, T-code PayPal, chiusura residuo Stripe.

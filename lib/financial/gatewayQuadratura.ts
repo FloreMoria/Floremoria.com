@@ -1,7 +1,14 @@
 /**
- * Quadratura wallet Stripe / PayPal — entrate vs tutte le uscite (fee, payout, SaaS, rimborsi).
+ * Quadratura wallet Stripe / PayPal — entrate vs uscite (fee, payout, SaaS, rimborsi)
+ * con incrocio payout ↔ accrediti Fineco filtrati (solo gateway).
  */
 import type { GatewaySyncRow } from '@/lib/financial/gatewaySyncRows';
+import {
+    isGatewayRelatedFinecoMovement,
+    matchGatewayPayoutsToFineco,
+    type GatewayBankLine,
+    type GatewayBankMatchSummary,
+} from '@/lib/financial/gatewayBankMatch';
 
 const TOLERANCE_CENTS = 100; // €1 di tolleranza arrotondamenti
 
@@ -11,14 +18,21 @@ export type GatewayWalletQuadratura = {
     entrateLordoCents: number;
     commissioniCents: number;
     payoutCents: number;
+    /** Payout abbinati ad accrediti Fineco (se disponibili). */
+    payoutFinecoCents: number;
     rimborsiCents: number;
-    /** Spese SaaS, carta PayPal, altre uscite non payout. */
+    /** Spese SaaS, carta PayPal, altre uscite non payout (escluse provviste T0300). */
     speseCents: number;
     totaleUsciteCents: number;
     /** Σ netCents di tutti i movimenti deduplicati (variazione wallet nel periodo). */
     saldoNettoMovimentiCents: number;
     /** entrateLordo − totaleUscite — deve coincidere con saldoNettoMovimenti. */
     saldoTeoricoCents: number;
+    /**
+     * Chiusura Stripe: lordo − fee − rimborsi − payout Fineco.
+     * Obiettivo ≈ 0 (salvo transazioni in elaborazione 24–48h).
+     */
+    residuoStripeCents: number | null;
     /** Scarto formula interna (0 = conti tornano). */
     quadraturaScartoCents: number;
     /** Saldo wallet da API (disponibile + in sospeso), se noto. */
@@ -27,6 +41,7 @@ export type GatewayWalletQuadratura = {
     walletScartoCents: number | null;
     isQuadrato: boolean;
     rowCount: number;
+    bankMatch: GatewayBankMatchSummary | null;
 };
 
 export type GatewayQuadraturaResult = {
@@ -34,6 +49,8 @@ export type GatewayQuadraturaResult = {
     stripe: GatewayWalletQuadratura;
     paypal: GatewayWalletQuadratura;
     isQuadrato: boolean;
+    /** Righe Fineco considerate nel matching (solo STRIPE/PAYPAL). */
+    finecoGatewayLineCount: number;
 };
 
 function withinTolerance(cents: number): boolean {
@@ -43,7 +60,8 @@ function withinTolerance(cents: number): boolean {
 function computeGatewayWalletQuadratura(
     gateway: 'stripe' | 'paypal',
     rows: GatewaySyncRow[],
-    walletApiCents: number | null
+    walletApiCents: number | null,
+    bankLines: GatewayBankLine[]
 ): GatewayWalletQuadratura {
     const gRows = rows.filter((r) => r.gateway === gateway);
 
@@ -67,6 +85,15 @@ function computeGatewayWalletQuadratura(
                 }
                 break;
             case 'commissione':
+                // Fee Stripe già sommate sull'incasso padre; climate/regolazioni restano.
+                if (gateway === 'stripe' && r.isTechnical) {
+                    if (/climate|contributo stripe|network_cost/i.test(
+                        `${r.movementLabel || ''} ${r.description || ''}`
+                    )) {
+                        commissioniCents += Math.abs(r.grossCents || r.feeCents || 0);
+                    }
+                    break;
+                }
                 commissioniCents += Math.abs(r.grossCents || r.feeCents || 0);
                 break;
             case 'payout':
@@ -88,14 +115,41 @@ function computeGatewayWalletQuadratura(
         }
     }
 
+    const bankMatch =
+        bankLines.length > 0
+            ? matchGatewayPayoutsToFineco({
+                  gateway,
+                  payoutRows: gRows,
+                  bankLines,
+              })
+            : null;
+
+    const payoutFinecoCents =
+        bankMatch?.finecoMatchedPayoutCents ??
+        bankMatch?.finecoGatewayCreditCents ??
+        payoutCents;
+
     const totaleUsciteCents =
         commissioniCents + payoutCents + rimborsiCents + speseCents;
     const saldoTeoricoCents = entrateLordoCents - totaleUsciteCents;
     const quadraturaScartoCents = saldoNettoMovimentiCents - saldoTeoricoCents;
+
+    const residuoStripeCents =
+        gateway === 'stripe'
+            ? entrateLordoCents -
+              commissioniCents -
+              rimborsiCents -
+              payoutFinecoCents
+            : null;
+
     const walletScartoCents =
         walletApiCents != null ? walletApiCents - saldoNettoMovimentiCents : null;
 
     const formulaOk = withinTolerance(quadraturaScartoCents);
+    const stripeBankOk =
+        gateway !== 'stripe' ||
+        residuoStripeCents == null ||
+        withinTolerance(residuoStripeCents);
     const walletOk =
         walletScartoCents == null ||
         walletApiCents === 0 ||
@@ -106,16 +160,19 @@ function computeGatewayWalletQuadratura(
         entrateLordoCents,
         commissioniCents,
         payoutCents,
+        payoutFinecoCents,
         rimborsiCents,
         speseCents,
         totaleUsciteCents,
         saldoNettoMovimentiCents,
         saldoTeoricoCents,
+        residuoStripeCents,
         quadraturaScartoCents,
         walletApiCents,
         walletScartoCents,
-        isQuadrato: formulaOk && walletOk,
+        isQuadrato: formulaOk && stripeBankOk && walletOk,
         rowCount: gRows.length,
+        bankMatch,
     };
 }
 
@@ -124,16 +181,23 @@ export function computeGatewayQuadratura(input: {
     fromIso: string;
     stripeWalletCents?: number | null;
     paypalWalletCents?: number | null;
+    bankLines?: GatewayBankLine[];
 }): GatewayQuadraturaResult {
+    const gatewayBankLines = (input.bankLines || []).filter((l) =>
+        isGatewayRelatedFinecoMovement(l.description, l.amountCents)
+    );
+
     const stripe = computeGatewayWalletQuadratura(
         'stripe',
         input.rows,
-        input.stripeWalletCents ?? null
+        input.stripeWalletCents ?? null,
+        gatewayBankLines
     );
     const paypal = computeGatewayWalletQuadratura(
         'paypal',
         input.rows,
-        input.paypalWalletCents ?? null
+        input.paypalWalletCents ?? null,
+        gatewayBankLines
     );
 
     return {
@@ -141,6 +205,7 @@ export function computeGatewayQuadratura(input: {
         stripe,
         paypal,
         isQuadrato: stripe.isQuadrato && paypal.isQuadrato,
+        finecoGatewayLineCount: gatewayBankLines.length,
     };
 }
 

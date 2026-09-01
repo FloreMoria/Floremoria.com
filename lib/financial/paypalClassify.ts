@@ -17,6 +17,43 @@ const SKIP_EVENT_CODES = new Set([
     'T1201',
 ]);
 
+/** Ricariche/provviste da carta o conto — giroconto, non spesa operativa. */
+const FUNDING_EVENT_CODES = new Set([
+    'T0300', // bank deposit / card funding
+    'T0301',
+    'T0302',
+]);
+
+/** Trasferimenti verso conto bancario (payout). */
+const PAYOUT_EVENT_CODES = new Set([
+    'T0400', // general withdrawal
+    'T0401',
+    'T0403',
+]);
+
+/** Incassi e-commerce PayPal. */
+const ORDER_EVENT_CODES = new Set([
+    'T0006', // express checkout
+    'T0007', // website payment
+    'T0011', // mobile payment
+]);
+
+export type PaypalGatewayMovementKind =
+    | 'incasso'
+    | 'commissione'
+    | 'payout'
+    | 'rimborso'
+    | 'altro'
+    | 'skip';
+
+export type PaypalGatewayClassifyResult = {
+    record: boolean;
+    movementKind: PaypalGatewayMovementKind;
+    label: string;
+    isFunding: boolean;
+    reason: string;
+};
+
 /**
  * Merchant SaaS / tool / abbonamenti: uscite = SPESE_SAAS; crediti = RIMBORSI (mai 60100).
  */
@@ -68,6 +105,24 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
             category: 'ALTRI_COSTI',
             direction: 'USCITA',
             reason: `skip_event_${code}`,
+        };
+    }
+
+    if (code && FUNDING_EVENT_CODES.has(code)) {
+        return {
+            record: false,
+            category: 'ALTRI_COSTI',
+            direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
+            reason: `skip_funding_${code}`,
+        };
+    }
+
+    if (code && PAYOUT_EVENT_CODES.has(code)) {
+        return {
+            record: false,
+            category: 'PAYPAL_PAYOUT',
+            direction: 'USCITA',
+            reason: `skip_payout_${code}`,
         };
     }
 
@@ -158,4 +213,149 @@ export function isPaypalInternalNetNoise(description: string): boolean {
 
 export function isPaypalAuthDuplicateCandidate(description: string): boolean {
     return AUTH_DUP_RE.test(description || '');
+}
+
+/**
+ * Classificazione T-code per tabella gateway / quadratura (non Prima Nota).
+ * Separa incassi, SaaS, payout, funding e rumore interno.
+ */
+export function classifyPaypalGatewayMovement(
+    input: PaypalClassifyInput
+): PaypalGatewayClassifyResult {
+    const desc = (input.description || '').trim();
+    const text = blob(input);
+    const code = String(input.eventCode || '')
+        .trim()
+        .toUpperCase();
+    const gross = input.grossCents;
+
+    if (code && SKIP_EVENT_CODES.has(code)) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Movimento interno PayPal',
+            isFunding: false,
+            reason: `skip_event_${code}`,
+        };
+    }
+
+    if (code && FUNDING_EVENT_CODES.has(code)) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Provvista / ricarica (giroconto)',
+            isFunding: true,
+            reason: `funding_${code}`,
+        };
+    }
+
+    if (code && PAYOUT_EVENT_CODES.has(code)) {
+        return {
+            record: true,
+            movementKind: 'payout',
+            label: 'Payout Bancario',
+            isFunding: false,
+            reason: `payout_${code}`,
+        };
+    }
+
+    if (INTERNAL_NET_RE.test(desc) || INTERNAL_NET_RE.test(text)) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Netto interno PayPal',
+            isFunding: false,
+            reason: 'skip_internal_net',
+        };
+    }
+
+    if (/refund|rimborso|chargeback|storno/i.test(desc) || code === 'T1107' || code === 'T1106') {
+        return {
+            record: true,
+            movementKind: 'rimborso',
+            label: 'Rimborso',
+            isFunding: false,
+            reason: 'refund',
+        };
+    }
+
+    if (/tariffa|fee|commissione/i.test(desc) && !/pagamento|payment|checkout/i.test(desc)) {
+        return {
+            record: true,
+            movementKind: 'commissione',
+            label: 'Commissione Gateway',
+            isFunding: false,
+            reason: 'fee_description',
+        };
+    }
+
+    const isSaas = SAAS_MERCHANT_RE.test(text);
+
+    if (gross < 0 && isSaas) {
+        return {
+            record: true,
+            movementKind: 'altro',
+            label: 'Spesa SaaS / Carta PayPal',
+            isFunding: false,
+            reason: 'saas_merchant',
+        };
+    }
+
+    if (gross > 0 && isSaas) {
+        return {
+            record: true,
+            movementKind: 'rimborso',
+            label: 'Rimborso SaaS',
+            isFunding: false,
+            reason: 'saas_credit',
+        };
+    }
+
+    if (code && ORDER_EVENT_CODES.has(code)) {
+        return {
+            record: true,
+            movementKind: 'incasso',
+            label: 'Incasso Ordine',
+            isFunding: false,
+            reason: `order_${code}`,
+        };
+    }
+
+    if (code === 'T0000' && gross < 0) {
+        return {
+            record: true,
+            movementKind: 'altro',
+            label: 'Pagamento fornitore',
+            isFunding: false,
+            reason: 't0000_debit',
+        };
+    }
+
+    if (gross >= 0) {
+        return {
+            record: true,
+            movementKind: 'incasso',
+            label: 'Incasso Ordine',
+            isFunding: false,
+            reason: code ? `payment_in_${code}` : 'payment_in',
+        };
+    }
+
+    if (/trasferimento|withdrawal|payout|bonifico|user initiated|prelievo/i.test(desc)) {
+        return {
+            record: true,
+            movementKind: 'payout',
+            label: 'Payout Bancario',
+            isFunding: false,
+            reason: 'payout_description',
+        };
+    }
+
+    return {
+        record: true,
+        movementKind: 'altro',
+        label: 'Uscita PayPal',
+        isFunding: false,
+        reason: 'other_out',
+    };
 }

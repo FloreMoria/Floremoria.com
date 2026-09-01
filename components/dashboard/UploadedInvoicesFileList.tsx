@@ -116,8 +116,15 @@ export default function UploadedInvoicesFileList({
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredUploads = useMemo(() => {
-        if (!searchQuery.trim()) return uploads;
-        return uploads.filter((u) =>
+        const sorted = [...uploads].sort((a, b) => {
+            const dateA = a.documentDate || a.uploadedAt.slice(0, 10);
+            const dateB = b.documentDate || b.uploadedAt.slice(0, 10);
+            const byDoc = dateB.localeCompare(dateA);
+            if (byDoc !== 0) return byDoc;
+            return b.uploadedAt.localeCompare(a.uploadedAt);
+        });
+        if (!searchQuery.trim()) return sorted;
+        return sorted.filter((u) =>
             matchesPassivoSearch(
                 u.searchHaystack ||
                     [u.fileName, u.documentDate, u.uploadedAt].filter(Boolean).join(' '),

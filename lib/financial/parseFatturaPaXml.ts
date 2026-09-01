@@ -187,32 +187,51 @@ export type FatturaPaAmountBreakdown = {
 export function extractFatturaPaAmounts(xmlRaw: string): FatturaPaAmountBreakdown {
     const xml = xmlRaw.replace(/^\uFEFF/, '');
 
+    const datiBeni =
+        extractXmlTag(xml, 'DatiBeniServizi') ||
+        extractXmlTag(xml, 'DatiBeniServiziDTE') ||
+        '';
+
     const datiDoc = extractXmlTag(xml, 'DatiGeneraliDocumento') || '';
     const totaleDoc = parseItalianOrIsoAmount(
         textOf(extractXmlTag(datiDoc, 'ImportoTotaleDocumento')) ||
             textOf(extractXmlTag(xml, 'ImportoTotaleDocumento'))
     );
 
-    const riepiloghi = extractAllXmlTags(xml, 'DatiRiepilogo');
+    const riepiloghi = datiBeni
+        ? extractAllXmlTags(datiBeni, 'DatiRiepilogo')
+        : extractAllXmlTags(xml, 'DatiRiepilogo');
     let netEuros = 0;
     let vatEuros = 0;
     let vatRate = 0;
 
     for (const block of riepiloghi) {
         const imponibile =
-            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'ImponibileImporto'))) || 0;
-        const imposta = parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Imposta'))) || 0;
-        const aliq = parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))) || 0;
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'ImponibileImporto'))) ||
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Imponibile'))) ||
+            0;
+        const imposta =
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Imposta'))) ||
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'ImpostaIVA'))) ||
+            0;
+        const aliq =
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))) ||
+            parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Aliquota'))) ||
+            0;
         netEuros += imponibile;
         vatEuros += imposta;
         if (aliq > vatRate) vatRate = aliq;
     }
 
     if (netEuros <= 0) {
-        netEuros = sumImponibileImportoTags(xml);
+        netEuros = sumImponibileImportoTags(datiBeni || xml);
     }
     if (vatEuros <= 0 && netEuros > 0) {
-        vatEuros = sumImpostaTags(xml);
+        vatEuros = sumImpostaTags(datiBeni || xml);
+        if (vatEuros <= 0) vatEuros = sumImpostaTags(xml);
+    }
+    if (netEuros <= 0) {
+        netEuros = sumDettaglioLineePrezzoTotale(datiBeni || xml);
     }
     if (netEuros <= 0) {
         netEuros = sumDettaglioLineePrezzoTotale(xml);
@@ -222,8 +241,13 @@ export function extractFatturaPaAmounts(xmlRaw: string): FatturaPaAmountBreakdow
     }
     if (netEuros <= 0 && totaleDoc != null && vatEuros > 0) {
         netEuros = Math.max(0, totaleDoc - vatEuros);
-    } else if (netEuros <= 0 && totaleDoc != null) {
-        netEuros = totaleDoc;
+    } else if (netEuros <= 0 && totaleDoc != null && vatEuros <= 0) {
+        if (vatRate > 0) {
+            netEuros = totaleDoc / (1 + vatRate / 100);
+            vatEuros = Math.max(0, totaleDoc - netEuros);
+        } else {
+            netEuros = totaleDoc;
+        }
     }
 
     return {

@@ -109,6 +109,10 @@ export async function getYoudoxAccessToken(config: YoudoxConfig): Promise<string
         token: ok.access_token.trim(),
         expiresAtMs: now + Math.max(60, Number(ok.expires_in) || 3600) * 1000,
     };
+    console.info('[youdox-sync] GetToken OK', {
+        tokenUrl: tokenUrl.replace(/password=[^&]+/i, 'password=***'),
+        expiresInSec: ok.expires_in,
+    });
     return cached.token;
 }
 

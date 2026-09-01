@@ -45,11 +45,16 @@ export async function reparseZeroNetSdiInvoices(input?: {
         where: {
             docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
             netCents: 0,
-            OR: [
-                { contentType: { contains: 'xml', mode: 'insensitive' } },
-                { fileName: { endsWith: '.xml', mode: 'insensitive' } },
+            AND: [
+                {
+                    OR: [
+                        { contentType: { contains: 'xml', mode: 'insensitive' } },
+                        { fileName: { endsWith: '.xml', mode: 'insensitive' } },
+                        { fileName: { endsWith: '.p7m', mode: 'insensitive' } },
+                    ],
+                },
+                { OR: [{ blobUrl: { not: null } }, { blobPath: { not: null } }] },
             ],
-            AND: [{ OR: [{ blobUrl: { not: null } }, { blobPath: { not: null } }] }],
         },
         orderBy: { expenseDate: 'desc' },
         take: input?.limit ?? 200,

@@ -25,6 +25,9 @@ function mergeInvoices(target: Map<string, YoudoxInvoice>, batch: YoudoxInvoice[
 /**
  * Scarica fatture passive in finestre temporali ricorsive.
  * Perché: l'API non espone paginazione esplicita e tronca a ~50 documenti per richiesta.
+ *
+ * Nota: DataFatturaFrom/To restano sul range completo (non sul chunk di ricezione),
+ * altrimenti fatture con data documento agosto ricevute a settembre vengono escluse.
  */
 async function fetchReceivedChunk(
     config: YoudoxConfig,
@@ -38,11 +41,34 @@ async function fetchReceivedChunk(
         return [];
     }
 
-    const batch = await soapListReceivedByFilter(config, token, {
+    const requestFilter: YoudoxInvoicesFilter = {
         ...filter,
         TimestampFrom: from.toISOString(),
         TimestampTo: to.toISOString(),
         Status: undefined,
+    };
+
+    console.info('[youdox-sync] fetchReceivedChunk', {
+        depth,
+        timestampFrom: requestFilter.TimestampFrom?.slice(0, 19),
+        timestampTo: requestFilter.TimestampTo?.slice(0, 19),
+        dataFatturaFrom: requestFilter.DataFatturaFrom?.slice(0, 10),
+        dataFatturaTo: requestFilter.DataFatturaTo?.slice(0, 10),
+        onlyUnread: requestFilter.OnlyUnread,
+    });
+
+    const batch = await soapListReceivedByFilter(config, token, requestFilter);
+
+    console.info('[youdox-sync] fetchReceivedChunk result', {
+        depth,
+        count: batch.length,
+        sample: batch.slice(0, 3).map((inv) => ({
+            key: inv.InvoiceKey,
+            numero: inv.FatturaNumero,
+            data: inv.FatturaData,
+            statusTs: inv.StatusTimestamp,
+            cliente: inv.ClienteDenominazione || inv.DichiaranteDenominazione,
+        })),
     });
 
     if (batch.length < PAGE_SIZE_HINT || depth >= 8) {
@@ -88,41 +114,47 @@ export async function fetchAllReceivedInvoicesForSync(
     options: SyncReceivedWindowOptions = {}
 ): Promise<YoudoxInvoice[]> {
     const now = options.now ?? new Date();
+    const endOfToday = new Date(now);
+    endOfToday.setUTCHours(23, 59, 59, 999);
+
     const lookbackDays = options.lookbackDays ?? DEFAULT_LOOKBACK_DAYS;
     const timestampFrom = addDays(now, -lookbackDays);
     const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-    const dataFatturaFrom = timestampFrom < yearStart ? timestampFrom : yearStart;
+    const dataFatturaFrom = addDays(now, -Math.max(lookbackDays, 365 * 2));
+    const dataFatturaTo = endOfToday.toISOString();
 
     const baseFilter: YoudoxInvoicesFilter = {
         TimestampFrom: timestampFrom.toISOString(),
-        TimestampTo: now.toISOString(),
+        TimestampTo: endOfToday.toISOString(),
         DataFatturaFrom: dataFatturaFrom.toISOString(),
-        DataFatturaTo: now.toISOString(),
+        DataFatturaTo: dataFatturaTo,
         OnlyUnread: options.onlyUnread ?? false,
         ShowAlsoDeleted: false,
     };
 
-    console.info('[youdox] Sync window', {
-        timestampFrom: baseFilter.TimestampFrom?.slice(0, 10),
-        timestampTo: baseFilter.TimestampTo?.slice(0, 10),
+    console.info('[youdox-sync] Sync window', {
+        timestampFrom: baseFilter.TimestampFrom?.slice(0, 19),
+        timestampTo: baseFilter.TimestampTo?.slice(0, 19),
         dataFatturaFrom: baseFilter.DataFatturaFrom?.slice(0, 10),
         dataFatturaTo: baseFilter.DataFatturaTo?.slice(0, 10),
         onlyUnread: baseFilter.OnlyUnread,
+        lookbackDays,
     });
 
     const byKey = new Map<string, YoudoxInvoice>();
     let cursor = new Date(timestampFrom);
 
-    while (cursor < now) {
+    while (cursor < endOfToday) {
         const chunkEnd = addDays(cursor, DEFAULT_CHUNK_DAYS);
-        const effectiveEnd = chunkEnd > now ? now : chunkEnd;
+        const effectiveEnd = chunkEnd > endOfToday ? endOfToday : chunkEnd;
 
         const batch = await fetchReceivedChunk(config, token, {
             ...baseFilter,
             TimestampFrom: cursor.toISOString(),
             TimestampTo: effectiveEnd.toISOString(),
+            // Data documento: range fisso su tutto il periodo (non legato al chunk di ricezione).
             DataFatturaFrom: dataFatturaFrom.toISOString(),
-            DataFatturaTo: effectiveEnd.toISOString(),
+            DataFatturaTo: dataFatturaTo,
         });
 
         mergeInvoices(byKey, batch);
@@ -130,11 +162,20 @@ export async function fetchAllReceivedInvoicesForSync(
     }
 
     const invoices = [...byKey.values()].sort((a, b) => {
-        const ta = a.StatusTimestamp || a.FatturaData || '';
-        const tb = b.StatusTimestamp || b.FatturaData || '';
+        const ta = a.FatturaData || a.StatusTimestamp || '';
+        const tb = b.FatturaData || b.StatusTimestamp || '';
         return tb.localeCompare(ta);
     });
 
-    console.info('[youdox] Sync window risultato', { count: invoices.length });
+    const byMonth = new Map<string, number>();
+    for (const inv of invoices) {
+        const m = (inv.FatturaData || inv.StatusTimestamp || 'unknown').slice(0, 7);
+        byMonth.set(m, (byMonth.get(m) || 0) + 1);
+    }
+
+    console.info('[youdox-sync] Sync window risultato', {
+        count: invoices.length,
+        byMonth: Object.fromEntries([...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0]))),
+    });
     return invoices;
 }

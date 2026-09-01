@@ -13,10 +13,11 @@ function buildSyncMessage(params: {
     imported: number;
     updated: number;
     failed: number;
+    alreadyPresent?: number;
 }): string {
-    const { polled, imported, updated, failed } = params;
+    const { polled, imported, updated, failed, alreadyPresent = 0 } = params;
     if (polled === 0) {
-        return 'Nessuna nuova fattura passiva da YouDOX SDI.';
+        return 'Nessuna fattura passiva restituita da YouDOX SDI nel periodo configurato (verifica log [youdox-sync] e credenziali).';
     }
     if (imported > 0) {
         const tail = updated > 0 ? `, ${updated} aggiornate` : '';
@@ -24,6 +25,9 @@ function buildSyncMessage(params: {
     }
     if (updated > 0) {
         return `${updated} fatture passive SDI aggiornate con successo.`;
+    }
+    if (alreadyPresent > 0 && failed === 0) {
+        return `${polled} fatture lette da YouDOX: tutte già presenti in Contabilità (${alreadyPresent} invariate).`;
     }
     if (failed > 0) {
         return `Sincronizzazione completata: ${polled} documenti letti, ${failed} non importati (vedi log).`;
@@ -37,7 +41,17 @@ async function handleSync(request: Request) {
 
     try {
         const client = getFinancialYoudoxClient();
+        console.info('[youdox-sync] Avvio sync passivo dashboard');
         const receivedInvoices = await client.fetchPassiveInvoicesForSync();
+        console.info('[youdox-sync] Fatture passive da elaborare', {
+            count: receivedInvoices.length,
+            latest: receivedInvoices.slice(0, 5).map((i) => ({
+                key: i.InvoiceKey,
+                numero: i.FatturaNumero,
+                data: i.FatturaData,
+                fornitore: i.DichiaranteDenominazione || i.ClienteDenominazione,
+            })),
+        });
 
         const results: Array<{
             invoiceKey: string;
@@ -53,6 +67,7 @@ async function handleSync(request: Request) {
         let importedCount = 0;
         let updatedCount = 0;
         let failedCount = 0;
+        let alreadyPresentCount = 0;
 
         for (const inv of receivedInvoices) {
             const key = inv.InvoiceKey;
@@ -74,6 +89,9 @@ async function handleSync(request: Request) {
 
                 importedCount += summary.imported;
                 updatedCount += summary.updated;
+                if (summary.imported === 0 && summary.updated === 0) {
+                    alreadyPresentCount += 1;
+                }
 
                 results.push({
                     invoiceKey: key,
@@ -144,6 +162,7 @@ async function handleSync(request: Request) {
             imported: importedCount,
             updated: updatedCount,
             failed: failedCount,
+            alreadyPresent: alreadyPresentCount,
         });
 
         return NextResponse.json({

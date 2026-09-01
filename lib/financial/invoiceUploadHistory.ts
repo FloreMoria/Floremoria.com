@@ -97,8 +97,14 @@ export async function listInvoiceUploads(
 ): Promise<InvoiceUploadRecord[]> {
     const all = await readHistory();
     const filtered = channel ? all.filter((r) => r.channel === channel) : all;
-    const sorted = filtered.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
-    return enrichUploadRecordsWithDocumentMeta(sorted);
+    const enriched = await enrichUploadRecordsWithDocumentMeta(filtered);
+    return enriched.sort((a, b) => {
+        const dateA = a.documentDate || a.uploadedAt.slice(0, 10);
+        const dateB = b.documentDate || b.uploadedAt.slice(0, 10);
+        const byDoc = dateB.localeCompare(dateA);
+        if (byDoc !== 0) return byDoc;
+        return b.uploadedAt.localeCompare(a.uploadedAt);
+    });
 }
 
 function formatItDateForSearch(iso: string): string {

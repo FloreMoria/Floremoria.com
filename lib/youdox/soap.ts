@@ -238,6 +238,22 @@ export async function soapListReceivedByFilter(
     token: string,
     filter: YoudoxInvoicesFilter
 ): Promise<YoudoxInvoice[]> {
+    const normalized = normalizeReceivedFilter(filter);
+    const candidates = resolveInvoicesServiceCandidates(config);
+    const endpoint = candidates[0] || invoicesServiceEndpoint(config);
+
+    console.info('[youdox-sync] Invoices_ListReceivedByFilter request', {
+        endpoint,
+        timestampFrom: normalized.TimestampFrom?.slice(0, 19),
+        timestampTo: normalized.TimestampTo?.slice(0, 19),
+        dataFatturaFrom: normalized.DataFatturaFrom?.slice(0, 10),
+        dataFatturaTo: normalized.DataFatturaTo?.slice(0, 10),
+        onlyUnread: normalized.OnlyUnread,
+        showAlsoDeleted: normalized.ShowAlsoDeleted,
+        status: normalized.Status ?? null,
+        partitaIva: normalized.PartitaIVA ?? null,
+    });
+
     const body = `<tns:Invoices_ListReceivedByFilter>
       <tns:token>${escapeXml(token)}</tns:token>
       ${buildInvoicesFilterXml(filter)}
@@ -249,7 +265,14 @@ export async function soapListReceivedByFilter(
         `${TNS}IInvoicesService/Invoices_ListReceivedByFilter`,
         body
     );
-    return parseInvoicesFromResponse(xml);
+    const invoices = parseInvoicesFromResponse(xml);
+
+    console.info('[youdox-sync] Invoices_ListReceivedByFilter response', {
+        httpParsedCount: invoices.length,
+        sampleKeys: invoices.slice(0, 5).map((i) => i.InvoiceKey),
+    });
+
+    return invoices;
 }
 
 export async function soapGetDownloadLink(

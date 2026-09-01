@@ -6,7 +6,9 @@
 import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
+import { orderHasB2bPartnership } from '@/lib/orders/hasB2bPartnership';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { resolveOrderBuyerEmail } from '@/lib/orders/resolveOrderBuyerContact';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 
@@ -135,6 +137,7 @@ export async function sendPartnerOrderNotifications(
 
     const agency = order.agency;
     const referral = order.referralPartner;
+    const hasB2b = orderHasB2bPartnership(order);
     const floristName = order.partner?.shopName ?? null;
     const floristEmail =
         order.partner?.email?.trim() ||
@@ -146,7 +149,7 @@ export async function sendPartnerOrderNotifications(
         referral?.aggregatorNotificationEmail?.trim() ||
         referral?.email?.trim() ||
         order.partnerNotifyEmail?.trim() ||
-        DEFAULT_AGGREGATOR_EMAIL;
+        null;
     const agencyTo = agency?.agencyNotificationEmail?.trim() || null;
 
     const tasks: Array<Promise<PartnerOrderNotificationResult>> = [];
@@ -199,8 +202,8 @@ export async function sendPartnerOrderNotifications(
     if (!options?.skipCustomer) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
-                const buyer = order.buyerEmail?.trim();
-                if (!buyer || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer)) {
+                const buyer = resolveOrderBuyerEmail(order);
+                if (!buyer) {
                     return { channel: 'email_customer', ok: true, skipped: 'no_buyer_email' };
                 }
                 try {
@@ -276,9 +279,16 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    // 5) Email trasparenza aggregatore (AF)
+    // 5) Email trasparenza aggregatore (AF) — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (!hasB2b) {
+                console.info('[partner-order-notifications] skip email B2B trasparenza: ordine B2C', {
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                });
+                return { channel: 'email_aggregator', ok: true, skipped: 'no_b2b_partnership' };
+            }
             if (!aggregatorTo) {
                 return { channel: 'email_aggregator', ok: true, skipped: 'no_aggregator_email' };
             }
@@ -311,9 +321,12 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    // 6) Email agenzia funebre
+    // 6) Email agenzia funebre — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (!hasB2b) {
+                return { channel: 'email_agency', ok: true, skipped: 'no_b2b_partnership' };
+            }
             if (!agencyTo) {
                 return { channel: 'email_agency', ok: true, skipped: 'no_agency_email' };
             }

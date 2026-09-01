@@ -3,6 +3,7 @@
  * Hop della catena: dorme fino a 50s, se non è ancora l'ora si richiama; altrimenti invia Punto B.
  */
 import { NextRequest, NextResponse, after } from 'next/server';
+import { sendScheduledCustomerOrderEmail } from '@/lib/orders/sendCustomerOrderConfirmationEmail';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import {
     computeWakeSleepMs,
@@ -62,11 +63,17 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await runPuntoBCustomerOrderConfirm(orderId, { bypassSchedule: true });
+    const emailResult = await sendScheduledCustomerOrderEmail(orderId).catch((err) => {
+        console.error('[customer-notify] email cliente post-wake fallita:', err);
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    });
+
     return NextResponse.json({
         ok: result.ok,
         skipped: result.skipped,
         error: result.error,
         deferred: result.deferred,
         scheduledFor: result.scheduledFor,
+        customerEmail: emailResult,
     });
 }

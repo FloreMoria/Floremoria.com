@@ -3,6 +3,8 @@ import {
     computeCustomerConfirmSendAt,
     isCustomerConfirmSendDue,
 } from '@/lib/datetime/customerConfirmSchedule';
+import { resolveCustomerConfirmSubjectName } from '@/lib/orders/customerConfirmCategoryCopy';
+import { parseOrderCategoryFromNumber } from '@/lib/orders/parseOrderCategory';
 import { generateWarmOrderThought } from '@/lib/vera/generateWarmOrderThought';
 import { resolveSafeBuyerFirstName } from '@/lib/vera/customerOrderConfirmCopy';
 import {
@@ -65,10 +67,9 @@ async function markPuntoBScheduled(
 }
 
 /**
- * PUNTO B — Conferma ordine utente.
- * Solo stato IN_PROGRESS (In Lavorazione).
- * Produzione: +30 min se creato 08:00–18:59; altrimenti 08:30 mattina successiva.
- * Sandbox (`isTest`): invio immediato. Claim atomico + dedup chat anti-duplicato.
+ * PUNTO B — Conferma ordine utente (floremoria_conferma_ordine_utente).
+ * Stato IN_PROGRESS, oppure post-pagamento schedulato (customerNotifyPaidAt).
+ * Post-pagamento: +60s da paidAt; legacy dashboard: +30 min / 08:30.
  */
 export async function runPuntoBCustomerOrderConfirm(
     orderId: string,
@@ -89,9 +90,12 @@ export async function runPuntoBCustomerOrderConfirm(
         return { ok: true, skipped: pendingBlock };
     }
 
-    if (order.status !== 'IN_PROGRESS' && !options.force) {
+    const flags = parseWorkflowFlags(order.veraWorkflowFlags);
+    const postPaymentScheduled = Boolean(flags.customerNotifyPaidAt);
+
+    if (order.status !== 'IN_PROGRESS' && !options.force && !postPaymentScheduled) {
         console.info(
-            `[vera-workflow] Punto B in attesa: stato=${order.status} (serve IN_PROGRESS) ordine ${order.orderNumber || order.id}`
+            `[vera-workflow] Punto B in attesa: stato=${order.status} (serve IN_PROGRESS o post-pagamento) ordine ${order.orderNumber || order.id}`
         );
         return { ok: true, skipped: 'not_in_progress' };
     }
@@ -114,8 +118,6 @@ export async function runPuntoBCustomerOrderConfirm(
         return { ok: false, skipped: 'test_order_meta_blocked' };
     }
 
-    const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-
     if (!options.force) {
         if (order.confirmationMessageSent || isWorkflowStepDone(flags, 'puntoB_customer')) {
             return { ok: true, skipped: 'already_sent' };
@@ -136,18 +138,27 @@ export async function runPuntoBCustomerOrderConfirm(
 
     // Scheduling Produzione (sandbox bypassa).
     if (!options.force && !options.bypassSchedule) {
-        const sendAt = computeCustomerConfirmSendAt({
-            createdAt: order.createdAt,
-            isTest: order.isTest,
-        });
+        const paidAtRaw = flags.customerNotifyPaidAt;
+        const scheduledRaw = flags.puntoB_customer_scheduled;
+        const paidAt = paidAtRaw ? new Date(paidAtRaw) : null;
+        const sendAt = scheduledRaw
+            ? new Date(scheduledRaw)
+            : computeCustomerConfirmSendAt({
+                  paidAt,
+                  createdAt: order.createdAt,
+                  isTest: order.isTest,
+              });
         if (!isCustomerConfirmSendDue(sendAt)) {
             await markPuntoBScheduled(order.id, flags, sendAt).catch((err) => {
                 console.error('[vera-workflow] Impossibile marcare Punto B schedulato:', err);
             });
-            console.info(
-                `[vera-workflow] Punto B schedulato per ${sendAt.toISOString()} ordine ${order.orderNumber || order.id}`
-            );
-            // Hobby: cron solo 1×/giorno → catena wake per rispettare i +30 minuti.
+            console.info('[customer-notify] Punto B schedulato', {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                sendAt: sendAt.toISOString(),
+                paidAt: paidAt?.toISOString(),
+                postPayment: Boolean(paidAt),
+            });
             enqueuePuntoBWake({ orderId: order.id, sendAt });
             return {
                 ok: true,
@@ -181,6 +192,9 @@ export async function runPuntoBCustomerOrderConfirm(
 
     const buyerName = resolveSafeBuyerFirstName(order.user?.name || order.buyerFullName);
 
+    const orderCategory = parseOrderCategoryFromNumber(order.orderNumber);
+    const subjectName = resolveCustomerConfirmSubjectName(orderCategory, order.deceasedName);
+
     // {{3}}: messaggio staff esplicito (UI) oppure warm thought auto; mai follow-up free-text separato.
     let slot3Message: string;
     if (options.staffMessage !== undefined) {
@@ -188,13 +202,15 @@ export async function runPuntoBCustomerOrderConfirm(
     } else {
         slot3Message = await generateWarmOrderThought({
             buyerName,
-            deceasedName: order.deceasedName,
+            deceasedName: subjectName,
+            orderCategory,
+            orderNumber: order.orderNumber,
         });
     }
 
     const bodyParams = buildCustomerOrderConfirmParams({
         buyerFirstName: buyerName,
-        deceasedName: order.deceasedName,
+        deceasedName: subjectName,
         staffMessage: slot3Message,
     });
 

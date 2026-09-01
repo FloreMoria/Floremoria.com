@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
-import { buildOrderCustomerHtml, buildOrderStaffHtml } from '@/lib/orderEmails';
+import { buildOrderStaffHtml } from '@/lib/orderEmails';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
             console.error('[stripe-webhook] Allineamento User/Defunto fallito (non bloccante):', entityErr);
         });
 
-        await runVeraPostPaymentWorkflow(orderId).catch((wfErr) => {
+        await runVeraPostPaymentWorkflow(orderId, balanceDate).catch((wfErr) => {
             console.error('[stripe-webhook] Workflow VERA post-pagamento fallito (non bloccante):', wfErr);
         });
 
@@ -251,21 +251,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'staff_mail_failed' }, { status: 500 });
     }
 
-    const buyer = order.buyerEmail?.trim();
-    if (buyer && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer)) {
-        const customerBcc = process.env.FLOREM_CUSTOMER_RECEIPT_BCC?.trim();
-        const custHtml = buildOrderCustomerHtml({ order });
-        const custResult = await sendFloremTransactionalMail({
-            to: buyer,
-            ...(customerBcc ? { bcc: customerBcc } : {}),
-            replyTo: process.env.FLOREM_MAIL_REPLY_TO?.trim() || 'assistenza@floremoria.com',
-            subject: `Conferma ordine ${order.orderNumber || ''} — FloreMoria`.trim(),
-            html: custHtml,
-        });
-        if (!custResult.ok) {
-            console.error('[stripe-webhook] Invio email cliente fallito:', custResult.error);
-        }
-    }
+    // Email cliente: schedulata a +60s dal pagamento (non immediata).
+    // Vedi schedulePostPaymentCustomerNotifications in runVeraPostPaymentWorkflow.
 
     // Email partner/agenzia/fiorista (cliente + ops già inviati sopra).
     void sendPartnerOrderNotifications(orderId, {

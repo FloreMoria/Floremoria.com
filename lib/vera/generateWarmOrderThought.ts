@@ -1,9 +1,10 @@
-import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
+import { customerConfirmCategoryPrompt } from '@/lib/orders/customerConfirmCategoryCopy';
+import { parseOrderCategoryFromNumber } from '@/lib/orders/parseOrderCategory';
 import {
     buildDefaultCustomerConfirmWarmSlot,
     finalizeCustomerConfirmWarmSlot,
 } from '@/lib/vera/customerOrderConfirmCopy';
-import { clampWarmThoughtForTemplate } from '@/lib/vera/clampWarmThought';
+import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 
 function getFallbackThought(): string {
     return buildDefaultCustomerConfirmWarmSlot();
@@ -16,9 +17,15 @@ function getFallbackThought(): string {
 export async function generateWarmOrderThought(input: {
     buyerName?: string | null;
     deceasedName?: string | null;
+    orderCategory?: string | null;
+    orderNumber?: string | null;
 }): Promise<string> {
     const name = extractFirstNameFromProfile(input.buyerName) || 'Utente';
     const deceased = (input.deceasedName || 'chi ama').trim();
+    const category =
+        input.orderCategory ||
+        (input.orderNumber ? parseOrderCategoryFromNumber(input.orderNumber) : null);
+    const { contextLine, example } = customerConfirmCategoryPrompt(category);
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) return getFallbackThought();
@@ -26,10 +33,10 @@ export async function generateWarmOrderThought(input: {
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const prompt = `Scrivi UNA frase breve in italiano (massimo 48 caratteri), completa di senso, con punto finale.
 Senza saluti, senza nome del destinatario, senza invito a rispondere (lo aggiungiamo noi dopo).
-Contesto: conferma ordine floreale commemorativo per il ricordo di ${deceased}.
+Contesto: conferma ordine ${contextLine} per il ricordo di ${deceased}.
 Tono: Quiet Luxury, sobrio, rassicurazione sulla cura e sulla foto prova a consegna avvenuta.
 Niente prezzi, link o codici ordine. Non iniziare con "Caro/Gentile".
-Esempio esatto: "Le invieremo la foto della posa appena completata."
+Esempio esatto: "${example}"
 Vietato lasciare frasi incomplete (es. "foto della.").`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;

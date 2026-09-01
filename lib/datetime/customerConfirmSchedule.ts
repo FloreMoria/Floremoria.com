@@ -1,10 +1,13 @@
 import { ITALY_TIMEZONE } from '@/lib/datetime/italyTimezone';
 import { getItalyMinutesSinceMidnight } from '@/lib/datetime/floristNotifyWindow';
 
-/** Fascia diurna: creazione 08:00–18:59 → invio a +30 minuti. */
+/** Fascia diurna legacy (solo senza paidAt): creazione 08:00–18:59 → invio differito. */
 export const CUSTOMER_CONFIRM_DAY_START_MINUTES = 8 * 60; // 08:00
 export const CUSTOMER_CONFIRM_DAY_END_MINUTES = 19 * 60; // 19:00 (escluso)
-export const CUSTOMER_CONFIRM_DELAY_MS = 30 * 60 * 1000;
+/** Post-pagamento: conferma utente a +60 secondi esatti. */
+export const CUSTOMER_CONFIRM_DELAY_MS = 60 * 1000;
+/** Legacy dashboard / senza paidAt: mantiene il ritardo storico di 30 minuti. */
+export const CUSTOMER_CONFIRM_LEGACY_DELAY_MS = 30 * 60 * 1000;
 export const CUSTOMER_CONFIRM_MORNING_HOUR = 8;
 export const CUSTOMER_CONFIRM_MORNING_MINUTE = 30;
 
@@ -111,13 +114,14 @@ export function isCustomerConfirmDayWindow(at: Date = new Date()): boolean {
 }
 
 /**
- * Calcola l'istante di invio Punto B.
+ * Calcola l'istante di invio Punto B / email cliente.
  * - Sandbox (`isTest`): immediato.
- * - Produzione 08:00–18:59: createdAt + 30 minuti.
- * - Produzione 19:00–07:59: 08:30 della mattina successiva (o odierna se prima delle 08:30).
+ * - Con `paidAt` (post-pagamento Stripe/ricorrenza): paidAt + 60 secondi.
+ * - Legacy senza paidAt: createdAt + 30 min (giorno) o 08:30 (notte).
  */
 export function computeCustomerConfirmSendAt(input: {
     createdAt: Date;
+    paidAt?: Date | null;
     isTest?: boolean | null;
     now?: Date;
 }): Date {
@@ -126,8 +130,12 @@ export function computeCustomerConfirmSendAt(input: {
         return now;
     }
 
+    if (input.paidAt) {
+        return new Date(input.paidAt.getTime() + CUSTOMER_CONFIRM_DELAY_MS);
+    }
+
     if (isCustomerConfirmDayWindow(input.createdAt)) {
-        return new Date(input.createdAt.getTime() + CUSTOMER_CONFIRM_DELAY_MS);
+        return new Date(input.createdAt.getTime() + CUSTOMER_CONFIRM_LEGACY_DELAY_MS);
     }
 
     return nextItalyMorning0830(input.createdAt);

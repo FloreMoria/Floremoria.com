@@ -11,7 +11,14 @@ export type VeraWorkflowStep =
     | 'exception_cemetery'
     | 'exception_modification';
 
-export type VeraWorkflowFlags = Partial<Record<VeraWorkflowStep, string>>;
+export type VeraWorkflowFlags = Partial<Record<VeraWorkflowStep, string>> & {
+    /** Istante pagamento confermato (Stripe / rinnovo). */
+    customerNotifyPaidAt?: string;
+    /** Istante schedulato email ricevuta cliente. */
+    customerEmailScheduledAt?: string;
+    /** Email ricevuta cliente già inviata. */
+    customer_email_sent?: string;
+};
 
 export function parseWorkflowFlags(raw: unknown): VeraWorkflowFlags {
     if (!raw || typeof raw !== 'object') return {};

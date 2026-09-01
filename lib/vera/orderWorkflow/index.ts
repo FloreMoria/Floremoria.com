@@ -6,6 +6,7 @@
  */
 import prisma from '@/lib/prisma';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
+import { schedulePostPaymentCustomerNotifications } from '@/lib/orders/schedulePostPaymentCustomerNotify';
 import { runPuntoAFloristNewOrder } from '@/lib/vera/orderWorkflow/puntoAFloristNewOrder';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { runPuntoEFDeliveryComplete } from '@/lib/vera/orderWorkflow/puntoEFDeliveryComplete';
@@ -28,8 +29,8 @@ export {
 export * from '@/lib/vera/orderWorkflow/exceptionScenarios';
 export * from '@/lib/vera/orderWorkflow/types';
 
-export async function runVeraPostPaymentWorkflow(orderId: string): Promise<void> {
-    await runVeraPostPaymentWorkflowWithResults(orderId);
+export async function runVeraPostPaymentWorkflow(orderId: string, paidAt?: Date): Promise<void> {
+    await runVeraPostPaymentWorkflowWithResults(orderId, paidAt);
 }
 
 export type VeraPostPaymentResult = {
@@ -50,10 +51,11 @@ export type VeraPostPaymentResult = {
 };
 
 /**
- * Post-creazione / post-pagamento: Punto A/B solo se stato IN_PROGRESS.
+ * Post-creazione / post-pagamento: schedula conferma cliente (+60s) e Punto A se fiorista assegnato.
  */
 export async function runVeraPostPaymentWorkflowWithResults(
-    orderId: string
+    orderId: string,
+    paidAt: Date = new Date()
 ): Promise<VeraPostPaymentResult> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
@@ -75,20 +77,22 @@ export async function runVeraPostPaymentWorkflowWithResults(
         };
     }
 
-    if (order.status !== 'IN_PROGRESS') {
+    const scheduleResult: Awaited<
+        ReturnType<typeof schedulePostPaymentCustomerNotifications>
+    > = await schedulePostPaymentCustomerNotifications(orderId, paidAt).catch((err) => {
+        console.error('[vera-workflow] Schedulazione conferma cliente fallita:', err);
         return {
-            customer: { ok: true, skipped: 'not_in_progress' },
-            florist: { ok: true, skipped: 'not_in_progress' },
+            scheduled: false,
+            skipped: err instanceof Error ? err.message : String(err),
         };
-    }
-
-    const customerResult = await runPuntoBCustomerOrderConfirm(orderId).catch((err) => {
-        console.error('[vera-workflow] Punto B fallito:', err);
-        return {
-            ok: false as const,
-            error: err instanceof Error ? err.message : String(err),
-        } satisfies VeraPostPaymentResult['customer'];
     });
+
+    const customerResult = {
+        ok: scheduleResult.scheduled || scheduleResult.skipped === 'already_scheduled',
+        skipped: scheduleResult.skipped,
+        deferred: scheduleResult.scheduled,
+        scheduledFor: scheduleResult.sendAt,
+    };
 
     let florist: VeraPostPaymentResult['florist'];
     if (!order.partnerId) {
@@ -113,10 +117,9 @@ export async function runVeraPostPaymentWorkflowWithResults(
     return {
         customer: {
             ok: customerResult.ok,
-            skipped: 'skipped' in customerResult ? customerResult.skipped : undefined,
-            error: 'error' in customerResult ? customerResult.error : undefined,
-            deferred: 'deferred' in customerResult ? customerResult.deferred : undefined,
-            scheduledFor: 'scheduledFor' in customerResult ? customerResult.scheduledFor : undefined,
+            skipped: customerResult.skipped,
+            deferred: customerResult.deferred,
+            scheduledFor: customerResult.scheduledFor,
         },
         florist,
     };

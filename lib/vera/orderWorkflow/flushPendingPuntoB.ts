@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { isCustomerConfirmSendDue } from '@/lib/datetime/customerConfirmSchedule';
+import { sendScheduledCustomerOrderEmail } from '@/lib/orders/sendCustomerOrderConfirmationEmail';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { isWorkflowStepDone, parseWorkflowFlags } from '@/lib/vera/orderWorkflow/types';
 import { isWhatsAppAutoNotifyDisabled } from '@/lib/whatsapp/outboundGuards';
@@ -35,8 +36,7 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
         where: {
             deletedAt: null,
             isTest: false,
-            status: { in: ['IN_PROGRESS'] },
-            customerPhone: { not: null },
+            status: { in: ['IN_PROGRESS', 'ACCEPTED'] },
         },
         select: {
             id: true,
@@ -52,12 +52,14 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
     for (const order of candidates) {
         result.scanned += 1;
         const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-        if (isWorkflowStepDone(flags, 'puntoB_customer')) {
+        const puntoBDone = isWorkflowStepDone(flags, 'puntoB_customer');
+        if (puntoBDone && flags.customer_email_sent) {
             result.skipped += 1;
             continue;
         }
 
-        const scheduledRaw = flags.puntoB_customer_scheduled;
+        const scheduledRaw =
+            flags.puntoB_customer_scheduled || flags.customerEmailScheduledAt;
         if (!scheduledRaw) {
             result.skipped += 1;
             continue;
@@ -70,9 +72,10 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
         }
 
         try {
-            const notify = await runPuntoBCustomerOrderConfirm(order.id, {
-                bypassSchedule: true,
-            });
+            if (!puntoBDone) {
+                const notify = await runPuntoBCustomerOrderConfirm(order.id, {
+                    bypassSchedule: true,
+                });
             if (notify.deferred) {
                 result.deferred += 1;
             } else if (notify.ok && !notify.skipped) {
@@ -82,6 +85,8 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
                 (notify.skipped === 'already_sent' || notify.skipped === 'duplicate_order_template')
             ) {
                 result.skipped += 1;
+            } else if (notify.skipped === 'invalid_phone' || notify.skipped === 'not_in_progress') {
+                result.skipped += 1;
             } else if (notify.skipped) {
                 result.skipped += 1;
             } else {
@@ -89,6 +94,12 @@ export async function flushPendingPuntoBCustomerConfirm(): Promise<FlushPendingP
                     `${order.orderNumber || order.id}: ${notify.error || notify.skipped || 'failed'}`
                 );
             }
+            }
+
+            await sendScheduledCustomerOrderEmail(order.id).catch((emailErr) => {
+                const message = emailErr instanceof Error ? emailErr.message : String(emailErr);
+                result.errors.push(`${order.orderNumber || order.id} email: ${message}`);
+            });
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             result.errors.push(`${order.orderNumber || order.id}: ${message}`);

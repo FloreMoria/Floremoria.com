@@ -5,6 +5,7 @@ import {
     buildTaxQuarterlyReport,
     type TaxQuarter,
 } from '@/lib/financial/taxQuarterly';
+import { buildTaxQuarterlyXlsxBuffer } from '@/lib/financial/taxQuarterlyXlsx';
 import { buildPaypalMonthlyFeesCsv } from '@/lib/financial/paypalMonthlyFees';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +51,21 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        if (format === 'csv' || format === 'excel' || format === 'xlsx') {
+        if (format === 'xlsx' || format === 'excel') {
+            const buffer = await buildTaxQuarterlyXlsxBuffer(report);
+            const filename = `FloreMoria_Prospetto_Fiscale_Q${quarter}_${year}.xlsx`;
+            return new NextResponse(new Uint8Array(buffer), {
+                status: 200,
+                headers: {
+                    'Content-Type':
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+
+        if (format === 'csv') {
             const csv = buildTaxQuarterlyCsv(report);
             const filename = `FloreMoria_Prospetto_Fiscale_Q${quarter}_${year}.csv`;
             return new NextResponse(csv, {

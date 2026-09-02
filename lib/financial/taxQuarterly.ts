@@ -10,12 +10,24 @@ import {
     scorporaIvaFloreale,
     scorporaVenditaFloreale,
     VAT_PCT_FLORAL,
+    VAT_PCT_ORDINARY,
 } from '@/lib/financial/vat';
 import { resolveOrderFloristCompensationCents } from '@/lib/financial/taxRegister';
 import {
     buildPaypalMonthlyFeeRows,
     type PaypalMonthlyFeeRow,
 } from '@/lib/financial/paypalMonthlyFees';
+import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
+import {
+    normalizePaypalTransactionId,
+    parsePaypalSourceKey,
+} from '@/lib/financial/paypalSourceKeys';
+
+/** Tax ID Stripe Payments Europe Ltd (IE). */
+const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
+/** Tax ID PayPal Europe (LU) — allineare alla fattura gateway se diversa. */
+const PAYPAL_VENDOR_TAX_ID = 'LU26375245';
+const PAYPAL_VENDOR_NAME = 'PayPal (Europe) S.à r.l. et Cie, S.C.A.';
 
 export type TaxQuarter = 1 | 2 | 3 | 4;
 
@@ -43,8 +55,15 @@ export function resolveQuarterBounds(year: number, quarter: TaxQuarter): Quarter
 export type CorrispettivoRow = {
     orderId: string;
     orderNumber: string;
+    /** Data ordine (legacy CSV). */
     date: string;
+    /** Data effettiva incasso gateway / pagamento. */
+    paymentDate: string;
     buyerName: string;
+    buyerTaxId: string;
+    buyerCountry: string;
+    gateway: string;
+    paymentMethod: string;
     grossCents: number;
     imponibileCents: number;
     ivaDebitoCents: number;
@@ -52,6 +71,46 @@ export type CorrispettivoRow = {
     gatewayFeeCents: number;
     netCents: number;
     transactionId: string;
+};
+
+export type ReverseChargeRow = {
+    competenceMonth: string;
+    vendorName: string;
+    vendorTaxId: string;
+    gatewayInvoiceNumber: string;
+    issuedAt: string;
+    taxableFeeCents: number;
+    vatReverseChargeCents: number;
+    autofatturaTd17Ref: string;
+    source: 'stripe' | 'paypal';
+};
+
+export type FloristPassivoRow = {
+    orderId: string;
+    orderNumber: string;
+    partnerName: string;
+    partnerTaxId: string | null;
+    partnerIban: string | null;
+    compensoConcordatoCents: number;
+    bonificoDate: string | null;
+    bonificoTrn: string | null;
+    sdiInvoiceNumber: string | null;
+    sdiDate: string | null;
+    imponibilePassivoCents: number;
+    ivaPassivaCents: number;
+    totaleFatturaCents: number;
+};
+
+export type IvaPeriodSummary = {
+    corrispettiviLordoCents: number;
+    imponibileVendite10Cents: number;
+    ivaDebitoVendite10Cents: number;
+    reverseChargeImponibileCents: number;
+    reverseChargeIvaCents: number;
+    floristImponibileCents: number;
+    floristIvaCreditoCents: number;
+    /** Positivo = debito, negativo = credito. */
+    saldoIvaStimatoCents: number;
 };
 
 export type StripeInvoiceRow = {
@@ -98,10 +157,100 @@ export type TaxQuarterlyReport = {
         ivaCreditoFlorist10Cents: number;
     };
     corrispettivi: CorrispettivoRow[];
+    reverseCharge: ReverseChargeRow[];
+    floristPassivo: FloristPassivoRow[];
+    ivaSummary: IvaPeriodSummary;
     stripeInvoices: StripeInvoiceRow[];
     paypalMonthlyFees: PaypalMonthlyFeeRow[];
+    /** @deprecated Usare floristPassivo — mantenuto per compat JSON. */
     floristLiquidazioni: FloristLiquidazioneRow[];
 };
+
+function isPaypalPaymentLabel(label: string | null | undefined): boolean {
+    return /paypal/i.test(label || '');
+}
+
+function resolveGatewayName(params: {
+    paymentMethodLabel: string | null;
+    hasPaypalLedger: boolean;
+    hasStripeMovement: boolean;
+}): string {
+    if (isPaypalPaymentLabel(params.paymentMethodLabel) || params.hasPaypalLedger) {
+        return 'PayPal';
+    }
+    if (params.hasStripeMovement || /stripe|card|apple|google/i.test(params.paymentMethodLabel || '')) {
+        return 'Stripe';
+    }
+    return params.paymentMethodLabel?.trim() || 'Stripe';
+}
+
+function readExpenseMeta(raw: unknown): Record<string, unknown> {
+    return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+}
+
+function expenseInvoiceNumber(meta: Record<string, unknown>, fallback?: string | null): string {
+    if (typeof meta.invoiceNumber === 'string' && meta.invoiceNumber.trim()) {
+        return meta.invoiceNumber.trim();
+    }
+    if (typeof meta.documentNumber === 'string' && meta.documentNumber.trim()) {
+        return meta.documentNumber.trim();
+    }
+    return fallback?.trim() || '';
+}
+
+function floristVatBreakdown(compensoCents: number, floristVatRate: number | null | undefined) {
+    const ratePct =
+        floristVatRate != null && floristVatRate > 0 && floristVatRate <= 1
+            ? Math.round(floristVatRate * 100)
+            : VAT_PCT_FLORAL;
+    if (ratePct === VAT_PCT_FLORAL) {
+        const v = scorporaIvaFloreale(compensoCents);
+        return {
+            imponibileCents: v.imponibileCents,
+            ivaCents: v.ivaCents,
+            totaleCents: compensoCents,
+        };
+    }
+    const imponibileCents = Math.round(compensoCents / (1 + ratePct / 100));
+    const ivaCents = compensoCents - imponibileCents;
+    return { imponibileCents, ivaCents, totaleCents: compensoCents };
+}
+
+async function loadAutofatturaRefByForeignInvoice(
+    bounds: QuarterlyBounds
+): Promise<Map<string, string>> {
+    const rows = await prisma.manualFinanceExpense.findMany({
+        where: {
+            expenseDate: { gte: bounds.start, lte: bounds.end },
+            OR: [
+                { notes: { startsWith: 'AUTOFATTURA_TD17' } },
+                { notes: { startsWith: 'AUTOFATTURA_TD18' } },
+            ],
+        },
+        select: { notes: true, metadataJson: true },
+    });
+    const map = new Map<string, string>();
+    for (const row of rows) {
+        const meta = readExpenseMeta(row.metadataJson);
+        const foreign =
+            typeof meta.foreignInvoiceNumber === 'string' ? meta.foreignInvoiceNumber.trim() : '';
+        const doc =
+            typeof meta.documentNumber === 'string'
+                ? meta.documentNumber.trim()
+                : String(row.notes || '')
+                      .replace(/^AUTOFATTURA_TD1[78]\s+/i, '')
+                      .trim();
+        if (foreign && doc) {
+            map.set(foreign.toUpperCase(), doc);
+            map.set(foreign, doc);
+        }
+        if (typeof meta.periodKey === 'string' && doc) {
+            map.set(meta.periodKey, doc);
+            map.set(`PP-FEE-${meta.periodKey}`, doc);
+        }
+    }
+    return map;
+}
 
 export async function buildTaxQuarterlyReport(
     year: number,
@@ -122,11 +271,14 @@ export async function buildTaxQuarterlyReport(
             ],
         },
         include: {
+            user: { select: { vatNumber: true } },
             partner: {
                 select: {
                     shopName: true,
                     ownerName: true,
                     vatNumber: true,
+                    taxCode: true,
+                    iban: true,
                     paymentStatus: true,
                     internalNotes: true,
                 },
@@ -141,6 +293,180 @@ export async function buildTaxQuarterlyReport(
         },
         orderBy: { createdAt: 'asc' },
     });
+
+    const orderIds = orders.map((o) => o.id);
+    const orderNumbers = orders
+        .map((o) => o.orderNumber)
+        .filter((n): n is string => Boolean(n));
+
+    const [stripeMoves, paypalLedger, bankLines, autofatturaRefs] = await Promise.all([
+            orderIds.length
+                ? prisma.stripeFinanceMovement.findMany({
+                      where: { orderId: { in: orderIds } },
+                      orderBy: { createdAtStripe: 'desc' },
+                  })
+                : Promise.resolve([]),
+            orderIds.length
+                ? prisma.financialLedgerEntry.findMany({
+                      where: {
+                          reversedAt: null,
+                          OR: [
+                              { orderId: { in: orderIds } },
+                              ...(orderNumbers.length
+                                  ? orderNumbers.map((num) => ({
+                                        description: { contains: num, mode: 'insensitive' as const },
+                                    }))
+                                  : []),
+                          ],
+                          sourceKey: { startsWith: 'PAYPAL_' },
+                      },
+                      select: {
+                          orderId: true,
+                          sourceKey: true,
+                          accountingDate: true,
+                          totalCents: true,
+                          description: true,
+                          metadataJson: true,
+                      },
+                  })
+                : Promise.resolve([]),
+            orderIds.length
+                ? prisma.bankStatementLine.findMany({
+                      where: {
+                          matchedOrderId: { in: orderIds },
+                          amountCents: { lt: 0 },
+                      },
+                      orderBy: { accountingDate: 'desc' },
+                  })
+                : Promise.resolve([]),
+            loadAutofatturaRefByForeignInvoice(bounds),
+        ]);
+
+    const bankLineIds = bankLines.map((l) => l.id);
+    const floristExpenses =
+        orderIds.length > 0
+            ? await prisma.manualFinanceExpense.findMany({
+                  where: {
+                      OR: [
+                          ...orderIds.map((id) => ({
+                              metadataJson: { path: ['orderId'], equals: id },
+                          })),
+                          ...(bankLineIds.length
+                              ? [{ matchedStatementLineId: { in: bankLineIds } }]
+                              : []),
+                      ],
+                  },
+              })
+            : [];
+
+    const stripeByOrderId = new Map<string, (typeof stripeMoves)[number]>();
+    for (const m of stripeMoves) {
+        if (!m.orderId) continue;
+        const prev = stripeByOrderId.get(m.orderId);
+        if (!prev || Math.abs(m.amountCents) >= Math.abs(prev.amountCents)) {
+            stripeByOrderId.set(m.orderId, m);
+        }
+    }
+
+    type PaypalAgg = {
+        paymentDate: Date;
+        transactionId: string;
+        feeCents: number;
+        grossCents: number;
+    };
+    const paypalByOrderId = new Map<string, PaypalAgg>();
+    const paypalByOrderNumber = new Map<string, PaypalAgg>();
+
+    for (const e of paypalLedger) {
+        const parsed = parsePaypalSourceKey(e.sourceKey || '');
+        if (parsed?.kind === 'FEE' || parsed?.kind === 'PAYOUT' || parsed?.kind === 'REFUND') {
+            continue;
+        }
+        const meta = readExpenseMeta(e.metadataJson);
+        const txId =
+            normalizePaypalTransactionId(parsed?.transactionId) ||
+            normalizePaypalTransactionId(
+                typeof meta.paypalTransactionId === 'string' ? meta.paypalTransactionId : null
+            ) ||
+            '';
+        const feeCents = Math.abs(Number(meta.feeCents || 0));
+        const grossCents = Math.abs(e.totalCents || 0);
+        const agg: PaypalAgg = {
+            paymentDate: e.accountingDate,
+            transactionId: txId,
+            feeCents,
+            grossCents,
+        };
+
+        if (e.orderId) {
+            const prev = paypalByOrderId.get(e.orderId);
+            if (!prev || grossCents >= prev.grossCents) {
+                paypalByOrderId.set(e.orderId, {
+                    ...agg,
+                    feeCents: Math.max(feeCents, prev?.feeCents || 0),
+                });
+            }
+        }
+
+        for (const num of orderNumbers) {
+            if (num && e.description?.includes(num)) {
+                const prev = paypalByOrderNumber.get(num);
+                if (!prev || grossCents >= prev.grossCents) {
+                    paypalByOrderNumber.set(num, agg);
+                }
+            }
+        }
+    }
+
+    for (const e of paypalLedger) {
+        const parsed = parsePaypalSourceKey(e.sourceKey || '');
+        if (parsed?.kind !== 'FEE') continue;
+        const txId = normalizePaypalTransactionId(parsed.transactionId);
+        for (const [orderId, agg] of paypalByOrderId) {
+            if (agg.transactionId === txId) {
+                agg.feeCents = Math.max(agg.feeCents, Math.abs(e.totalCents || 0));
+                paypalByOrderId.set(orderId, agg);
+            }
+        }
+        for (const [num, agg] of paypalByOrderNumber) {
+            if (agg.transactionId === txId) {
+                agg.feeCents = Math.max(agg.feeCents, Math.abs(e.totalCents || 0));
+                paypalByOrderNumber.set(num, agg);
+            }
+        }
+    }
+
+    const bankLineByOrderId = new Map<string, (typeof bankLines)[number]>();
+    for (const line of bankLines) {
+        if (!line.matchedOrderId) continue;
+        const prev = bankLineByOrderId.get(line.matchedOrderId);
+        if (!prev) {
+            bankLineByOrderId.set(line.matchedOrderId, line);
+            continue;
+        }
+        const isFlorist =
+            /FLORIST/i.test(line.matchType || '') ||
+            /FIORIST|COMPENSO|BONIFICO/i.test(line.description);
+        if (isFlorist) bankLineByOrderId.set(line.matchedOrderId, line);
+    }
+
+    const expenseByOrderId = new Map<string, (typeof floristExpenses)[number]>();
+    for (const exp of floristExpenses) {
+        const meta = readExpenseMeta(exp.metadataJson);
+        const orderId = typeof meta.orderId === 'string' ? meta.orderId : null;
+        if (orderId) expenseByOrderId.set(orderId, exp);
+    }
+    for (const line of bankLines) {
+        if (!line.matchedOrderId) continue;
+        const raw = readExpenseMeta(line.rawJson);
+        const alert = readExpenseMeta(raw.floristAlert);
+        const linkedId =
+            typeof alert.linkedExpenseId === 'string' ? alert.linkedExpenseId : null;
+        if (linkedId) {
+            const exp = floristExpenses.find((e) => e.id === linkedId);
+            if (exp) expenseByOrderId.set(line.matchedOrderId, exp);
+        }
+    }
 
     const corrispettivi: CorrispettivoRow[] = [];
     for (const order of orders) {
@@ -161,8 +487,31 @@ export async function buildTaxQuarterlyReport(
         }
 
         const vat = scorporaVenditaFloreale({ grossCents, accessoryCents });
-        const feeCents =
-            order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
+        const stripeMove = stripeByOrderId.get(order.id);
+        const paypalMove =
+            paypalByOrderId.get(order.id) ||
+            (order.orderNumber ? paypalByOrderNumber.get(order.orderNumber) : undefined);
+
+        let feeCents = order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
+        let transactionId = order.stripeTransactionId || '';
+        let paymentDate = order.createdAt;
+        const gateway = resolveGatewayName({
+            paymentMethodLabel: order.paymentMethodLabel,
+            hasPaypalLedger: Boolean(paypalMove),
+            hasStripeMovement: Boolean(stripeMove),
+        });
+
+        if (stripeMove && gateway === 'Stripe') {
+            feeCents = stripeMove.feeCents > 0 ? stripeMove.feeCents : feeCents;
+            transactionId =
+                stripeMove.sourceId || stripeMove.stripeId || transactionId;
+            paymentDate = stripeMove.createdAtStripe;
+        } else if (paypalMove && gateway === 'PayPal') {
+            feeCents = paypalMove.feeCents > 0 ? paypalMove.feeCents : feeCents;
+            transactionId = paypalMove.transactionId || transactionId;
+            paymentDate = paypalMove.paymentDate;
+        }
+
         const netCents =
             order.netAmount != null
                 ? euroFloatToCents(order.netAmount)
@@ -172,14 +521,19 @@ export async function buildTaxQuarterlyReport(
             orderId: order.id,
             orderNumber: order.orderNumber || order.id.slice(0, 8),
             date: order.createdAt.toISOString().slice(0, 10),
+            paymentDate: paymentDate.toISOString().slice(0, 10),
             buyerName: order.buyerFullName || order.buyerEmail || 'Cliente',
+            buyerTaxId: order.user?.vatNumber?.trim() || '',
+            buyerCountry: order.buyerCountry?.trim() || 'IT',
+            gateway,
+            paymentMethod: order.paymentMethodLabel?.trim() || gateway,
             grossCents,
             imponibileCents: vat.imponibileCents,
             ivaDebitoCents: vat.ivaCents,
             vatRate: VAT_PCT_FLORAL,
             gatewayFeeCents: feeCents,
             netCents,
-            transactionId: order.stripeTransactionId || '',
+            transactionId,
         });
     }
 
@@ -214,6 +568,89 @@ export async function buildTaxQuarterlyReport(
         to: bounds.end,
     });
 
+    const reverseCharge: ReverseChargeRow[] = [
+        ...stripeInvoices.map((inv) => ({
+            competenceMonth: inv.periodKey,
+            vendorName: inv.vendorName || 'Stripe Payments Europe Ltd',
+            vendorTaxId: STRIPE_VENDOR_TAX_ID,
+            gatewayInvoiceNumber: inv.number,
+            issuedAt: inv.issuedAt,
+            taxableFeeCents: inv.taxableFeeCents || inv.totalFeeCents,
+            vatReverseChargeCents:
+                inv.vatReverseChargeCents ||
+                Math.round(((inv.taxableFeeCents || inv.totalFeeCents) * VAT_PCT_ORDINARY) / 100),
+            autofatturaTd17Ref:
+                autofatturaRefs.get(inv.number.toUpperCase()) ||
+                autofatturaRefs.get(inv.number) ||
+                autofatturaRefs.get(inv.periodKey) ||
+                '',
+            source: 'stripe' as const,
+        })),
+        ...paypalMonthlyFees.map((inv) => ({
+            competenceMonth: inv.periodKey,
+            vendorName: inv.vendorName || PAYPAL_VENDOR_NAME,
+            vendorTaxId: PAYPAL_VENDOR_TAX_ID,
+            gatewayInvoiceNumber: inv.number,
+            issuedAt: inv.issuedAt,
+            taxableFeeCents: inv.taxableFeeCents,
+            vatReverseChargeCents: inv.vatReverseChargeCents,
+            autofatturaTd17Ref:
+                autofatturaRefs.get(inv.number.toUpperCase()) ||
+                autofatturaRefs.get(inv.number) ||
+                autofatturaRefs.get(inv.periodKey) ||
+                '',
+            source: 'paypal' as const,
+        })),
+    ];
+
+    const floristPassivo: FloristPassivoRow[] = orders
+        .filter((o) => o.partnerId)
+        .map((order) => {
+            const compenso = resolveOrderFloristCompensationCents(order);
+            const bankLine = bankLineByOrderId.get(order.id);
+            const expense = expenseByOrderId.get(order.id);
+            const expenseMeta = expense ? readExpenseMeta(expense.metadataJson) : {};
+            const vatBreakdown = expense
+                ? {
+                      imponibileCents: Math.abs(expense.netCents || 0),
+                      ivaCents: Math.abs(expense.vatCents || 0),
+                      totaleCents: Math.abs(expense.totalCents || 0),
+                  }
+                : floristVatBreakdown(compenso, order.floristVatRate);
+
+            const partnerTaxId =
+                order.partner?.vatNumber?.trim() ||
+                order.partner?.taxCode?.trim() ||
+                null;
+
+            return {
+                orderId: order.id,
+                orderNumber: order.orderNumber || order.id.slice(0, 8),
+                partnerName:
+                    order.partner?.shopName ||
+                    order.partner?.ownerName ||
+                    'Fiorista',
+                partnerTaxId,
+                partnerIban: order.partner?.iban?.trim() || null,
+                compensoConcordatoCents: compenso,
+                bonificoDate: bankLine?.accountingDate
+                    ? bankLine.accountingDate.toISOString().slice(0, 10)
+                    : bankLine?.valueDate
+                      ? bankLine.valueDate.toISOString().slice(0, 10)
+                      : null,
+                bonificoTrn: bankLine ? extractBareFinecoTrn(bankLine.description) : null,
+                sdiInvoiceNumber: expense
+                    ? expenseInvoiceNumber(expenseMeta, expense.notes)
+                    : null,
+                sdiDate: expense
+                    ? expense.expenseDate.toISOString().slice(0, 10)
+                    : null,
+                imponibilePassivoCents: vatBreakdown.imponibileCents,
+                ivaPassivaCents: vatBreakdown.ivaCents,
+                totaleFatturaCents: vatBreakdown.totaleCents || compenso,
+            };
+        });
+
     const floristLiquidazioni: FloristLiquidazioneRow[] = orders
         .filter((o) => o.partnerId)
         .map((order) => {
@@ -247,35 +684,60 @@ export async function buildTaxQuarterlyReport(
             };
         });
 
-    const summary = {
+    const reverseChargeImponibileCents = reverseCharge.reduce(
+        (s, r) => s + r.taxableFeeCents,
+        0
+    );
+    const reverseChargeIvaCents = reverseCharge.reduce(
+        (s, r) => s + r.vatReverseChargeCents,
+        0
+    );
+    const floristImponibileCents = floristPassivo.reduce(
+        (s, r) => s + r.imponibilePassivoCents,
+        0
+    );
+    const floristIvaCreditoCents = floristPassivo.reduce((s, r) => s + r.ivaPassivaCents, 0);
+
+    const ivaDebitoVendite10Cents = corrispettivi.reduce((s, r) => s + r.ivaDebitoCents, 0);
+    const saldoIvaStimatoCents = ivaDebitoVendite10Cents - floristIvaCreditoCents;
+
+    const ivaSummary: IvaPeriodSummary = {
         corrispettiviLordoCents: corrispettivi.reduce((s, r) => s + r.grossCents, 0),
-        corrispettiviImponibileCents: corrispettivi.reduce((s, r) => s + r.imponibileCents, 0),
-        ivaDebito10Cents: corrispettivi.reduce((s, r) => s + r.ivaDebitoCents, 0),
+        imponibileVendite10Cents: corrispettivi.reduce((s, r) => s + r.imponibileCents, 0),
+        ivaDebitoVendite10Cents,
+        reverseChargeImponibileCents,
+        reverseChargeIvaCents,
+        floristImponibileCents,
+        floristIvaCreditoCents,
+        saldoIvaStimatoCents,
+    };
+
+    const summary = {
+        corrispettiviLordoCents: ivaSummary.corrispettiviLordoCents,
+        corrispettiviImponibileCents: ivaSummary.imponibileVendite10Cents,
+        ivaDebito10Cents: ivaSummary.ivaDebitoVendite10Cents,
         gatewayFeesCents: corrispettivi.reduce((s, r) => s + r.gatewayFeeCents, 0),
-        /** Cassa gateway (fee trattenute) — non sono ricavi di vendita. */
         cashGatewayFeesCents: corrispettivi.reduce((s, r) => s + r.gatewayFeeCents, 0),
-        /** Netto cassa atteso post-fee (binario A). */
         cashNettoIncassatoCents: corrispettivi.reduce((s, r) => s + r.netCents, 0),
         stripeInvoicesTotalCents: stripeInvoices.reduce((s, r) => s + r.totalFeeCents, 0),
         paypalFeesTotalCents: paypalMonthlyFees.reduce((s, r) => s + r.totalFeeCents, 0),
-        floristCompensiCents: floristLiquidazioni.reduce(
+        floristCompensiCents: floristPassivo.reduce(
             (s, r) => s + r.compensoConcordatoCents,
             0
         ),
-        floristPaidCents: floristLiquidazioni
-            .filter((r) => r.bonificoInviato)
+        floristPaidCents: floristPassivo
+            .filter((r) => r.bonificoDate)
             .reduce((s, r) => s + r.compensoConcordatoCents, 0),
-        /** IVA a credito stimata 10% su compensi fioristi (fattura passiva tipica). */
-        ivaCreditoFlorist10Cents: floristLiquidazioni.reduce(
-            (s, r) => s + Math.abs(scorporaIvaFloreale(r.compensoConcordatoCents).ivaCents),
-            0
-        ),
+        ivaCreditoFlorist10Cents: floristIvaCreditoCents,
     };
 
     return {
         bounds,
         summary,
         corrispettivi,
+        reverseCharge,
+        floristPassivo,
+        ivaSummary,
         stripeInvoices,
         paypalMonthlyFees,
         floristLiquidazioni,

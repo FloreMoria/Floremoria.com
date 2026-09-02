@@ -172,10 +172,10 @@ export default function TaxQuarterlyPanel() {
         }
     };
 
-    const handleDownloadCsv = () => {
+    const handleDownloadXlsx = () => {
         const q = mode === 'quarter' ? quarter : Math.min(4, Math.ceil(quadrimester * 1.34));
         window.open(
-            `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${q}&format=csv`,
+            `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${q}&format=xlsx`,
             '_blank'
         );
     };
@@ -298,11 +298,11 @@ export default function TaxQuarterlyPanel() {
                     </button>
                     <button
                         type="button"
-                        onClick={handleDownloadCsv}
+                        onClick={handleDownloadXlsx}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#c5a880] text-white text-xs font-bold uppercase tracking-wide hover:bg-[#b8976e]"
                     >
                         <Download size={14} />
-                        CSV commercialista
+                        XLSX commercialista
                     </button>
                 </div>
             </div>

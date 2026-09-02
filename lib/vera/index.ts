@@ -40,8 +40,15 @@ export {
     isAskingAboutPhotosOrDelivery,
     isOrderDeliveryCompleted,
     isPhotoProofDispute,
+    shouldReplyWithHistoricalDeliveryStatus,
 } from '@/lib/vera/deliveryContextGate';
-export { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
+export {
+    buildGenericAssistanceOpenReply,
+    buildPreAcquisitionLucianoReply,
+    isGenericAssistanceOrFirstContactIntent,
+    isPreAcquisitionIntent,
+    isWebsiteContactFormPayload,
+} from '@/lib/vera/preAcquisitionIntent';
 export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 export {
     classifyAndExtractVeraMessage,

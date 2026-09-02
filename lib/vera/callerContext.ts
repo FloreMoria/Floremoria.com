@@ -14,7 +14,10 @@ import {
     formatFloristCompensationForTemplate,
 } from '@/lib/pricing/calculateFloristCompensation';
 import { resolveFloristDeliveryDeadline } from '@/lib/orders/formatFloristDeliveryDeadline';
-import { sessionHasRecentOutboundPhotos } from '@/lib/vera/deliveryContextGate';
+import {
+    RECENT_CLOSED_ORDER_HOURS,
+    sessionHasRecentOutboundPhotos,
+} from '@/lib/vera/deliveryContextGate';
 import { lookupLastOrderByPhone } from '@/lib/whatsapp/orderStatusInquiry';
 import type { ProfileUserType } from '@prisma/client';
 import {
@@ -67,6 +70,8 @@ export interface VeraCallerContext {
     photosAlreadySentInChat?: boolean;
     /** ID ordine collegato (per alert). */
     orderId?: string | null;
+    /** updatedAt ordine collegato (ms) — per finestra post-consegna recente. */
+    orderUpdatedAtMs?: number | null;
 }
 
 function resolveDisplayName(session: ChatSession): string | null {
@@ -122,8 +127,24 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
             });
         }
     } else if (phoneE164) {
+        // Solo ordine aperto, oppure ultimo chiuso se ancora nella finestra 48h.
+        // Perché: un omaggio completato settimane fa non deve “riscrivere” un nuovo contatto.
         const activeOrderBasic = await lookupActiveOrderByPhone(phoneE164);
-        const orderBasic = activeOrderBasic || (await lookupLastOrderByPhone(phoneE164));
+        let orderBasic = activeOrderBasic;
+        if (!orderBasic) {
+            const last = await lookupLastOrderByPhone(phoneE164);
+            if (last) {
+                const updatedMs = new Date(last.updatedAt).getTime();
+                const closed =
+                    last.status === 'COMPLETED' || last.deliveryProof?.status === 'COMPLETED';
+                const recent =
+                    Number.isFinite(updatedMs) &&
+                    Date.now() - updatedMs <= RECENT_CLOSED_ORDER_HOURS * 3600_000;
+                if (closed && recent) {
+                    orderBasic = last;
+                }
+            }
+        }
         if (orderBasic) {
             order = await prisma.order.findUnique({
                 where: { id: orderBasic.id },
@@ -137,8 +158,14 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
 
     const openStatuses = new Set(['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'DELIVERING']);
     const hasActiveOrder = Boolean(order && openStatuses.has(order.status));
-    const hasOrderContext = Boolean(order && order.status !== 'CANCELLED');
     const proofStatus = order?.deliveryProof?.status ?? null;
+    const orderUpdatedAtMs = order?.updatedAt ? new Date(order.updatedAt).getTime() : null;
+    const isRecentClosedOrder =
+        Boolean(order) &&
+        !hasActiveOrder &&
+        (order!.status === 'COMPLETED' || proofStatus === 'COMPLETED') &&
+        orderUpdatedAtMs != null &&
+        Date.now() - orderUpdatedAtMs <= RECENT_CLOSED_ORDER_HOURS * 3600_000;
 
     const productsList = order?.items.map((item) => `${item.product.name} (x${item.quantity})`) ?? null;
     const hasPhotoBefore = order ? hasPhotoBeforeOption(order.items) : false;
@@ -171,7 +198,7 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
     const mode: VeraConversationMode =
         session.userType === 'FLORIST'
             ? 'fiorista'
-            : hasActiveOrder || proofStatus === 'COMPLETED' || order?.status === 'COMPLETED'
+            : hasActiveOrder || isRecentClosedOrder
               ? 'ordine_attivo'
               : 'pre_acquisto';
 
@@ -214,10 +241,11 @@ export async function resolveVeraCallerContext(session: ChatSession): Promise<Ve
         profileUserType,
         isGuestOrUnprofiled,
         mode,
-        hasActiveOrder: hasActiveOrder || hasOrderContext,
+        hasActiveOrder,
         orderId: order?.id ?? null,
         orderNumber: order?.orderNumber ?? null,
         orderStatus: order?.status ?? null,
+        orderUpdatedAtMs,
         deceasedName: order?.deceasedName ?? null,
         deliveryLocation: location,
         gravePosition: grave,
@@ -268,9 +296,9 @@ export function buildCallerContextPromptBlock(ctx: VeraCallerContext): string {
         `Stato conversazione: ${ctx.mode === 'pre_acquisto' ? 'PRE-ACQUISTO (Nessun ordine attivo)' : ctx.mode === 'ordine_attivo' ? 'ORDINE ATTIVO' : 'FIORISTA PARTNER'}`,
     ];
 
-    if (ctx.hasActiveOrder) {
+    if (ctx.hasActiveOrder || (ctx.mode === 'ordine_attivo' && ctx.orderNumber)) {
         lines.push(
-            `DETTAGLI ORDINE ATTIVO:`,
+            `DETTAGLI ORDINE ${ctx.hasActiveOrder ? 'ATTIVO' : 'RECENTE (post-consegna)'}:`,
             `- Codice Ordine (ID): ${ctx.orderNumber ?? 'Nessuno'}`,
             `- Stato Attuale Ordine: ${ctx.orderStatus ?? 'Sconosciuto'}`,
             `- Prodotto acquistato: ${ctx.productsList?.join(', ') || 'Nessun prodotto'}`,

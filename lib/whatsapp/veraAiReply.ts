@@ -26,10 +26,10 @@ import { buildFloristDeliveryPhotoAckText } from '@/lib/deliveryProof/sendFloris
 import {
     buildDeliveryAlreadyDoneReply,
     buildPhotoProofDisputeReply,
-    isAskingAboutPhotosOrDelivery,
     isOrderDeliveryCompleted,
     isPhotoProofDispute,
     replyViolatesDeliveryContextGate,
+    shouldReplyWithHistoricalDeliveryStatus,
 } from '@/lib/vera/deliveryContextGate';
 import {
     buildDeliveryPhotoDeclineOrAckReply,
@@ -59,7 +59,14 @@ import {
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
-import { buildPreAcquisitionLucianoReply, isPreAcquisitionIntent } from '@/lib/vera/preAcquisitionIntent';
+import {
+    buildGenericAssistanceOpenReply,
+    buildPreAcquisitionLucianoReply,
+    isGenericAssistanceOrFirstContactIntent,
+    isPreAcquisitionIntent,
+    isWebsiteContactFormPayload,
+    resolveAssistanceDisplayName,
+} from '@/lib/vera/preAcquisitionIntent';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
     detectFloristException,
@@ -587,11 +594,44 @@ export async function generateVeraReply(
         return { text: '', source: 'silence', shouldEscalate: false };
     }
 
+    // PRIORITÀ: nuovo contatto / form contatti / assistenza generica —
+    // mai agganciare ordini pregressi né copione foto post-consegna.
+    if (
+        session.userType !== 'FLORIST' &&
+        isGenericAssistanceOrFirstContactIntent(message) &&
+        !callerContext.hasActiveOrder
+    ) {
+        const displayName = resolveAssistanceDisplayName(message, callerContext.firstName);
+        // Form contatti o CTA floating: risposta aperta di cortesia.
+        // Pre-acquisto “come funziona / prezzi”: resta il flusso Luciano più guida.
+        const wantsLucianoGuide =
+            isPreAcquisitionIntent(message) &&
+            !isWebsiteContactFormPayload(message) &&
+            /come funziona|quanto costa|listino|prezz|vorrei mandare|vorrei inviare|prima di /.test(
+                message.toLowerCase()
+            );
+
+        if (wantsLucianoGuide) {
+            return {
+                text: buildPreAcquisitionLucianoReply(displayName),
+                source: 'deterministic',
+                shouldEscalate: false,
+            };
+        }
+
+        return {
+            text: buildGenericAssistanceOpenReply(displayName),
+            source: 'deterministic',
+            shouldEscalate: false,
+        };
+    }
+
     // P0: richiesta esplicita foto in chat → invia Prima/Dopo (finestra riaperta dall'inbound).
     if (
         session.userType !== 'FLORIST' &&
         isRequestingDeliveryPhotosInChat(message) &&
-        callerContext.phoneE164
+        callerContext.phoneE164 &&
+        (callerContext.hasActiveOrder || isOrderDeliveryCompleted(callerContext))
     ) {
         const photoSend = await sendDeliveryPhotosOnDemand({
             phoneE164: callerContext.phoneE164,
@@ -628,13 +668,13 @@ export async function generateVeraReply(
     }
 
     // P0 context gate foto/consegna (Carolina/Maria) — mai se l'utente contesta le foto.
+    // Solo su richiesta esplicita o ordine chiuso recente (non su assistenza generica).
     if (
         session.userType !== 'FLORIST' &&
-        isAskingAboutPhotosOrDelivery(message) &&
         !isPhotoProofDispute(message) &&
         !isRequestingDeliveryPhotosInChat(message) &&
         !isDecliningDeliveryPhotosInChat(message) &&
-        isOrderDeliveryCompleted(callerContext)
+        shouldReplyWithHistoricalDeliveryStatus(message, callerContext)
     ) {
         return {
             text: buildDeliveryAlreadyDoneReply({
@@ -649,10 +689,13 @@ export async function generateVeraReply(
 
     if (
         session.userType !== 'FLORIST' &&
-        callerContext.mode === 'pre_acquisto' &&
-        isPreAcquisitionIntent(message)
+        (callerContext.mode === 'pre_acquisto' || isPreAcquisitionIntent(message)) &&
+        isPreAcquisitionIntent(message) &&
+        !callerContext.hasActiveOrder
     ) {
-        const replyText = buildPreAcquisitionLucianoReply(callerContext.firstName);
+        const replyText = buildPreAcquisitionLucianoReply(
+            resolveAssistanceDisplayName(message, callerContext.firstName)
+        );
         return { text: replyText, source: 'deterministic', shouldEscalate: false };
     }
 

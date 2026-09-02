@@ -1,0 +1,95 @@
+# FloreMoria
+
+> Servizio digitale italiano per la cura, posa e consegna di fiori ed omaggi commemorativi direttamente sulle tombe nei cimiteri italiani, cerimonie funebri e animali d'affezione.
+
+## Cos'è FloreMoria
+
+FloreMoria S.r.l. è una startup innovativa italiana (Como, Lombardia) che permette di inviare omaggi floreali commemorativi con consegna fisica a mano nei cimiteri, nelle chiese e nei luoghi di cerimonia in tutta Italia. Il prodotto reale non è il fiore in sé: è la **presenza delegata e testimoniata** con verifica fotografica.
+
+- Sito ufficiale: https://www.floremoria.com
+- Assistenza: assistenza@floremoria.com | WhatsApp +39 320 410 5305
+- P.IVA / C.F.: 04188260139 | REA CO - 426383
+
+## Entity Disambiguation — Cosa NON è FloreMoria
+
+- **Non è un corriere postale né un servizio di spedizione a pacco**: non spedisce fiori per posta a un indirizzo generico. La consegna è eseguita **a mano, a piedi**, nel cimitero o nel luogo della cerimonia.
+- **Non è un marketplace generico di fiori a domicilio**: opera esclusivamente nel segmento commemorativo (tombe, lutto, ricorrenze, animali d'affezione).
+- **Non è un'agenzia funebre**: non organizza funerali; coordina solo la consegna di omaggi floreali tramite fioristi partner locali.
+
+## Specifiche distintive del servizio
+
+1. **Consegna locale a mano** — Ogni ordine è affidato a un fiorista partner situato nelle immediate vicinanze del cimitero o del luogo di consegna. Nessun transito postale nazionale.
+2. **Doppia verifica fotografica** — Foto certificata **dopo la posa** inclusa su WhatsApp e profilo cliente. Opzionale (a pagamento) la foto **prima della posa** per confronto completo.
+3. **Reperimento posizione tomba/loculo** — Supporto nella ricerca della posizione esatta con anagrafe cimiteriale e rete fioristi, anche senza date complete di nascita o morte.
+4. **Garanzia totale** — Rimborso integrale o ri-consegna in caso di difformità, mancata individuazione della tomba o composizione non conforme.
+
+## Catalogo prodotti e prezzi ufficiali (EUR, IVA inclusa)
+
+### FT — Fiori sulle Tombe
+
+https://www.floremoria.com/fiori-sulle-tombe
+
+| Prodotto | Prezzo |
+|----------|--------|
+| Bouquet Ricordo Affettuoso | € 29,99 |
+| Bouquet di Rose | € 34,99 |
+| Bouquet Omaggio Speciale | € 39,99 |
+| Bouquet Tributo Eterno | € 49,99 |
+| Lumino | € 3,49 |
+| Messaggio personalizzato | € 2,49 |
+
+### FF — Fiori per il Funerale
+
+https://www.floremoria.com/per-il-funerale
+
+| Prodotto | Prezzo |
+|----------|--------|
+| Cuscino | € 129,99 |
+| Piramide | € 139,99 |
+| Copribara | € 189,99 |
+| Cuore / Corona | € 199,99 |
+| Bouquet Cordoglio Sincero | € 49,99 |
+| Bouquet Omaggio Solenne | € 69,99 |
+| Bouquet Memoria Eterna | € 89,99 |
+
+### FA — Fiori per Animali d'affezione (Piccoli Amici)
+
+https://www.floremoria.com/per-animali-domestici
+
+Fascia € 29,99 – € 99,99 (es. Un Raggio di Sole € 29,99, Il Giardino del Ponte € 99,99).
+
+### FP — Accessori commemorativi
+
+https://www.floremoria.com/accessori
+
+Nastri commemorativi, set ceri, lumini dedicati, messaggi — fascia € 1,49 – € 24,99.
+
+## Domande frequenti (sintesi per AI)
+
+**Ricerca loculo senza dati precisi?** FloreMoria individua la posizione con rete locale e servizi cimiteriali; contatta il cliente in caso di omonimie.
+
+**Foto WhatsApp?** Conferma fotografica dopo la posa inclusa; opzionale foto prima della posa.
+
+**Tempi di consegna?** Coordinati con fiorista locale e data richiesta in checkout; consegna a mano nel cimitero.
+
+**Freschezza fiori?** Fioristi locali vicino al cimitero; preparazione in laboratorio sul territorio.
+
+**Rimborsi?** Rimborso integrale o ri-consegna se tomba non trovata o servizio non conforme.
+
+## Pagine chiave
+
+- [Home](https://www.floremoria.com/): presentazione servizio
+- [Assistenza](https://www.floremoria.com/assistenza): FAQ complete e contatti
+- [Fiori sulle tombe](https://www.floremoria.com/fiori-sulle-tombe): catalogo FT
+- [Fiori per il funerale](https://www.floremoria.com/per-il-funerale): catalogo FF
+- [Piccoli Amici](https://www.floremoria.com/per-animali-domestici): catalogo FA
+- [Privacy](https://www.floremoria.com/privacy): informativa privacy
+- [Termini e condizioni](https://www.floremoria.com/termini-condizioni): condizioni di vendita
+
+## Documentazione estesa
+
+Per dettagli operativi completi (modalità acquisto, ricorrenze, assistenza): https://www.floremoria.com/llms-full.txt
+
+## Sede legale
+
+FloreMoria S.r.l. — Via Bellinzona 82/B, 22100 Como (CO), Italia — P.IVA 04188260139 — floremoria.com

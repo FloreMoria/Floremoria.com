@@ -62,6 +62,8 @@ env.host.docker.example
 !public/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt
 !public/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt
 !public/tiktokhn9zw4SN50YfX9FTNwvbXtKINd8Blpzm.txt
+!public/llms.txt
+!public/llms-full.txt
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/
 !app/tiktokjRsHK4w8bRtjCo7HGlmCbNvw2s6Ou9z4.txt/**
 !app/tiktok7q8SLkeWcoWauhGum9tEWOvaLVUs777b.txt/

@@ -15,14 +15,26 @@ import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthori
 import type { AccountingEntry } from '@/lib/financial/types';
 import {
     categoryLabel,
+    compactCausalePreview,
+    currentPrimaNotaPeriodKey,
     dedupePrimaNotaVisualEntries,
-    formatSignedImporto,
-    formatVatColumn,
+    formatEuroBalance,
+    gatewayBadge,
+    periodBounds,
+    PRIMA_NOTA_PERIOD_OPTIONS,
     reconciliationStatusLabel,
     RECONCILIATION_STATUS_OPTIONS,
+    signedMovementCents,
     type PrimaNotaDisplayEntry,
+    type PrimaNotaPeriodKey,
 } from '@/lib/financial/primaNotaShared';
 import PrimaNotaDetailDrawer from '@/components/dashboard/PrimaNotaDetailDrawer';
+
+const STORAGE_KEY = 'floremoria.primaNota.period';
+const FISCAL_YEAR = 2026;
+
+const PRIMA_NOTA_TABLE_SCROLL_CLASS =
+    'dashboard-table-scroll max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto [scrollbar-width:thin]';
 
 type NeonRow = {
     id: string;
@@ -53,8 +65,22 @@ type NeonRow = {
     } | null;
 };
 
-const PRIMA_NOTA_TABLE_SCROLL_CLASS =
-    'dashboard-table-scroll max-h-[min(70vh,calc(2.75rem+28*2.85rem))] overflow-y-auto overflow-x-auto [scrollbar-width:thin]';
+function readStoredPeriod(): PrimaNotaPeriodKey {
+    if (typeof window === 'undefined') return currentPrimaNotaPeriodKey();
+    try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw === 'Q1' || raw === 'Q2' || raw === 'Q3' || raw === 'Q4' || raw === 'YEAR') {
+            return raw;
+        }
+        const dossierQ = window.localStorage.getItem('floremoria.dossier.quarter');
+        if (dossierQ === '1' || dossierQ === '2' || dossierQ === '3' || dossierQ === '4') {
+            return `Q${dossierQ}` as PrimaNotaPeriodKey;
+        }
+    } catch {
+        /* ignore */
+    }
+    return currentPrimaNotaPeriodKey();
+}
 
 function isEntrataFromNeon(r: NeonRow): boolean {
     if (r.direction === 'ENTRATA') return true;
@@ -160,6 +186,23 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
     const [selectedEntry, setSelectedEntry] = useState<PrimaNotaDisplayEntry | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+    const [periodKey, setPeriodKey] = useState<PrimaNotaPeriodKey>(() => currentPrimaNotaPeriodKey());
+
+    useEffect(() => {
+        setPeriodKey(readStoredPeriod());
+    }, []);
+
+    const setPeriod = (key: PrimaNotaPeriodKey) => {
+        setPeriodKey(key);
+        try {
+            window.localStorage.setItem(STORAGE_KEY, key);
+            if (key.startsWith('Q')) {
+                window.localStorage.setItem('floremoria.dossier.quarter', key.slice(1));
+            }
+        } catch {
+            /* ignore */
+        }
+    };
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -375,9 +418,35 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     reconciliationStatusLabel(e.reconciliationStatus).toLowerCase().includes(q)
             );
         }
-        list.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+        // Cronologico crescente per saldo progressivo
+        list.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
         return list;
     }, [localEntries, neonRows, searchTerm, fonteOverrides, statusOverrides]);
+
+    const bounds = useMemo(
+        () => periodBounds(FISCAL_YEAR, periodKey),
+        [periodKey]
+    );
+
+    const { periodRows, openingBalanceCents, closingBalanceCents } = useMemo(() => {
+        const before = rows.filter((e) => e.date < bounds.start);
+        const inPeriod = rows.filter((e) => e.date >= bounds.start && e.date <= bounds.end);
+        const opening = before.reduce((s, e) => s + signedMovementCents(e), 0);
+        const periodNet = inPeriod.reduce((s, e) => s + signedMovementCents(e), 0);
+        return {
+            periodRows: inPeriod,
+            openingBalanceCents: opening,
+            closingBalanceCents: opening + periodNet,
+        };
+    }, [rows, bounds.start, bounds.end]);
+
+    const rowsWithRunning = useMemo(() => {
+        let running = openingBalanceCents;
+        return periodRows.map((entry) => {
+            running += signedMovementCents(entry);
+            return { entry, runningCents: running };
+        });
+    }, [periodRows, openingBalanceCents]);
 
     const openDrawer = (entry: PrimaNotaDisplayEntry) => {
         setSelectedEntry(entry);
@@ -393,22 +462,108 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         );
     }
 
+    const periodOptions = PRIMA_NOTA_PERIOD_OPTIONS.map((o) => ({
+        ...o,
+        label: o.label.replace(/2026/g, String(FISCAL_YEAR)),
+    }));
+
     return (
         <>
-            <div className="space-y-2">
-                <div className="px-4 pt-3 flex items-center justify-between gap-2">
+            <div className="space-y-3">
+                <div className="px-4 pt-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div
+                            className="inline-flex flex-wrap rounded-xl border border-slate-200 bg-slate-50 p-0.5 gap-0.5"
+                            role="tablist"
+                            aria-label="Filtro periodo Prima Nota"
+                        >
+                            {periodOptions.map((opt) => {
+                                const active = periodKey === opt.key;
+                                return (
+                                    <button
+                                        key={opt.key}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={active}
+                                        onClick={() => setPeriod(opt.key)}
+                                        title={opt.label}
+                                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                                            active
+                                                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                                                : 'text-slate-500 hover:text-slate-800'
+                                        }`}
+                                    >
+                                        {opt.key === 'YEAR' ? (
+                                            <>Anno {FISCAL_YEAR}</>
+                                        ) : (
+                                            <>
+                                                {opt.key}{' '}
+                                                <span className="hidden md:inline font-normal text-slate-500">
+                                                    {opt.key === 'Q1'
+                                                        ? '(Gen–Mar)'
+                                                        : opt.key === 'Q2'
+                                                          ? '(Apr–Giu)'
+                                                          : opt.key === 'Q3'
+                                                            ? '(Lug–Set)'
+                                                            : '(Ott–Dic)'}
+                                                </span>
+                                            </>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => void load()}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600"
+                        >
+                            <RefreshCw size={12} />
+                            Aggiorna
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Periodo
+                            </p>
+                            <p className="text-sm font-semibold text-slate-800">{bounds.label}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Saldo iniziale
+                            </p>
+                            <p
+                                className={`text-sm font-bold font-mono ${
+                                    openingBalanceCents >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                }`}
+                            >
+                                {formatEuroBalance(openingBalanceCents)}
+                            </p>
+                            <p className="text-[10px] text-slate-400">Riporto da prima del periodo</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Saldo finale
+                            </p>
+                            <p
+                                className={`text-sm font-bold font-mono ${
+                                    closingBalanceCents >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                                }`}
+                            >
+                                {formatEuroBalance(closingBalanceCents)}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                                {periodRows.length} movimenti nel periodo
+                            </p>
+                        </div>
+                    </div>
+
                     <p className="text-[11px] text-slate-500">
-                        Clicca una riga per il dettaglio completo · dedup attiva su
-                        data/importo/controparte/riferimento · {rows.length} voci
+                        Clicca una riga per il dettaglio · causale compatta (hover = testo completo) ·{' '}
+                        {periodRows.length} voci
                     </p>
-                    <button
-                        type="button"
-                        onClick={() => void load()}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600"
-                    >
-                        <RefreshCw size={12} />
-                        Aggiorna
-                    </button>
                 </div>
                 {error && (
                     <div className="mx-4 text-xs bg-rose-50 border border-rose-100 text-rose-700 rounded-xl px-3 py-2">
@@ -416,54 +571,56 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     </div>
                 )}
                 <div className={PRIMA_NOTA_TABLE_SCROLL_CLASS}>
-                    <table className="border-collapse text-left text-sm w-full min-w-[920px]">
+                    <table className="border-collapse text-left text-sm w-full table-fixed">
                         <thead className="sticky top-0 z-10">
                             <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap w-[6.5rem]">
+                                <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap w-[5.5rem]">
                                     Data
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 min-w-[14rem]">
-                                    Descrizione / Causale
+                                <th className="px-2 py-2.5 bg-slate-50 w-[14rem] max-w-[14rem]">
+                                    Causale
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap min-w-[8rem]">
-                                    Controparte
+                                <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap w-[6.5rem]">
+                                    Entrata
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap min-w-[9rem]">
-                                    Categoria
+                                <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap w-[6.5rem]">
+                                    Uscita
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap w-[7.5rem]">
-                                    IVA
+                                <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap w-[5.5rem]">
+                                    Conto
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 text-right whitespace-nowrap w-[7.5rem]">
-                                    Importo (€)
+                                <th className="px-2 py-2.5 bg-slate-50 text-right whitespace-nowrap w-[7rem]">
+                                    Saldo
                                 </th>
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap w-[10rem]">
+                                <th className="px-2 py-2.5 bg-slate-50 whitespace-nowrap w-[8.5rem]">
                                     Stato
-                                </th>
-                                <th className="px-3 py-2.5 bg-slate-50 whitespace-nowrap w-[7rem]">
-                                    Fonte
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {rows.length === 0 ? (
+                            {rowsWithRunning.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={8}
+                                        colSpan={7}
                                         className="px-3 py-10 text-center text-slate-400 italic"
                                     >
-                                        Nessuna scrittura contabile reale. Allinea l&apos;Archivio
-                                        Storico o importa fatture/gateway.
+                                        Nessun movimento nel periodo selezionato.
                                     </td>
                                 </tr>
                             ) : (
-                                rows.map((entry) => {
-                                    const amount = formatSignedImporto(
-                                        entry.amountCents,
-                                        entry.isEntrata
+                                rowsWithRunning.map(({ entry, runningCents }) => {
+                                    const preview = compactCausalePreview(
+                                        entry.description,
+                                        entry.counterpartyName
                                     );
-                                    const vat = formatVatColumn(entry);
+                                    const badge = gatewayBadge(entry);
                                     const isSelected = selectedEntry?.id === entry.id && drawerOpen;
+                                    const entrata = entry.isEntrata
+                                        ? formatEuroBalance(entry.amountCents)
+                                        : '';
+                                    const uscita = !entry.isEntrata
+                                        ? formatEuroBalance(entry.amountCents)
+                                        : '';
                                     return (
                                         <tr
                                             key={entry.id}
@@ -474,39 +631,53 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                                     : 'hover:bg-slate-50/80'
                                             }`}
                                         >
-                                            <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">
+                                            <td className="px-2 py-2 text-xs text-slate-600 whitespace-nowrap">
                                                 {formatFinanceDate(entry.date)}
                                             </td>
                                             <td
-                                                className="px-3 py-2.5 text-sm font-medium text-slate-800 leading-snug"
+                                                className="px-2 py-2 max-w-[14rem] w-56"
                                                 title={entry.description}
                                             >
-                                                <span className="line-clamp-2">{entry.description}</span>
+                                                <div className="max-w-[220px] overflow-hidden">
+                                                    <p className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug">
+                                                        {preview.title}
+                                                        {preview.subtitle ? (
+                                                            <span className="font-normal text-slate-500">
+                                                                {' '}
+                                                                · {preview.subtitle}
+                                                            </span>
+                                                        ) : null}
+                                                    </p>
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-2 text-right font-mono text-xs font-bold text-emerald-700 whitespace-nowrap">
+                                                {entrata || (
+                                                    <span className="text-slate-300">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-2 py-2 text-right font-mono text-xs font-bold text-rose-700 whitespace-nowrap">
+                                                {uscita || (
+                                                    <span className="text-slate-300">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-2 py-2 whitespace-nowrap">
+                                                <span
+                                                    className={`inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
+                                                >
+                                                    {badge.label}
+                                                </span>
                                             </td>
                                             <td
-                                                className="px-3 py-2.5 text-xs text-slate-600"
-                                                title={entry.counterpartyName || undefined}
+                                                className={`px-2 py-2 text-right font-mono text-xs font-semibold whitespace-nowrap ${
+                                                    runningCents >= 0
+                                                        ? 'text-slate-800'
+                                                        : 'text-rose-700'
+                                                }`}
                                             >
-                                                {entry.counterpartyName || '—'}
+                                                {formatEuroBalance(runningCents)}
                                             </td>
                                             <td
-                                                className="px-3 py-2.5 text-[11px] text-slate-600"
-                                                title={categoryLabel(entry.category)}
-                                            >
-                                                {categoryLabel(entry.category)}
-                                            </td>
-                                            <td
-                                                className={`px-3 py-2.5 text-[11px] font-semibold whitespace-nowrap ${vat.className}`}
-                                            >
-                                                {vat.label}
-                                            </td>
-                                            <td
-                                                className={`px-3 py-2.5 font-bold font-mono text-sm text-right whitespace-nowrap ${amount.className}`}
-                                            >
-                                                {amount.text}
-                                            </td>
-                                            <td
-                                                className="px-3 py-2.5 whitespace-nowrap"
+                                                className="px-2 py-2 whitespace-nowrap"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <select
@@ -515,7 +686,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                                     onChange={(e) =>
                                                         void saveStatus(entry.id, e.target.value)
                                                     }
-                                                    className="w-full max-w-[9.5rem] rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700"
+                                                    className="w-full max-w-[8.5rem] rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700"
                                                     title="Modifica stato riconciliazione"
                                                 >
                                                     {RECONCILIATION_STATUS_OPTIONS.map((s) => (
@@ -524,11 +695,6 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                                         </option>
                                                     ))}
                                                 </select>
-                                            </td>
-                                            <td className="px-3 py-2.5 whitespace-nowrap">
-                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                                                    {entry.sourceLabel}
-                                                </span>
                                             </td>
                                         </tr>
                                     );

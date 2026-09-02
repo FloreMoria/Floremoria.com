@@ -97,3 +97,5 @@
 
 
 [2026-09-02 20:02] fix(accounting): dedup totale PN su banca/gateway, collasso scontrini, IVA credito solo SDI
+
+[2026-09-02 22:02] feat(accounting): selettore trimestrale Prima Nota + causale compatta con tooltip

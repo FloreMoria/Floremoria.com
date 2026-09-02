@@ -180,3 +180,120 @@ export function dedupePrimaNotaVisualEntries(
 
     return Array.from(groups.values());
 }
+
+export type PrimaNotaPeriodKey = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'YEAR';
+
+export const PRIMA_NOTA_PERIOD_OPTIONS: Array<{
+    key: PrimaNotaPeriodKey;
+    label: string;
+    months: string;
+}> = [
+    { key: 'Q1', label: 'Q1 2026 (Gen-Mar)', months: '01-03' },
+    { key: 'Q2', label: 'Q2 2026 (Apr-Giu)', months: '04-06' },
+    { key: 'Q3', label: 'Q3 2026 (Lug-Set)', months: '07-09' },
+    { key: 'Q4', label: 'Q4 2026 (Ott-Dic)', months: '10-12' },
+    { key: 'YEAR', label: 'Tutto il 2026', months: '01-12' },
+];
+
+export function currentPrimaNotaPeriodKey(now = new Date()): PrimaNotaPeriodKey {
+    const q = (Math.floor(now.getMonth() / 3) + 1) as 1 | 2 | 3 | 4;
+    return (`Q${q}` as PrimaNotaPeriodKey);
+}
+
+export function periodBounds(
+    year: number,
+    key: PrimaNotaPeriodKey
+): { start: string; end: string; label: string } {
+    const opt = PRIMA_NOTA_PERIOD_OPTIONS.find((o) => o.key === key)!;
+    if (key === 'YEAR') {
+        return { start: `${year}-01-01`, end: `${year}-12-31`, label: opt.label.replace('2026', String(year)) };
+    }
+    const q = Number(key.slice(1));
+    const startMonth = (q - 1) * 3 + 1;
+    const endMonth = startMonth + 2;
+    const endDay = new Date(year, endMonth, 0).getDate();
+    return {
+        start: `${year}-${String(startMonth).padStart(2, '0')}-01`,
+        end: `${year}-${String(endMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`,
+        label: opt.label.replace(/2026/g, String(year)),
+    };
+}
+
+export function signedMovementCents(entry: Pick<PrimaNotaDisplayEntry, 'amountCents' | 'isEntrata'>): number {
+    return entry.isEntrata ? Math.abs(entry.amountCents) : -Math.abs(entry.amountCents);
+}
+
+/** Badge sintetico conto/gateway. */
+export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | 'sourceLabel' | 'sourceKey'>): {
+    label: string;
+    className: string;
+} {
+    const st = entry.sourceType || '';
+    const sk = (entry.sourceKey || '').toUpperCase();
+    const label = (entry.sourceLabel || '').toLowerCase();
+    if (st === 'BANK_LINE' || st === 'BANK_LINE_MANUAL' || label.includes('fineco')) {
+        return { label: 'Fineco', className: 'bg-sky-100 text-sky-800' };
+    }
+    if (st === 'STRIPE_MOVEMENT' || sk.includes('STRIPE') || label.includes('stripe')) {
+        return { label: 'Stripe', className: 'bg-violet-100 text-violet-800' };
+    }
+    if (st === 'PAYPAL_MOVEMENT' || sk.includes('PAYPAL') || label.includes('paypal')) {
+        return { label: 'PayPal', className: 'bg-amber-100 text-amber-900' };
+    }
+    if (st === 'MANUAL_EXPENSE' || st === 'SAAS_INVOICE' || label.includes('sdi')) {
+        return { label: 'SDI', className: 'bg-slate-100 text-slate-700' };
+    }
+    if (st === 'FLORIST_PAYOUT') {
+        return { label: 'Fiorista', className: 'bg-rose-50 text-rose-800' };
+    }
+    if (st === 'ORDER') {
+        return { label: 'Ordine', className: 'bg-emerald-50 text-emerald-800' };
+    }
+    return {
+        label: entry.sourceLabel?.slice(0, 12) || 'Altro',
+        className: 'bg-slate-100 text-slate-600',
+    };
+}
+
+/**
+ * Anteprima compatta causale: beneficiario in evidenza + tipo movimento breve.
+ */
+export function compactCausalePreview(
+    description: string,
+    counterpartyName?: string | null
+): { title: string; subtitle: string | null } {
+    const raw = (description || '').replace(/\s+/g, ' ').trim();
+    if (!raw) return { title: '—', subtitle: null };
+
+    const beneficiary =
+        counterpartyName?.trim() ||
+        raw.match(/Beneficiario\s*:\s*([^|·\n]+?)(?:\s+IBAN\b|\s+I\s*BAN\b|\s+Data\b|$)/i)?.[1]?.trim() ||
+        raw.match(/\bBen\s*:\s*([^|·\n]+?)(?:\s+Ins\b|\s+IBAN\b|\s+Iban\b|$)/i)?.[1]?.trim() ||
+        null;
+
+    let kind = 'Movimento';
+    if (/bonifico|beneficiario|^ben\s*:/i.test(raw)) kind = 'Bonifico';
+    else if (/scontrino/i.test(raw)) kind = 'Scontrino';
+    else if (/fattura/i.test(raw)) kind = 'Fattura';
+    else if (/compenso fiorista/i.test(raw)) kind = 'Compenso';
+    else if (/incasso|stripe|paypal|ricavo/i.test(raw)) kind = 'Incasso';
+    else if (/fee|commissione|oneri/i.test(raw)) kind = 'Fee';
+
+    if (beneficiary) {
+        const name = beneficiary.replace(/\s+/g, ' ').trim().slice(0, 42);
+        return { title: name, subtitle: kind };
+    }
+
+    // Senza beneficiario: primi ~48 char senza prefissi tecnici
+    const cleaned = raw
+        .replace(/^(Beneficiario|Ben)\s*:\s*/i, '')
+        .replace(/\s+IBAN:.*$/i, '')
+        .replace(/\s+Data Inserimento:.*$/i, '')
+        .slice(0, 56);
+    return { title: cleaned || raw.slice(0, 56), subtitle: null };
+}
+
+export function formatEuroBalance(cents: number): string {
+    const sign = cents < 0 ? '−' : '';
+    return `${sign}${euro(cents)} €`;
+}

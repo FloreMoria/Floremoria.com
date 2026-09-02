@@ -107,6 +107,15 @@ export default function TaxQuarterlyPanel() {
     const [editRow, setEditRow] = useState<TaxRegisterRow | null>(null);
     const [saving, setSaving] = useState(false);
 
+    useEffect(() => {
+        try {
+            window.localStorage.setItem('floremoria.dossier.quarter', String(quarter));
+            window.localStorage.setItem('floremoria.primaNota.period', `Q${quarter}`);
+        } catch {
+            /* ignore */
+        }
+    }, [quarter]);
+
     const periodQuery =
         mode === 'quadrimester'
             ? `year=${year}&mode=quadrimester&quadrimester=${quadrimester}`

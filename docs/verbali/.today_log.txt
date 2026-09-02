@@ -83,3 +83,4 @@
 [2026-09-02 15:20] feat(aeo): FAQ assistenza da fonte unica publicFaq, copy AEO su Home/FT/FF, JSON-LD cataloghi FT-FF-FA-FP + Service consegna/ricerca loculo; tsc+build OK.
 [2026-09-02 15:25] fix(fioristi): matita e click riga → scheda completa /dashboard/fioristi/[id]; drawer solo nuova registrazione con redirect post-POST; tsc+build OK.
 [2026-09-02 15:35] feat(aeo): puntualità garantita FF — copy /per-il-funerale, FAQ funerale-puntualita, Service JSON-LD camera ardente; tsc+build OK.
+[2026-09-02 18:10] fix(support): WhatsApp flottante mobile z-999 sopra bottom nav/sticky Ordina; form Contatti → email assistenza + wa.me/393204105305; /contatti + /api/contact; tsc+build OK.

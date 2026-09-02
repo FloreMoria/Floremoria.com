@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import FloremSocialLinks from '@/components/FloremSocialLinks';
 import PublicFaqAccordion from '@/components/seo/PublicFaqAccordion';
+import ContactForm from '@/components/ContactForm';
 import { FLOREMORIA_ASSISTENZA_FAQ } from '@/lib/seo/publicFaq';
 
 export const metadata: Metadata = {
@@ -229,32 +230,13 @@ export default function AssistenzaPage() {
                     </div>
                 </div>
 
-                {/* Form Contatto */}
-                <div className="bg-[#FAF9F6] border border-fm-gold/20 rounded-[24px] p-5 sm:p-6 lg:p-8 shadow-lg relative overflow-hidden">
+                {/* Form Contatto — email + WhatsApp */}
+                <div
+                    id="contatti"
+                    className="bg-[#FAF9F6] border border-fm-gold/20 rounded-[24px] p-5 sm:p-6 lg:p-8 shadow-lg relative overflow-hidden"
+                >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-fm-gold/5 rounded-full blur-3xl -z-10 -mr-20 -mt-20"></div>
-                    <form className="space-y-4 relative z-10">
-                        <div className="mb-5">
-                            <h2 className="text-xl sm:text-2xl font-display font-medium text-gray-900 mb-2">Condividi con noi la tua richiesta</h2>
-                            <p className="text-fm-muted font-body leading-relaxed">
-                                Siamo qui per ascoltarti. Che sia un dubbio logistico o un desiderio particolare per il tuo caro, Salvatore e il team di FloreMoria ti risponderanno personalmente.
-                            </p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">Il tuo nome</label>
-                            <input type="text" className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all" placeholder="Il tuo nome e cognome" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">Email</label>
-                            <input type="email" className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all" placeholder="La tua email per risponderti" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">Come possiamo aiutarti oggi?</label>
-                            <textarea className="w-full bg-white border border-fm-gold/30 rounded-xl px-4 py-3 text-fm-text focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold shadow-sm transition-all min-h-[120px] resize-none" placeholder="Scrivi qui la tua richiesta..."></textarea>
-                        </div>
-                        <button type="submit" className="w-full bg-fm-gold text-white font-medium text-base sm:text-lg rounded-xl py-3.5 hover:bg-yellow-600 transition-colors shadow-md">
-                            Invia il tuo pensiero
-                        </button>
-                    </form>
+                    <ContactForm />
                 </div>
 
             </section>

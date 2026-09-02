@@ -8,6 +8,9 @@
  */
 import {
     buildFinecoDedupKey,
+    extractBareFinecoTrn,
+    extractBeneficiaryToken,
+    extractIbanToken,
     normalizeCausale,
 } from './parseFinecoPaste';
 
@@ -47,6 +50,20 @@ const STOP_WORDS = new Set([
     'CON',
     'THE',
     'AND',
+    'BENEFICIARIO',
+    'IBAN',
+    'DATA',
+    'INSERIMENTO',
+    'INSERIM',
+    'ENTO',
+    'CANALE',
+    'INTERNET',
+    'INTERN',
+    'CAUSALE',
+    'CAUSAL',
+    'ACQUISTO',
+    'FIORI',
+    'ORDINE',
 ]);
 
 const STRONG_VENDOR_TOKENS = new Set([
@@ -139,14 +156,7 @@ export function movementDateIso(
 }
 
 function extractTrnToken(description: string): string | null {
-    const u = description.toUpperCase().replace(/\s+/g, ' ');
-    const labeled = u.match(
-        /\b(?:TRN|TRANS(?:ACTION)?\s*ID|TRANSID|ID\s*TRN|CRO|C\.?R\.?O\.?)\s*[:.#]?\s*([A-Z0-9][A-Z0-9\s]{5,48})/
-    )?.[1];
-    if (!labeled) return null;
-    const trn = labeled.replace(/\s+/g, '');
-    if (trn.length < 8) return null;
-    return trn;
+    return extractBareFinecoTrn(description);
 }
 
 /** Token identificativi condivisi (vendor, TRN, parole chiave). */
@@ -187,24 +197,27 @@ export function descriptionsAreEquivalent(
     const keyB = buildFinecoDedupKey(dateIso, amountCents, b);
     if (keyA === keyB) return true;
 
+    const trnA = extractBareFinecoTrn(a);
+    const trnB = extractBareFinecoTrn(b);
+    if (trnA && trnB && trnA !== trnB) return false;
+
+    const ibanA = extractIbanToken(a);
+    const ibanB = extractIbanToken(b);
+    if (ibanA && ibanB && ibanA !== ibanB) return false;
+
+    const payeeA = extractBeneficiaryToken(a);
+    const payeeB = extractBeneficiaryToken(b);
+    if (payeeA && payeeB && payeeA !== payeeB) return false;
+
     const na = normalizeCausale(a);
     const nb = normalizeCausale(b);
     if (!na || !nb) return false;
     if (na === nb) return true;
 
     const minLen = Math.min(na.length, nb.length);
-    if (minLen >= 8 && (na.includes(nb) || nb.includes(na))) return true;
+    if (minLen >= 24 && (na.includes(nb) || nb.includes(na))) return true;
 
-    const ta = extractIdentityTokens(a);
-    const tb = extractIdentityTokens(b);
-    for (const t of ta) {
-        if (t.startsWith('trn:') && tb.has(t)) return true;
-    }
-    const overlap = tokenOverlapScore(ta, tb);
-    if (overlap >= 2) return true;
-    if (overlap >= 1 && [...ta].some((t) => STRONG_VENDOR_TOKENS.has(t) && tb.has(t))) {
-        return true;
-    }
+    // Non deduplicare solo per parole generiche condivise (es. BENEFICIARIO/ACQUISTO/FIORI).
     return false;
 }
 

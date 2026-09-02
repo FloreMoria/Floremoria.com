@@ -18,7 +18,7 @@ import {
 import { reconcileAllMovements } from './reconcileStatement';
 import type { BankReconciliationReport, ParsedBankMovement } from './types';
 import type { Prisma } from '@prisma/client';
-import { inferBankMovementSource, mergeBankLineMatchFields, deduplicateBankMovements, bankMovementSourcePriority } from './deduplicateBankMovements';
+import { inferBankMovementSource, mergeBankLineMatchFields } from './deduplicateBankMovements';
 import {
     planBankMovementsImport,
     supersedeBankLineSafe,
@@ -234,7 +234,11 @@ export async function listBankStatementMovements(params?: {
 
     const lines = await prisma.bankStatementLine.findMany({
         where: dateFilter,
-        orderBy: [{ accountingDate: 'desc' }, { valueDate: 'desc' }, { lineIndex: 'asc' }],
+        orderBy: [
+            { accountingDate: 'desc' },
+            { valueDate: 'desc' },
+            { id: 'desc' },
+        ],
         include: {
             document: {
                 select: {
@@ -292,15 +296,13 @@ export async function listBankStatementMovements(params?: {
         };
     });
 
-    const sortedForDedup = [...mapped].sort(
-        (a, b) => bankMovementSourcePriority(b.source) - bankMovementSourcePriority(a.source)
-    );
-    const { kept } = deduplicateBankMovements(sortedForDedup);
-    const visibleLines = kept
+    const visibleLines = mapped
         .sort((a, b) => {
             const da = a.accountingDate || a.valueDate || '';
             const db = b.accountingDate || b.valueDate || '';
-            return db.localeCompare(da);
+            const byDate = db.localeCompare(da);
+            if (byDate !== 0) return byDate;
+            return b.id.localeCompare(a.id);
         })
         .map(({ source: _source, dateIso: _dateIso, ...row }) => row);
 

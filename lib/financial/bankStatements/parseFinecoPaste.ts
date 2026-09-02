@@ -109,31 +109,69 @@ export function looksLikeIbanOrCreditorId(token: string): boolean {
     return false;
 }
 
+/** Estrae IBAN italiano o estero dalla causale Fineco. */
+export function extractIbanToken(description: string): string | null {
+    const compact = description.toUpperCase().replace(/\s+/g, '');
+    const m = compact.match(/[A-Z]{2}\d{2}[A-Z0-9]{10,30}/);
+    if (!m) return null;
+    const iban = m[0];
+    return looksLikeIbanOrCreditorId(iban) ? iban : null;
+}
+
+/** Beneficiario da riga "Beneficiario: …" (home banking Fineco). */
+export function extractBeneficiaryToken(description: string): string | null {
+    const m = description.match(/Beneficiario\s*:\s*([^|\n·]+?)(?:\s+IBAN\b|\s+Data\b|$)/i);
+    if (!m) return null;
+    const norm = normalizeCausale(m[1]).slice(0, 80);
+    return norm || null;
+}
+
+/**
+ * TRN/CRO/TransID espliciti o numeri lunghi Fineco (es. 260902333402969448032000000IT).
+ */
+export function extractBareFinecoTrn(description: string): string | null {
+    const u = description.toUpperCase().replace(/\s+/g, ' ');
+    const labeled = u.match(
+        /\b(?:TRN|TRANS(?:ACTION)?\s*ID|TRANSID|ID\s*TRN|CRO|C\.?R\.?O\.?)\s*[:.#]?\s*([A-Z0-9][A-Z0-9\s]{5,72})/
+    )?.[1];
+    if (labeled) {
+        let trn = labeled.replace(/\s+/g, '');
+        // Taglia eventuale testo accidentale dopo il TRN numerico.
+        trn = trn.match(/^(\d{12,32}IT?)/)?.[1] || trn;
+        if (trn.length >= 8 && !looksLikeIbanOrCreditorId(trn)) return trn;
+    }
+
+    const bareMatches = [...u.matchAll(/\b(\d{20,32}IT?)\b/g)].map((m) => m[1]);
+    const bare = bareMatches.sort((a, b) => b.length - a.length)[0];
+    if (bare && !looksLikeIbanOrCreditorId(bare)) return bare;
+
+    return null;
+}
+
 /**
  * Chiave dedup naturale Fineco.
- * - TRN/CRO/TransID espliciti (mai IBAN / LU96ZZZ…)
- * - Altrimenti data|importo|causale (distingue due bonifici stesso giorno/importo)
+ * Priorità: TRN univoco → data+importo+IBAN+beneficiario+causale.
  */
 export function buildFinecoDedupKey(
     dateIso: string | null,
     amountCents: number,
     description: string
 ): string {
-    const u = description.toUpperCase().replace(/\s+/g, ' ');
-    const labeled = u.match(
-        /\b(?:TRN|TRANS(?:ACTION)?\s*ID|TRANSID|ID\s*TRN|CRO|C\.?R\.?O\.?)\s*[:.#]?\s*([A-Z0-9][A-Z0-9\s]{5,48})/
-    )?.[1];
-    let trn = labeled ? labeled.replace(/\s+/g, '') : null;
-    if (trn && looksLikeIbanOrCreditorId(trn)) {
-        trn = null;
-    }
-
+    const trn = extractBareFinecoTrn(description);
     const date = dateIso || 'nodate';
-    const norm = normalizeCausale(description).slice(0, 160);
-    if (trn && /[A-Z]/.test(trn) && /\d/.test(trn) && trn.length >= 8) {
+
+    if (trn) {
         return `trn:${trn}|${date}|${amountCents}`;
     }
-    return `${date}|${amountCents}|${norm}`;
+
+    const iban = extractIbanToken(description);
+    const payee = extractBeneficiaryToken(description);
+    const norm = normalizeCausale(description).slice(0, 160);
+    const parts = [date, String(amountCents)];
+    if (iban) parts.push(`iban:${iban}`);
+    if (payee) parts.push(`payee:${payee}`);
+    parts.push(norm);
+    return parts.join('|');
 }
 
 function extractAmount(line: string): { cents: number; rest: string } | null {

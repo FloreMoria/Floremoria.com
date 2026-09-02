@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 type Stage = 'identify' | 'password' | 'otp' | 'magic-sent';
 
@@ -275,6 +277,14 @@ export default function LoginPage() {
             <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-6 min-h-[44px]"
+                >
+                    <ArrowLeft size={16} aria-hidden />
+                    Torna a FloreMoria
+                </Link>
+
                 <div className="flex justify-center mb-6">
                     <div className="text-3xl font-display font-medium text-fm-gold tracking-widest uppercase">
                         FloreMoria

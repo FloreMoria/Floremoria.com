@@ -73,3 +73,4 @@
 [2026-09-02 13:35] feat(ai-audit): runner reale 12 prompt, scoring semantico, snapshot Neon, API POST run + UI scansione live con estratti risposta AI; tsc+build OK.
 [2026-09-02 13:45] feat(aeo): Google Search grounding nel runner audit Gemini, evaluateAiResponse con sinonimi brand/garanzie, schema HowTo+FAQ esteso in JsonLd; tsc+build OK.
 [2026-09-02 14:15] feat(aeo): benchmark esteso a 20 prompt RAG in 5 macro-intenti, batch parallelo runner, filtri UI dashboard, docs allineata; tsc+build OK.
+[2026-09-02 14:30] feat(auth): link Torna a FloreMoria con ArrowLeft nella pagina login (/); tsc+build OK.

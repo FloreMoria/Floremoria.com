@@ -11,6 +11,7 @@ import {
     Plus,
     RefreshCw,
     FileJson,
+    FileSpreadsheet,
     Calendar,
     AlertOctagon,
     Pencil,
@@ -319,27 +320,31 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    // Export Neon historical ledger (Prima Nota)
-    const handleExportHistoricalCSV = async () => {
+    // Export Dossier Fiscale Completo (Prima Nota + prospetti in un unico .xlsx)
+    const handleExportFiscalDossier = async () => {
         setExportingLedger(true);
         try {
             const year = new Date().getFullYear();
+            const quarter = Math.floor(new Date().getMonth() / 3) + 1;
             const res = await fetch(
-                `/api/dashboard/finance/historical-ledger/export?format=csv&year=${year}`
+                `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${quarter}&format=xlsx`
             );
-            if (!res.ok) throw new Error('Export CSV fallito');
+            if (!res.ok) throw new Error('Export dossier fallito');
             const blob = await res.blob();
+            const cd = res.headers.get('Content-Disposition') || '';
+            const match = cd.match(/filename="([^"]+)"/);
+            const filename = match?.[1] || `FloreMoria_Dossier_Fiscale_Q${quarter}_${year}.xlsx`;
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `libro-giornale-${year}.csv`;
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             link.remove();
             URL.revokeObjectURL(url);
         } catch (err) {
             console.error(err);
-            alert(err instanceof Error ? err.message : 'Export CSV fallito');
+            alert(err instanceof Error ? err.message : 'Export dossier fallito');
         } finally {
             setExportingLedger(false);
         }
@@ -753,17 +758,17 @@ export default function FinanceDashboardPage() {
                                 <button
                                     type="button"
                                     disabled={exportingLedger}
-                                    onClick={() => void handleExportHistoricalCSV()}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
+                                    onClick={() => void handleExportFiscalDossier()}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D6F42] hover:bg-[#165a35] text-white rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
                                 >
-                                    <Download size={16} />
-                                    Esporta CSV
+                                    <FileSpreadsheet size={16} />
+                                    Scarica Dossier Fiscale Completo (.xlsx)
                                 </button>
                                 <button
                                     type="button"
                                     disabled={exportingLedger}
                                     onClick={() => void handleExportHistoricalJSON()}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
                                 >
                                     <FileJson size={16} />
                                     Esporta JSON

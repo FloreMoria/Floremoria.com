@@ -88,3 +88,4 @@
 
 [2026-09-02 18:25] feat(blog): ShareButtons — Web Share API + WhatsApp/FB/X/LinkedIn/Telegram/copia link; barra top+bottom articolo; tsc+build OK.
 [2026-09-02 18:35] fix(vera): priorità assistenza generica/form contatti — blocco false positive «invi» in informazioni, niente aggancio ordini chiusi >48h, reply cortesia aperta; tsc+build OK.
+[2026-09-02 18:50] feat(accounting): Dossier Fiscale Completo .xlsx (exceljs) — 6 fogli IVA/Prima Nota/Corrispettivi/RC/Fioristi/Meta; CTA unica Trimestre/Mese; CSV deprecato; tsc+build OK.

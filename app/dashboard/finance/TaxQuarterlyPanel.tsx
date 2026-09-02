@@ -9,9 +9,10 @@ import {
     Receipt,
     Pencil,
     Archive,
+    FileSpreadsheet,
 } from 'lucide-react';
 
-type PeriodMode = 'quarter' | 'quadrimester';
+type PeriodMode = 'quarter' | 'month' | 'quadrimester';
 type SettlementStatus = 'PENDING' | 'BONIFICATO' | 'RICEVUTA';
 
 type TaxRegisterRow = {
@@ -94,12 +95,14 @@ export default function TaxQuarterlyPanel() {
     const [year, setYear] = useState(new Date().getFullYear());
     const [mode, setMode] = useState<PeriodMode>('quarter');
     const [quarter, setQuarter] = useState(currentQuarter());
+    const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [quadrimester, setQuadrimester] = useState(currentQuadrimester());
     const [report, setReport] = useState<TaxRegisterReport | null>(null);
     const [stripeInvoices, setStripeInvoices] = useState<StripeInvoiceRow[]>([]);
     const [paypalFees, setPaypalFees] = useState<PaypalFeeRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [editRow, setEditRow] = useState<TaxRegisterRow | null>(null);
     const [saving, setSaving] = useState(false);
@@ -107,7 +110,17 @@ export default function TaxQuarterlyPanel() {
     const periodQuery =
         mode === 'quadrimester'
             ? `year=${year}&mode=quadrimester&quadrimester=${quadrimester}`
-            : `year=${year}&mode=quarter&quarter=${quarter}`;
+            : `year=${year}&mode=quarter&quarter=${
+                  mode === 'month' ? Math.floor((month - 1) / 3) + 1 : quarter
+              }`;
+
+    const dossierQuery = () => {
+        if (mode === 'month') {
+            return `year=${year}&month=${month}&quarter=${Math.floor((month - 1) / 3) + 1}&format=xlsx`;
+        }
+        const q = mode === 'quarter' ? quarter : Math.min(4, Math.ceil(quadrimester * 1.34));
+        return `year=${year}&quarter=${q}&format=xlsx`;
+    };
 
     const loadReport = useCallback(async () => {
         setLoading(true);
@@ -117,8 +130,12 @@ export default function TaxQuarterlyPanel() {
                 fetch(`/api/dashboard/finance/tax-register?${periodQuery}`),
                 fetch(
                     `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${
-                        mode === 'quarter' ? quarter : Math.ceil(quadrimester * 1.34)
-                    }&format=json`
+                        mode === 'month'
+                            ? Math.floor((month - 1) / 3) + 1
+                            : mode === 'quarter'
+                              ? quarter
+                              : Math.ceil(quadrimester * 1.34)
+                    }${mode === 'month' ? `&month=${month}` : ''}&format=json`
                 ),
             ]);
             const regData = await regRes.json();
@@ -142,7 +159,7 @@ export default function TaxQuarterlyPanel() {
         } finally {
             setLoading(false);
         }
-    }, [periodQuery, year, mode, quarter, quadrimester]);
+    }, [periodQuery, year, mode, quarter, month, quadrimester]);
 
     useEffect(() => {
         void loadReport();
@@ -172,12 +189,33 @@ export default function TaxQuarterlyPanel() {
         }
     };
 
-    const handleDownloadXlsx = () => {
-        const q = mode === 'quarter' ? quarter : Math.min(4, Math.ceil(quadrimester * 1.34));
-        window.open(
-            `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${q}&format=xlsx`,
-            '_blank'
-        );
+    const handleDownloadXlsx = async () => {
+        setDownloading(true);
+        setMessage(null);
+        try {
+            const res = await fetch(`/api/dashboard/finance/tax-quarterly?${dossierQuery()}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error((err as { error?: string }).error || 'Download fallito');
+            }
+            const blob = await res.blob();
+            const cd = res.headers.get('Content-Disposition') || '';
+            const match = cd.match(/filename="([^"]+)"/);
+            const filename = match?.[1] || `FloreMoria_Dossier_Fiscale_${year}.xlsx`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            setMessage('Dossier Fiscale Completo scaricato.');
+        } catch (err) {
+            setMessage(err instanceof Error ? err.message : 'Errore download dossier');
+        } finally {
+            setDownloading(false);
+        }
     };
 
     const handleDownloadZip = () => {
@@ -238,6 +276,7 @@ export default function TaxQuarterlyPanel() {
                         className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
                     >
                         <option value="quarter">Trimestre fiscale</option>
+                        <option value="month">Mese</option>
                         <option value="quadrimester">Quadrimestre</option>
                     </select>
                     {mode === 'quarter' ? (
@@ -250,6 +289,31 @@ export default function TaxQuarterlyPanel() {
                             <option value={2}>Q2 (apr–giu)</option>
                             <option value={3}>Q3 (lug–set)</option>
                             <option value={4}>Q4 (ott–dic)</option>
+                        </select>
+                    ) : mode === 'month' ? (
+                        <select
+                            value={month}
+                            onChange={(e) => setMonth(Number(e.target.value))}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
+                        >
+                            {[
+                                'Gennaio',
+                                'Febbraio',
+                                'Marzo',
+                                'Aprile',
+                                'Maggio',
+                                'Giugno',
+                                'Luglio',
+                                'Agosto',
+                                'Settembre',
+                                'Ottobre',
+                                'Novembre',
+                                'Dicembre',
+                            ].map((label, i) => (
+                                <option key={label} value={i + 1}>
+                                    {label}
+                                </option>
+                            ))}
                         </select>
                     ) : (
                         <select
@@ -298,11 +362,12 @@ export default function TaxQuarterlyPanel() {
                     </button>
                     <button
                         type="button"
-                        onClick={handleDownloadXlsx}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#c5a880] text-white text-xs font-bold uppercase tracking-wide hover:bg-[#b8976e]"
+                        onClick={() => void handleDownloadXlsx()}
+                        disabled={downloading}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1D6F42] text-white text-xs font-bold tracking-wide hover:bg-[#165a35] shadow-sm disabled:opacity-60"
                     >
-                        <Download size={14} />
-                        XLSX commercialista
+                        <FileSpreadsheet size={15} className={downloading ? 'animate-pulse' : ''} />
+                        {downloading ? 'Preparazione…' : 'Scarica Dossier Fiscale Completo (.xlsx)'}
                     </button>
                 </div>
             </div>
@@ -505,20 +570,11 @@ export default function TaxQuarterlyPanel() {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    const q =
-                                        mode === 'quarter'
-                                            ? quarter
-                                            : Math.min(4, Math.ceil(quadrimester * 1.34));
-                                    window.open(
-                                        `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${q}&format=paypal-fees-csv`,
-                                        '_blank'
-                                    );
-                                }}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 hover:underline"
+                                onClick={() => void handleDownloadXlsx()}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1D6F42] hover:underline"
                             >
-                                <Download size={12} />
-                                Scarica CSV
+                                <FileSpreadsheet size={12} />
+                                Incluso nel Dossier .xlsx
                             </button>
                         </div>
                         <div className="dashboard-table-scroll overflow-x-auto">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { applyUserEmailChange, UserEmailUpdateError } from '@/lib/auth/userEmailUpdate';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export async function PUT(request: Request) {
     try {
@@ -12,12 +13,14 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Missing orderIds' }, { status: 400 });
         }
 
+        const formattedName = typeof name === 'string' ? formatPersonName(name) : name;
+
         await prisma.order.updateMany({
             where: {
                 id: { in: orderIds },
             },
             data: {
-                buyerFullName: name,
+                buyerFullName: formattedName,
                 customerPhone: phone,
                 ...(typeof email === 'string' && email.trim()
                     ? { buyerEmail: normalizeMagicLinkEmail(email) }
@@ -46,7 +49,7 @@ export async function PUT(request: Request) {
                     userId: existingUser.id,
                     previousEmail: existingUser.email,
                     newEmail: nextEmail,
-                    name: name ?? existingUser.name,
+                    name: formattedName ?? existingUser.name,
                     phone: phone ?? existingUser.phone,
                 });
             }
@@ -54,7 +57,7 @@ export async function PUT(request: Request) {
             await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    name: name,
+                    name: formattedName,
                     phone: phone,
                     ...(nextEmail !== existingUser.email ? { email: nextEmail } : {}),
                 },

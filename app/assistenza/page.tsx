@@ -2,6 +2,8 @@ import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import FloremSocialLinks from '@/components/FloremSocialLinks';
+import PublicFaqAccordion from '@/components/seo/PublicFaqAccordion';
+import { FLOREMORIA_ASSISTENZA_FAQ } from '@/lib/seo/publicFaq';
 
 export const metadata: Metadata = {
     title: 'Assistenza e Vicinanza | FloreMoria - Consegna Fiori Cimiteriali',
@@ -64,7 +66,7 @@ export default function AssistenzaPage() {
                             </svg>
                         </div>
                         <h3 className="text-lg font-display font-bold text-gray-900">Consegniamo noi</h3>
-                        <p className="text-sm sm:text-base text-fm-muted font-body">Gestiamo la consegna in chiese, cimiteri o abitazioni in tutta Italia.</p>
+                        <p className="text-sm sm:text-base text-fm-muted font-body">Un fiorista partner locale prepara e consegna a mano in cimitero, chiesa o abitazione — senza spedizioni postali.</p>
                     </div>
                 </div>
             </section>

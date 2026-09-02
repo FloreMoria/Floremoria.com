@@ -9,6 +9,7 @@ import { exportToCSV } from '@/lib/utils';
 import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 
 export type ExtendedPartner = Partner & {
@@ -189,7 +190,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
 
         try {
             // Remove unnecessary IDs if POSTing new
-            const submitData = { ...formData };
+            const submitData = { ...formData, ownerName: formatPersonName(formData.ownerName) };
             if (!isUpdate) delete (submitData as any).id;
 
             const res = await fetch(url, {
@@ -330,7 +331,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             ID: p.id,
             Codice: p.uniqueCode || '-',
             Negozio: p.shopName,
-            Titolare: p.ownerName,
+            Titolare: formatPersonName(p.ownerName),
             Provincia: p.province || '-',
             Area: p.coverageArea || 'Non definita',
             WhatsApp: p.whatsappNumber || '-',
@@ -465,7 +466,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                 <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
                                                     {partner.shopName}
                                                 </div>
-                                                <div className="text-xs text-gray-500 font-medium">{partner.ownerName}</div>
+                                                <div className="text-xs text-gray-500 font-medium">{formatPersonName(partner.ownerName)}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -545,7 +546,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                         {formData.id ? (
                             <Link href={`/dashboard/fioristi/${formData.id}`} className="group flex flex-col gap-0.5 transition-colors cursor-pointer" title="Apri Dossier Completo">
                                 <h2 className="text-xl font-bold flex items-center gap-2">
-                                    {formData.ownerName}
+                                    {formatPersonName(formData.ownerName)}
                                     <span className="text-xs ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Apri ↳</span>
                                 </h2>
                                 <p className="text-gray-500 font-medium flex items-center gap-1.5"><Building2 size={13} className="text-fm-gold" /> {formData.shopName}</p>

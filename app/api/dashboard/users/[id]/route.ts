@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { normalizeMagicLinkEmail } from '@/lib/auth/magicLink';
 import { isProfileUserType } from '@/lib/users/profileUserType';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
     const auth = await requireDashboardAdmin();
@@ -12,7 +13,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         const { id } = await context.params;
         const body = await request.json();
 
-        const name = typeof body.name === 'string' ? body.name.trim() : undefined;
+        const name = typeof body.name === 'string' ? formatPersonName(body.name) : undefined;
         const phone = typeof body.phone === 'string' ? body.phone.trim() : undefined;
         const email =
             typeof body.email === 'string' && body.email.trim()

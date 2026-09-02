@@ -1,22 +1,9 @@
-/** Chiave ordinamento alfabetico per cognome (ultima parola del nome completo, convenzione IT). */
-export function sortKeyBySurname(fullName: string | null | undefined): string {
-    const name = (fullName || '').trim();
-    if (!name) return 'zzz';
+import {
+    sortKeyBySurname,
+    compareBySurname,
+} from '@/lib/utils/formatPersonName';
 
-    const parts = name.split(/\s+/).filter(Boolean);
-    if (parts.length <= 1) return parts[0]!.toLocaleLowerCase('it');
-
-    const surname = parts[parts.length - 1]!;
-    const given = parts.slice(0, -1).join(' ');
-    return `${surname.toLocaleLowerCase('it')} ${given.toLocaleLowerCase('it')}`;
-}
-
-export function compareBySurname(
-    a: string | null | undefined,
-    b: string | null | undefined
-): number {
-    return sortKeyBySurname(a).localeCompare(sortKeyBySurname(b), 'it', { sensitivity: 'base' });
-}
+export { sortKeyBySurname, compareBySurname };
 
 export function compareByRecentActivity(
     a: { createdAt?: Date | string | null; updatedAt?: Date | string | null },

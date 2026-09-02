@@ -14,6 +14,7 @@ import {
     X,
 } from 'lucide-react';
 import ClientPrintButton from './ClientPrintButton';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 type Props = {
     partner: Partner;
@@ -50,10 +51,14 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
 
         setIsSubmitting(true);
         try {
+            const payload = {
+                ...formData,
+                ownerName: formatPersonName(formData.ownerName),
+            };
             const res = await fetch(`/api/dashboard/partners/${formData.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) throw new Error('Salvataggio non riuscito');
             const saved = (await res.json()) as Partner;
@@ -84,7 +89,7 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
                                 {partner.shopName}
                             </h1>
                             <p className="text-sm text-gray-600 font-medium truncate mt-0.5">
-                                {partner.ownerName}
+                                {formatPersonName(partner.ownerName)}
                             </p>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-gray-500">
                                 <span>

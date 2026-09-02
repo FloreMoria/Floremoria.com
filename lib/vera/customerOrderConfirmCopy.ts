@@ -1,6 +1,7 @@
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { toPersonTitleCase } from '@/lib/utils/formatPersonName';
 
 /**
  * Invito a rispondere per aprire la finestra conversazione Meta (24h).
@@ -151,5 +152,5 @@ export function resolveSafeBuyerFirstName(raw?: string | null): string {
         return 'Cliente';
     }
 
-    return cleanFirstName.charAt(0).toUpperCase() + cleanFirstName.slice(1);
+    return toPersonTitleCase(cleanFirstName);
 }

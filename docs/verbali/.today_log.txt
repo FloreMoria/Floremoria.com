@@ -78,3 +78,5 @@
 
 [2026-09-02 14:40] fix(aeo-runner): Strict Benchmark Baseline — system prompt neutrale, zero bias brand/llms.txt, Google Search grounding invariato; tsc+build OK.
 [2026-09-02 14:50] fix(mobile-ux): sticky CTA Ordina su PDP mobile sopra bottom nav (z-998), backdrop blur, padding contenuto; tsc+build OK.
+[2026-09-02 15:15] refactor(users): Title Case per nomi utenti ovunque ed ordinamento per cognome nella tabella Utenti; creato helper formatPersonName in lib/utils/formatPersonName.ts con ordinamento e Title Case; aggiornati sort, visualizzazioni tabelle/drawer/comunicazioni/email e normalizzazione input/persistenza; tsc+build OK.
+

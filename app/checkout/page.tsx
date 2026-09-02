@@ -14,6 +14,7 @@ import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName, toPersonTitleCase } from '@/lib/utils/formatPersonName';
 
 interface OrderItem {
     productId: string;
@@ -485,7 +486,7 @@ export default function CheckoutPage() {
                     code: discountCodeInput,
                     subtotalCents: cartTotalCents,
                     buyerEmail,
-                    buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
+                    buyerFullName: formatPersonName(buyerName, buyerSurname),
                     buyerPhone,
                 }),
             });
@@ -518,7 +519,7 @@ export default function CheckoutPage() {
                 orderCategory,
                 recurringType,
                 ...(orderCategory === 'FF' ? { ffTombCareReminder10d } : {}),
-                buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
+                buyerFullName: formatPersonName(buyerName, buyerSurname),
                 buyerEmail,
                 buyerPhone,
                 deceasedName: formatDeceasedName(deceasedName),
@@ -831,10 +832,10 @@ export default function CheckoutPage() {
                                     <h3 className="font-display font-bold text-lg text-gray-900 border-b border-gray-200 pb-2">Sezione Contatto (Chi riceve la conferma)</h3>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <input type="text" placeholder="Nome *" value={buyerName} onChange={e => setBuyerName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="given-name" />
+                                            <input type="text" placeholder="Nome *" value={buyerName} onChange={e => setBuyerName(e.target.value)} onBlur={() => setBuyerName(prev => toPersonTitleCase(prev))} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="given-name" />
                                         </div>
                                         <div>
-                                            <input type="text" placeholder="Cognome *" value={buyerSurname} onChange={e => setBuyerSurname(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="family-name" />
+                                            <input type="text" placeholder="Cognome *" value={buyerSurname} onChange={e => setBuyerSurname(e.target.value)} onBlur={() => setBuyerSurname(prev => toPersonTitleCase(prev))} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900" autoComplete="family-name" />
                                         </div>
                                     </div>
                                     <div>

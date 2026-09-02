@@ -6,6 +6,7 @@ import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export const maxDuration = 120;
 
@@ -48,6 +49,8 @@ export async function PUT(request: Request, context: any) {
                     }
                 } else if (k === 'deceasedName') {
                     safeData.deceasedName = body.deceasedName ? formatDeceasedName(body.deceasedName) : '';
+                } else if (k === 'buyerFullName') {
+                    safeData.buyerFullName = body.buyerFullName ? formatPersonName(body.buyerFullName) : null;
                 } else {
                     safeData[k] = body[k];
                 }

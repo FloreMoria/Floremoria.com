@@ -1,6 +1,7 @@
 import type { Order, OrderItem, Product, Partner } from '@prisma/client';
 import type { FloristScoutOrderPayload } from '@/lib/ai/floristScoutTypes';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 type OrderWithItems = Order & {
     items: (OrderItem & { product: Product })[];
@@ -64,7 +65,7 @@ export function buildOrderStaffHtml(params: { order: OrderWithItemsAndPartner; s
       <tbody>
         <tr style="border-bottom: 1px solid #eee;">
           <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Cliente</strong></td>
-          <td style="padding: 8px 0; color: #111;">${esc(order.buyerFullName)}</td>
+          <td style="padding: 8px 0; color: #111;">${esc(formatPersonName(order.buyerFullName))}</td>
         </tr>
         <tr style="border-bottom: 1px solid #eee;">
           <td style="padding: 8px 0; color: #666;"><strong>Email</strong></td>

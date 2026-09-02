@@ -5,6 +5,7 @@ import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { enrichOrderWithShareableLinks } from '@/lib/dashboard/enrichOrderShareableLinks';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
+import { formatPersonName, compareBySurname } from '@/lib/utils/formatPersonName';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export default async function UsersPage() {
 
         usersMap.set(u.id, {
             id: u.id,
-            name: u.name || 'Utente Registrato',
+            name: formatPersonName(u.name, 'Utente Registrato'),
             email: u.email || '',
             phone: u.phone || 'Non specificato',
             city: u.city || 'Non specificata',
@@ -109,7 +110,7 @@ export default async function UsersPage() {
         if (!usersMap.has(key)) {
             usersMap.set(key, {
                 id: order.userId || `virtual_${order.id}`,
-                name: order.user?.name || order.buyerFullName || 'Utente Sconosciuto',
+                name: formatPersonName(order.user?.name || order.buyerFullName, 'Utente Sconosciuto'),
                 email: order.user?.email || order.buyerEmail || '',
                 phone: order.user?.phone || order.customerPhone || 'Non specificato',
                 city: order.buyerCity || 'Non specificata',
@@ -141,7 +142,10 @@ export default async function UsersPage() {
         }
     });
 
-    const groupedUsers = Array.from(usersMap.values());
+    // Ordinamento alfabetico tassativo per COGNOME (A-Z)
+    const groupedUsers = Array.from(usersMap.values()).sort((a, b) =>
+        compareBySurname(a.name, b.name)
+    );
 
     const dbErrors: string[] = [];
     if (!ordersResult.ok) dbErrors.push(ordersResult.error);

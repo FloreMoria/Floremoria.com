@@ -19,6 +19,7 @@ import {
     isDashboardMainProduct,
 } from '@/lib/orders/dashboardProductRole';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export const MANUAL_ORDER_IMPORT_TAG = 'IMPORT_MANUALE: dashboard admin';
 
@@ -94,7 +95,7 @@ async function resolveUserIdForManualOrder(
         id: `manual-${Date.now()}`,
         buyerEmail: email,
         customerPhone: phone,
-        buyerFullName: input.buyerFullName?.trim() || null,
+        buyerFullName: formatPersonName(input.buyerFullName) || null,
     } as Parameters<typeof createUserFromOrder>[0];
 
     const created = await createUserFromOrder(draftOrder);
@@ -207,7 +208,7 @@ export async function createDashboardManualOrder(
     }
 
     const orderDataBase: Prisma.OrderCreateInput = {
-        buyerFullName: input.buyerFullName?.trim() || null,
+        buyerFullName: formatPersonName(input.buyerFullName) || null,
         buyerEmail: email,
         customerPhone: phone,
         deceasedName,

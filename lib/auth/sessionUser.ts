@@ -8,6 +8,7 @@ import { ADMIN_ROLE_NAME, SUPER_ADMIN_ROLE_NAME } from '../superAdmin';
 import { isElevatedLoginEmail } from '../superAdminLogin';
 import { ensureElevatedUserRecord } from './ensureElevatedUser';
 import { findUserByEmail } from './identity';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export interface SessionContext {
     role: string;
@@ -83,7 +84,7 @@ export function buildSafeProfileUpdate(body: Record<string, unknown>): {
     } = {};
 
     if (typeof body.name === 'string') {
-        const name = body.name.trim();
+        const name = formatPersonName(body.name);
         if (name) data.name = name.slice(0, 200);
     }
     if (typeof body.phone === 'string') {

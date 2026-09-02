@@ -17,6 +17,7 @@ import {
     resolveB2bOrderAssociations,
 } from '@/lib/partners/partnerOrderService';
 import { formatDeceasedName, type DeceasedNameInput } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export const runtime = 'nodejs';
 
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
         const deliveryProvince =
             typeof b.deliveryProvince === 'string' ? b.deliveryProvince.trim().toUpperCase().slice(0, 2) : '';
         const deliveryDateRaw = b.deliveryDate;
-        const buyerFullName = b.buyerFullName;
+        const buyerFullName = typeof b.buyerFullName === 'string' ? formatPersonName(b.buyerFullName) : b.buyerFullName;
         const buyerEmail = typeof b.buyerEmail === 'string' ? b.buyerEmail.trim().toLowerCase() : '';
         const buyerPhone = typeof b.buyerPhone === 'string' ? b.buyerPhone.trim() : undefined;
         const gravePosition = typeof b.gravePosition === 'string' ? b.gravePosition.trim() : undefined;

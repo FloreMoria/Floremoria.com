@@ -19,6 +19,29 @@ export default function JsonLd() {
     const catalogId = `${origin}/#offer-catalog`;
     const faqId = `${origin}/#faq`;
     const howToId = `${origin}/#howto-cemetery-flowers`;
+    const cemeteryServiceId = `${origin}/#service-cemetery-delivery`;
+    const loculoServiceId = `${origin}/#service-grave-loculo-search`;
+
+    const catalogOffers = FLOREMORIA_OFFER_CATALOGS.map((cat) => {
+        const offerId = `${origin}/#offer-catalog-${cat.id}`;
+        return {
+            '@type': 'Offer',
+            '@id': offerId,
+            name: `${cat.id} — ${cat.name}`,
+            url: cat.url,
+            priceCurrency: 'EUR',
+            price: cat.priceFrom,
+            description: `${cat.priceFromLabel}. Fascia ${cat.priceRange}.`,
+            itemOffered: {
+                '@type': 'Service',
+                name: cat.name,
+                url: cat.url,
+                provider: { '@id': orgId },
+                areaServed: { '@type': 'Country', name: 'Italia', identifier: 'IT' },
+            },
+            offeredBy: { '@id': localBusinessId },
+        };
+    });
 
     const graph = {
         '@context': 'https://schema.org',
@@ -60,6 +83,7 @@ export default function JsonLd() {
                     'https://www.facebook.com/floremoria',
                     'https://www.linkedin.com/company/floremoria',
                 ],
+                makesOffer: catalogOffers.map((o) => ({ '@id': o['@id'] })),
             },
             {
                 '@type': ['LocalBusiness', 'Florist'],
@@ -88,6 +112,7 @@ export default function JsonLd() {
                 },
                 parentOrganization: { '@id': orgId },
                 hasOfferCatalog: { '@id': catalogId },
+                makesOffer: catalogOffers.map((o) => ({ '@id': o['@id'] })),
             },
             {
                 '@type': 'WebSite',
@@ -108,8 +133,31 @@ export default function JsonLd() {
                     position: index + 1,
                     name: `${cat.id} — ${cat.name}`,
                     url: cat.url,
-                    description: `Fascia prezzi ${cat.priceRange}. ${cat.highlights.join('; ')}.`,
+                    description: `Da € ${cat.priceFrom.toFixed(2).replace('.', ',')}. ${cat.priceFromLabel}. Fascia ${cat.priceRange}.`,
+                    offers: { '@id': `${origin}/#offer-catalog-${cat.id}` },
                 })),
+            },
+            ...catalogOffers,
+            {
+                '@type': 'Service',
+                '@id': cemeteryServiceId,
+                name: 'Consegna fiori al cimitero a mano',
+                description:
+                    'Consegna commemorativa eseguita a piedi da fioristi partner locali nelle immediate vicinanze del cimitero o del luogo della cerimonia, su tutto il territorio italiano. Nessuna spedizione postale.',
+                provider: { '@id': localBusinessId },
+                areaServed: { '@type': 'Country', name: 'Italia', identifier: 'IT' },
+                serviceType: 'Consegna floreale commemorativa in cimitero',
+                offers: { '@id': `${origin}/#offer-catalog-FT` },
+            },
+            {
+                '@type': 'Service',
+                '@id': loculoServiceId,
+                name: 'Ricerca loculo e tomba',
+                description:
+                    'Verifica e individuazione della sepoltura tramite registri cimiteriali comunali e rete di fioristi locali, inclusa nel servizio FloreMoria anche senza numero di loculo completo.',
+                provider: { '@id': orgId },
+                areaServed: { '@type': 'Country', name: 'Italia', identifier: 'IT' },
+                serviceType: 'Ricerca loculo e posizione tomba',
             },
             {
                 '@type': 'FAQPage',
@@ -143,7 +191,7 @@ export default function JsonLd() {
                 isPartOf: { '@id': websiteId },
                 about: [
                     { '@id': orgId },
-                    { '@type': 'Service', name: 'Consegna fiori al cimitero con foto WhatsApp' },
+                    { '@id': cemeteryServiceId },
                 ],
             },
         ],

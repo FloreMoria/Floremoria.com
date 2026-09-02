@@ -22,6 +22,7 @@ import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
 import type { ProfileUserType } from '@prisma/client';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName, compareBySurname } from '@/lib/utils/formatPersonName';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -254,7 +255,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    buyerFullName: draft.buyerFullName,
+                    buyerFullName: formatPersonName(draft.buyerFullName),
                     customerPhone: draft.customerPhone,
                     deceasedName: formatDeceasedName(draft.deceasedName),
                     cemeteryName: draft.cemeteryName,
@@ -417,7 +418,9 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
             return sortDirection === 'asc' ? cmp : -cmp;
         }
         if (sortField === 'price') cmp = a.totalPriceCents - b.totalPriceCents;
-        else if (sortField === 'alpha') cmp = (a.buyerFullName || '').localeCompare(b.buyerFullName || '');
+        else if (sortField === 'alpha') cmp = compareBySurname(a.buyerFullName, b.buyerFullName);
+        else if (sortField === 'city') cmp = (a.cemeteryCity || '').localeCompare(b.cemeteryCity || '');
+        else if (sortField === 'cemetery') cmp = (a.cemeteryName || '').localeCompare(b.cemeteryName || '');
         return sortDirection === 'asc' ? cmp : -cmp;
     });
 
@@ -426,7 +429,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
             'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
             'Data Consegna': formatDeliveryDate(o),
             'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
-            'Utente': o.buyerFullName || 'Sconosciuto',
+            'Utente': formatPersonName(o.buyerFullName, 'Sconosciuto'),
             'Telefono': o.customerPhone || '',
             'Prodotto': o.items?.[0]?.product?.name || 'Composizione',
             'Prezzo': `${(o.totalPriceCents / 100).toFixed(2)} €`,
@@ -833,7 +836,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-wrap items-center gap-1.5 leading-tight">
-                                                    <span className="font-semibold text-black">{order.buyerFullName || 'Utente Sconosciuto'}</span>
+                                                    <span className="font-semibold text-black">{formatPersonName(order.buyerFullName, 'Utente Sconosciuto')}</span>
                                                     {order.userId ? (
                                                         <span onClick={(e) => e.stopPropagation()}>
                                                             <UserTypeBadge

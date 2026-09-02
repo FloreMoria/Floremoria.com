@@ -1,9 +1,11 @@
+import { toPersonTitleCase } from '@/lib/utils/formatPersonName';
+
 /** Estrae il nome di battesimo (prima parola) da nome completo o ragione sociale. */
 export function extractFirstName(fullName: string): string {
     const trimmed = fullName.trim().replace(/^gentile\s+/i, '');
     if (!trimmed) return '';
     const [first] = trimmed.split(/\s+/);
-    return first ?? trimmed;
+    return toPersonTitleCase(first ?? trimmed);
 }
 
 /**

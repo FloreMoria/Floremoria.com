@@ -3,11 +3,16 @@ import prisma from '@/lib/prisma';
 import { generatePartnerCode } from '@/lib/codeGenerator';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import crypto from 'crypto';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { id, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...data } = body;
+
+        if (data.ownerName) {
+            data.ownerName = formatPersonName(data.ownerName);
+        }
 
         let uniqueCode = typeof data.uniqueCode === 'string' ? data.uniqueCode.trim() : '';
         if (!uniqueCode) {
@@ -26,7 +31,7 @@ export async function POST(request: Request) {
                 user = await prisma.user.create({
                     data: {
                         email: partnerEmail,
-                        name: data.ownerName || '',
+                        name: data.ownerName ? formatPersonName(data.ownerName) : '',
                         systemRole: 'FLORIST',
                         isActive: false,
                         isActivated: false,

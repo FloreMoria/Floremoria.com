@@ -8,6 +8,7 @@ import StaffPushNotifications from '@/components/dashboard/StaffPushNotification
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
   const now = new Date();
@@ -1143,7 +1144,7 @@ function ControlloTab() {
                   {data.gdmOpens.map(open => (
                     <tr key={open.id} className="hover:bg-[#FAF8F5]/50 transition-colors">
                       <td className="py-3.5 pr-4">
-                        <span className="font-medium text-[#111B21]">{open.buyerName}</span>
+                        <span className="font-medium text-[#111B21]">{formatPersonName(open.buyerName, 'Cliente')}</span>
                         <span className="block text-[11px] text-[#8696A0]">{open.buyerEmail}</span>
                       </td>
                       <td className="py-3.5 pr-4 font-mono text-xs">{open.orderNumber}</td>

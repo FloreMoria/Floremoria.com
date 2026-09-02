@@ -17,6 +17,7 @@ import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { resolveCheckoutPartnerAssociations } from '@/lib/orders/resolveCheckoutPartners';
 import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
         } = body;
 
         const formattedDeceasedName = formatDeceasedName(deceasedName);
+        const formattedBuyerFullName = formatPersonName(buyerFullName);
 
         // 0. Server-Side Logistics Validation
         const validateDeliveryTime = (category: string, requestedIso: string) => {
@@ -326,7 +328,7 @@ export async function POST(request: Request) {
                     userObj = await prisma.user.create({
                         data: {
                             email: emailTrim,
-                            name: typeof buyerFullName === 'string' ? buyerFullName.trim() : null,
+                            name: formattedBuyerFullName || null,
                             phone: typeof normalizedBuyerPhone === 'string' ? normalizedBuyerPhone : null,
                             systemRole: 'USER',
                             isActive: true, // I clienti privati (USER) sono subito pronti per l'accesso Magic Link
@@ -354,7 +356,7 @@ export async function POST(request: Request) {
                     return tx.order.create({
                         data: {
                             orderNumber,
-                            buyerFullName,
+                            buyerFullName: formattedBuyerFullName,
                             buyerEmail,
                             isRecurring,
                             userId: buyerUserId,

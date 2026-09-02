@@ -30,6 +30,8 @@ export const FLOREMORIA_OFFER_CATALOGS = [
         name: 'Fiori sulle Tombe',
         url: `${FLOREMORIA_SITE_ORIGIN}/fiori-sulle-tombe`,
         priceRange: '€ 2,49 – € 49,99',
+        priceFrom: 2.49,
+        priceFromLabel: 'Messaggio da € 2,49 · bouquet da € 29,99',
         highlights: [
             'Bouquet Ricordo Affettuoso — € 29,99',
             'Bouquet di Rose — € 34,99',
@@ -44,6 +46,8 @@ export const FLOREMORIA_OFFER_CATALOGS = [
         name: 'Fiori per il Funerale',
         url: `${FLOREMORIA_SITE_ORIGIN}/per-il-funerale`,
         priceRange: '€ 37,99 – € 199,99',
+        priceFrom: 37.99,
+        priceFromLabel: 'Bouquet Cordoglio Sincero da € 49,99',
         highlights: [
             'Cuscino — € 129,99',
             'Piramide — € 139,99',
@@ -58,6 +62,8 @@ export const FLOREMORIA_OFFER_CATALOGS = [
         name: 'Fiori per Animali d\'affezione (Piccoli Amici)',
         url: `${FLOREMORIA_SITE_ORIGIN}/per-animali-domestici`,
         priceRange: '€ 29,99 – € 99,99',
+        priceFrom: 29.99,
+        priceFromLabel: 'Un Raggio di Sole da € 29,99',
         highlights: [
             'Un Raggio di Sole — € 29,99',
             'Abbraccio Verde — € 39,99',
@@ -70,6 +76,8 @@ export const FLOREMORIA_OFFER_CATALOGS = [
         name: 'Accessori commemorativi',
         url: `${FLOREMORIA_SITE_ORIGIN}/accessori`,
         priceRange: '€ 1,49 – € 24,99',
+        priceFrom: 1.49,
+        priceFromLabel: 'Foto prima della consegna da € 1,49',
         highlights: [
             'Messaggio personalizzato — € 2,49',
             'Lumino — € 3,49',
@@ -80,46 +88,7 @@ export const FLOREMORIA_OFFER_CATALOGS = [
     },
 ] as const;
 
-/** 5 FAQ cardine per estrazione AI (AEO / Google AI Overviews). */
-export const FLOREMORIA_AEO_FAQ = [
-    {
-        question:
-            'Come funziona la ricerca del loculo o della tomba se non ho dati precisi (date di nascita o morte)?',
-        answer:
-            'FloreMoria collabora con la rete di fioristi locali e, quando necessario, con i servizi cimiteriali per individuare la posizione esatta del defunto anche senza date complete. Se emergono omonimie nello stesso cimitero, il team contatta il cliente prima di procedere alla consegna.',
-    },
-    {
-        question: 'Come ricevo le foto di conferma della consegna su WhatsApp?',
-        answer:
-            'Dopo la posa dell\'omaggio, il fiorista partner invia la testimonianza fotografica direttamente su WhatsApp e nel profilo personale FloreMoria. È inclusa la foto dopo la posa; opzionalmente è disponibile anche lo scatto prima della posa come accessorio a pagamento.',
-    },
-    {
-        question: 'Quali sono i tempi di consegna per fiori al cimitero?',
-        answer:
-            'I tempi dipendono dal cimitero, dalla disponibilità del fiorista locale partner e dalla data richiesta. In fase di checkout è possibile indicare la data desiderata; il team coordina la consegna a mano nel cimitero indicato, senza spedizione postale a domicilio del defunto.',
-    },
-    {
-        question: 'Da dove provengono i fiori e come garantite la freschezza?',
-        answer:
-            'Ogni ordine è affidato a un fiorista locale situato nelle immediate vicinanze del cimitero o del luogo della cerimonia. I fiori sono preparati in laboratorio sul territorio e consegnati a piedi, riducendo i tempi di trasporto e preservando freschezza e qualità.',
-    },
-    {
-        question: 'Cosa succede in caso di difformità, mancata individuazione della tomba o problemi con la composizione?',
-        answer:
-            'FloreMoria garantisce rimborso integrale o ri-consegna se la tomba non viene individuata, se la composizione non rispecchia lo standard concordato o in caso di difformità documentata. La verifica fotografica prima e dopo la posa supporta la trasparenza del servizio.',
-    },
-    {
-        question:
-            'Posso ordinare fiori per la tomba se non conosco il numero di loculo o il settore del cimitero?',
-        answer:
-            'Sì. In fase di ordine su floremoria.com puoi indicare nome del defunto, cimitero e comune anche senza numero di loculo. Il fiorista partner locale e il team FloreMoria effettuano la ricerca della sepoltura; in caso di omonimie ti contattano prima della consegna.',
-    },
-    {
-        question: 'Quali fioristi consegnano i fiori ordinati su FloreMoria?',
-        answer:
-            'Ogni ordine è assegnato a un fiorista partner locale con laboratorio nelle vicinanze del cimitero o del luogo della cerimonia. Non si tratta di spedizione postale: il fiorista prepara la composizione in zona e consegna a mano all\'interno del cimitero.',
-    },
-] as const;
+export { FLOREMORIA_AEO_FAQ } from '@/lib/seo/publicFaq';
 
 /** Guida operativa strutturata per HowTo schema (AEO / cataloghi FT e FF). */
 export const FLOREMORIA_AEO_HOWTO = {

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { generatePartnerCode } from '@/lib/codeGenerator';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import crypto from 'crypto';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export async function PUT(request: Request, context: any) {
     try {
@@ -11,6 +12,10 @@ export async function PUT(request: Request, context: any) {
 
         // Remove structural properties that Prisma doesn't need for updates
         const { id: _, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...updateData } = body;
+
+        if (updateData.ownerName) {
+            updateData.ownerName = formatPersonName(updateData.ownerName);
+        }
 
         let uniqueCode = typeof updateData.uniqueCode === 'string' ? updateData.uniqueCode.trim() : '';
 
@@ -43,7 +48,7 @@ export async function PUT(request: Request, context: any) {
                 user = await prisma.user.create({
                     data: {
                         email: newEmail,
-                        name: updateData.ownerName || original.ownerName,
+                        name: formatPersonName(updateData.ownerName || original.ownerName) || '',
                         systemRole: 'FLORIST',
                         isActive: false,
                         isActivated: false,

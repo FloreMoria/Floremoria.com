@@ -29,7 +29,7 @@ import AdminMediaUploadAvatar from '@/components/dashboard/AdminMediaUploadAvata
 import CreateUserModal from '@/components/dashboard/CreateUserModal';
 import ShareableLinkPanel from '@/components/dashboard/ShareableLinkPanel';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
-import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
+import { compareBySurname, formatPersonName, SURNAME_PARTICLES } from '@/lib/utils/formatPersonName';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 
 
@@ -65,9 +65,9 @@ export default function ClientUsersTable({
 
     const [users, setUsers] = useState(initialUsers);
 
-    // Leggi i parametri iniziali dall'URL
+    // Leggi i parametri iniziali dall'URL (default: alfabetico per cognome A-Z)
     const initialQuery = searchParams.get('q') || '';
-    const initialSort = (searchParams.get('sort') as SortOption) || 'created_desc';
+    const initialSort = (searchParams.get('sort') as SortOption) || 'name_asc';
     
     const [searchInput, setSearchInput] = useState(initialQuery);
     const [searchTerm, setSearchTerm] = useState(initialQuery);
@@ -86,7 +86,7 @@ export default function ClientUsersTable({
         const q = searchParams.get('q') || '';
         setSearchInput(q);
         setSearchTerm(q);
-        setSortOption((searchParams.get('sort') as SortOption) || 'created_desc');
+        setSortOption((searchParams.get('sort') as SortOption) || 'name_asc');
     }, [searchParams]);
 
     // Aggiorna gli URL SearchParams in Next.js in modo trasparente
@@ -102,7 +102,7 @@ export default function ClientUsersTable({
         params.delete('role');
         params.delete('status');
 
-        if (newSort && newSort !== 'created_desc') params.set('sort', newSort);
+        if (newSort && newSort !== 'name_asc') params.set('sort', newSort);
         else params.delete('sort');
 
         const queryString = params.toString();
@@ -124,12 +124,12 @@ export default function ClientUsersTable({
     const resetFilters = () => {
         setSearchInput('');
         setSearchTerm('');
-        setSortOption('created_desc');
+        setSortOption('name_asc');
         router.replace(pathname, { scroll: false });
     };
 
     const toggleSortHeader = (type: 'name' | 'orders' | 'created') => {
-        let nextSort: SortOption = 'created_desc';
+        let nextSort: SortOption = 'name_asc';
         if (type === 'name') {
             nextSort = sortOption === 'name_asc' ? 'name_desc' : 'name_asc';
         } else if (type === 'orders') {
@@ -156,11 +156,8 @@ export default function ClientUsersTable({
             );
         }
 
-        // 2. Ordinamento Colonne
+        // 2. Ordinamento Colonne (Default: per Cognome A-Z)
         list.sort((a, b) => {
-            if (sortOption === 'name_asc') {
-                return compareBySurname(a.name || '', b.name || '');
-            }
             if (sortOption === 'name_desc') {
                 return compareBySurname(b.name || '', a.name || '');
             }
@@ -170,21 +167,24 @@ export default function ClientUsersTable({
             if (sortOption === 'orders_asc') {
                 return (a.ordersCount || a.orders?.length || 0) - (b.ordersCount || b.orders?.length || 0);
             }
+            if (sortOption === 'created_desc') {
+                const dateA = new Date(a.createdAt || a.lastOrderDate || 0).getTime();
+                const dateB = new Date(b.createdAt || b.lastOrderDate || 0).getTime();
+                return dateB - dateA;
+            }
             if (sortOption === 'created_asc') {
                 const dateA = new Date(a.createdAt || a.lastOrderDate || 0).getTime();
                 const dateB = new Date(b.createdAt || b.lastOrderDate || 0).getTime();
                 return dateA - dateB;
             }
-            // Default: created_desc
-            const dateA = new Date(a.createdAt || a.lastOrderDate || 0).getTime();
-            const dateB = new Date(b.createdAt || b.lastOrderDate || 0).getTime();
-            return dateB - dateA;
+            // Default: name_asc (ordinamento per cognome A-Z)
+            return compareBySurname(a.name || '', b.name || '');
         });
 
         return list;
     }, [users, searchTerm, sortOption]);
 
-    const isFiltered = Boolean(searchTerm || sortOption !== 'created_desc');
+    const isFiltered = Boolean(searchTerm || sortOption !== 'name_asc');
 
     const beginRowEdit = (u: any) => {
         if (!u.id || String(u.id).startsWith('virtual_')) return;
@@ -469,10 +469,14 @@ export default function ClientUsersTable({
                                 </tr>
                             ) : (
                                 filteredUsers.map((u, i) => {
-                                    const rawName = (u.name || 'Utente Sconosciuto').trim();
-                                    const nameParts = rawName.split(' ');
-                                    const firstName = nameParts[0] || '';
-                                    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || 'Utente';
+                                    const rawName = formatPersonName(u.name || 'Utente Sconosciuto');
+                                    const nameParts = rawName.split(/\s+/).filter(Boolean);
+                                    let lastName = nameParts[nameParts.length - 1] || 'Utente';
+                                    let firstName = nameParts.slice(0, -1).join(' ');
+                                    if (nameParts.length >= 2 && SURNAME_PARTICLES.has(nameParts[nameParts.length - 2].toLowerCase())) {
+                                        lastName = nameParts.slice(nameParts.length - 2).join(' ');
+                                        firstName = nameParts.slice(0, nameParts.length - 2).join(' ');
+                                    }
                                     const isSingleWord = nameParts.length <= 1;
 
                                     return (
@@ -674,7 +678,7 @@ export default function ClientUsersTable({
                                 />
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-xl font-bold text-gray-900">{selectedUser.name}</h2>
+                                        <h2 className="text-xl font-bold text-gray-900">{formatPersonName(selectedUser.name)}</h2>
                                         <UserTypeBadge userId={selectedUser.id} initialType={selectedUser.userType} />
                                     </div>
                                     <p className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-2">

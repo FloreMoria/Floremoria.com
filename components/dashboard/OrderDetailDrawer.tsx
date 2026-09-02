@@ -11,6 +11,7 @@ import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 interface OrderDetailDrawerProps {
     order: any | null;
@@ -201,7 +202,7 @@ export default function OrderDetailDrawer({
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Dettaglio Ordine</div>
                         <h3 className="text-xl font-display font-semibold text-gray-900">
-                            {localOrder.orderNumber || `Ordine #${localOrder.id.substring(localOrder.id.length - 6).toUpperCase()}`} - {localOrder.buyerFullName || formatDeceasedName(localOrder.deceasedName)}
+                            {localOrder.orderNumber || `Ordine #${localOrder.id.substring(localOrder.id.length - 6).toUpperCase()}`} - {formatPersonName(localOrder.buyerFullName) || formatDeceasedName(localOrder.deceasedName)}
                         </h3>
                     </div>
                     <div className="flex items-center gap-3">
@@ -515,13 +516,13 @@ export default function OrderDetailDrawer({
                                 <option value="">-- Nessun Fiorista --</option>
                                 {florists.map((f: any) => (
                                     <option key={f.id} value={f.id} className="text-black font-semibold">
-                                        {f.shopName} ({f.ownerName})
+                                        {f.shopName} {f.ownerName ? `(${formatPersonName(f.ownerName)})` : ''}
                                     </option>
                                 ))}
                             </select>
                         ) : (
                             <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 p-3 rounded-xl flex items-center gap-2">
-                                <span>{localOrder.partner?.shopName || localOrder.partner?.ownerName || 'Nessun fiorista'}</span>
+                                <span>{localOrder.partner?.shopName || (localOrder.partner?.ownerName ? formatPersonName(localOrder.partner.ownerName) : 'Nessun fiorista')}</span>
                             </div>
                         )}
                         {localOrder.partnerId && localOrder.floristDeliveryUrl ? (

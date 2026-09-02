@@ -10,7 +10,7 @@
  */
 
 // Prefissi / particelle comuni nei cognomi italiani
-const SURNAME_PARTICLES = new Set([
+export const SURNAME_PARTICLES = new Set([
     'de',
     'del',
     'della',
@@ -32,7 +32,7 @@ const SURNAME_PARTICLES = new Set([
 ]);
 
 // Set ottimizzato dei nomi propri italiani più diffusi per riconoscimento inversione Cognome Nome
-const ITALIAN_FIRST_NAMES = new Set([
+export const ITALIAN_FIRST_NAMES = new Set([
     'mario', 'luigi', 'giovanni', 'giuseppe', 'francesco', 'antonio', 'paolo', 'roberto', 'andrea',
     'alessandro', 'marco', 'luca', 'matteo', 'davide', 'simone', 'federico', 'lorenzo', 'gabriele',
     'mattia', 'leonardo', 'riccardo', 'tommaso', 'edoardo', 'filippo', 'michele', 'pietro', 'salvatore',

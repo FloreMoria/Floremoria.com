@@ -14,6 +14,7 @@ import { Order, User, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { isLegacyElevatedIdentifier } from '../superAdminLogin';
 import { phoneVariants, phoneCore, toE164 } from './phone';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export type IdentifierType = 'email' | 'phone';
 export type LoginMode = 'password' | 'passwordless';
@@ -127,7 +128,7 @@ export async function linkHistoricalOrders(user: User): Promise<number> {
 export async function createUserFromOrder(order: Order): Promise<User | null> {
     const phone = order.customerPhone?.trim() || null;
     const realEmail = order.buyerEmail?.trim().toLowerCase() || null;
-    const name = order.buyerFullName?.trim() || null;
+    const name = order.buyerFullName?.trim() ? formatPersonName(order.buyerFullName) : null;
 
     if (!realEmail && !phone) return null;
 

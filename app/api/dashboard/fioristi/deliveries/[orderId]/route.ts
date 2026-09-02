@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { revalidatePath } from 'next/cache';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +36,7 @@ export async function PATCH(request: Request, context: any) {
             data.floristCompensationCents = !isNaN(euros) ? Math.round(euros * 100) : null;
         }
         if (body.deceasedName !== undefined) data.deceasedName = body.deceasedName ? formatDeceasedName(body.deceasedName) : '';
-        if (body.buyerFullName !== undefined) data.buyerFullName = body.buyerFullName;
+        if (body.buyerFullName !== undefined) data.buyerFullName = body.buyerFullName ? formatPersonName(body.buyerFullName) : null;
         if (body.ticketMessage !== undefined) data.ticketMessage = body.ticketMessage;
         if (body.additionalInstructions !== undefined) data.additionalInstructions = body.additionalInstructions;
 

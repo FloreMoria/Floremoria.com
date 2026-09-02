@@ -28,6 +28,14 @@ const nextConfig: NextConfig = {
         source: '/merchant-feed.csv',
         destination: '/merchant-feed',
       },
+      {
+        source: '/piccoli-amici',
+        destination: '/per-animali-domestici',
+      },
+      {
+        source: '/piccoli-amici/:path*',
+        destination: '/per-animali-domestici/:path*',
+      },
     ];
   },
   images: {

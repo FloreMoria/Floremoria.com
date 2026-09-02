@@ -12,6 +12,7 @@ import {
     isIsolatedCourtesyMessage,
 } from '@/lib/vera/courtesyDebounce';
 import { getClosingGreeting, getOpeningGreeting } from '@/lib/vera/greetings';
+import { tryBuildCatalogLinkReply } from '@/lib/vera/catalogIntentReply';
 
 type CoreKb = {
     supportEmail: string;
@@ -466,13 +467,19 @@ export function buildWhatsAppAiReply(params: {
     knowledgeContext?: string;
 }): string {
     const { message, userName, userType, mediaUrl, history = [] } = params;
+    const displayName = getDisplayName(userName);
+
+    if (userType !== 'FLORIST') {
+        const catalogReply = tryBuildCatalogLinkReply(message, displayName);
+        if (catalogReply) return catalogReply;
+    }
+
     const kb = loadWhatsAppCoreKb();
     const m = normalizeMessage(message);
     const recentTopic = inferRecentTopic(history);
     const lastOutboundMessage = findLastOutboundMessage(history);
     const recentInboundLocation = findRecentInboundLocation(history);
     const contextDependent = isContextDependentMessage(m);
-    const displayName = getDisplayName(userName);
     const salutoPrefix = shouldUseDailyGreeting(history)
         ? `${getOpeningGreeting(displayName || '')} `
         : '';

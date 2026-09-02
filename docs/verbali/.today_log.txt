@@ -93,3 +93,5 @@
 [2026-09-02 18:49] feat(vera): helper saluti orari Europe/Rome (apertura/chiusura) + integrazione WhatsApp/prompt
 
 [2026-09-02 19:10] fix(accounting): dedup Prima Nota (TRN/SDI), esclusione pose prepagate da corrispettivi, euro al centesimo
+[2026-09-02 19:40] fix(vera): gestione richieste link cataloghi, fallback conversazionale e regole orarie saluti; modulo catalogIntentReply, rewrite /piccoli-amici, saluti Rome orari e Title Case; tsc+build OK.
+

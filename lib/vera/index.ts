@@ -58,6 +58,12 @@ export {
     isPreAcquisitionIntent,
     isWebsiteContactFormPayload,
 } from '@/lib/vera/preAcquisitionIntent';
+export {
+    buildCatalogLinkReply,
+    detectCatalogLinkIntent,
+    tryBuildCatalogLinkReply,
+    type CatalogLinkIntentType,
+} from '@/lib/vera/catalogIntentReply';
 export { listActiveVeraAlerts, setVeraOperationalAlert, clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 export {
     classifyAndExtractVeraMessage,

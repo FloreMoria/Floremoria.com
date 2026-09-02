@@ -59,7 +59,7 @@ export function getClosingGreetingPhrase(now: Date = new Date()): string {
 /**
  * Saluto di apertura: "Buongiorno [Nome]," oppure "Buongiorno," se nome assente.
  */
-export function getOpeningGreeting(nome: string, now: Date = new Date()): string {
+export function getOpeningGreeting(nome?: string | null, now: Date = new Date()): string {
     const phrase = getOpeningGreetingPhrase(now);
     const name = normalizeGreetingName(nome);
     return name ? `${phrase} ${name},` : `${phrase},`;
@@ -68,7 +68,7 @@ export function getOpeningGreeting(nome: string, now: Date = new Date()): string
 /**
  * Congedo: "Buona giornata [Nome], a presto." oppure senza nome.
  */
-export function getClosingGreeting(nome: string, now: Date = new Date()): string {
+export function getClosingGreeting(nome?: string | null, now: Date = new Date()): string {
     const phrase = getClosingGreetingPhrase(now);
     const name = normalizeGreetingName(nome);
     return name ? `${phrase} ${name}, a presto.` : `${phrase}, a presto.`;

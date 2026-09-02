@@ -67,6 +67,8 @@ import {
     isWebsiteContactFormPayload,
     resolveAssistanceDisplayName,
 } from '@/lib/vera/preAcquisitionIntent';
+import { tryBuildCatalogLinkReply } from '@/lib/vera/catalogIntentReply';
+import { normalizeGreetingName } from '@/lib/vera/greetings';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
     detectFloristException,
@@ -152,11 +154,11 @@ function stripClosingSignature(text: string): string {
 }
 
 function getDisplayNameFromSession(session: ChatSession, callerContext?: VeraCallerContext): string | undefined {
-    if (callerContext?.firstName) return callerContext.firstName;
-    const sanitized = sanitizeWhatsAppDisplayName(session.name);
+    if (callerContext?.firstName) return normalizeGreetingName(callerContext.firstName) || undefined;
+    const rawName = session.name || (session as unknown as { profileName?: string }).profileName;
+    const sanitized = sanitizeWhatsAppDisplayName(rawName);
     if (!sanitized) return undefined;
-    const parts = sanitized.split(' ').filter(Boolean);
-    return parts.length ? parts[parts.length - 1] : undefined;
+    return normalizeGreetingName(sanitized) || undefined;
 }
 
 function sanitizeVeraReplyText(text: string): string {
@@ -592,6 +594,17 @@ export async function generateVeraReply(
     // Reaction / cortesia / ack isolati: nessun messaggio in uscita.
     if (shouldSilenceVeraReply(message, session)) {
         return { text: '', source: 'silence', shouldEscalate: false };
+    }
+
+    // ── Richieste link cataloghi e navigazione sito (priorità deterministica immediata) ──
+    if (session.userType !== 'FLORIST') {
+        const catalogReply = tryBuildCatalogLinkReply(
+            message,
+            getDisplayNameFromSession(session, callerContext)
+        );
+        if (catalogReply) {
+            return { text: catalogReply, source: 'deterministic', shouldEscalate: false };
+        }
     }
 
     // PRIORITÀ: nuovo contatto / form contatti / assistenza generica —

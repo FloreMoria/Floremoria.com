@@ -69,3 +69,4 @@
 [2026-09-02 12:30] feat: YouDOX sync post-19/08 (chunk vuoti, forceResync, debug log), fix imponibili FatturaPA + reparse, tabella fatture passive flat con drawer dettaglio completo.
 [2026-09-02 12:55] feat(ai-readiness): llms.txt + llms-full.txt, JSON-LD @graph globale, script audit:ai-visibility e protocollo benchmark GEO/AEO.
 [2026-09-02 13:05] fix(youdox-ui): header compatto orizzontale SdiInvoicesUploadBox; dedup parseFatturaPaDetail pagamenti/righe/IVA.
+[2026-09-02 13:15] feat(dashboard): pulsante Command Center Audit Visibilità AI (AEO/GEO), pagina /dashboard/audit/ai-visibility, API report, lib/seo/aiVisibilityBenchmark; tsc+build OK.

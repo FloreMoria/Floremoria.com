@@ -12,6 +12,8 @@ type HubButton = {
     url: string;
     /** Scroll alla sezione Traffico GA4 nella Overview */
     scrollTarget?: string;
+    /** Apre in nuova scheda (anche per route interne dashboard) */
+    openInNewTab?: boolean;
 };
 
 const ROW1_BASE: HubButton[] = [
@@ -30,9 +32,16 @@ const ROW2_BASE: HubButton[] = [
     { id: 'youdox', label: 'Contabilità', icon: '💼', url: '/dashboard/finance' },
 ];
 
-const ROW3 = [
+const ROW3: HubButton[] = [
     { id: 'github', label: 'GitHub', icon: '💻', url: process.env.NEXT_PUBLIC_SOCIAL_GITHUB_URL || 'https://github.com' },
     { id: 'social', label: 'Social Media', icon: '📱', url: '/dashboard/campaigns' },
+    {
+        id: 'ai-audit',
+        label: 'Audit AI',
+        icon: '🧠',
+        url: '/dashboard/audit/ai-visibility',
+        openInNewTab: true,
+    },
 ];
 
 export default function MissionControlHub({
@@ -100,6 +109,11 @@ export default function MissionControlHub({
         const state = states[btn.id] || 'green';
 
         const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+            if (btn.openInNewTab) {
+                e.preventDefault();
+                window.open(btn.url, '_blank', 'noopener,noreferrer');
+                return;
+            }
             if (!btn.scrollTarget) return;
             e.preventDefault();
             document.getElementById(btn.scrollTarget)?.scrollIntoView({
@@ -112,12 +126,22 @@ export default function MissionControlHub({
             <a
                 href={btn.scrollTarget ? `#${btn.scrollTarget}` : btn.url}
                 onClick={handleClick}
-                target={btn.scrollTarget ? undefined : (btn.url.startsWith('/') ? undefined : '_blank')}
-                rel={btn.scrollTarget ? undefined : 'noopener noreferrer'}
+                target={
+                    btn.openInNewTab
+                        ? '_blank'
+                        : btn.scrollTarget
+                          ? undefined
+                          : btn.url.startsWith('/')
+                            ? undefined
+                            : '_blank'
+                }
+                rel={btn.scrollTarget && !btn.openInNewTab ? undefined : 'noopener noreferrer'}
                 title={
-                    btn.scrollTarget
-                        ? 'Vai alla sezione Traffico GA4 (clic destro → Apri GA4 in nuova scheda)'
-                        : btn.label
+                    btn.id === 'ai-audit'
+                        ? 'Audit Visibilità AI (AEO/GEO)'
+                        : btn.scrollTarget
+                          ? 'Vai alla sezione Traffico GA4 (clic destro → Apri GA4 in nuova scheda)'
+                          : btn.label
                 }
                 onContextMenu={(e) => {
                     if (btn.scrollTarget) {
@@ -128,7 +152,18 @@ export default function MissionControlHub({
                 className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-300 w-full min-w-[70px] ${getColorClass(state)}`}
             >
                 <span className="text-xl sm:text-2xl mb-1.5">{btn.icon}</span>
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-center">{btn.label}</span>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-center leading-tight">
+                    {btn.id === 'ai-audit' ? (
+                        <>
+                            Audit
+                            <br className="sm:hidden" />
+                            <span className="hidden sm:inline"> </span>
+                            Visibilità AI
+                        </>
+                    ) : (
+                        btn.label
+                    )}
+                </span>
             </a>
         );
     };

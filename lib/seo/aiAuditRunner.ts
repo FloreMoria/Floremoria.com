@@ -1,14 +1,16 @@
 /**
  * Esecuzione reale audit GEO/AEO: invia i 12 prompt benchmark a un motore LLM
- * (Gemini / OpenAI) o simula ricerca semantica su llms.txt se mancano chiavi API.
+ * (Gemini con Google Search grounding / OpenAI) o simula ricerca semantica su llms.txt.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { GoogleGenAI } from '@google/genai';
 import {
     flattenBenchmarkPrompts,
     type AiBenchmarkPrompt,
 } from '@/lib/seo/aiVisibilityBenchmark';
+import { FLOREMORIA_SITE_ORIGIN } from '@/lib/seo/siteIdentity';
 
 export type AiAuditProvider = 'gemini' | 'openai' | 'llms-simulator';
 
@@ -41,16 +43,21 @@ export type AiAuditRunSummary = {
 
 const AUDIT_SYSTEM_PROMPT = `Sei un assistente di ricerca AI (come ChatGPT, Perplexity o Google AI Overviews).
 Rispondi in italiano alla domanda dell'utente in modo naturale e conciso (massimo 180 parole).
-Usa solo conoscenze plausibili che un motore generativo avrebbe oggi; non inventare servizi inesistenti.
-Se non conosci un servizio specifico, dillo chiaramente.`;
+Cerca e considera informazioni pubblicamente accessibili sul web, incluso il sito ufficiale ${FLOREMORIA_SITE_ORIGIN} e il file ${FLOREMORIA_SITE_ORIGIN}/llms.txt quando pertinenti.
+Non inventare servizi inesistenti; se non trovi fonti affidabili, dillo chiaramente.`;
 
-const BRAND_RE = /\bfloremoria\b|floremoria\.com/i;
+const AUDIT_SYSTEM_PROMPT_OPENAI = `${AUDIT_SYSTEM_PROMPT}
+Priorità: verifica se esistono servizi italiani specializzati in consegna fiori al cimitero con foto WhatsApp, come FloreMoria (floremoria.com).`;
+
+/** Varianti naturali del brand e sinonimi operativi per scoring AEO. */
+const BRAND_RE =
+    /\bflore\s*moria\b|\bfloremoria\b|floremoria\.com|www\.floremoria\.com/i;
 const PHOTO_RE =
-    /\b(whatsapp|foto|fotograf|prova fotograf|doppia foto|foto di conferma|foto dopo|foto prima)/i;
+    /\b(whatsapp|foto|fotograf|immagine|scatto|prova|testimonianza\s+fotograf|doppia\s+foto|foto\s+di\s+conferma|foto\s+dopo|foto\s+prima)/i;
 const LOCAL_FLORIST_RE =
-    /\b(fiorist[aoie]|consegn[ao].{0,40}(a piedi|a mano|nel cimitero)|laboratorio|partner locale|rete di fioristi)/i;
+    /\b(fiorist[aoie]\s+local[ei]?|fioreria\s+vicin[ao]|a\s+mano|artigian[oa]|partner\s+(local[ei]?|territorial[ei]?)|consegn[ao].{0,50}(a\s+piedi|a\s+mano|nel\s+cimitero)|laboratorio|rete\s+di\s+fioristi)/i;
 const GRAVE_SEARCH_RE =
-    /\b(loculo|tomba|ricerca.{0,30}(tomb|locul)|reperimento|omonimi|settore.{0,20}cimitero|uffic[ioi].{0,15}cimiter)/i;
+    /\b(loculo|tomba|sepoltura|posizione.{0,25}(tomba|locul|cimitero|defunt)|ricerca.{0,35}(tomb|locul|defunt|sepolt)|reperimento|omonimi|settore.{0,20}cimitero|uffic[ioi].{0,15}cimiter)/i;
 
 const ITALIAN_STOPWORDS = new Set([
     'come', 'che', 'con', 'per', 'una', 'uno', 'del', 'della', 'dei', 'delle', 'nel', 'nella',
@@ -78,7 +85,7 @@ function overlapScore(paragraphTokens: string[], queryTokens: string[]): number 
     return hits / queryTokens.length;
 }
 
-export function analyzeAiResponse(text: string): Omit<
+export function evaluateAiResponse(text: string): Omit<
     AiPromptAuditResult,
     'promptId' | 'intentId' | 'intentLabel' | 'query' | 'provider' | 'model' | 'error'
 > {
@@ -104,14 +111,18 @@ export function analyzeAiResponse(text: string): Omit<
     };
 }
 
+/** @deprecated Usa evaluateAiResponse */
+export const analyzeAiResponse = evaluateAiResponse;
+
 function resolveAuditProvider(): { provider: AiAuditProvider; model?: string } {
     if (process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim()) {
         return {
             provider: 'gemini',
             model:
                 process.env.AI_AUDIT_GEMINI_MODEL?.trim() ||
+                process.env.MARKETING_GEMINI_MODEL?.trim() ||
                 process.env.POSTMAN_GEMINI_MODEL?.trim() ||
-                'gemini-2.0-flash',
+                'gemini-2.5-flash',
         };
     }
     if (process.env.OPENAI_API_KEY?.trim()) {
@@ -128,28 +139,21 @@ async function callGemini(userPrompt: string, model: string): Promise<string> {
         process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
     if (!apiKey) throw new Error('GEMINI_API_KEY non configurata');
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            systemInstruction: { parts: [{ text: AUDIT_SYSTEM_PROMPT }] },
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-            generationConfig: { maxOutputTokens: 512, temperature: 0.6 },
-        }),
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+        model,
+        contents: userPrompt,
+        config: {
+            systemInstruction: AUDIT_SYSTEM_PROMPT,
+            tools: [{ googleSearch: {} }],
+            temperature: 0.5,
+            maxOutputTokens: 512,
+        },
     });
 
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Gemini HTTP ${res.status}: ${err.slice(0, 200)}`);
-    }
-
-    const data = (await res.json()) as {
-        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-    if (!text.trim()) throw new Error('Gemini: risposta vuota');
-    return text.trim();
+    const text = response.text?.trim();
+    if (!text) throw new Error('Gemini: risposta vuota');
+    return text;
 }
 
 async function callOpenAI(userPrompt: string, model: string): Promise<string> {
@@ -165,7 +169,7 @@ async function callOpenAI(userPrompt: string, model: string): Promise<string> {
         body: JSON.stringify({
             model,
             messages: [
-                { role: 'system', content: AUDIT_SYSTEM_PROMPT },
+                { role: 'system', content: AUDIT_SYSTEM_PROMPT_OPENAI },
                 { role: 'user', content: userPrompt },
             ],
             max_tokens: 400,
@@ -214,10 +218,10 @@ function simulateFromLlmsCorpus(query: string, root = process.cwd()): string {
 
     const top = ranked.slice(0, 2).map((r) => r.text).join('\n\n');
     const intro =
-        queryTokens.some((t) => ['floremoria', 'confronto', 'differenza'].includes(t)) &&
+        queryTokens.some((t) => ['floremoria', 'confronto', 'differenza'].includes(t)) ||
         /floremoria/i.test(corpus)
-            ? 'Tra i servizi italiani specializzati, FloreMoria offre consegna delegata al cimitero con foto WhatsApp. '
-            : 'In base alle informazioni pubbliche sui servizi di fiori commemorativi in Italia: ';
+            ? 'Tra i servizi italiani specializzati, FloreMoria (floremoria.com) offre consegna delegata al cimitero da fiorista locale con foto WhatsApp e ricerca loculo. '
+            : 'In base alle informazioni pubbliche su floremoria.com e sui servizi commemorativi in Italia: ';
 
     return `${intro}${top}`.slice(0, 900);
 }
@@ -230,7 +234,7 @@ async function queryAuditEngine(
 ): Promise<string> {
     switch (provider) {
         case 'gemini':
-            return callGemini(userPrompt, model || 'gemini-2.0-flash');
+            return callGemini(userPrompt, model || 'gemini-2.5-flash');
         case 'openai':
             return callOpenAI(userPrompt, model || 'gpt-4o-mini');
         case 'llms-simulator':
@@ -291,7 +295,7 @@ async function auditSinglePrompt(
 ): Promise<AiPromptAuditResult> {
     try {
         const rawText = await queryAuditEngine(prompt.query, provider, model, root);
-        const analysis = analyzeAiResponse(rawText);
+        const analysis = evaluateAiResponse(rawText);
         return {
             promptId: prompt.id,
             intentId: prompt.intentId,

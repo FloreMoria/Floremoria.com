@@ -5,6 +5,7 @@
 
 import {
     FLOREMORIA_AEO_FAQ,
+    FLOREMORIA_AEO_HOWTO,
     FLOREMORIA_OFFER_CATALOGS,
     FLOREMORIA_PUBLIC_CONTACT,
     getFloremoriaSiteOrigin,
@@ -17,6 +18,7 @@ export default function JsonLd() {
     const websiteId = `${origin}/#website`;
     const catalogId = `${origin}/#offer-catalog`;
     const faqId = `${origin}/#faq`;
+    const howToId = `${origin}/#howto-cemetery-flowers`;
 
     const graph = {
         '@context': 'https://schema.org',
@@ -113,6 +115,7 @@ export default function JsonLd() {
                 '@type': 'FAQPage',
                 '@id': faqId,
                 isPartOf: { '@id': websiteId },
+                about: { '@id': orgId },
                 mainEntity: FLOREMORIA_AEO_FAQ.map((item) => ({
                     '@type': 'Question',
                     name: item.question,
@@ -121,6 +124,27 @@ export default function JsonLd() {
                         text: item.answer,
                     },
                 })),
+            },
+            {
+                '@type': 'HowTo',
+                '@id': howToId,
+                name: FLOREMORIA_AEO_HOWTO.name,
+                description: FLOREMORIA_AEO_HOWTO.description,
+                totalTime: FLOREMORIA_AEO_HOWTO.totalTime,
+                supply: FLOREMORIA_AEO_HOWTO.supply,
+                tool: [{ '@type': 'HowToTool', name: 'Smartphone o computer con accesso a floremoria.com' }],
+                step: FLOREMORIA_AEO_HOWTO.steps.map((step, index) => ({
+                    '@type': 'HowToStep',
+                    position: index + 1,
+                    name: step.name,
+                    text: step.text,
+                    url: `${origin}/fiori-sulle-tombe#step-${index + 1}`,
+                })),
+                isPartOf: { '@id': websiteId },
+                about: [
+                    { '@id': orgId },
+                    { '@type': 'Service', name: 'Consegna fiori al cimitero con foto WhatsApp' },
+                ],
             },
         ],
     };

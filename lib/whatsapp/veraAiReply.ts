@@ -1033,7 +1033,9 @@ export async function generateVeraReply(
         replyText = deterministicReply;
         source = 'deterministic';
     } else if (isClosingMessage(message)) {
-        replyText = buildSimpleThanksReply();
+        replyText = buildSimpleThanksReply(
+            getDisplayNameFromSession(session, callerContext)
+        );
         source = 'deterministic';
     } else {
         // Nessun match specifico: prova Gemini LLM

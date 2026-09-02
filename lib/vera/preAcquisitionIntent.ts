@@ -1,7 +1,7 @@
 /**
  * Intent pre-acquisto / assistenza generica — non collegare ordini storici completati.
  */
-import { getItalyOpeningGreeting } from '@/lib/datetime/italyGreeting';
+import { getOpeningGreeting } from '@/lib/vera/greetings';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
 
 function normalizeForMatch(value: string): string {
@@ -94,9 +94,9 @@ export function isGenericAssistanceOrFirstContactIntent(message: string): boolea
 
 /** Metodo Luciano: Lei formale, disponibilità, domande di verifica senza codici ordine. */
 export function buildPreAcquisitionLucianoReply(firstName?: string | null): string {
-    const saluto = firstName ? `Gentile ${firstName}, ` : '';
+    const opening = getOpeningGreeting(firstName || '');
     return (
-        `${saluto}La ringrazio per averci contattato. Sono VERA, l'assistanza di FloreMoria: mi metta pure a disposizione per aiutarLa prima dell'ordine, con calma e attenzione.\n\n` +
+        `${opening} La ringrazio per averci contattato. Sono VERA, l'assistanza di FloreMoria: mi metta pure a disposizione per aiutarLa prima dell'ordine, con calma e attenzione.\n\n` +
         `Mi indichi gentilmente se il fiore servisse per una tomba in cimitero o per un funerale, e in quale città e con quale orario dovrebbe avvenire la consegna, così posso orientarLa nel modo più adatto.\n\n` +
         `In questa fase non serve alcun codice ordine: La guido passo passo.`
     );
@@ -107,17 +107,9 @@ export function buildPreAcquisitionLucianoReply(firstName?: string | null): stri
  * Perché: non riaprire copioni post-consegna su richieste generiche.
  */
 export function buildGenericAssistanceOpenReply(firstName?: string | null): string {
-    const opening = getItalyOpeningGreeting();
-    const raw = (firstName || '').trim();
-    const name = raw ? formatPersonName(raw).split(/\s+/)[0] || '' : '';
-    if (name) {
-        return (
-            `${opening} ${name}, come posso aiutarLa? ` +
-            `Resto a Sua completa disposizione per qualsiasi informazione o supporto sui nostri servizi.`
-        );
-    }
+    const opening = getOpeningGreeting(firstName || '');
     return (
-        `${opening}, come posso aiutarLa? ` +
+        `${opening} come posso aiutarLa? ` +
         `Resto a Sua completa disposizione per qualsiasi informazione o supporto sui nostri servizi.`
     );
 }

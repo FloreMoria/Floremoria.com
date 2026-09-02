@@ -1,5 +1,5 @@
 import type { ChatSession } from '@/lib/chatStore';
-import { getItalyOpeningGreeting } from '@/lib/datetime/italyGreeting';
+import { getClosingGreeting, getOpeningGreeting } from '@/lib/vera/greetings';
 
 function normalizeForCourtesy(value: string): string {
     const clean = (value || '')
@@ -249,28 +249,32 @@ export function buildSymmetricCourtesyReply(params: {
 }): string {
     const m = normalizeForCourtesy(params.message);
     const isFlorist = params.userType === 'FLORIST';
-    const opening = getItalyOpeningGreeting();
+    const opening = getOpeningGreeting(params.displayName || '');
 
     if (/^(grazie|grazie mille|ti ringrazio|la ringrazio|molte grazie)$/.test(m)) {
         return isFlorist ? 'Prego! Dimmi pure se serve altro.' : 'Prego. Se serve altro, scriva pure qui.';
     }
 
-    if (/^(buonasera|buona sera|buongiorno|buon giorno|buondi|buon pomeriggio|ciao( ciao)?|salve)$/.test(m)) {
-        // Rispecchia l'orario Italia, non il saluto dell'utente (evita "Buongiorno" alle 19).
+    if (
+        /^(buonasera|buona sera|buongiorno|buon giorno|buondi|buon pomeriggio|ciao( ciao)?|salve)$/.test(
+            m
+        )
+    ) {
+        // Orario Italia tassativo — non rispecchiare il saluto dell'utente.
         return isFlorist
-            ? `${opening}! Dimmi pure, come posso aiutarti?`
-            : `${opening}. Come posso esserLe utile?`;
+            ? `${opening} Dimmi pure, come posso aiutarti?`
+            : `${opening} Come posso esserLe utile?`;
     }
 
     return isFlorist
-        ? `${opening}! Dimmi pure, come posso aiutarti oggi?`
-        : `${opening}. Come posso esserLe utile?`;
+        ? `${opening} Dimmi pure, come posso aiutarti oggi?`
+        : `${opening} Come posso esserLe utile?`;
 }
 
 export const VERA_SYMMETRIC_GREETING_RULE = `
 REGOLA UNIVERSALE — SALUTO SIMMETRICO (Small Talk Debounce):
 - Se il messaggio contiene SOLO un saluto o un ringraziamento isolato SENZA richiesta operativa, ricambia in modo breve e naturale.
-- Il saluto DEVE seguire l'orario Italia (Europe/Rome): 06–14 "Buongiorno", 15–23 "Buonasera", 00–05 "Buonanotte". Mai "Buongiorno" di sera.
+- Il saluto DEVE seguire l'orario Italia (Europe/Rome): 06–14 "Buongiorno", 14–18 "Buon pomeriggio", 18–06 "Buona sera". Mai "Buongiorno" di sera.
 - NON attivare procedure (foto, ordine, catalogo) su sola cortesia.
 - Su reaction / "Anche a lei" dopo un congedo: SILENZIO totale (nessun messaggio).
 `.trim();

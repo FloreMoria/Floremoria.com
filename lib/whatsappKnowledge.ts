@@ -11,7 +11,7 @@ import {
     buildSymmetricCourtesyReply,
     isIsolatedCourtesyMessage,
 } from '@/lib/vera/courtesyDebounce';
-import { getItalyOpeningGreeting } from '@/lib/datetime/italyGreeting';
+import { getClosingGreeting, getOpeningGreeting } from '@/lib/vera/greetings';
 
 type CoreKb = {
     supportEmail: string;
@@ -422,16 +422,17 @@ export function ensureRespectfulOpening(reply: string, hasPriorOutbound: boolean
         lower.includes('condoglianze') ||
         lower.startsWith('buongiorno') ||
         lower.startsWith('buonasera') ||
+        lower.startsWith('buona sera') ||
+        lower.startsWith('buon pomeriggio') ||
         lower.startsWith('buonanotte') ||
         lower.startsWith('gentile ')
     ) {
         return reply;
     }
     // Saluto ancorato all'orario Italia: non forzare mai "Buongiorno" di sera.
-    const opening = getItalyOpeningGreeting();
     const safeName = sanitizeWhatsAppDisplayName(displayName);
-    const greeting = safeName ? `${opening} ${safeName}, ` : `${opening}, `;
-    return `${greeting}${reply}`;
+    const greeting = getOpeningGreeting(safeName || '');
+    return `${greeting} ${reply}`;
 }
 
 export function isSimpleThanksMessage(message: string): boolean {
@@ -440,13 +441,19 @@ export function isSimpleThanksMessage(message: string): boolean {
 
 export function isClosingMessage(message: string): boolean {
     const m = normalizeMessage(message);
-    return ['arrivederci', 'a presto', 'buona notte', 'buona serata', 'buona giornata', 'a risentirci'].some(
-        (phrase) => m === phrase || m.startsWith(`${phrase} `)
-    );
+    return [
+        'arrivederci',
+        'a presto',
+        'buona notte',
+        'buona serata',
+        'buona giornata',
+        'buon pomeriggio',
+        'a risentirci',
+    ].some((phrase) => m === phrase || m.startsWith(`${phrase} `));
 }
 
-export function buildSimpleThanksReply(): string {
-    return 'Di nulla. Siamo vicini a Lei in questo momento delicato.';
+export function buildSimpleThanksReply(displayName?: string): string {
+    return getClosingGreeting(displayName || '');
 }
 
 export function buildWhatsAppAiReply(params: {
@@ -466,9 +473,8 @@ export function buildWhatsAppAiReply(params: {
     const recentInboundLocation = findRecentInboundLocation(history);
     const contextDependent = isContextDependentMessage(m);
     const displayName = getDisplayName(userName);
-    const italyHello = getItalyOpeningGreeting();
     const salutoPrefix = shouldUseDailyGreeting(history)
-        ? (displayName ? `${italyHello} ${displayName}, ` : `${italyHello}, `)
+        ? `${getOpeningGreeting(displayName || '')} `
         : '';
     const emotionalContext = hasAny(m, [
         'sconforto',

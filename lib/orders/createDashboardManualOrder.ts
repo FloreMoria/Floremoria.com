@@ -18,6 +18,7 @@ import {
     isDashboardAccessoryProduct,
     isDashboardMainProduct,
 } from '@/lib/orders/dashboardProductRole';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export const MANUAL_ORDER_IMPORT_TAG = 'IMPORT_MANUALE: dashboard admin';
 
@@ -109,7 +110,7 @@ async function resolveUserIdForManualOrder(
 export async function createDashboardManualOrder(
     input: CreateDashboardManualOrderInput
 ) {
-    const deceasedName = input.deceasedName?.trim();
+    const deceasedName = formatDeceasedName(input.deceasedName);
     const cemeteryName = input.cemeteryName?.trim();
     const cemeteryCity = input.cemeteryCity?.trim();
     const productId = input.productId?.trim();

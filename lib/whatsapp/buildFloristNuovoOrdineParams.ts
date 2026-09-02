@@ -18,6 +18,7 @@ import type { OrderLineForListino } from '@/lib/pricing/listini';
 import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 import { metaParamOrDash, formatFloristPriceAmountParam } from '@/lib/whatsapp/floristTemplateCopy';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export const FLORIST_NUOVO_ORDINE_BODY_PARAM_COUNT = 11;
 
@@ -215,7 +216,7 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
     // Var 3: Defunto (etichetta gestita da template "🕊️ In memoria di: {{3}}")
     let rawDeceased = stripNoise(input.deceasedName);
     rawDeceased = rawDeceased.replace(/^🕊️\s*In\s+memoria\s+di:\s*/i, '').replace(/^per\s+/i, '').trim();
-    const deceased = rawDeceased && rawDeceased !== '-' ? rawDeceased : 'il caro defunto';
+    const deceased = formatDeceasedName(rawDeceased, 'il caro defunto');
     const var3 = metaParamOrDash(deceased, 120);
 
     // Var 4: Data Consegna (etichetta gestita da template "📅 CONSEGNA : {{4}}")

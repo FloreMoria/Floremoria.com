@@ -20,6 +20,7 @@ import {
     formatFloristMiniAppInstructionLine,
     isUnspecifiedPlaceValue,
 } from '@/lib/whatsapp/buildFloristNuovoOrdineParams';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 /**
  * Testo WhatsApp Punto A — nuovo incarico fiorista.
@@ -129,7 +130,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
     if (isUnspecifiedPlaceValue(rawDeceased)) {
         rawDeceased = '';
     }
-    const deceased = sanitizeLine(rawDeceased, 'il caro defunto');
+    const deceased = formatDeceasedName(rawDeceased, 'il caro defunto');
 
     const deadline = resolveFloristDeliveryDeadline({
         deliveryDate: input.deliveryDate,

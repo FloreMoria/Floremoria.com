@@ -5,6 +5,7 @@ import { clearVeraOperationalAlert } from '@/lib/vera/operationalAlerts';
 import { cancelDashboardOrder } from '@/lib/orders/cancelOrder';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export const maxDuration = 120;
 
@@ -45,6 +46,8 @@ export async function PUT(request: Request, context: any) {
                             safeData[k] = parsedDate;
                         }
                     }
+                } else if (k === 'deceasedName') {
+                    safeData.deceasedName = body.deceasedName ? formatDeceasedName(body.deceasedName) : '';
                 } else {
                     safeData[k] = body[k];
                 }

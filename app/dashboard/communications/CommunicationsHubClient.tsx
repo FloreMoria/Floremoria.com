@@ -7,6 +7,7 @@ import NewConversationModal from '@/components/dashboard/NewConversationModal';
 import StaffPushNotifications from '@/components/dashboard/StaffPushNotifications';
 import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
   const now = new Date();
@@ -1146,7 +1147,7 @@ function ControlloTab() {
                         <span className="block text-[11px] text-[#8696A0]">{open.buyerEmail}</span>
                       </td>
                       <td className="py-3.5 pr-4 font-mono text-xs">{open.orderNumber}</td>
-                      <td className="py-3.5 pr-4">{open.deceasedName}</td>
+                      <td className="py-3.5 pr-4">{formatDeceasedName(open.deceasedName, '—')}</td>
                       <td className="py-3.5 pr-4 text-xs font-semibold text-gray-600">{open.openedAt}</td>
                       <td className="py-3.5 text-xs max-w-[220px]" title={open.deviceHint || open.userAgent || open.device}>
                         <span className={open.isBot ? 'text-amber-700 font-semibold' : 'text-[#8696A0]'}>

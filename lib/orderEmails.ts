@@ -1,5 +1,6 @@
 import type { Order, OrderItem, Product, Partner } from '@prisma/client';
 import type { FloristScoutOrderPayload } from '@/lib/ai/floristScoutTypes';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 type OrderWithItems = Order & {
     items: (OrderItem & { product: Product })[];
@@ -75,7 +76,7 @@ export function buildOrderStaffHtml(params: { order: OrderWithItemsAndPartner; s
         </tr>
         <tr style="border-bottom: 1px solid #eee;">
           <td style="padding: 8px 0; color: #666;"><strong>Defunto / dedicatario</strong></td>
-          <td style="padding: 8px 0; color: #111;">${esc(order.deceasedName)}</td>
+          <td style="padding: 8px 0; color: #111;">${esc(formatDeceasedName(order.deceasedName))}</td>
         </tr>
         <tr style="border-bottom: 1px solid #eee;">
           <td style="padding: 8px 0; color: #666;"><strong>Luogo di Consegna (Cimitero)</strong></td>
@@ -253,7 +254,7 @@ export function buildFloristScoutStaffHtml(params: {
   <div style="background:#fff;padding:24px;border-radius:12px;border:1px solid #e5e7eb;">
     <h2 style="margin:0 0 8px;font-size:20px;">Nuovo fiorista richiesto — Scout AI</h2>
     <p style="margin:0 0 16px;color:#555;font-size:14px;">
-      Ordine <strong>${esc(params.orderNumber)}</strong> · ${esc(params.deceasedName)}<br/>
+      Ordine <strong>${esc(params.orderNumber)}</strong> · ${esc(formatDeceasedName(params.deceasedName))}<br/>
       Cimitero: <strong>${esc(params.scout.cemetery)}</strong> (${esc(params.scout.cemeteryCity)})
     </p>
     ${

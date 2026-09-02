@@ -15,6 +15,7 @@ import { PaymentStatus, OrderStatus } from '@prisma/client';
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
 import PartnerHistoricalLedgerSnippet from '@/components/dashboard/PartnerHistoricalLedgerSnippet';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
     { value: 'ACCEPTED', label: 'Ricevuto' },
@@ -238,7 +239,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                                             </span>
                                                         ) : null}
                                                     </td>
-                                                    <td className="py-3 px-4 text-gray-600 font-medium text-xs">{order.deceasedName || '-'}</td>
+                                                    <td className="py-3 px-4 text-gray-600 font-medium text-xs">{formatDeceasedName(order.deceasedName, '-')}</td>
                                                     <td className="py-3 px-4 text-gray-600 text-[11px] leading-tight max-w-[120px]">
                                                         <div className="font-semibold text-gray-800">{order.cemeteryCity || '-'}</div>
                                                         <div>{order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'Da definire'}</div>

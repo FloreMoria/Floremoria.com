@@ -13,6 +13,7 @@ import type { PartnerExternalOrderPayload } from '@/lib/partnerExternalOrderData
 import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
 import PhoneInput from '@/components/ui/PhoneInput';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 interface OrderItem {
     productId: string;
@@ -520,7 +521,7 @@ export default function CheckoutPage() {
                 buyerFullName: `${buyerName} ${buyerSurname}`.trim(),
                 buyerEmail,
                 buyerPhone,
-                deceasedName,
+                deceasedName: formatDeceasedName(deceasedName),
                 cemeteryName,
                 gravePosition: funeralDirector ? `${gravePosition} - Impresa Funebre: ${funeralDirector}` : gravePosition,
                 deliveryProvince: deliveryProvince.toUpperCase(),
@@ -734,7 +735,13 @@ export default function CheckoutPage() {
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
                                             {orderCategory === 'FA' ? "Nome del Piccolo Amico *" : "Nome e Cognome Defunto *"}
                                         </label>
-                                        <input type="text" value={deceasedName} onChange={e => setDeceasedName(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all" />
+                                        <input
+                                            type="text"
+                                            value={deceasedName}
+                                            onChange={e => setDeceasedName(e.target.value)}
+                                            onBlur={() => setDeceasedName(prev => formatDeceasedName(prev))}
+                                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-fm-cta-soft transition-all"
+                                        />
                                     </div>
                                 </div>
 
@@ -910,7 +917,7 @@ export default function CheckoutPage() {
                                         <h3 className="font-display font-bold text-gray-900 border-b border-gray-200 pb-2 mb-3">Dati della Consegna</h3>
                                         <div className="grid grid-cols-[100px_1fr] gap-y-2 text-[13px]">
                                             <div className="text-gray-500 font-medium">Defunto:</div>
-                                            <div className="text-gray-900 font-semibold">{deceasedName}</div>
+                                            <div className="text-gray-900 font-semibold">{formatDeceasedName(deceasedName) || '—'}</div>
                                             
                                             {gravePosition && (
                                                 <>

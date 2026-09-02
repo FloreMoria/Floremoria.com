@@ -1,3 +1,5 @@
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+
 /** Utility pure per form anagrafica defunto (safe per client components). */
 
 export function composeFullName(
@@ -5,13 +7,7 @@ export function composeFullName(
     lastName?: string | null,
     fallback?: string | null
 ): string {
-    const joined = [firstName, lastName]
-        .map((p) => (p || '').trim())
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-    if (joined) return joined;
-    return (fallback || '').trim();
+    return formatDeceasedName({ firstName, lastName, fullName: fallback });
 }
 
 export function splitFullName(fullName: string): { firstName: string; lastName: string } {

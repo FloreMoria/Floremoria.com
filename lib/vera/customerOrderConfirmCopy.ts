@@ -1,5 +1,6 @@
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 /**
  * Invito a rispondere per aprire la finestra conversazione Meta (24h).
@@ -115,7 +116,7 @@ export function renderCustomerOrderConfirmFreeText(input: {
     staffMessage?: string | null;
 }): string {
     const buyer = resolveSafeBuyerFirstName(input.buyerFirstName);
-    const deceased = (input.deceasedName || 'chi ama').trim() || 'chi ama';
+    const deceased = formatDeceasedName(input.deceasedName, 'chi ama') || 'chi ama';
     const slot3 = resolveCustomerConfirmSlot3(input.staffMessage);
     const slot3Visible = slot3.trim();
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { revalidatePath } from 'next/cache';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, context: any) {
             const euros = Number(body.floristCompensationEuros);
             data.floristCompensationCents = !isNaN(euros) ? Math.round(euros * 100) : null;
         }
-        if (body.deceasedName !== undefined) data.deceasedName = body.deceasedName;
+        if (body.deceasedName !== undefined) data.deceasedName = body.deceasedName ? formatDeceasedName(body.deceasedName) : '';
         if (body.buyerFullName !== undefined) data.buyerFullName = body.buyerFullName;
         if (body.ticketMessage !== undefined) data.ticketMessage = body.ticketMessage;
         if (body.additionalInstructions !== undefined) data.additionalInstructions = body.additionalInstructions;

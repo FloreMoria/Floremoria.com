@@ -16,6 +16,7 @@ import {
     revalidatePartnerOrderDashboardCaches,
     resolveB2bOrderAssociations,
 } from '@/lib/partners/partnerOrderService';
+import { formatDeceasedName, type DeceasedNameInput } from '@/lib/utils/formatDeceasedName';
 
 export const runtime = 'nodejs';
 
@@ -111,7 +112,13 @@ export async function POST(request: Request) {
             );
         }
 
-        const deceasedName = b.deceasedName;
+        const deceasedNameRaw = b.deceasedName;
+        const deceasedName = formatDeceasedName(
+            typeof deceasedNameRaw === 'string' ||
+                (deceasedNameRaw !== null && typeof deceasedNameRaw === 'object')
+                ? (deceasedNameRaw as DeceasedNameInput)
+                : undefined
+        );
         const cemeteryName = b.cemeteryName;
         const cemeteryCity = b.cemeteryCity;
         const deliveryProvince =

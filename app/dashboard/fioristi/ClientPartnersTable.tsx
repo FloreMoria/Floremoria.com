@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { exportToCSV } from '@/lib/utils';
 import { getFlatProofPhotoUrls } from '@/lib/deliveryProof/proofPhotoUrls';
 import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 
 export type ExtendedPartner = Partner & {
@@ -836,7 +837,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                              </div>
                                              <div className="text-right flex flex-col items-end">
                                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Defunto</span>
-                                                 <span className="font-semibold text-gray-800">{order.deceasedName}</span>
+                                                 <span className="font-semibold text-gray-800">{formatDeceasedName(order.deceasedName, 'Non specificato')}</span>
                                                  {(order.latitude && order.longitude) && (
                                                      <a href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`} target="_blank" rel="noopener noreferrer" className="mt-2 text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-200 transition-colors flex items-center gap-1">
                                                          📍 Apri Navigatore

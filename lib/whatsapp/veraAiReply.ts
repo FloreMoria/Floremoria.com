@@ -17,6 +17,7 @@ import {
     isShortAckWithoutOperationalIntent,
     shouldSilenceVeraReply,
 } from '@/lib/vera/courtesyDebounce';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import {
     buildCourtesyConfirmIntentFingerprint,
     tryClaimConversationIntent,
@@ -603,7 +604,7 @@ export async function generateVeraReply(
                 text:
                     `${who}ecco le foto principali della posa` +
                     (callerContext.deceasedName
-                        ? ` nel ricordo di ${callerContext.deceasedName}`
+                        ? ` nel ricordo di ${formatDeceasedName(callerContext.deceasedName)}`
                         : '') +
                     `. Se desidera rivederle tutte, può usare anche il link del Giardino della Memoria già inviato. Restiamo a Sua disposizione 🌹`,
                 source: 'deterministic',

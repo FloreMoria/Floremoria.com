@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, MapPin, RefreshCw, Send, Trash2 } from 'lucide-react';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 type Slot = 'before' | 'after';
 
@@ -577,7 +578,7 @@ export default function FloristProofUploadClient({
                     <p className="mt-0.5 font-mono text-base font-bold text-slate-900">{orderNumber}</p>
                 ) : null}
                 <h1 className="mt-3 text-xl font-display font-semibold leading-snug text-slate-900">
-                    {deceasedName}
+                    {formatDeceasedName(deceasedName)}
                 </h1>
                 <p className="mt-1.5 text-sm text-slate-600">
                     {cemeteryName}

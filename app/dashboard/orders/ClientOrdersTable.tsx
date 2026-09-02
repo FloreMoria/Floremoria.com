@@ -21,6 +21,7 @@ import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
 import type { ProfileUserType } from '@prisma/client';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 interface ClientOrdersTableProps {
     orders: any[];
@@ -255,7 +256,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                 body: JSON.stringify({
                     buyerFullName: draft.buyerFullName,
                     customerPhone: draft.customerPhone,
-                    deceasedName: draft.deceasedName,
+                    deceasedName: formatDeceasedName(draft.deceasedName),
                     cemeteryName: draft.cemeteryName,
                     cemeteryCity: draft.cemeteryCity,
                     totalPriceCents: draft.totalPriceCents,
@@ -797,7 +798,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="font-bold text-gray-900 leading-tight break-words">{order.deceasedName || 'Non specificato'}</div>
+                                                    <div className="font-bold text-gray-900 leading-tight break-words">{formatDeceasedName(order.deceasedName, 'Non specificato')}</div>
                                                     <div className="text-gray-500 text-[12px] whitespace-nowrap mt-0.5 flex items-center gap-1"><MapPin size={10} /> {order.cemeteryName || 'Cimitero n.d.'}</div>
                                                 </>
                                             )}

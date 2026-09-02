@@ -3,6 +3,7 @@
  * Evita profili multipli per lo stesso defunto quando cambiano maiuscole/spazi.
  */
 import prisma from '@/lib/prisma';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export interface DeceasedProfileMatch {
     id: string;
@@ -17,9 +18,9 @@ export function normalizeDeceasedIdentityField(value: string): string {
     return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-/** Valore canonico da persistere (trim + spazi singoli, mantiene il casing originale). */
+/** Valore canonico da persistere in formato Title Case Nome Cognome. */
 export function formatDeceasedIdentityField(value: string): string {
-    return value.trim().replace(/\s+/g, ' ');
+    return formatDeceasedName(value) || value.trim().replace(/\s+/g, ' ');
 }
 
 export function buildDeceasedIdentityKey(fullName: string, cemeteryCity: string): string {

@@ -10,6 +10,7 @@ import FloristScoutPanel from './FloristScoutPanel';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 interface OrderDetailDrawerProps {
     order: any | null;
@@ -200,7 +201,7 @@ export default function OrderDetailDrawer({
                     <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Dettaglio Ordine</div>
                         <h3 className="text-xl font-display font-semibold text-gray-900">
-                            {localOrder.orderNumber || `Ordine #${localOrder.id.substring(localOrder.id.length - 6).toUpperCase()}`} - {localOrder.buyerFullName || localOrder.deceasedName}
+                            {localOrder.orderNumber || `Ordine #${localOrder.id.substring(localOrder.id.length - 6).toUpperCase()}`} - {localOrder.buyerFullName || formatDeceasedName(localOrder.deceasedName)}
                         </h3>
                     </div>
                     <div className="flex items-center gap-3">
@@ -238,7 +239,7 @@ export default function OrderDetailDrawer({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
                                     <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Nome Defunto</span>
-                                    <span className="font-bold text-gray-900 text-base">{localOrder.deceasedName || 'Non specificato'}</span>
+                                    <span className="font-bold text-gray-900 text-base">{formatDeceasedName(localOrder.deceasedName, 'Non specificato')}</span>
                                 </div>
                                 {localOrder.agencyName && (
                                     <div>
@@ -538,9 +539,9 @@ export default function OrderDetailDrawer({
                                 url={localOrder.gdmMagicLinkUrl}
                                 hint="Accesso cliente alle foto nel Giardino della Memoria (24h)."
                                 whatsappPhone={localOrder.customerPhone}
-                                whatsappIntro={`Il tuo link FloreMoria per vedere le foto in memoria di ${localOrder.deceasedName}:`}
+                                whatsappIntro={`Il tuo link FloreMoria per vedere le foto in memoria di ${formatDeceasedName(localOrder.deceasedName)}:`}
                                 enableEmailShare
-                                deceasedName={localOrder.deceasedName}
+                                deceasedName={formatDeceasedName(localOrder.deceasedName)}
                                 senderName="FloreMoria"
                             />
                         ) : null}

@@ -16,6 +16,7 @@ import {
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { resolveCheckoutPartnerAssociations } from '@/lib/orders/resolveCheckoutPartners';
 import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 function categoryFromCatalog(cat?: 'cimitero' | 'funerale' | 'animali') {
     switch (cat) {
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
             discountCode,
             newsletterOptIn,
         } = body;
+
+        const formattedDeceasedName = formatDeceasedName(deceasedName);
 
         // 0. Server-Side Logistics Validation
         const validateDeliveryTime = (category: string, requestedIso: string) => {
@@ -356,7 +359,7 @@ export async function POST(request: Request) {
                             isRecurring,
                             userId: buyerUserId,
                             customerPhone: normalizedBuyerPhone,
-                            deceasedName,
+                            deceasedName: formattedDeceasedName,
                             cemeteryName,
                             gravePosition: finalGravePosition,
                             cemeteryCity: cemeteryCityValue,

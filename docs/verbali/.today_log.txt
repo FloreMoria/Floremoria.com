@@ -74,3 +74,5 @@
 [2026-09-02 13:45] feat(aeo): Google Search grounding nel runner audit Gemini, evaluateAiResponse con sinonimi brand/garanzie, schema HowTo+FAQ esteso in JsonLd; tsc+build OK.
 [2026-09-02 14:15] feat(aeo): benchmark esteso a 20 prompt RAG in 5 macro-intenti, batch parallelo runner, filtri UI dashboard, docs allineata; tsc+build OK.
 [2026-09-02 14:30] feat(auth): link Torna a FloreMoria con ArrowLeft nella pagina login (/); tsc+build OK.
+[2026-09-02 14:35] refactor(format): standardizzazione globale nomi defunti in Title Case con ordine Nome Cognome — creato helper formatDeceasedName in lib/utils/formatDeceasedName.ts con inversione automatica Cognome Nome / particelle e Title Case con apostrofi/trattini; applicato a checkout, API ordini (B2C/B2B/manuali), dashboard ordini/fioristi/comunicazioni, notifiche WhatsApp (Punto A/VERA), email transazionali e anagrafica defunti; tsc+build OK.
+

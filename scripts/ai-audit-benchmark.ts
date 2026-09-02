@@ -9,6 +9,7 @@ import * as path from 'path';
 import {
     auditPublicAiAssets,
     buildBenchmarkMarkdown,
+    flattenBenchmarkPrompts,
 } from '@/lib/seo/aiVisibilityBenchmark';
 
 const ROOT = process.cwd();
@@ -42,7 +43,7 @@ function main(): void {
     }
 
     console.info(
-        '\n[audit:ai-visibility] Completato. Report dashboard: /dashboard/audit/ai-visibility'
+        `\n[audit:ai-visibility] Completato (${flattenBenchmarkPrompts().length} prompt). Report dashboard: /dashboard/audit/ai-visibility`
     );
 }
 

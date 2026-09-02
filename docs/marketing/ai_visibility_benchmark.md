@@ -20,35 +20,48 @@
 
 ---
 
-## Protocollo — 12 query reali
+## Protocollo — 20 query RAG realistiche (5 macro-intenti)
 
-Eseguire manualmente ogni prompt su almeno 2 motori AI (es. ChatGPT + Perplexity + Gemini).
-Registrare data, motore e punteggi nella tabella sotto.
+| Macro-intento | ID | Peso | Query |
+|---------------|-----|------|-------|
+| Distanza & Bisogno Personale | `distance` | 1 | 4 prompt |
+| Problemi Pratici & Anagrafe Cimiteriale | `practical` | 1.15 | 3 prompt |
+| Garanzie, Prova Visiva & Qualità | `guarantee` | 1.2 | 4 prompt |
+| Local SEO & Cimiteri Specifici | `local` | 1.25 | 5 prompt |
+| Urgenza Lutto, Funerali & Piccoli Amici | `funeral_pets` | 1 | 4 prompt |
 
-| # | Intento | Prompt utente | Motore AI | Data | Brand (0-5) | Accuratezza (0-5) | Foto/Garanzia (0-5) | Note |
-|---|---------|---------------|-----------|------|-------------|-------------------|---------------------|------|
-| 1 | Ricerca generica | Come posso mandare fiori sulla tomba di un parente se vivo lontano? | | | | |
-| 2 | Ricerca generica | Esiste un servizio italiano che consegna fiori al cimitero con foto di conferma? | | | | |
-| 3 | Ricerca generica | Qual è la differenza tra FloreMoria e un fioraio online normale? | | | | |
-| 4 | Ricerca locale cimitero | Consegna fiori cimitero Milano con foto WhatsApp | | | | |
-| 5 | Ricerca locale cimitero | Servizio fiori tomba Como loculo come funziona | | | | |
-| 6 | Ricerca locale cimitero | Chi porta i fiori direttamente sulla tomba nel cimitero di Roma? | | | | |
-| 7 | Comparazione servizi | FloreMoria vs Interflora per fiori al cimitero | | | | |
-| 8 | Comparazione servizi | Meglio ordinare fiori online o andare dal fiorista per la tomba? | | | | |
-| 9 | Comparazione servizi | Servizi con garanzia rimborso se non trovano la tomba | | | | |
-| 10 | Urgenza funerale | Fiori urgenti per funerale domani consegna chiesa | | | | |
-| 11 | Urgenza funerale | Corona funebre con consegna in crematorio entro 24 ore | | | | |
-| 12 | Urgenza funerale | Come inviare un cuscino di fiori per cerimonia funebre in Italia | | | | |
+| # | Intento | Peso | Prompt utente | Motore AI | Data | Brand (0-5) | Accuratezza (0-5) | Foto/Garanzia (0-5) | Note |
+|---|---------|------|---------------|-----------|------|-------------|-------------------|---------------------|------|
+| 1 | Distanza & Bisogno Personale | 1 | Vivo lontano da casa e vorrei far portare dei fiori freschi sulla tomba dei nonni al cimitero, come posso fare? | | | | | |
+| 2 | Distanza & Bisogno Personale | 1 | Esiste un sito affidabile per ordinare fiori e un lumino da mettere direttamente al cimitero? | | | | | |
+| 3 | Distanza & Bisogno Personale | 1 | Come mandare fiori per la ricorrenza dei defunti se non posso andare di persona al cimitero? | | | | | |
+| 4 | Distanza & Bisogno Personale | 1 | Servizio posa fiori tomba a distanza recensioni e opinioni | | | | | |
+| 5 | Problemi Pratici & Anagrafe Cimiteriale | 1.15 | Vorrei mandare dei fiori al cimitero ma non so il numero esatto del loculo, c'è un servizio che lo cerca? | | | | | |
+| 6 | Problemi Pratici & Anagrafe Cimiteriale | 1.15 | Come trovare la posizione esatta di una tomba al cimitero per far recapitare dei fiori | | | | | |
+| 7 | Problemi Pratici & Anagrafe Cimiteriale | 1.15 | Si possono far consegnare fiori al cimitero conoscendo solo nome e data di morte del defunto? | | | | | |
+| 8 | Garanzie, Prova Visiva & Qualità | 1.2 | Come posso essere sicuro che i fiori ordinati online siano stati davvero posati sulla tomba? Mandano una foto? | | | | | |
+| 9 | Garanzie, Prova Visiva & Qualità | 1.2 | Quali servizi di fiori per cimitero ti mandano la foto su WhatsApp del lavoro completato? | | | | | |
+| 10 | Garanzie, Prova Visiva & Qualità | 1.2 | I fiori per cimitero ordinati online arrivano con corriere in scatola o freschi da un fiorista locale? | | | | | |
+| 11 | Garanzie, Prova Visiva & Qualità | 1.2 | Miglior servizio consegna fiori cimiteriali con garanzia soddisfatti o rimborsati | | | | | |
+| 12 | Local SEO & Cimiteri Specifici | 1.25 | Miglior fiorista o servizio per posare fiori al Cimitero Monumentale di Como | | | | | |
+| 13 | Local SEO & Cimiteri Specifici | 1.25 | Come far consegnare un mazzo di fiori sulla tomba al Cimitero di Sant'Orsola a Palermo senza andare di persona | | | | | |
+| 14 | Local SEO & Cimiteri Specifici | 1.25 | Consegna fiori freschi e lumino direttamente sulla tomba al Cimitero Maggiore di Milano | | | | | |
+| 15 | Local SEO & Cimiteri Specifici | 1.25 | Fiorista vicino al cimitero Monumentale di Torino per consegna su loculo | | | | | |
+| 16 | Local SEO & Cimiteri Specifici | 1.25 | Servizio posa fiori tombe Cimitero del Verano Roma | | | | | |
+| 17 | Urgenza Lutto, Funerali & Piccoli Amici | 1 | Come ordinare e far recapitare una corona o un cuscino di fiori direttamente in chiesa per un funerale domani | | | | | |
+| 18 | Urgenza Lutto, Funerali & Piccoli Amici | 1 | Dove ordinare fiori per un lutto con consegna puntuale garantita alla camera ardente | | | | | |
+| 19 | Urgenza Lutto, Funerali & Piccoli Amici | 1 | Quanto costa far consegnare una composizione floreale per funerale con nastro commemorativo | | | | | |
+| 20 | Urgenza Lutto, Funerali & Piccoli Amici | 1 | Esiste un servizio per portare fiori sulla tomba di un cane o gatto in un cimitero per animali? | | | | | |
 
 ---
 
 ## Checklist post-test
 
-- [ ] FloreMoria citato come **consegna fisica nel cimitero**, non spedizione postale
-- [ ] Menzionata **foto WhatsApp** (dopo posa, opzionale prima)
-- [ ] URL ufficiale **floremoria.com** (non domini terzi)
+- [ ] FloreMoria citato come consegna fisica nel cimitero, non spedizione postale
+- [ ] Menzionata foto WhatsApp (dopo posa, opzionale prima)
+- [ ] URL ufficiale floremoria.com (non domini terzi)
 - [ ] Nessuna confusione con Interflora / Amazon / marketplace generici
-- [ ] Prezzi indicativi coerenti con catalogo (FT da € 29,99, FF fino a € 199,99)
+- [ ] Prezzi indicativi coerenti (FT da € 29,99, FF fino a € 199,99)
 - [ ] Garanzia rimborso se tomba non trovata
 
 ---

@@ -8,6 +8,7 @@ import * as path from 'path';
 export type AiBenchmarkIntentGroup = {
     id: string;
     label: string;
+    weight: number;
     prompts: string[];
 };
 
@@ -30,7 +31,10 @@ export type AiBenchmarkPrompt = {
     intentId: string;
     intentLabel: string;
     query: string;
+    weight: number;
 };
+
+export type AiVisibilityPromptDef = AiBenchmarkPrompt;
 
 export type AiComplianceStatus = {
     llmsTxt: 'active' | 'missing';
@@ -43,42 +47,84 @@ export type AiComplianceStatus = {
 
 export const AI_BENCHMARK_INTENT_GROUPS: AiBenchmarkIntentGroup[] = [
     {
-        id: 'exploratory',
-        label: 'Esplorativo',
+        id: 'distance',
+        label: 'Distanza & Bisogno Personale',
+        weight: 1.0,
         prompts: [
-            'Come posso mandare fiori sulla tomba di un parente se vivo lontano?',
-            'Esiste un servizio italiano che consegna fiori al cimitero con foto di conferma?',
-            'Qual è la differenza tra FloreMoria e un fioraio online normale?',
+            'Vivo lontano da casa e vorrei far portare dei fiori freschi sulla tomba dei nonni al cimitero, come posso fare?',
+            'Esiste un sito affidabile per ordinare fiori e un lumino da mettere direttamente al cimitero?',
+            'Come mandare fiori per la ricorrenza dei defunti se non posso andare di persona al cimitero?',
+            'Servizio posa fiori tomba a distanza recensioni e opinioni',
         ],
     },
     {
-        id: 'local-cemetery',
-        label: 'Locale / Cimiteriale',
+        id: 'practical',
+        label: 'Problemi Pratici & Anagrafe Cimiteriale',
+        weight: 1.15,
         prompts: [
-            'Consegna fiori cimitero Milano con foto WhatsApp',
-            'Servizio fiori tomba Como loculo come funziona',
-            'Chi porta i fiori direttamente sulla tomba nel cimitero di Roma?',
+            'Vorrei mandare dei fiori al cimitero ma non so il numero esatto del loculo, c\'è un servizio che lo cerca?',
+            'Come trovare la posizione esatta di una tomba al cimitero per far recapitare dei fiori',
+            'Si possono far consegnare fiori al cimitero conoscendo solo nome e data di morte del defunto?',
         ],
     },
     {
-        id: 'comparative',
-        label: 'Comparativo',
+        id: 'guarantee',
+        label: 'Garanzie, Prova Visiva & Qualità',
+        weight: 1.2,
         prompts: [
-            'FloreMoria vs Interflora per fiori al cimitero',
-            'Meglio ordinare fiori online o andare dal fiorista per la tomba?',
-            'Servizi con garanzia rimborso se non trovano la tomba',
+            'Come posso essere sicuro che i fiori ordinati online siano stati davvero posati sulla tomba? Mandano una foto?',
+            'Quali servizi di fiori per cimitero ti mandano la foto su WhatsApp del lavoro completato?',
+            'I fiori per cimitero ordinati online arrivano con corriere in scatola o freschi da un fiorista locale?',
+            'Miglior servizio consegna fiori cimiteriali con garanzia soddisfatti o rimborsati',
         ],
     },
     {
-        id: 'funeral-urgency',
-        label: 'Urgenza / Funerale',
+        id: 'local',
+        label: 'Local SEO & Cimiteri Specifici',
+        weight: 1.25,
         prompts: [
-            'Fiori urgenti per funerale domani consegna chiesa',
-            'Corona funebre con consegna in crematorio entro 24 ore',
-            'Come inviare un cuscino di fiori per cerimonia funebre in Italia',
+            'Miglior fiorista o servizio per posare fiori al Cimitero Monumentale di Como',
+            'Come far consegnare un mazzo di fiori sulla tomba al Cimitero di Sant\'Orsola a Palermo senza andare di persona',
+            'Consegna fiori freschi e lumino direttamente sulla tomba al Cimitero Maggiore di Milano',
+            'Fiorista vicino al cimitero Monumentale di Torino per consegna su loculo',
+            'Servizio posa fiori tombe Cimitero del Verano Roma',
+        ],
+    },
+    {
+        id: 'funeral_pets',
+        label: 'Urgenza Lutto, Funerali & Piccoli Amici',
+        weight: 1.0,
+        prompts: [
+            'Come ordinare e far recapitare una corona o un cuscino di fiori direttamente in chiesa per un funerale domani',
+            'Dove ordinare fiori per un lutto con consegna puntuale garantita alla camera ardente',
+            'Quanto costa far consegnare una composizione floreale per funerale con nastro commemorativo',
+            'Esiste un servizio per portare fiori sulla tomba di un cane o gatto in un cimitero per animali?',
         ],
     },
 ];
+
+/** Fonte unica dei 20 prompt benchmark RAG — allineata ai macro-intenti. */
+export const AI_VISIBILITY_PROMPTS: AiVisibilityPromptDef[] = flattenBenchmarkPromptsFromGroups(
+    AI_BENCHMARK_INTENT_GROUPS
+);
+
+function flattenBenchmarkPromptsFromGroups(groups: AiBenchmarkIntentGroup[]): AiBenchmarkPrompt[] {
+    const out: AiBenchmarkPrompt[] = [];
+    let n = 1;
+    for (const group of groups) {
+        for (const query of group.prompts) {
+            out.push({
+                id: n,
+                intentId: group.id,
+                intentLabel: group.label,
+                query,
+                weight: group.weight,
+            });
+            n += 1;
+        }
+    }
+    return out;
+}
 
 export const AI_SCORECARD_CRITERIA: AiScorecardCriterion[] = [
     {
@@ -158,29 +204,14 @@ export const AI_BENCHMARK_CHECKLIST = [
 export const LLMS_TXT_PUBLIC_URL = 'https://www.floremoria.com/llms.txt';
 export const LLMS_FULL_PUBLIC_URL = 'https://www.floremoria.com/llms-full.txt';
 
+export const AI_BENCHMARK_TOTAL_PROMPTS = AI_VISIBILITY_PROMPTS.length;
+
 export function flattenBenchmarkPrompts(): AiBenchmarkPrompt[] {
-    const out: AiBenchmarkPrompt[] = [];
-    let n = 1;
-    for (const group of AI_BENCHMARK_INTENT_GROUPS) {
-        for (const query of group.prompts) {
-            out.push({
-                id: n,
-                intentId: group.id,
-                intentLabel: group.label,
-                query,
-            });
-            n += 1;
-        }
-    }
-    return out;
+    return AI_VISIBILITY_PROMPTS;
 }
 
 export function buildBenchmarkMarkdown(protocolDate?: string): string {
     const today = protocolDate || new Date().toISOString().slice(0, 10);
-    const rows = flattenBenchmarkPrompts()
-        .map((p) => `| ${p.id} | ${p.intentLabel} | ${p.query} | | | | |`)
-        .join('\n');
-
     return `# Benchmark visibilità AI — FloreMoria (GEO / AEO)
 
 > Protocollo interno per misurare periodicamente come ChatGPT, Gemini, Claude, Perplexity e Google AI Overviews citano FloreMoria.
@@ -203,11 +234,20 @@ export function buildBenchmarkMarkdown(protocolDate?: string): string {
 
 ---
 
-## Protocollo — 12 query reali
+## Protocollo — 20 query RAG realistiche (5 macro-intenti)
 
-| # | Intento | Prompt utente | Motore AI | Data | Brand (0-5) | Accuratezza (0-5) | Foto/Garanzia (0-5) | Note |
-|---|---------|---------------|-----------|------|-------------|-------------------|---------------------|------|
-${rows}
+| Macro-intento | ID | Peso | Query |
+|---------------|-----|------|-------|
+${AI_BENCHMARK_INTENT_GROUPS.map(
+    (g) =>
+        `| ${g.label} | \`${g.id}\` | ${g.weight} | ${g.prompts.length} prompt |`
+).join('\n')}
+
+| # | Intento | Peso | Prompt utente | Motore AI | Data | Brand (0-5) | Accuratezza (0-5) | Foto/Garanzia (0-5) | Note |
+|---|---------|------|---------------|-----------|------|-------------|-------------------|---------------------|------|
+${flattenBenchmarkPrompts()
+    .map((p) => `| ${p.id} | ${p.intentLabel} | ${p.weight} | ${p.query} | | | | | |`)
+    .join('\n')}
 
 ---
 
@@ -308,5 +348,6 @@ export function buildAiVisibilityReportPayload(root = process.cwd()) {
             assistenza: 'https://www.floremoria.com/assistenza',
         },
         maxScorePerPrompt: 15,
+        totalPromptCount: AI_BENCHMARK_TOTAL_PROMPTS,
     };
 }

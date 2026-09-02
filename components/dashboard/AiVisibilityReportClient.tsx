@@ -15,6 +15,7 @@ import {
     Zap,
 } from 'lucide-react';
 import type {
+    AiBenchmarkIntentGroup,
     AiBenchmarkPrompt,
     AiComplianceStatus,
     AiScorecardCriterion,
@@ -25,12 +26,14 @@ import type { StoredAiAuditSnapshot } from '@/lib/seo/aiAuditSnapshotStore';
 
 type ReportPayload = {
     compliance: AiComplianceStatus;
+    intentGroups: AiBenchmarkIntentGroup[];
     prompts: AiBenchmarkPrompt[];
     scorecard: AiScorecardCriterion[];
     verificationCriteria: AiVerificationCriterion[];
     checklist: string[];
     links: { llmsTxt: string; llmsFull: string; assistenza: string };
     maxScorePerPrompt: number;
+    totalPromptCount: number;
 };
 
 function Badge({
@@ -60,13 +63,15 @@ function Badge({
 
 function intentBadgeClass(intentId: string): string {
     switch (intentId) {
-        case 'exploratory':
+        case 'distance':
             return 'bg-indigo-50 text-indigo-800 border-indigo-100';
-        case 'local-cemetery':
-            return 'bg-sky-50 text-sky-800 border-sky-100';
-        case 'comparative':
+        case 'practical':
+            return 'bg-teal-50 text-teal-800 border-teal-100';
+        case 'guarantee':
             return 'bg-violet-50 text-violet-800 border-violet-100';
-        case 'funeral-urgency':
+        case 'local':
+            return 'bg-sky-50 text-sky-800 border-sky-100';
+        case 'funeral_pets':
             return 'bg-amber-50 text-amber-800 border-amber-100';
         default:
             return 'bg-slate-50 text-slate-700 border-slate-100';
@@ -104,6 +109,7 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
     const [isRunning, setIsRunning] = useState(false);
     const [runError, setRunError] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<number | null>(null);
+    const [intentFilter, setIntentFilter] = useState<string>('all');
 
     const loadSnapshot = useCallback(async () => {
         try {
@@ -159,7 +165,13 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
         (snapshot?.promptResults ?? []).map((r) => [r.promptId, r])
     );
 
+    const filteredPrompts =
+        intentFilter === 'all'
+            ? report.prompts
+            : report.prompts.filter((p) => p.intentId === intentFilter);
+
     const { compliance } = report;
+    const totalPrompts = report.totalPromptCount ?? report.prompts.length;
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 print:px-0 print:py-4">
@@ -219,7 +231,7 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
             {isRunning ? (
                 <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900 flex items-center gap-2">
                     <Loader2 size={14} className="animate-spin shrink-0" />
-                    Esecuzione dei 12 prompt benchmark sul motore AI configurato. Attendi 30–90 secondi…
+                    Esecuzione dei {totalPrompts} prompt benchmark sul motore AI configurato. Attendi 60–150 secondi…
                 </div>
             ) : null}
 
@@ -318,15 +330,35 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
                         </div>
                     </div>
                     {Object.keys(snapshot.intentScores).length > 0 ? (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                            {Object.entries(snapshot.intentScores).map(([id, intent]) => (
-                                <span
-                                    key={id}
-                                    className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${intentBadgeClass(id)}`}
-                                >
-                                    {intent.label}: {intent.score}/100
-                                </span>
-                            ))}
+                        <div className="space-y-2 pt-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Score per macro-intento (5 categorie RAG)
+                            </p>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                                {report.intentGroups.map((group) => {
+                                    const intentScore = snapshot.intentScores[group.id];
+                                    const score = intentScore?.score ?? 0;
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            type="button"
+                                            onClick={() => setIntentFilter(group.id)}
+                                            className={`rounded-xl border p-3 text-left transition-colors hover:border-slate-300 ${intentBadgeClass(group.id)}`}
+                                        >
+                                            <p className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                                                {group.label}
+                                            </p>
+                                            <p className={`text-xl font-display font-bold mt-1 ${scoreColor(score)}`}>
+                                                {score}
+                                                <span className="text-xs font-normal opacity-60">/100</span>
+                                            </p>
+                                            <p className="text-[9px] opacity-60 mt-0.5">
+                                                {group.prompts.length} prompt · peso {group.weight}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : null}
                 </section>
@@ -336,7 +368,7 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
                         Nessuna scansione live ancora eseguita.
                     </p>
                     <p className="text-xs text-slate-400">
-                        Clicca &quot;Esegui Scansione Live Ora&quot; per testare i 12 prompt su Gemini/OpenAI
+                        Clicca &quot;Esegui Scansione Live Ora&quot; per testare i {totalPrompts} prompt su Gemini/OpenAI
                         (o simulatore llms.txt se mancano chiavi API).
                     </p>
                 </section>
@@ -351,7 +383,7 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
                     A differenza di audit commerciali opachi (es. servizi tipo GPTFusion), questo
                     protocollo è <strong>ripetibile, gratuito e allineato ai nostri asset reali</strong>{' '}
                     (<code className="text-[10px]">llms.txt</code>, JSON-LD, FAQ strutturate). Esegui
-                    i 12 prompt su ChatGPT, Perplexity, Claude e Gemini ogni 4–8 settimane e confronta
+                    i {totalPrompts} prompt su ChatGPT, Perplexity, Claude e Gemini ogni 4–8 settimane e confronta
                     i punteggi nel tempo con la scansione live integrata.
                 </p>
             </section>
@@ -382,15 +414,44 @@ export default function AiVisibilityReportClient({ report: initialReport }: { re
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                    Matrice Benchmark — 12 Prompt Utente
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                        Matrice Benchmark — {totalPrompts} Prompt Utente
+                    </h2>
+                    <div className="flex flex-wrap gap-1.5 print:hidden">
+                        <button
+                            type="button"
+                            onClick={() => setIntentFilter('all')}
+                            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
+                                intentFilter === 'all'
+                                    ? 'bg-slate-900 text-white border-slate-900'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                        >
+                            Tutti ({totalPrompts})
+                        </button>
+                        {report.intentGroups.map((group) => (
+                            <button
+                                key={group.id}
+                                type="button"
+                                onClick={() => setIntentFilter(group.id)}
+                                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors ${
+                                    intentFilter === group.id
+                                        ? 'bg-slate-900 text-white border-slate-900'
+                                        : `${intentBadgeClass(group.id)} hover:opacity-90`
+                                }`}
+                            >
+                                {group.label.split(' ')[0]} ({group.prompts.length})
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <p className="text-xs text-slate-500">
                     Criteri di verifica per ogni risposta AI:{' '}
                     {report.verificationCriteria.map((v) => v.name).join(' · ')}.
                 </p>
                 <div className="space-y-3">
-                    {report.prompts.map((prompt) => {
+                    {filteredPrompts.map((prompt) => {
                         const live = resultByPromptId.get(prompt.id);
                         return (
                             <div

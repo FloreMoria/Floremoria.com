@@ -244,7 +244,7 @@ async function queryAuditEngine(
 
 function computeIntentScores(
     results: AiPromptAuditResult[]
-): Record<string, { label: string; score: number }> {
+): Record<string, { label: string; score: number; count: number }> {
     const buckets = new Map<string, { label: string; total: number; count: number }>();
     for (const r of results) {
         const prev = buckets.get(r.intentId) || { label: r.intentLabel, total: 0, count: 0 };
@@ -252,9 +252,13 @@ function computeIntentScores(
         prev.count += 1;
         buckets.set(r.intentId, prev);
     }
-    const out: Record<string, { label: string; score: number }> = {};
+    const out: Record<string, { label: string; score: number; count: number }> = {};
     for (const [id, b] of buckets) {
-        out[id] = { label: b.label, score: b.count > 0 ? Math.round(b.total / b.count) : 0 };
+        out[id] = {
+            label: b.label,
+            score: b.count > 0 ? Math.round(b.total / b.count) : 0,
+            count: b.count,
+        };
     }
     return out;
 }
@@ -264,10 +268,18 @@ function computeSummary(
     provider: AiAuditProvider,
     model?: string
 ): AiAuditRunSummary {
-    const total = results.length || 1;
-    const overallScore = Math.round(
-        results.reduce((sum, r) => sum + r.score, 0) / total
+    const weightByPromptId = new Map(
+        flattenBenchmarkPrompts().map((p) => [p.id, p.weight] as const)
     );
+    const totalWeight =
+        results.reduce((sum, r) => sum + (weightByPromptId.get(r.promptId) ?? 1), 0) || 1;
+    const overallScore = Math.round(
+        results.reduce(
+            (sum, r) => sum + r.score * (weightByPromptId.get(r.promptId) ?? 1),
+            0
+        ) / totalWeight
+    );
+    const total = results.length || 1;
     const brandMentionRate = Math.round(
         (results.filter((r) => r.brandMentioned).length / total) * 100
     );
@@ -329,20 +341,27 @@ function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const AUDIT_BATCH_SIZE = 4;
+const AUDIT_BATCH_DELAY_MS = 1200;
+
 /**
- * Esegue l'audit completo sui 12 prompt benchmark.
- * I prompt vengono inviati in sequenza con breve pausa per rispettare rate limit API.
+ * Esegue l'audit completo sui 20 prompt benchmark.
+ * Batch paralleli da 4 con pausa tra chunk per rate limit Gemini + Google Search grounding.
  */
 export async function runAiVisibilityAudit(root = process.cwd()): Promise<AiAuditRunSummary> {
     const { provider, model } = resolveAuditProvider();
     const prompts = flattenBenchmarkPrompts();
     const results: AiPromptAuditResult[] = [];
 
-    for (const prompt of prompts) {
-        const result = await auditSinglePrompt(prompt, provider, model, root);
-        results.push(result);
-        if (provider !== 'llms-simulator') {
-            await delay(400);
+    for (let i = 0; i < prompts.length; i += AUDIT_BATCH_SIZE) {
+        const batch = prompts.slice(i, i + AUDIT_BATCH_SIZE);
+        const batchResults = await Promise.all(
+            batch.map((prompt) => auditSinglePrompt(prompt, provider, model, root))
+        );
+        results.push(...batchResults);
+
+        if (provider !== 'llms-simulator' && i + AUDIT_BATCH_SIZE < prompts.length) {
+            await delay(AUDIT_BATCH_DELAY_MS);
         }
     }
 

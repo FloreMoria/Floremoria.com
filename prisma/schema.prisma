@@ -1086,3 +1086,20 @@ model WhatsAppInboundDebounceBatch {
   @@map("whatsapp_inbound_debounce_batches")
 }
 
+/** Snapshot esecuzione audit visibilità AI (GEO/AEO) — 12 prompt benchmark. */
+model AiAuditSnapshot {
+  id                    String   @id @default(cuid())
+  runAt                 DateTime @default(now()) @map("run_at")
+  provider              String   @db.VarChar(50)
+  model                 String?  @db.VarChar(80)
+  overallScore          Int      @map("overall_score")
+  brandMentionRate      Int      @map("brand_mention_rate")
+  guaranteeAccuracyRate Int      @map("guarantee_accuracy_rate")
+  intentScores          Json     @map("intent_scores")
+  promptResults         Json     @map("prompt_results")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([runAt(sort: Desc)])
+  @@map("ai_audit_snapshots")
+}
+

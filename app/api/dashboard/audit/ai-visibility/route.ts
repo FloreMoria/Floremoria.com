@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { buildAiVisibilityReportPayload } from '@/lib/seo/aiVisibilityBenchmark';
+import { getLatestAiAuditSnapshot } from '@/lib/seo/aiAuditSnapshotStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,13 @@ export async function GET() {
 
     try {
         const report = buildAiVisibilityReportPayload();
-        return NextResponse.json({ ok: true, report });
+        let snapshot = null;
+        try {
+            snapshot = await getLatestAiAuditSnapshot();
+        } catch (dbError) {
+            console.warn('[audit/ai-visibility] snapshot DB non disponibile:', dbError);
+        }
+        return NextResponse.json({ ok: true, report, snapshot });
     } catch (error) {
         console.error('[audit/ai-visibility]', error);
         return NextResponse.json(

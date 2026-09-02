@@ -10,6 +10,8 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 export interface ResendCustomerWaitingUpdateResult {
     ok: boolean;
@@ -138,11 +140,24 @@ export async function resendCustomerWaitingUpdateForOrder(
     }
 
     const flags = parseWorkflowFlags(order.veraWorkflowFlags);
-    if (!options.force && isWorkflowStepDone(flags, 'puntoG_customer_wait')) {
+    const alreadySent =
+        isWorkflowStepDone(flags, 'puntoG_customer_wait') ||
+        isWorkflowStepDone(flags, 'hasSentReassuranceNudge') ||
+        Boolean(flags.hasSentReassuranceNudge);
+
+    if (!options.force && alreadySent) {
         return {
             ok: false,
             orderNumber: normalizedOrderNumber,
-            skipped: 'puntoG_customer_wait già completato (usa force=true per reinviare)',
+            skipped: 'Rassicurazione già completata a flag (usa force=true per reinviare)',
+        };
+    }
+
+    if (!options.force && (await wasOrderTemplateSent(order.id, 'customer_waiting_update', order.orderNumber))) {
+        return {
+            ok: false,
+            orderNumber: normalizedOrderNumber,
+            skipped: 'Messaggio di rassicurazione già presente nella chat (usa force=true per reinviare)',
         };
     }
 
@@ -156,7 +171,7 @@ export async function resendCustomerWaitingUpdateForOrder(
     }
 
     const buyerFirstName = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
-    const deceasedName = order.deceasedName || 'chi ama';
+    const deceasedName = formatDeceasedName(order.deceasedName, 'chi ama');
     const bodyParams = buildCustomerWaitingUpdateParams({
         buyerFirstName,
         deceasedName,
@@ -187,9 +202,14 @@ export async function resendCustomerWaitingUpdateForOrder(
         buyerDisplayName: order.user?.name || order.buyerFullName,
     });
 
+    const nextFlags = markWorkflowStep(
+        markWorkflowStep(flags, 'puntoG_customer_wait'),
+        'hasSentReassuranceNudge'
+    );
+
     await prisma.order.update({
         where: { id: order.id },
-        data: { veraWorkflowFlags: markWorkflowStep(flags, 'puntoG_customer_wait') },
+        data: { veraWorkflowFlags: nextFlags },
     });
 
     return {

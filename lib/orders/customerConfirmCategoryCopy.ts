@@ -1,4 +1,5 @@
 import { normalizeOrderCategory } from '@/lib/orders/orderNumber';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 /** Nome/ricordo per {{2}} del template conferma, per categoria ordine FF/FT/FA/FP. */
 export function resolveCustomerConfirmSubjectName(
@@ -6,7 +7,7 @@ export function resolveCustomerConfirmSubjectName(
     deceasedName?: string | null
 ): string {
     const trimmed = deceasedName?.trim();
-    if (trimmed) return trimmed;
+    if (trimmed) return formatDeceasedName(trimmed);
 
     switch (normalizeOrderCategory(orderCategory)) {
         case 'FA':

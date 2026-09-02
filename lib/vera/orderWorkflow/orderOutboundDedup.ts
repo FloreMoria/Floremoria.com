@@ -3,6 +3,10 @@ import type { VeraTemplateId } from '@/lib/whatsapp/veraTemplateRegistry';
 
 const EVENT_TYPE_BY_TEMPLATE: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'ORDER_CONFIRM_TEMPLATE',
+    customer_waiting_update: 'WAITING_UPDATE_TEMPLATE',
+    customer_delivery_photo: 'DELIVERY_PHOTO_TEMPLATE',
+    ordine_completato: 'ORDINE_COMPLETATO_TEMPLATE',
+    florist_reminder: 'FLORIST_REMINDER_TEMPLATE',
     florist_repeat: 'FLORIST_NEW_ORDER_TEMPLATE',
     florist_first_001: 'FLORIST_NEW_ORDER_TEMPLATE',
     florist_first_002: 'FLORIST_NEW_ORDER_TEMPLATE',
@@ -34,14 +38,7 @@ export async function wasOrderTemplateSent(
           AND (
             metadata->>'templateId' = ${templateId}
             OR (
-              ${templateId} = 'customer_order_confirm'
-              AND ${eventType}::text IS NOT NULL
-              AND metadata->>'eventType' = ${eventType}
-            )
-            OR (
-              -- Free-text / marker Punto A: eventType senza templateId → conta come florist_first_001 inviato
-              ${templateId} = 'florist_first_001'
-              AND ${eventType}::text IS NOT NULL
+              ${eventType}::text IS NOT NULL
               AND metadata->>'eventType' = ${eventType}
             )
           )
@@ -67,6 +64,27 @@ export async function wasOrderTemplateSent(
             LIMIT 1
         `;
         if (legacy.length > 0) return true;
+    }
+
+    // Fallback testo: rassicurazione cliente (customer_waiting_update) già presente in chat.
+    if (templateId === 'customer_waiting_update') {
+        const legacyWaiting = await prisma.$queryRaw<Array<{ id: string }>>`
+            SELECT m.id
+            FROM whatsapp_chat_messages m
+            WHERE m.direction = 'OUTBOUND'
+              AND (
+                m.body ILIKE '%rassicurarLa%'
+                OR m.body ILIKE '%stiamo seguendo da vicino la preparazione%'
+                OR m.metadata->>'templateId' = 'customer_waiting_update'
+                OR m.metadata->>'eventType' = 'WAITING_UPDATE_TEMPLATE'
+              )
+              AND (
+                m.metadata->>'orderId' = ${orderId}
+                OR (${code}::text IS NOT NULL AND (m.metadata->>'orderNumber' = ${code} OR m.body ILIKE ${'%' + code + '%'}))
+              )
+            LIMIT 1
+        `;
+        if (legacyWaiting.length > 0) return true;
     }
 
     return false;

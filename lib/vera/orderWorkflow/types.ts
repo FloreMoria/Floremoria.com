@@ -5,6 +5,7 @@ export type VeraWorkflowStep =
     | 'puntoB_customer_scheduled'
     | 'puntoEF_delivery'
     | 'puntoG_customer_wait'
+    | 'hasSentReassuranceNudge'
     | 'puntoG_florist_reminder'
     | 'puntoH_review'
     | 'exception_tomb'
@@ -18,6 +19,8 @@ export type VeraWorkflowFlags = Partial<Record<VeraWorkflowStep, string>> & {
     customerEmailScheduledAt?: string;
     /** Email ricevuta cliente già inviata. */
     customer_email_sent?: string;
+    /** Rassicurazione / aggiornamento attesa già inviato (one-shot tassativo). */
+    hasSentReassuranceNudge?: string;
 };
 
 export function parseWorkflowFlags(raw: unknown): VeraWorkflowFlags {

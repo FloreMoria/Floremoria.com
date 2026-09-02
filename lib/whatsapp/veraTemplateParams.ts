@@ -11,6 +11,7 @@ import {
     type VeraTemplateId,
     type VeraTemplateSpec,
 } from '@/lib/whatsapp/veraTemplateRegistry';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 /** Slot opzionale Meta: testo sanitizzato oppure singolo spazio (#132000). */
 function resolveOptionalMetaBodyParam(
@@ -118,7 +119,7 @@ export function buildCustomerOrderConfirmParams(input: {
     const params = [
         resolveSafeBuyerFirstName(input.buyerFirstName),
         requireText(
-            input.deceasedName || 'chi ama',
+            formatDeceasedName(input.deceasedName, 'chi ama'),
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
         ),
@@ -141,7 +142,7 @@ export function buildCustomerWaitingUpdateParams(input: {
     const params = buildVeraTemplateBodyParams('customer_waiting_update', {
         buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         deceasedName: requireText(
-            input.deceasedName || 'chi ama',
+            formatDeceasedName(input.deceasedName, 'chi ama'),
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
         ),
@@ -164,7 +165,7 @@ export function buildCustomerDeliveryPhotoParams(input: {
         buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
         partnerCity: requireText(input.partnerCity || 'zona', 'partnerCity', 80),
         deceasedName: requireText(
-            input.deceasedName || 'chi ama',
+            formatDeceasedName(input.deceasedName, 'chi ama'),
             'deceasedName',
             META_TEMPLATE_LIMITS.deceasedName
         ),
@@ -287,7 +288,7 @@ export function buildAnniversaryGdmReminderParams(input: {
     catalogUrl?: string | null;
 }): { bodyParams: string[]; headerTextParams: string[] } {
     const rememberedPerson = requireText(
-        input.deceasedName || 'il Suo caro',
+        formatDeceasedName(input.deceasedName, 'il Suo caro'),
         'rememberedPerson',
         META_TEMPLATE_LIMITS.deceasedName
     );

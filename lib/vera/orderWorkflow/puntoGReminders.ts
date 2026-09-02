@@ -14,10 +14,10 @@ import {
     markWorkflowStep,
     parseWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { wasOrderTemplateSent } from '@/lib/vera/orderWorkflow/orderOutboundDedup';
 import { isOrderStatusBlockingVeraAutomation } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
+import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
-/** Finestra promemoria: da 0 a 72h (3 giorni) prima della consegna — mai un mese prima. */
-const REMINDER_MAX_HOURS_BEFORE = 72;
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 export interface PuntoGRunResult {
@@ -28,12 +28,16 @@ export interface PuntoGRunResult {
 }
 
 /**
- * PUNTO G — Un solo sollecito per ordine (cliente + fiorista), 2–3 giorni prima della consegna.
+ * PUNTO G — Gestione notifiche proattive con vincolo TASSATIVO di unicità (Anti-Spam).
  *
- * Perché one-shot: i keep-alive ricorrenti ogni ~20h inviavano lo stesso template
- * ieri e oggi (stesso testo a Isabella / Antonella). Non è accettabile sul canale commemorativo.
- * La finestra Meta 24h resta gestita da inbound reali; non si “tiene aperta” con messaggi doppi.
- * PENDING/ATTESA: esclusi (solo intervento umano da dashboard).
+ * REGOLE TASSATIVE:
+ * 1. Rassicurazione Cliente (customer_waiting_update):
+ *    - Inviabile AL MASSIMO UNA SOLA VOLTA nell'intero ciclo di vita dell'ordine.
+ *    - Se la posa è entro 48 ore (o passata), NON si invia alcuna rassicurazione: il cliente attende direttamente la foto di consegna.
+ *    - Inviata solo se l'ordine è stato creato da almeno 24h e la data di posa è lontana (> 48h).
+ *    - Se già inviata (verificato sia su flags che su storico messaggi DB), MAI più ripetuta.
+ * 2. Sollecito Fiorista (florist_reminder):
+ *    - Inviabile AL MASSIMO UNA VOLTA, solo tra 24h e 72h prima della data di posa se il fiorista non ha ancora completato.
  */
 export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
     const result: PuntoGRunResult = {
@@ -76,106 +80,149 @@ export async function runPuntoGOrderReminders(): Promise<PuntoGRunResult> {
             continue;
         }
 
-        // Senza data consegna/funerale non sollecitare (evita messaggi a chi non ha urgenza operativa).
         const targetDate = order.deliveryDate || order.funeralDate;
         if (!targetDate) {
             result.skipped += 1;
             continue;
         }
         const diffHours = (targetDate.getTime() - Date.now()) / MS_PER_HOUR;
-        // Solo entro 72h (3 giorni) dalla consegna — mai anticipi di settimane/mesi.
-        if (diffHours > REMINDER_MAX_HOURS_BEFORE || diffHours < -12) {
-            result.skipped += 1;
-            continue;
-        }
+        const orderAgeHours = (Date.now() - order.createdAt.getTime()) / MS_PER_HOUR;
 
         let currentFlags = parseWorkflowFlags(order.veraWorkflowFlags);
         let flagsDirty = false;
 
-        // ── Cliente: un solo aggiornamento attesa per ordine ──
+        // ── 1. RASSICURAZIONE CLIENTE (MAX 1 VOLTA, solo se data lontana > 48h) ──
         const customerPhoneE164 = normalizePhoneE164(order.customerPhone);
-        if (customerPhoneE164 && !isWorkflowStepDone(currentFlags, 'puntoG_customer_wait')) {
-            try {
-                const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
-                const bodyParams = buildCustomerWaitingUpdateParams({
-                    buyerFirstName: name,
-                    deceasedName: order.deceasedName,
-                });
-                const send = await sendVeraTemplate(customerPhoneE164, 'customer_waiting_update', bodyParams, {
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
-                });
-                if (send.ok) {
-                    await logVeraTemplateOutbound({
-                        phoneE164: customerPhoneE164,
-                        templateId: 'customer_waiting_update',
-                        bodyParams,
-                        eventType: 'WAITING_UPDATE_TEMPLATE',
-                        orderId: order.id,
-                        orderNumber: order.orderNumber,
-                        messageId: send.messageId,
-                        contactName: order.user?.name || order.buyerFullName || name,
-                        userType: 'UTENTE',
-                    });
-                    currentFlags = markWorkflowStep(currentFlags, 'puntoG_customer_wait');
-                    flagsDirty = true;
-                    result.customerReminders += 1;
-                } else if (send.error) {
-                    result.errors.push(`customer ${order.orderNumber}: ${send.error}`);
+        const alreadyFlaggedCustomer =
+            isWorkflowStepDone(currentFlags, 'puntoG_customer_wait') ||
+            isWorkflowStepDone(currentFlags, 'hasSentReassuranceNudge') ||
+            Boolean(currentFlags.hasSentReassuranceNudge);
+
+        if (customerPhoneE164 && !alreadyFlaggedCustomer) {
+            // Verifica storico comunicazioni (chat log a database)
+            const alreadySentInChat = await wasOrderTemplateSent(
+                order.id,
+                'customer_waiting_update',
+                order.orderNumber
+            );
+
+            if (alreadySentInChat) {
+                // Auto-healing flags per evitare verifiche future
+                currentFlags = markWorkflowStep(currentFlags, 'puntoG_customer_wait');
+                currentFlags = markWorkflowStep(currentFlags, 'hasSentReassuranceNudge');
+                flagsDirty = true;
+                result.skipped += 1;
+            } else {
+                // Se la posa è entro 48 ore (o passata), NON inviare alcuna rassicurazione:
+                // il cliente attende direttamente la foto di consegna.
+                const isDeliveryFarAway = diffHours > 48 && diffHours <= 168; // tra 2 e 7 giorni prima
+                const isOrderMature = orderAgeHours >= 24; // almeno 24h dopo il checkout
+
+                if (!isDeliveryFarAway || !isOrderMature) {
+                    result.skipped += 1;
+                } else {
+                    try {
+                        const name = extractFirstNameFromProfile(order.user?.name || order.buyerFullName);
+                        const formattedDeceased = formatDeceasedName(order.deceasedName, 'chi ama');
+                        const bodyParams = buildCustomerWaitingUpdateParams({
+                            buyerFirstName: name,
+                            deceasedName: formattedDeceased,
+                        });
+                        const send = await sendVeraTemplate(customerPhoneE164, 'customer_waiting_update', bodyParams, {
+                            orderId: order.id,
+                            orderNumber: order.orderNumber,
+                        });
+                        if (send.ok) {
+                            await logVeraTemplateOutbound({
+                                phoneE164: customerPhoneE164,
+                                templateId: 'customer_waiting_update',
+                                bodyParams,
+                                eventType: 'WAITING_UPDATE_TEMPLATE',
+                                orderId: order.id,
+                                orderNumber: order.orderNumber,
+                                messageId: send.messageId,
+                                contactName: order.user?.name || order.buyerFullName || name,
+                                userType: 'UTENTE',
+                            });
+                            currentFlags = markWorkflowStep(currentFlags, 'puntoG_customer_wait');
+                            currentFlags = markWorkflowStep(currentFlags, 'hasSentReassuranceNudge');
+                            flagsDirty = true;
+                            result.customerReminders += 1;
+                        } else if (send.error) {
+                            result.errors.push(`customer ${order.orderNumber}: ${send.error}`);
+                        }
+                    } catch (e) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        result.errors.push(`customer ${order.orderNumber}: ${msg}`);
+                    }
                 }
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                result.errors.push(`customer ${order.orderNumber}: ${msg}`);
             }
-        } else if (isWorkflowStepDone(currentFlags, 'puntoG_customer_wait')) {
+        } else if (alreadyFlaggedCustomer) {
             result.skipped += 1;
         }
 
-        // ── Fiorista: un solo sollecito per ordine ──
+        // ── 2. SOLLECITO FIORISTA (MAX 1 VOLTA, solo tra 24h e 72h dalla posa) ──
         const floristPhoneRaw = order.partner?.whatsappNumber?.trim();
         const floristPhoneE164 = normalizePhoneE164(floristPhoneRaw);
-        if (floristPhoneE164 && !isWorkflowStepDone(currentFlags, 'puntoG_florist_reminder')) {
-            try {
-                const floristName = extractFirstName(
-                    order.partner?.ownerName || order.partner?.shopName || 'Fiorista'
-                );
-                const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
-                const deliveryUrl = buildFloristDeliveryUrl({
-                    id: order.id,
-                    orderNumber: order.orderNumber,
-                });
-                const bodyParams = buildFloristReminderParams({
-                    floristFirstName: floristName,
-                    orderCode: order.orderNumber || order.id,
-                    deliveryUrl,
-                });
-                const send = await sendVeraTemplate(floristPhoneE164, 'florist_reminder', bodyParams, {
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
-                });
-                if (send.ok) {
-                    await logVeraTemplateOutbound({
-                        phoneE164: floristPhoneE164,
-                        templateId: 'florist_reminder',
-                        bodyParams,
-                        eventType: 'FLORIST_REMINDER_TEMPLATE',
+        const alreadyFlaggedFlorist = isWorkflowStepDone(currentFlags, 'puntoG_florist_reminder');
+
+        if (floristPhoneE164 && !alreadyFlaggedFlorist) {
+            const alreadySentFlorist = await wasOrderTemplateSent(
+                order.id,
+                'florist_reminder',
+                order.orderNumber
+            );
+
+            if (alreadySentFlorist) {
+                currentFlags = markWorkflowStep(currentFlags, 'puntoG_florist_reminder');
+                flagsDirty = true;
+                result.skipped += 1;
+            } else if (diffHours > 72 || diffHours < 24) {
+                // Sollecito fiorista solo nella finestra 24-72h prima della posa
+                result.skipped += 1;
+            } else {
+                try {
+                    const floristName = extractFirstName(
+                        order.partner?.ownerName || order.partner?.shopName || 'Fiorista'
+                    );
+                    const { buildFloristDeliveryUrl } = await import('@/lib/orders/resolveOrderIdentifier');
+                    const deliveryUrl = buildFloristDeliveryUrl({
+                        id: order.id,
+                        orderNumber: order.orderNumber,
+                    });
+                    const bodyParams = buildFloristReminderParams({
+                        floristFirstName: floristName,
+                        orderCode: order.orderNumber || order.id,
+                        deliveryUrl,
+                    });
+                    const send = await sendVeraTemplate(floristPhoneE164, 'florist_reminder', bodyParams, {
                         orderId: order.id,
                         orderNumber: order.orderNumber,
-                        messageId: send.messageId,
-                        contactName: order.partner?.ownerName || order.partner?.shopName || floristName,
-                        userType: 'FLORIST',
                     });
-                    currentFlags = markWorkflowStep(currentFlags, 'puntoG_florist_reminder');
-                    flagsDirty = true;
-                    result.floristReminders += 1;
-                } else if (send.error) {
-                    result.errors.push(`florist ${order.orderNumber}: ${send.error}`);
+                    if (send.ok) {
+                        await logVeraTemplateOutbound({
+                            phoneE164: floristPhoneE164,
+                            templateId: 'florist_reminder',
+                            bodyParams,
+                            eventType: 'FLORIST_REMINDER_TEMPLATE',
+                            orderId: order.id,
+                            orderNumber: order.orderNumber,
+                            messageId: send.messageId,
+                            contactName: order.partner?.ownerName || order.partner?.shopName || floristName,
+                            userType: 'FLORIST',
+                        });
+                        currentFlags = markWorkflowStep(currentFlags, 'puntoG_florist_reminder');
+                        flagsDirty = true;
+                        result.floristReminders += 1;
+                    } else if (send.error) {
+                        result.errors.push(`florist ${order.orderNumber}: ${send.error}`);
+                    }
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    result.errors.push(`florist ${order.orderNumber}: ${msg}`);
                 }
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                result.errors.push(`florist ${order.orderNumber}: ${msg}`);
             }
-        } else if (isWorkflowStepDone(currentFlags, 'puntoG_florist_reminder')) {
+        } else if (alreadyFlaggedFlorist) {
             result.skipped += 1;
         }
 

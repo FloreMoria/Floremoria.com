@@ -127,7 +127,7 @@ function fillDeadlinesForYear(addDeadline: AddFn, currentYear: number) {
     for (const { q, due } of ivaQuarters) {
         addDeadline(
             `iva_liq_q${q}_${currentYear}`,
-            `Liquidazione IVA Trimestrale Q${q}`,
+            `Liquidazione IVA Trimestrale T${q}`,
             'IVA',
             due,
             'QUARTERLY',
@@ -138,7 +138,7 @@ function fillDeadlinesForYear(addDeadline: AddFn, currentYear: number) {
     // 2. ESTEROMETRO / LIPE
     addDeadline(
         `lipe_q1_${currentYear}`,
-        'Comunicazione LIPE Q1',
+        'Comunicazione LIPE T1',
         'ESTEROMETRO',
         `${currentYear}-05-31`,
         'QUARTERLY',
@@ -146,7 +146,7 @@ function fillDeadlinesForYear(addDeadline: AddFn, currentYear: number) {
     );
     addDeadline(
         `lipe_q2_${currentYear}`,
-        'Comunicazione LIPE Q2',
+        'Comunicazione LIPE T2',
         'ESTEROMETRO',
         `${currentYear}-09-30`,
         'QUARTERLY',
@@ -154,7 +154,7 @@ function fillDeadlinesForYear(addDeadline: AddFn, currentYear: number) {
     );
     addDeadline(
         `lipe_q3_${currentYear}`,
-        'Comunicazione LIPE Q3',
+        'Comunicazione LIPE T3',
         'ESTEROMETRO',
         `${currentYear}-11-30`,
         'QUARTERLY',
@@ -162,7 +162,7 @@ function fillDeadlinesForYear(addDeadline: AddFn, currentYear: number) {
     );
     addDeadline(
         `lipe_q4_${currentYear}`,
-        'Comunicazione LIPE Q4',
+        'Comunicazione LIPE T4',
         'ESTEROMETRO',
         `${currentYear + 1}-02-28`,
         'QUARTERLY',

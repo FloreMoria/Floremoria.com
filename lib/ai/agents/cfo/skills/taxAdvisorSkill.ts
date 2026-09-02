@@ -72,26 +72,26 @@ export type F24Deadline = {
 export function buildF24DeadlineCalendar(year: number): F24Deadline[] {
     return [
         {
-            code: 'IVA_Q1',
-            label: `Liquidazione IVA Q1 ${year}`,
+            code: 'IVA_T1',
+            label: `Liquidazione IVA T1 ${year}`,
             indicativeDueDate: `${year}-05-16`,
             note: 'Verificare proroghe AdE / festività (Tier 1–2)',
         },
         {
-            code: 'IVA_Q2',
-            label: `Liquidazione IVA Q2 ${year}`,
+            code: 'IVA_T2',
+            label: `Liquidazione IVA T2 ${year}`,
             indicativeDueDate: `${year}-09-16`,
             note: 'Liquidazione IVA trimestrale',
         },
         {
-            code: 'IVA_Q3',
-            label: `Liquidazione IVA Q3 ${year}`,
+            code: 'IVA_T3',
+            label: `Liquidazione IVA T3 ${year}`,
             indicativeDueDate: `${year}-11-16`,
             note: 'Liquidazione IVA trimestrale',
         },
         {
-            code: 'IVA_Q4',
-            label: `Liquidazione IVA Q4 ${year} / acconto`,
+            code: 'IVA_T4',
+            label: `Liquidazione IVA T4 ${year} / acconto`,
             indicativeDueDate: `${year + 1}-03-16`,
             note: 'Acconto IVA — Verify disposizioni AdE anno',
         },

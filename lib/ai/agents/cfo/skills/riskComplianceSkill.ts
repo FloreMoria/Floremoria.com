@@ -53,14 +53,14 @@ export function buildComplianceCalendar(year: number): CalendarItem[] {
         {
             id: 'iva_q1',
             domain: 'fiscale',
-            label: 'Liquidazione IVA Q1',
+            label: 'Liquidazione IVA T1',
             indicativeDate: `${year}-05-16`,
             note: 'Verify calendario AdE',
         },
         {
             id: 'iva_q2',
             domain: 'fiscale',
-            label: 'Liquidazione IVA Q2',
+            label: 'Liquidazione IVA T2',
             indicativeDate: `${year}-09-16`,
             note: 'Verify calendario AdE',
         },

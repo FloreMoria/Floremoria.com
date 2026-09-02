@@ -103,3 +103,4 @@
 [2026-09-02 22:02] feat(accounting): selettore trimestrale Prima Nota + causale compatta con tooltip
 
 [2026-09-02 22:11] refactor(accounting): nomenclatura periodi T1-T4 (ex Q1-Q4) in UI/export/API
+[2026-09-02 22:24] feat/dashboard: Live Data SWR (chat 4s / ops 12s / finance 45s / metrics 60s), badge Live + soft refresh RSC, zero spinner full-page

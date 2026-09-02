@@ -8,6 +8,9 @@ import TopNavDropdown from '@/components/dashboard/TopNavDropdown';
 import DashboardMobileNav from '@/components/dashboard/DashboardMobileNav';
 import StaffAlertPoller from '@/components/dashboard/StaffAlertPoller';
 import DashboardSwipeBack from '@/components/dashboard/DashboardSwipeBack';
+import DashboardLiveProvider from '@/components/dashboard/DashboardLiveProvider';
+import DashboardLiveBadge from '@/components/dashboard/DashboardLiveBadge';
+import DashboardSoftRefresh from '@/components/dashboard/DashboardSoftRefresh';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import TestModeBanner from '@/components/dashboard/TestModeBanner';
 import { isDashboardAdminRole, isSuperAdminRole } from '@/lib/superAdmin';
@@ -58,6 +61,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     } as CSSProperties;
 
     return (
+        <DashboardLiveProvider>
         <div
             className={`dashboard-shell flex flex-col min-h-screen h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-hidden font-sans antialiased transition-colors duration-300 ${isSystemClean ? 'theme-system-clean bg-[#FFFFFF] text-[#1A1A1A]' : 'bg-[#fbfbfd] text-[#1d1d1f]'}`}
             style={{
@@ -107,6 +111,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
                 {/* Right Bar */}
                 <div className="flex items-center gap-3 md:gap-5 shrink-0">
+                    <DashboardLiveBadge />
                     <DashboardMobileNav
                         isDashboardAdmin={isDashboardAdmin}
                         isSuperAdmin={isSuperAdmin}
@@ -140,7 +145,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </main>
 
             <StaffAlertPoller />
+            <DashboardSoftRefresh />
             <DashboardSwipeBack />
         </div>
+        </DashboardLiveProvider>
     );
 }

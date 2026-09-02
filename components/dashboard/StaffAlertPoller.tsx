@@ -6,8 +6,7 @@ import {
     unlockStaffAlertSounds,
     type StaffAlertSound,
 } from '@/lib/dashboard/staffAlertSounds';
-
-const POLL_MS = 30000;
+import { dashboardJsonFetcher, useDashboardLive } from '@/hooks/useDashboardLive';
 
 interface StaffAlertsSummary {
     inboundMessageCount: number;
@@ -47,58 +46,47 @@ export default function StaffAlertPoller() {
         };
     }, []);
 
+    const { data } = useDashboardLive<{ summary?: StaffAlertsSummary }>(
+        '/api/dashboard/staff-alerts/summary',
+        dashboardJsonFetcher,
+        'chat',
+        {
+            // Suoni: un po' meno aggressivo del feed chat ma ancora reattivo
+            refreshInterval: 8_000,
+        }
+    );
+
     useEffect(() => {
-        let cancelled = false;
+        if (typeof document !== 'undefined' && document.hidden) return;
 
-        async function poll() {
-            if (typeof document !== 'undefined' && document.hidden) return;
-            try {
-                const res = await fetch('/api/dashboard/staff-alerts/summary', {
-                    cache: 'no-store',
-                });
-                if (!res.ok || cancelled) return;
+        const summary = data?.summary;
+        if (!summary) return;
 
-                const data = await res.json();
-                const summary = data.summary as StaffAlertsSummary | undefined;
-                if (!summary) return;
+        const next: Snapshot = {
+            inboundMessageCount: summary.inboundMessageCount,
+            paidOrderCount: summary.paidOrderCount,
+            deliveryProofCompletedCount: summary.deliveryProofCompletedCount,
+            floristInboundMediaCount: summary.floristInboundMediaCount,
+        };
 
-                const next: Snapshot = {
-                    inboundMessageCount: summary.inboundMessageCount,
-                    paidOrderCount: summary.paidOrderCount,
-                    deliveryProofCompletedCount: summary.deliveryProofCompletedCount,
-                    floristInboundMediaCount: summary.floristInboundMediaCount,
-                };
-
-                const baseline = baselineRef.current;
-                if (baseline) {
-                    if (next.inboundMessageCount > baseline.inboundMessageCount) {
-                        playStaffAlertSound('whatsapp');
-                    }
-                    if (next.paidOrderCount > baseline.paidOrderCount) {
-                        playStaffAlertSound('order');
-                    }
-                    const photoEventsIncreased =
-                        next.deliveryProofCompletedCount > baseline.deliveryProofCompletedCount ||
-                        next.floristInboundMediaCount > baseline.floristInboundMediaCount;
-                    if (photoEventsIncreased) {
-                        playStaffAlertSound('floristPhoto');
-                    }
-                }
-
-                baselineRef.current = next;
-            } catch {
-                /* rete o sessione scaduta */
+        const baseline = baselineRef.current;
+        if (baseline) {
+            if (next.inboundMessageCount > baseline.inboundMessageCount) {
+                playStaffAlertSound('whatsapp');
+            }
+            if (next.paidOrderCount > baseline.paidOrderCount) {
+                playStaffAlertSound('order');
+            }
+            const photoEventsIncreased =
+                next.deliveryProofCompletedCount > baseline.deliveryProofCompletedCount ||
+                next.floristInboundMediaCount > baseline.floristInboundMediaCount;
+            if (photoEventsIncreased) {
+                playStaffAlertSound('floristPhoto');
             }
         }
 
-        void poll();
-        const interval = setInterval(() => void poll(), POLL_MS);
-        return () => {
-            cancelled = true;
-            clearInterval(interval);
-        };
-    }, []);
-
+        baselineRef.current = next;
+    }, [data]);
 
     return null;
 }

@@ -13,6 +13,7 @@ import type {
 
 import { useRouter } from 'next/navigation';
 import MissionControlHub from './MissionControlHub';
+import { dashboardJsonFetcher, useDashboardLive } from '@/hooks/useDashboardLive';
 
 export default function AnalyticsOverviewClient({
     initialGa4Overview,
@@ -50,13 +51,32 @@ export default function AnalyticsOverviewClient({
     const [isMounted, setIsMounted] = useState(false);
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
-    const [logs, setLogs] = useState<any[]>(latestLogs);
-    const [logsLoading, setLogsLoading] = useState(latestLogs.length === 0);
-    const [ga4Overview, setGa4Overview] = useState<Ga4OverviewResult | null>(
-        initialGa4Overview,
-    );
     const [ga4RefreshError, setGa4RefreshError] = useState<string | null>(null);
 
+    const { data: remoteLogs, isLoading: logsLoadingRemote } = useDashboardLive<any[]>(
+        '/api/logs',
+        dashboardJsonFetcher,
+        'ops'
+    );
+    const logs = Array.isArray(remoteLogs) ? remoteLogs : latestLogs;
+    const logsLoading = logsLoadingRemote && logs.length === 0;
+
+    const { data: remoteGa4, error: ga4Error } = useDashboardLive<Ga4OverviewResult>(
+        '/api/dashboard/ga4-overview',
+        dashboardJsonFetcher,
+        'metrics',
+        {
+            fallbackData: initialGa4Overview ?? undefined,
+            refreshInterval: 60_000,
+        }
+    );
+    const ga4Overview = remoteGa4 ?? initialGa4Overview;
+
+    useEffect(() => {
+        setIsMounted(true);
+        if (ga4Error) setGa4RefreshError('refresh_failed');
+        else if (remoteGa4) setGa4RefreshError(null);
+    }, [ga4Error, remoteGa4]);
 
     const handleCopy = () => {
         const activeLog = logs.length > 0 ? logs[0] : null;
@@ -66,63 +86,6 @@ export default function AnalyticsOverviewClient({
             setTimeout(() => setIsCopied(false), 2000);
         }
     };
-
-    useEffect(() => {
-        setIsMounted(true);
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            // setDarkMode(true);
-        }
-
-        const fetchLogs = async () => {
-            try {
-                const res = await fetch('/api/logs', {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-                });
-                const data = await res.json();
-                setLogs(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error("Failed to fetch logs:", err);
-                setLogs([]);
-            } finally {
-                setLogsLoading(false);
-            }
-        };
-
-        fetchLogs();
-    }, []);
-
-    useEffect(() => {
-        let disposed = false;
-
-        const refreshGa4Overview = async () => {
-            try {
-                const res = await fetch('/api/dashboard/ga4-overview', {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-                });
-                if (!res.ok) {
-                    throw new Error(`ga4_overview_http_${res.status}`);
-                }
-                const nextOverview = (await res.json()) as Ga4OverviewResult;
-                if (disposed) return;
-                setGa4Overview(nextOverview);
-                setGa4RefreshError(null);
-            } catch (err) {
-                if (disposed) return;
-                console.error('[GA4 Overview] refresh failed:', err);
-                setGa4RefreshError('refresh_failed');
-            }
-        };
-
-        refreshGa4Overview();
-        const interval = setInterval(refreshGa4Overview, 5 * 60 * 1000);
-
-        return () => {
-            disposed = true;
-            clearInterval(interval);
-        };
-    }, []);
 
     const activeLog = logs.length > 0 ? logs[0] : null;
 

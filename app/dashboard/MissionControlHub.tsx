@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, AlertCircle, CheckCircle2, LayoutGrid, Calendar as CalendarIcon, List } from 'lucide-react';
 import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
+import { dashboardJsonFetcher, useDashboardLive } from '@/hooks/useDashboardLive';
 
 type HubButton = {
     id: string;
@@ -76,25 +77,14 @@ export default function MissionControlHub({
               ? { ...btn, url: openReplayUrl }
               : btn,
     );
-    const [states, setStates] = useState<Record<string, string>>({});
     const [ordersViewTab, setOrdersViewTab] = useState<'stream' | 'calendar'>('stream');
 
-    useEffect(() => {
-        const fetchStates = async () => {
-            try {
-                const res = await fetch('/api/dashboard/mission-control');
-                const data = await res.json();
-                setStates(data);
-            } catch (error) {
-                console.error('Polling failed, using fallback states');
-                setStates({ github: 'red', merchant: 'yellow' });
-            }
-        };
-
-        fetchStates();
-        const interval = setInterval(fetchStates, 10000);
-        return () => clearInterval(interval);
-    }, []);
+    const { data: missionStates } = useDashboardLive<Record<string, string>>(
+        '/api/dashboard/mission-control',
+        dashboardJsonFetcher,
+        'ops'
+    );
+    const states = missionStates || {};
 
     const getColorClass = (state: string) => {
         switch(state) {

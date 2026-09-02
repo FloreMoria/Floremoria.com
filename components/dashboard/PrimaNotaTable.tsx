@@ -5,7 +5,7 @@
  * Gerarchia fiscale + dedup visiva su data/importo/controparte/riferimento.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatFinanceDate';
@@ -30,6 +30,7 @@ import {
 } from '@/lib/financial/primaNotaShared';
 import { normalizePrimaNotaPeriodKey } from '@/lib/financial/trimestreLabel';
 import PrimaNotaDetailDrawer from '@/components/dashboard/PrimaNotaDetailDrawer';
+import { useDashboardLive } from '@/hooks/useDashboardLive';
 
 const STORAGE_KEY = 'floremoria.primaNota.period';
 const FISCAL_YEAR = 2026;
@@ -175,16 +176,42 @@ type Props = {
     searchTerm?: string;
 };
 
+async function fetchPrimaNotaRows(url: string): Promise<NeonRow[]> {
+    const res = await fetch(url, { cache: 'no-store' });
+    const parsed = await readJsonResponse<{
+        ok?: boolean;
+        rows?: NeonRow[];
+        error?: string;
+    }>(res);
+    if (!parsed.ok) throw new Error(parsed.error || 'Caricamento fallito');
+    return parsed.data?.rows || [];
+}
+
 export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props) {
-    const [neonRows, setNeonRows] = useState<NeonRow[]>([]);
     const [fonteOverrides, setFonteOverrides] = useState<Record<string, string>>({});
     const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [selectedEntry, setSelectedEntry] = useState<PrimaNotaDisplayEntry | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
     const [periodKey, setPeriodKey] = useState<PrimaNotaPeriodKey>(() => currentPrimaNotaPeriodKey());
+    const [localError, setLocalError] = useState<string | null>(null);
+
+    const ledgerKey = `/api/dashboard/finance/historical-ledger?year=${FISCAL_YEAR}&take=5000&direction=ALL&category=ALL`;
+    const {
+        data: remoteRows,
+        error: swrError,
+        isLoading,
+        isValidating,
+        mutate,
+    } = useDashboardLive<NeonRow[]>(ledgerKey, fetchPrimaNotaRows, 'finance');
+
+    const [neonRows, setNeonRows] = useState<NeonRow[]>([]);
+    useEffect(() => {
+        if (Array.isArray(remoteRows)) setNeonRows(remoteRows);
+    }, [remoteRows]);
+
+    const loading = isLoading && neonRows.length === 0;
+    const error = localError || (swrError instanceof Error ? swrError.message : swrError ? String(swrError) : null);
 
     useEffect(() => {
         setPeriodKey(readStoredPeriod());
@@ -202,32 +229,10 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         }
     };
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const year = new Date().getFullYear();
-            const res = await fetch(
-                `/api/dashboard/finance/historical-ledger?year=${year}&take=5000&direction=ALL&category=ALL`
-            );
-            const parsed = await readJsonResponse<{
-                ok?: boolean;
-                rows?: NeonRow[];
-                error?: string;
-            }>(res);
-            if (!parsed.ok) throw new Error(parsed.error || 'Caricamento fallito');
-            setNeonRows(parsed.data?.rows || []);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Errore');
-            setNeonRows([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void load();
-    }, [load]);
+    const load = () => {
+        setLocalError(null);
+        void mutate();
+    };
 
     const saveStatus = async (entryId: string, reconciliationStatus: string) => {
         setSavingStatusId(entryId);
@@ -253,7 +258,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                 prev?.id === entryId ? { ...prev, reconciliationStatus } : prev
             );
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Errore salvataggio stato');
+            setLocalError(e instanceof Error ? e.message : 'Errore salvataggio stato');
         } finally {
             setSavingStatusId(null);
         }
@@ -514,9 +519,10 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                         <button
                             type="button"
                             onClick={() => void load()}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600"
+                            disabled={isValidating}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 disabled:opacity-60"
                         >
-                            <RefreshCw size={12} />
+                            <RefreshCw size={12} className={isValidating ? 'animate-spin' : undefined} />
                             Aggiorna
                         </button>
                     </div>

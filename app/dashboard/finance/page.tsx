@@ -45,8 +45,28 @@ import {
 import { formatFinanceDate, formatFinanceDateTime } from '@/lib/financial/formatFinanceDate';
 import { FLOREMORIA_FINECO_BANK, FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { useDashboardLive } from '@/hooks/useDashboardLive';
 
 type FinanceTab = 'bank' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
+
+type FinanceLedgerPayload = {
+    ok?: boolean;
+    ledger?: FinancialLedger;
+    statements?: unknown;
+    finecoBalance?: { balanceCents: number; alignedAt: string } | null;
+    saasTotalEurCents?: number;
+    quadratura?: FinanceQuadratura;
+    error?: string;
+};
+
+async function fetchFinanceLedger(url: string): Promise<FinanceLedgerPayload> {
+    const res = await fetch(url, { cache: 'no-store' });
+    const parsed = await readJsonResponse<FinanceLedgerPayload>(res);
+    if (!parsed.ok) {
+        throw new Error(parsed.error || 'Caricamento finance fallito');
+    }
+    return parsed.data || {};
+}
 
 function formatEuroCents(cents: number | null | undefined): string {
     if (cents == null || !Number.isFinite(cents)) return '—';
@@ -60,7 +80,6 @@ function formatEuroCents(cents: number | null | undefined): string {
 
 export default function FinanceDashboardPage() {
     const [ledger, setLedger] = useState<FinancialLedger>({ transactions: [], accountingEntries: [] });
-    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<FinanceTab>('bank');
     const [statements, setStatements] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -101,39 +120,34 @@ export default function FinanceDashboardPage() {
     const [manualExpenseOpen, setManualExpenseOpen] = useState(false);
     const [manualExpensePrefill, setManualExpensePrefill] = useState<ManualExpensePrefill | null>(null);
 
-    // Caricamento dati
-    const loadLedger = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/dashboard/finance');
-            const parsed = await readJsonResponse<{
-                ok?: boolean;
-                ledger?: FinancialLedger;
-                statements?: unknown;
-                finecoBalance?: { balanceCents: number; alignedAt: string } | null;
-                saasTotalEurCents?: number;
-                quadratura?: FinanceQuadratura;
-                error?: string;
-            }>(res);
-            if (parsed.ok && parsed.data) {
-                if (parsed.data.ledger) setLedger(parsed.data.ledger);
-                if (parsed.data.statements) setStatements(parsed.data.statements);
-                if (parsed.data.finecoBalance) {
-                    setManualBalanceCents(parsed.data.finecoBalance.balanceCents);
-                    setManualBalanceAlignedAt(parsed.data.finecoBalance.alignedAt);
-                }
-                if (typeof parsed.data.saasTotalEurCents === 'number') {
-                    setSaasTotalCents(parsed.data.saasTotalEurCents);
-                }
-                if (parsed.data.quadratura) setQuadratura(parsed.data.quadratura);
-            } else if (parsed.error) {
-                console.error('Errore di caricamento ledger:', parsed.error);
-            }
-        } catch (error) {
-            console.error('Errore di caricamento ledger:', error);
-        } finally {
-            setLoading(false);
+    const {
+        data: financePayload,
+        isLoading: financeLoading,
+        mutate: mutateFinance,
+    } = useDashboardLive<FinanceLedgerPayload>(
+        '/api/dashboard/finance',
+        fetchFinanceLedger,
+        'finance'
+    );
+
+    useEffect(() => {
+        if (!financePayload) return;
+        if (financePayload.ledger) setLedger(financePayload.ledger);
+        if (financePayload.statements) setStatements(financePayload.statements);
+        if (financePayload.finecoBalance) {
+            setManualBalanceCents(financePayload.finecoBalance.balanceCents);
+            setManualBalanceAlignedAt(financePayload.finecoBalance.alignedAt);
         }
+        if (typeof financePayload.saasTotalEurCents === 'number') {
+            setSaasTotalCents(financePayload.saasTotalEurCents);
+        }
+        if (financePayload.quadratura) setQuadratura(financePayload.quadratura);
+    }, [financePayload]);
+
+    const loading = financeLoading && !financePayload;
+
+    const loadLedger = async () => {
+        await mutateFinance();
     };
 
     const loadGateways = async () => {
@@ -229,7 +243,6 @@ export default function FinanceDashboardPage() {
     };
 
     useEffect(() => {
-        void loadLedger();
         void loadGateways();
     }, []);
 

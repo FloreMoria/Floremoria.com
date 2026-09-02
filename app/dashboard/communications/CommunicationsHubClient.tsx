@@ -9,6 +9,7 @@ import ChatMessageMedia from '@/components/dashboard/ChatMessageMedia';
 import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
+import { dashboardJsonFetcher, useDashboardLive } from '@/hooks/useDashboardLive';
 
 function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
   const now = new Date();
@@ -67,29 +68,19 @@ function formatMessageTimestamp(createdAtStr?: string, fallback?: string): strin
 
 export default function CommunicationsHubClient({ initialProofs, isDashboardAdmin }: { initialProofs?: any[]; isDashboardAdmin?: boolean }) {
   const [activeTab, setActiveTab] = useState('visione');
+  const { data: sessionsPayload, isLoading } = useDashboardLive<{
+    success?: boolean;
+    sessions?: any[];
+  }>('/api/dashboard/communications', dashboardJsonFetcher, 'chat');
+
   const [sessions, setSessions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Poll for new messages every 4 seconds to simulate real-time chat
   useEffect(() => {
-    async function fetchSessions() {
-      try {
-        const res = await fetch('/api/dashboard/communications');
-        const data = await res.json();
-        if (data.success) {
-          setSessions(data.sessions || []);
-        }
-      } catch (err) {
-        console.error('Error fetching chat sessions:', err);
-      } finally {
-        setLoading(false);
-      }
+    if (sessionsPayload?.success && Array.isArray(sessionsPayload.sessions)) {
+      setSessions(sessionsPayload.sessions);
     }
+  }, [sessionsPayload]);
 
-    fetchSessions();
-    const interval = setInterval(fetchSessions, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  const loading = isLoading && sessions.length === 0;
 
   const tabs = [
     { id: 'visione', label: 'Monitoraggio Live', icon: Eye },
@@ -1348,43 +1339,46 @@ function WhatsAppSetupSection() {
     const [state, setState] = useState<ConnectionState>(null);
     const [displayPhone, setDisplayPhone] = useState<string | null>(null);
     const [missingEnv, setMissingEnv] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const fetchStatus = useCallback(async (silent = false) => {
-        if (!silent) setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch('/api/dashboard/whatsapp/status');
-            const data: StatusResponse = await res.json();
-            if (!res.ok && res.status === 401) {
-                setState('error');
-                setError('Sessione scaduta — rieffettua il login dashboard.');
-                setMissingEnv([]);
-            } else if (data.ok && data.state) {
-                setState(data.state);
-                setDisplayPhone(data.displayPhoneNumber ?? null);
-                setMissingEnv([]);
-            } else {
-                setState(data.state ?? 'error');
-                setError(data.error ?? 'Errore nel recupero stato Meta Cloud API');
-                setMissingEnv(data.missingEnv ?? []);
-            }
-            setLastUpdated(new Date());
-        } catch {
-            setError('Impossibile contattare Meta WhatsApp Cloud API');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const {
+        data: statusData,
+        error: statusFetchError,
+        isLoading,
+        isValidating,
+        mutate,
+    } = useDashboardLive<StatusResponse>(
+        '/api/dashboard/whatsapp/status',
+        dashboardJsonFetcher,
+        'metrics'
+    );
 
     useEffect(() => {
-        fetchStatus();
-        const interval = setInterval(() => fetchStatus(true), 60_000);
-        return () => clearInterval(interval);
-    }, [fetchStatus]);
+        if (statusFetchError) {
+            setError('Impossibile contattare Meta WhatsApp Cloud API');
+            return;
+        }
+        if (!statusData) return;
+        if (statusData.ok && statusData.state) {
+            setState(statusData.state);
+            setDisplayPhone(statusData.displayPhoneNumber ?? null);
+            setMissingEnv([]);
+            setError(null);
+        } else {
+            setState(statusData.state ?? 'error');
+            setError(statusData.error ?? 'Errore nel recupero stato Meta Cloud API');
+            setMissingEnv(statusData.missingEnv ?? []);
+        }
+        setLastUpdated(new Date());
+    }, [statusData, statusFetchError]);
 
+    const fetchStatus = useCallback(async () => {
+        setError(null);
+        await mutate();
+    }, [mutate]);
+
+    const loading = isLoading && !statusData;
     const isConnected = state === 'open';
 
     return (
@@ -1408,11 +1402,11 @@ function WhatsAppSetupSection() {
                         <button
                             type="button"
                             onClick={() => fetchStatus()}
-                            disabled={loading}
+                            disabled={isValidating}
                             className="flex items-center gap-1.5 text-xs text-[#B89F78] hover:text-[#9A7F56] transition-colors disabled:opacity-40 font-bold uppercase tracking-wider"
                             aria-label="Aggiorna stato"
                         >
-                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`w-3.5 h-3.5 ${isValidating ? 'animate-spin' : ''}`} />
                             Aggiorna
                         </button>
                     </div>

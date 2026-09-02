@@ -17,6 +17,7 @@ import {
     VAT_PCT_FLORAL,
     VAT_PCT_ORDINARY,
 } from '@/lib/financial/vat';
+import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 
 function toRow(input: LedgerEntryInput): Prisma.FinancialLedgerEntryCreateManyInput {
     const parts = fiscalParts(input.accountingDate);
@@ -205,6 +206,12 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             floristCompensationCents: true,
             floristSettlementStatus: true,
             partnerPaymentStatus: true,
+            isRecurring: true,
+            grossAmount: true,
+            netAmount: true,
+            stripeFee: true,
+            additionalInstructions: true,
+            financeNotes: true,
         },
         take: 5000,
         orderBy: { createdAt: 'desc' },
@@ -213,29 +220,33 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     for (const o of orders) {
         if (!o.totalPriceCents || o.totalPriceCents <= 0) continue;
         const d = o.createdAt;
-        // Vendite floreali: IVA 10% (punti percentuali interi).
-        const vat = scorporaIvaFloreale(o.totalPriceCents);
-        candidates.push({
-            sourceKey: `ORDER:${o.id}`,
-            sourceType: 'ORDER',
-            sourceId: o.id,
-            direction: 'ENTRATA',
-            category: 'RICAVI_VENDITE',
-            accountingDate: d,
-            description: `Ricavo ordine ${o.orderNumber || o.id.slice(0, 8)} (${o.paymentMethodLabel || 'checkout'})`,
-            netCents: vat.imponibileCents,
-            vatRate: VAT_PCT_FLORAL,
-            vatCents: vat.ivaCents,
-            totalCents: o.totalPriceCents,
-            reconciliationStatus: o.stripeTransactionId ? 'MATCHED' : 'PARTIAL',
-            documentRef: o.orderNumber || o.id,
-            orderId: o.id,
-            partnerId: o.partnerId,
-            metadataJson: { stripeTransactionId: o.stripeTransactionId },
-        });
-        sources.ORDER = (sources.ORDER || 0) + 1;
+        const isPose = isPrepaidSubscriptionPoseOrder(o);
 
-        // Compenso fiorista liquidato — IVA 10% a credito (fattura passiva tipica fiorista)
+        // Ricavo vendita: solo su pagamento reale — non sulle pose di abbonamento prepagato.
+        if (!isPose) {
+            const vat = scorporaIvaFloreale(o.totalPriceCents);
+            candidates.push({
+                sourceKey: `ORDER:${o.id}`,
+                sourceType: 'ORDER',
+                sourceId: o.id,
+                direction: 'ENTRATA',
+                category: 'RICAVI_VENDITE',
+                accountingDate: d,
+                description: `Ricavo ordine ${o.orderNumber || o.id.slice(0, 8)} (${o.paymentMethodLabel || 'checkout'})`,
+                netCents: vat.imponibileCents,
+                vatRate: VAT_PCT_FLORAL,
+                vatCents: vat.ivaCents,
+                totalCents: o.totalPriceCents,
+                reconciliationStatus: o.stripeTransactionId ? 'MATCHED' : 'PARTIAL',
+                documentRef: o.orderNumber || o.id,
+                orderId: o.id,
+                partnerId: o.partnerId,
+                metadataJson: { stripeTransactionId: o.stripeTransactionId },
+            });
+            sources.ORDER = (sources.ORDER || 0) + 1;
+        }
+
+        // Compenso fiorista — anche sulle pose prepagate (costo vivo evasione).
         const paid =
             o.partnerPaymentStatus === 'PAID' ||
             o.floristSettlementStatus === 'BONIFICATO' ||
@@ -263,6 +274,7 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
                 metadataJson: {
                     floristSettlementStatus: o.floristSettlementStatus,
                     partnerPaymentStatus: o.partnerPaymentStatus,
+                    prepaidSubscriptionPose: isPose || undefined,
                 },
             });
             sources.FLORIST_PAYOUT = (sources.FLORIST_PAYOUT || 0) + 1;

@@ -15,6 +15,76 @@ import {
     labelReconciliationStatusIt,
     labelSourceTypeIt,
 } from '@/lib/financial/fiscalItalianLabels';
+import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+
+type PoseRefSets = {
+    orderIds: Set<string>;
+    orderNumbers: Set<string>;
+};
+
+async function loadPrepaidPoseRefSets(): Promise<PoseRefSets> {
+    const poses = await prisma.order.findMany({
+        where: {
+            deletedAt: null,
+            isTest: false,
+            OR: [{ isRecurring: true }, { additionalInstructions: { contains: 'Duplicato da' } }],
+        },
+        select: {
+            id: true,
+            orderNumber: true,
+            isRecurring: true,
+            stripeTransactionId: true,
+            grossAmount: true,
+            netAmount: true,
+            stripeFee: true,
+            paymentMethodLabel: true,
+            additionalInstructions: true,
+            financeNotes: true,
+        },
+        take: 8000,
+    });
+    const orderIds = new Set<string>();
+    const orderNumbers = new Set<string>();
+    for (const o of poses) {
+        if (!isPrepaidSubscriptionPoseOrder(o)) continue;
+        orderIds.add(o.id);
+        if (o.orderNumber) orderNumbers.add(o.orderNumber.toUpperCase());
+    }
+    return { orderIds, orderNumbers };
+}
+
+function isPrepaidPoseRevenueEntry(
+    r: {
+        sourceType: string;
+        direction: string | null;
+        orderId?: string | null;
+        documentRef?: string | null;
+        description?: string | null;
+        totalCents: number;
+    },
+    refs: PoseRefSets
+): boolean {
+    if (r.direction === 'USCITA' || r.totalCents < 0) return false;
+    if (r.sourceType === 'FLORIST_PAYOUT' || r.sourceType === 'BANK_LINE') return false;
+
+    if (r.orderId && refs.orderIds.has(r.orderId)) {
+        return r.sourceType === 'ORDER' || r.sourceType === 'JSON_ENTRY';
+    }
+    const doc = (r.documentRef || '').trim().toUpperCase();
+    if (doc && refs.orderNumbers.has(doc)) {
+        return r.sourceType === 'ORDER' || r.sourceType === 'JSON_ENTRY';
+    }
+    const desc = r.description || '';
+    for (const num of refs.orderNumbers) {
+        if (desc.includes(num)) {
+            return (
+                r.sourceType === 'JSON_ENTRY' &&
+                /incasso ordine|ricavo ordine/i.test(desc)
+            );
+        }
+    }
+    return false;
+}
 
 export type HistoricalLedgerFilters = {
     fiscalYear?: number;
@@ -72,7 +142,9 @@ export async function listHistoricalLedgerEntries(filters: HistoricalLedgerFilte
         if (r.sourceKey?.startsWith('JSON_ENTRY:entry_00')) return false;
         return true;
     });
-    const deduped = applyFiscalAuthorityHierarchy(cleaned);
+    const poseRefs = await loadPrepaidPoseRefSets();
+    const withoutPoseRevenue = cleaned.filter((r) => !isPrepaidPoseRevenueEntry(r, poseRefs));
+    const deduped = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
     const rows = deduped.slice(skip, skip + take);
     const suppressed = Math.max(0, cleaned.length - deduped.length);
     const total = Math.max(0, totalRaw - suppressed);
@@ -118,7 +190,9 @@ export async function computeHistoricalPnl(opts: {
         if (r.sourceKey?.startsWith('JSON_ENTRY:entry_00')) return false;
         return true;
     });
-    const usable = applyFiscalAuthorityHierarchy(cleaned);
+    const poseRefs = await loadPrepaidPoseRefSets();
+    const withoutPoseRevenue = cleaned.filter((r) => !isPrepaidPoseRevenueEntry(r, poseRefs));
+    const usable = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
 
     let ricaviLordiCents = 0;
     let ricaviNettiCents = 0;

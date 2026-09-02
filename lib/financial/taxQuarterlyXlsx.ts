@@ -43,7 +43,8 @@ const EUR_FORMAT = '€ #,##0.00';
 const DOSSIER_VERSION = 'dossier-fiscale-v2';
 
 function euroNum(cents: number): number {
-    return Math.round(cents) / 100;
+    // Centesimi interi → euro con 2 decimali esatti (29.99, non 30.00).
+    return Number((Number(cents) / 100).toFixed(2));
 }
 
 function styleHeaderRow(row: ExcelJS.Row) {

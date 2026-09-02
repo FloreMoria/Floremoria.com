@@ -91,3 +91,5 @@
 [2026-09-02 18:50] feat(accounting): Dossier Fiscale Completo .xlsx (exceljs) — 6 fogli IVA/Prima Nota/Corrispettivi/RC/Fioristi/Meta; CTA unica Trimestre/Mese; CSV deprecato; tsc+build OK.
 
 [2026-09-02 18:49] feat(vera): helper saluti orari Europe/Rome (apertura/chiusura) + integrazione WhatsApp/prompt
+
+[2026-09-02 19:10] fix(accounting): dedup Prima Nota (TRN/SDI), esclusione pose prepagate da corrispettivi, euro al centesimo

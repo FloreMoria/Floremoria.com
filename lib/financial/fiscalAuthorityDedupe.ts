@@ -6,8 +6,11 @@
  * calendario e importo esatto in centesimi.
  */
 
+import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
+
 export const FISCAL_AUTHORITY_SOURCE_TYPES = new Set([
     'BANK_LINE',
+    'BANK_LINE_MANUAL',
     'STRIPE_MOVEMENT',
     'PAYPAL_MOVEMENT',
 ]);
@@ -188,8 +191,19 @@ export function excludeJsonRevenuesCoveredByFiscalAuthority<T extends FiscalDedu
  * ordine / payout / documento + categoria + importo assoluto.
  */
 export function naturalFiscalKey(r: FiscalDedupableEntry): string {
+    const movement = canonicalMovementDedupeKey(r);
+    if (movement) return movement;
+
     const sk = (r.sourceKey || '').trim().toUpperCase();
+    // BANK_LINE e BANK_LINE_MANUAL sullo stesso id non devono restare doppi via sourceKey diverso
+    if (sk.startsWith('BANK_LINE:') || sk.startsWith('BANK_LINE_MANUAL:')) {
+        const sid = (r.sourceId || r.bankLineId || '').trim();
+        if (sid) return `MOV:BL:${sid}`;
+    }
     if (sk) return `SK:${sk}`;
+
+    const supplier = supplierInvoiceDedupeKey(r);
+    if (supplier) return supplier;
 
     const meta = asMeta(r.metadataJson);
     const payout =
@@ -217,13 +231,241 @@ export function naturalFiscalKey(r: FiscalDedupableEntry): string {
 }
 
 function authorityRank(r: FiscalDedupableEntry): number {
+    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 100;
     if (FISCAL_AUTHORITY_SOURCE_TYPES.has(r.sourceType)) return 100;
-    if (r.sourceType === 'BANK_LINE') return 100;
     if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 90;
-    if (r.sourceType === 'FLORIST_PAYOUT' || r.sourceType === 'MANUAL_EXPENSE') return 70;
+    if (r.sourceType === 'MANUAL_EXPENSE') return 75;
+    if (r.sourceType === 'FLORIST_PAYOUT') return 70;
     if (r.sourceType === 'ORDER') return 40;
     if (r.sourceType === 'JSON_ENTRY') return 20;
     return 50;
+}
+
+function normalizeVendorToken(raw: string): string {
+    return raw
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/\b(S\.?R\.?L\.?|S\.?P\.?A\.?|S\.?A\.?S\.?|SNC|DI|DELL[AE]|E|&)\b/g, ' ')
+        .replace(/[^A-Z0-9]+/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .slice(0, 48);
+}
+
+function extractInvoiceNumberFromEntry(r: FiscalDedupableEntry): string | null {
+    const meta = asMeta(r.metadataJson);
+    for (const k of ['invoiceNumber', 'documentNumber', 'invoiceRef'] as const) {
+        const v = meta[k];
+        if (typeof v === 'string' && v.trim() && /\d/.test(v)) return v.trim().toUpperCase();
+    }
+    const doc = (r.documentRef || '').trim();
+    // documentRef numerico / fattura (non id bank line / cuid)
+    if (
+        doc &&
+        /\d/.test(doc) &&
+        /^[A-Z0-9][A-Z0-9./-]{0,24}$/i.test(doc) &&
+        !/^c[a-z0-9]{20,}$/i.test(doc)
+    ) {
+        return doc.toUpperCase();
+    }
+    const blob = r.description || '';
+    // Richiede almeno una cifra: evita falsi positivi tipo "Ins:" / "P. Iban"
+    const m =
+        blob.match(/\bfattura\s+(?:sdi|report)?\s*.{0,80}?\bn[°º.]?\s*([0-9][A-Z0-9./-]{0,20})\b/i) ||
+        blob.match(/\bn[°º.]\s*([0-9][A-Z0-9./-]{0,20})\b/i);
+    return m?.[1] ? m[1].toUpperCase() : null;
+}
+
+function extractVendorFromEntry(r: FiscalDedupableEntry): string {
+    if (r.counterpartyName?.trim()) return normalizeVendorToken(r.counterpartyName);
+    const blob = r.description || '';
+    const beneficiary =
+        blob.match(/Beneficiario\s*:\s*([^|\n]+?)(?:\s+IBAN\b|\s+I\s*BAN\b|\s+Data\b|$)/i)?.[1] ||
+        blob.match(/\bBen\s*:\s*([^|\n]+?)(?:\s+Ins\b|\s+IBAN\b|\s+Iban\b|$)/i)?.[1];
+    if (beneficiary) return normalizeVendorToken(beneficiary);
+    const m =
+        blob.match(/fattura\s+(?:sdi|report)?\s*(.+?)\s+n\./i) ||
+        blob.match(/fattura\s+n\.\s*\S+\s*[—\-]\s*(.+)$/i);
+    if (m?.[1]) return normalizeVendorToken(m[1]);
+    return normalizeVendorToken(blob.slice(0, 80));
+}
+
+/** Collega JSON `entry_sdi_<expenseId>` alla MANUAL_EXPENSE sottostante. */
+function linkedManualExpenseId(r: FiscalDedupableEntry): string | null {
+    const sid = (r.sourceId || '').trim();
+    if (r.sourceType === 'MANUAL_EXPENSE' && sid) return sid;
+    const m = sid.match(/^entry_sdi_([a-z0-9]+)(?::v\d+)?$/i);
+    if (m?.[1]) return m[1];
+    const meta = asMeta(r.metadataJson);
+    for (const k of ['manualExpenseId', 'expenseId', 'linkedExpenseId'] as const) {
+        const v = meta[k];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+    const doc = (r.documentRef || '').trim();
+    if (doc && /^c[a-z0-9]{20,}$/i.test(doc)) {
+        // Evita di trattare documentRef=bankLineId come id spesa
+        if (doc === sid || doc === (r.bankLineId || '').trim()) return null;
+        return doc;
+    }
+    return null;
+}
+
+/**
+ * Chiave tassativa per TRN / sourceId / bankLine: un solo movimento economico.
+ */
+export function canonicalMovementDedupeKey(r: FiscalDedupableEntry): string | null {
+    const abs = Math.abs(r.totalCents);
+    const bank = bankLineRef(r);
+    if (bank) return `MOV:BL:${bank}`;
+
+    const trn = extractBareFinecoTrn(r.description || '');
+    if (trn) return `MOV:TRN:${trn}|${abs}`;
+
+    const expenseId = linkedManualExpenseId(r);
+    if (expenseId && isOutflowExpense(r)) return `MOV:EXP:${expenseId}|${abs}`;
+
+    const sid = (r.sourceId || '').trim();
+    if (sid && (r.sourceType.startsWith('BANK_LINE') || r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL'))) {
+        return `MOV:SID:${sid}`;
+    }
+    return null;
+}
+
+/**
+ * Stesso TRN / bankLineId / sourceId banca: una sola riga (autorità più alta).
+ */
+export function dedupeByCanonicalMovementKey<T extends FiscalDedupableEntry>(rows: T[]): T[] {
+    const best = new Map<string, T>();
+    const passthrough: T[] = [];
+    for (const r of rows) {
+        const key = canonicalMovementDedupeKey(r);
+        if (!key) {
+            passthrough.push(r);
+            continue;
+        }
+        const prev = best.get(key);
+        if (!prev) {
+            best.set(key, r);
+            continue;
+        }
+        const rankNew = authorityRank(r);
+        const rankPrev = authorityRank(prev);
+        if (rankNew > rankPrev) best.set(key, r);
+        else if (rankNew === rankPrev) {
+            const idNew = r.id || '';
+            const idPrev = prev.id || '';
+            if (idNew && idPrev && idNew < idPrev) best.set(key, r);
+        }
+    }
+    return [...passthrough, ...best.values()];
+}
+
+/**
+ * Chiave fattura fornitore: stesso fornitore + n. fattura + importo → una spesa.
+ * I bonifici collegati via expenseId ereditano la stessa chiave INV.
+ */
+export function supplierInvoiceDedupeKey(
+    r: FiscalDedupableEntry,
+    expenseIdToInvKey?: Map<string, string>
+): string | null {
+    if (!isOutflowExpense(r)) return null;
+    if (r.sourceType === 'FLORIST_PAYOUT' && r.orderId) return null;
+
+    const abs = Math.abs(r.totalCents);
+    const expenseId = linkedManualExpenseId(r);
+
+    const inv = extractInvoiceNumberFromEntry(r);
+    const vendor = extractVendorFromEntry(r);
+    const blob = `${r.description || ''} ${r.sourceType}`.toUpperCase();
+    const looksLikeInvoice =
+        r.sourceType === 'MANUAL_EXPENSE' ||
+        r.sourceType === 'JSON_ENTRY' ||
+        /FATTURA|SDI|REPORT|NOTA\s*CREDITO|\bNC\b/.test(blob) ||
+        Boolean(asMeta(r.metadataJson).invoiceNumber);
+
+    if (inv && vendor && vendor.length >= 3 && looksLikeInvoice) {
+        return `SUP:INV:${vendor}|${inv}|${abs}`;
+    }
+
+    if (expenseId && expenseIdToInvKey?.has(expenseId)) {
+        return expenseIdToInvKey.get(expenseId)!;
+    }
+
+    if (expenseId) return `SUP:EXP:${expenseId}|${abs}`;
+
+    return null;
+}
+
+/**
+ * Collassa Fattura SDI + Fattura report + Registrazione manuale (+ bonifico se collegato).
+ */
+export function dedupeSupplierInvoices<T extends FiscalDedupableEntry>(rows: T[]): T[] {
+    const expenseIdToInvKey = new Map<string, string>();
+    for (const r of rows) {
+        if (!isOutflowExpense(r)) continue;
+        const inv = extractInvoiceNumberFromEntry(r);
+        const vendor = extractVendorFromEntry(r);
+        const expenseId = linkedManualExpenseId(r);
+        if (!inv || !vendor || vendor.length < 3 || !expenseId) continue;
+        const blob = `${r.description || ''} ${r.sourceType}`.toUpperCase();
+        const looksLikeInvoice =
+            r.sourceType === 'MANUAL_EXPENSE' ||
+            r.sourceType === 'JSON_ENTRY' ||
+            /FATTURA|SDI|REPORT/.test(blob);
+        if (!looksLikeInvoice) continue;
+        expenseIdToInvKey.set(expenseId, `SUP:INV:${vendor}|${inv}|${Math.abs(r.totalCents)}`);
+    }
+
+    // Indice vendor|importo → chiave INV (solo se univoca: evita collasso di bonifici multipli)
+    const vendorAmountToInv = new Map<string, string>();
+    const vendorAmountAmbiguous = new Set<string>();
+    for (const key of expenseIdToInvKey.values()) {
+        const m = key.match(/^SUP:INV:(.+)\|([^|]+)\|(\d+)$/);
+        if (!m) continue;
+        const va = `${m[1]}|${m[3]}`;
+        if (vendorAmountToInv.has(va) && vendorAmountToInv.get(va) !== key) {
+            vendorAmountAmbiguous.add(va);
+        } else {
+            vendorAmountToInv.set(va, key);
+        }
+    }
+    for (const va of vendorAmountAmbiguous) vendorAmountToInv.delete(va);
+
+    const best = new Map<string, T>();
+    const passthrough: T[] = [];
+    for (const r of rows) {
+        let key = supplierInvoiceDedupeKey(r, expenseIdToInvKey);
+        if (
+            !key &&
+            isOutflowExpense(r) &&
+            (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL')
+        ) {
+            const vendor = extractVendorFromEntry(r);
+            const va = `${vendor}|${Math.abs(r.totalCents)}`;
+            if (vendor.length >= 3 && vendorAmountToInv.has(va)) {
+                key = vendorAmountToInv.get(va)!;
+            }
+        }
+        if (!key) {
+            passthrough.push(r);
+            continue;
+        }
+        const prev = best.get(key);
+        if (!prev) {
+            best.set(key, r);
+            continue;
+        }
+        const rankNew = authorityRank(r);
+        const rankPrev = authorityRank(prev);
+        if (rankNew > rankPrev) best.set(key, r);
+        else if (rankNew === rankPrev) {
+            const idNew = r.id || '';
+            const idPrev = prev.id || '';
+            if (idNew && idPrev && idNew < idPrev) best.set(key, r);
+        }
+    }
+    return [...passthrough, ...best.values()];
 }
 
 /**
@@ -484,7 +726,9 @@ export function excludeJsonExpensesCoveredByReconciledPayment<T extends FiscalDe
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
     const step1 = excludeOrdersCoveredByFiscalAuthority(rows);
     const step2 = excludeJsonRevenuesCoveredByFiscalAuthority(step1);
-    const step3 = consolidateReconciledPayments(step2);
-    const step4 = excludeJsonExpensesCoveredByReconciledPayment(step3);
-    return dedupeByNaturalFiscalKey(step4);
+    const step3 = dedupeByCanonicalMovementKey(step2);
+    const step4 = dedupeSupplierInvoices(step3);
+    const step5 = consolidateReconciledPayments(step4);
+    const step6 = excludeJsonExpensesCoveredByReconciledPayment(step5);
+    return dedupeByNaturalFiscalKey(step6);
 }

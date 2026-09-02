@@ -22,6 +22,7 @@ import {
     normalizePaypalTransactionId,
     parsePaypalSourceKey,
 } from '@/lib/financial/paypalSourceKeys';
+import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 
 /** Tax ID Stripe Payments Europe Ltd (IE). */
 const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
@@ -487,10 +488,23 @@ export async function buildTaxQuarterlyReport(
 
     const corrispettivi: CorrispettivoRow[] = [];
     for (const order of orders) {
+        // Pose di abbonamento prepagato: niente corrispettivo (solo passivo fiorista).
+        if (isPrepaidSubscriptionPoseOrder(order)) continue;
+
+        const stripeMove = stripeByOrderId.get(order.id);
+        const paypalMove =
+            paypalByOrderId.get(order.id) ||
+            (order.orderNumber ? paypalByOrderNumber.get(order.orderNumber) : undefined);
+
+        // Preferisci l'importo catturato dal gateway (centesimi esatti), poi grossAmount, poi listino.
         const grossCents =
-            order.grossAmount != null
-                ? euroFloatToCents(order.grossAmount)
-                : order.totalPriceCents;
+            stripeMove && stripeMove.amountCents > 0
+                ? Math.abs(stripeMove.amountCents)
+                : paypalMove && paypalMove.grossCents > 0
+                  ? paypalMove.grossCents
+                  : order.grossAmount != null
+                    ? euroFloatToCents(order.grossAmount)
+                    : order.totalPriceCents;
 
         let accessoryCents =
             order.accessoryAmountCents != null ? order.accessoryAmountCents : 0;
@@ -504,11 +518,6 @@ export async function buildTaxQuarterlyReport(
         }
 
         const vat = scorporaVenditaFloreale({ grossCents, accessoryCents });
-        const stripeMove = stripeByOrderId.get(order.id);
-        const paypalMove =
-            paypalByOrderId.get(order.id) ||
-            (order.orderNumber ? paypalByOrderNumber.get(order.orderNumber) : undefined);
-
         let feeCents = order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
         let transactionId = order.stripeTransactionId || '';
         let paymentDate = order.createdAt;

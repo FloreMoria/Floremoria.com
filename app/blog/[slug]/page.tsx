@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getArticleBySlug, getAllArticles } from '@/lib/articles';
+import ShareButtons from '@/components/blog/ShareButtons';
+import { getFloremoriaSiteOrigin } from '@/lib/seo/siteIdentity';
 
 export const revalidate = 3600;
 
@@ -43,6 +45,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         notFound();
     }
 
+    const shareUrl = `${getFloremoriaSiteOrigin()}/blog/${article.slug}`;
+    const shareSummary = article.excerpt || article.title;
+
     return (
         <article className="min-h-screen bg-fm-bg pb-24">
             {/* 1) HERO IMAGE */}
@@ -77,16 +82,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
 
             {/* 2) CORPO DEL TESTO */}
-            <div className="max-w-3xl mx-auto px-4 lg:px-8 pt-16 font-body">
+            <div className="max-w-3xl mx-auto px-4 lg:px-8 pt-10 md:pt-16 font-body">
+                <ShareButtons url={shareUrl} title={article.title} summary={shareSummary} />
+
                 {/* Tipografia Premium SEO friendly */}
                 <div
-                    className="prose prose-lg prose-rose lg:prose-xl max-w-none text-fm-text leading-relaxed
+                    className="prose prose-lg prose-rose lg:prose-xl max-w-none text-fm-text leading-relaxed mt-10
              prose-headings:font-display prose-headings:font-semibold prose-headings:text-fm-text prose-headings:tracking-tight
              prose-p:text-fm-text prose-p:font-normal prose-p:mb-6 prose-p:leading-8
              prose-a:text-fm-cta prose-a:underline hover:prose-a:text-fm-cta-hover
              prose-strong:text-fm-text prose-strong:font-semibold"
                     dangerouslySetInnerHTML={{ __html: article.content }}
                 />
+
+                <div className="mt-12">
+                    <ShareButtons url={shareUrl} title={article.title} summary={shareSummary} />
+                </div>
             </div>
 
             {/* 3) FOOTER / POTREBBE INTERESSARTI */}

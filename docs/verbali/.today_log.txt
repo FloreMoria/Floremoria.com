@@ -86,3 +86,4 @@
 [2026-09-02 18:10] fix(support): WhatsApp flottante mobile z-999 sopra bottom nav/sticky Ordina; form Contatti → email assistenza + wa.me/393204105305; /contatti + /api/contact; tsc+build OK.
 [2026-09-02 18:17] fix(vera): blocco spam giornaliero messaggi di rassicurazione e vincolo a singolo invio per ordine; dedup storico chat DB, flag hasSentReassuranceNudge, vincolo posa >48h e Title Case formatDeceasedName sui template; tsc+build OK.
 
+[2026-09-02 18:25] feat(blog): ShareButtons — Web Share API + WhatsApp/FB/X/LinkedIn/Telegram/copia link; barra top+bottom articolo; tsc+build OK.

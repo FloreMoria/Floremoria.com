@@ -81,3 +81,4 @@
 [2026-09-02 15:15] refactor(users): Title Case per nomi utenti ovunque ed ordinamento per cognome nella tabella Utenti; creato helper formatPersonName in lib/utils/formatPersonName.ts con ordinamento e Title Case; aggiornati sort, visualizzazioni tabelle/drawer/comunicazioni/email e normalizzazione input/persistenza; tsc+build OK.
 
 [2026-09-02 15:20] feat(aeo): FAQ assistenza da fonte unica publicFaq, copy AEO su Home/FT/FF, JSON-LD cataloghi FT-FF-FA-FP + Service consegna/ricerca loculo; tsc+build OK.
+[2026-09-02 15:25] fix(fioristi): matita e click riga → scheda completa /dashboard/fioristi/[id]; drawer solo nuova registrazione con redirect post-POST; tsc+build OK.

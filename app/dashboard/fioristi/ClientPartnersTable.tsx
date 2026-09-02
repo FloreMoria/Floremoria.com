@@ -203,12 +203,13 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 const savedItem = await res.json();
                 if (isUpdate) {
                     setPartners((prev: Partner[]) => prev.map(p => p.id === savedItem.id ? savedItem : p));
+                    setIsSuccess(true);
+                    setTimeout(() => setIsSuccess(false), 2500);
                 } else {
                     setPartners((prev: Partner[]) => [savedItem, ...prev]);
-                    setFormData((prev: Partner) => ({ ...prev, id: savedItem.id }));
+                    closeDrawer();
+                    router.push(`/dashboard/fioristi/${savedItem.id}`);
                 }
-                setIsSuccess(true);
-                setTimeout(() => setIsSuccess(false), 2500);
             } else {
                 alert('Errore di salvataggio del fiorista.');
             }
@@ -517,7 +518,16 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                     </td>
                                     <td className="py-3 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                                         <div className="flex items-center justify-end gap-1">
-                                            <button onClick={(e) => { e.stopPropagation(); openDrawer(partner); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/dashboard/fioristi/${partner.id}`);
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Apri scheda fiorista"
+                                                aria-label="Apri scheda fiorista"
+                                            >
                                                 <Edit2 size={16} />
                                             </button>
                                         </div>
@@ -585,10 +595,14 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                 {/* Body Tabs Nav forzato */}
                 <div className="flex items-center gap-6 px-6 pt-4 border-b border-gray-100 uppercase tracking-widest text-[11px] font-bold shrink-0">
                     <button onClick={() => setActiveTab('ANAGRAFICA')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'ANAGRAFICA' ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>Anagrafica & Bot</button>
-                    <button onClick={() => setActiveTab('MISSIONI')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'MISSIONI' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>
-                        Ordini ({(formData.orders || []).length})
-                    </button>
-                    <button onClick={() => setActiveTab('FINANZA')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'FINANZA' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>Amministrazione</button>
+                    {formData.id ? (
+                        <>
+                            <button onClick={() => setActiveTab('MISSIONI')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'MISSIONI' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>
+                                Ordini ({(formData.orders || []).length})
+                            </button>
+                            <button onClick={() => setActiveTab('FINANZA')} className={`pb-3 border-b-2 transition-colors ${activeTab === 'FINANZA' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}>Amministrazione</button>
+                        </>
+                    ) : null}
                 </div>
 
                 {/* Body Content */}

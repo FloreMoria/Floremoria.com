@@ -4,6 +4,7 @@
 
 import prisma from '@/lib/prisma';
 import type { AiAuditRunSummary } from '@/lib/seo/aiAuditRunner';
+import { AI_AUDIT_STRICT_BASELINE_ID } from '@/lib/seo/aiVisibilityBenchmark';
 import type { Prisma } from '@prisma/client';
 
 export type StoredAiAuditSnapshot = AiAuditRunSummary & {
@@ -31,6 +32,7 @@ export async function saveAiAuditSnapshot(
         runAt: row.runAt.toISOString(),
         provider: summary.provider,
         model: summary.model,
+        baselineId: summary.baselineId,
         overallScore: row.overallScore,
         brandMentionRate: row.brandMentionRate,
         guaranteeAccuracyRate: row.guaranteeAccuracyRate,
@@ -50,6 +52,7 @@ export async function getLatestAiAuditSnapshot(): Promise<StoredAiAuditSnapshot 
         runAt: row.runAt.toISOString(),
         provider: row.provider as StoredAiAuditSnapshot['provider'],
         model: row.model ?? undefined,
+        baselineId: AI_AUDIT_STRICT_BASELINE_ID,
         overallScore: row.overallScore,
         brandMentionRate: row.brandMentionRate,
         guaranteeAccuracyRate: row.guaranteeAccuracyRate,

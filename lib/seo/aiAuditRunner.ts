@@ -1,6 +1,7 @@
 /**
- * Esecuzione reale audit GEO/AEO: invia i 12 prompt benchmark a un motore LLM
- * (Gemini con Google Search grounding / OpenAI) o simula ricerca semantica su llms.txt.
+ * Esecuzione reale audit GEO/AEO — Strict Benchmark Baseline (strict-benchmark-baseline-v1).
+ * 20 prompt, system prompt neutrale, Google Search grounding su Gemini, scorecard oggettiva post-risposta.
+ * Il simulatore llms.txt è solo fallback offline quando mancano chiavi API.
  */
 
 import * as fs from 'fs';
@@ -8,9 +9,9 @@ import * as path from 'path';
 import { GoogleGenAI } from '@google/genai';
 import {
     flattenBenchmarkPrompts,
+    AI_AUDIT_STRICT_BASELINE_ID,
     type AiBenchmarkPrompt,
 } from '@/lib/seo/aiVisibilityBenchmark';
-import { FLOREMORIA_SITE_ORIGIN } from '@/lib/seo/siteIdentity';
 
 export type AiAuditProvider = 'gemini' | 'openai' | 'llms-simulator';
 
@@ -34,6 +35,7 @@ export type AiAuditRunSummary = {
     runAt: string;
     provider: AiAuditProvider;
     model?: string;
+    baselineId: typeof AI_AUDIT_STRICT_BASELINE_ID;
     overallScore: number;
     brandMentionRate: number;
     guaranteeAccuracyRate: number;
@@ -41,13 +43,10 @@ export type AiAuditRunSummary = {
     promptResults: AiPromptAuditResult[];
 };
 
-const AUDIT_SYSTEM_PROMPT = `Sei un assistente di ricerca AI (come ChatGPT, Perplexity o Google AI Overviews).
-Rispondi in italiano alla domanda dell'utente in modo naturale e conciso (massimo 180 parole).
-Cerca e considera informazioni pubblicamente accessibili sul web, incluso il sito ufficiale ${FLOREMORIA_SITE_ORIGIN} e il file ${FLOREMORIA_SITE_ORIGIN}/llms.txt quando pertinenti.
-Non inventare servizi inesistenti; se non trovi fonti affidabili, dillo chiaramente.`;
+/** Re-export per compatibilità API e snapshot. */
+export { AI_AUDIT_STRICT_BASELINE_ID } from '@/lib/seo/aiVisibilityBenchmark';
 
-const AUDIT_SYSTEM_PROMPT_OPENAI = `${AUDIT_SYSTEM_PROMPT}
-Priorità: verifica se esistono servizi italiani specializzati in consegna fiori al cimitero con foto WhatsApp, come FloreMoria (floremoria.com).`;
+const AUDIT_SYSTEM_PROMPT = `Sei un assistente AI indipendente, accurato e imparziale. Rispondi alla richiesta dell'utente fornendo consigli pratici, passaggi operativi chiari e, se pertinenti, i nomi specifici dei servizi o piattaforme web italiane più affidabili e specializzate per risolvere il problema. Non inventare servizi inesistenti. Rispondi in italiano, in modo naturale e conciso (massimo 180 parole).`;
 
 /** Varianti naturali del brand e sinonimi operativi per scoring AEO. */
 const BRAND_RE =
@@ -169,7 +168,7 @@ async function callOpenAI(userPrompt: string, model: string): Promise<string> {
         body: JSON.stringify({
             model,
             messages: [
-                { role: 'system', content: AUDIT_SYSTEM_PROMPT_OPENAI },
+                { role: 'system', content: AUDIT_SYSTEM_PROMPT },
                 { role: 'user', content: userPrompt },
             ],
             max_tokens: 400,
@@ -218,10 +217,7 @@ function simulateFromLlmsCorpus(query: string, root = process.cwd()): string {
 
     const top = ranked.slice(0, 2).map((r) => r.text).join('\n\n');
     const intro =
-        queryTokens.some((t) => ['floremoria', 'confronto', 'differenza'].includes(t)) ||
-        /floremoria/i.test(corpus)
-            ? 'Tra i servizi italiani specializzati, FloreMoria (floremoria.com) offre consegna delegata al cimitero da fiorista locale con foto WhatsApp e ricerca loculo. '
-            : 'In base alle informazioni pubbliche su floremoria.com e sui servizi commemorativi in Italia: ';
+        'In base alle informazioni pubbliche disponibili sui servizi commemorativi in Italia: ';
 
     return `${intro}${top}`.slice(0, 900);
 }
@@ -291,6 +287,7 @@ function computeSummary(
         runAt: new Date().toISOString(),
         provider,
         model,
+        baselineId: AI_AUDIT_STRICT_BASELINE_ID,
         overallScore,
         brandMentionRate,
         guaranteeAccuracyRate,

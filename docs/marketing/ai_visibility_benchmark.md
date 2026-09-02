@@ -8,6 +8,14 @@
 
 ---
 
+## Strict Benchmark Baseline
+
+**ID:** strict-benchmark-baseline-v1
+
+System prompt neutrale (zero riferimenti al brand), Google Search grounding attivo su Gemini. I punteggi riflettono solo citazioni organiche nel web pubblico.
+
+---
+
 ## Scorecard (0–5 per criterio)
 
 | Criterio | 0 | 1–2 | 3 | 4 | 5 |

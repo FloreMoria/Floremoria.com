@@ -204,6 +204,11 @@ export const AI_BENCHMARK_CHECKLIST = [
 export const LLMS_TXT_PUBLIC_URL = 'https://www.floremoria.com/llms.txt';
 export const LLMS_FULL_PUBLIC_URL = 'https://www.floremoria.com/llms-full.txt';
 
+/** Configurazione audit live imparziale — system prompt neutrale + Google Search grounding. */
+export const AI_AUDIT_STRICT_BASELINE_ID = 'strict-benchmark-baseline-v1';
+export const AI_AUDIT_STRICT_BASELINE_NOTE =
+    'System prompt neutrale (zero riferimenti al brand), Google Search grounding attivo su Gemini. I punteggi riflettono solo citazioni organiche nel web pubblico.';
+
 export const AI_BENCHMARK_TOTAL_PROMPTS = AI_VISIBILITY_PROMPTS.length;
 
 export function flattenBenchmarkPrompts(): AiBenchmarkPrompt[] {
@@ -219,6 +224,14 @@ export function buildBenchmarkMarkdown(protocolDate?: string): string {
 
 **Ultimo aggiornamento protocollo:** ${today}
 **Asset di riferimento:** \`/llms.txt\`, \`/llms-full.txt\`, JSON-LD globale in \`components/seo/JsonLd.tsx\`
+
+---
+
+## Strict Benchmark Baseline
+
+**ID:** ${AI_AUDIT_STRICT_BASELINE_ID}
+
+${AI_AUDIT_STRICT_BASELINE_NOTE}
 
 ---
 
@@ -349,5 +362,9 @@ export function buildAiVisibilityReportPayload(root = process.cwd()) {
         },
         maxScorePerPrompt: 15,
         totalPromptCount: AI_BENCHMARK_TOTAL_PROMPTS,
+        strictBaseline: {
+            id: AI_AUDIT_STRICT_BASELINE_ID,
+            note: AI_AUDIT_STRICT_BASELINE_NOTE,
+        },
     };
 }

@@ -21,6 +21,7 @@ export default function JsonLd() {
     const howToId = `${origin}/#howto-cemetery-flowers`;
     const cemeteryServiceId = `${origin}/#service-cemetery-delivery`;
     const loculoServiceId = `${origin}/#service-grave-loculo-search`;
+    const funeralServiceId = `${origin}/#service-funeral-delivery`;
 
     const catalogOffers = FLOREMORIA_OFFER_CATALOGS.map((cat) => {
         const offerId = `${origin}/#offer-catalog-${cat.id}`;
@@ -158,6 +159,17 @@ export default function JsonLd() {
                 provider: { '@id': orgId },
                 areaServed: { '@type': 'Country', name: 'Italia', identifier: 'IT' },
                 serviceType: 'Ricerca loculo e posizione tomba',
+            },
+            {
+                '@type': 'Service',
+                '@id': funeralServiceId,
+                name: 'Consegna fiori per funerale e camera ardente',
+                description:
+                    'Posizionamento floreale garantito prima dell\'inizio della cerimonia o della chiusura della camera ardente, con coordinamento orario con casa funeraria, parrocchia o struttura e certificazione fotografica su WhatsApp al committente.',
+                provider: { '@id': localBusinessId },
+                areaServed: { '@type': 'Country', name: 'Italia', identifier: 'IT' },
+                serviceType: 'Consegna fiori per funerale e camera ardente con orario garantito',
+                offers: { '@id': `${origin}/#offer-catalog-FF` },
             },
             {
                 '@type': 'FAQPage',

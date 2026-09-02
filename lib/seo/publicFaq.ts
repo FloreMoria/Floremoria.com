@@ -69,6 +69,13 @@ export const FLOREMORIA_ASSISTENZA_FAQ: PublicFaqItem[] = [
             'Sì. Per il catalogo Fiori per il Funerale (FF) coordiniamo la consegna in chiesa, camera ardente o crematorio con il fiorista locale partner, allineandoci agli orari della cerimonia. La consegna è sempre fisica e a mano, non tramite corriere.',
     },
     {
+        id: 'funerale-puntualita',
+        column: 'B',
+        question: 'Come garantite la puntualità della consegna per funerali e camere ardenti?',
+        answer:
+            'Gli ordini del catalogo FF (Fiori per il Funerale) hanno corsia di priorità urgente. Il fiorista partner locale si attiva subito, concorda orari e accesso con casa funeraria, parrocchia o struttura indicata e garantisce il posizionamento della composizione con almeno 60-90 minuti di anticipo rispetto all\'inizio del rito o alla chiusura della camera ardente. Dopo la posa accurata inviamo tempestivamente la foto di conferma ad alta risoluzione su WhatsApp al committente.',
+    },
+    {
         id: 'testo-biglietto',
         column: 'B',
         question: 'Cosa scrivo sul biglietto se non trovo le parole?',

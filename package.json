@@ -54,7 +54,8 @@
     "postman:setup-resend": "tsx scripts/setup-resend-assistenza.ts",
     "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts",
     "push:generate-vapid": "tsx scripts/generate-vapid-keys.ts",
-    "merchant:feed": "tsx scripts/generate-merchant-feed.ts"
+    "merchant:feed": "tsx scripts/generate-merchant-feed.ts",
+    "audit:ai-visibility": "tsx scripts/ai-audit-benchmark.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

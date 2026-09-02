@@ -67,3 +67,4 @@
 
 [2026-09-02 11:52] fix(partner-app): sanitizzazione punto finale URL template/resolver fiorista + layout mobile full-height bilanciato mini-app consegna.
 [2026-09-02 12:30] feat: YouDOX sync post-19/08 (chunk vuoti, forceResync, debug log), fix imponibili FatturaPA + reparse, tabella fatture passive flat con drawer dettaglio completo.
+[2026-09-02 12:55] feat(ai-readiness): llms.txt + llms-full.txt, JSON-LD @graph globale, script audit:ai-visibility e protocollo benchmark GEO/AEO.

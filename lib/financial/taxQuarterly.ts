@@ -218,7 +218,12 @@ function floristVatBreakdown(compensoCents: number, floristVatRate: number | nul
     const ratePct =
         floristVatRate != null && floristVatRate > 0 && floristVatRate <= 1
             ? Math.round(floristVatRate * 100)
-            : VAT_PCT_FLORAL;
+            : floristVatRate != null && floristVatRate > 1
+              ? Math.round(floristVatRate)
+              : VAT_PCT_FLORAL;
+    if (ratePct <= 0) {
+        return { imponibileCents: compensoCents, ivaCents: 0, totaleCents: compensoCents };
+    }
     if (ratePct === VAT_PCT_FLORAL) {
         const v = scorporaIvaFloreale(compensoCents);
         return {
@@ -230,6 +235,83 @@ function floristVatBreakdown(compensoCents: number, floristVatRate: number | nul
     const imponibileCents = Math.round(compensoCents / (1 + ratePct / 100));
     const ivaCents = compensoCents - imponibileCents;
     return { imponibileCents, ivaCents, totaleCents: compensoCents };
+}
+
+/**
+ * IVA a credito detraibile solo con fattura SDI reale e fornitore IVA ordinaria.
+ * Scontrini / forfettari / assenza documento → imponibile = totale, IVA = 0.
+ */
+function hasVerifiableSdiPassiveInvoice(params: {
+    expense: { docType?: string | null; expenseDate?: Date | null; notes?: string | null } | null;
+    meta: Record<string, unknown>;
+    floristVatRate: number | null | undefined;
+    partnerVatNumber: string | null | undefined;
+}): boolean {
+    if (params.floristVatRate === 0) return false;
+    const vat = (params.partnerVatNumber || '').replace(/\s+/g, '').toUpperCase();
+    // Partita IVA ordinaria IT + 11 cifre (esclude vuoto / solo CF)
+    const hasOrdinaryVat = /^IT\d{11}$/.test(vat) || /^\d{11}$/.test(vat);
+    if (!hasOrdinaryVat) return false;
+
+    const expense = params.expense;
+    if (!expense) return false;
+    const meta = params.meta;
+    const docType = String(expense.docType || meta.docType || meta.docKind || '').toUpperCase();
+    if (docType === 'SCONTRINO' || docType === 'RICEVUTA') return false;
+
+    const source = String(meta.source || meta.ingestChannel || '').toUpperCase();
+    const isSdi =
+        source.includes('SDI') ||
+        Boolean(meta.sdi) ||
+        Boolean(meta.xmlPath) ||
+        Boolean(meta.sourceFileName) ||
+        Boolean(meta.archiveFileName);
+
+    const invoiceNumber = expenseInvoiceNumber(meta, expense.notes);
+    if (!invoiceNumber) return false;
+    if (!expense.expenseDate) return false;
+    if (docType === 'FATTURA' && isSdi) return true;
+    if (isSdi && invoiceNumber) return true;
+    return false;
+}
+
+function resolveFloristPassivoVat(params: {
+    compensoCents: number;
+    expense: {
+        docType?: string | null;
+        expenseDate?: Date | null;
+        notes?: string | null;
+        netCents?: number | null;
+        vatCents?: number | null;
+        totalCents?: number | null;
+    } | null;
+    meta: Record<string, unknown>;
+    floristVatRate: number | null | undefined;
+    partnerVatNumber: string | null | undefined;
+}): { imponibileCents: number; ivaCents: number; totaleCents: number; sdiOk: boolean } {
+    const totale =
+        params.expense != null
+            ? Math.abs(params.expense.totalCents || params.compensoCents)
+            : params.compensoCents;
+    const sdiOk = hasVerifiableSdiPassiveInvoice({
+        expense: params.expense,
+        meta: params.meta,
+        floristVatRate: params.floristVatRate,
+        partnerVatNumber: params.partnerVatNumber,
+    });
+    if (!sdiOk) {
+        return { imponibileCents: totale, ivaCents: 0, totaleCents: totale, sdiOk: false };
+    }
+    if (params.expense) {
+        return {
+            imponibileCents: Math.abs(params.expense.netCents || 0),
+            ivaCents: Math.abs(params.expense.vatCents || 0),
+            totaleCents: totale,
+            sdiOk: true,
+        };
+    }
+    const breakdown = floristVatBreakdown(params.compensoCents, params.floristVatRate);
+    return { ...breakdown, sdiOk: true };
 }
 
 async function loadAutofatturaRefByForeignInvoice(
@@ -636,18 +718,36 @@ export async function buildTaxQuarterlyReport(
             const bankLine = bankLineByOrderId.get(order.id);
             const expense = expenseByOrderId.get(order.id);
             const expenseMeta = expense ? readExpenseMeta(expense.metadataJson) : {};
-            const vatBreakdown = expense
-                ? {
-                      imponibileCents: Math.abs(expense.netCents || 0),
-                      ivaCents: Math.abs(expense.vatCents || 0),
-                      totaleCents: Math.abs(expense.totalCents || 0),
-                  }
-                : floristVatBreakdown(compenso, order.floristVatRate);
-
             const partnerTaxId =
                 order.partner?.vatNumber?.trim() ||
                 order.partner?.taxCode?.trim() ||
                 null;
+            const vatBreakdown = resolveFloristPassivoVat({
+                compensoCents: compenso,
+                expense: expense
+                    ? {
+                          docType: expense.docType,
+                          expenseDate: expense.expenseDate,
+                          notes: expense.notes,
+                          netCents: expense.netCents,
+                          vatCents: expense.vatCents,
+                          totalCents: expense.totalCents,
+                      }
+                    : null,
+                meta: expenseMeta,
+                floristVatRate: order.floristVatRate,
+                partnerVatNumber: order.partner?.vatNumber,
+            });
+
+            const sdiInvoiceNumber = vatBreakdown.sdiOk
+                ? expense
+                    ? expenseInvoiceNumber(expenseMeta, expense.notes)
+                    : null
+                : null;
+            const sdiDate =
+                vatBreakdown.sdiOk && expense
+                    ? expense.expenseDate.toISOString().slice(0, 10)
+                    : null;
 
             return {
                 orderId: order.id,
@@ -665,12 +765,8 @@ export async function buildTaxQuarterlyReport(
                       ? bankLine.valueDate.toISOString().slice(0, 10)
                       : null,
                 bonificoTrn: bankLine ? extractBareFinecoTrn(bankLine.description) : null,
-                sdiInvoiceNumber: expense
-                    ? expenseInvoiceNumber(expenseMeta, expense.notes)
-                    : null,
-                sdiDate: expense
-                    ? expense.expenseDate.toISOString().slice(0, 10)
-                    : null,
+                sdiInvoiceNumber,
+                sdiDate,
                 imponibilePassivoCents: vatBreakdown.imponibileCents,
                 ivaPassivaCents: vatBreakdown.ivaCents,
                 totaleFatturaCents: vatBreakdown.totaleCents || compenso,
@@ -722,7 +818,52 @@ export async function buildTaxQuarterlyReport(
         (s, r) => s + r.imponibilePassivoCents,
         0
     );
-    const floristIvaCreditoCents = floristPassivo.reduce((s, r) => s + r.ivaPassivaCents, 0);
+
+    // IVA a credito detraibile: SOLO fatture passive SDI reali nel periodo (non scorporo teorico).
+    const sdiPassiveInPeriod = await prisma.manualFinanceExpense.findMany({
+        where: {
+            expenseDate: { gte: bounds.start, lte: bounds.end },
+            docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
+            OR: [
+                { metadataJson: { path: ['source'], equals: 'SDI_XML' } },
+                { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XML' } },
+                { metadataJson: { path: ['source'], equals: 'SDI' } },
+            ],
+        },
+        select: {
+            docType: true,
+            expenseDate: true,
+            notes: true,
+            netCents: true,
+            vatCents: true,
+            totalCents: true,
+            metadataJson: true,
+            vendorName: true,
+        },
+    });
+    let floristIvaCreditoCents = 0;
+    for (const inv of sdiPassiveInPeriod) {
+        const meta = readExpenseMeta(inv.metadataJson);
+        if (meta.cancelledByCreditNote) continue;
+        const ok = hasVerifiableSdiPassiveInvoice({
+            expense: inv,
+            meta,
+            floristVatRate: null,
+            partnerVatNumber:
+                (typeof meta.vendorVat === 'string' && meta.vendorVat) ||
+                (typeof meta.cedenteVat === 'string' && meta.cedenteVat) ||
+                null,
+        });
+        if (!ok) continue;
+        const iva = Math.abs(inv.vatCents || 0);
+        if (inv.docType === 'NOTA_CREDITO' || (inv.totalCents || 0) < 0) {
+            floristIvaCreditoCents -= iva;
+        } else {
+            floristIvaCreditoCents += iva;
+        }
+    }
+    // Imponibile passivo di riepilogo: costi ordine (senza scorporo fittizio). L'IVA a credito
+    // arriva solo dalle fatture SDI di periodo sopra.
 
     const ivaDebitoVendite10Cents = corrispettivi.reduce((s, r) => s + r.ivaDebitoCents, 0);
     const saldoIvaStimatoCents = ivaDebitoVendite10Cents - floristIvaCreditoCents;

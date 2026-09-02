@@ -291,11 +291,13 @@ function extractVendorFromEntry(r: FiscalDedupableEntry): string {
     return normalizeVendorToken(blob.slice(0, 80));
 }
 
-/** Collega JSON `entry_sdi_<expenseId>` alla MANUAL_EXPENSE sottostante. */
+/** Collega JSON `entry_sdi_<expenseId>` / `entry_manual_exp_<expenseId>` alla MANUAL_EXPENSE. */
 function linkedManualExpenseId(r: FiscalDedupableEntry): string | null {
     const sid = (r.sourceId || '').trim();
     if (r.sourceType === 'MANUAL_EXPENSE' && sid) return sid;
-    const m = sid.match(/^entry_sdi_([a-z0-9]+)(?::v\d+)?$/i);
+    const m =
+        sid.match(/^entry_sdi_([a-z0-9]+)(?::v\d+)?$/i) ||
+        sid.match(/^entry_manual_exp_([a-z0-9]+)$/i);
     if (m?.[1]) return m[1];
     const meta = asMeta(r.metadataJson);
     for (const k of ['manualExpenseId', 'expenseId', 'linkedExpenseId'] as const) {
@@ -503,23 +505,92 @@ function isOutflowExpense(r: FiscalDedupableEntry): boolean {
     return r.totalCents < 0;
 }
 
-function isFloristRelatedExpense(r: FiscalDedupableEntry): boolean {
+/** Riferimento ordine FF/FT/FA/FP o orderId. */
+export function extractOrderBusinessRef(r: FiscalDedupableEntry): string | null {
+    if (r.orderId?.trim()) return `ID:${r.orderId.trim()}`;
+    const blob = `${r.documentRef || ''} ${r.description || ''} ${JSON.stringify(asMeta(r.metadataJson))}`;
+    const m = blob.match(/\b((?:FF|FT|FA|FP)-[A-Z]{2}-\d{2}-\d{3,})\b/i);
+    if (m?.[1]) return `NUM:${m[1].toUpperCase()}`;
+    if (r.sourceType === 'ORDER' && r.sourceId?.trim()) return `ID:${r.sourceId.trim()}`;
+    if (r.sourceType === 'FLORIST_PAYOUT' && r.sourceId?.trim()) return `ID:${r.sourceId.trim()}`;
+    return null;
+}
+
+function significantVendorTokens(raw: string): Set<string> {
+    const stop = new Set([
+        'SRL',
+        'SPA',
+        'SAS',
+        'SNC',
+        'DI',
+        'DELLA',
+        'DELLE',
+        'DEI',
+        'DEGLI',
+        'E',
+        'BEN',
+        'BENEFICIARIO',
+        'IBAN',
+        'DATA',
+        'INSERIMENTO',
+        'SCONTRINO',
+        'FATTURA',
+        'RICEVUTA',
+        'COLLEGAMENTO',
+        'MANUALE',
+        'PAGAMENTO',
+        'ORDINE',
+        'FIORERIA',
+        'FIORISTA',
+    ]);
+    const tokens = normalizeVendorToken(raw)
+        .split(/\s+/)
+        .filter((t) => t.length >= 4 && !stop.has(t));
+    return new Set(tokens);
+}
+
+function vendorsOverlap(a: string, b: string): boolean {
+    const ta = significantVendorTokens(a);
+    const tb = significantVendorTokens(b);
+    if (!ta.size || !tb.size) return false;
+    for (const t of ta) if (tb.has(t)) return true;
+    return false;
+}
+
+function expenseVendorBlob(r: FiscalDedupableEntry): string {
+    return `${r.counterpartyName || ''} ${r.description || ''}`;
+}
+
+/**
+ * Uscita documentale / fiorista / scontrino: candidata al collasso su bonifico reale.
+ */
+function isDocumentOrFloristOutflow(r: FiscalDedupableEntry): boolean {
     if (!isOutflowExpense(r)) return false;
     if (r.category === 'COSTI_FIORISTI') return true;
-    if (r.sourceType === 'FLORIST_PAYOUT') return true;
+    if (r.sourceType === 'FLORIST_PAYOUT' || r.sourceType === 'MANUAL_EXPENSE') return true;
+    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return true;
     const meta = asMeta(r.metadataJson);
-    const docType = String(meta.docType || '').toUpperCase();
-    const blob = `${r.description || ''} ${r.counterpartyName || ''} ${meta.source || ''}`.toUpperCase();
-    if (/FIORIST|FIORER|COMPENSO|POSA/.test(blob)) return true;
-    if (docType === 'SCONTRINO' || docType === 'FATTURA') {
-        if (/FIORIST|FIORER|COMPENSO/.test(blob)) return true;
+    const docType = String(meta.docType || meta.docKind || '').toUpperCase();
+    if (docType === 'SCONTRINO' || docType === 'FATTURA' || docType === 'RICEVUTA') return true;
+    const blob = `${r.description || ''} ${r.counterpartyName || ''} ${r.sourceId || ''}`.toUpperCase();
+    if (/FIORIST|FIORER|COMPENSO|POSA|SCONTRINO|FATTURA\s+RICEVUTA|ENTRY_MANUAL_EXP_/.test(blob)) {
+        return true;
     }
     return false;
 }
 
+function isFloristRelatedExpense(r: FiscalDedupableEntry): boolean {
+    return isDocumentOrFloristOutflow(r);
+}
+
 function bankLineRef(r: FiscalDedupableEntry): string | null {
     if (r.bankLineId?.trim()) return r.bankLineId.trim();
-    if (r.sourceType === 'BANK_LINE' && r.sourceId?.trim()) return r.sourceId.trim();
+    if (
+        (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') &&
+        r.sourceId?.trim()
+    ) {
+        return r.sourceId.trim();
+    }
     const meta = asMeta(r.metadataJson);
     for (const k of ['bankMovementId', 'bankLineId', 'matchedStatementLineId'] as const) {
         const v = meta[k];
@@ -529,39 +600,71 @@ function bankLineRef(r: FiscalDedupableEntry): string | null {
 }
 
 /**
+ * Chiavi di cluster per unione multi-ancora (banca / TRN / ordine / spesa / vendor+importo).
+ */
+export function authorityOutflowClusterKeys(r: FiscalDedupableEntry): string[] {
+    if (!isDocumentOrFloristOutflow(r)) return [];
+    const abs = Math.abs(r.totalCents);
+    if (abs <= 0) return [];
+
+    const keys: string[] = [];
+    const bank = bankLineRef(r);
+    if (bank) keys.push(`BL:${bank}`);
+
+    const trn = extractBareFinecoTrn(r.description || '');
+    if (trn) keys.push(`TRN:${trn}`);
+
+    const orderRef = extractOrderBusinessRef(r);
+    if (orderRef) keys.push(`ORD:${orderRef}|${abs}`);
+
+    const expenseId = linkedManualExpenseId(r);
+    if (expenseId) keys.push(`EXP:${expenseId}|${abs}`);
+
+    // Chiave vendor debole: usata solo in union-find con overlap token (vedi consolidate)
+    keys.push(`AMT:${abs}`);
+
+    return keys;
+}
+
+/**
  * Chiave di raggruppamento per pagamenti fiorista riconciliati:
  * stesso movimento bancario, ordine+importo, o riferimento ordine FF-*.
  */
 export function reconciledPaymentGroupKey(r: FiscalDedupableEntry): string | null {
-    if (!isFloristRelatedExpense(r)) return null;
+    if (!isDocumentOrFloristOutflow(r)) return null;
     const abs = Math.abs(r.totalCents);
     if (abs <= 0) return null;
 
     const bank = bankLineRef(r);
     if (bank) return `RECON:BL:${bank}`;
 
-    const orderRef = (r.orderId || '').trim();
+    const trn = extractBareFinecoTrn(r.description || '');
+    if (trn) return `RECON:TRN:${trn}`;
+
+    const orderRef = extractOrderBusinessRef(r);
     if (orderRef) return `RECON:ORD:${orderRef}|${abs}`;
 
-    const docRef = (r.documentRef || '').trim();
-    if (docRef && /^FF-/i.test(docRef)) return `RECON:DOC:${docRef.toUpperCase()}|${abs}`;
+    const expenseId = linkedManualExpenseId(r);
+    if (expenseId) return `RECON:EXP:${expenseId}|${abs}`;
 
-    const day = calendarDayKey(r.accountingDate);
-    const cp = (r.counterpartyName || '').trim().toUpperCase();
-    if (day && cp) return `RECON:DAY:${day}|${abs}|${cp.slice(0, 48)}`;
+    const docRef = (r.documentRef || '').trim();
+    if (docRef && /^(FF|FT|FA|FP)-/i.test(docRef)) {
+        return `RECON:DOC:${docRef.toUpperCase()}|${abs}`;
+    }
 
     return null;
 }
 
 function reconciledPrimaryRank(r: FiscalDedupableEntry): number {
-    if (r.sourceType === 'BANK_LINE') return 100;
-    if (r.sourceType === 'FLORIST_PAYOUT') return 85;
+    if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') return 100;
+    if (r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL')) return 95;
+    if (r.sourceType === 'FLORIST_PAYOUT') return 50;
     if (r.sourceType === 'MANUAL_EXPENSE') {
         const meta = asMeta(r.metadataJson);
         const docType = String(meta.docType || '').toUpperCase();
         if (docType === 'FATTURA') return 65;
-        if (docType === 'SCONTRINO') return 62;
-        return 60;
+        if (docType === 'SCONTRINO') return 40;
+        return 45;
     }
     if (r.sourceType === 'JSON_ENTRY') return 20;
     return 50;
@@ -589,21 +692,24 @@ function pickReconciledPrimary<T extends FiscalDedupableEntry>(members: T[]): T 
 
 function attachmentFromRow(r: FiscalDedupableEntry): ConsolidatedFiscalAttachment | null {
     const meta = asMeta(r.metadataJson);
-    const docType = String(meta.docType || '').toUpperCase();
+    const docType = String(meta.docType || meta.docKind || '').toUpperCase();
+    const desc = (r.description || '').toUpperCase();
     let kind: ConsolidatedFiscalAttachment['kind'] = 'DOCUMENTO';
-    if (docType === 'FATTURA') kind = 'FATTURA';
-    else if (docType === 'SCONTRINO') kind = 'SCONTRINO';
+    if (docType === 'FATTURA' || /FATTURA/.test(desc)) kind = 'FATTURA';
+    else if (docType === 'SCONTRINO' || /SCONTRINO/.test(desc)) kind = 'SCONTRINO';
     else if (r.sourceType === 'FLORIST_PAYOUT') kind = 'COMPENSO';
     else if (r.sourceType === 'JSON_ENTRY') kind = 'DOCUMENTO';
 
     let label = (r.counterpartyName || r.description || r.sourceType || 'Documento').slice(0, 120);
-    if (r.sourceType === 'MANUAL_EXPENSE') {
+    if (r.sourceType === 'MANUAL_EXPENSE' || /SCONTRINO|FATTURA/.test(desc)) {
         const vendor = r.counterpartyName || 'fornitore';
-        if (docType === 'FATTURA') label = `Fattura ${vendor}`;
-        else if (docType === 'SCONTRINO') label = `Scontrino ${vendor}`;
+        if (kind === 'FATTURA') label = `Fattura ${vendor}`;
+        else if (kind === 'SCONTRINO') label = `Scontrino ${vendor}`;
         else label = `Documento ${vendor}`;
-    } else if (r.sourceType === 'BANK_LINE') {
+    } else if (r.sourceType === 'BANK_LINE' || r.sourceType === 'BANK_LINE_MANUAL') {
         label = 'Bonifico Fineco';
+    } else if (r.sourceType === 'FLORIST_PAYOUT') {
+        label = `Compenso ${(r.documentRef || r.description || 'ordine').slice(0, 40)}`;
     } else if (r.sourceType === 'JSON_ENTRY') {
         label = (r.description || 'Registrazione manuale').slice(0, 80);
     }
@@ -722,13 +828,189 @@ export function excludeJsonExpensesCoveredByReconciledPayment<T extends FiscalDe
     });
 }
 
+/**
+ * Union-find: collassa scontrini/manuali/compensi sullo stesso bonifico/ordine/TRN.
+ * Se esiste il flusso bancario reale, resta UNICA riga di uscita (documenti → allegati).
+ */
+export function consolidateAuthorityOutflows<T extends FiscalDedupableEntry>(rows: T[]): T[] {
+    const candidates = rows
+        .map((r, index) => ({ r, index }))
+        .filter(({ r }) => isDocumentOrFloristOutflow(r));
+    if (candidates.length < 2) return rows;
+
+    const parent = new Map<number, number>();
+    const find = (i: number): number => {
+        let p = parent.get(i) ?? i;
+        while (p !== (parent.get(p) ?? p)) p = parent.get(p) ?? p;
+        parent.set(i, p);
+        return p;
+    };
+    const union = (a: number, b: number) => {
+        const ra = find(a);
+        const rb = find(b);
+        if (ra !== rb) parent.set(ra, rb);
+    };
+
+    for (const { index } of candidates) parent.set(index, index);
+
+    // 1) Unione su chiavi forti (escluso AMT generico)
+    const keyToIndexes = new Map<string, number[]>();
+    for (const { r, index } of candidates) {
+        for (const key of authorityOutflowClusterKeys(r)) {
+            if (key.startsWith('AMT:')) continue;
+            const list = keyToIndexes.get(key) || [];
+            list.push(index);
+            keyToIndexes.set(key, list);
+        }
+    }
+    for (const indexes of keyToIndexes.values()) {
+        for (let i = 1; i < indexes.length; i++) union(indexes[0]!, indexes[i]!);
+    }
+
+    // 2) Unione vendor+importo: solo se almeno un membro del cluster ha già banca/TRN/ordine
+    //    oppure due documenti con stesso importo e token vendor in comune.
+    const byAmount = new Map<number, Array<{ r: T; index: number }>>();
+    for (const c of candidates) {
+        const abs = Math.abs(c.r.totalCents);
+        const list = byAmount.get(abs) || [];
+        list.push(c);
+        byAmount.set(abs, list);
+    }
+
+    const clusterHasAuthority = (root: number): boolean => {
+        for (const { r, index } of candidates) {
+            if (find(index) !== root) continue;
+            if (bankLineRef(r) || extractBareFinecoTrn(r.description || '')) return true;
+            if (
+                r.sourceType === 'BANK_LINE' ||
+                r.sourceType === 'BANK_LINE_MANUAL' ||
+                r.sourceType.startsWith('STRIPE') ||
+                r.sourceType.startsWith('PAYPAL')
+            ) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    for (const group of byAmount.values()) {
+        if (group.length < 2) continue;
+        for (let i = 0; i < group.length; i++) {
+            for (let j = i + 1; j < group.length; j++) {
+                const a = group[i]!;
+                const b = group[j]!;
+                if (!vendorsOverlap(expenseVendorBlob(a.r), expenseVendorBlob(b.r))) continue;
+                const ra = find(a.index);
+                const rb = find(b.index);
+                // Unisci se condividono già autorità, oppure se uno dei due cluster ha banca,
+                // oppure entrambi sono documenti (scontrini multipli stesso fornitore/importo).
+                const authA = clusterHasAuthority(ra);
+                const authB = clusterHasAuthority(rb);
+                const bothDocs =
+                    !authA &&
+                    !authB &&
+                    a.r.sourceType !== 'BANK_LINE' &&
+                    b.r.sourceType !== 'BANK_LINE';
+                if (authA || authB || bothDocs || ra === rb) {
+                    union(a.index, b.index);
+                }
+            }
+        }
+    }
+
+    // 3) Materializza cluster
+    const clusters = new Map<number, T[]>();
+    for (const { r, index } of candidates) {
+        const root = find(index);
+        const list = clusters.get(root) || [];
+        list.push(r);
+        clusters.set(root, list);
+    }
+
+    const suppressIds = new Set<string>();
+    const enrichedById = new Map<string, T>();
+
+    for (const members of clusters.values()) {
+        if (members.length < 2) continue;
+        const primary = pickReconciledPrimary(members);
+        const enriched = enrichPrimaryWithAttachments(primary, members);
+        if (primary.id) enrichedById.set(primary.id, enriched);
+        for (const m of members) {
+            if (m.id && m.id !== primary.id) suppressIds.add(m.id);
+        }
+    }
+
+    if (!suppressIds.size) return rows;
+
+    return rows
+        .filter((r) => !r.id || !suppressIds.has(r.id))
+        .map((r) => (r.id && enrichedById.has(r.id) ? enrichedById.get(r.id)! : r));
+}
+
+/**
+ * Se esiste già un'autorità di cassa (banca/gateway) per lo stesso ordine+importo,
+ * elimina uscite subordinate residue (compenso/scontrino/JSON) non catturate dal cluster.
+ */
+export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDedupableEntry>(
+    rows: T[]
+): T[] {
+    const authorityOrderAmounts = new Set<string>();
+    const authorityVendorAmounts: Array<{ tokens: Set<string>; abs: number }> = [];
+
+    for (const r of rows) {
+        if (!isOutflowExpense(r)) continue;
+        const isAuth =
+            r.sourceType === 'BANK_LINE' ||
+            r.sourceType === 'BANK_LINE_MANUAL' ||
+            r.sourceType.startsWith('STRIPE') ||
+            r.sourceType.startsWith('PAYPAL');
+        if (!isAuth) continue;
+        const abs = Math.abs(r.totalCents);
+        const orderRef = extractOrderBusinessRef(r);
+        if (orderRef) authorityOrderAmounts.add(`${orderRef}|${abs}`);
+        authorityVendorAmounts.push({ tokens: significantVendorTokens(expenseVendorBlob(r)), abs });
+    }
+
+    if (!authorityOrderAmounts.size && !authorityVendorAmounts.length) return rows;
+
+    return rows.filter((r) => {
+        if (!isOutflowExpense(r)) return true;
+        if (
+            r.sourceType === 'BANK_LINE' ||
+            r.sourceType === 'BANK_LINE_MANUAL' ||
+            r.sourceType.startsWith('STRIPE') ||
+            r.sourceType.startsWith('PAYPAL')
+        ) {
+            return true;
+        }
+        if (!isDocumentOrFloristOutflow(r)) return true;
+
+        const abs = Math.abs(r.totalCents);
+        const orderRef = extractOrderBusinessRef(r);
+        if (orderRef && authorityOrderAmounts.has(`${orderRef}|${abs}`)) return false;
+
+        const tokens = significantVendorTokens(expenseVendorBlob(r));
+        if (tokens.size) {
+            for (const auth of authorityVendorAmounts) {
+                if (auth.abs !== abs) continue;
+                for (const t of tokens) {
+                    if (auth.tokens.has(t)) return false;
+                }
+            }
+        }
+        return true;
+    });
+}
+
 /** Pipeline unica per listati Prima Nota e aggregati PnL. */
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
     const step1 = excludeOrdersCoveredByFiscalAuthority(rows);
     const step2 = excludeJsonRevenuesCoveredByFiscalAuthority(step1);
     const step3 = dedupeByCanonicalMovementKey(step2);
     const step4 = dedupeSupplierInvoices(step3);
-    const step5 = consolidateReconciledPayments(step4);
-    const step6 = excludeJsonExpensesCoveredByReconciledPayment(step5);
-    return dedupeByNaturalFiscalKey(step6);
+    const step5 = consolidateAuthorityOutflows(step4);
+    const step6 = consolidateReconciledPayments(step5);
+    const step7 = excludeJsonExpensesCoveredByReconciledPayment(step6);
+    const step8 = suppressSubordinateOutflowsCoveredByAuthority(step7);
+    return dedupeByNaturalFiscalKey(step8);
 }

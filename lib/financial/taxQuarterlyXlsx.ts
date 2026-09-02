@@ -18,6 +18,7 @@ import {
     labelReconciliationStatusIt,
     labelSourceTypeIt,
 } from '@/lib/financial/fiscalItalianLabels';
+import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
 
 const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
@@ -155,16 +156,32 @@ async function buildPrimaNotaRows(report: TaxQuarterlyReport) {
         running += signed;
         const entrata = r.direction === 'ENTRATA' ? euroNum(Math.abs(r.totalCents)) : 0;
         const uscita = r.direction === 'USCITA' ? euroNum(Math.abs(r.totalCents)) : 0;
+        const meta =
+            r.metadataJson && typeof r.metadataJson === 'object'
+                ? (r.metadataJson as Record<string, unknown>)
+                : {};
+        const attachments = Array.isArray(meta.consolidatedAttachments)
+            ? (meta.consolidatedAttachments as Array<{ label?: string }>)
+            : [];
+        const attachmentNote =
+            attachments.length > 0
+                ? ` [allegati: ${attachments.map((a) => a.label || 'doc').slice(0, 4).join('; ')}${attachments.length > 4 ? '…' : ''}]`
+                : '';
+        const trn =
+            extractBareFinecoTrn(r.description || '') ||
+            r.sourceId ||
+            r.bankLineId ||
+            '';
         return {
             Data: r.accountingDate.toISOString().slice(0, 10),
-            Causale: r.description || '',
+            Causale: `${r.description || ''}${attachmentNote}`,
             Entrata: entrata || '',
             Uscita: uscita || '',
             'Conto / Gateway': labelSourceTypeIt(r.sourceType),
             Categoria: CATEGORY_LABELS[r.category as LedgerCategory] || r.category,
             Controparte: r.counterpartyName || '',
-            'Rif. Ordine / Doc': r.orderId || r.documentRef || '',
-            'TRN / Source ID': r.sourceId || r.bankLineId || '',
+            'Rif. Ordine / Doc': r.documentRef || r.orderId || '',
+            'TRN / Source ID': trn,
             'Stato Riconciliazione': labelReconciliationStatusIt(r.reconciliationStatus),
             'Saldo Progressivo EUR': euroNum(running),
         };

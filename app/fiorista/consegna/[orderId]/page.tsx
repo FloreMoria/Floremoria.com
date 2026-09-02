@@ -4,7 +4,7 @@ import {
     isFloristTestOrder,
     isFloristTestOrderRef,
 } from '@/lib/deliveryProof/floristAccess';
-import { resolveOrderByPublicRef } from '@/lib/orders/resolveOrderIdentifier';
+import { resolveOrderByPublicRef, sanitizePublicOrderRef } from '@/lib/orders/resolveOrderIdentifier';
 import { buildOrderOptionalsList } from '@/lib/orders/orderOptionals';
 import FloristProofUploadClient from '@/components/fiorista/FloristProofUploadClient';
 import Link from 'next/link';
@@ -33,10 +33,7 @@ function BlockedPage({ title, message }: { title: string; message: string }) {
 
 function CompletedPage({ orderNumber }: { orderNumber: string | null }) {
     return (
-        <div
-            className="mx-auto flex min-h-[100dvh] max-w-lg flex-col items-center justify-center px-6 text-center bg-[#FAF9F6]"
-            style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
-        >
+        <div className="mx-auto flex min-h-[80dvh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center bg-[#FAF9F6] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600 shadow-sm">
                 ✓
             </div>
@@ -91,24 +88,35 @@ export default async function FloristConsegnaPage({
 }: {
     params: Promise<{ orderId: string }>;
 }) {
-    const { orderId: orderRef } = await params;
+    const { orderId: rawOrderRef } = await params;
+    const orderRef = sanitizePublicOrderRef(rawOrderRef);
 
     const order = await resolveOrderByPublicRef(orderRef, orderSelect);
 
-    if (!order && !isFloristTestOrderRef(orderRef)) {
+    if (!order) {
+        if (isFloristTestOrderRef(orderRef) || isFloristTestOrderRef(rawOrderRef)) {
+            console.error('[florist-delivery-debug] Ordine di test non presente nel database:', {
+                orderRef,
+                rawOrderRef,
+            });
+            return (
+                <BlockedPage
+                    title="Ordine non trovato"
+                    message="L'ordine di test non è presente nel database."
+                />
+            );
+        }
+
+        console.error('[florist-delivery-debug] Impossibile risolvere ordine dal link:', {
+            orderRef,
+            rawOrderRef,
+            found: false,
+        });
+
         return (
             <BlockedPage
                 title="Ordine non trovato"
                 message="Verifica il codice ordine nel link e riprova."
-            />
-        );
-    }
-
-    if (!order) {
-        return (
-            <BlockedPage
-                title="Ordine non trovato"
-                message="L'ordine di test non è presente nel database."
             />
         );
     }

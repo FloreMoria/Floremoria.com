@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Camera, CheckCircle2, Image as ImageIcon, Loader2, MapPin, RefreshCw, Send, Trash2 } from 'lucide-react';
+import { CheckCircle2, Loader2, MapPin, RefreshCw, Send, Trash2 } from 'lucide-react';
 
 type Slot = 'before' | 'after';
 
@@ -377,20 +377,18 @@ export default function FloristProofUploadClient({
 
     if (success && !embedded) {
         return (
-            <div
-                className="mx-auto flex min-h-[100dvh] max-w-lg flex-col items-center justify-center px-6 text-center bg-[#FAF9F6]"
-                style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
-            >
-                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm">
+            <div className="mx-auto flex min-h-[80dvh] max-w-lg flex-col items-center justify-center gap-4 px-6 text-center bg-[#FAF9F6] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm">
                     <CheckCircle2 size={44} className="stroke-[2.2]" />
                 </div>
                 <h1 className="text-2xl font-display font-bold text-slate-900">
                     Consegna registrata con successo!
                 </h1>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600 max-w-xs">
-                    Grazie per il tuo lavoro. Le foto e i dettagli di posa sono stati registrati correttamente.
+                <p className="max-w-xs text-sm leading-relaxed text-slate-600">
+                    Grazie per il tuo lavoro. Le foto e i dettagli di posa sono stati registrati
+                    correttamente.
                 </p>
-                <div className="mt-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-5 py-3 text-xs font-semibold text-emerald-800">
+                <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-5 py-3 text-xs font-semibold text-emerald-800">
                     {orderNumber ? `Ordine: ${orderNumber} · ` : ''}Puoi chiudere questa pagina.
                 </div>
             </div>
@@ -563,66 +561,38 @@ export default function FloristProofUploadClient({
 
     return (
         <div
-            className="mx-auto min-h-[100dvh] max-w-lg bg-[#FAF9F6]"
-            style={{
-                paddingTop: 'env(safe-area-inset-top)',
-                paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))',
-            }}
+            className="mx-auto flex min-h-[100dvh] max-w-lg flex-col justify-between bg-[#FAF9F6] px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+            style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
         >
-            {/* Header essenziale e compatto */}
-            <header
-                className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3.5 backdrop-blur shadow-xs"
-                style={{ paddingTop: 'max(0.875rem, env(safe-area-inset-top))' }}
-            >
-                <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880]">
-                        FloreMoria · Consegna
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c5a880]">
+                    FloreMoria · Consegna
+                </p>
+                {orderNumber ? (
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Codice ordine
                     </p>
-                    {orderNumber && (
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                            {orderNumber}
-                        </span>
-                    )}
-                </div>
-                <h1 className="mt-1 text-lg font-display font-semibold text-slate-900 leading-tight">
+                ) : null}
+                {orderNumber ? (
+                    <p className="mt-0.5 font-mono text-base font-bold text-slate-900">{orderNumber}</p>
+                ) : null}
+                <h1 className="mt-3 text-xl font-display font-semibold leading-snug text-slate-900">
                     {deceasedName}
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
-                    {cemeteryName}, {cemeteryCity}
+                <p className="mt-1.5 text-sm text-slate-600">
+                    {cemeteryName}
+                    {cemeteryCity ? `, ${cemeteryCity}` : ''}
                 </p>
-            </header>
+            </section>
 
-            {/* Stepper visuale 2 passaggi */}
-            <div className="px-4 pt-4 pb-2">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1">
-                        <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${beforeFiles.length > 0 && afterFiles.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-900 text-white'}`}>
-                            1
-                        </span>
-                        <span className="text-xs font-medium text-slate-800">Scatta foto</span>
-                    </div>
-                    <div className="h-0.5 flex-1 bg-slate-200" />
-                    <div className="flex items-center gap-2 flex-1 justify-end">
-                        <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${canSubmit ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                            2
-                        </span>
-                        <span className="text-xs font-medium text-slate-600">Invia conferma</span>
-                    </div>
-                </div>
-            </div>
+            <div className="my-4 flex flex-1 flex-col justify-center gap-4">{uploadFields}</div>
 
-            <div className="space-y-4 px-4 py-3">{uploadFields}</div>
-
-            {/* Bottom Bar fissa con pulsante verde "Invia Conferma di Consegna" */}
-            <div
-                className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 px-4 pt-3 backdrop-blur"
-                style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-            >
+            <div className="space-y-3">
                 <button
                     type="button"
                     disabled={!canSubmit}
                     onClick={handleSubmit}
-                    className="flex w-full min-h-[54px] items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 text-base font-bold text-white shadow-md shadow-emerald-900/10 transition enabled:hover:bg-emerald-700 enabled:active:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-base font-bold text-white shadow-md shadow-emerald-900/10 transition enabled:hover:bg-emerald-700 enabled:active:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
                 >
                     {submitting ? (
                         <>
@@ -693,22 +663,26 @@ function PhotoSlot({
 
             {/* Pulsanti per Scatta / Scegli da Galleria se sotto limite MAX */}
             {count < MAX ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                     <button
                         type="button"
                         onClick={onCamera}
-                        className="flex min-h-[64px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-2 text-emerald-900 transition active:bg-emerald-100/60"
+                        className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 px-3 py-4 text-emerald-900 transition active:bg-emerald-100/70"
                     >
-                        <Camera size={20} className="text-emerald-700" />
-                        <span className="text-[11px] font-bold">Scatta Foto</span>
+                        <span className="text-2xl" aria-hidden>
+                            📸
+                        </span>
+                        <span className="text-sm font-bold">Scatta Foto</span>
                     </button>
                     <button
                         type="button"
                         onClick={onGallery}
-                        className="flex min-h-[64px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-2 text-slate-700 transition active:bg-slate-100"
+                        className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/80 px-3 py-4 text-slate-700 transition active:bg-slate-100"
                     >
-                        <ImageIcon size={20} className="text-slate-600" />
-                        <span className="text-[11px] font-bold">Dalla Galleria</span>
+                        <span className="text-2xl" aria-hidden>
+                            🖼️
+                        </span>
+                        <span className="text-sm font-bold">Galleria</span>
                     </button>
                 </div>
             ) : null}

@@ -154,27 +154,34 @@ export function formatFloristLuogoDisplayLine(input: {
 }
 
 /**
- * URL mini-app pulito (solo https…), senza etichette.
- * Perché: WhatsApp evidenzia l'URL solo se non è attaccato ai due punti senza spazio.
+ * URL mini-app pulito (solo https…), senza etichette né punteggiatura finale.
+ * Perché: WhatsApp evidenzia l'URL solo se non è attaccato ai due punti o al punto di fine frase.
  */
-export function formatFloristMiniAppUrlParam(url: string | null | undefined): string {
+export function formatFloristMiniAppUrlParam(
+    url: string | null | undefined,
+    opts?: { whatsAppTrailingSpace?: boolean }
+): string {
     let raw = stripNoise(url);
     raw = raw
         .replace(/^🔗\s*Per favore,\s*completa l'ordine con la mini-app:\s*/i, '')
         .replace(/^🔗\s*Link\s+mini-app\s+fiorista:\s*/i, '')
         .trim();
+    raw = raw.replace(/[.,!?;:]+$/, '').trim();
     if (!raw || raw === '-') return '-';
     // Garantisce schema https per anteprima card.
     if (/^www\./i.test(raw)) raw = `https://${raw}`;
-    return metaParamOrDash(raw, META_TEMPLATE_LIMITS.url);
+    const capped = metaParamOrDash(raw, META_TEMPLATE_LIMITS.url);
+    if (capped === '-') return capped;
+    // Spazio finale: separa l'URL dal "." del template Meta (floremoria_sollecito_fiorista).
+    return opts?.whatsAppTrailingSpace ? `${capped} ` : capped;
 }
 
-/** Riga completa con spazio obbligatorio dopo i due punti (link blu + anteprima). */
+/** Riga completa: URL su riga dedicata (mai seguito da punto sulla stessa riga). */
 export function formatFloristMiniAppInstructionLine(url: string): string {
     const clean = formatFloristMiniAppUrlParam(url);
     // Fallback: home sito (non /fiorista — non esiste una pagina indice fiorista).
     const href = clean === '-' ? 'https://www.floremoria.com' : clean;
-    return `🔗 Per favore, completa l'ordine con la mini-app: ${href}`;
+    return `🔗 Per favore, completa l'ordine con la mini-app:\n${href}`;
 }
 
 /** {{8}} Accessori. */
@@ -279,7 +286,7 @@ export function buildFloristNuovoOrdineBodyParams(input: FloristNuovoOrdineInput
             id: input.orderId || orderCode,
             orderNumber: orderCode === '-' ? null : orderCode,
         });
-    const var11 = formatFloristMiniAppUrlParam(rawDeliveryUrl);
+    const var11 = formatFloristMiniAppUrlParam(rawDeliveryUrl, { whatsAppTrailingSpace: true });
 
     const params = [
         var1,  // {{1}}

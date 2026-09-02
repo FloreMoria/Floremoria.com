@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
-import { buildFloristDeliveryPath } from '@/lib/orders/resolveOrderIdentifier';
+import {
+    buildFloristDeliveryPath,
+    sanitizePublicOrderRef,
+} from '@/lib/orders/resolveOrderIdentifier';
 
 export const metadata = {
     title: 'Upload Prove - FloreMoria Partner',
@@ -16,7 +19,7 @@ export default async function FloristUploadRedirectPage({
     params: Promise<{ orderId: string }> | { orderId: string };
 }) {
     const resolved = await Promise.resolve(params);
-    const orderId = resolved.orderId?.trim();
+    const orderId = sanitizePublicOrderRef(resolved.orderId || '');
     if (!orderId) {
         redirect('/');
     }

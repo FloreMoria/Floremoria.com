@@ -100,11 +100,10 @@ function main(): void {
     );
     assert(
         text.includes(
-            'Per caricare le foto mentre effettui la consegna dovresti usare il link alla mini-app dedicata a questo ordine:'
+            "🔗 Per favore, completa l'ordine con la mini-app:\nhttps://www.floremoria.com/fiorista/consegna/FT-MB-26-001"
         ),
-        'dicitura foto mini-app'
+        'link mini-app su riga dedicata'
     );
-    assert(text.includes('🔗 https://www.floremoria.com/fiorista/consegna/FT-MB-26-001'), 'link mini-app');
     assert(text.endsWith('Vera | Staff FloreMoria 🌹'), 'chiusura con rosa unica');
     assert((text.match(/🌹/g) || []).length === 1, 'una sola rosa');
     assert(!text.includes('Bouquet Memoria Eterna'), 'niente nome commerciale bouquet');

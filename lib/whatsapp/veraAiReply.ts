@@ -564,7 +564,7 @@ export async function generateVeraReply(
                 });
                 const floristFirstName = extractFirstName(partner.ownerName || partner.shopName);
 
-                const reply = `Perfetto ${floristFirstName}, incarico confermato. Ecco il link della mini-app per le foto di posa: ${deliveryUrl}\n\nBuon lavoro!`;
+                const reply = `Perfetto ${floristFirstName}, incarico confermato. Ecco il link della mini-app per le foto di posa:\n${deliveryUrl}\n\nBuon lavoro!`;
                 return { text: reply, source: 'deterministic', shouldEscalate: false };
             }
         }

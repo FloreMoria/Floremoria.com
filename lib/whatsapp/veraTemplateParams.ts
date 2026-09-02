@@ -3,6 +3,7 @@ import {
     resolveSafeBuyerFirstName,
 } from '@/lib/vera/customerOrderConfirmCopy';
 import { extractFirstName, normalizeOrderCode } from '@/lib/whatsapp/proactiveTemplateParams';
+import { formatFloristMiniAppUrlParam } from '@/lib/whatsapp/buildFloristNuovoOrdineParams';
 import { sanitizeMetaTemplateParam } from '@/lib/whatsapp/sanitizeMetaParam';
 import { META_TEMPLATE_LIMITS } from '@/lib/whatsapp/metaTemplateLimits';
 import {
@@ -201,7 +202,9 @@ export function buildFloristReminderParams(input: {
         floristFirstName: extractFirstName(input.floristFirstName || 'Fiorista') || 'Fiorista',
         orderCode: requireText(normalizeOrderCode(input.orderCode || '') || '-', 'orderCode', 40),
         deliveryUrl: requireText(
-            input.deliveryUrl || 'https://www.floremoria.com',
+            formatFloristMiniAppUrlParam(input.deliveryUrl || 'https://www.floremoria.com', {
+                whatsAppTrailingSpace: true,
+            }),
             'deliveryUrl',
             META_TEMPLATE_LIMITS.url
         ),

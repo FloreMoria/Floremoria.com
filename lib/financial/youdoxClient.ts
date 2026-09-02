@@ -27,6 +27,7 @@ import type {
     YoudoxInvoice,
     YoudoxDownloadType,
 } from '@/lib/youdox/types';
+import type { SyncReceivedWindowOptions } from '@/lib/youdox/listReceivedInvoicesPaged';
 
 export class FinancialYoudoxClient {
     readonly rawClient: YoudoxClient;
@@ -53,8 +54,10 @@ export class FinancialYoudoxClient {
     /**
      * 1. fetchPassiveInvoicesForSync: tutte le passive nel periodo (letto + non letto).
      */
-    async fetchPassiveInvoicesForSync(): Promise<YoudoxInvoice[]> {
-        return this.rawClient.listAllReceivedForSync();
+    async fetchPassiveInvoicesForSync(
+        options?: SyncReceivedWindowOptions
+    ): Promise<YoudoxInvoice[]> {
+        return this.rawClient.listAllReceivedForSync(options);
     }
 
     /** @deprecated Preferire fetchPassiveInvoicesForSync per il tasto sync dashboard. */

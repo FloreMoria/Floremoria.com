@@ -7,6 +7,7 @@ import {
     getInvoiceExpenseDetail,
     listInvoiceUploads,
     listInvoicesForUpload,
+    listPassiveSdiInvoices,
     type InvoiceUploadChannel,
 } from '@/lib/financial/invoiceUploadHistory';
 
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
             channelRaw === 'SDI_XML' || channelRaw === 'SDI_XLSX'
                 ? (channelRaw as InvoiceUploadChannel)
                 : undefined;
+        const view = searchParams.get('view');
 
         if (expenseId) {
             const invoice = await getInvoiceExpenseDetail(expenseId);
@@ -45,6 +47,11 @@ export async function GET(request: Request) {
                 exists: Boolean(existing),
                 upload: existing,
             });
+        }
+
+        if (view === 'invoices' && channel === 'SDI_XML') {
+            const invoices = await listPassiveSdiInvoices();
+            return NextResponse.json({ ok: true, invoices });
         }
 
         const uploads = await listInvoiceUploads(channel);

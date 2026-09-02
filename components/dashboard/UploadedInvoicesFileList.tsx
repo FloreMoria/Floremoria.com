@@ -11,6 +11,23 @@ import {
     FINANCE_PASSIVO_TABLE_SCROLL,
     matchesPassivoSearch,
 } from '@/components/dashboard/finance/financePassivoUi';
+import SdiInvoiceDetailDrawer from '@/components/dashboard/SdiInvoiceDetailDrawer';
+
+export type PassiveInvoiceTableRow = {
+    id: string;
+    fileName: string;
+    documentDate: string;
+    vendorName: string;
+    vendorVat: string | null;
+    invoiceNumber: string | null;
+    netCents: number;
+    vatCents: number;
+    vatRate: number | null;
+    totalCents: number;
+    reconciled: boolean;
+    invoiceRole?: string;
+    searchHaystack?: string;
+};
 
 export type UploadedFileRow = {
     id: string;
@@ -53,6 +70,9 @@ type InvoiceDetailExtended = InvoiceDetail & {
     notes?: string | null;
     archiveFileName?: string | null;
     isReverseCharge?: boolean;
+    fatturaPaDetail?: import('@/lib/financial/parseFatturaPaXml').FatturaPaDetail | null;
+    sdiIdentificativo?: string | null;
+    sdiDataRicezione?: string | null;
 };
 
 const SCROLL_TABLE = FINANCE_PASSIVO_TABLE_SCROLL;
@@ -91,16 +111,21 @@ function euro(cents: number): string {
 
 export default function UploadedInvoicesFileList({
     uploads,
+    invoices,
     emptyHint,
     onChanged,
     fillHeight = false,
 }: {
-    uploads: UploadedFileRow[];
+    uploads?: UploadedFileRow[];
+    /** Vista flat per fatture SDI (prioritaria se presente). */
+    invoices?: PassiveInvoiceTableRow[];
     emptyHint?: string;
     onChanged?: () => void;
-    /** Riempie l'altezza del contenitore padre con tabella scrollabile */
     fillHeight?: boolean;
 }) {
+    const invoiceMode = Boolean(invoices);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
     const [batchDetailId, setBatchDetailId] = useState<string | null>(null);
     const [batchInvoices, setBatchInvoices] = useState<InvoiceDetail[]>([]);
     const [batchFileName, setBatchFileName] = useState('');
@@ -116,7 +141,8 @@ export default function UploadedInvoicesFileList({
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredUploads = useMemo(() => {
-        const sorted = [...uploads].sort((a, b) => {
+        const list = uploads || [];
+        const sorted = [...list].sort((a, b) => {
             const dateA = a.documentDate || a.uploadedAt.slice(0, 10);
             const dateB = b.documentDate || b.uploadedAt.slice(0, 10);
             const byDoc = dateB.localeCompare(dateA);
@@ -132,6 +158,27 @@ export default function UploadedInvoicesFileList({
             )
         );
     }, [uploads, searchQuery]);
+
+    const filteredInvoices = useMemo(() => {
+        const list = invoices || [];
+        const sorted = [...list].sort((a, b) => b.documentDate.localeCompare(a.documentDate));
+        if (!searchQuery.trim()) return sorted;
+        return sorted.filter((inv) =>
+            matchesPassivoSearch(
+                inv.searchHaystack ||
+                    [
+                        inv.fileName,
+                        inv.documentDate,
+                        inv.vendorName,
+                        inv.invoiceNumber,
+                        inv.vendorVat,
+                    ]
+                        .filter(Boolean)
+                        .join(' '),
+                searchQuery
+            )
+        );
+    }, [invoices, searchQuery]);
 
     const openBatchDetail = async (id: string, fileName: string) => {
         setBatchDetailId(id);
@@ -159,6 +206,8 @@ export default function UploadedInvoicesFileList({
     };
 
     const openInvoiceDetail = async (expenseId: string) => {
+        setSelectedInvoiceId(expenseId);
+        setDrawerOpen(true);
         setLoadingInvoice(true);
         setError(null);
         try {
@@ -176,6 +225,7 @@ export default function UploadedInvoicesFileList({
             setInvoiceDetail(parsed.data.invoice);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore dettaglio fattura');
+            setDrawerOpen(false);
         } finally {
             setLoadingInvoice(false);
         }
@@ -213,6 +263,8 @@ export default function UploadedInvoicesFileList({
             if (!parsed.ok) throw new Error(parsed.error || 'Eliminazione fallita');
             setDeleteInvoiceId(null);
             setInvoiceDetail(null);
+            setDrawerOpen(false);
+            setSelectedInvoiceId(null);
             if (batchDetailId) {
                 setBatchInvoices((prev) => prev.filter((i) => i.id !== expenseId));
             }
@@ -224,10 +276,15 @@ export default function UploadedInvoicesFileList({
         }
     };
 
-    if (!uploads.length) {
+    const rowCount = invoiceMode ? (invoices?.length || 0) : (uploads?.length || 0);
+
+    if (!rowCount) {
         return (
             <p className="text-[11px] text-slate-400 py-2">
-                {emptyHint || 'Nessun file caricato ancora in questa sezione.'}
+                {emptyHint ||
+                    (invoiceMode
+                        ? 'Nessuna fattura passiva SDI ancora importata.'
+                        : 'Nessun file caricato ancora in questa sezione.')}
             </p>
         );
     }
@@ -257,6 +314,117 @@ export default function UploadedInvoicesFileList({
                 </p>
             )}
             <div className={tableWrapClass}>
+                {invoiceMode ? (
+                    <table className="w-full text-[11px] min-w-[960px]">
+                        <thead className="sticky top-0 z-10 bg-slate-50">
+                            <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <th className="px-2.5 py-2 font-bold whitespace-nowrap">Data fattura</th>
+                                <th className="px-2.5 py-2 font-bold min-w-[140px]">Nome file</th>
+                                <th className="px-2.5 py-2 font-bold min-w-[160px]">Fornitore</th>
+                                <th className="px-2.5 py-2 font-bold whitespace-nowrap">N. fattura</th>
+                                <th className="px-2.5 py-2 font-bold text-right whitespace-nowrap">Imponibile</th>
+                                <th className="px-2.5 py-2 font-bold text-right whitespace-nowrap">IVA</th>
+                                <th className="px-2.5 py-2 font-bold text-right whitespace-nowrap">Totale</th>
+                                <th className="px-2.5 py-2 font-bold text-right min-w-[120px]">Stato</th>
+                                <th className="px-2.5 py-2 font-bold text-right min-w-[120px]">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredInvoices.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={9}
+                                        className="px-2.5 py-6 text-center text-[11px] text-slate-400"
+                                    >
+                                        Nessuna fattura corrisponde alla ricerca.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredInvoices.map((inv) => (
+                                    <tr
+                                        key={inv.id}
+                                        onClick={() => void openInvoiceDetail(inv.id)}
+                                        className="border-t border-slate-50 cursor-pointer transition-colors hover:bg-slate-50/90 align-top"
+                                    >
+                                        <td className="px-2.5 py-2 whitespace-nowrap text-slate-600">
+                                            {formatItDate(inv.documentDate)}
+                                        </td>
+                                        <td className="px-2.5 py-2">
+                                            <div
+                                                className="font-medium text-slate-800 line-clamp-2 break-all"
+                                                title={inv.fileName}
+                                            >
+                                                {inv.fileName}
+                                            </div>
+                                        </td>
+                                        <td className="px-2.5 py-2">
+                                            <div
+                                                className="font-medium text-slate-800 line-clamp-2"
+                                                title={inv.vendorName}
+                                            >
+                                                {inv.vendorName}
+                                            </div>
+                                            {inv.vendorVat && (
+                                                <span className="text-[10px] text-slate-400 block">
+                                                    P.IVA {inv.vendorVat}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">
+                                            {inv.invoiceNumber || '—'}
+                                        </td>
+                                        <td className="px-2.5 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                                            €{euro(inv.netCents)}
+                                        </td>
+                                        <td className="px-2.5 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                                            {inv.vatRate != null ? `${inv.vatRate}% · ` : ''}€
+                                            {euro(inv.vatCents)}
+                                        </td>
+                                        <td className="px-2.5 py-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                                            €{euro(inv.totalCents)}
+                                        </td>
+                                        <td className="px-2.5 py-2 text-right min-w-[120px]">
+                                            {inv.reconciled ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold whitespace-nowrap">
+                                                    <CheckCircle2 size={11} />
+                                                    Abbinato
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-100 font-bold whitespace-nowrap">
+                                                    Da abbinare
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2.5 py-2 text-right min-w-[120px]">
+                                            <div
+                                                className="inline-flex gap-1.5"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    title="Apri dettaglio"
+                                                    onClick={() => void openInvoiceDetail(inv.id)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 text-slate-700 font-bold hover:bg-white"
+                                                >
+                                                    <Eye size={11} />
+                                                    Apri
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Elimina fattura"
+                                                    onClick={() => setDeleteInvoiceId(inv.id)}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200 text-rose-700 font-bold hover:bg-rose-50"
+                                                >
+                                                    <Trash2 size={11} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                ) : (
                 <table className="w-full text-[11px] table-fixed min-w-[520px]">
                     <thead className="sticky top-0 z-10 bg-slate-50">
                         <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
@@ -340,10 +508,23 @@ export default function UploadedInvoicesFileList({
                         )}
                     </tbody>
                 </table>
+                )}
             </div>
 
-            {/* Modale dettaglio batch / report */}
-            {batchDetailId && (
+            <SdiInvoiceDetailDrawer
+                invoice={invoiceDetail as import('@/lib/financial/invoiceUploadHistory').UploadInvoiceDetailExtended | null}
+                loading={loadingInvoice}
+                open={drawerOpen && invoiceMode}
+                onClose={() => {
+                    setDrawerOpen(false);
+                    setSelectedInvoiceId(null);
+                    setInvoiceDetail(null);
+                }}
+                onDelete={(id) => setDeleteInvoiceId(id)}
+            />
+
+            {/* Modale dettaglio batch / report (solo vista file) */}
+            {!invoiceMode && batchDetailId && (
                 <div
                     className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/40 p-4"
                     onClick={() => {
@@ -468,8 +649,8 @@ export default function UploadedInvoicesFileList({
                 </div>
             )}
 
-            {/* Modale dettaglio singola fattura */}
-            {(invoiceDetail || loadingInvoice) && (
+            {/* Modale dettaglio singola fattura (vista file / batch) */}
+            {!invoiceMode && (invoiceDetail || loadingInvoice) && (
                 <div
                     className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-900/45 p-4"
                     onClick={() => !loadingInvoice && setInvoiceDetail(null)}

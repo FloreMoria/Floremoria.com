@@ -6,6 +6,7 @@
 import * as fs from 'fs';
 import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
+import { parseFatturaPaDetail } from '@/lib/financial/parseFatturaPaXml';
 
 export type InvoiceUploadChannel = 'SDI_XML' | 'SDI_XLSX';
 
@@ -57,6 +58,25 @@ export type UploadInvoiceDetailExtended = UploadInvoiceDetail & {
     uploadId: string | null;
     archiveFileName: string | null;
     isReverseCharge: boolean;
+    fatturaPaDetail?: import('@/lib/financial/parseFatturaPaXml').FatturaPaDetail | null;
+    sdiIdentificativo?: string | null;
+    sdiDataRicezione?: string | null;
+};
+
+export type PassiveSdiInvoiceRow = {
+    id: string;
+    fileName: string;
+    documentDate: string;
+    vendorName: string;
+    vendorVat: string | null;
+    invoiceNumber: string | null;
+    netCents: number;
+    vatCents: number;
+    vatRate: number | null;
+    totalCents: number;
+    reconciled: boolean;
+    invoiceRole: string;
+    searchHaystack: string;
 };
 
 const HISTORY_KEY = 'finance.invoice.uploads';
@@ -104,6 +124,71 @@ export async function listInvoiceUploads(
         const byDoc = dateB.localeCompare(dateA);
         if (byDoc !== 0) return byDoc;
         return b.uploadedAt.localeCompare(a.uploadedAt);
+    });
+}
+
+/** Elenco flat fatture passive SDI (XML) per tabella dashboard. */
+export async function listPassiveSdiInvoices(limit = 2000): Promise<PassiveSdiInvoiceRow[]> {
+    const rows = await prisma.manualFinanceExpense.findMany({
+        where: {
+            docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
+            OR: [
+                { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XML' } },
+                { metadataJson: { path: ['source'], equals: 'SDI_XML' } },
+                { notes: { contains: 'SDI_XML', mode: 'insensitive' } },
+                {
+                    AND: [
+                        { fileName: { endsWith: '.xml', mode: 'insensitive' } },
+                        { metadataJson: { path: ['invoiceRole'], equals: 'PASSIVE' } },
+                    ],
+                },
+            ],
+        },
+        orderBy: { expenseDate: 'desc' },
+        take: limit,
+    });
+
+    return rows.map((r) => {
+        const meta = (r.metadataJson || {}) as Record<string, unknown>;
+        const invoiceNumber =
+            typeof meta.invoiceNumber === 'string'
+                ? meta.invoiceNumber
+                : typeof meta.documentNumber === 'string'
+                  ? meta.documentNumber
+                  : null;
+        const vendorVat = typeof meta.vendorVat === 'string' ? meta.vendorVat : null;
+        const fileName =
+            (typeof meta.archiveFileName === 'string' ? meta.archiveFileName : null) ||
+            r.fileName ||
+            '—';
+        const documentDate = r.expenseDate.toISOString().slice(0, 10);
+        const searchHaystack = [
+            fileName,
+            r.vendorName,
+            invoiceNumber,
+            vendorVat,
+            documentDate,
+            formatItDateForSearch(documentDate),
+            r.description,
+        ]
+            .filter(Boolean)
+            .join(' ');
+
+        return {
+            id: r.id,
+            fileName,
+            documentDate,
+            vendorName: r.vendorName,
+            vendorVat,
+            invoiceNumber,
+            netCents: r.netCents,
+            vatCents: r.vatCents,
+            vatRate: typeof r.vatRate === 'number' ? r.vatRate : null,
+            totalCents: r.totalCents,
+            reconciled: Boolean(r.reconciled),
+            invoiceRole: String(meta.invoiceRole || meta.source || 'PASSIVE'),
+            searchHaystack,
+        };
     });
 }
 
@@ -318,6 +403,21 @@ export async function getInvoiceExpenseDetail(
     const lineDescriptions = Array.isArray(meta.lineDescriptions)
         ? meta.lineDescriptions.filter((x): x is string => typeof x === 'string')
         : [];
+
+    let fatturaPaDetail = null;
+    try {
+        if (row.blobUrl?.startsWith('http')) {
+            const res = await fetch(row.blobUrl);
+            if (res.ok) {
+                fatturaPaDetail = parseFatturaPaDetail(await res.text());
+            }
+        } else if (row.storageKind === 'local' && row.blobPath && fs.existsSync(row.blobPath)) {
+            fatturaPaDetail = parseFatturaPaDetail(fs.readFileSync(row.blobPath, 'utf-8'));
+        }
+    } catch (err) {
+        console.warn('[uploads] parseFatturaPaDetail', err);
+    }
+
     return {
         ...base,
         description: row.description,
@@ -333,6 +433,11 @@ export async function getInvoiceExpenseDetail(
         archiveFileName:
             typeof meta.archiveFileName === 'string' ? meta.archiveFileName : row.fileName,
         isReverseCharge: Boolean(meta.isReverseCharge),
+        fatturaPaDetail,
+        sdiIdentificativo:
+            typeof meta.sdiIdentificativo === 'string' ? meta.sdiIdentificativo : null,
+        sdiDataRicezione:
+            typeof meta.sdiDataRicezione === 'string' ? meta.sdiDataRicezione : null,
     };
 }
 

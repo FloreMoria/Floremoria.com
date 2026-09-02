@@ -40,9 +40,46 @@ async function handleSync(request: Request) {
     if (!access.ok) return access.response;
 
     try {
+        const url = new URL(request.url);
+        let bodyOpts: Record<string, unknown> = {};
+        if (request.method === 'POST') {
+            try {
+                const json = await request.clone().json();
+                if (json && typeof json === 'object') bodyOpts = json as Record<string, unknown>;
+            } catch {
+                /* no body */
+            }
+        }
+
+        const forceFromMonthStart =
+            url.searchParams.get('forceFromMonthStart') === '1' ||
+            bodyOpts.forceFromMonthStart === true;
+        const forceResyncFrom =
+            url.searchParams.get('forceResyncFrom') ||
+            (typeof bodyOpts.forceResyncFrom === 'string' ? bodyOpts.forceResyncFrom : null);
+
+        const now = new Date();
+        const syncOptions: {
+            timestampFrom?: Date;
+            lookbackDays?: number;
+        } = {};
+        if (forceFromMonthStart) {
+            syncOptions.timestampFrom = new Date(
+                Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+            );
+        } else if (forceResyncFrom) {
+            const parsed = new Date(forceResyncFrom);
+            if (!Number.isNaN(parsed.getTime())) {
+                syncOptions.timestampFrom = parsed;
+            }
+        }
+        if (typeof bodyOpts.lookbackDays === 'number' && bodyOpts.lookbackDays > 0) {
+            syncOptions.lookbackDays = bodyOpts.lookbackDays;
+        }
+
         const client = getFinancialYoudoxClient();
-        console.info('[youdox-sync] Avvio sync passivo dashboard');
-        const receivedInvoices = await client.fetchPassiveInvoicesForSync();
+        console.info('[youdox-sync] Avvio sync passivo dashboard', syncOptions);
+        const receivedInvoices = await client.fetchPassiveInvoicesForSync(syncOptions);
         console.info('[youdox-sync] Fatture passive da elaborare', {
             count: receivedInvoices.length,
             latest: receivedInvoices.slice(0, 5).map((i) => ({
@@ -129,7 +166,7 @@ async function handleSync(request: Request) {
         // Re-parsing imponibili a zero su XML già archiviati (fix parser retroattivo).
         let reparsed = { scanned: 0, updated: 0, errors: [] as string[] };
         try {
-            reparsed = await reparseZeroNetSdiInvoices({ limit: 300 });
+            reparsed = await reparseZeroNetSdiInvoices({ limit: 5000, allZeroOrNull: true });
         } catch (reparseErr) {
             console.warn('[youdox/sync] Re-parse imponibili fallito (non bloccante):', reparseErr);
         }

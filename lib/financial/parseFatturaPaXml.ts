@@ -100,6 +100,13 @@ function extractAllXmlTags(xml: string, tagName: string): string[] {
     return out;
 }
 
+/** Unisce i body FatturaPA (multi-corpo) per estrazione coerente di importi e righe. */
+function flattenFatturaXmlScope(xml: string): string {
+    const bodies = extractAllXmlTags(xml, 'FatturaElettronicaBody');
+    if (bodies.length > 0) return bodies.join('\n');
+    return xml;
+}
+
 function decodeXmlEntities(s: string): string {
     return s
         .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -186,13 +193,18 @@ export type FatturaPaAmountBreakdown = {
  */
 export function extractFatturaPaAmounts(xmlRaw: string): FatturaPaAmountBreakdown {
     const xml = xmlRaw.replace(/^\uFEFF/, '');
+    const xmlScope = flattenFatturaXmlScope(xml);
 
     const datiBeni =
+        extractXmlTag(xmlScope, 'DatiBeniServizi') ||
+        extractXmlTag(xmlScope, 'DatiBeniServiziDTE') ||
         extractXmlTag(xml, 'DatiBeniServizi') ||
-        extractXmlTag(xml, 'DatiBeniServiziDTE') ||
         '';
 
-    const datiDoc = extractXmlTag(xml, 'DatiGeneraliDocumento') || '';
+    const datiDoc =
+        extractXmlTag(xmlScope, 'DatiGeneraliDocumento') ||
+        extractXmlTag(xml, 'DatiGeneraliDocumento') ||
+        '';
     const totaleDoc = parseItalianOrIsoAmount(
         textOf(extractXmlTag(datiDoc, 'ImportoTotaleDocumento')) ||
             textOf(extractXmlTag(xml, 'ImportoTotaleDocumento'))
@@ -669,5 +681,218 @@ export async function parseInvoiceUpload(
         invoices: [],
         skipped: [{ fileName, reason: 'Formato non supportato (usa ZIP/XML/CSV)' }],
         warnings: [],
+    };
+}
+
+export type FatturaPaPartyAddress = {
+    indirizzo: string | null;
+    cap: string | null;
+    comune: string | null;
+    provincia: string | null;
+    nazione: string | null;
+};
+
+export type FatturaPaParty = {
+    denominazione: string | null;
+    nome: string | null;
+    cognome: string | null;
+    partitaIva: string | null;
+    codiceFiscale: string | null;
+    regimeFiscale: string | null;
+    sede: FatturaPaPartyAddress;
+};
+
+export type FatturaPaPaymentDetail = {
+    modalita: string | null;
+    modalitaLabel: string | null;
+    dataScadenza: string | null;
+    importo: number | null;
+    iban: string | null;
+    istituto: string | null;
+    beneficiario: string | null;
+};
+
+export type FatturaPaLineItem = {
+    numeroLinea: string | null;
+    descrizione: string;
+    quantita: number | null;
+    prezzoUnitario: number | null;
+    prezzoTotale: number | null;
+    aliquotaIva: number | null;
+    natura: string | null;
+};
+
+export type FatturaPaVatSummary = {
+    aliquota: number | null;
+    imponibile: number;
+    imposta: number;
+    natura: string | null;
+    esigibilita: string | null;
+};
+
+export type FatturaPaDetail = {
+    generali: {
+        tipoDocumento: string | null;
+        numero: string | null;
+        data: string | null;
+        divisa: string | null;
+        importoTotale: number | null;
+        causale: string | null;
+    };
+    cedente: FatturaPaParty;
+    cessionario: FatturaPaParty;
+    pagamenti: FatturaPaPaymentDetail[];
+    righe: FatturaPaLineItem[];
+    riepilogoIva: FatturaPaVatSummary[];
+    importi: FatturaPaAmountBreakdown;
+};
+
+const PAYMENT_MODE_LABELS: Record<string, string> = {
+    MP01: 'Contanti',
+    MP02: 'Assegno',
+    MP03: 'Assegno circolare',
+    MP04: 'Contanti presso Tesoreria',
+    MP05: 'Bonifico',
+    MP06: 'Vaglia cambiario',
+    MP07: 'Bollettino bancario',
+    MP08: 'Carta di pagamento',
+    MP09: 'RID',
+    MP10: 'RID utenze',
+    MP11: 'RID veloce',
+    MP12: 'RIBA',
+    MP13: 'MAV',
+    MP14: 'Quietanza erario',
+    MP15: 'Giroconto contabile',
+    MP16: 'Domiciliazione bancaria',
+    MP17: 'Domiciliazione postale',
+    MP18: 'Bollettino c/c postale',
+    MP19: 'SEPA Direct Debit',
+    MP20: 'SEPA Direct Debit CORE',
+    MP21: 'SEPA Direct Debit B2B',
+    MP22: 'Trattenuta su somme riscosse',
+    MP23: 'PagoPA',
+};
+
+function parsePartyBlock(block: string): FatturaPaParty {
+    const idFiscale = extractXmlTag(block, 'IdFiscaleIVA') || extractXmlTag(block, 'IdFiscale') || '';
+    const idCodice = textOf(extractXmlTag(idFiscale || block, 'IdCodice'));
+    const idPaese = textOf(extractXmlTag(idFiscale || block, 'IdPaese')) || 'IT';
+    const sedeBlock = extractXmlTag(block, 'Sede') || extractXmlTag(block, 'StabileOrganizzazione') || '';
+    return {
+        denominazione: textOf(extractXmlTag(block, 'Denominazione')) || null,
+        nome: textOf(extractXmlTag(block, 'Nome')) || null,
+        cognome: textOf(extractXmlTag(block, 'Cognome')) || null,
+        partitaIva: idCodice ? `${idPaese}${idCodice}` : null,
+        codiceFiscale: textOf(extractXmlTag(block, 'CodiceFiscale')) || null,
+        regimeFiscale: textOf(extractXmlTag(block, 'RegimeFiscale')) || null,
+        sede: {
+            indirizzo: textOf(extractXmlTag(sedeBlock, 'Indirizzo')) || null,
+            cap: textOf(extractXmlTag(sedeBlock, 'CAP')) || null,
+            comune: textOf(extractXmlTag(sedeBlock, 'Comune')) || null,
+            provincia: textOf(extractXmlTag(sedeBlock, 'Provincia')) || null,
+            nazione: textOf(extractXmlTag(sedeBlock, 'Nazione')) || null,
+        },
+    };
+}
+
+/**
+ * Parsing analitico completo FatturaPA per drawer dettaglio SDI.
+ */
+export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
+    const xml = xmlRaw.replace(/^\uFEFF/, '');
+    const xmlScope = flattenFatturaXmlScope(xml);
+
+    const cedente =
+        extractXmlTag(xmlScope, 'CedentePrestatore') ||
+        extractXmlTag(xml, 'CedentePrestatore') ||
+        '';
+    const cessionario =
+        extractXmlTag(xmlScope, 'CessionarioCommittente') ||
+        extractXmlTag(xml, 'CessionarioCommittente') ||
+        '';
+
+    const datiDoc =
+        extractXmlTag(xmlScope, 'DatiGeneraliDocumento') ||
+        extractXmlTag(xml, 'DatiGeneraliDocumento') ||
+        '';
+    const causali = extractAllXmlTags(datiDoc || xmlScope, 'Causale').map(textOf).filter(Boolean);
+
+    const importi = extractFatturaPaAmounts(xml);
+
+    const righe: FatturaPaLineItem[] = [];
+    for (const block of extractAllXmlTags(xmlScope, 'DettaglioLinee').concat(
+        extractAllXmlTags(xml, 'DettaglioLinee')
+    )) {
+        const desc = textOf(extractXmlTag(block, 'Descrizione'));
+        if (!desc) continue;
+        righe.push({
+            numeroLinea: textOf(extractXmlTag(block, 'NumeroLinea')) || null,
+            descrizione: desc,
+            quantita: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Quantita'))),
+            prezzoUnitario: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'PrezzoUnitario'))),
+            prezzoTotale: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'PrezzoTotale'))),
+            aliquotaIva: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))),
+            natura: textOf(extractXmlTag(block, 'Natura')) || null,
+        });
+    }
+
+    const riepilogoIva: FatturaPaVatSummary[] = [];
+    for (const block of extractAllXmlTags(xmlScope, 'DatiRiepilogo').concat(
+        extractAllXmlTags(xml, 'DatiRiepilogo')
+    )) {
+        riepilogoIva.push({
+            aliquota:
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))) ||
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Aliquota'))),
+            imponibile:
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'ImponibileImporto'))) ||
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Imponibile'))) ||
+                0,
+            imposta:
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Imposta'))) ||
+                parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'ImpostaIVA'))) ||
+                0,
+            natura: textOf(extractXmlTag(block, 'Natura')) || null,
+            esigibilita: textOf(extractXmlTag(block, 'EsigibilitaIVA')) || null,
+        });
+    }
+
+    const pagamenti: FatturaPaPaymentDetail[] = [];
+    for (const pagBlock of extractAllXmlTags(xmlScope, 'DatiPagamento').concat(
+        extractAllXmlTags(xml, 'DatiPagamento')
+    )) {
+        for (const detBlock of extractAllXmlTags(pagBlock, 'DettaglioPagamento')) {
+            const modalita = textOf(extractXmlTag(detBlock, 'ModalitaPagamento')) || null;
+            pagamenti.push({
+                modalita,
+                modalitaLabel: modalita ? PAYMENT_MODE_LABELS[modalita] || modalita : null,
+                dataScadenza:
+                    normalizeDate(textOf(extractXmlTag(detBlock, 'DataScadenzaPagamento'))) ||
+                    normalizeDate(textOf(extractXmlTag(detBlock, 'DataRiferimentoTerminiPagamento'))),
+                importo: parseItalianOrIsoAmount(textOf(extractXmlTag(detBlock, 'ImportoPagamento'))),
+                iban: textOf(extractXmlTag(detBlock, 'IBAN')) || null,
+                istituto: textOf(extractXmlTag(detBlock, 'IstitutoFinanziario')) || null,
+                beneficiario: textOf(extractXmlTag(detBlock, 'Beneficiario')) || null,
+            });
+        }
+    }
+
+    return {
+        generali: {
+            tipoDocumento: textOf(extractXmlTag(datiDoc, 'TipoDocumento')) || null,
+            numero: textOf(extractXmlTag(datiDoc, 'Numero')) || null,
+            data: normalizeDate(textOf(extractXmlTag(datiDoc, 'Data'))),
+            divisa: textOf(extractXmlTag(datiDoc, 'Divisa')) || null,
+            importoTotale:
+                importi.totalEuros ??
+                parseItalianOrIsoAmount(textOf(extractXmlTag(datiDoc, 'ImportoTotaleDocumento'))),
+            causale: causali.join(' — ') || null,
+        },
+        cedente: parsePartyBlock(cedente),
+        cessionario: parsePartyBlock(cessionario),
+        pagamenti,
+        righe,
+        riepilogoIva,
+        importi,
     };
 }

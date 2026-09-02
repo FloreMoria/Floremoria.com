@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileArchive, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import UploadedInvoicesFileList, {
-    type UploadedFileRow,
+    type PassiveInvoiceTableRow,
 } from '@/components/dashboard/UploadedInvoicesFileList';
 import { FINANCE_PASSIVO_CARD_CLASS } from '@/components/dashboard/finance/financePassivoUi';
 import { YOUDOX_ER05_USER_MESSAGE } from '@/lib/youdox/auth';
@@ -38,33 +38,36 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<IngestSummary | null>(null);
-    const [uploads, setUploads] = useState<UploadedFileRow[]>([]);
+    const [invoices, setInvoices] = useState<PassiveInvoiceTableRow[]>([]);
     const [dupWarn, setDupWarn] = useState<string | null>(null);
 
-    const loadUploads = useCallback(async () => {
+    const loadInvoices = useCallback(async () => {
         try {
-            const res = await fetch('/api/dashboard/finance/invoices/uploads?channel=SDI_XML');
+            const res = await fetch(
+                '/api/dashboard/finance/invoices/uploads?channel=SDI_XML&view=invoices'
+            );
             const parsed = await readJsonResponse<{
                 ok?: boolean;
-                uploads?: UploadedFileRow[];
+                invoices?: PassiveInvoiceTableRow[];
             }>(res);
-            if (parsed.ok) setUploads(parsed.data?.uploads || []);
+            if (parsed.ok) setInvoices(parsed.data?.invoices || []);
         } catch {
             /* silent */
         }
     }, []);
 
     useEffect(() => {
-        void loadUploads();
-    }, [loadUploads]);
+        void loadInvoices();
+    }, [loadInvoices]);
 
-    const handleSyncYoudox = async () => {
+    const handleSyncYoudox = async (forceFromMonthStart = false) => {
         setSyncing(true);
         setError(null);
         setMessage(null);
         setSummary(null);
         try {
-            const res = await fetch('/api/v1/finance/youdox/sync', { method: 'POST' });
+            const qs = forceFromMonthStart ? '?forceFromMonthStart=1' : '';
+            const res = await fetch(`/api/v1/finance/youdox/sync${qs}`, { method: 'POST' });
             const data = await res.json();
             if (!res.ok || !data.ok) {
                 const msg =
@@ -78,7 +81,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     ? data.message
                     : `Sincronizzazione YouDOX completata! Polled: ${data.polled || 0}, Importate: ${data.imported || 0}, Aggiornate: ${data.updated || 0}.`
             );
-            await loadUploads();
+            await loadInvoices();
             onImported?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore durante la sincronizzazione YouDOX');
@@ -151,11 +154,11 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     ? notes.join(' | ')
                     : 'Nessun file importato (tutti annullati o già presenti).'
             );
-            await loadUploads();
+            await loadInvoices();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
-            await loadUploads();
+            await loadInvoices();
         } finally {
             setUploading(false);
             if (inputRef.current) inputRef.current.value = '';
@@ -181,10 +184,11 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     </div>
                 </div>
 
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
                 <button
                     type="button"
                     disabled={uploading || syncing}
-                    onClick={handleSyncYoudox}
+                    onClick={() => void handleSyncYoudox(false)}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50 transition-colors shrink-0 shadow-sm"
                 >
                     {syncing ? (
@@ -194,6 +198,16 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     )}
                     {syncing ? 'Sincronizzazione…' : 'Sincronizza YouDOX SDI'}
                 </button>
+                <button
+                    type="button"
+                    disabled={uploading || syncing}
+                    onClick={() => void handleSyncYoudox(true)}
+                    title="Riscarica fatture ricevute dall'inizio del mese corrente"
+                    className="inline-flex items-center gap-1 px-2.5 py-2 border border-emerald-200 text-emerald-800 rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-50 shrink-0 hover:bg-emerald-50"
+                >
+                    Mese corrente
+                </button>
+                </div>
             </div>
 
             <div
@@ -251,12 +265,12 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
 
             <div className="flex flex-col flex-1 min-h-0 gap-1.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
-                    File caricati ({uploads.length})
+                    Fatture passive ({invoices.length})
                 </p>
                 <UploadedInvoicesFileList
-                    uploads={uploads}
+                    invoices={invoices}
                     fillHeight
-                    onChanged={() => void loadUploads()}
+                    onChanged={() => void loadInvoices()}
                 />
             </div>
 

@@ -10,6 +10,10 @@ export type SyncReceivedWindowOptions = {
     lookbackDays?: number;
     onlyUnread?: boolean;
     now?: Date;
+    /** Override limite inferiore (risincronizzazione forzata). */
+    timestampFrom?: string | Date;
+    /** Override limite superiore (default: fine giornata UTC odierna). */
+    timestampTo?: string | Date;
 };
 
 function addDays(date: Date, days: number): Date {
@@ -58,6 +62,15 @@ async function fetchReceivedChunk(
     });
 
     const batch = await soapListReceivedByFilter(config, token, requestFilter);
+    const hasMore = batch.length >= PAGE_SIZE_HINT;
+
+    console.log('[youdox-sync-debug]', {
+        from: requestFilter.TimestampFrom,
+        to: requestFilter.TimestampTo,
+        countReceived: batch.length,
+        hasMore,
+        depth,
+    });
 
     console.info('[youdox-sync] fetchReceivedChunk result', {
         depth,
@@ -71,12 +84,13 @@ async function fetchReceivedChunk(
         })),
     });
 
-    if (batch.length < PAGE_SIZE_HINT || depth >= 8) {
+    const spanMs = to.getTime() - from.getTime();
+    if (spanMs <= 24 * 60 * 60 * 1000 || depth >= 8) {
         return batch;
     }
 
-    const spanMs = to.getTime() - from.getTime();
-    if (spanMs <= 24 * 60 * 60 * 1000) {
+    // Subdivide se pieno (≥50) o se vuoto: l'API può troncare/omettere su finestre larghe.
+    if (batch.length < PAGE_SIZE_HINT && batch.length > 0) {
         return batch;
     }
 
@@ -114,11 +128,17 @@ export async function fetchAllReceivedInvoicesForSync(
     options: SyncReceivedWindowOptions = {}
 ): Promise<YoudoxInvoice[]> {
     const now = options.now ?? new Date();
-    const endOfToday = new Date(now);
-    endOfToday.setUTCHours(23, 59, 59, 999);
+    const endOfToday = options.timestampTo
+        ? new Date(options.timestampTo)
+        : new Date(now);
+    if (!options.timestampTo) {
+        endOfToday.setUTCHours(23, 59, 59, 999);
+    }
 
     const lookbackDays = options.lookbackDays ?? DEFAULT_LOOKBACK_DAYS;
-    const timestampFrom = addDays(now, -lookbackDays);
+    const timestampFrom = options.timestampFrom
+        ? new Date(options.timestampFrom)
+        : addDays(now, -lookbackDays);
     const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
     const dataFatturaFrom = addDays(now, -Math.max(lookbackDays, 365 * 2));
     const dataFatturaTo = endOfToday.toISOString();
@@ -131,6 +151,15 @@ export async function fetchAllReceivedInvoicesForSync(
         OnlyUnread: options.onlyUnread ?? false,
         ShowAlsoDeleted: false,
     };
+
+    console.log('[youdox-sync-debug]', {
+        from: baseFilter.TimestampFrom,
+        to: baseFilter.TimestampTo,
+        countReceived: null,
+        hasMore: null,
+        phase: 'sync-window-start',
+        nowIso: now.toISOString(),
+    });
 
     console.info('[youdox-sync] Sync window', {
         timestampFrom: baseFilter.TimestampFrom?.slice(0, 19),
@@ -158,6 +187,13 @@ export async function fetchAllReceivedInvoicesForSync(
         });
 
         mergeInvoices(byKey, batch);
+        console.log('[youdox-sync-debug]', {
+            from: cursor.toISOString(),
+            to: effectiveEnd.toISOString(),
+            countReceived: batch.length,
+            hasMore: batch.length >= PAGE_SIZE_HINT,
+            phase: 'outer-chunk',
+        });
         cursor = new Date(effectiveEnd.getTime() + 1);
     }
 

@@ -1,5 +1,5 @@
 /**
- * Re-parsing imponibili da XML archiviati quando netCents risulta 0 (bug parser legacy).
+ * Re-parsing imponibili da XML archiviati quando netCents risulta 0 o null (bug parser legacy).
  */
 import * as fs from 'fs';
 import prisma from '@/lib/prisma';
@@ -33,6 +33,10 @@ async function loadXmlBuffer(row: {
 
 export async function reparseZeroNetSdiInvoices(input?: {
     limit?: number;
+    /** Include netCents null oltre a zero. */
+    allZeroOrNull?: boolean;
+    /** Data minima documento (YYYY-MM-DD). */
+    sinceDate?: string;
 }): Promise<ReparseZeroNetResult> {
     const result: ReparseZeroNetResult = {
         scanned: 0,
@@ -41,10 +45,20 @@ export async function reparseZeroNetSdiInvoices(input?: {
         errors: [],
     };
 
+    const netFilter = input?.allZeroOrNull
+        ? { netCents: { lte: 0 } }
+        : { netCents: 0 };
+
+    const since =
+        input?.sinceDate && /^\d{4}-\d{2}-\d{2}$/.test(input.sinceDate)
+            ? new Date(`${input.sinceDate}T00:00:00.000Z`)
+            : null;
+
     const rows = await prisma.manualFinanceExpense.findMany({
         where: {
             docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
-            netCents: 0,
+            ...netFilter,
+            ...(since ? { expenseDate: { gte: since } } : {}),
             AND: [
                 {
                     OR: [
@@ -57,7 +71,7 @@ export async function reparseZeroNetSdiInvoices(input?: {
             ],
         },
         orderBy: { expenseDate: 'desc' },
-        take: input?.limit ?? 200,
+        take: input?.limit ?? 500,
         select: {
             id: true,
             fileName: true,
@@ -112,9 +126,7 @@ export async function reparseZeroNetSdiInvoices(input?: {
                 },
             });
 
-            upsertAccountingEntries([
-                toLedgerEntry(updated.id, parsed, 'SDI_XML'),
-            ]);
+            upsertAccountingEntries([toLedgerEntry(updated.id, parsed, 'SDI_XML')]);
 
             result.updated += 1;
             console.info('[youdox][reparse] Imponibile aggiornato', {

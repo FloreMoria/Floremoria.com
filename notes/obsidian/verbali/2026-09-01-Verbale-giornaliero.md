@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 1 Settembre 2026"
 sync_source: docs/verbali/01-09-2026.md
-synced_at: 2026-09-01T22:05:44.776Z
+synced_at: 2026-09-02T03:04:03.688Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/01-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -30,14 +30,8 @@ synced_at: 2026-09-01T22:05:44.776Z
 - `47e6edbf` fix(youdox): debug sync API fatture agosto, ordinamento per data e fix parsing imponibile XML _(FloreMoria)_
 - `b8d72fd7` fix(youdox): estensione finestra temporale sync fatture e fix parser imponibile XML FatturaPA _(FloreMoria)_
 - `14a58774` fix(notifications): conferma utente con delay 1 min (singoli e ricorrenti) e vincolo B2B su mail provider _(FloreMoria)_
-- [2026-09-01 18:30] fix(youdox): sync finestra estesa + chunk paginazione + parser imponibile FatturaPA e reparse XML a zero
-- [2026-09-01 19:12] fix(youdox): debug sync API agosto, ordinamento data desc, parser imponibile FatturaPA e reparse automatico.
 
 ## Sezione 4 — Logistica
 
 - `265d3274` fix(reconciliation): filtro mirato movimenti bancari gateway, chiusura payout Stripe e fix parser T-code PayPal _(FloreMoria)_
 - `35187ed8` feat(whatsapp): ingestione e abbinamento automatico foto di consegna inviate dai fioristi via chat _(FloreMoria)_
-- [2026-09-01 18:08] fix: conferma utente post-pagamento +60s (WA/email), skip email B2B su ordini B2C, log strutturati dispatcher notifiche
-- [2026-09-01 18:15] fix(partner-app): audit fotocamera, fallback galleria/GPS e magic link resiliente per fioristi — interfaccia mini-app 2 passaggi con opzioni Scatta Foto (capture=environment) e Dalla Galleria separate, compressione automatica client JPEG ≤1600px, geolocalizzazione non bloccante con fallback coordinate cimitero, gestione tollerante TTL 7 giorni e feedback finale chiaro; tsc+build OK.
-- [2026-09-01 18:21] feat: ack immediato WhatsApp fiorista su foto consegna + allineamento ingest delivery automation
-- [2026-09-01 18:58] fix: quadratura gateway — filtro Fineco STRIPE/PAYPAL, match payout banca, T-code PayPal, chiusura residuo Stripe.

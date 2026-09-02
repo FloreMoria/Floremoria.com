@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { getDailyImageSet } from '@/utils/dailyImageSet';
 import { buildProductAlt } from '@/utils/altText';
 import Link from 'next/link';
+import { ShoppingBag } from 'lucide-react';
 import {
     FLOREM_PRE_DELIVERY_PHOTO_PRODUCT_ID,
     mergePreDeliveryPhotoIntoCart,
@@ -376,8 +377,11 @@ export default function ProductClientView({ product, relatedProducts, initialCom
         availableAddons.length === 3 &&
         Boolean(addonMessaggio && addonFotoPrima && addonLuminoFt);
 
+    /** Altezza MobileBottomNav (3.25rem) — CTA sticky si ancora sopra la tab bar PWA. */
+    const mobileNavClearance = 'calc(3.25rem + env(safe-area-inset-bottom, 0px))';
+
     return (
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-9 space-y-5 lg:space-y-9">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-9 space-y-5 lg:space-y-9 pb-[calc(3.25rem+5rem+env(safe-area-inset-bottom,12px))] md:pb-9">
 
 
             {/* HERO PRODOTTO - 2 COLONNE */}
@@ -821,19 +825,25 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                 <CoreValues className="py-0" />
             </div>
 
-            {/* MOBILE STICKY BOTTOM CTA */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-8px_16px_rgba(0,0,0,0.08)] z-[100] pb-safe">
+            {/* MOBILE STICKY CTA — sopra MobileBottomNav, sempre visibile al primo impatto */}
+            <div
+                className="md:hidden fixed left-0 right-0 z-[998] border-t border-slate-100 bg-white/95 backdrop-blur-md p-3 shadow-lg"
+                style={{ bottom: mobileNavClearance }}
+            >
                 <button
+                    type="button"
                     onClick={handleAddToCart}
-                    className="w-full bg-fm-gold hover:brightness-110 text-white font-semibold font-body py-4 rounded-xl transition-all shadow-md active:scale-[0.98] h-[56px] text-lg flex justify-center items-center gap-3"
+                    aria-label={`Ordina ${product.name} per €${totalPrice.toFixed(2)}`}
+                    className="w-full h-12 rounded-xl bg-fm-gold hover:brightness-110 text-white font-semibold font-body transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2.5 text-base"
                 >
+                    <ShoppingBag size={18} strokeWidth={2.25} aria-hidden />
                     <span>Ordina</span>
-                    <span className="opacity-80 translate-y-[-1px]">|</span>
-                    <span className="font-bold">€{totalPrice.toFixed(2)}</span>
+                    <span className="opacity-75 font-normal" aria-hidden>
+                        |
+                    </span>
+                    <span className="font-bold tabular-nums">€{totalPrice.toFixed(2)}</span>
                 </button>
             </div>
-            {/* Safe area padding for mobile spacing */}
-            <div className="h-[10px] md:hidden"></div>
 
             <FloremCartCategoryModal
                 open={cartCategoryModalOpen}

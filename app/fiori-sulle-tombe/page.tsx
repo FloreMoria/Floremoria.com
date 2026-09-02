@@ -19,7 +19,7 @@ export default function CatalogPage() {
                     Fiori sulle tombe
                 </h1>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
-                    Scegli tra le nostre composizioni floreali e i nostri servizi per onorare la memoria dei tuoi cari con eleganza e rispetto. La consegna è effettuata direttamente presso le strutture cimiteriali.
+                    Scegli tra le nostre composizioni floreali per onorare la memoria dei tuoi cari. La consegna è eseguita a mano da fioristi partner nelle immediate vicinanze del cimitero — non tramite pacco postale. Se non conosci il loculo, la ricerca sui registri cimiteriali comunali è inclusa nel servizio.
                 </p>
             </section>
 
@@ -30,7 +30,7 @@ export default function CatalogPage() {
                     Servizio di consegna su tutti i Comuni italiani
                 </h2>
                 <p className="text-fm-muted font-body leading-relaxed max-w-2xl mx-auto text-[14px] sm:text-base">
-                    Offriamo un servizio dedicato e locale per la consegna dei vostri omaggi floreali in tutti i cimiteri, camere mortuarie e chiese d&apos;Italia per garantirti un supporto presente sul territorio.
+                    Rete nazionale di fioristi locali: ogni ordine è preparato in zona e consegnato a piedi in cimitero su tutto il territorio italiano. Ricevi la foto di conferma ad alta risoluzione su WhatsApp dopo la posa.
                 </p>
                 <div className="max-w-xl mx-auto relative z-10 pt-1 sm:pt-2">
                     <MunicipalitySearch

@@ -20,7 +20,7 @@ export default function FuneralCatalogPage() {
                     Fiori per il funerale
                 </h1>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
-                    Scegli tra le nostre composizioni floreali e i nostri servizi per onorare la memoria dei tuoi cari con eleganza e rispetto. La consegna è effettuata direttamente presso chiese, camere mortuarie e cimiteri per garantirti il massimo supporto.
+                    Composizioni per funerali, camere ardenti e cerimonie. La consegna è fisica e a mano da fioristi partner locali in chiesa, crematorio o cimitero — mai tramite corriere. Su richiesta, foto prima e dopo la posa via WhatsApp o email.
                 </p>
             </section>
 
@@ -31,7 +31,7 @@ export default function FuneralCatalogPage() {
                     Servizio di consegna su tutti i Comuni italiani
                 </h2>
                 <p className="text-fm-muted font-body leading-relaxed max-w-2xl mx-auto text-[14px] sm:text-base">
-                    Offriamo un servizio dedicato e locale per la consegna dei vostri omaggi floreali in tutti i cimiteri, camere mortuarie e chiese d&apos;Italia per garantirti un supporto presente sul territorio.
+                    Coordinamento con orari di cerimonia e consegna a mano in tutta Italia tramite fioristi nelle vicinanze del luogo indicato. Verifica loculo e ricerca sepoltura disponibili anche per ordini successivi al funerale.
                 </p>
                 <div className="max-w-xl mx-auto relative z-10 pt-1 sm:pt-2">
                     <MunicipalitySearch

@@ -125,7 +125,7 @@ export default async function Home() {
                   <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Tu ordini</h3>
                 </div>
                 <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
-                  Scegli la composizione e inserisci i dati.
+                  Scegli la composizione, indica cimitero e defunto. Se non conosci il loculo, avviamo la verifica sui registri cimiteriali comunali — inclusa nel servizio.
                 </p>
               </div>
 
@@ -137,7 +137,7 @@ export default async function Home() {
                   <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Noi consegniamo</h3>
                 </div>
                 <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
-                  Il fiorista partner locale prepara e posa i fiori con cura.
+                  Un fiorista partner nelle immediate vicinanze del cimitero prepara e consegna a mano sul loculo — nessuna spedizione postale né corriere.
                 </p>
               </div>
 
@@ -149,7 +149,7 @@ export default async function Home() {
                   <h3 className="text-[17px] sm:text-lg font-display font-bold text-fm-text">Ricevi conferma</h3>
                 </div>
                 <p className="mt-2.5 pl-[52px] text-fm-muted font-body text-[14px] sm:text-[15px] leading-relaxed">
-                  Ricevi su WhatsApp le foto della consegna effettuata.
+                  Ricevi fino a 2 foto ad alta risoluzione su WhatsApp o email: opzionalmente prima della posa, sempre dopo — prova tangibile della consegna.
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export default async function Home() {
                     sorprese in fattura.
                   </p>
                   <p className="text-fm-text/80 font-body text-[14px] sm:text-lg leading-relaxed">
-                    Sappiamo quanto conti avere una prova tangibile. Il fiorista documenta il lavoro svolto; ricevi tutto sul tuo WhatsApp, con la stessa cura che mettiamo in ogni dettaglio del servizio.
+                    Sappiamo quanto conti avere una prova tangibile. Il fiorista documenta il lavoro con fotografie ad alta risoluzione; ricevi l&apos;immagine dopo la posa su WhatsApp o email, con la stessa cura che mettiamo in ogni dettaglio del servizio.
                   </p>
                   <FotoPrimaConsegnaOptIn />
                 </div>

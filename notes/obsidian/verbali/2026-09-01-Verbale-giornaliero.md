@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 1 Settembre 2026"
 sync_source: docs/verbali/01-09-2026.md
-synced_at: 2026-09-02T03:04:03.688Z
+synced_at: 2026-09-02T21:57:04.373Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/01-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

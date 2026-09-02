@@ -167,49 +167,44 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
 
     return (
         <div className={FINANCE_PASSIVO_CARD_CLASS}>
-            <div className="flex items-start justify-between gap-3 shrink-0 min-h-[4.5rem]">
-                <div className="flex items-start gap-3">
-                    <div className="mt-0.5 rounded-xl bg-slate-900/5 p-2.5 text-slate-700">
-                        <FileArchive size={20} />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                            Fatture Passive SDI / YouDOX
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1">
-                            Carica uno ZIP di XML FatturaPA, un singolo XML o un CSV esportato da YouDOX/SDI.
-                            Deduplica automatica; correzioni e note di credito (TD04) aggiornano i documenti già presenti
-                            e riconciliano Fineco.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-                <button
-                    type="button"
-                    disabled={uploading || syncing}
-                    onClick={() => void handleSyncYoudox(false)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50 transition-colors shrink-0 shadow-sm"
-                >
-                    {syncing ? (
-                        <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                        <RefreshCw size={14} />
-                    )}
-                    {syncing ? 'Sincronizzazione…' : 'Sincronizza YouDOX SDI'}
-                </button>
-                <button
-                    type="button"
-                    disabled={uploading || syncing}
-                    onClick={() => void handleSyncYoudox(true)}
-                    title="Riscarica fatture ricevute dall'inizio del mese corrente"
-                    className="inline-flex items-center gap-1 px-2.5 py-2 border border-emerald-200 text-emerald-800 rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-50 shrink-0 hover:bg-emerald-50"
-                >
-                    Mese corrente
-                </button>
+            {/* Riga 1: titolo + azioni sync */}
+            <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap shrink-0">
+                    Fatture Passive SDI / YouDOX
+                </h3>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        disabled={uploading || syncing}
+                        onClick={() => void handleSyncYoudox(false)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider disabled:opacity-50 transition-colors shadow-sm"
+                    >
+                        {syncing ? (
+                            <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                            <RefreshCw size={13} />
+                        )}
+                        {syncing ? 'Sync…' : 'Sincronizza YouDOX SDI'}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={uploading || syncing}
+                        onClick={() => void handleSyncYoudox(true)}
+                        title="Riscarica fatture ricevute dall'inizio del mese corrente"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-emerald-200 text-emerald-800 rounded-xl text-[10px] font-bold uppercase tracking-wider disabled:opacity-50 hover:bg-emerald-50"
+                    >
+                        Mese corrente
+                    </button>
                 </div>
             </div>
 
+            {/* Riga 2: descrizione compatta */}
+            <p className="text-xs text-slate-500 leading-snug shrink-0">
+                Importa XML FatturaPA o ZIP da YouDOX/SDI. Deduplica automatica; note di credito (TD04) e
+                sync YouDOX aggiornano i documenti e riconciliano Fineco.
+            </p>
+
+            {/* Riga 3: dropzone orizzontale sottile */}
             <div
                 onDragOver={(e) => {
                     e.preventDefault();
@@ -222,32 +217,31 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
                     const files = e.dataTransfer.files;
                     if (files?.length) void uploadMany(files);
                 }}
-                className={`rounded-2xl border-2 border-dashed px-4 py-4 transition-colors shrink-0 ${
+                className={`rounded-xl border border-dashed px-3 py-2 transition-colors shrink-0 ${
                     dragOver
                         ? 'border-[#c5a880] bg-[#c5a880]/10'
                         : 'border-slate-200 bg-slate-50/80 hover:border-slate-300'
                 }`}
             >
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <UploadCloud className="text-[#c5a880] shrink-0" size={22} />
-                        <span>
-                            Trascina ZIP o più XML FatturaPA (selezione multipla), oppure seleziona i
-                            file
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 text-xs text-slate-600">
+                        <UploadCloud className="text-[#c5a880] shrink-0" size={18} />
+                        <span className="truncate">
+                            Trascina ZIP o XML FatturaPA — oppure seleziona i file
                         </span>
                     </div>
                     <button
                         type="button"
                         disabled={uploading}
                         onClick={() => inputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider disabled:opacity-50 shrink-0"
                     >
                         {uploading ? (
-                            <Loader2 size={14} className="animate-spin" />
+                            <Loader2 size={12} className="animate-spin" />
                         ) : (
-                            <FileArchive size={14} />
+                            <FileArchive size={12} />
                         )}
-                        {uploading ? 'Importazione…' : 'Carica ZIP / XML (multi)'}
+                        {uploading ? 'Importazione…' : 'Carica ZIP / XML'}
                     </button>
                     <input
                         ref={inputRef}

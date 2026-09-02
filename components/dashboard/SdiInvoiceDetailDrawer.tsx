@@ -243,12 +243,12 @@ export default function SdiInvoiceDetailDrawer({
                                 )}
                             </Section>
 
-                            {(detail?.pagamenti.length || 0) > 0 && (
+                            {detail && detail.pagamenti.length > 0 && (
                                 <Section title="Dati di pagamento">
                                     <div className="space-y-3">
-                                        {detail!.pagamenti.map((p, i) => (
+                                        {detail.pagamenti.map((p) => (
                                             <div
-                                                key={i}
+                                                key={`${p.modalita || ''}|${p.importo ?? ''}|${p.iban || ''}`}
                                                 className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 space-y-1"
                                             >
                                                 <p className="font-semibold">
@@ -292,8 +292,11 @@ export default function SdiInvoiceDetailDrawer({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {detail.righe.map((r, i) => (
-                                                        <tr key={i} className="border-t border-slate-50">
+                                                    {detail.righe.map((r) => (
+                                                        <tr
+                                                            key={`${r.numeroLinea || ''}|${r.descrizione}|${r.prezzoTotale ?? ''}`}
+                                                            className="border-t border-slate-50"
+                                                        >
                                                             <td className="px-2 py-1.5">{r.descrizione}</td>
                                                             <td className="px-2 py-1.5 text-right font-mono">
                                                                 {r.quantita ?? '—'}
@@ -327,7 +330,7 @@ export default function SdiInvoiceDetailDrawer({
                                 </Section>
                             )}
 
-                            {(detail?.riepilogoIva.length || 0) > 0 && (
+                            {detail && detail.riepilogoIva.length > 0 && (
                                 <Section title="Riepilogo IVA">
                                     <div className="overflow-x-auto rounded-xl border border-slate-100">
                                         <table className="w-full text-[10px]">
@@ -340,8 +343,11 @@ export default function SdiInvoiceDetailDrawer({
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {detail!.riepilogoIva.map((r, i) => (
-                                                    <tr key={i} className="border-t border-slate-50">
+                                                {detail.riepilogoIva.map((r) => (
+                                                    <tr
+                                                        key={`${r.aliquota ?? ''}|${r.imponibile}|${r.imposta}`}
+                                                        className="border-t border-slate-50"
+                                                    >
                                                         <td className="px-2 py-1.5 font-mono">
                                                             {r.aliquota ?? 0}%
                                                         </td>

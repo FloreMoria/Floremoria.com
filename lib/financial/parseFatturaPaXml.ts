@@ -800,32 +800,28 @@ function parsePartyBlock(block: string): FatturaPaParty {
  */
 export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
     const xml = xmlRaw.replace(/^\uFEFF/, '');
-    const xmlScope = flattenFatturaXmlScope(xml);
+    // Un solo scope: evita doppia estrazione quando i body sono già annidati nel documento.
+    const scope = flattenFatturaXmlScope(xml);
 
     const cedente =
-        extractXmlTag(xmlScope, 'CedentePrestatore') ||
-        extractXmlTag(xml, 'CedentePrestatore') ||
+        extractXmlTag(scope, 'CedentePrestatore') ||
+        extractXmlTag(scope, 'CedentePrestatoreDTE') ||
         '';
     const cessionario =
-        extractXmlTag(xmlScope, 'CessionarioCommittente') ||
-        extractXmlTag(xml, 'CessionarioCommittente') ||
+        extractXmlTag(scope, 'CessionarioCommittente') ||
+        extractXmlTag(scope, 'CessionarioCommittenteDTE') ||
         '';
 
-    const datiDoc =
-        extractXmlTag(xmlScope, 'DatiGeneraliDocumento') ||
-        extractXmlTag(xml, 'DatiGeneraliDocumento') ||
-        '';
-    const causali = extractAllXmlTags(datiDoc || xmlScope, 'Causale').map(textOf).filter(Boolean);
+    const datiDoc = extractXmlTag(scope, 'DatiGeneraliDocumento') || '';
+    const causali = extractAllXmlTags(datiDoc || scope, 'Causale').map(textOf).filter(Boolean);
 
     const importi = extractFatturaPaAmounts(xml);
 
-    const righe: FatturaPaLineItem[] = [];
-    for (const block of extractAllXmlTags(xmlScope, 'DettaglioLinee').concat(
-        extractAllXmlTags(xml, 'DettaglioLinee')
-    )) {
+    const righeMap = new Map<string, FatturaPaLineItem>();
+    for (const block of extractAllXmlTags(scope, 'DettaglioLinee')) {
         const desc = textOf(extractXmlTag(block, 'Descrizione'));
         if (!desc) continue;
-        righe.push({
+        const item: FatturaPaLineItem = {
             numeroLinea: textOf(extractXmlTag(block, 'NumeroLinea')) || null,
             descrizione: desc,
             quantita: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Quantita'))),
@@ -833,14 +829,19 @@ export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
             prezzoTotale: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'PrezzoTotale'))),
             aliquotaIva: parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))),
             natura: textOf(extractXmlTag(block, 'Natura')) || null,
-        });
+        };
+        const key = [
+            item.numeroLinea || '',
+            item.descrizione,
+            item.prezzoTotale ?? '',
+            item.aliquotaIva ?? '',
+        ].join('|');
+        righeMap.set(key, item);
     }
 
-    const riepilogoIva: FatturaPaVatSummary[] = [];
-    for (const block of extractAllXmlTags(xmlScope, 'DatiRiepilogo').concat(
-        extractAllXmlTags(xml, 'DatiRiepilogo')
-    )) {
-        riepilogoIva.push({
+    const riepilogoMap = new Map<string, FatturaPaVatSummary>();
+    for (const block of extractAllXmlTags(scope, 'DatiRiepilogo')) {
+        const row: FatturaPaVatSummary = {
             aliquota:
                 parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'AliquotaIVA'))) ||
                 parseItalianOrIsoAmount(textOf(extractXmlTag(block, 'Aliquota'))),
@@ -854,16 +855,16 @@ export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
                 0,
             natura: textOf(extractXmlTag(block, 'Natura')) || null,
             esigibilita: textOf(extractXmlTag(block, 'EsigibilitaIVA')) || null,
-        });
+        };
+        const key = [row.aliquota ?? '', row.imponibile, row.imposta, row.natura || ''].join('|');
+        riepilogoMap.set(key, row);
     }
 
-    const pagamenti: FatturaPaPaymentDetail[] = [];
-    for (const pagBlock of extractAllXmlTags(xmlScope, 'DatiPagamento').concat(
-        extractAllXmlTags(xml, 'DatiPagamento')
-    )) {
+    const pagamentiMap = new Map<string, FatturaPaPaymentDetail>();
+    for (const pagBlock of extractAllXmlTags(scope, 'DatiPagamento')) {
         for (const detBlock of extractAllXmlTags(pagBlock, 'DettaglioPagamento')) {
             const modalita = textOf(extractXmlTag(detBlock, 'ModalitaPagamento')) || null;
-            pagamenti.push({
+            const item: FatturaPaPaymentDetail = {
                 modalita,
                 modalitaLabel: modalita ? PAYMENT_MODE_LABELS[modalita] || modalita : null,
                 dataScadenza:
@@ -873,7 +874,9 @@ export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
                 iban: textOf(extractXmlTag(detBlock, 'IBAN')) || null,
                 istituto: textOf(extractXmlTag(detBlock, 'IstitutoFinanziario')) || null,
                 beneficiario: textOf(extractXmlTag(detBlock, 'Beneficiario')) || null,
-            });
+            };
+            const key = [item.modalita || '', item.importo ?? '', item.iban || ''].join('|');
+            pagamentiMap.set(key, item);
         }
     }
 
@@ -890,9 +893,9 @@ export function parseFatturaPaDetail(xmlRaw: string): FatturaPaDetail {
         },
         cedente: parsePartyBlock(cedente),
         cessionario: parsePartyBlock(cessionario),
-        pagamenti,
-        righe,
-        riepilogoIva,
+        pagamenti: [...pagamentiMap.values()],
+        righe: [...righeMap.values()],
+        riepilogoIva: [...riepilogoMap.values()],
         importi,
     };
 }

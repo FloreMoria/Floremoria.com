@@ -65,3 +65,4 @@
 [2026-09-02 11:45] feat(accounting): export fiscale XLSX multi-foglio (corrispettivi, reverse charge TD17, passivo fioristi, riepilogo IVA) con arricchimento Stripe/PayPal/Fineco/SDI.
 [2026-09-02 11:50] fix(partner-app): fallback robusto UUID/orderNumber nel resolver mini-app fioristi — introdotta estrazione candidati multi-livello (decodifica URL multipla, pulizia punteggiatura WhatsApp, regex codice ordine/CUID/UUID, compound tokens), matching elastico case-insensitive su id/orderNumber/proofFotoCode e log diagnostico dettagliato [florist-delivery-debug]; tsc+build OK.
 
+[2026-09-02 11:52] fix(partner-app): sanitizzazione punto finale URL template/resolver fiorista + layout mobile full-height bilanciato mini-app consegna.

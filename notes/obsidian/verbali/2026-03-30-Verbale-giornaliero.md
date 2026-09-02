@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Ristrutturazione logica in Florem Hub e Upload Fotografico per inserire tracking GPS nativo nei device dei fioristi. Modifica al modulo checkout (Rimozione vincoli Posizione Tomba) per aumentare il Tasso di Conversione."
 sync_source: docs/verbali/30-03-2026.md
-synced_at: 2026-09-01T11:31:00.872Z
+synced_at: 2026-09-02T07:45:59.737Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/30-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

@@ -110,7 +110,7 @@ export default function TaxQuarterlyPanel() {
     useEffect(() => {
         try {
             window.localStorage.setItem('floremoria.dossier.quarter', String(quarter));
-            window.localStorage.setItem('floremoria.primaNota.period', `Q${quarter}`);
+            window.localStorage.setItem('floremoria.primaNota.period', `T${quarter}`);
         } catch {
             /* ignore */
         }
@@ -294,10 +294,10 @@ export default function TaxQuarterlyPanel() {
                             onChange={(e) => setQuarter(Number(e.target.value))}
                             className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white"
                         >
-                            <option value={1}>Q1 (gen–mar)</option>
-                            <option value={2}>Q2 (apr–giu)</option>
-                            <option value={3}>Q3 (lug–set)</option>
-                            <option value={4}>Q4 (ott–dic)</option>
+                            <option value={1}>T1 {year} (Gen - Mar)</option>
+                            <option value={2}>T2 {year} (Apr - Giu)</option>
+                            <option value={3}>T3 {year} (Lug - Set)</option>
+                            <option value={4}>T4 {year} (Ott - Dic)</option>
                         </select>
                     ) : mode === 'month' ? (
                         <select

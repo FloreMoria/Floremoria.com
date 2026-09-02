@@ -23,6 +23,7 @@ import {
     parsePaypalSourceKey,
 } from '@/lib/financial/paypalSourceKeys';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 
 /** Tax ID Stripe Payments Europe Ltd (IE). */
 const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
@@ -49,7 +50,7 @@ export function resolveQuarterBounds(year: number, quarter: TaxQuarter): Quarter
         quarter,
         start,
         end,
-        label: `Q${quarter} ${year}`,
+        label: trimestrePeriodLabel(year, quarter),
     };
 }
 

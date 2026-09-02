@@ -1,6 +1,8 @@
 /**
- * Periodi fiscali: trimestri standard Q1–Q4 e quadrimestri Gen–Apr / Mag–Ago / Set–Dic.
+ * Periodi fiscali: trimestri standard T1–T4 (ex Q1–Q4) e quadrimestri Gen–Apr / Mag–Ago / Set–Dic.
  */
+
+import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 
 export type FiscalQuarter = 1 | 2 | 3 | 4;
 export type FiscalQuadrimester = 1 | 2 | 3;
@@ -26,7 +28,8 @@ export function resolveQuarterBounds(year: number, quarter: FiscalQuarter): Fina
         index: quarter,
         start,
         end,
-        label: `Q${quarter} ${year}`,
+        label: trimestrePeriodLabel(year, quarter),
+        // Chiave interna stabile (retrocompatibile con archivi esistenti).
         periodKey: `${year}-Q${quarter}`,
     };
 }

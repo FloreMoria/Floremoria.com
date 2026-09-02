@@ -181,23 +181,23 @@ export function dedupePrimaNotaVisualEntries(
     return Array.from(groups.values());
 }
 
-export type PrimaNotaPeriodKey = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'YEAR';
+export type PrimaNotaPeriodKey = 'T1' | 'T2' | 'T3' | 'T4' | 'YEAR';
 
 export const PRIMA_NOTA_PERIOD_OPTIONS: Array<{
     key: PrimaNotaPeriodKey;
     label: string;
     months: string;
 }> = [
-    { key: 'Q1', label: 'Q1 2026 (Gen-Mar)', months: '01-03' },
-    { key: 'Q2', label: 'Q2 2026 (Apr-Giu)', months: '04-06' },
-    { key: 'Q3', label: 'Q3 2026 (Lug-Set)', months: '07-09' },
-    { key: 'Q4', label: 'Q4 2026 (Ott-Dic)', months: '10-12' },
+    { key: 'T1', label: 'T1 2026 (Gen - Mar)', months: '01-03' },
+    { key: 'T2', label: 'T2 2026 (Apr - Giu)', months: '04-06' },
+    { key: 'T3', label: 'T3 2026 (Lug - Set)', months: '07-09' },
+    { key: 'T4', label: 'T4 2026 (Ott - Dic)', months: '10-12' },
     { key: 'YEAR', label: 'Tutto il 2026', months: '01-12' },
 ];
 
 export function currentPrimaNotaPeriodKey(now = new Date()): PrimaNotaPeriodKey {
     const q = (Math.floor(now.getMonth() / 3) + 1) as 1 | 2 | 3 | 4;
-    return (`Q${q}` as PrimaNotaPeriodKey);
+    return `T${q}` as PrimaNotaPeriodKey;
 }
 
 export function periodBounds(
@@ -206,16 +206,21 @@ export function periodBounds(
 ): { start: string; end: string; label: string } {
     const opt = PRIMA_NOTA_PERIOD_OPTIONS.find((o) => o.key === key)!;
     if (key === 'YEAR') {
-        return { start: `${year}-01-01`, end: `${year}-12-31`, label: opt.label.replace('2026', String(year)) };
+        return {
+            start: `${year}-01-01`,
+            end: `${year}-12-31`,
+            label: `Tutto il ${year}`,
+        };
     }
     const q = Number(key.slice(1));
     const startMonth = (q - 1) * 3 + 1;
     const endMonth = startMonth + 2;
     const endDay = new Date(year, endMonth, 0).getDate();
+    const longLabel = opt.label.replace(/2026/g, String(year));
     return {
         start: `${year}-${String(startMonth).padStart(2, '0')}-01`,
         end: `${year}-${String(endMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`,
-        label: opt.label.replace(/2026/g, String(year)),
+        label: longLabel,
     };
 }
 

@@ -481,7 +481,7 @@ export function buildWhatsAppAiReply(params: {
     const recentInboundLocation = findRecentInboundLocation(history);
     const contextDependent = isContextDependentMessage(m);
     const salutoPrefix = shouldUseDailyGreeting(history)
-        ? `${getOpeningGreeting(displayName || '')} `
+        ? `${getOpeningGreeting(displayName || '')}\n`
         : '';
     const emotionalContext = hasAny(m, [
         'sconforto',
@@ -621,8 +621,20 @@ export function buildWhatsAppAiReply(params: {
         );
     }
 
+    if (hasAny(m, ['cuscino', 'cuscini'])) {
+        return `${salutoPrefix}${emotionalPrefix}Il Cuscino Funebre costa 129,99€. È una composizione formale ed elegante realizzata con rose, lilium (gigli), garofani e verde nobile decorativo, principalmente nei toni del bianco e del crema. La consegna è garantita con anticipo prima dell'inizio del rito o chiusura camera ardente, con invio della foto di conferma su WhatsApp.`;
+    }
+
+    if (hasAny(m, ['copribara'])) {
+        return `${salutoPrefix}${emotionalPrefix}Il Copribara costa 189,99€. È la composizione floreale d'onore adagiata direttamente sul feretro, realizzata con rose, lilium, garofani e verde nobile, con consegna garantita e foto di conferma su WhatsApp.`;
+    }
+
+    if (hasAny(m, ['corona', 'corone', 'cuore funebre'])) {
+        return `${salutoPrefix}${emotionalPrefix}La Corona o Cuore Funebre costa 199,99€. È un omaggio solenne di grande impatto visivo con rose e lilium pregiati, con consegna garantita e foto di conferma su WhatsApp.`;
+    }
+
     if (hasAny(m, ['prezzo', 'prezzi', 'costo', 'costi', 'quanto costa', 'tariffa'])) {
-        return `${salutoPrefix}${emotionalPrefix}Per i tributi floreali sulla tomba partiamo da EUR 29.99. Può consultare tutte le opzioni qui: ${kb.catalogTombsUrl}\nPer il funerale: ${kb.funeralUrl}`;
+        return `${salutoPrefix}${emotionalPrefix}Per i funerali le composizioni partono da 129,99€ per il Cuscino Funebre, 189,99€ per il Copribara e 199,99€ per Corona/Cuore. Per i bouquet sulla tomba partiamo da 29,99€.`;
     }
 
     if (

@@ -83,10 +83,11 @@ export function buildVeraGreetingPromptRule(now: Date = new Date()): string {
         '=== SALUTO ORARIO VERA (Europe/Rome, TASSAZIONE) ===',
         `Ora Italia: circa le ${String(hour).padStart(2, '0')}:00.`,
         `Apertura consentita ORA: "${opening}" (con nome di battesimo Title Case se noto).`,
-        `Chiusura consentita ORA: "${closing} …, a presto."`,
+        `Chiusura congedo ORA: "${closing} [Nome], a presto."`,
         'Fasce apertura: 06–14 Buongiorno · 14–18 Buon pomeriggio · 18–06 Buona sera.',
         'Fasce chiusura: 06–14 Buona giornata · 14–17 Buon pomeriggio · 17–22 Buona serata · 22–06 Buona notte.',
         'VIETATO: "Buongiorno" di sera; "Buona sera" al mattino; "Buona giornata" dopo le 17.',
-        'Non ripetere il saluto se la conversazione è già aperta e il cliente non ha salutato.',
+        'REGOLA CONTINUITÀ CONVERSAZIONE: Non ripetere il saluto iniziale se c\'è già uno scambio recente.',
+        'REGOLA COMMIATO: NON inserire la formula di chiusura ("Buona serata, a presto") all\'interno di ogni singola replica se la conversazione è nel pieno dello scambio di domande o chiarimenti. Mantieni una formula aperta e accogliente ("Resto a Sua completa disposizione per qualsiasi altra domanda o per completare l\'ordine insieme."). Usa il commiato SOLO se l\'utente sta salutando per chiudere la chat.',
     ].join('\n');
 }

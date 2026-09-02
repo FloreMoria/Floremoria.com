@@ -262,7 +262,7 @@ export async function listBankStatementMovements(params?: {
         if (ref) {
             const m = ref.getUTCMonth();
             const y = ref.getUTCFullYear();
-            quarterLabel = `Q${Math.floor(m / 3) + 1} ${y}`;
+            quarterLabel = `T${Math.floor(m / 3) + 1} ${y}`;
         }
         const dateIso =
             (l.accountingDate || l.valueDate)?.toISOString().slice(0, 10) ?? null;

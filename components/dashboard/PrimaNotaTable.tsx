@@ -28,6 +28,7 @@ import {
     type PrimaNotaDisplayEntry,
     type PrimaNotaPeriodKey,
 } from '@/lib/financial/primaNotaShared';
+import { normalizePrimaNotaPeriodKey } from '@/lib/financial/trimestreLabel';
 import PrimaNotaDetailDrawer from '@/components/dashboard/PrimaNotaDetailDrawer';
 
 const STORAGE_KEY = 'floremoria.primaNota.period';
@@ -68,14 +69,11 @@ type NeonRow = {
 function readStoredPeriod(): PrimaNotaPeriodKey {
     if (typeof window === 'undefined') return currentPrimaNotaPeriodKey();
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (raw === 'Q1' || raw === 'Q2' || raw === 'Q3' || raw === 'Q4' || raw === 'YEAR') {
-            return raw;
-        }
+        const fromPrima = normalizePrimaNotaPeriodKey(window.localStorage.getItem(STORAGE_KEY));
+        if (fromPrima) return fromPrima;
         const dossierQ = window.localStorage.getItem('floremoria.dossier.quarter');
-        if (dossierQ === '1' || dossierQ === '2' || dossierQ === '3' || dossierQ === '4') {
-            return `Q${dossierQ}` as PrimaNotaPeriodKey;
-        }
+        const fromDossier = normalizePrimaNotaPeriodKey(dossierQ ? `T${dossierQ}` : null);
+        if (fromDossier && fromDossier !== 'YEAR') return fromDossier;
     } catch {
         /* ignore */
     }
@@ -196,7 +194,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         setPeriodKey(key);
         try {
             window.localStorage.setItem(STORAGE_KEY, key);
-            if (key.startsWith('Q')) {
+            if (key.startsWith('T')) {
                 window.localStorage.setItem('floremoria.dossier.quarter', key.slice(1));
             }
         } catch {
@@ -499,13 +497,13 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                                             <>
                                                 {opt.key}{' '}
                                                 <span className="hidden md:inline font-normal text-slate-500">
-                                                    {opt.key === 'Q1'
-                                                        ? '(Gen–Mar)'
-                                                        : opt.key === 'Q2'
-                                                          ? '(Apr–Giu)'
-                                                          : opt.key === 'Q3'
-                                                            ? '(Lug–Set)'
-                                                            : '(Ott–Dic)'}
+                                                    {opt.key === 'T1'
+                                                        ? '(Gen - Mar)'
+                                                        : opt.key === 'T2'
+                                                          ? '(Apr - Giu)'
+                                                          : opt.key === 'T3'
+                                                            ? '(Lug - Set)'
+                                                            : '(Ott - Dic)'}
                                                 </span>
                                             </>
                                         )}

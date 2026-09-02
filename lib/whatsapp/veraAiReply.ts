@@ -67,7 +67,10 @@ import {
     isWebsiteContactFormPayload,
     resolveAssistanceDisplayName,
 } from '@/lib/vera/preAcquisitionIntent';
-import { tryBuildCatalogLinkReply } from '@/lib/vera/catalogIntentReply';
+import {
+    isConsultativeOrDetailQuestion,
+    tryBuildCatalogLinkReply,
+} from '@/lib/vera/catalogIntentReply';
 import { normalizeGreetingName } from '@/lib/vera/greetings';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 import {
@@ -600,27 +603,30 @@ export async function generateVeraReply(
     if (session.userType !== 'FLORIST') {
         const catalogReply = tryBuildCatalogLinkReply(
             message,
-            getDisplayNameFromSession(session, callerContext)
+            getDisplayNameFromSession(session, callerContext),
+            new Date(),
+            session
         );
         if (catalogReply) {
             return { text: catalogReply, source: 'deterministic', shouldEscalate: false };
         }
     }
 
-    // PRIORITÀ: nuovo contatto / form contatti / assistenza generica —
+    // PRIORITÀ: nuovo contatto / form contatti / assistenza generica (solo se non è una domanda consulenziale su prodotti/fiori/prezzi) —
     // mai agganciare ordini pregressi né copione foto post-consegna.
     if (
         session.userType !== 'FLORIST' &&
+        !isConsultativeOrDetailQuestion(message) &&
         isGenericAssistanceOrFirstContactIntent(message) &&
         !callerContext.hasActiveOrder
     ) {
         const displayName = resolveAssistanceDisplayName(message, callerContext.firstName);
         // Form contatti o CTA floating: risposta aperta di cortesia.
-        // Pre-acquisto “come funziona / prezzi”: resta il flusso Luciano più guida.
+        // Pre-acquisto “come funziona / guida”: resta il flusso Luciano più guida.
         const wantsLucianoGuide =
             isPreAcquisitionIntent(message) &&
             !isWebsiteContactFormPayload(message) &&
-            /come funziona|quanto costa|listino|prezz|vorrei mandare|vorrei inviare|prima di /.test(
+            /come funziona|vorrei mandare|vorrei inviare|prima di /.test(
                 message.toLowerCase()
             );
 
@@ -702,6 +708,7 @@ export async function generateVeraReply(
 
     if (
         session.userType !== 'FLORIST' &&
+        !isConsultativeOrDetailQuestion(message) &&
         (callerContext.mode === 'pre_acquisto' || isPreAcquisitionIntent(message)) &&
         isPreAcquisitionIntent(message) &&
         !callerContext.hasActiveOrder
@@ -1013,7 +1020,18 @@ export async function generateVeraReply(
         const fallbackText =
             session.userType === 'FLORIST'
                 ? 'Grazie per il messaggio, lo leggo subito. Buon lavoro 🌹'
-                : STANDARD_GUIDANCE_MESSAGE;
+                : buildWhatsAppAiReply({
+                      message,
+                      userName: getDisplayNameFromSession(session, callerContext) || '',
+                      userType: session.userType,
+                      mediaUrl,
+                      history: session.messages.map((m) => ({
+                          direction: m.direction,
+                          body: m.body,
+                          mediaUrl: m.mediaUrl,
+                          createdAt: m.createdAt,
+                      })),
+                  });
         return { text: fallbackText, source: 'fallback', shouldEscalate: false };
     }
 

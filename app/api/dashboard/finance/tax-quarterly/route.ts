@@ -6,20 +6,14 @@ import {
 } from '@/lib/financial/taxQuarterly';
 import { buildTaxQuarterlyXlsxBuffer } from '@/lib/financial/taxQuarterlyXlsx';
 import { buildPaypalMonthlyFeesCsv } from '@/lib/financial/paypalMonthlyFees';
+import { parseTrimestreParam, trimestreCode } from '@/lib/financial/trimestreLabel';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-function parseQuarter(raw: string | null): TaxQuarter {
-    const n = Number(raw || '0');
-    if (n === 1 || n === 2 || n === 3 || n === 4) return n;
-    const m = new Date().getMonth();
-    return (Math.floor(m / 3) + 1) as TaxQuarter;
-}
-
 /**
  * GET /api/dashboard/finance/tax-quarterly
- * ?year=2026&quarter=3&month=9&format=json|csv|xlsx|paypal-fees-csv
+ * ?year=2026&quarter=3|T3|Q3&period=T3&month=9&format=json|csv|xlsx|paypal-fees-csv
  * Se `month` è valorizzato (1–12), il dossier è mensile; altrimenti trimestrale.
  */
 export async function GET(request: NextRequest) {
@@ -29,7 +23,9 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const year = Number(searchParams.get('year') || new Date().getFullYear());
-        const quarter = parseQuarter(searchParams.get('quarter'));
+        const quarter = parseTrimestreParam(
+            searchParams.get('period') || searchParams.get('quarter') || searchParams.get('trimestre')
+        ) as TaxQuarter;
         const monthRaw = searchParams.get('month');
         const month =
             monthRaw != null && monthRaw !== ''
@@ -60,7 +56,9 @@ export async function GET(request: NextRequest) {
 
         if (format === 'xlsx' || format === 'excel' || format === 'dossier') {
             const buffer = await buildTaxQuarterlyXlsxBuffer(report);
-            const stamp = report.bounds.label.replace(/[/\s]+/g, '_');
+            const stamp = month
+                ? report.bounds.label.replace(/[/\s]+/g, '_')
+                : `${trimestreCode(quarter)}_${year}`;
             const filename = `FloreMoria_Dossier_Fiscale_${stamp}.xlsx`;
             return new NextResponse(new Uint8Array(buffer), {
                 status: 200,
@@ -76,7 +74,9 @@ export async function GET(request: NextRequest) {
         // CSV parziale deprecato: redirect semantico al dossier XLSX
         if (format === 'csv') {
             const buffer = await buildTaxQuarterlyXlsxBuffer(report);
-            const stamp = report.bounds.label.replace(/[/\s]+/g, '_');
+            const stamp = month
+                ? report.bounds.label.replace(/[/\s]+/g, '_')
+                : `${trimestreCode(quarter)}_${year}`;
             const filename = `FloreMoria_Dossier_Fiscale_${stamp}.xlsx`;
             return new NextResponse(new Uint8Array(buffer), {
                 status: 200,

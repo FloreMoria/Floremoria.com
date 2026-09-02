@@ -3,7 +3,7 @@ import { loadWhatsAppCoreKb } from '@/lib/whatsappKnowledge';
 import { extractFirstNameFromProfile } from '@/lib/vera/genderFromName';
 import { sanitizeWhatsAppDisplayName } from '@/lib/vera/displayName';
 
-export const GEMINI_MAX_OUTPUT_TOKENS = 1000;
+export const GEMINI_MAX_OUTPUT_TOKENS = 1200;
 
 export const FLOREMORIA_INSTANT_TRANSFER_IBAN = 'IT60 X054 2811 1010 0000 0123 456';
 export const FLOREMORIA_INSTANT_TRANSFER_HOLDER = 'FloreMoria S.r.l.';
@@ -352,54 +352,51 @@ export function buildNewOrderLocationReply(message: string, session: ChatSession
     );
 }
 
+const DANGLING_TRAILING_WORDS =
+    /\s+(e|ed|o|oppure|che|se|ma|per|con|su|tra|fra|di|a|da|in|il|la|lo|i|gli|le|un|uno|una|del|dello|della|dei|degli|delle|al|allo|alla|ai|agli|alle|nel|nello|nella|nei|negli|nelle|sul|sullo|sulla|sui|sugli|sulle)$/i;
+
 /** Taglia il testo all'ultima frase completa, eliminando code incomplete da Gemini/Meta. */
 export function trimIncompleteTail(text: string): string {
-    const trimmed = text.trim();
+    let trimmed = text.trim();
     if (!trimmed) return trimmed;
+
+    // Rimuove punteggiatura pendente come virgole, due punti, punti e virgola, trattini
+    trimmed = trimmed.replace(/[,;:\-\s]+$/, '').trim();
     if (/[.!?…🌹]$/.test(trimmed)) return trimmed;
 
-    for (const sep of ['. ', '.\n', '! ', '?\n', '? ', '…']) {
+    for (const sep of ['. ', '.\n', '!\n', '! ', '?\n', '? ', '…\n', '…']) {
         const idx = trimmed.lastIndexOf(sep);
         if (idx >= Math.floor(trimmed.length * 0.35)) {
-            return trimmed.slice(0, idx + 1).trim();
+            return trimmed.slice(0, idx + sep.trim().length).trim();
         }
     }
 
-    let cleaned = trimmed.replace(
-        /\s+(e|che|se|oppure|per|con|un|una|il|la|lo|dei|del|non|resto|desider|vedo)\s+\S{0,12}$/i,
-        ''
-    ).trim();
-
-    const words = cleaned.split(/\s+/);
-    const last = words[words.length - 1] || '';
-    if (words.length > 2 && last.length <= 4 && !/[.!?]$/.test(last)) {
-        cleaned = words.slice(0, -1).join(' ');
+    let cleaned = trimmed;
+    while (DANGLING_TRAILING_WORDS.test(cleaned)) {
+        cleaned = cleaned.replace(DANGLING_TRAILING_WORDS, '').trim().replace(/[,;:\-\s]+$/, '').trim();
     }
 
-    return cleaned.trim();
+    return cleaned;
 }
 
 /** Risposta incompleta (troncata da Meta/Gemini o taglio catalogo). */
 export function looksIncompleteReply(text: string): boolean {
-    const trimmed = trimIncompleteTail(text).trim();
+    const trimmed = text.trim();
     if (trimmed.length < 12) return true;
     if (/https?:\/\/\S+$/.test(trimmed)) return false;
     if (/[.!?…🌹]$/.test(trimmed)) return false;
-    if (/\b(desider|vedo che|se |oppure|per es|chrome o safari|resto a)\)?$/i.test(trimmed)) return true;
-    const lastWord = trimmed.split(/\s+/).pop() || '';
-    if (lastWord.length <= 3 && !/[.!?]$/.test(trimmed)) return true;
-    return false;
+    return true;
 }
 
 export function repairIncompleteReply(text: string, userType: ChatSession['userType']): string {
     const trimmed = trimIncompleteTail(text);
-    const base = trimmed.replace(/[,.\s]+$/, '').trim();
+    const base = trimmed.replace(/[,;:\-\s]+$/, '').trim();
     if (/[.!?…🌹]$/.test(base)) return base;
 
     const suffix =
         userType === 'FLORIST'
             ? `Se la mini-app non risponde, può inviare le foto della posa direttamente qui in chat: le accettiamo come prova consegna.`
-            : `Resto a Sua completa disposizione: mi scriva pure come posso aiutarLa.`;
+            : `Resto a Sua completa disposizione per qualsiasi chiarimento o per procedere insieme.`;
 
     return `${base}. ${suffix}`;
 }
@@ -410,7 +407,11 @@ export function finalizeVeraReplyText(text: string, userType: ChatSession['userT
     if (looksIncompleteReply(result)) {
         result = repairIncompleteReply(result, userType);
     }
-    return result.trim();
+    result = result.replace(/[,;:\-\s]+$/, '').trim();
+    if (!/[.!?…🌹]$/.test(result)) {
+        result += '.';
+    }
+    return result;
 }
 
 /**

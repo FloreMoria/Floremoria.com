@@ -19,6 +19,7 @@ import {
     labelSourceTypeIt,
 } from '@/lib/financial/fiscalItalianLabels';
 import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
+import { trimestreCode, trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 
 const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
@@ -330,7 +331,13 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
             ['Dal', report.bounds.start.toISOString().slice(0, 10)],
             ['Al', report.bounds.end.toISOString().slice(0, 10)],
             ['Anno', report.bounds.year],
-            ['Trimestre di riferimento', report.bounds.quarter],
+            [
+                'Trimestre di riferimento',
+                /^\d{2}\/\d{4}$/.test(report.bounds.label)
+                    ? report.bounds.label
+                    : trimestrePeriodLabel(report.bounds.year, report.bounds.quarter),
+            ],
+            ['Codice trimestre', trimestreCode(report.bounds.quarter)],
             ['Data estrazione', new Date().toISOString().slice(0, 19)],
             ['Timezone', 'Europe/Rome (date contabili localizzate lato DB)'],
             ['Fogli', 'Riepilogo_IVA_Periodo; Prima_Nota; Registro_Corrispettivi; Reverse_Charge_SaaS_Gateway; Compensi_Fioristi_Passivo; _Meta'],

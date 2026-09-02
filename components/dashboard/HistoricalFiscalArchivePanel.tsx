@@ -287,10 +287,10 @@ export default function HistoricalFiscalArchivePanel() {
                         className="mt-1 block rounded-xl border border-slate-200 px-3 py-2 text-sm"
                     >
                         <option value="">Tutti</option>
-                        <option value={1}>Q1</option>
-                        <option value={2}>Q2</option>
-                        <option value={3}>Q3</option>
-                        <option value={4}>Q4</option>
+                        <option value={1}>T1</option>
+                        <option value={2}>T2</option>
+                        <option value={3}>T3</option>
+                        <option value={4}>T4</option>
                     </select>
                 </label>
                 <label className="text-[10px] font-bold uppercase text-slate-500">

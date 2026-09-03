@@ -18,6 +18,10 @@ const SKIP_EVENT_CODES = new Set([
 ]);
 
 /** Ricariche/provviste da carta o conto — giroconto, non spesa operativa. */
+export const PAYPAL_FUNDING_LABEL_RE =
+    /blocco generico|ricarica conto|prelievo generico da(?:\s+carta|\s+banca)?|add funds from a (?:card|bank)|generic (?:card|bank) (?:withdrawal|funding)|bank deposit to pp|fondi aggiunti|autorizzazione generica|general authorization|card funding|funding from/i;
+
+/** Ricariche/provviste da carta o conto — giroconto, non spesa operativa. */
 const FUNDING_EVENT_CODES = new Set([
     'T0300', // bank deposit / card funding
     'T0301',
@@ -114,6 +118,15 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
             category: 'ALTRI_COSTI',
             direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
             reason: `skip_funding_${code}`,
+        };
+    }
+
+    if (PAYPAL_FUNDING_LABEL_RE.test(text)) {
+        return {
+            record: false,
+            category: 'ALTRI_COSTI',
+            direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
+            reason: 'skip_funding_label',
         };
     }
 
@@ -246,6 +259,16 @@ export function classifyPaypalGatewayMovement(
             label: 'Provvista / ricarica (giroconto)',
             isFunding: true,
             reason: `funding_${code}`,
+        };
+    }
+
+    if (PAYPAL_FUNDING_LABEL_RE.test(text)) {
+        return {
+            record: false,
+            movementKind: 'skip',
+            label: 'Provvista / ricarica (giroconto)',
+            isFunding: true,
+            reason: 'funding_label',
         };
     }
 

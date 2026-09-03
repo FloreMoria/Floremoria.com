@@ -7,6 +7,7 @@
  */
 
 import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
+import { applyPaypalStateMachine } from '@/lib/accounting/paypalStateMachine';
 
 export const FISCAL_AUTHORITY_SOURCE_TYPES = new Set([
     'BANK_LINE',
@@ -1004,7 +1005,9 @@ export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDe
 
 /** Pipeline unica per listati Prima Nota e aggregati PnL. */
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
-    const step1 = excludeOrdersCoveredByFiscalAuthority(rows);
+    // PayPal prima: gli storni tecnici non devono coprire ricavi ordine come autorità.
+    const step0 = applyPaypalStateMachine(rows);
+    const step1 = excludeOrdersCoveredByFiscalAuthority(step0);
     const step2 = excludeJsonRevenuesCoveredByFiscalAuthority(step1);
     const step3 = dedupeByCanonicalMovementKey(step2);
     const step4 = dedupeSupplierInvoices(step3);

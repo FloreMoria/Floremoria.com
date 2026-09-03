@@ -40,6 +40,8 @@ export type PaypalTx = {
     description: string;
     payerEmail?: string | null;
     eventCode?: string | null;
+    parentTransactionId?: string | null;
+    referenceId?: string | null;
 };
 
 export function paypalBaseUrl(): string {
@@ -130,6 +132,8 @@ async function fetchPaypalTransactions(params: {
                     transaction_initiation_date?: string;
                     transaction_subject?: string;
                     transaction_note?: string;
+                    paypal_parent_transaction_id?: string;
+                    paypal_reference_id?: string;
                 };
                 payer_info?: { email_address?: string };
             }>;
@@ -161,6 +165,8 @@ async function fetchPaypalTransactions(params: {
                     `PayPal ${info.transaction_id}`,
                 payerEmail: d.payer_info?.email_address || null,
                 eventCode: info.transaction_event_code || null,
+                parentTransactionId: info.paypal_parent_transaction_id || null,
+                referenceId: info.paypal_reference_id || null,
             });
         }
 
@@ -282,6 +288,8 @@ export async function runPaypalFinanceSync(params?: {
                         isRefund,
                         classifyReason: classified.reason,
                         paypalTransactionId: tx.id,
+                        parentTransactionId: tx.parentTransactionId || null,
+                        referenceId: tx.referenceId || null,
                         dareAccount,
                         avereAccount,
                     },

@@ -20,6 +20,7 @@ import {
 } from '@/lib/financial/fiscalItalianLabels';
 import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
 import { trimestreCode, trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
+import { recomputeSequentialRunningBalance } from '@/lib/accounting/paypalStateMachine';
 
 const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
@@ -141,20 +142,10 @@ async function buildPrimaNotaRows(report: TaxQuarterlyReport) {
 
     const { rows } = await listHistoricalLedgerEntries(filters);
 
-    // Cronologico crescente + saldo progressivo (solo movimenti con segno)
-    const chronological = [...rows].sort(
-        (a, b) => a.accountingDate.getTime() - b.accountingDate.getTime()
-    );
+    // Cronologico rigoroso + saldo progressivo sulla lista già ridotta (PayPal cluster + gerarchia fiscale)
+    const withRunning = recomputeSequentialRunningBalance(rows, 0);
 
-    let running = 0;
-    return chronological.map((r) => {
-        const signed =
-            r.direction === 'ENTRATA'
-                ? r.totalCents
-                : r.direction === 'USCITA'
-                  ? -Math.abs(r.totalCents)
-                  : r.totalCents;
-        running += signed;
+    return withRunning.map(({ row: r, runningCents }) => {
         const entrata = r.direction === 'ENTRATA' ? euroNum(Math.abs(r.totalCents)) : 0;
         const uscita = r.direction === 'USCITA' ? euroNum(Math.abs(r.totalCents)) : 0;
         const meta =
@@ -173,8 +164,9 @@ async function buildPrimaNotaRows(report: TaxQuarterlyReport) {
             r.sourceId ||
             r.bankLineId ||
             '';
+        const dateMs = r.accountingDate instanceof Date ? r.accountingDate : new Date(String(r.accountingDate || ''));
         return {
-            Data: r.accountingDate.toISOString().slice(0, 10),
+            Data: Number.isNaN(dateMs.getTime()) ? '' : dateMs.toISOString().slice(0, 10),
             Causale: `${r.description || ''}${attachmentNote}`,
             Entrata: entrata || '',
             Uscita: uscita || '',
@@ -184,7 +176,7 @@ async function buildPrimaNotaRows(report: TaxQuarterlyReport) {
             'Rif. Ordine / Doc': r.documentRef || r.orderId || '',
             'TRN / Source ID': trn,
             'Stato Riconciliazione': labelReconciliationStatusIt(r.reconciliationStatus),
-            'Saldo Progressivo EUR': euroNum(running),
+            'Saldo Progressivo EUR': euroNum(runningCents),
         };
     });
 }

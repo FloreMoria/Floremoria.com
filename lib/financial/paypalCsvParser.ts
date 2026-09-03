@@ -20,6 +20,7 @@ import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDouble
 export type PaypalCsvRow = {
     transactionId: string;
     referenceId: string | null;
+    parentTransactionId: string | null;
     accountingDate: Date;
     typeLabel: string;
     status: string;
@@ -142,6 +143,14 @@ function parsePaypalDateTime(dateRaw: string, timeRaw?: string, tzRaw?: string):
 function classifyPaypalType(typeLabel: string): PaypalCsvRow['kind'] {
     const t = typeLabel.toLowerCase();
     if (/rimborso|refund|storno|chargeback|contestazione/.test(t)) return 'refund';
+    // Carta d'appoggio / hold: non è payout Fineco né pagamento commerciale
+    if (
+        /blocco generico|ricarica conto|prelievo generico da|autorizzazione generica|add funds|card funding/.test(
+            t
+        )
+    ) {
+        return 'skip';
+    }
     if (
         /trasferimento|withdrawal|prelievo|bank|bonifico|payout|versamento|user initiated/.test(t)
     ) {
@@ -250,6 +259,13 @@ export function parsePaypalCsvText(text: string): PaypalCsvParseResult {
                 'Codice riferimento transazione',
                 'Reference Transaction ID',
             ]) || null;
+        const parentTransactionId =
+            findCol(raw, [
+                'Parent Transaction ID',
+                'ParentTransactionID',
+                'ID transazione padre',
+            ]) ||
+            referenceId;
 
         const dateRaw = findCol(raw, ['Date', 'Data']);
         const timeRaw = findCol(raw, ['Time', 'Ora']);
@@ -291,6 +307,7 @@ export function parsePaypalCsvText(text: string): PaypalCsvParseResult {
         rows.push({
             transactionId,
             referenceId,
+            parentTransactionId,
             accountingDate,
             typeLabel,
             status,
@@ -323,6 +340,7 @@ function ledgerEntriesForCsvRow(row: PaypalCsvRow): LedgerEntryInput[] {
         csvImport: true,
         typeLabel: row.typeLabel,
         referenceId: row.referenceId,
+        parentTransactionId: row.parentTransactionId,
         feeCents: row.feeCents,
         netCents: row.netCents,
         paypalTransactionId: row.transactionId,

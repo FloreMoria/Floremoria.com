@@ -29,6 +29,7 @@ export type PartnerOrderNotificationResult = {
     ok: boolean;
     skipped?: string;
     error?: string;
+    resendId?: string;
 };
 
 function esc(s: string | null | undefined): string {
@@ -140,7 +141,9 @@ export async function sendPartnerOrderNotifications(
     const sandbox = options?.sandboxOrder || order.isTest;
     const notifyOpts = {
         emailsOnly: options?.emailsOnly,
-        skipCustomer: sandbox ? true : options?.skipCustomer,
+        // Requisito: per ordini test via API partner devono partire SEMPRE email staff/partner/buyer.
+        // Quindi skipCustomer non viene forzato dal flag sandbox/isTest.
+        skipCustomer: options?.skipCustomer,
         skipOps: options?.skipOps,
     };
 
@@ -240,7 +243,13 @@ export async function sendPartnerOrderNotifications(
                         subject: `Conferma ordine ${order.orderNumber || ''} — FloreMoria`.trim(),
                         html,
                     });
-                    return { channel: 'email_customer', ok: r.ok, error: r.error };
+                    console.log('[Partner Order Email] Buyer:', {
+                        to: buyer,
+                        ok: r.ok,
+                        resendId: (r as any)?.resendId,
+                        error: r.error,
+                    });
+                    return { channel: 'email_customer', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
                 } catch (e) {
                     return {
                         channel: 'email_customer',
@@ -266,7 +275,13 @@ export async function sendPartnerOrderNotifications(
                         subject: `[B2B${sandbox ? ' TEST' : ''}] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
                         html,
                     });
-                    return { channel: 'email_ops', ok: r.ok, error: r.error };
+                    console.log('[Partner Order Email] Staff:', {
+                        to: opsTo,
+                        ok: r.ok,
+                        resendId: (r as any)?.resendId,
+                        error: r.error,
+                    });
+                    return { channel: 'email_ops', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
                 } catch (e) {
                     return {
                         channel: 'email_ops',
@@ -311,9 +326,6 @@ export async function sendPartnerOrderNotifications(
     // 5) Email trasparenza aggregatore (AF) — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
-            if (sandbox) {
-                return { channel: 'email_aggregator', ok: true, skipped: 'sandbox_order' };
-            }
             if (!hasB2b) {
                 console.info('[partner-order-notifications] skip email B2B trasparenza: ordine B2C', {
                     orderId: order.id,
@@ -342,7 +354,13 @@ export async function sendPartnerOrderNotifications(
                     subject: `[AF/Provider] Ordine ${order.orderNumber} — trasparenza B2B`,
                     html,
                 });
-                return { channel: 'email_aggregator', ok: r.ok, error: r.error };
+                console.log('[Partner Order Email] Partner:', {
+                    to: aggregatorTo,
+                    ok: r.ok,
+                    resendId: (r as any)?.resendId,
+                    error: r.error,
+                });
+                return { channel: 'email_aggregator', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
             } catch (e) {
                 return {
                     channel: 'email_aggregator',
@@ -394,11 +412,40 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    const results = await Promise.all(tasks);
+    // Non cancellare altri invii in caso di errore: tutte le email vengono tentate in parallelo.
+    const settled = await Promise.allSettled(tasks);
+    const results: PartnerOrderNotificationResult[] = settled.map((s) => {
+        if (s.status === 'fulfilled') return s.value;
+        return {
+            channel: 'email_ops',
+            ok: false,
+            error: s.reason instanceof Error ? s.reason.message : String(s.reason),
+        };
+    });
+
+    const staffRes = results.find((r) => r.channel === 'email_ops');
+    const partnerRes = results.find((r) => r.channel === 'email_aggregator');
+    const buyerRes = results.find((r) => r.channel === 'email_customer');
+    console.log(
+        `[Partner Order Email] Staff: ${staffRes?.ok ? 'OK' : 'FAIL'}${
+            (staffRes as any)?.resendId ? ` (${(staffRes as any).resendId})` : ''
+        }, Partner: ${partnerRes?.ok ? 'OK' : 'FAIL'}${
+            (partnerRes as any)?.resendId ? ` (${(partnerRes as any).resendId})` : ''
+        }, Buyer: ${buyerRes?.ok ? 'OK' : 'FAIL'}${
+            (buyerRes as any)?.resendId ? ` (${(buyerRes as any).resendId})` : ''
+        }`,
+    );
+
     console.info('[partner-order-notifications]', {
         orderId: order.id,
         orderNumber: order.orderNumber,
-        results: results.map((r) => ({ channel: r.channel, ok: r.ok, skipped: r.skipped, error: r.error })),
+        results: results.map((r) => ({
+            channel: r.channel,
+            ok: r.ok,
+            skipped: r.skipped,
+            error: r.error,
+            resendId: r.resendId,
+        })),
     });
     return results;
 }

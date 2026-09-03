@@ -751,7 +751,9 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                             <div className="font-bold text-black text-[14px] whitespace-nowrap">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
                                             {order.isTest ? (
                                                 <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded inline-block">
-                                                    Test API
+                                                    {order.partnershipChannel === 'ANNUNCI_FUNEBRI'
+                                                        ? 'Test Partner - Annunci Funebri'
+                                                        : 'Test API'}
                                                 </div>
                                             ) : null}
                                         </td>

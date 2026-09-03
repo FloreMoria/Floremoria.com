@@ -14,7 +14,10 @@ function asList(v: string | string[] | undefined): string[] | undefined {
     return Array.isArray(v) ? v : [v];
 }
 
-async function sendViaResend(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
+async function sendViaResend(
+    from: string,
+    params: SendFloremMailParams
+): Promise<{ ok: boolean; error?: string; resendId?: string }> {
     const key = process.env.RESEND_API_KEY?.trim();
     if (!key) return { ok: false, error: 'missing_resend' };
 
@@ -42,7 +45,22 @@ async function sendViaResend(from: string, params: SendFloremMailParams): Promis
         const t = await res.text();
         return { ok: false, error: t.slice(0, 800) };
     }
-    return { ok: true };
+
+    // Resend response typically contains `{ id: string, ... }`.
+    // We try best-effort parsing so we can log resendId for debugging.
+    try {
+        const json = (await res.json()) as unknown;
+        const any = json as { id?: unknown; messageId?: unknown };
+        const resendId =
+            typeof any?.id === 'string'
+                ? any.id
+                : typeof any?.messageId === 'string'
+                  ? any.messageId
+                  : undefined;
+        return { ok: true, ...(resendId ? { resendId } : {}) };
+    } catch {
+        return { ok: true };
+    }
 }
 
 async function sendViaSmtp(from: string, params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
@@ -80,7 +98,9 @@ async function sendViaSmtp(from: string, params: SendFloremMailParams): Promise<
  * Invio transazionale server-side: Resend → SMTP (fallback).
  * Richiede `FLOREM_MAIL_FROM` (es. "FloreMoria <assistenza@floremoria.com>").
  */
-export async function sendFloremTransactionalMail(params: SendFloremMailParams): Promise<{ ok: boolean; error?: string }> {
+export async function sendFloremTransactionalMail(
+    params: SendFloremMailParams
+): Promise<{ ok: boolean; error?: string; resendId?: string }> {
     const from = process.env.FLOREM_MAIL_FROM?.trim();
     if (!from) {
         console.error('[mail] FLOREM_MAIL_FROM mancante: impossibile inviare.');

@@ -102,6 +102,13 @@ function isBankLineSdd(row: FiscalDedupableEntry): 'paypal' | 'stripe' | null {
     return null;
 }
 
+function gatewayLabel(row: FiscalDedupableEntry): string {
+    const cp = (row.counterpartyName || '').trim();
+    if (cp && !GATEWAY_PLATFORM_NAMES_RE.test(cp)) return cp;
+    const desc = (row.description || '').trim();
+    return desc.slice(0, 60) || row.sourceType;
+}
+
 function isGatewayOutflow(row: FiscalDedupableEntry, gateway: 'paypal' | 'stripe'): boolean {
     if (row.totalCents >= 0) return false;
     if (gateway === 'paypal') return row.sourceType === 'PAYPAL_MOVEMENT';
@@ -155,7 +162,25 @@ export function reconcileSddGatewayDuplicates<T extends FiscalDedupableEntry>(
     }
 
     const suppressedGatewayIds = new Set<string>();
-    const enrichedBankLines = new Map<string, { counterpartyName: string; description: string }>();
+    const enrichedBankLines = new Map<
+        string,
+        {
+            counterpartyName: string;
+            description: string;
+            drillDown?: {
+                gateway: 'paypal' | 'stripe';
+                kind: 'sdd_debit';
+                lines: Array<{
+                    id: string;
+                    sourceType: string;
+                    label: string;
+                    amountCents: number;
+                    accountingDate: string | null;
+                }>;
+                netCents: number;
+            };
+        }
+    >();
 
     // Passa 1: trova match SDD ↔ gateway
     for (const bankRow of rows) {
@@ -200,11 +225,40 @@ export function reconcileSddGatewayDuplicates<T extends FiscalDedupableEntry>(
             suppressedGatewayIds.add(gwId);
 
             const realVendor = extractRealVendor(bestMatch);
+            const drillDownLine = {
+                id: gwId,
+                sourceType: bestMatch.sourceType,
+                label: realVendor || gatewayLabel(bestMatch),
+                amountCents: bestMatch.totalCents,
+                accountingDate:
+                    bestMatch.accountingDate instanceof Date
+                        ? bestMatch.accountingDate.toISOString().slice(0, 10)
+                        : bestMatch.accountingDate
+                          ? String(bestMatch.accountingDate).slice(0, 10)
+                          : null,
+            };
             if (realVendor) {
                 const origDesc = (bankRow.description || '').trim();
                 enrichedBankLines.set(bankId, {
                     counterpartyName: realVendor,
                     description: realVendor + (origDesc ? ` · Addebito Fineco via PayPal` : ''),
+                    drillDown: {
+                        gateway,
+                        kind: 'sdd_debit' as const,
+                        lines: [drillDownLine],
+                        netCents: Math.abs(bankRow.totalCents),
+                    },
+                });
+            } else {
+                enrichedBankLines.set(bankId, {
+                    counterpartyName: bankRow.counterpartyName || '',
+                    description: bankRow.description || '',
+                    drillDown: {
+                        gateway,
+                        kind: 'sdd_debit' as const,
+                        lines: [drillDownLine],
+                        netCents: Math.abs(bankRow.totalCents),
+                    },
                 });
             }
 
@@ -231,13 +285,26 @@ export function reconcileSddGatewayDuplicates<T extends FiscalDedupableEntry>(
         // Sopprimi riga gateway duplicata
         if (suppressedGatewayIds.has(rowId)) continue;
 
-        // Arricchisci bank line con fornitore reale
+        // Arricchisci bank line con fornitore reale + drill-down gateway
         const enrichment = enrichedBankLines.get(rowId);
         if (enrichment) {
+            const prevMeta =
+                r.metadataJson && typeof r.metadataJson === 'object'
+                    ? (r.metadataJson as Record<string, unknown>)
+                    : {};
             result.push({
                 ...r,
                 counterpartyName: enrichment.counterpartyName,
                 description: enrichment.description,
+                metadataJson: {
+                    ...prevMeta,
+                    ...(enrichment.drillDown
+                        ? {
+                              finecoGatewayDrillDown: enrichment.drillDown,
+                              finecoMasterKind: 'sdd_debit',
+                          }
+                        : {}),
+                },
             });
             continue;
         }

@@ -11,6 +11,7 @@ import {
     type LedgerCategory,
 } from '@/lib/financial/historicalLedgerTypes';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
+import { applyFinecoMasterLedger } from '@/lib/accounting/finecoMasterLedger';
 import {
     labelReconciliationStatusIt,
     labelSourceTypeIt,
@@ -144,7 +145,9 @@ export async function listHistoricalLedgerEntries(filters: HistoricalLedgerFilte
     });
     const poseRefs = await loadPrepaidPoseRefSets();
     const withoutPoseRevenue = cleaned.filter((r) => !isPrepaidPoseRevenueEntry(r, poseRefs));
-    const deduped = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
+    // Gerarchia fiscale (dedup) + vista mastro Fineco: solo BANK_LINE in elenco.
+    const hierarchy = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
+    const { rows: deduped } = applyFinecoMasterLedger(hierarchy, withoutPoseRevenue);
     const rows = deduped.slice(skip, skip + take);
     const suppressed = Math.max(0, cleaned.length - deduped.length);
     const total = Math.max(0, totalRaw - suppressed);

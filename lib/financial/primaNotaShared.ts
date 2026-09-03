@@ -5,6 +5,7 @@
 import { labelReconciliationStatusIt } from '@/lib/financial/fiscalItalianLabels';
 import { CATEGORY_LABELS } from '@/lib/financial/historicalLedgerTypes';
 import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthorityDedupe';
+import type { FinecoGatewayDrillDown } from '@/lib/accounting/finecoMasterLedger';
 
 export type PrimaNotaDisplayEntry = {
     id: string;
@@ -31,6 +32,8 @@ export type PrimaNotaDisplayEntry = {
     isEntrata: boolean;
     sourceLabel: string;
     attachments: ConsolidatedFiscalAttachment[];
+    /** Dettaglio gateway (PayPal/Stripe) collegato alla riga Fineco — solo drawer. */
+    gatewayDrillDown?: FinecoGatewayDrillDown | null;
 };
 
 export const RECONCILIATION_STATUS_OPTIONS = [
@@ -229,7 +232,7 @@ export function signedMovementCents(entry: Pick<PrimaNotaDisplayEntry, 'amountCe
 }
 
 /** Badge sintetico conto/gateway. */
-export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | 'sourceLabel' | 'sourceKey' | 'category'>): {
+export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | 'sourceLabel' | 'sourceKey' | 'category' | 'gatewayDrillDown'>): {
     label: string;
     className: string;
 } {
@@ -237,12 +240,21 @@ export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | '
     const sk = (entry.sourceKey || '').toUpperCase();
     const label = (entry.sourceLabel || '').toLowerCase();
     const cat = entry.category || '';
+    const dd = entry.gatewayDrillDown;
 
+    // Vista Fineco-mastro: badge sul movimento bancario reale
+    if (st === 'BANK_LINE' || st === 'BANK_LINE_MANUAL' || label.includes('fineco')) {
+        if (dd?.kind === 'payout_credit') {
+            const gw = dd.gateway === 'stripe' ? 'Stripe' : dd.gateway === 'paypal' ? 'PayPal' : 'Gateway';
+            return { label: `Fineco · ${gw}`, className: 'bg-indigo-100 text-indigo-900' };
+        }
+        if (dd?.kind === 'sdd_debit') {
+            return { label: 'Fineco · SDD', className: 'bg-amber-100 text-amber-900' };
+        }
+        return { label: 'Fineco', className: 'bg-sky-100 text-sky-800' };
+    }
     if (cat === 'TRASFERIMENTO_INTERNO' || cat === 'PAYPAL_PAYOUT') {
         return { label: 'Giroconto', className: 'bg-indigo-100 text-indigo-900' };
-    }
-    if (st === 'BANK_LINE' || st === 'BANK_LINE_MANUAL' || label.includes('fineco')) {
-        return { label: 'Fineco', className: 'bg-sky-100 text-sky-800' };
     }
     if (st === 'STRIPE_MOVEMENT' || sk.includes('STRIPE') || label.includes('stripe')) {
         return { label: 'Stripe', className: 'bg-violet-100 text-violet-800' };

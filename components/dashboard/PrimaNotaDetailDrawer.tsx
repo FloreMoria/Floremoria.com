@@ -348,6 +348,81 @@ export default function PrimaNotaDetailDrawer({
 
                     <section className="space-y-3">
                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Dettaglio gateway (drill-down)
+                        </h4>
+                        {entry.gatewayDrillDown ? (
+                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+                                <p className="text-xs text-indigo-900">
+                                    {entry.gatewayDrillDown.kind === 'payout_credit'
+                                        ? 'Accredito payout: suddivisione corrispettivi e commissioni trattenute dal gateway.'
+                                        : entry.gatewayDrillDown.kind === 'sdd_debit'
+                                          ? 'Addebito SDD Fineco abbinato alla spesa fornitore sul gateway.'
+                                          : 'Movimenti gateway collegati a questa riga bancaria.'}
+                                </p>
+                                {(entry.gatewayDrillDown.grossSalesCents != null ||
+                                    entry.gatewayDrillDown.feesCents != null) && (
+                                    <dl className="grid grid-cols-2 gap-2 text-xs">
+                                        {entry.gatewayDrillDown.grossSalesCents != null && (
+                                            <div>
+                                                <dt className="text-slate-500">Corrispettivi lordi</dt>
+                                                <dd className="font-semibold text-emerald-800">
+                                                    +€ {euro(entry.gatewayDrillDown.grossSalesCents)}
+                                                </dd>
+                                            </div>
+                                        )}
+                                        {entry.gatewayDrillDown.feesCents != null && (
+                                            <div>
+                                                <dt className="text-slate-500">Commissioni gateway</dt>
+                                                <dd className="font-semibold text-rose-800">
+                                                    −€ {euro(entry.gatewayDrillDown.feesCents)}
+                                                </dd>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <dt className="text-slate-500">Netto su Fineco</dt>
+                                            <dd className="font-semibold text-slate-900">
+                                                € {euro(entry.gatewayDrillDown.netCents)}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                )}
+                                {entry.gatewayDrillDown.lines.length > 0 && (
+                                    <ul className="divide-y divide-indigo-100 rounded-lg border border-indigo-100 bg-white text-xs">
+                                        {entry.gatewayDrillDown.lines.map((line) => (
+                                            <li
+                                                key={line.id}
+                                                className="flex items-center justify-between gap-2 px-2 py-1.5"
+                                            >
+                                                <span className="truncate text-slate-700" title={line.label}>
+                                                    {line.label}
+                                                    <span className="ml-1 text-[10px] text-slate-400">
+                                                        {line.sourceType}
+                                                    </span>
+                                                </span>
+                                                <span
+                                                    className={`font-mono font-semibold whitespace-nowrap ${
+                                                        line.amountCents >= 0
+                                                            ? 'text-emerald-700'
+                                                            : 'text-rose-700'
+                                                    }`}
+                                                >
+                                                    {line.amountCents >= 0 ? '+' : '−'}€{' '}
+                                                    {euro(Math.abs(line.amountCents))}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-slate-400 italic">
+                                Nessun dettaglio gateway collegato (bonifico diretto / onere bancario).
+                            </p>
+                        )}
+                    </section>
+
+                    <section className="space-y-3">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                             Movimenti correlati
                         </h4>
                         {loadingRelated ? (

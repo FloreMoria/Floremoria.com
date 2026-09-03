@@ -12,6 +12,10 @@ import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatF
 import { labelSourceTypeIt } from '@/lib/financial/fiscalItalianLabels';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthorityDedupe';
+import {
+    applyFinecoMasterLedger,
+    readFinecoGatewayDrillDown,
+} from '@/lib/accounting/finecoMasterLedger';
 import type { AccountingEntry } from '@/lib/financial/types';
 import {
     categoryLabel,
@@ -85,16 +89,6 @@ function isEntrataFromNeon(r: NeonRow): boolean {
     if (r.direction === 'ENTRATA') return true;
     if (r.direction === 'USCITA') return false;
     return r.totalCents > 0;
-}
-
-function isEntrataFromLocal(dareAccount: string, avereAccount: string): boolean {
-    const dare = dareAccount.toLowerCase();
-    const avere = avereAccount.toLowerCase();
-    if (/banca|cassa|10100|10200/.test(dare)) return true;
-    if (/banca|cassa|10100|10200/.test(avere)) return false;
-    if (/ricav|60100|60900/.test(avere)) return true;
-    if (/cost|spes|70100|70200|70300|70900/.test(dare)) return false;
-    return true;
 }
 
 function accountsFromNeon(r: NeonRow): { dare: string; avere: string } {
@@ -187,7 +181,7 @@ async function fetchPrimaNotaRows(url: string): Promise<NeonRow[]> {
     return parsed.data?.rows || [];
 }
 
-export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props) {
+export default function PrimaNotaTable({ localEntries: _localEntries, searchTerm = '' }: Props) {
     const [fonteOverrides, setFonteOverrides] = useState<Record<string, string>>({});
     const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
     const [selectedEntry, setSelectedEntry] = useState<PrimaNotaDisplayEntry | null>(null);
@@ -271,25 +265,27 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
             return true;
         });
 
-        const fiscalRows = applyFiscalAuthorityHierarchy(
-            cleanedNeon.map((r) => ({
-                id: r.id,
-                sourceType: r.sourceType,
-                sourceId: r.sourceId,
-                sourceKey: r.sourceKey,
-                orderId: r.orderId,
-                documentRef: r.documentRef,
-                accountingDate: r.accountingDate,
-                totalCents: r.totalCents,
-                direction: r.direction,
-                category: r.category,
-                bankLineId: r.bankLineId,
-                description: r.description,
-                counterpartyName: r.counterpartyName,
-                attachmentUrl: r.attachmentUrl,
-                metadataJson: r.metadataJson,
-            }))
-        );
+        const fiscalInput = cleanedNeon.map((r) => ({
+            id: r.id,
+            sourceType: r.sourceType,
+            sourceId: r.sourceId,
+            sourceKey: r.sourceKey,
+            orderId: r.orderId,
+            documentRef: r.documentRef,
+            accountingDate: r.accountingDate,
+            totalCents: r.totalCents,
+            direction: r.direction,
+            category: r.category,
+            bankLineId: r.bankLineId,
+            description: r.description,
+            counterpartyName: r.counterpartyName,
+            attachmentUrl: r.attachmentUrl,
+            metadataJson: r.metadataJson,
+        }));
+
+        // Gerarchia fiscale + vista mastro Fineco (solo movimenti bancari).
+        const hierarchy = applyFiscalAuthorityHierarchy(fiscalInput);
+        const { rows: fiscalRows } = applyFinecoMasterLedger(hierarchy, fiscalInput);
         const fiscalById = new Map(fiscalRows.map((r) => [r.id, r]));
         const keepNeonIds = new Set(fiscalRows.map((r) => r.id).filter(Boolean) as string[]);
 
@@ -313,13 +309,14 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     : direction === 'USCITA'
                       ? false
                       : isEntrataFromNeon({ ...r, totalCents, direction: direction || r.direction });
+            const gatewayDrillDown = readFinecoGatewayDrillDown(meta);
 
             map.set(
                 r.id,
                 buildDisplayEntry({
                     id: r.id,
                     date: String(r.accountingDate).slice(0, 10),
-                    description: r.description,
+                    description: enriched?.description || r.description,
                     dareAccount: accounts.dare,
                     avereAccount: accounts.avere,
                     amountCents: Math.abs(totalCents || r.netCents || 0),
@@ -345,71 +342,12 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                             (typeof meta.displayFonte === 'string' ? meta.displayFonte : null)
                     ),
                     attachments,
+                    gatewayDrillDown,
                 })
             );
         }
 
-        const combinedForLocalFilter = applyFiscalAuthorityHierarchy([
-            ...fiscalRows,
-            ...localEntries
-                .filter((e) => !isFinanceSeedEntryId(e.id))
-                .map((e) => ({
-                    id: e.id,
-                    sourceType: 'JSON_ENTRY' as const,
-                    sourceId: e.id,
-                    sourceKey: `JSON_ENTRY:${e.id}`,
-                    accountingDate: e.date,
-                    totalCents: e.amountCents,
-                    direction: 'ENTRATA' as const,
-                    category: 'RICAVI_VENDITE',
-                    metadataJson: null,
-                })),
-        ]);
-        const keepLocalIds = new Set(
-            combinedForLocalFilter
-                .filter((r) => r.sourceType === 'JSON_ENTRY')
-                .map((r) => r.id)
-                .filter(Boolean) as string[]
-        );
-
-        for (const e of localEntries) {
-            if (isFinanceSeedEntryId(e.id)) continue;
-            if (!keepLocalIds.has(e.id)) continue;
-            if (map.has(e.id)) continue;
-            const isEntrata = isEntrataFromLocal(e.dareAccount, e.avereAccount);
-            map.set(
-                e.id,
-                buildDisplayEntry({
-                    id: e.id,
-                    date: e.date,
-                    description: e.description,
-                    dareAccount: e.dareAccount,
-                    avereAccount: e.avereAccount,
-                    amountCents: e.amountCents,
-                    netCents: Math.max(0, e.amountCents - (e.vatAmountCents || 0)),
-                    vatCents: e.vatAmountCents || 0,
-                    vatRate: e.vatAmountCents
-                        ? Math.round((e.vatAmountCents / Math.max(1, e.amountCents - e.vatAmountCents)) * 100)
-                        : 0,
-                    direction: isEntrata ? 'ENTRATA' : 'USCITA',
-                    category: 'JSON_ENTRY',
-                    counterpartyName: null,
-                    documentRef: e.invoiceReference,
-                    sourceType: 'JSON_ENTRY',
-                    sourceId: e.id,
-                    sourceKey: `JSON_ENTRY:${e.id}`,
-                    orderId: null,
-                    partnerId: null,
-                    bankLineId: null,
-                    attachmentUrl: null,
-                    reconciliationStatus: statusOverrides[e.id] || 'UNMATCHED',
-                    isEntrata,
-                    sourceLabel: fonteOverrides[e.id] || 'Manuale',
-                    attachments: [],
-                })
-            );
-        }
-
+        // Vista Fineco-mastro: niente JSON_ENTRY locali (non sono movimenti bancari).
         let list = dedupePrimaNotaVisualEntries(Array.from(map.values()));
         const q = searchTerm.trim().toLowerCase();
         if (q) {
@@ -429,10 +367,10 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     reconciliationStatusLabel(e.reconciliationStatus).toLowerCase().includes(q)
             );
         }
-        // Cronologico crescente per saldo progressivo
+        // Cronologico crescente per saldo progressivo (= saldo estratto Fineco)
         list.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
         return list;
-    }, [localEntries, neonRows, searchTerm, fonteOverrides, statusOverrides]);
+    }, [neonRows, searchTerm, fonteOverrides, statusOverrides]);
 
     const bounds = useMemo(
         () => periodBounds(FISCAL_YEAR, periodKey),
@@ -534,6 +472,12 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                             Aggiorna
                         </button>
                     </div>
+
+                    <p className="text-[11px] text-slate-500 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2">
+                        Registro mastro Fineco: elenco cronologico dei soli movimenti del conto
+                        corrente. PayPal/Stripe appaiono come dettaglio nel drawer, non come
+                        righe autonome. Il saldo progressivo collima con l&apos;estratto conto.
+                    </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">

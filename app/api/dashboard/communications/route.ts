@@ -4,6 +4,7 @@ import { getChatStore, addMessage, setSessionStatus, getSession, markChatSession
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates, type TemplateLibrary } from '@/lib/whatsapp/approvedTemplates';
+import { FLOREMORIA_GENERICO_TEMPLATE_ID } from '@/lib/whatsapp/floremoriaGenericoTemplate';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
 import { sendWhatsAppMessage } from '@/lib/whatsapp/sendWhatsAppMessage';
@@ -196,6 +197,54 @@ export async function POST(req: Request) {
             }
             const session = await setSessionStatus(phone, status);
             return NextResponse.json({ success: true, session });
+        }
+
+        if (action === 'sendTemplate') {
+            if (!phone) {
+                return NextResponse.json({ success: false, error: 'Parametro "phone" mancante.' }, { status: 400 });
+            }
+            const session = await getSession(phone);
+            const result = await startProactiveConversation({
+                phoneRaw: phone.replace(/^whatsapp:/, ''),
+                displayName: displayName || session.name,
+                userType:
+                    userType === 'FLORIST' || userType === 'UTENTE'
+                        ? userType
+                        : session.userType === 'FLORIST' || session.userType === 'UTENTE'
+                          ? session.userType
+                          : 'UNKNOWN',
+                templateId: templateId || FLOREMORIA_GENERICO_TEMPLATE_ID,
+                templateFieldValues:
+                    templateFieldValues &&
+                    typeof templateFieldValues === 'object' &&
+                    !Array.isArray(templateFieldValues)
+                        ? (templateFieldValues as Record<string, string>)
+                        : undefined,
+                forceTemplate: true,
+            });
+
+            if (!result.ok) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: result.error ?? 'Invio template WhatsApp fallito.',
+                        requiresTemplate: result.requiresTemplate ?? false,
+                        templates: result.templates,
+                    },
+                    { status: result.requiresTemplate ? 409 : 502 }
+                );
+            }
+
+            if (testModeActive) {
+                await markChatSessionAsTest(phone);
+            }
+
+            return NextResponse.json({
+                success: true,
+                session: result.session,
+                mode: result.mode,
+                send: result.send,
+            });
         }
 
         if (action === 'sendMessage') {

@@ -74,9 +74,16 @@ const SLOT_UI: Record<
         placeholder: 'https://www.floremoria.com/fiori-sulle-tombe',
         defaultValue: 'https://www.floremoria.com/fiori-sulle-tombe',
     },
+    updateMessage: {
+        label: 'Testo aggiornamento (variabile {{2}})',
+        placeholder:
+            'Es. la consegna è confermata per domani mattina; il fiorista le invierà la foto appena completata.',
+        multiline: true,
+    },
 };
 
 export const FLORIST_LIBRARY_IDS: VeraTemplateId[] = [
+    'floremoria_generico',
     'florist_bonifico_ricevuta',
     'florist_ringraziamento',
     'florist_repeat',
@@ -89,6 +96,7 @@ export const FLORIST_LIBRARY_IDS: VeraTemplateId[] = [
 ];
 
 export const USER_LIBRARY_IDS: VeraTemplateId[] = [
+    'floremoria_generico',
     'customer_order_confirm',
     'customer_delivery_photo',
     'customer_waiting_update',
@@ -97,6 +105,7 @@ export const USER_LIBRARY_IDS: VeraTemplateId[] = [
 ];
 
 const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
+    floremoria_generico: 'Aggiornamento generico (floremoria_generico)',
     florist_bonifico_ricevuta: 'Conferma Bonifico Fiorista',
     florist_ringraziamento: 'Ringraziamento post-consegna fiorista',
     florist_first_001: 'Nuovo ordine fiorista · parte 1 (nome/codice/compenso)',
@@ -109,6 +118,7 @@ const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
 };
 
 const USER_LABELS: Partial<Record<VeraTemplateId, string>> = {
+    floremoria_generico: 'Aggiornamento generico (floremoria_generico)',
     customer_order_confirm: 'Conferma ordine cliente',
     customer_delivery_photo: 'Consegna completata + MagicLink foto',
     customer_waiting_update: 'Aggiornamento attesa consegna',

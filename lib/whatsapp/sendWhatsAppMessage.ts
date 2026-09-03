@@ -12,11 +12,14 @@ import {
 } from '@/lib/whatsapp/metaCloudApiClient';
 import { isWhatsAppBsuid, normalizeWhatsAppBsuid } from '@/lib/whatsapp/bsuid';
 import {
-    getProactiveWhatsAppTemplate,
-    sanitizeMetaTemplateParam,
-    extractFirstName,
-    normalizeOrderCode,
-} from '@/lib/whatsapp/approvedTemplates';
+    buildFloremoriaGenericoComponents,
+    FLOREMORIA_GENERICO_LANGUAGE,
+    FLOREMORIA_GENERICO_META_NAME,
+    FLOREMORIA_GENERICO_TEMPLATE_ID,
+    prepareGenericoUpdateBody,
+    renderFloremoriaGenericoPreview,
+    resolveGenericoRecipientName,
+} from '@/lib/whatsapp/floremoriaGenericoTemplate';
 import { tryClaimIdenticalTextOutbound } from '@/lib/whatsapp/veraWebhookDedup';
 import { buildOutboundWamidMetadata } from '@/lib/whatsapp/normalizeWamid';
 
@@ -32,6 +35,10 @@ export interface SendWhatsAppMessageOptions {
     forceTemplate?: boolean;
     /** Se true, in caso di errore 24h non invia il template proattivo (Punto A preferisce cascata dedicata). */
     disableTemplateFallback?: boolean;
+    /**
+     * Aggiornamento operativo ordine: usa sempre `floremoria_generico` (dentro e fuori finestra 24h).
+     */
+    operationalUpdate?: boolean;
 }
 
 export interface SendWhatsAppMessageResult extends WhatsAppSendResult {
@@ -131,8 +138,8 @@ export async function sendWhatsAppMessage(
         };
     }
 
-    // 1. Tenta invio messaggio libero (session message), salvo forceTemplate
-    if (!options?.forceTemplate) {
+    // 1. Tenta invio messaggio libero (session message), salvo forceTemplate / aggiornamento operativo
+    if (!options?.forceTemplate && !options?.operationalUpdate) {
         const initialSend = await sendWhatsAppTextMessage(phone, text);
 
         if (initialSend.ok) {
@@ -155,6 +162,11 @@ export async function sendWhatsAppMessage(
             errorCode: initialSend.errorCode,
             errorSubcode: initialSend.errorSubcode,
         });
+    } else if (options?.operationalUpdate) {
+        console.info('[whatsapp] operationalUpdate: invio template floremoria_generico', {
+            phone,
+            source: options.source,
+        });
     } else {
         console.info('[whatsapp] forceTemplate: salto free-text, invio diretto template', {
             phone,
@@ -162,51 +174,19 @@ export async function sendWhatsAppMessage(
         });
     }
 
-    // Mappatura parametri per il template di notifica logistica / messaggio personalizzato
-    const templateSpec = getProactiveWhatsAppTemplate();
+    const recipientFirstName = resolveGenericoRecipientName(options?.recipientName || 'Cliente');
+    const updateMessage = prepareGenericoUpdateBody(text);
 
-    const rawOrderCode =
-        options?.orderCode ||
-        extractOrderCodeFromText(text) ||
-        'FLOREMORIA';
-    const orderCode = normalizeOrderCode(rawOrderCode) || 'FLOREMORIA';
+    const components = buildFloremoriaGenericoComponents(recipientFirstName, updateMessage);
 
-    const rawFirstName =
-        options?.recipientName ||
-        'Cliente';
-    const recipientFirstName = extractFirstName(rawFirstName) || 'Cliente';
-
-    const staffNotes = sanitizeMetaTemplateParam(text, 900) || 'Aggiornamento sul Suo servizio.';
-
-    // Meta FT body-only: {{1}} nome, {{2}} ordine, {{3}} note.
-    const components = [
-        {
-            type: 'body' as const,
-            parameters: [
-                {
-                    type: 'text' as const,
-                    text: sanitizeMetaTemplateParam(recipientFirstName, 60) || '-',
-                },
-                {
-                    type: 'text' as const,
-                    text: sanitizeMetaTemplateParam(orderCode, 40) || '-',
-                },
-                {
-                    type: 'text' as const,
-                    text: staffNotes,
-                },
-            ],
-        },
-    ];
-
-    // 3. Fallback / invio diretto via WhatsApp Template
+    // 3. Fallback / invio diretto via WhatsApp Template `floremoria_generico`
     const templateResult = await sendWhatsAppTemplateMessage(
         phone,
-        templateSpec.metaName,
-        templateSpec.language,
+        FLOREMORIA_GENERICO_META_NAME,
+        FLOREMORIA_GENERICO_LANGUAGE,
         components,
         {
-            expectedBodyParamCount: 3,
+            expectedBodyParamCount: 2,
             expectedHeaderTextParamCount: 0,
         }
     );
@@ -223,6 +203,7 @@ export async function sendWhatsAppMessage(
 
     // 4. Se l'invio ha esito positivo, segna il messaggio come inviato su WhatsApp e aggiorna la cronologia chat Dashboard
     const sessionPhone = options?.sessionPhone || (phone.startsWith('whatsapp:') ? phone : `whatsapp:${phone.replace(/^\+?/, '+')}`);
+    const logBody = renderFloremoriaGenericoPreview(recipientFirstName, updateMessage);
     try {
         await getSession(sessionPhone);
         if (options?.recipientName) {
@@ -232,12 +213,15 @@ export async function sendWhatsAppMessage(
                 status: 'HUMAN_INTERVENTION',
             });
         }
-        await addMessage(sessionPhone, 'OUTBOUND', text, undefined, {
+        await addMessage(sessionPhone, 'OUTBOUND', logBody, undefined, {
             source: options?.source || 'vera',
-            outboundMode: options?.forceTemplate ? 'template_forced' : 'template_fallback_24h',
-            templateName: templateSpec.metaName,
-            orderCode,
-            recipientFirstName,
+            outboundMode: options?.operationalUpdate
+                ? 'template_operational'
+                : options?.forceTemplate
+                  ? 'template_forced'
+                  : 'template_fallback_24h',
+            templateId: FLOREMORIA_GENERICO_TEMPLATE_ID,
+            templateName: FLOREMORIA_GENERICO_META_NAME,
             ...buildOutboundWamidMetadata(templateResult.messageId),
         });
         console.info(`[whatsapp-24h-fallback] Messaggio registrato con successo su chat Dashboard per ${sessionPhone}`);
@@ -248,6 +232,6 @@ export async function sendWhatsAppMessage(
     return {
         ok: true,
         messageId: templateResult.messageId,
-        fallbackExecuted: true,
+        fallbackExecuted: !options?.operationalUpdate,
     };
 }

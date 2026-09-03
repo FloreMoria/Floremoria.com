@@ -11,6 +11,7 @@ import {
     listVeraFloristLibraryTemplates,
     listVeraUserLibraryTemplates,
 } from '@/lib/whatsapp/templateLibraries';
+import { getFloremoriaGenericoWhatsAppTemplate, prepareGenericoUpdateBody } from '@/lib/whatsapp/floremoriaGenericoTemplate';
 
 /** Scenario A: librerie rigidamente separate. */
 export type TemplateLibrary = 'FLORIST' | 'UTENTE';
@@ -311,17 +312,23 @@ export function listApprovedWhatsAppTemplates(
     library?: TemplateLibrary
 ): WhatsAppTemplateDefinition[] {
     const florist = [
-        ...listVeraFloristLibraryTemplates().filter((t) => t.id !== 'florist_reminder'),
+        getFloremoriaGenericoWhatsAppTemplate('FLORIST'),
+        ...listVeraFloristLibraryTemplates().filter((t) => t.id !== 'floremoria_generico'),
         getFloristReminderWhatsAppTemplate(),
         getProactiveWhatsAppTemplate(),
     ];
-    const users = listVeraUserLibraryTemplates().map((t) => {
+    const users = [
+        getFloremoriaGenericoWhatsAppTemplate('UTENTE'),
+        ...listVeraUserLibraryTemplates()
+            .filter((t) => t.id !== 'floremoria_generico')
+            .map((t) => {
         if (t.id === 'customer_waiting_update') return getCustomerWaitingUpdateWhatsAppTemplate();
         if (t.id === 'anniversary_gdm_reminder') {
             return { ...getAnniversaryGdmWhatsAppTemplate(), id: 'anniversary_gdm_reminder' };
         }
         return t;
-    });
+    }),
+    ];
 
     if (library === 'FLORIST') return florist;
     if (library === 'UTENTE') return users;
@@ -380,10 +387,17 @@ export function buildOperatorTemplateComponents(
         if (
             (field.key === 'recipientFirstName' ||
                 field.key === 'userFirstName' ||
-                field.key === 'buyerFirstName') &&
+                field.key === 'buyerFirstName' ||
+                field.key === 'floristFirstName') &&
             !raw.startsWith('Ciao ')
         ) {
             raw = extractFirstName(raw) || raw;
+        }
+        if (field.key === 'recipientFirstName' && !raw.trim()) {
+            raw = 'Cliente';
+        }
+        if (field.key === 'updateMessage') {
+            raw = prepareGenericoUpdateBody(raw);
         }
         if (field.key === 'orderCode' && !raw.includes('📦')) {
             raw = normalizeOrderCode(raw);
@@ -446,10 +460,17 @@ export function renderOperatorTemplatePreview(
         if (
             (field.key === 'recipientFirstName' ||
                 field.key === 'userFirstName' ||
-                field.key === 'buyerFirstName') &&
+                field.key === 'buyerFirstName' ||
+                field.key === 'floristFirstName') &&
             !raw.startsWith('Ciao ')
         ) {
             raw = extractFirstName(raw) || raw;
+        }
+        if (field.key === 'recipientFirstName' && !raw.trim()) {
+            raw = 'Cliente';
+        }
+        if (field.key === 'updateMessage') {
+            raw = prepareGenericoUpdateBody(raw);
         }
         body = body.replace(
             new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'),

@@ -9,6 +9,7 @@
  * che `stripInternalNotes` nasconde al fiorista.
  */
 
+import { prepareGenericoUpdateBody } from '@/lib/whatsapp/floremoriaGenericoTemplate';
 import prisma from '@/lib/prisma';
 import {
     B2B_METADATA_DELIMITER,
@@ -450,19 +451,17 @@ export async function notifyFloristIfApplicable(
         customerNotes: 'Note operative aggiornate',
     };
 
-    const body =
-        `Aggiornamento ordine ${orderCode}` +
-        (order?.deceasedName ? ` (${order.deceasedName})` : '') +
-        `\n${labelByType[updateType] || 'Aggiornamento operativo'}:\n` +
-        `${content.trim().slice(0, 400)}\n\n` +
-        `— Vera | Staff FloreMoria`;
+    const updateBody = prepareGenericoUpdateBody(
+        `${labelByType[updateType] || 'Aggiornamento operativo'}: ${content.trim().slice(0, 400)}`
+    );
 
     try {
-        const send = await sendWhatsAppMessage(phone, body, {
+        const send = await sendWhatsAppMessage(phone, updateBody, {
             recipientName: order?.partner?.ownerName || order?.partner?.shopName || 'Fiorista',
             orderCode,
             source: 'vera_action_florist_update',
             userType: 'FLORIST',
+            operationalUpdate: true,
         });
 
         console.info('[vera-actions] notifyFloristIfApplicable', {

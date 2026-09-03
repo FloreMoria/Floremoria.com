@@ -12,6 +12,10 @@ import {
     type VeraTemplateSpec,
 } from '@/lib/whatsapp/veraTemplateRegistry';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import {
+    prepareGenericoUpdateBody,
+    resolveGenericoRecipientName,
+} from '@/lib/whatsapp/floremoriaGenericoTemplate';
 
 /** Slot opzionale Meta: testo sanitizzato oppure singolo spazio (#132000). */
 function resolveOptionalMetaBodyParam(
@@ -28,7 +32,7 @@ export class VeraTemplateParamError extends Error {
     }
 }
 
-const FIRST_NAME_SLOT_PATTERN = /^(firstName|floristFirstName|buyerFirstName|userFirstName)$/i;
+const FIRST_NAME_SLOT_PATTERN = /^(firstName|floristFirstName|buyerFirstName|userFirstName|recipientFirstName)$/i;
 const MAX_NAME_LEN = META_TEMPLATE_LIMITS.shortName;
 
 function assertShortName(value: string, slot: string): string {
@@ -148,6 +152,18 @@ export function buildCustomerWaitingUpdateParams(input: {
         ),
     });
     logBuiltTemplateParams('customer_waiting_update', params);
+    return params;
+}
+
+export function buildFloremoriaGenericoParams(input: {
+    recipientFirstName?: string | null;
+    updateMessage: string;
+}): string[] {
+    const params = [
+        resolveGenericoRecipientName(input.recipientFirstName),
+        prepareGenericoUpdateBody(input.updateMessage),
+    ];
+    logBuiltTemplateParams('floremoria_generico', params);
     return params;
 }
 

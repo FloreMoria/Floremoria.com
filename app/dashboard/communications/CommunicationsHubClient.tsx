@@ -10,6 +10,11 @@ import { useEdgeSwipeBack } from '@/lib/dashboard/useEdgeSwipeBack';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
 import { dashboardJsonFetcher, useDashboardLive } from '@/hooks/useDashboardLive';
+import {
+    FLOREMORIA_GENERICO_TEMPLATE_ID,
+    renderFloremoriaGenericoPreview,
+} from '@/lib/whatsapp/floremoriaGenericoTemplate';
+import { extractFirstName } from '@/lib/whatsapp/proactiveTemplateParams';
 
 function formatMessageTimestamp(createdAtStr?: string, fallback?: string): string {
   const now = new Date();
@@ -162,6 +167,9 @@ function VisioneTab({
   const [forwardSource, setForwardSource] = useState<{ mediaUrl: string; fromPhone: string } | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
   const [forwarding, setForwarding] = useState(false);
+  const [genericoUpdateText, setGenericoUpdateText] = useState('');
+  const [genericoPanelOpen, setGenericoPanelOpen] = useState(false);
+  const [sendingGenerico, setSendingGenerico] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -191,6 +199,56 @@ function VisioneTab({
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [activeChat?.messages?.length]);
+
+  const genericoRecipientName =
+    extractFirstName(activeChat?.displayName || activeChat?.name || '') || 'Cliente';
+  const genericoPreview =
+    genericoUpdateText.trim().length > 0
+      ? renderFloremoriaGenericoPreview(genericoRecipientName, genericoUpdateText)
+      : '';
+
+  const handleSendGenericoTemplate = async () => {
+    if (!activeChatId || !genericoUpdateText.trim() || sendingGenerico) return;
+    setSendingGenerico(true);
+    try {
+      if (activeChat?.status === 'AI_ACTIVE') {
+        await fetch('/api/dashboard/communications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: activeChatId, action: 'updateStatus', status: 'HUMAN_INTERVENTION' }),
+        });
+      }
+      const res = await fetch('/api/dashboard/communications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: activeChatId,
+          action: 'sendTemplate',
+          templateId: FLOREMORIA_GENERICO_TEMPLATE_ID,
+          templateFieldValues: {
+            recipientFirstName: genericoRecipientName,
+            updateMessage: genericoUpdateText.trim(),
+          },
+          forceTemplate: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSessions((prev) =>
+          prev.map((s) => (s.phone === activeChatId ? { ...data.session, status: 'HUMAN_INTERVENTION' } : s))
+        );
+        setGenericoUpdateText('');
+        setGenericoPanelOpen(false);
+      } else {
+        alert(data.error || 'Invio template non riuscito.');
+      }
+    } catch (err) {
+      console.error('Error sending generico template:', err);
+      alert('Errore di rete durante l\'invio del template.');
+    } finally {
+      setSendingGenerico(false);
+    }
+  };
 
   const renderStatus = (status: string, direction: string) => {
     if (direction === 'OUTBOUND') {
@@ -712,6 +770,50 @@ function VisioneTab({
 
               {/* Chat Input Bar — graffetta sempre disponibile */}
               <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-2.5 sm:p-3.5 flex flex-col gap-2 border-t border-[#DFDFDF] shrink-0">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <button
+                    type="button"
+                    onClick={() => setGenericoPanelOpen((v) => !v)}
+                    className="text-[11px] font-semibold uppercase tracking-wide text-[#54656F] hover:text-[#00A884]"
+                  >
+                    {genericoPanelOpen ? 'Nascondi template' : 'Template floremoria_generico'}
+                  </button>
+                  <span className="text-[10px] text-[#8696A0]">Meta · dentro e fuori finestra 24h</span>
+                </div>
+                {genericoPanelOpen ? (
+                  <div className="rounded-xl border border-[#D1E7DD] bg-white p-3 space-y-2 shadow-sm">
+                    <p className="text-[11px] text-[#54656F]">
+                      Destinatario: <strong>{genericoRecipientName}</strong> (variabile {'{{1}}'})
+                    </p>
+                    <textarea
+                      value={genericoUpdateText}
+                      onChange={(e) => setGenericoUpdateText(e.target.value)}
+                      rows={3}
+                      placeholder="Testo aggiornamento per {{2}} — senza saluto iniziale né chiusura (già nel template Meta)…"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#111B21] focus:border-[#00A884] focus:outline-none resize-y"
+                    />
+                    {genericoPreview ? (
+                      <div className="rounded-lg bg-[#FAF8F5] border border-[#EAE3D9] px-3 py-2 text-xs text-[#111B21] whitespace-pre-wrap">
+                        <span className="font-semibold text-[#8A7355]">Anteprima</span>
+                        {'\n'}
+                        {genericoPreview}
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={!genericoUpdateText.trim() || sendingGenerico}
+                      onClick={() => void handleSendGenericoTemplate()}
+                      className={`self-end inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors ${
+                        !genericoUpdateText.trim() || sendingGenerico
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-[#00A884] hover:bg-[#008f6f]'
+                      }`}
+                    >
+                      {sendingGenerico ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Invia template
+                    </button>
+                  </div>
+                ) : null}
                 {activeChat.status === 'AI_ACTIVE' && (
                   <p className="text-[11px] text-center text-[#667781] px-2">
                     VERA AI è attiva: inviando un messaggio o una foto passi al controllo umano.

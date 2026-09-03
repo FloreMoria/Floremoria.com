@@ -3,3 +3,4 @@
 [2026-09-03 09:28] fix(accounting): bundler multi-quota PayPal a somma zero (Ballarate 06/05/2026) e collasso storni parziali; saldo progressivo ricalcolato
 [2026-09-03 15:15] fix(partner-api): compatibilità partnerId legacy Annunci Funebri (f067beff-e351-4484-81b2-5b16bdf27801), fix collisione progressivo orderNumber PT su count e try/catch su revalidatePath; tsc+build OK.
 [2026-09-03 15:31] feat(dashboard): ordini API partner fmp_test_ con isTest, paymentMethodLabel TEST_MOCK_PAID, toggle Modalità Test su /dashboard/orders, backfill script
+[2026-09-03 15:44] feat(whatsapp): template Meta floremoria_generico per VERA, fallback 24h e invio manuale dashboard comunicazioni

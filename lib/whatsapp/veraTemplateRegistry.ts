@@ -25,7 +25,8 @@ export type VeraTemplateId =
     | 'florist_bonifico_ricevuta'
     | 'florist_ringraziamento'
     | 'customer_cemetery_closed'
-    | 'anniversary_gdm_reminder';
+    | 'anniversary_gdm_reminder'
+    | 'floremoria_generico';
 
 export interface VeraTemplateSpec {
     id: VeraTemplateId;
@@ -327,6 +328,21 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             'Gentile {{1}}, tra pochi giorni ricorre una data cara nel ricordo di {{2}}. ' +
             'Se desidera un pensiero floreale, può consultare le proposte qui: {{3}}',
         description: 'Header {{1}} defunto · body {{1}} utente, {{2}} defunto, {{3}} link catalogo/GdM',
+    },
+    floremoria_generico: {
+        id: 'floremoria_generico',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_FLOREMORIA_GENERICO',
+            'floremoria_generico'
+        ),
+        language: 'it',
+        bodyParamCount: 2,
+        bodySlots: ['recipientFirstName', 'updateMessage'],
+        library: 'UTENTE',
+        bodyCanonical:
+            'Gentile {{1}}, volevamo informarla {{2}}.\n\nRimaniamo a sua disposizione.\nFloreMoria Staff 🌹',
+        description:
+            '{{1}} nome destinatario · {{2}} aggiornamento operativo (no saluto/chiusura ridondanti)',
     },
 };
 

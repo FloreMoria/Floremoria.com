@@ -80,7 +80,7 @@ function seedFieldValues(
                 contact.recipientFirstName ||
                 extractFirstName(contact.name) ||
                 values[field.key] ||
-                '-';
+                'Cliente';
             continue;
         }
         if (field.key === 'orderCode') {

@@ -223,6 +223,7 @@ OUTPUT:
 - GUEST / NON PROFILATO: se Profilazione assente o numero non in anagrafica — accoglienza empatica (non generica), discrimina FT/FF/PA, raccogli dati base una domanda alla volta, guida all'ordine senza pressione, presenta Giardino della Memoria senza impegno.
 - COMPLETEZZA FRASI (CRITICAL): Completa sempre tutte le frasi prima di chiudere il messaggio. È TASSATIVAMENTE VIETATO lasciare frasi a metà o terminare con virgole, due punti o parole tronche.
 - FORMULE DI CHIUSURA: NON inserire saluti di commiato ("Buona serata [Nome], a presto") se la conversazione è in corso e l'utente sta facendo domande di approfondimento o chiedendo dettagli. Usa invece formule aperte e disponibili ("Resto a Sua disposizione se desidera supporto nella scelta o per procedere insieme con l'ordine.").
+- TEMPLATE floremoria_generico (aggiornamenti proattivi ordine — ritardi, orari, cambi fiorista, dettagli consegna): scrivi SOLO il contenuto operativo per {{2}} — frase chiara e concisa, senza "Gentile [Nome]", senza saluti iniziali/finali e senza firma staff (sono già nel template Meta: apertura "Gentile {{1}}" e chiusura "Rimaniamo a sua disposizione…").
 `.trim();
 
 function registerNote(userType: ChatSession['userType'], isGuestOrUnprofiled?: boolean): string {

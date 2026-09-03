@@ -333,20 +333,24 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    // Export Dossier Fiscale Completo (Prima Nota + prospetti in un unico .xlsx)
+    // Export Dossier Fiscale Completo — periodo = tab attivo Prima Nota (localStorage)
     const handleExportFiscalDossier = async () => {
         setExportingLedger(true);
         try {
-            const year = new Date().getFullYear();
-            const quarter = Math.floor(new Date().getMonth() / 3) + 1;
+            const { readActivePrimaNotaPeriod, fiscalPeriodFilenameStamp } = await import(
+                '@/lib/financial/trimestreLabel'
+            );
+            const { year, period, queryValue } = readActivePrimaNotaPeriod();
             const res = await fetch(
-                `/api/dashboard/finance/tax-quarterly?year=${year}&quarter=${quarter}&format=xlsx`
+                `/api/dashboard/finance/tax-quarterly?year=${year}&period=${encodeURIComponent(queryValue)}&quarter=${encodeURIComponent(queryValue)}&format=xlsx`
             );
             if (!res.ok) throw new Error('Export dossier fallito');
             const blob = await res.blob();
             const cd = res.headers.get('Content-Disposition') || '';
             const match = cd.match(/filename="([^"]+)"/);
-            const filename = match?.[1] || `FloreMoria_Dossier_Fiscale_T${quarter}_${year}.xlsx`;
+            const stamp = fiscalPeriodFilenameStamp(period);
+            const filename =
+                match?.[1] || `Dossier_Fiscale_FloreMoria_${year}_${stamp}.xlsx`;
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;

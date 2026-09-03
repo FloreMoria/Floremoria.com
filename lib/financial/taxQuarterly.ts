@@ -54,6 +54,19 @@ export function resolveQuarterBounds(year: number, quarter: TaxQuarter): Quarter
     };
 }
 
+/** Bounds anno intero (dossier COMPLETO). */
+export function resolveYearBounds(year: number): QuarterlyBounds {
+    const start = new Date(year, 0, 1, 0, 0, 0, 0);
+    const end = new Date(year, 11, 31, 23, 59, 59, 999);
+    return {
+        year,
+        quarter: 1,
+        start,
+        end,
+        label: `COMPLETO ${year}`,
+    };
+}
+
 /** Bounds di un singolo mese solare (label MM/YYYY; quarter = trimestre di appartenenza). */
 export function resolveMonthBounds(year: number, month: number): QuarterlyBounds {
     const m = Math.min(12, Math.max(1, Math.floor(month)));
@@ -354,10 +367,14 @@ async function loadAutofatturaRefByForeignInvoice(
 export async function buildTaxQuarterlyReport(
     year: number,
     quarter: TaxQuarter,
-    opts?: { month?: number | null }
+    opts?: { month?: number | null; fullYear?: boolean }
 ): Promise<TaxQuarterlyReport> {
     const month = opts?.month != null && opts.month >= 1 && opts.month <= 12 ? opts.month : null;
-    const bounds = month ? resolveMonthBounds(year, month) : resolveQuarterBounds(year, quarter);
+    const bounds = month
+        ? resolveMonthBounds(year, month)
+        : opts?.fullYear
+          ? resolveYearBounds(year)
+          : resolveQuarterBounds(year, quarter);
 
     const orders = await prisma.order.findMany({
         where: {

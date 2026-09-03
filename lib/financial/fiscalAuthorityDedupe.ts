@@ -8,6 +8,7 @@
 
 import { extractBareFinecoTrn } from '@/lib/financial/bankStatements/parseFinecoPaste';
 import { applyPaypalStateMachine } from '@/lib/accounting/paypalStateMachine';
+import { reconcileSddGatewayDuplicates } from '@/lib/financial/paypalSddReconcile';
 
 export const FISCAL_AUTHORITY_SOURCE_TYPES = new Set([
     'BANK_LINE',
@@ -1041,7 +1042,9 @@ export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDe
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
     // PayPal prima: gli storni tecnici non devono coprire ricavi ordine come autorità.
     const step0 = applyPaypalStateMachine(rows);
-    const step1 = excludeOrdersCoveredByFiscalAuthority(step0);
+    // Riconciliazione SDD Fineco ↔ PayPal/Stripe: collassa duplicati gateway.
+    const step0b = reconcileSddGatewayDuplicates(step0).rows;
+    const step1 = excludeOrdersCoveredByFiscalAuthority(step0b);
     const step2 = excludeJsonRevenuesCoveredByFiscalAuthority(step1);
     const step3 = dedupeByCanonicalMovementKey(step2);
     const step4 = dedupeSupplierInvoices(step3);

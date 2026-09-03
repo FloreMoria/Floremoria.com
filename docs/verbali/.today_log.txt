@@ -1,1 +1,2 @@
 [2026-09-03 09:02] feat(accounting): macchina a stati PayPal — cluster funding/carta, storni tecnici a somma zero, saldo progressivo su movimenti effettivi
+[2026-09-03 09:17] feat(accounting): modale Rendiconto Fornitori Esteri PayPal (TD17/TD18) su Autofatture estere, filtro T1–T4 e CSV commercialista

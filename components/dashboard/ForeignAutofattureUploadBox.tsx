@@ -15,6 +15,7 @@ import {
     Search,
     Trash2,
     UploadCloud,
+    WalletCards,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import {
@@ -22,6 +23,7 @@ import {
     FINANCE_PASSIVO_TABLE_SCROLL,
     matchesPassivoSearch,
 } from '@/components/dashboard/finance/financePassivoUi';
+import PaypalForeignSuppliersModal from '@/components/dashboard/PaypalForeignSuppliersModal';
 
 type Props = {
     onImported?: () => void;
@@ -144,6 +146,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     const [detailItem, setDetailItem] = useState<AutofatturaHistoryItem | null>(null);
     const [historySearch, setHistorySearch] = useState('');
+    const [paypalForeignOpen, setPaypalForeignOpen] = useState(false);
 
     const filteredHistory = useMemo(() => {
         if (!historySearch.trim()) return history;
@@ -333,7 +336,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 <div className="mt-0.5 rounded-xl bg-indigo-50 p-2.5 text-indigo-700">
                     <Globe2 size={20} />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
                         Autofatture estere
                     </h3>
@@ -342,6 +345,14 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                         SoggettoEmittente CC) pronto per YouDOX, oppure carica XML/ZIP/PDF già
                         emessi.
                     </p>
+                    <button
+                        type="button"
+                        onClick={() => setPaypalForeignOpen(true)}
+                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-semibold text-sky-900 hover:bg-sky-100"
+                    >
+                        <WalletCards size={14} />
+                        Rendiconto fornitori esteri (PayPal)
+                    </button>
                 </div>
             </div>
 
@@ -814,6 +825,10 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     </div>
                 </div>
             )}
+            <PaypalForeignSuppliersModal
+                open={paypalForeignOpen}
+                onClose={() => setPaypalForeignOpen(false)}
+            />
         </div>
     );
 }

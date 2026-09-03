@@ -266,7 +266,7 @@ export default function LinkPhotoToOrderModal({
                         ) : (
                             filteredOrders.map((ord) => {
                                 const isSelected = selectedOrderId === ord.id;
-                                const buyerName = ord.buyerFullName || ord.user?.name || ord.buyerEmail || 'Cliente sconosciuto';
+                                const buyerName = ord.buyerFullName || ord.user?.name || ord.buyerEmail || 'Cliente';
                                 const deceasedName = ord.deceasedName || ord.deceasedProfile?.fullName || 'Defunto non specificato';
                                 const cemeteryInfo = [ord.cemeteryName, ord.cemeteryCity].filter(Boolean).join(', ') || 'Cimitero n.d.';
                                 const floristName = ord.partner?.shopName || null;

@@ -15,3 +15,5 @@
 [2026-09-03 22:42] ops: Pulizia Vercel Blob — store dashboard -96MB (futuria/staging/orfani). Cron cleanup-blob per store foto-consegne OIDC. No Speed Insights @vercel. Obiettivo: rientrare Hobby <1GB.
 [2026-09-03 22:46] ops: Blob GyRv -77MB (futuria/staging/orfani). Estensione orphan marketing >7gg + path delivery-proof legacy.
 [2026-09-03 22:50] ops: Blob cleanup riallineato — foto consegne PROTETTE; rimozione solo media campagne PUBLISHED >30gg + tmp/staging/futuria.
+[2026-09-03 23:00] fix(dashboard): rimossa dicitura utente sconosciuto sotto al nome cliente nella tabella ordini; fallback pulito su buyerFullName / user?.name / buyerEmail / 'Cliente', CSV export aggiornato; tsc+build OK.
+

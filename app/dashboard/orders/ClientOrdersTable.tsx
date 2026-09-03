@@ -430,7 +430,7 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
             'Data': new Date(o.createdAt).toLocaleDateString('it-IT'),
             'Data Consegna': formatDeliveryDate(o),
             'ID Ordine': o.orderNumber || o.id.substring(o.id.length - 6).toUpperCase(),
-            'Utente': formatPersonName(o.buyerFullName, 'Sconosciuto'),
+            'Utente': formatPersonName(o.buyerFullName || o.user?.name || '') || o.buyerEmail || 'Cliente',
             'Telefono': o.customerPhone || '',
             'Prodotto': o.items?.[0]?.product?.name || 'Composizione',
             'Prezzo': `${(o.totalPriceCents / 100).toFixed(2)} €`,
@@ -851,7 +851,9 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-wrap items-center gap-1.5 leading-tight">
-                                                    <span className="font-semibold text-black">{formatPersonName(order.buyerFullName, 'Utente Sconosciuto')}</span>
+                                                    <span className="font-semibold text-black">
+                                                        {formatPersonName(order.buyerFullName || order.user?.name || '') || (order.buyerEmail ? order.buyerEmail.split('@')[0] : 'Cliente')}
+                                                    </span>
                                                     {order.userId ? (
                                                         <span onClick={(e) => e.stopPropagation()}>
                                                             <UserTypeBadge

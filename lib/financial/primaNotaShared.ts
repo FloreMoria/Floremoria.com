@@ -229,13 +229,18 @@ export function signedMovementCents(entry: Pick<PrimaNotaDisplayEntry, 'amountCe
 }
 
 /** Badge sintetico conto/gateway. */
-export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | 'sourceLabel' | 'sourceKey'>): {
+export function gatewayBadge(entry: Pick<PrimaNotaDisplayEntry, 'sourceType' | 'sourceLabel' | 'sourceKey' | 'category'>): {
     label: string;
     className: string;
 } {
     const st = entry.sourceType || '';
     const sk = (entry.sourceKey || '').toUpperCase();
     const label = (entry.sourceLabel || '').toLowerCase();
+    const cat = entry.category || '';
+
+    if (cat === 'TRASFERIMENTO_INTERNO' || cat === 'PAYPAL_PAYOUT') {
+        return { label: 'Giroconto', className: 'bg-indigo-100 text-indigo-900' };
+    }
     if (st === 'BANK_LINE' || st === 'BANK_LINE_MANUAL' || label.includes('fineco')) {
         return { label: 'Fineco', className: 'bg-sky-100 text-sky-800' };
     }
@@ -277,7 +282,8 @@ export function compactCausalePreview(
         null;
 
     let kind = 'Movimento';
-    if (/bonifico|beneficiario|^ben\s*:/i.test(raw)) kind = 'Bonifico';
+    if (/trasferimento di denaro|denaro raccolto per esborso|payout|giroconto/i.test(raw)) kind = 'Giroconto';
+    else if (/bonifico|beneficiario|^ben\s*:/i.test(raw)) kind = 'Bonifico';
     else if (/scontrino/i.test(raw)) kind = 'Scontrino';
     else if (/fattura/i.test(raw)) kind = 'Fattura';
     else if (/compenso fiorista/i.test(raw)) kind = 'Compenso';
@@ -285,8 +291,15 @@ export function compactCausalePreview(
     else if (/fee|commissione|oneri/i.test(raw)) kind = 'Fee';
 
     if (beneficiary) {
+        if (/staff\.floremoria@gmail\.com|@floremoria\.com|\bflore\s*moria\b/i.test(beneficiary)) {
+            return { title: 'Giroconto verso Banca Fineco', subtitle: 'Partita di giro' };
+        }
         const name = beneficiary.replace(/\s+/g, ' ').trim().slice(0, 42);
         return { title: name, subtitle: kind };
+    }
+
+    if (/trasferimento di denaro|denaro raccolto per esborso/i.test(raw)) {
+        return { title: 'Giroconto verso Banca Fineco', subtitle: 'Partita di giro' };
     }
 
     // Senza beneficiario: primi ~48 char senza prefissi tecnici

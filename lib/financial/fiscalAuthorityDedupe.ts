@@ -328,6 +328,40 @@ export function canonicalMovementDedupeKey(r: FiscalDedupableEntry): string | nu
     const expenseId = linkedManualExpenseId(r);
     if (expenseId && isOutflowExpense(r)) return `MOV:EXP:${expenseId}|${abs}`;
 
+    if (r.sourceType.startsWith('STRIPE')) {
+        const raw = (r.sourceKey || r.sourceId || '').trim();
+        const norm = raw
+            .replace(/^STRIPE_FEE:/i, '')
+            .replace(/^STRIPE_MOVEMENT:/i, '')
+            .replace(/^STRIPE_TX:/i, '')
+            .replace(/^fee_stripe_tx_/i, '')
+            .replace(/^stripe_tx_/i, '')
+            .replace(/^fee_/i, '');
+        if (norm) {
+            const isFee = r.category === 'ONERI_BANCARI' || raw.includes('FEE');
+            return isFee ? `MOV:STRIPE:FEE:${norm}|${abs}` : `MOV:STRIPE:TX:${norm}|${abs}`;
+        }
+    }
+
+    if (r.sourceType.startsWith('PAYPAL')) {
+        const raw = (r.sourceKey || r.sourceId || '').trim();
+        const norm = raw
+            .replace(/^PAYPAL_FEE:/i, '')
+            .replace(/^PAYPAL_TX:/i, '')
+            .replace(/^PAYPAL_PAYOUT:/i, '')
+            .replace(/^fee_/i, '');
+        if (norm) {
+            const isFee = r.category === 'ONERI_BANCARI' || raw.includes('FEE');
+            const isPayout =
+                r.category === 'PAYPAL_PAYOUT' ||
+                r.category === 'TRASFERIMENTO_INTERNO' ||
+                raw.includes('PAYOUT');
+            if (isFee) return `MOV:PAYPAL:FEE:${norm}|${abs}`;
+            if (isPayout) return `MOV:PAYPAL:PAYOUT:${norm}|${abs}`;
+            return `MOV:PAYPAL:TX:${norm}|${abs}`;
+        }
+    }
+
     const sid = (r.sourceId || '').trim();
     if (sid && (r.sourceType.startsWith('BANK_LINE') || r.sourceType.startsWith('STRIPE') || r.sourceType.startsWith('PAYPAL'))) {
         return `MOV:SID:${sid}`;

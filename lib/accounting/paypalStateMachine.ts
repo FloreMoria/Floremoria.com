@@ -253,12 +253,11 @@ export function classifyPaypalEvent(row: PaypalMachineEntry): PaypalEventKind {
 
     if (
         (code && PAYOUT_EVENT_CODES.has(code)) ||
-        (isPayoutCategory && REAL_BANK_PAYOUT_RE.test(blob))
+        isPayoutCategory ||
+        REAL_BANK_PAYOUT_RE.test(blob) ||
+        (/denaro raccolto per esborso|trasferimento di denaro da conto generico/i.test(blob) && isCompanyIdentity(row))
     ) {
         return 'PAYOUT';
-    }
-    if (isPayoutCategory && isCompanyIdentity(row) && !looksLikeVendor(row)) {
-        return signed > 0 ? 'TECHNICAL_REVERSAL' : 'FUNDING_TRANSIT';
     }
 
     if (code && ORDER_EVENT_CODES.has(code)) return 'ORDER_CAPTURE';

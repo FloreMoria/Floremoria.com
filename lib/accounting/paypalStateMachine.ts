@@ -57,7 +57,10 @@ export type PaypalReducedCluster<T extends PaypalMachineEntry = PaypalMachineEnt
 
 const FISCAL_EPOCH_MS = Date.parse('2026-01-01T00:00:00.000Z');
 const AMOUNT_PAIR_WINDOW_MS = 48 * 60 * 60 * 1000;
+const MULTI_QUOTA_WINDOW_MS = 48 * 60 * 60 * 1000;
 const VENDOR_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/** Tolleranza 0,005 € → in centesimi interi è zero. */
+const ZERO_SUM_TOLERANCE_CENTS = 0;
 
 const COMPANY_IDENTITY_RE =
     /staff\.floremoria@gmail\.com|@floremoria\.com|\bflore\s*moria\b/i;
@@ -193,6 +196,27 @@ function looksLikeVendor(row: PaypalMachineEntry): boolean {
     return SAAS_MERCHANT_RE.test(blob) || KNOWN_VENDOR_RE.test(blob);
 }
 
+function isPaypalPlatformName(row: PaypalMachineEntry): boolean {
+    const cp = String(row.counterpartyName || '').trim();
+    if (COMPANY_IDENTITY_RE.test(cp)) return false;
+    if (/^paypal$/i.test(cp)) return true;
+    return /paypal\s*\(europe\)|paypal\s+europe/i.test(textBlob(row)) && !looksLikeVendor(row);
+}
+
+/** Credito tecnico PayPal (storno commissione / conguaglio) da agganciare al fornitore. */
+function isPaypalPlatformCredit(item: Indexed<PaypalMachineEntry>): boolean {
+    if (item.signed <= 0) return false;
+    if (item.kind === 'ORDER_CAPTURE' || item.kind === 'PAYOUT') return false;
+    if (item.kind === 'FEE' || item.kind === 'TECHNICAL_REVERSAL' || item.kind === 'OTHER') {
+        return isPaypalPlatformName(item.row) || item.kind === 'FEE';
+    }
+    return isPaypalPlatformName(item.row);
+}
+
+export function isPaypalZeroSumNet(cents: number): boolean {
+    return Math.abs(cents) <= ZERO_SUM_TOLERANCE_CENTS;
+}
+
 function vendorToken(row: PaypalMachineEntry): string {
     const blob = textBlob(row).toUpperCase();
     const known = blob.match(
@@ -242,12 +266,16 @@ export function classifyPaypalEvent(row: PaypalMachineEntry): PaypalEventKind {
         signed > 0 &&
         (row.category === 'RICAVI_VENDITE' || Boolean(row.orderId) || ORDER_CAPTURE_LABEL_RE.test(blob)) &&
         !looksLikeVendor(row) &&
-        !isCompanyIdentity(row)
+        !isCompanyIdentity(row) &&
+        !isPaypalPlatformName(row)
     ) {
         return 'ORDER_CAPTURE';
     }
 
     if (code && REVERSAL_EVENT_CODES.has(code)) return 'TECHNICAL_REVERSAL';
+    if (signed > 0 && isPaypalPlatformName(row) && !Boolean(row.orderId)) {
+        return 'TECHNICAL_REVERSAL';
+    }
     if (signed > 0 && (REVERSAL_LABEL_RE.test(blob) || isCompanyIdentity(row))) {
         // Credito merchant SaaS/fornitore: rimborso commerciale (State B), non incasso cliente
         if (looksLikeVendor(row) || row.category === 'RIMBORSI') return 'TECHNICAL_REVERSAL';
@@ -323,8 +351,64 @@ function commercialDisplayName(item: Indexed<PaypalMachineEntry>): string {
     return token || cp || 'Fornitore PayPal';
 }
 
-function rowKey(row: PaypalMachineEntry, signed: number, txnId: string): string {
-    return row.id || row.sourceKey || `${txnId}|${signed}`;
+function economicNetOf<T extends PaypalMachineEntry>(items: Indexed<T>[]): number {
+    return items
+        .filter((i) => i.kind !== 'ORDER_CAPTURE' && i.kind !== 'PAYOUT')
+        .reduce((s, i) => s + i.signed, 0);
+}
+
+function subsetSumCredits<T extends PaypalMachineEntry>(
+    credits: Array<{ item: Indexed<T>; index: number }>,
+    target: number
+): number[] | null {
+    if (target <= 0) return null;
+    const n = credits.length;
+    if (n === 0) return null;
+    const exact = credits.find((c) => c.item.signed === target);
+    if (exact) return [exact.index];
+    const total = credits.reduce((s, c) => s + c.item.signed, 0);
+    if (total === target) return credits.map((c) => c.index);
+    if (n > 16) return null;
+
+    const amounts = credits.map((c) => c.item.signed);
+    const found: number[] = [];
+    const dfs = (i: number, left: number): boolean => {
+        if (left === 0) return true;
+        if (left < 0 || i >= n) return false;
+        found.push(credits[i]!.index);
+        if (dfs(i + 1, left - amounts[i]!)) return true;
+        found.pop();
+        return dfs(i + 1, left);
+    };
+    return dfs(0, target) ? found : null;
+}
+
+function collapseToNetPrimary<T extends PaypalMachineEntry>(
+    commercials: Indexed<T>[],
+    netCents: number,
+    state: PaypalClusterState
+): T {
+    const primary = [...commercials].sort((a, b) => b.abs - a.abs)[0]!;
+    const direction: 'ENTRATA' | 'USCITA' = netCents >= 0 ? 'ENTRATA' : 'USCITA';
+    return annotateKept(
+        {
+            ...primary.row,
+            totalCents: netCents,
+            direction,
+            counterpartyName: commercialDisplayName(primary),
+            documentRef: primary.txnId || primary.row.documentRef,
+            metadataJson: {
+                ...asMeta(primary.row.metadataJson),
+                paypalCollapsedNetCents: netCents,
+                paypalMultiQuota: true,
+            },
+        },
+        state,
+        {
+            counterpartyName: commercialDisplayName(primary),
+            documentRef: primary.txnId || primary.row.documentRef,
+        }
+    );
 }
 
 function reduceCluster<T extends PaypalMachineEntry>(items: Indexed<T>[]): PaypalReducedCluster<T> {
@@ -356,55 +440,47 @@ function reduceCluster<T extends PaypalMachineEntry>(items: Indexed<T>[]): Paypa
         };
     }
 
-    const economic = [...commercials, ...fundings, ...reversals, ...others];
+    const economic = items.filter((i) => i.kind !== 'ORDER_CAPTURE' && i.kind !== 'PAYOUT');
     const economicNet = economic.reduce((s, i) => s + i.signed, 0);
 
-    // Stato B: somma algebrica 0,00 € → voci fittizie fuori da Prima Nota.
-    if (economic.length >= 2 && economicNet === 0 && !captures.length) {
+    // Stato B multi-quota: somma algebrica ~ 0,00 € → nessuna voce in Prima Nota.
+    if (economic.length >= 2 && isPaypalZeroSumNet(economicNet) && !captures.length) {
         return {
             state: 'B_ZERO_SUM',
             kept: keepPayouts,
-            dropped: [...economic.map((i) => i.row), ...fees.map((f) => f.row)],
+            dropped: economic.map((i) => i.row),
             netCents: 0,
         };
     }
 
-    // Stato A: transito carta + pagamento fornitore ± storno tecnico.
-    if (commercials.length >= 1 && (fundings.length >= 1 || reversals.length >= 1)) {
-        const twinReversalKeys = new Set<string>();
-        for (const c of commercials) {
-            const twin = reversals.find((r) => {
-                const key = rowKey(r.row, r.signed, r.txnId);
-                return !twinReversalKeys.has(key) && r.abs === c.abs && r.signed === -c.signed;
-            });
-            if (twin) twinReversalKeys.add(rowKey(twin.row, twin.signed, twin.txnId));
+    // Stato A / B parziale: transito + pagamento + storni spezzati → una sola riga al netto.
+    if (commercials.length >= 1 && (fundings.length >= 1 || reversals.length >= 1 || others.length >= 1 || fees.length >= 1)) {
+        if (isPaypalZeroSumNet(economicNet)) {
+            return {
+                state: 'B_ZERO_SUM',
+                kept: keepPayouts,
+                dropped: economic.map((i) => i.row),
+                netCents: 0,
+            };
         }
-        const technicalReversals = reversals.filter((r) =>
-            twinReversalKeys.has(rowKey(r.row, r.signed, r.txnId))
-        );
-        const residualReversals = reversals.filter(
-            (r) => !twinReversalKeys.has(rowKey(r.row, r.signed, r.txnId))
-        );
 
-        const keptCommercials = commercials.map((c) =>
-            annotateKept(c.row, 'A_VENDOR_CARD_CLUSTER', {
-                counterpartyName: commercialDisplayName(c),
-                documentRef: c.txnId || c.row.documentRef,
-            })
+        const collapsed = collapseToNetPrimary(
+            commercials,
+            economicNet,
+            economicNet !== commercials.reduce((s, c) => s + c.signed, 0)
+                ? 'B_PARTIAL_REFUND'
+                : 'A_VENDOR_CARD_CLUSTER'
         );
-        const keptResiduals = residualReversals.map((r) => annotateKept(r.row, 'B_PARTIAL_REFUND'));
-        const state: PaypalClusterState =
-            residualReversals.length > 0 ? 'B_PARTIAL_REFUND' : 'A_VENDOR_CARD_CLUSTER';
-
+        const keepKey = collapsed.id || collapsed.sourceKey || '';
         return {
-            state,
-            kept: [...keptCommercials, ...keptResiduals, ...keepPayouts],
-            dropped: [
-                ...fundings.map((f) => f.row),
-                ...technicalReversals.map((r) => r.row),
-                ...others.map((o) => o.row),
-            ],
-            netCents: [...keptCommercials, ...keptResiduals].reduce((s, r) => s + paypalSignedCents(r), 0),
+            state: economicNet !== commercials.reduce((s, c) => s + c.signed, 0)
+                ? 'B_PARTIAL_REFUND'
+                : 'A_VENDOR_CARD_CLUSTER',
+            kept: [collapsed, ...keepPayouts],
+            dropped: economic
+                .filter((i) => (i.row.id || i.row.sourceKey || '') !== keepKey)
+                .map((i) => i.row),
+            netCents: economicNet,
         };
     }
 
@@ -432,6 +508,60 @@ function unionFind(size: number) {
     return { find, union };
 }
 
+/**
+ * Bundler multi-quota: se un addebito fornitore ha storni spezzati (fornitore + PayPal)
+ * nella finestra 48h e la somma algebrica è 0, unisce tutte le quote nello stesso cluster.
+ */
+function attachMultiQuotaZeroSumCredits<T extends PaypalMachineEntry>(
+    items: Indexed<T>[],
+    find: (i: number) => number,
+    union: (a: number, b: number) => void
+): void {
+    let changed = true;
+    let guard = 0;
+    while (changed && guard < items.length + 2) {
+        changed = false;
+        guard += 1;
+        const groups = new Map<number, number[]>();
+        items.forEach((_, index) => {
+            const root = find(index);
+            const list = groups.get(root) || [];
+            list.push(index);
+            groups.set(root, list);
+        });
+
+        for (const indexes of groups.values()) {
+            const members = indexes.map((i) => items[i]!);
+            if (members.some((m) => m.kind === 'ORDER_CAPTURE' || m.kind === 'PAYOUT')) continue;
+            const hasCommercial = members.some((m) => m.kind === 'COMMERCIAL_PAYMENT');
+            if (!hasCommercial) continue;
+            const net = economicNetOf(members);
+            if (isPaypalZeroSumNet(net) || net >= 0) continue;
+            const need = -net;
+
+            const candidates: Array<{ item: Indexed<T>; index: number }> = [];
+            items.forEach((item, j) => {
+                if (indexes.includes(j)) return;
+                if (item.kind === 'ORDER_CAPTURE' || item.kind === 'PAYOUT') return;
+                if (item.signed <= 0) return;
+                const close = members.some((m) => within(m.ms, item.ms, MULTI_QUOTA_WINDOW_MS));
+                if (!close) return;
+                const token = vendorToken(item.row);
+                const sameVendor =
+                    Boolean(token) && members.some((m) => vendorToken(m.row) === token);
+                if (!sameVendor && !isPaypalPlatformCredit(item)) return;
+                candidates.push({ item, index: j });
+            });
+
+            const picked = subsetSumCredits(candidates, need);
+            if (!picked?.length) continue;
+            const root = indexes[0]!;
+            for (const idx of picked) union(root, idx);
+            changed = true;
+        }
+    }
+}
+
 function clusterIndexed<T extends PaypalMachineEntry>(items: Indexed<T>[]): Indexed<T>[][] {
     if (items.length === 0) return [];
     const { find, union } = unionFind(items.length);
@@ -457,17 +587,19 @@ function clusterIndexed<T extends PaypalMachineEntry>(items: Indexed<T>[]): Inde
     // Coppie stesso |importo| in 48h: funding/reversal/commercial complementari.
     for (let i = 0; i < items.length; i++) {
         const a = items[i]!;
-        if (a.kind === 'FEE' || a.kind === 'PAYOUT' || a.kind === 'ORDER_CAPTURE') continue;
+        if (a.kind === 'PAYOUT' || a.kind === 'ORDER_CAPTURE') continue;
+        if (a.kind === 'FEE' && a.signed < 0) continue;
         for (let j = i + 1; j < items.length; j++) {
             const b = items[j]!;
-            if (b.kind === 'FEE' || b.kind === 'PAYOUT' || b.kind === 'ORDER_CAPTURE') continue;
+            if (b.kind === 'PAYOUT' || b.kind === 'ORDER_CAPTURE') continue;
+            if (b.kind === 'FEE' && b.signed < 0) continue;
             if (a.abs !== b.abs || a.abs === 0) continue;
             if (!within(a.ms, b.ms, AMOUNT_PAIR_WINDOW_MS)) continue;
             const complementary =
                 (a.kind === 'FUNDING_TRANSIT' && (b.kind === 'TECHNICAL_REVERSAL' || b.kind === 'COMMERCIAL_PAYMENT')) ||
                 (b.kind === 'FUNDING_TRANSIT' && (a.kind === 'TECHNICAL_REVERSAL' || a.kind === 'COMMERCIAL_PAYMENT')) ||
-                (a.kind === 'COMMERCIAL_PAYMENT' && b.kind === 'TECHNICAL_REVERSAL') ||
-                (b.kind === 'COMMERCIAL_PAYMENT' && a.kind === 'TECHNICAL_REVERSAL');
+                (a.kind === 'COMMERCIAL_PAYMENT' && (b.kind === 'TECHNICAL_REVERSAL' || isPaypalPlatformCredit(b))) ||
+                (b.kind === 'COMMERCIAL_PAYMENT' && (a.kind === 'TECHNICAL_REVERSAL' || isPaypalPlatformCredit(a)));
             if (complementary) union(i, j);
         }
     }
@@ -476,15 +608,19 @@ function clusterIndexed<T extends PaypalMachineEntry>(items: Indexed<T>[]): Inde
     for (let i = 0; i < items.length; i++) {
         const a = items[i]!;
         const tokenA = vendorToken(a.row);
-        if (!tokenA || a.kind === 'FEE' || a.kind === 'PAYOUT' || a.kind === 'ORDER_CAPTURE') continue;
+        if (!tokenA || a.kind === 'PAYOUT' || a.kind === 'ORDER_CAPTURE') continue;
+        if (a.kind === 'FEE' && a.signed < 0) continue;
         for (let j = i + 1; j < items.length; j++) {
             const b = items[j]!;
-            if (b.kind === 'FEE' || b.kind === 'PAYOUT' || b.kind === 'ORDER_CAPTURE') continue;
+            if (b.kind === 'PAYOUT' || b.kind === 'ORDER_CAPTURE') continue;
+            if (b.kind === 'FEE' && b.signed < 0) continue;
             if (!within(a.ms, b.ms, VENDOR_WINDOW_MS)) continue;
             if (vendorToken(b.row) !== tokenA) continue;
             union(i, j);
         }
     }
+
+    attachMultiQuotaZeroSumCredits(items, find, union);
 
     const buckets = new Map<number, Indexed<T>[]>();
     items.forEach((item, index) => {

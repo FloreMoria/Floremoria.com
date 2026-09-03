@@ -104,7 +104,7 @@ function main(): void {
     ]);
     assert(transatel.length === 0, `Transatel zero-sum deve sparire, got ${transatel.length}`);
 
-    // Stato B parziale: uscita 30 € e rimborso 10 €
+    // Stato B parziale: uscita 30 € e rimborso 10 € → una sola uscita netta 20 €
     const partial = applyPaypalStateMachine([
         row({
             id: 'b1',
@@ -130,9 +130,65 @@ function main(): void {
             metadataJson: { parentTransactionId: 'BA1' },
         }),
     ]);
-    assert(partial.length === 2, `Parziale deve tenere uscita + rimborso, got ${partial.length}`);
+    assert(partial.length === 1, `Parziale deve collassare in 1 riga, got ${partial.length}`);
     const partialNet = partial.reduce((s, r) => s + signed(r), 0);
     assert(partialNet === -2000, `Netto parziale -20,00 €, got ${partialNet}`);
+
+    // Stato B multi-quota 06/05/2026 — Ballarate -57,95 + PayPal +9,31 + Ballarate +48,64 = 0
+    const ballarateSeed: PaypalMachineEntry = {
+        id: 'seed-fineco',
+        sourceType: 'BANK_LINE',
+        accountingDate: '2026-05-05T12:00:00.000Z',
+        direction: 'USCITA',
+        totalCents: -48120,
+        description: 'Saldo pre-cluster',
+    };
+    const ballarateMulti = applyPaypalStateMachine([
+        ballarateSeed,
+        row({
+            id: 'ba-out',
+            accountingDate: '2026-05-06T09:10:00.000Z',
+            direction: 'USCITA',
+            totalCents: -5795,
+            counterpartyName: 'BALLARATE PIETRO SRL',
+            description: 'Pagamento · BALLARATE PIETRO SRL',
+            documentRef: 'BA5795',
+            sourceKey: 'PAYPAL_TX:BA5795',
+            category: 'ALTRI_COSTI',
+        }),
+        row({
+            id: 'ba-fee-rev',
+            accountingDate: '2026-05-06T09:12:00.000Z',
+            direction: 'ENTRATA',
+            totalCents: 931,
+            counterpartyName: 'PayPal',
+            description: 'Storno commissione / conguaglio',
+            documentRef: 'PP931',
+            sourceKey: 'PAYPAL_TX:PP931',
+        }),
+        row({
+            id: 'ba-rev',
+            accountingDate: '2026-05-06T09:15:00.000Z',
+            direction: 'ENTRATA',
+            totalCents: 4864,
+            counterpartyName: 'BALLARATE PIETRO SRL',
+            description: 'Rimborso BALLARATE PIETRO SRL',
+            documentRef: 'BA4864',
+            sourceKey: 'PAYPAL_TX:BA4864',
+            category: 'RIMBORSI',
+        }),
+    ]);
+    const ballarateLeft = ballarateMulti.filter((r) => r.sourceType === 'PAYPAL_MOVEMENT');
+    assert(
+        ballarateLeft.length === 0,
+        `Cluster Ballarate 06/05/2026 deve neutralizzarsi a 0 righe, got ${ballarateLeft.length}`
+    );
+    const runningBallarate = recomputeSequentialRunningBalance(ballarateMulti, 0);
+    const lastBallarate = runningBallarate[runningBallarate.length - 1];
+    assert(
+        lastBallarate?.runningCents === -48120,
+        `Saldo progressivo deve restare -481,20 €, got ${lastBallarate?.runningCents}`
+    );
 
     // Stato C — incasso cliente
     const capture = applyPaypalStateMachine([

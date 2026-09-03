@@ -298,6 +298,8 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
         for (const r of cleanedNeon) {
             if (!keepNeonIds.has(r.id)) continue;
             const enriched = fiscalById.get(r.id);
+            const totalCents = enriched?.totalCents ?? r.totalCents;
+            const direction = enriched?.direction || r.direction;
             const meta = (enriched?.metadataJson || r.metadataJson || {}) as Record<string, unknown>;
             const attachments = Array.isArray(meta.consolidatedAttachments)
                 ? (meta.consolidatedAttachments as ConsolidatedFiscalAttachment[])
@@ -305,6 +307,12 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
             const accounts = accountsFromNeon(r);
             const reconciliationStatus =
                 statusOverrides[r.id] || r.reconciliationStatus || 'UNMATCHED';
+            const isEntrata =
+                direction === 'ENTRATA'
+                    ? true
+                    : direction === 'USCITA'
+                      ? false
+                      : isEntrataFromNeon({ ...r, totalCents, direction: direction || r.direction });
 
             map.set(
                 r.id,
@@ -314,14 +322,14 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     description: r.description,
                     dareAccount: accounts.dare,
                     avereAccount: accounts.avere,
-                    amountCents: Math.abs(r.totalCents || r.netCents || 0),
-                    netCents: Math.abs(r.netCents || r.totalCents || 0),
+                    amountCents: Math.abs(totalCents || r.netCents || 0),
+                    netCents: Math.abs(r.netCents || totalCents || 0),
                     vatCents: Math.abs(r.vatCents || 0),
                     vatRate: Number(r.vatRate || 0),
-                    direction: r.direction || (r.totalCents >= 0 ? 'ENTRATA' : 'USCITA'),
+                    direction: direction || (totalCents >= 0 ? 'ENTRATA' : 'USCITA'),
                     category: r.category || '—',
-                    counterpartyName: r.counterpartyName || null,
-                    documentRef: r.documentRef || null,
+                    counterpartyName: enriched?.counterpartyName || r.counterpartyName || null,
+                    documentRef: enriched?.documentRef || r.documentRef || null,
                     sourceType: r.sourceType,
                     sourceId: r.sourceId || null,
                     sourceKey: r.sourceKey || null,
@@ -330,7 +338,7 @@ export default function PrimaNotaTable({ localEntries, searchTerm = '' }: Props)
                     bankLineId: r.bankLineId || null,
                     attachmentUrl: r.attachmentUrl || null,
                     reconciliationStatus,
-                    isEntrata: isEntrataFromNeon(r),
+                    isEntrata,
                     sourceLabel: sourceLabel(
                         r.sourceType,
                         fonteOverrides[r.id] ||

@@ -79,7 +79,7 @@ export default function TestModeOverviewBar({ initialTestModeActive }: Props) {
                         <p className="font-semibold text-sm text-slate-900">Modalità Test</p>
                         <p className="text-xs text-slate-600 mt-0.5">
                             {testModeActive
-                                ? 'Vedi solo dati di test. VERA e WhatsApp funzionano normalmente; i nuovi ordini/utenti manuali restano separati dalla produzione.'
+                                ? 'Vedi solo dati di test (ordini manuali sandbox e ordini API con chiave fmp_test_…). Esclusi da fioristi reali e Prima Nota.'
                                 : 'Dashboard produzione: i record di test sono nascosti.'}
                         </p>
                         {testModeActive ? (

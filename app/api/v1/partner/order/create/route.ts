@@ -18,6 +18,10 @@ import {
 } from '@/lib/partners/partnerOrderService';
 import { formatDeceasedName, type DeceasedNameInput } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
+import {
+    buildPartnerTestFinanceNote,
+    resolvePartnerApiPaymentKind,
+} from '@/lib/partnerTestCredential';
 
 export const runtime = 'nodejs';
 
@@ -296,8 +300,13 @@ export async function POST(request: Request) {
         }
 
         const subtotalCents = resolved.reduce((acc, r) => acc + r.priceCents * r.quantity, 0);
+        const isTestOrder = auth.isTestCredential;
         const partnerAlreadyPaid =
-            Boolean(stripeCheckoutSessionId || stripePaymentIntentId) || partner.isB2B;
+            Boolean(stripeCheckoutSessionId || stripePaymentIntentId) || partner.isB2B || isTestOrder;
+        const partnerPaymentKind = resolvePartnerApiPaymentKind(isTestOrder);
+
+        // Sandbox API: niente fiorista reale né workflow operativo; admin verifica solo i dati ricevuti.
+        const effectiveFloristPartnerId = isTestOrder ? null : floristPartnerId;
 
         const partnershipChannelBody =
             typeof b.partnershipChannel === 'string'
@@ -316,12 +325,15 @@ export async function POST(request: Request) {
 
         const order = await prisma.$transaction(async (tx) => {
             const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
-            const b2bFields = buildB2bOrderCreateData(association, floristPartnerId);
+            const b2bFields = buildB2bOrderCreateData(association, effectiveFloristPartnerId);
             return tx.order.create({
                 data: {
                     orderNumber,
-                    status: floristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
+                    status: effectiveFloristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
                     partnerPaymentStatus: partnerAlreadyPaid ? 'PAID' : 'UNPAID',
+                    paymentMethodLabel: partnerPaymentKind,
+                    isTest: isTestOrder,
+                    financeNotes: isTestOrder ? buildPartnerTestFinanceNote(auth.publicId) : undefined,
                     deceasedName: deceasedName.trim(),
                     cemeteryName: cemeteryName.trim(),
                     cemeteryCity: cemeteryCity.trim(),
@@ -365,7 +377,7 @@ export async function POST(request: Request) {
             console.error('[B2B Partner API] touchPartnerCredentialLastUsed failed (non-blocking):', touchErr);
         }
 
-        if (partnerAlreadyPaid && !floristPartnerId) {
+        if (partnerAlreadyPaid && !effectiveFloristPartnerId) {
             await autoAssignKnownTombOrder(order.id).catch((autoErr) => {
                 console.error('[B2B Partner API] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
             });
@@ -377,18 +389,20 @@ export async function POST(request: Request) {
             orderNumber: order.orderNumber,
             authPartner: partner,
             association,
-            floristPartnerId,
+            floristPartnerId: effectiveFloristPartnerId,
             totalPriceCents: subtotalCents,
         });
 
         revalidatePartnerOrderDashboardCaches({
             referralPartnerId: association.referralPartnerId,
             agencyId: association.agencyId,
-            floristPartnerId,
+            floristPartnerId: effectiveFloristPartnerId,
         });
 
         // Dispatcher multi-canale (email cliente/fiorista/partner + WhatsApp VERA).
-        void sendPartnerOrderNotifications(order.id)
+        void sendPartnerOrderNotifications(order.id, {
+            sandboxOrder: isTestOrder,
+        })
             .then((results) => {
                 console.info('[B2B Partner API] sendPartnerOrderNotifications', {
                     tag: `partner:${partner.id}`,
@@ -423,6 +437,9 @@ export async function POST(request: Request) {
                     partnershipChannel: order.partnershipChannel,
                     partnerCommissionCents: order.partnerCommissionCents,
                     partnerCommissionSettlementStatus: order.partnerCommissionSettlementStatus,
+                    isTest: order.isTest,
+                    partnerPaymentStatus: order.partnerPaymentStatus,
+                    paymentMethodLabel: order.paymentMethodLabel,
                 },
             },
             { status: 201, headers: jsonHeaders(request) }

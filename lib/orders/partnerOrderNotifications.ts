@@ -115,7 +115,13 @@ async function ensureInProgressForNotifications(orderId: string, partnerId: stri
  */
 export async function sendPartnerOrderNotifications(
     orderId: string,
-    options?: { emailsOnly?: boolean; skipCustomer?: boolean; skipOps?: boolean }
+    options?: {
+        emailsOnly?: boolean;
+        skipCustomer?: boolean;
+        skipOps?: boolean;
+        /** Ordine sandbox API (`fmp_test_…`): niente fiorista reale né WhatsApp cliente. */
+        sandboxOrder?: boolean;
+    }
 ): Promise<PartnerOrderNotificationResult[]> {
     const order = await prisma.order.findFirst({
         where: { id: orderId, deletedAt: null },
@@ -131,7 +137,14 @@ export async function sendPartnerOrderNotifications(
         return [{ channel: 'email_ops', ok: false, skipped: 'order_not_found' }];
     }
 
-    if (!options?.emailsOnly) {
+    const sandbox = options?.sandboxOrder || order.isTest;
+    const notifyOpts = {
+        emailsOnly: options?.emailsOnly,
+        skipCustomer: sandbox ? true : options?.skipCustomer,
+        skipOps: options?.skipOps,
+    };
+
+    if (!notifyOpts.emailsOnly && !sandbox) {
         await ensureInProgressForNotifications(order.id, order.partnerId);
     }
 
@@ -154,7 +167,7 @@ export async function sendPartnerOrderNotifications(
 
     const tasks: Array<Promise<PartnerOrderNotificationResult>> = [];
 
-    if (!options?.emailsOnly) {
+    if (!notifyOpts.emailsOnly && !sandbox) {
         // 1) WhatsApp fiorista (Punto A / mini-app)
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
@@ -196,10 +209,23 @@ export async function sendPartnerOrderNotifications(
                 }
             })()
         );
+    } else if (sandbox) {
+        tasks.push(
+            Promise.resolve({
+                channel: 'whatsapp_florist' as const,
+                ok: true,
+                skipped: 'sandbox_order',
+            }),
+            Promise.resolve({
+                channel: 'whatsapp_customer' as const,
+                ok: true,
+                skipped: 'sandbox_order',
+            })
+        );
     }
 
     // 3) Email utente (ricevuta)
-    if (!options?.skipCustomer) {
+    if (!notifyOpts.skipCustomer) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
                 const buyer = resolveOrderBuyerEmail(order);
@@ -227,7 +253,7 @@ export async function sendPartnerOrderNotifications(
     }
 
     // 4) Email operativa FloreMoria
-    if (!options?.skipOps) {
+    if (!notifyOpts.skipOps) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
                 try {
@@ -237,7 +263,7 @@ export async function sendPartnerOrderNotifications(
                     });
                     const r = await sendFloremTransactionalMail({
                         to: opsTo,
-                        subject: `[B2B] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
+                        subject: `[B2B${sandbox ? ' TEST' : ''}] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
                         html,
                     });
                     return { channel: 'email_ops', ok: r.ok, error: r.error };
@@ -255,6 +281,9 @@ export async function sendPartnerOrderNotifications(
     // 4b) Email fiorista assegnato
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (sandbox) {
+                return { channel: 'email_florist', ok: true, skipped: 'sandbox_order' };
+            }
             if (!floristEmail) {
                 return { channel: 'email_florist', ok: true, skipped: 'no_florist_email' };
             }
@@ -282,6 +311,9 @@ export async function sendPartnerOrderNotifications(
     // 5) Email trasparenza aggregatore (AF) — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (sandbox) {
+                return { channel: 'email_aggregator', ok: true, skipped: 'sandbox_order' };
+            }
             if (!hasB2b) {
                 console.info('[partner-order-notifications] skip email B2B trasparenza: ordine B2C', {
                     orderId: order.id,
@@ -324,6 +356,9 @@ export async function sendPartnerOrderNotifications(
     // 6) Email agenzia funebre — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (sandbox) {
+                return { channel: 'email_agency', ok: true, skipped: 'sandbox_order' };
+            }
             if (!hasB2b) {
                 return { channel: 'email_agency', ok: true, skipped: 'no_b2b_partnership' };
             }

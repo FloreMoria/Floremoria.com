@@ -1,9 +1,13 @@
 import prisma from '@/lib/prisma';
 import { verifyPartnerApiSecret } from '@/lib/partnerApiSecret';
+import { isPartnerTestCredential } from '@/lib/partnerTestCredential';
 
 export type PartnerV1AuthContext = {
     partnerId: string;
     credentialId: string;
+    /** Public id credenziale (`fmp_live_…` / `fmp_test_…`). */
+    publicId: string;
+    isTestCredential: boolean;
 };
 
 /**
@@ -37,7 +41,12 @@ export async function authenticatePartnerV1(request: Request): Promise<PartnerV1
         return null;
     }
 
-    return { partnerId: cred.partnerId, credentialId: cred.id };
+    return {
+        partnerId: cred.partnerId,
+        credentialId: cred.id,
+        publicId: cred.publicId,
+        isTestCredential: isPartnerTestCredential(cred.publicId),
+    };
 }
 
 export async function touchPartnerCredentialLastUsed(credentialId: string): Promise<void> {

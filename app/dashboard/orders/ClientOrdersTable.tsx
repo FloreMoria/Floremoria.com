@@ -33,9 +33,10 @@ interface ClientOrdersTableProps {
     deceasedProfiles: any[];
     canChangeStatus: boolean;
     isGlobalAdmin?: boolean;
+    testModeActive?: boolean;
 }
 
-export default function ClientOrdersTable({ orders, abandonedOrders = [], florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin }: ClientOrdersTableProps) {
+export default function ClientOrdersTable({ orders, abandonedOrders = [], florists, products, users, deceasedProfiles, canChangeStatus, isGlobalAdmin, testModeActive = false }: ClientOrdersTableProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -545,9 +546,16 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                     <h1 className="text-[28px] font-semibold text-black tracking-tight">Coda Ordini & Consegne</h1>
                     <p className="text-gray-500 text-[15px] mt-1">
                         {isGlobalAdmin
-                            ? "Gestisci l'hub centrale o smista le commesse ai fioristi locali."
+                            ? testModeActive
+                                ? "Modalità test attiva: ordini API con chiave fmp_test_… e sandbox manuali. Esclusi da fioristi reali e contabilità."
+                                : "Gestisci l'hub centrale o smista le commesse ai fioristi locali."
                             : "Gestisci gli ordini a te assegnati e carica le foto della posa d'opera e del laboratorio."}
                     </p>
+                    {isGlobalAdmin && !testModeActive ? (
+                        <p className="text-xs text-amber-800 mt-2">
+                            Gli ordini di test partner (chiave <code className="text-[11px]">fmp_test_…</code>) sono nascosti. Attiva la Modalità Test sopra per consultarli.
+                        </p>
+                    ) : null}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -741,6 +749,11 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                 {new Date(order.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
                                             </div>
                                             <div className="font-bold text-black text-[14px] whitespace-nowrap">{order.orderNumber || `#${order.id.substring(order.id.length - 6).toUpperCase()}`}</div>
+                                            {order.isTest ? (
+                                                <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded inline-block">
+                                                    Test API
+                                                </div>
+                                            ) : null}
                                         </td>
                                         <td className="py-3 px-3 whitespace-nowrap">
                                             {editingOrderId === order.id ? (

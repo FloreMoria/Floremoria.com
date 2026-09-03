@@ -37,7 +37,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ agencyId: s
     const where = {
         OR: [{ referralPartnerId: auth.partnerId }, { partnerId: auth.partnerId }],
         agencyId,
-        ...visibleDashboardOrdersWhere(),
+        ...visibleDashboardOrdersWhere(auth.isTestCredential),
     };
 
     const [total, rows] = await Promise.all([

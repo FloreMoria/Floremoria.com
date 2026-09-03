@@ -8,6 +8,7 @@ import { compareBySurname } from '@/lib/dashboard/sortDashboardLists';
 import { canEditOrderStatus, hasGlobalOrdersView } from '@/lib/dashboardOrderAccess';
 import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
+import TestModeOverviewBar from '@/components/dashboard/TestModeOverviewBar';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 
 // MOCK: ID dell'utente loggato, per test fiorista (sostituire in produzione con session.user.id)
@@ -183,6 +184,7 @@ export default async function OrdersPage({
     return (
         <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <DashboardDbAlert page="Ordini" errors={dbErrors} />
+            {isGlobalAdmin ? <TestModeOverviewBar initialTestModeActive={testModeActive} /> : null}
             <Suspense fallback={<div className="p-8 text-sm text-slate-500">Caricamento ordini…</div>}>
                 <ClientOrdersTable
                     orders={displayOrders}
@@ -193,6 +195,7 @@ export default async function OrdersPage({
                     deceasedProfiles={deceasedProfiles}
                     canChangeStatus={canChangeStatus}
                     isGlobalAdmin={isGlobalAdmin}
+                    testModeActive={testModeActive}
                 />
             </Suspense>
         </div>

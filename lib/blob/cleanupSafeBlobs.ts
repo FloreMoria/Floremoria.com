@@ -231,12 +231,18 @@ async function collectDbReferences(): Promise<{
     return { referenced, testOrderIds, existingOrderIds };
 }
 
+function extractDeliveryOrderId(pathname: string): string | null {
+    const m =
+        pathname.match(
+            /floremoria-blob-foto-consegne\/(?:delivery-proof|social-ready)\/([^/]+)\//,
+        ) || pathname.match(/^delivery-proof\/([^/]+)\//);
+    return m?.[1] || null;
+}
+
 function isTestOrderProof(pathname: string, testOrderIds: Set<string>): boolean {
-    const m = pathname.match(
-        /floremoria-blob-foto-consegne\/(?:delivery-proof|social-ready)\/([^/]+)\//,
-    );
-    if (!m) return false;
-    return testOrderIds.has(m[1]!);
+    const orderId = extractDeliveryOrderId(pathname);
+    if (!orderId) return false;
+    return testOrderIds.has(orderId);
 }
 
 function isOrphanProductMedia(pathname: string, referenced: Set<string>): boolean {
@@ -250,11 +256,9 @@ function isOrphanDeliveryProofFolder(
 ): boolean {
     // Solo se abbiamo caricato gli ID ordine dal DB (evita wipe se DB down).
     if (existingOrderIds.size === 0) return false;
-    const m = pathname.match(
-        /floremoria-blob-foto-consegne\/(?:delivery-proof|social-ready)\/([^/]+)\//,
-    );
-    if (!m) return false;
-    return !existingOrderIds.has(m[1]!);
+    const orderId = extractDeliveryOrderId(pathname);
+    if (!orderId) return false;
+    return !existingOrderIds.has(orderId);
 }
 
 function isUnreferencedDeliveryProof(
@@ -264,14 +268,17 @@ function isUnreferencedDeliveryProof(
 ): boolean {
     // Foto sotto un ordine esistente ma URL non più referenziato (duplicati random suffix).
     if (existingOrderIds.size === 0 || referenced.size === 0) return false;
-    if (!pathname.includes('floremoria-blob-foto-consegne/')) return false;
+    if (
+        !pathname.includes('floremoria-blob-foto-consegne/') &&
+        !pathname.startsWith('delivery-proof/')
+    ) {
+        return false;
+    }
     if (referenced.has(pathname)) return false;
-    const m = pathname.match(
-        /floremoria-blob-foto-consegne\/(?:delivery-proof|social-ready)\/([^/]+)\//,
-    );
-    if (!m) return false;
+    const orderId = extractDeliveryOrderId(pathname);
+    if (!orderId) return false;
     // Solo se l'ordine esiste: altrimenti gestito da orphan folder.
-    if (!existingOrderIds.has(m[1]!)) return false;
+    if (!existingOrderIds.has(orderId)) return false;
     return true;
 }
 
@@ -280,8 +287,9 @@ function isOrphanMarketing(pathname: string, referenced: Set<string>, uploadedAt
     if (pathname.includes('/publish-staging/')) return false;
     if (pathname.includes('/reel-audio/')) return false;
     if (referenced.has(pathname)) return false;
+    // 7 giorni: draft/generation abortite senza riga MarketingCampaign
     const ageMs = Date.now() - uploadedAt.getTime();
-    return ageMs > 30 * 24 * 60 * 60 * 1000;
+    return ageMs > 7 * 24 * 60 * 60 * 1000;
 }
 
 export async function runSafeBlobCleanup(opts: {

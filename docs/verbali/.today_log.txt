@@ -13,3 +13,4 @@
 [2026-09-03 17:44] fix: Riconciliazione SDD Fineco-PayPal — collasso duplicati gateway con attribuzione fornitore reale (Aruba SpA). Nuovo modulo paypalSddReconcile.ts integrato in fiscalAuthorityDedupe step0b. Script verifica verify-sdd-reconcile.ts (21 assert ok).
 [2026-09-03 22:15] refactor: Prima Nota Fineco-centrica — applyFinecoMasterLedger (solo BANK_LINE), SDD/payout in drill-down drawer, saldo = estratto conto. Script verify-fineco-master.ts ok.
 [2026-09-03 22:42] ops: Pulizia Vercel Blob — store dashboard -96MB (futuria/staging/orfani). Cron cleanup-blob per store foto-consegne OIDC. No Speed Insights @vercel. Obiettivo: rientrare Hobby <1GB.
+[2026-09-03 22:46] ops: Blob GyRv -77MB (futuria/staging/orfani). Estensione orphan marketing >7gg + path delivery-proof legacy.

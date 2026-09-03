@@ -17,3 +17,4 @@
 [2026-09-03 22:50] ops: Blob cleanup riallineato — foto consegne PROTETTE; rimozione solo media campagne PUBLISHED >30gg + tmp/staging/futuria.
 [2026-09-03 23:00] fix(dashboard): rimossa dicitura utente sconosciuto sotto al nome cliente nella tabella ordini; fallback pulito su buyerFullName / user?.name / buyerEmail / 'Cliente', CSV export aggiornato; tsc+build OK.
 
+[2026-09-03 22:59] ops: Eseguito cleanup Blob GyRv: -32.4MB (18 media campagne PUBLISHED >30gg). Foto consegne intatte. Totale account ~917MB (GyRv~812 + dashboard~105) sotto soglia 1GB Hobby.

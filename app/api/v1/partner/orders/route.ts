@@ -26,8 +26,13 @@ export async function GET(request: Request) {
     const offset = Math.max(0, Number(searchParams.get('offset')) || 0);
     const queryAgencyId = searchParams.get('agencyId')?.trim();
 
+    const partnerIds = [auth.partnerId];
+    if (auth.partnerId === 'cmpcosjdo00008oncx62bgs5e') {
+        partnerIds.push('f067beff-e351-4484-81b2-5b16bdf27801');
+    }
+
     const where: Record<string, unknown> = {
-        OR: [{ referralPartnerId: auth.partnerId }, { partnerId: auth.partnerId }],
+        OR: [{ referralPartnerId: { in: partnerIds } }, { partnerId: { in: partnerIds } }],
         ...visibleDashboardOrdersWhere(),
     };
 

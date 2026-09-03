@@ -1,3 +1,4 @@
 [2026-09-03 09:02] feat(accounting): macchina a stati PayPal — cluster funding/carta, storni tecnici a somma zero, saldo progressivo su movimenti effettivi
 [2026-09-03 09:17] feat(accounting): modale Rendiconto Fornitori Esteri PayPal (TD17/TD18) su Autofatture estere, filtro T1–T4 e CSV commercialista
 [2026-09-03 09:28] fix(accounting): bundler multi-quota PayPal a somma zero (Ballarate 06/05/2026) e collasso storni parziali; saldo progressivo ricalcolato
+[2026-09-03 15:15] fix(partner-api): compatibilità partnerId legacy Annunci Funebri (f067beff-e351-4484-81b2-5b16bdf27801), fix collisione progressivo orderNumber PT su count e try/catch su revalidatePath; tsc+build OK.

@@ -82,7 +82,10 @@ export async function POST(request: Request) {
 
         const b = body as Record<string, unknown>;
         const partnerIdBody = typeof b.partnerId === 'string' ? b.partnerId.trim() : '';
-        if (partnerIdBody && partnerIdBody !== auth.partnerId) {
+        const isLegacyAnnunciFunebriAlias =
+            partnerIdBody === 'f067beff-e351-4484-81b2-5b16bdf27801' &&
+            auth.partnerId === 'cmpcosjdo00008oncx62bgs5e';
+        if (partnerIdBody && partnerIdBody !== auth.partnerId && !isLegacyAnnunciFunebriAlias) {
             return NextResponse.json(
                 { error: 'Il campo partnerId non coincide con il partner associato alla credenziale API.' },
                 { status: 403, headers: jsonHeaders(request) }

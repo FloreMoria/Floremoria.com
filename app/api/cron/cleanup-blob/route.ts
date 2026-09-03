@@ -1,5 +1,6 @@
 /**
- * Cron: pulizia sicura Blob storage (store collegato al progetto via OIDC).
+ * Cron: pulizia sicura Blob (foto consegne PROTETTE).
+ * Cancella: tmp/staging/futuria + media campagne PUBLISHED da >30 giorni.
  *
  * Auth: Authorization Bearer CRON_SECRET | POSTMAN_CRON_SECRET | x-cron-key
  * Query: ?execute=1 per cancellare (default dry-run)
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
                 residualMb: formatMb(report.residualBytesEstimate),
                 under1Gb,
                 under800Mb: under800,
+                clearedCampaignMedia: report.clearedCampaignMedia || 0,
             },
         });
     } catch (err) {

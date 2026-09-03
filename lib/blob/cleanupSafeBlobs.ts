@@ -3,10 +3,13 @@
  *
  * Cancella SOLO:
  *  - path tmp/test/scratch/futuria/staging
- *  - foto consegne di ordini isTest=true
- *  - immagini prodotto/marketing orfane (non referenziate in Neon)
+ *  - media campagne MarketingCampaign PUBLISHED da oltre 30 giorni
  *
- * NON tocca: floremoria-finance/*, foto ordini reali, media referenziati.
+ * NON tocca MAI:
+ *  - foto consegne (delivery-proof / social-ready)
+ *  - documenti fiscali (floremoria-finance/*)
+ *  - immagini prodotto ancora referenziate
+ *  - campagne draft / pubblicate di recente (< 30 gg)
  */
 
 import { list, del, type ListBlobResultBlob } from '@vercel/blob';
@@ -31,10 +34,21 @@ export type BlobCleanupReport = {
     byPrefix: Array<{ prefix: string; count: number; bytes: number }>;
     residualBytesEstimate: number;
     dryRun: boolean;
+    clearedCampaignMedia?: number;
 };
 
-const PROTECTED_PREFIXES = ['floremoria-finance/'];
+const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Prefissi SEMPRE protetti. */
+const PROTECTED_PREFIXES = [
+    'floremoria-finance/',
+    'floremoria-blob-foto-consegne/',
+    'delivery-proof/',
+    'floremoria-media/products/',
+    'floremoria-media/whatsapp-chat/',
+];
+
+/** Pattern path chiaramente temporanei / test. */
 const SAFE_PATH_RES: Array<{ re: RegExp; reason: string }> = [
     { re: /(^|\/)tmp\//i, reason: 'cartella tmp/' },
     { re: /(^|\/)temp\//i, reason: 'cartella temp/' },
@@ -88,208 +102,130 @@ async function listAllBlobs(token?: string): Promise<ListBlobResultBlob[]> {
     return out;
 }
 
-async function collectDbReferences(): Promise<{
-    referenced: Set<string>;
-    testOrderIds: Set<string>;
-    existingOrderIds: Set<string>;
-}> {
-    const referenced = new Set<string>();
-    const testOrderIds = new Set<string>();
-    const existingOrderIds = new Set<string>();
+type DbCleanupContext = {
+    /** Path ancora da proteggere (prodotti, campagne recenti, fiscali…). */
+    protectedPaths: Set<string>;
+    /** Path media campagne pubblicate da >30gg → cancellabili. */
+    publishedOldPaths: Set<string>;
+    /** ID campagne il cui media verrà azzerato dopo delete. */
+    publishedOldCampaignIds: string[];
+};
 
-    const addUrl = (url: string | null | undefined) => {
+async function collectDbCleanupContext(): Promise<DbCleanupContext> {
+    const protectedPaths = new Set<string>();
+    const publishedOldPaths = new Set<string>();
+    const publishedOldCampaignIds: string[] = [];
+
+    const addProtected = (url: string | null | undefined) => {
         if (!url || !/blob\.vercel-storage\.com/i.test(url)) return;
-        referenced.add(pathnameFromUrl(url));
+        protectedPaths.add(pathnameFromUrl(url));
     };
 
     try {
         const { default: prisma } = await import('@/lib/prisma');
+        const cutoff = new Date(Date.now() - ONE_MONTH_MS);
 
-        const [products, productImages, campaigns, testOrders, realOrders, deliveryProofs, allOrderIds] =
-            await Promise.all([
+        const [products, productImages, campaigns] = await Promise.all([
             prisma.product.findMany({
                 where: { mediaUrl: { not: null } },
                 select: { mediaUrl: true },
             }),
             prisma.productImage.findMany({ select: { url: true } }),
             prisma.marketingCampaign.findMany({
-                select: { imageUrl: true, videoUrl: true },
-            }),
-            prisma.order.findMany({
-                where: { isTest: true },
-                select: { id: true },
-            }),
-            prisma.order.findMany({
-                where: {
-                    isTest: false,
-                    photos: { isEmpty: false },
-                },
-                select: { photos: true },
-                take: 8000,
-            }),
-            prisma.deliveryProof.findMany({
                 select: {
-                    orderId: true,
-                    photoBeforeUrl: true,
-                    photoAfterUrl: true,
-                    photosBeforeUrls: true,
-                    photosAfterUrls: true,
-                    socialReadyAfterUrls: true,
-                    socialReadyPrimaryUrl: true,
-                    order: { select: { isTest: true } },
+                    id: true,
+                    status: true,
+                    publishedAt: true,
+                    imageUrl: true,
+                    videoUrl: true,
                 },
-            }),
-            prisma.order.findMany({
-                select: { id: true },
-                take: 50000,
             }),
         ]);
 
-        for (const o of allOrderIds) existingOrderIds.add(o.id);
+        for (const p of products) addProtected(p.mediaUrl);
+        for (const img of productImages) addProtected(img.url);
 
-        for (const p of products) addUrl(p.mediaUrl);
-        for (const img of productImages) addUrl(img.url);
         for (const c of campaigns) {
-            addUrl(c.imageUrl);
-            addUrl(c.videoUrl);
-        }
-        for (const o of testOrders) testOrderIds.add(o.id);
-        for (const o of realOrders) {
-            for (const u of o.photos || []) addUrl(u);
-        }
-        for (const d of deliveryProofs) {
-            if (d.order?.isTest) {
-                testOrderIds.add(d.orderId);
-                continue; // foto test: NON proteggere
+            const publishedOld =
+                c.status === 'PUBLISHED' &&
+                c.publishedAt != null &&
+                c.publishedAt.getTime() <= cutoff.getTime();
+
+            if (publishedOld) {
+                publishedOldCampaignIds.push(c.id);
+                if (c.imageUrl && /blob\.vercel-storage\.com/i.test(c.imageUrl)) {
+                    publishedOldPaths.add(pathnameFromUrl(c.imageUrl));
+                }
+                if (c.videoUrl && /blob\.vercel-storage\.com/i.test(c.videoUrl)) {
+                    publishedOldPaths.add(pathnameFromUrl(c.videoUrl));
+                }
+            } else {
+                addProtected(c.imageUrl);
+                addProtected(c.videoUrl);
             }
-            addUrl(d.photoBeforeUrl);
-            addUrl(d.photoAfterUrl);
-            addUrl(d.socialReadyPrimaryUrl);
-            for (const u of d.photosBeforeUrls || []) addUrl(u);
-            for (const u of d.photosAfterUrls || []) addUrl(u);
-            for (const u of d.socialReadyAfterUrls || []) addUrl(u);
         }
 
-        // Allegati fiscali / ledger (best-effort: modelli opzionali)
-        const extras: Array<Promise<Array<{ blobUrl?: string | null; attachmentUrl?: string | null }>>> = [];
-        extras.push(
+        // Fiscali: proteggere sempre
+        const fiscalRows = await Promise.all([
             prisma.manualFinanceExpense
-                .findMany({
-                    where: { blobUrl: { not: null } },
-                    select: { blobUrl: true },
-                })
-                .catch(() => []),
-        );
-        extras.push(
+                .findMany({ where: { blobUrl: { not: null } }, select: { blobUrl: true } })
+                .catch(() => [] as Array<{ blobUrl: string | null }>),
             prisma.bankStatementDocument
-                .findMany({
-                    where: { blobUrl: { not: null } },
-                    select: { blobUrl: true },
-                })
-                .catch(() => []),
-        );
-        extras.push(
+                .findMany({ where: { blobUrl: { not: null } }, select: { blobUrl: true } })
+                .catch(() => [] as Array<{ blobUrl: string | null }>),
             prisma.saasForeignInvoice
-                .findMany({
-                    where: { blobUrl: { not: null } },
-                    select: { blobUrl: true },
-                })
-                .catch(() => []),
-        );
-        extras.push(
+                .findMany({ where: { blobUrl: { not: null } }, select: { blobUrl: true } })
+                .catch(() => [] as Array<{ blobUrl: string | null }>),
             prisma.financialLedgerEntry
                 .findMany({
                     where: { attachmentUrl: { not: null } },
                     select: { attachmentUrl: true },
                     take: 10000,
                 })
-                .catch(() => []),
-        );
-        extras.push(
+                .catch(() => [] as Array<{ attachmentUrl: string | null }>),
             prisma.customerOrderReceipt
-                .findMany({
-                    where: { blobUrl: { not: null } },
-                    select: { blobUrl: true },
-                })
-                .catch(() => []),
-        );
+                .findMany({ where: { blobUrl: { not: null } }, select: { blobUrl: true } })
+                .catch(() => [] as Array<{ blobUrl: string | null }>),
+        ]);
 
-        const settled = await Promise.all(extras);
-        for (const rows of settled) {
+        for (const rows of fiscalRows) {
             for (const r of rows) {
-                addUrl(r.blobUrl);
-                addUrl(r.attachmentUrl);
+                addProtected((r as { blobUrl?: string | null }).blobUrl);
+                addProtected((r as { attachmentUrl?: string | null }).attachmentUrl);
             }
         }
+
+        console.info(
+            `[blob-cleanup] DB: campagne pubblicate >30gg=${publishedOldCampaignIds.length} ` +
+                `mediaPath=${publishedOldPaths.size} protetti=${protectedPaths.size}`,
+        );
     } catch (err) {
         console.warn(
-            '[blob-cleanup] DB refs non disponibili — solo path test/staging:',
+            '[blob-cleanup] DB non disponibile — solo path test/staging (niente campagne pubblicate):',
             err instanceof Error ? err.message : err,
         );
     }
 
-    return { referenced, testOrderIds, existingOrderIds };
+    return { protectedPaths, publishedOldPaths, publishedOldCampaignIds };
 }
 
-function extractDeliveryOrderId(pathname: string): string | null {
-    const m =
-        pathname.match(
-            /floremoria-blob-foto-consegne\/(?:delivery-proof|social-ready)\/([^/]+)\//,
-        ) || pathname.match(/^delivery-proof\/([^/]+)\//);
-    return m?.[1] || null;
-}
-
-function isTestOrderProof(pathname: string, testOrderIds: Set<string>): boolean {
-    const orderId = extractDeliveryOrderId(pathname);
-    if (!orderId) return false;
-    return testOrderIds.has(orderId);
-}
-
-function isOrphanProductMedia(pathname: string, referenced: Set<string>): boolean {
-    if (!pathname.startsWith('floremoria-media/products/')) return false;
-    return !referenced.has(pathname);
-}
-
-function isOrphanDeliveryProofFolder(
-    pathname: string,
-    existingOrderIds: Set<string>,
-): boolean {
-    // Solo se abbiamo caricato gli ID ordine dal DB (evita wipe se DB down).
-    if (existingOrderIds.size === 0) return false;
-    const orderId = extractDeliveryOrderId(pathname);
-    if (!orderId) return false;
-    return !existingOrderIds.has(orderId);
-}
-
-function isUnreferencedDeliveryProof(
-    pathname: string,
-    referenced: Set<string>,
-    existingOrderIds: Set<string>,
-): boolean {
-    // Foto sotto un ordine esistente ma URL non più referenziato (duplicati random suffix).
-    if (existingOrderIds.size === 0 || referenced.size === 0) return false;
-    if (
-        !pathname.includes('floremoria-blob-foto-consegne/') &&
-        !pathname.startsWith('delivery-proof/')
-    ) {
-        return false;
+async function clearPublishedCampaignMediaUrls(campaignIds: string[]): Promise<number> {
+    if (campaignIds.length === 0) return 0;
+    try {
+        const { default: prisma } = await import('@/lib/prisma');
+        // Placeholder vuoto: imageUrl è required nello schema → stringa vuota.
+        const result = await prisma.marketingCampaign.updateMany({
+            where: { id: { in: campaignIds } },
+            data: { imageUrl: '', videoUrl: null },
+        });
+        return result.count;
+    } catch (err) {
+        console.warn(
+            '[blob-cleanup] clear campaign media URLs fallito:',
+            err instanceof Error ? err.message : err,
+        );
+        return 0;
     }
-    if (referenced.has(pathname)) return false;
-    const orderId = extractDeliveryOrderId(pathname);
-    if (!orderId) return false;
-    // Solo se l'ordine esiste: altrimenti gestito da orphan folder.
-    if (!existingOrderIds.has(orderId)) return false;
-    return true;
-}
-
-function isOrphanMarketing(pathname: string, referenced: Set<string>, uploadedAt: Date): boolean {
-    if (!pathname.startsWith('marketing/campagne/')) return false;
-    if (pathname.includes('/publish-staging/')) return false;
-    if (pathname.includes('/reel-audio/')) return false;
-    if (referenced.has(pathname)) return false;
-    // 7 giorni: draft/generation abortite senza riga MarketingCampaign
-    const ageMs = Date.now() - uploadedAt.getTime();
-    return ageMs > 7 * 24 * 60 * 60 * 1000;
 }
 
 export async function runSafeBlobCleanup(opts: {
@@ -313,11 +249,14 @@ export async function runSafeBlobCleanup(opts: {
         .sort((a, b) => b[1].bytes - a[1].bytes)
         .map(([prefix, v]) => ({ prefix, count: v.count, bytes: v.bytes }));
 
-    const { referenced, testOrderIds, existingOrderIds } = await collectDbReferences();
+    const { protectedPaths, publishedOldPaths, publishedOldCampaignIds } =
+        await collectDbCleanupContext();
 
     const candidates: BlobCleanupItem[] = [];
     for (const b of blobs) {
+        // Foto consegne + fiscali + prodotti: mai toccare
         if (isProtectedPath(b.pathname)) continue;
+        if (protectedPaths.has(b.pathname)) continue;
 
         const safeReason = matchSafePath(b.pathname);
         if (safeReason) {
@@ -331,60 +270,13 @@ export async function runSafeBlobCleanup(opts: {
             continue;
         }
 
-        if (isTestOrderProof(b.pathname, testOrderIds)) {
+        if (publishedOldPaths.has(b.pathname)) {
             candidates.push({
                 url: b.url,
                 pathname: b.pathname,
                 size: b.size,
                 uploadedAt: b.uploadedAt,
-                reason: 'foto consegna ordine isTest=true',
-            });
-            continue;
-        }
-
-        if (isOrphanDeliveryProofFolder(b.pathname, existingOrderIds)) {
-            candidates.push({
-                url: b.url,
-                pathname: b.pathname,
-                size: b.size,
-                uploadedAt: b.uploadedAt,
-                reason: 'foto consegna ordine assente dal DB',
-            });
-            continue;
-        }
-
-        if (
-            isUnreferencedDeliveryProof(b.pathname, referenced, existingOrderIds) &&
-            Date.now() - b.uploadedAt.getTime() > 7 * 24 * 60 * 60 * 1000
-        ) {
-            candidates.push({
-                url: b.url,
-                pathname: b.pathname,
-                size: b.size,
-                uploadedAt: b.uploadedAt,
-                reason: 'foto consegna duplicata/non referenziata (>7gg)',
-            });
-            continue;
-        }
-
-        if (referenced.size > 0 && isOrphanProductMedia(b.pathname, referenced)) {
-            candidates.push({
-                url: b.url,
-                pathname: b.pathname,
-                size: b.size,
-                uploadedAt: b.uploadedAt,
-                reason: 'immagine prodotto orfana',
-            });
-            continue;
-        }
-
-        if (referenced.size > 0 && isOrphanMarketing(b.pathname, referenced, b.uploadedAt)) {
-            candidates.push({
-                url: b.url,
-                pathname: b.pathname,
-                size: b.size,
-                uploadedAt: b.uploadedAt,
-                reason: 'marketing orfano >30gg',
+                reason: 'campagna PUBLISHED >30gg',
             });
         }
     }
@@ -405,6 +297,7 @@ export async function runSafeBlobCleanup(opts: {
     let deletedCount = 0;
     let deletedBytes = 0;
     let errors = 0;
+    let clearedCampaignMedia = 0;
 
     if (!dryRun && toDelete.length > 0) {
         const BATCH = 40;
@@ -436,6 +329,12 @@ export async function runSafeBlobCleanup(opts: {
                 }
             }
         }
+
+        // Solo se abbiamo cancellato media campagne pubblicate: azzera URL in DB
+        const deletedPublished = toDelete.some((c) => c.reason === 'campagna PUBLISHED >30gg');
+        if (deletedPublished && publishedOldCampaignIds.length > 0) {
+            clearedCampaignMedia = await clearPublishedCampaignMediaUrls(publishedOldCampaignIds);
+        }
     }
 
     const freed = dryRun ? candidateBytes : deletedBytes;
@@ -452,6 +351,7 @@ export async function runSafeBlobCleanup(opts: {
         byPrefix,
         residualBytesEstimate: Math.max(0, totalBytes - freed),
         dryRun,
+        clearedCampaignMedia: dryRun ? 0 : clearedCampaignMedia,
     };
 }
 

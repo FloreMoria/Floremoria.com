@@ -4,3 +4,4 @@
 - Aggiunto padding top generoso (pt-10 / pt-12) sul container della pagina utenti per evitare il taglio del titolo H1 sotto la navbar;
 - Risolto refactor colonna 'Giardino Utente': visualizzazione pulita del nome e cognome reale come titolo primario (senza suffissi 'Utente'), stato account/registrazione come sottotitolo, e iniziale reale del nome nell'avatar; tsc+build OK.
 
+[2026-09-05 13:40] fix(finance): Storico Autofatture include upload PDF/SaaS (SDI_AUTOFATTURA_ESTERA); allineato filtro dossier e metadati documentNumber.

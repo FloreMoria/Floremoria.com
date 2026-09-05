@@ -60,6 +60,7 @@ type AutofatturaHistoryItem = {
     reconciled: boolean;
     fileName: string | null;
     createdAt: string;
+    origin?: 'generated' | 'upload';
 };
 
 const PRESETS: VendorPreset[] = [
@@ -515,6 +516,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                                 </div>
                                                 <div className="text-[10px] text-indigo-700 font-bold">
                                                     {h.docType}
+                                                    {h.origin === 'upload' ? ' · upload' : ''}
                                                 </div>
                                             </td>
                                             <td className="px-2 py-2">

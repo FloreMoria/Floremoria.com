@@ -24,6 +24,7 @@ import {
 } from '@/lib/financial/paypalSourceKeys';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
+import { foreignAutofatturaExpenseWhere } from '@/lib/financial/autofatturaHistory';
 
 /** Tax ID Stripe Payments Europe Ltd (IE). */
 const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
@@ -333,13 +334,12 @@ async function loadAutofatturaRefByForeignInvoice(
 ): Promise<Map<string, string>> {
     const rows = await prisma.manualFinanceExpense.findMany({
         where: {
-            expenseDate: { gte: bounds.start, lte: bounds.end },
-            OR: [
-                { notes: { startsWith: 'AUTOFATTURA_TD17' } },
-                { notes: { startsWith: 'AUTOFATTURA_TD18' } },
+            AND: [
+                { expenseDate: { gte: bounds.start, lte: bounds.end } },
+                foreignAutofatturaExpenseWhere(),
             ],
         },
-        select: { notes: true, metadataJson: true },
+        select: { notes: true, metadataJson: true, fileName: true },
     });
     const map = new Map<string, string>();
     for (const row of rows) {
@@ -350,8 +350,11 @@ async function loadAutofatturaRefByForeignInvoice(
             typeof meta.documentNumber === 'string'
                 ? meta.documentNumber.trim()
                 : String(row.notes || '')
-                      .replace(/^AUTOFATTURA_TD1[78]\s+/i, '')
-                      .trim();
+                      .replace(/^AUTOFATTURA_TD1[789]\s+/i, '')
+                      .replace(/^SDI_AUTOFATTURA_ESTERA\s+(PDF\s+)?/i, '')
+                      .trim() ||
+                  row.fileName ||
+                  '';
         if (foreign && doc) {
             map.set(foreign.toUpperCase(), doc);
             map.set(foreign, doc);

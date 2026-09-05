@@ -6,6 +6,7 @@ import {
     parseWorkflowFlags,
     type VeraWorkflowFlags,
 } from '@/lib/vera/orderWorkflow/types';
+import { isFuneralOrderNumber } from '@/lib/orders/isFuneralOrder';
 import { veraAutomationBlockedSkipReason } from '@/lib/vera/orderWorkflow/blockPendingAutomation';
 
 export interface FloristDeliveryNotifyResult {
@@ -33,6 +34,7 @@ async function markPuntoADeferred(orderId: string, flags: VeraWorkflowFlags): Pr
 /**
  * Notifica fiorista — Punto A.
  * Solo stato IN_PROGRESS. Fuori fascia 08:00–20:00 Europe/Rome → differito (sandbox bypass).
+ * Ordini FF (funerale): blocco assoluto senza assegnazione manuale staff.
  */
 export async function notifyFloristDeliveryLinkForOrder(
     orderId: string,
@@ -52,6 +54,15 @@ export async function notifyFloristDeliveryLinkForOrder(
     });
 
     if (!order) return { ok: false, skipped: 'order_not_found' };
+
+    if (isFuneralOrderNumber(order.orderNumber) && !options.force) {
+        if (!order.partnerId) {
+            console.info(
+                `[vera-workflow] Punto A SKIP funerale ${order.orderNumber}: attesa assegnazione fiorista`
+            );
+            return { ok: true, skipped: 'funeral_awaiting_manual_assignment' };
+        }
+    }
 
     const pendingBlock = veraAutomationBlockedSkipReason(order.status);
     if (pendingBlock) {

@@ -6,3 +6,4 @@
 
 [2026-09-05 13:40] fix(finance): Storico Autofatture include upload PDF/SaaS (SDI_AUTOFATTURA_ESTERA); allineato filtro dossier e metadati documentNumber.
 [2026-09-05 15:42] feat(finance): Storico Autofatture con tab T1-T4/Anno, selettore anno, totali imponibile/IVA e sync periodo Prima Nota.
+[2026-09-05 17:00] fix(orders): E.164 no doppio +39 su USA; merge chat Oscar +17134834061; stop auto-dispatch FF; firma FloreMoria Staff; ripristino FF-MC-26-001 in attesa assegnazione.

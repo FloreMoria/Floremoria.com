@@ -24,7 +24,7 @@ import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 
 /**
  * Testo WhatsApp Punto A — nuovo incarico fiorista.
- * Unica rosa 🌹 in chiusura dopo "Vera | Staff FloreMoria".
+ * Unica rosa 🌹 in chiusura dopo "FloreMoria Staff".
  */
 
 export const FLORIST_DELIVERY_PHOTO_INSTRUCTION =
@@ -188,7 +188,7 @@ export function buildFloristNewOrderWhatsAppText(input: FloristNewOrderMessageIn
         `${miniAppLine}\n\n` +
         `Mi confermi?\n` +
         `Grazie mille per il tuo supporto!\n` +
-        `Vera | Staff FloreMoria 🌹`;
+        `FloreMoria Staff 🌹`;
 
     return withBoldWhatsAppTitle(
         FIRST_OUTBOUND_TITLES.floristNewOrder,

@@ -49,12 +49,14 @@ async function findFloristByProvince(province: string): Promise<string | null> {
 
 /**
  * referralRef può essere id Partner o uniqueCode (fiorista, agenzia o aggregatore).
+ * skipAutoFloristAssignment: ordini funerale (FF) — niente coverage/provincia automatica.
  */
 export async function resolveCheckoutPartnerAssociations(input: {
     referralRef?: string | null;
     deliveryProvince: string;
     cemeteryCity?: string | null;
     partnerNotifyEmail?: string | null;
+    skipAutoFloristAssignment?: boolean;
 }): Promise<CheckoutPartnerAssociations> {
     const prov = input.deliveryProvince.trim().toUpperCase().slice(0, 2);
     const cemeteryCity = input.cemeteryCity?.trim() || '';
@@ -62,6 +64,7 @@ export async function resolveCheckoutPartnerAssociations(input: {
         typeof input.partnerNotifyEmail === 'string' && input.partnerNotifyEmail.trim()
             ? input.partnerNotifyEmail.trim().slice(0, 255)
             : null;
+    const skipFlorist = input.skipAutoFloristAssignment === true;
 
     let referralPartner: Partner | null = null;
     const ref = input.referralRef?.trim();
@@ -97,25 +100,30 @@ export async function resolveCheckoutPartnerAssociations(input: {
         }
 
         if (referralPartner.partnerType === 'FLORIST') {
+            // Referral esplicito a fiorista: consentito anche su FF.
             partnerId = referralPartner.id;
         } else if (referralPartner.partnerType === 'FUNERAL_AGENCY') {
             agencyId = referralPartner.id;
             referralPartnerId = referralPartner.id;
             agencyCode = referralPartner.uniqueCode;
             agencyName = referralPartner.shopName;
-            partnerId = await resolveFloristPartnerIdForAgency({
-                agency: toResolvedAgency(referralPartner),
-                cemeteryCity,
-            });
+            if (!skipFlorist) {
+                partnerId = await resolveFloristPartnerIdForAgency({
+                    agency: toResolvedAgency(referralPartner),
+                    cemeteryCity,
+                });
+            }
         } else if (referralPartner.partnerType === 'AGGREGATOR') {
             referralPartnerId = referralPartner.id;
-            partnerId =
-                (await findFloristByCemeteryCoverage(cemeteryCity)) ||
-                (prov ? await findFloristByProvince(prov) : null);
+            if (!skipFlorist) {
+                partnerId =
+                    (await findFloristByCemeteryCoverage(cemeteryCity)) ||
+                    (prov ? await findFloristByProvince(prov) : null);
+            }
         }
     }
 
-    if (!partnerId) {
+    if (!partnerId && !skipFlorist) {
         partnerId =
             (cemeteryCity ? await findFloristByCemeteryCoverage(cemeteryCity) : null) ||
             (prov ? await findFloristByProvince(prov) : null);

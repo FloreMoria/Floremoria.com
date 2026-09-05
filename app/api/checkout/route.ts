@@ -228,6 +228,7 @@ export async function POST(request: Request) {
             deliveryProvince: prov,
             cemeteryCity: cemeteryCityValue,
             partnerNotifyEmail: notify,
+            skipAutoFloristAssignment: prefix === 'FF',
         });
 
         let finalInstructions: string | null = partnerAssoc.referralInstructions;

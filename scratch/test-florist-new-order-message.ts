@@ -104,7 +104,7 @@ function main(): void {
         ),
         'link mini-app su riga dedicata'
     );
-    assert(text.endsWith('Vera | Staff FloreMoria 🌹'), 'chiusura con rosa unica');
+    assert(text.endsWith('FloreMoria Staff 🌹'), 'chiusura con rosa unica');
     assert((text.match(/🌹/g) || []).length === 1, 'una sola rosa');
     assert(!text.includes('Bouquet Memoria Eterna'), 'niente nome commerciale bouquet');
     assert(!text.includes('Gramato'), 'niente Gramato');

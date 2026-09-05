@@ -60,44 +60,68 @@ export interface MetaCloudCredentials {
     phoneNumberId: string;
 }
 
-/** Prefissi internazionali comuni (clienti diaspora .eu) senza + in input. */
+/** Prefissi internazionali comuni (clienti diaspora) senza + in input. Include NANP (+1). */
 const INTL_COUNTRY_PREFIXES =
-    '33|49|44|41|34|31|32|43|48|30|36|40|351|352|353|358|386|420|421|45|46|47|39';
+    '1|33|49|44|41|34|31|32|43|48|30|36|40|351|352|353|358|386|420|421|45|46|47|39|55|52|61|81|86|91|7|90|966|971';
 
 /** Mobile italiano senza prefisso internazionale: 10 cifre che iniziano con 3 (es. 3204910428). */
 function isItalianMobileWithoutCountryCode(digits: string): boolean {
     return /^3\d{9}$/.test(digits);
 }
 
+/** NANP (USA/Canada): country 1 + 10 cifre NXX-NXX-XXXX. */
+function isNanpDigits(digits: string): boolean {
+    return /^1[2-9]\d{9}$/.test(digits);
+}
+
+/**
+ * Se qualcuno ha anteposto erroneamente +39 a un numero già internazionale
+ * (es. +3917134834061 → +17134834061), ripristina il prefisso corretto.
+ * Non tocca i veri mobili IT (+3932…).
+ */
+function repairFalseItalianPrefix(e164: string): string {
+    if (!e164.startsWith('+39') || e164.length < 12) return e164;
+    const after39 = e164.slice(3); // cifre dopo +39
+    if (isItalianMobileWithoutCountryCode(after39)) return e164;
+    if (isNanpDigits(after39)) return `+${after39}`;
+    if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(after39) && !after39.startsWith('39')) {
+        return `+${after39}`;
+    }
+    return e164;
+}
+
 /**
  * Normalizza un numero grezzo in E.164 (con prefisso +).
  * Default Italia (+39) solo se il numero non sembra già internazionale.
  *
- * Nota bug: un mobile italiano privo di prefisso (es. "3204910428" o addirittura
- * "+3204910428") veniva dirottato su un paese estero perché "32"/"31"/"30"… sono
- * prefissi internazionali validi. Il mobile italiano (10 cifre che iniziano con 3)
- * va quindi forzato a +39 PRIMA del matching dei prefissi esteri, così le due varianti
- * dello stesso numero collassano su un'unica sessione (+393204910428).
+ * Nota: Meta invia spesso wa_id senza «+» (es. 17134834061 USA). Se il prefisso
+ * internazionale non è riconosciuto, un fallback cieco a +39 produce doppi prefissi
+ * (+391…). NANP (+1) e altri prefissi noti vanno preservati; i falsi +39 vanno riparati.
  */
 export function normalizePhoneE164(raw: string | null | undefined): string | null {
     if (!raw) return null;
-    let p = raw.replace(/^whatsapp:/, '').replace(/[^\d+]/g, '').trim();
+    let p = raw.replace(/^whatsapp:/i, '').replace(/[^\d+]/g, '').trim();
     if (!p) return null;
     if (p.startsWith('00')) p = `+${p.slice(2)}`;
 
     if (p.startsWith('+')) {
-        // Già in forma internazionale, ma potrebbe essere un mobile IT a cui manca il 39.
         const digits = p.slice(1);
-        if (isItalianMobileWithoutCountryCode(digits)) p = `+39${digits}`;
-    } else if (p.startsWith('39') && p.length >= 11) {
+        if (isItalianMobileWithoutCountryCode(digits)) {
+            p = `+39${digits}`;
+        } else {
+            p = `+${digits}`;
+        }
+    } else if (p.startsWith('39') && p.length >= 11 && isItalianMobileWithoutCountryCode(p.slice(2))) {
         p = `+${p}`;
     } else if (isItalianMobileWithoutCountryCode(p)) {
         p = `+39${p}`;
-    } else if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) {
+    } else if (isNanpDigits(p) || new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) {
         p = `+${p}`;
     } else {
         p = `+39${p}`;
     }
+
+    p = repairFalseItalianPrefix(p);
 
     if (!/^\+\d{8,15}$/.test(p)) return null;
     return p;

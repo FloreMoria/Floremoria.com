@@ -4,6 +4,7 @@ import { findMatchingDeceasedProfile } from '@/lib/deceased/deceasedProfileIdent
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDeliveryLink';
 import { runFloristScoutForOrderIfNeeded } from '@/lib/ai/floristScoutOrder';
+import { isFuneralOrderNumber } from '@/lib/orders/isFuneralOrder';
 
 export type AutoAssignKnownTombResult =
     | { assigned: true; deceasedProfileId: string; partnerId: string; becameInProgress: boolean }
@@ -21,7 +22,8 @@ function normalizeCity(s: string): string {
 /**
  * Tomba già censita + fiorista custode primario → collega ordine e passa a IN_PROGRESS.
  * Fallback: fiorista di copertura sul comune del cimitero.
- * Perché: se defunto/cimitero hanno fiorista di riferimento, il match è sempre automatico.
+ *
+ * Eccezione funerale (FF): mai auto-assegnare — resta in attesa assegnazione manuale staff.
  */
 export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAssignKnownTombResult> {
     const order = await prisma.order.findFirst({
@@ -29,6 +31,7 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         select: {
             id: true,
             status: true,
+            orderNumber: true,
             deceasedName: true,
             cemeteryCity: true,
             cemeteryName: true,
@@ -39,6 +42,14 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
     if (!order) {
         return { assigned: false, reason: 'order_not_found' };
     }
+
+    if (isFuneralOrderNumber(order.orderNumber)) {
+        console.info(
+            `[auto-assign-known-tomb] SKIP funerale ${order.orderNumber}: attesa assegnazione manuale`
+        );
+        return { assigned: false, reason: 'funeral_manual_assignment_required' };
+    }
+
     if (order.status !== 'ACCEPTED' && order.status !== 'PENDING' && order.status !== 'IN_PROGRESS') {
         return { assigned: false, reason: 'status_not_eligible' };
     }
@@ -77,7 +88,6 @@ export async function autoAssignKnownTombOrder(orderId: string): Promise<AutoAss
         }
     }
 
-    // Fallback automatico: fiorista di riferimento sul comune/cimitero (coverageArea)
     if (!partnerId) {
         const cityNorm = normalizeCity(order.cemeteryCity);
         const coveragePartners = await prisma.partner.findMany({

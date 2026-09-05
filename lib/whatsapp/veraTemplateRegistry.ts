@@ -160,7 +160,7 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
             "🔗 Per favore, completa l'ordine con la mini-app: {{11}}\n\n" +
             "Mi confermi?\n" +
             "Grazie mille per il tuo supporto!\n" +
-            "Vera | Staff FloreMoria 🌹",
+            "FloreMoria Staff 🌹",
         description:
             '{{1}} nome fiorista, {{2}} codice ordine, {{3}} defunto, {{4}} scadenza, {{5}} comune, {{6}} luogo, {{7}} prodotto, {{8}} accessori, {{9}} testo biglietto, {{10}} compenso, {{11}} link mini-app',
     },

@@ -55,6 +55,8 @@ function FooterLegalLink({ href, children }: { href: string; children: ReactNode
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#C0A062',
 };

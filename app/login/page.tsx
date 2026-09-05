@@ -242,7 +242,7 @@ export default function LoginPage() {
     };
 
     const inputClass =
-        'appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all';
+        'appearance-none block w-full px-4 py-3 bg-white border border-fm-gold/30 rounded-xl font-body text-slate-800 text-[16px] shadow-sm focus:outline-none focus:ring-2 focus:ring-fm-gold/50 focus:border-fm-gold transition-all';
     const buttonClass = (loading: boolean) =>
         `w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-[17px] font-semibold text-white bg-fm-gold hover:bg-[#b59870] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fm-gold transition-all duration-300 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`;
 
@@ -272,11 +272,11 @@ export default function LoginPage() {
             : 'Inserisci la tua email o il tuo numero di telefono';
 
     return (
-        <div className="min-h-screen bg-[#FAF9F6] flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-bl from-fm-gold/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+        <div className="min-h-screen bg-[#FAF9F6] flex flex-col justify-center items-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 relative overflow-hidden w-full max-w-full">
+            <div className="absolute top-[-10%] right-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-gradient-to-bl from-fm-gold/10 to-transparent rounded-full blur-3xl pointer-events-none max-w-full"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-gradient-to-tr from-emerald-600/5 to-transparent rounded-full blur-3xl pointer-events-none max-w-full"></div>
 
-            <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+            <div className="w-full max-w-md mx-auto relative z-10">
                 <Link
                     href="/"
                     className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-6 min-h-[44px]"
@@ -291,7 +291,7 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-xl py-10 px-8 lg:px-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[32px] border border-white/60">
+                <div className="bg-white/80 backdrop-blur-xl py-8 px-5 sm:py-10 sm:px-8 lg:px-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[32px] border border-white/60 w-full">
                     <div className="text-center mb-6">
                         <h2 className="text-lg font-bold text-slate-800">{heading}</h2>
                         <p className="text-xs text-slate-400 mt-1">{subheading}</p>

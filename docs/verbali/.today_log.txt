@@ -1,1 +1,2 @@
 [2026-09-05 13:20] fix(finance): aggiunti campi Data fattura, Importo EUR e tipo TD17/TD18 nel form upload autofatture estere (PDF/immagine).
+[2026-09-05 13:26] fix(mobile): bloccato zoom indesiderato e overflow orizzontale su iOS login e chat; viewport con maximumScale=1 e userScalable=false, font-size 16px globale su input mobile, overflow-x hidden, safe-area-inset su input bar e break-words su messaggi; tsc+build OK.

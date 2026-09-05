@@ -435,7 +435,7 @@ function VisioneTab({
   };
 
   return (
-    <div className="animate-in fade-in duration-300">
+    <div className="animate-in fade-in duration-300 w-full max-w-full overflow-x-hidden min-w-0">
       <NewConversationModal
         open={newChatOpen}
         onClose={() => setNewChatOpen(false)}
@@ -460,42 +460,39 @@ function VisioneTab({
                   type="text"
                   value={forwardSearch}
                   onChange={(e) => setForwardSearch(e.target.value)}
-                  placeholder="Cerca la chat di destinazione..."
-                  className="w-full bg-white rounded-xl pl-9 pr-4 py-2.5 text-sm border border-[#EAE3D9] focus:outline-none focus:border-[#C0A062]"
+                  placeholder="Cerca destinatario per nome o numero…"
+                  className="w-full rounded-xl border border-gray-200 bg-[#FAF8F5] px-3.5 py-2 text-sm text-[#111B21] focus:border-[#00A884] focus:outline-none"
                 />
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
               </div>
             </div>
-            <div className="max-h-[50vh] overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
               {sessions
-                .filter(s => s.phone !== forwardSource.fromPhone)
-                .filter(s =>
-                  s.name?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
-                  s.displayName?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
-                  s.subtitle?.toLowerCase().includes(forwardSearch.toLowerCase()) ||
-                  s.phone?.includes(forwardSearch)
-                )
-                .map(s => (
+                .filter((s) => s.phone !== forwardSource.fromPhone)
+                .filter((s) => {
+                  if (!forwardSearch.trim()) return true;
+                  const q = forwardSearch.toLowerCase();
+                  return (
+                    (s.displayName || s.name || '').toLowerCase().includes(q) ||
+                    (s.subtitle || '').toLowerCase().includes(q) ||
+                    (s.phone || '').includes(q)
+                  );
+                })
+                .map((target) => (
                   <button
-                    key={s.phone}
+                    key={target.phone}
                     type="button"
                     disabled={forwarding}
-                    onClick={() => handleForwardTo(s.phone)}
-                    className="w-full flex items-center gap-3 p-3.5 hover:bg-[#FAF8F5] text-left transition-colors disabled:opacity-50"
+                    onClick={() => void handleForwardTo(target.phone)}
+                    className="w-full text-left px-5 py-3 hover:bg-[#FAF8F5] flex items-center justify-between gap-3 transition-colors disabled:opacity-50"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#EAE3D9] to-[#DFDFDF] flex items-center justify-center font-display font-semibold text-gray-700 flex-shrink-0 border border-gray-200">
-                      {s.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-display font-semibold text-[14px] text-[#111B21] truncate">{s.displayName || s.name}</span>
-                        {s.userType === 'FLORIST' && (
-                          <span className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 rounded border border-emerald-100 font-bold uppercase">Fiorista</span>
-                        )}
-                      </div>
-                      <span className="block text-[11px] text-[#667781] truncate">
-                        {s.subtitle || s.phone.replace('whatsapp:', '')}
-                      </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#111B21] truncate">
+                        {target.displayName || target.name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {target.subtitle ? `${target.subtitle} · ` : ''}
+                        {target.phone.replace('whatsapp:', '')}
+                      </p>
                     </div>
                     {forwarding ? <Loader2 className="w-4 h-4 animate-spin text-[#00A884]" /> : <Forward className="w-4 h-4 text-[#00A884]" />}
                   </button>
@@ -507,7 +504,7 @@ function VisioneTab({
           </div>
         </div>
       )}
-      <div className="flex border-0 md:border border-[#EAE3D9] rounded-none md:rounded-3xl overflow-hidden h-[calc(100dvh-110px)] min-h-[440px] md:h-[680px] bg-[#FAF9F6] shadow-none md:shadow-sm min-w-0 max-w-full">
+      <div className="flex border-0 md:border border-[#EAE3D9] rounded-none md:rounded-3xl overflow-hidden h-[calc(100dvh-110px)] min-h-[440px] md:h-[680px] bg-[#FAF9F6] shadow-none md:shadow-sm w-full max-w-full min-w-0">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
         <div
@@ -629,7 +626,7 @@ function VisioneTab({
 
         {/* ── COLONNA 2: ACTIVE CHAT PANE ── */}
         <div
-          className={`flex-col h-full bg-[#EFEAE2] relative w-full md:w-[62%] ${
+          className={`flex-col h-full bg-[#EFEAE2] relative w-full md:w-[62%] min-w-0 max-w-full ${
             activeChatId ? 'flex' : 'hidden md:flex'
           }`}
         >
@@ -689,7 +686,7 @@ function VisioneTab({
 
               <div 
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-3.5 sm:p-4 md:p-6 space-y-3.5 md:space-y-4 custom-scrollbar bg-repeat" 
+                className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-4 md:p-6 space-y-3.5 md:space-y-4 custom-scrollbar bg-repeat w-full max-w-full min-w-0" 
                 style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")' }}
               >
                 {activeChat.messages?.map((m: any, idx: number) => {
@@ -703,7 +700,7 @@ function VisioneTab({
                   return (
                     <div key={m.id || idx} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
                       <div 
-                        className={`px-4 py-3 md:py-3.5 rounded-2xl shadow-sm relative text-[16px] md:text-[15px] text-[#111B21] max-w-[88%] sm:max-w-[82%] md:max-w-[80%] leading-relaxed border font-normal tracking-wide
+                        className={`px-4 py-3 md:py-3.5 rounded-2xl shadow-sm relative text-[16px] md:text-[15px] text-[#111B21] max-w-[88%] sm:max-w-[82%] md:max-w-[80%] leading-relaxed border font-normal tracking-wide break-words [overflow-wrap:anywhere]
                         ${isOutbound 
                           ? isFailed
                             ? 'bg-red-50 rounded-tr-none border-red-200 text-red-950'
@@ -738,7 +735,7 @@ function VisioneTab({
                             </button>
                           </div>
                         ) : (
-                          <p className="pb-3.5 pr-11 whitespace-pre-wrap text-[16px] md:text-[15px] leading-[1.5] text-[#111B21] tracking-[0.01em]">{renderLinkedMessage(m.body)}</p>
+                          <p className="pb-3.5 pr-11 whitespace-pre-wrap text-[16px] md:text-[15px] leading-[1.5] text-[#111B21] tracking-[0.01em] break-words [overflow-wrap:anywhere]">{renderLinkedMessage(m.body)}</p>
                         )}
                         <div className="absolute bottom-1 right-2.5 flex items-center gap-1">
                           <span className="text-[11px] md:text-[10px] text-[#8696A0] font-medium tracking-normal">{formatMessageTimestamp(m.createdAt, m.timestampLabel || m.timestamp || 'ora')}</span>
@@ -769,7 +766,7 @@ function VisioneTab({
               </div>
 
               {/* Chat Input Bar — graffetta sempre disponibile */}
-              <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-2.5 sm:p-3.5 flex flex-col gap-2 border-t border-[#DFDFDF] shrink-0">
+              <form onSubmit={handleSendMessage} className="bg-[#F0F2F5] p-2.5 sm:p-3.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex flex-col gap-2 border-t border-[#DFDFDF] shrink-0 w-full max-w-full">
                 <div className="flex items-center justify-between gap-2 px-1">
                   <button
                     type="button"
@@ -844,7 +841,7 @@ function VisioneTab({
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder="Scrivi un messaggio o allega una foto..."
-                    className="flex-1 bg-white rounded-full px-4 sm:px-5 py-2.5 sm:py-3 outline-none text-[16px] md:text-[15px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884] placeholder:text-gray-400"
+                    className="flex-1 min-w-0 bg-white rounded-full px-4 sm:px-5 py-2.5 sm:py-3 outline-none text-[16px] md:text-[15px] text-[#111B21] shadow-sm border border-gray-200 transition-all focus:border-[#00A884] placeholder:text-gray-400"
                   />
                   <button
                     type="submit"

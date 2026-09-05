@@ -16,7 +16,10 @@ synced_at: 2026-09-05T10:25:40.701Z
 
 ## Sezione 1 — Infrastruttura
 
-- `a0d0356` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
+- `fc170810` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
+- `a0d03563` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
+- `48f5431f` chore(verbali): [skip ci] pipeline BARBARA + DEVIN → Obsidian _(github-actions[bot])_
+- `19f654ae` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
 
 ## Sezione 2 — Strategia
 

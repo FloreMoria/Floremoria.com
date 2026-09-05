@@ -1,2 +1,6 @@
 [2026-09-05 13:20] fix(finance): aggiunti campi Data fattura, Importo EUR e tipo TD17/TD18 nel form upload autofatture estere (PDF/immagine).
 [2026-09-05 13:26] fix(mobile): bloccato zoom indesiderato e overflow orizzontale su iOS login e chat; viewport con maximumScale=1 e userScalable=false, font-size 16px globale su input mobile, overflow-x hidden, safe-area-inset su input bar e break-words su messaggi; tsc+build OK.
+[2026-09-05 13:33] fix(dashboard): corretto padding titolo utenti e ripristinata corretta visualizzazione nome/avatar nella tabella;
+- Aggiunto padding top generoso (pt-10 / pt-12) sul container della pagina utenti per evitare il taglio del titolo H1 sotto la navbar;
+- Risolto refactor colonna 'Giardino Utente': visualizzazione pulita del nome e cognome reale come titolo primario (senza suffissi 'Utente'), stato account/registrazione come sottotitolo, e iniziale reale del nome nell'avatar; tsc+build OK.
+

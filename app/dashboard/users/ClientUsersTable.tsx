@@ -48,6 +48,17 @@ const formatITDate = (dateStr: string | null) => {
     return `${day}/${month}/${shortYear}`;
 };
 
+function cleanUserFullName(name?: string | null, email?: string | null): string {
+    if (!name || !name.trim()) {
+        return email ? email.split('@')[0] : 'Utente senza nome';
+    }
+    let cleaned = name.replace(/\s+utente(\s+registrato|\s+sconosciuto)?$/i, '').trim();
+    if (/^utente(\s+registrato|\s+sconosciuto)?$/i.test(cleaned) || /^utente$/i.test(cleaned)) {
+        return email ? email.split('@')[0] : 'Utente senza nome';
+    }
+    return formatPersonName(cleaned) || (email ? email.split('@')[0] : 'Utente senza nome');
+}
+
 type UserRoleFilter = 'ALL' | 'ADMIN' | 'CUSTOMER' | 'FLORIST';
 type UserStatusFilter = 'ALL' | 'ACTIVE' | 'SUSPENDED';
 type SortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc' | 'orders_desc' | 'orders_asc';
@@ -469,15 +480,17 @@ export default function ClientUsersTable({
                                 </tr>
                             ) : (
                                 filteredUsers.map((u, i) => {
-                                    const rawName = formatPersonName(u.name || 'Utente Sconosciuto');
-                                    const nameParts = rawName.split(/\s+/).filter(Boolean);
-                                    let lastName = nameParts[nameParts.length - 1] || 'Utente';
-                                    let firstName = nameParts.slice(0, -1).join(' ');
-                                    if (nameParts.length >= 2 && SURNAME_PARTICLES.has(nameParts[nameParts.length - 2].toLowerCase())) {
-                                        lastName = nameParts.slice(nameParts.length - 2).join(' ');
-                                        firstName = nameParts.slice(0, nameParts.length - 2).join(' ');
+                                    const displayName = cleanUserFullName(u.name, u.email);
+                                    const initial = (displayName.charAt(0) || 'U').toUpperCase();
+
+                                    let subtitle = 'Utente registrato';
+                                    if (u.role === 'ADMIN') {
+                                        subtitle = 'Account staff';
+                                    } else if (u.role === 'FLORIST') {
+                                        subtitle = 'Fiorista partner';
+                                    } else if (String(u.id).startsWith('virtual_')) {
+                                        subtitle = 'Ordine cliente';
                                     }
-                                    const isSingleWord = nameParts.length <= 1;
 
                                     return (
                                         <tr
@@ -495,15 +508,15 @@ export default function ClientUsersTable({
                                                     {u.profilePicUrl ? (
                                                         <Image
                                                             src={u.profilePicUrl}
-                                                            alt={u.name || 'Utente'}
+                                                            alt={displayName}
                                                             width={36}
                                                             height={36}
                                                             className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm shrink-0"
                                                             unoptimized
                                                         />
                                                     ) : (
-                                                        <div className="w-9 h-9 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0 text-xs">
-                                                            {u.name?.charAt(0) || '?'}
+                                                        <div className="w-9 h-9 bg-[#EFEAE2] rounded-full flex items-center justify-center text-fm-gold font-bold shrink-0 text-sm">
+                                                            {initial}
                                                         </div>
                                                     )}
                                                     {editingUserId === u.id ? (
@@ -519,15 +532,13 @@ export default function ClientUsersTable({
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     ) : (
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-gray-900 text-sm leading-tight">
-                                                                {lastName}
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="font-semibold text-slate-900 text-sm leading-tight truncate">
+                                                                {displayName}
                                                             </span>
-                                                            {!isSingleWord && firstName && (
-                                                                <span className="text-xs font-normal text-gray-600 leading-tight">
-                                                                    {firstName}
-                                                                </span>
-                                                            )}
+                                                            <span className="text-xs font-normal text-slate-500 leading-tight mt-0.5">
+                                                                {subtitle}
+                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -678,7 +689,7 @@ export default function ClientUsersTable({
                                 />
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-xl font-bold text-gray-900">{formatPersonName(selectedUser.name)}</h2>
+                                        <h2 className="text-xl font-bold text-gray-900">{cleanUserFullName(selectedUser.name, selectedUser.email)}</h2>
                                         <UserTypeBadge userId={selectedUser.id} initialType={selectedUser.userType} />
                                     </div>
                                     <p className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-2">

@@ -84,9 +84,11 @@ export default async function UsersPage() {
 
         const status: 'ACTIVE' | 'SUSPENDED' = u.deletedAt || u.isActive === false ? 'SUSPENDED' : 'ACTIVE';
 
+        const cleanName = formatPersonName(u.name || '');
+
         usersMap.set(u.id, {
             id: u.id,
-            name: formatPersonName(u.name, 'Utente Registrato'),
+            name: cleanName || (u.email ? u.email.split('@')[0] : 'Utente senza nome'),
             email: u.email || '',
             phone: u.phone || 'Non specificato',
             city: u.city || 'Non specificata',
@@ -108,9 +110,10 @@ export default async function UsersPage() {
         const key = order.userId || (order.user?.id) || order.customerPhone || order.buyerEmail || order.buyerFullName || order.id;
 
         if (!usersMap.has(key)) {
+            const cleanName = formatPersonName(order.user?.name || order.buyerFullName || '');
             usersMap.set(key, {
                 id: order.userId || `virtual_${order.id}`,
-                name: formatPersonName(order.user?.name || order.buyerFullName, 'Utente Sconosciuto'),
+                name: cleanName || (order.buyerEmail ? order.buyerEmail.split('@')[0] : 'Utente senza nome'),
                 email: order.user?.email || order.buyerEmail || '',
                 phone: order.user?.phone || order.customerPhone || 'Non specificato',
                 city: order.buyerCity || 'Non specificata',
@@ -153,9 +156,9 @@ export default async function UsersPage() {
     if (!registeredUsersResult.ok) dbErrors.push(registeredUsersResult.error);
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-10 pb-20 fade-in">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-12 pb-20 fade-in">
             <DashboardDbAlert page="Utenti" errors={dbErrors} />
-            <div className="mb-8">
+            <div className="mb-8 pt-4 sm:pt-6">
                 <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">Il Giardino della Memoria</h1>
                 <p className="text-gray-500 font-medium">
                     Gestione degli Utenti e dello storico ordini fotografici (Giardino della Memoria Infinita).

@@ -24,6 +24,51 @@ import {
     matchesPassivoSearch,
 } from '@/components/dashboard/finance/financePassivoUi';
 import PaypalForeignSuppliersModal from '@/components/dashboard/PaypalForeignSuppliersModal';
+import {
+    currentPrimaNotaPeriodKey,
+    periodBounds,
+    PRIMA_NOTA_PERIOD_OPTIONS,
+    type PrimaNotaPeriodKey,
+} from '@/lib/financial/primaNotaShared';
+import { normalizePrimaNotaPeriodKey } from '@/lib/financial/trimestreLabel';
+
+const STORAGE_PERIOD = 'floremoria.primaNota.period';
+const STORAGE_YEAR = 'floremoria.autofatture.year';
+const DEFAULT_YEAR = new Date().getFullYear();
+
+function readStoredPeriod(): PrimaNotaPeriodKey {
+    if (typeof window === 'undefined') return currentPrimaNotaPeriodKey();
+    try {
+        const fromPrima = normalizePrimaNotaPeriodKey(
+            window.localStorage.getItem(STORAGE_PERIOD),
+        );
+        if (fromPrima) return fromPrima;
+        const dossierQ = window.localStorage.getItem('floremoria.dossier.quarter');
+        const fromDossier = normalizePrimaNotaPeriodKey(dossierQ ? `T${dossierQ}` : null);
+        if (fromDossier && fromDossier !== 'YEAR') return fromDossier;
+    } catch {
+        /* ignore */
+    }
+    return currentPrimaNotaPeriodKey();
+}
+
+function readStoredYear(): number {
+    if (typeof window === 'undefined') return DEFAULT_YEAR;
+    try {
+        const raw = window.localStorage.getItem(STORAGE_YEAR);
+        const n = raw ? Number(raw) : NaN;
+        if (Number.isFinite(n) && n >= 2020 && n <= 2100) return n;
+    } catch {
+        /* ignore */
+    }
+    return DEFAULT_YEAR;
+}
+
+function periodKeyFromIsoDate(iso: string): PrimaNotaPeriodKey {
+    const m = Number(String(iso).slice(5, 7));
+    if (!Number.isFinite(m) || m < 1) return currentPrimaNotaPeriodKey();
+    return `T${Math.floor((m - 1) / 3) + 1}` as PrimaNotaPeriodKey;
+}
 
 type Props = {
     onImported?: () => void;
@@ -148,32 +193,109 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
     const [detailItem, setDetailItem] = useState<AutofatturaHistoryItem | null>(null);
     const [historySearch, setHistorySearch] = useState('');
     const [paypalForeignOpen, setPaypalForeignOpen] = useState(false);
+    const [periodKey, setPeriodKey] = useState<PrimaNotaPeriodKey>(() =>
+        currentPrimaNotaPeriodKey(),
+    );
+    const [fiscalYear, setFiscalYear] = useState(DEFAULT_YEAR);
+    const [periodTotals, setPeriodTotals] = useState({
+        imponibileCents: 0,
+        vatCents: 0,
+        totaleCents: 0,
+        count: 0,
+    });
+
+    const bounds = useMemo(
+        () => periodBounds(fiscalYear, periodKey),
+        [fiscalYear, periodKey],
+    );
 
     const filteredHistory = useMemo(() => {
         if (!historySearch.trim()) return history;
-        return history.filter((h) => matchesPassivoSearch(autofatturaSearchHaystack(h), historySearch));
+        return history.filter((h) =>
+            matchesPassivoSearch(autofatturaSearchHaystack(h), historySearch),
+        );
     }, [history, historySearch]);
 
-    const loadHistory = useCallback(async () => {
-        setHistoryLoading(true);
+    const setPeriod = (key: PrimaNotaPeriodKey) => {
+        setPeriodKey(key);
         try {
-            const res = await fetch('/api/dashboard/finance/autofatture');
-            const parsed = await readJsonResponse<{
-                ok?: boolean;
-                items?: AutofatturaHistoryItem[];
-                count?: number;
-            }>(res);
-            if (parsed.ok) setHistory(parsed.data?.items || []);
+            window.localStorage.setItem(STORAGE_PERIOD, key);
+            if (key !== 'YEAR') {
+                window.localStorage.setItem('floremoria.dossier.quarter', key.slice(1));
+            }
         } catch {
-            /* silent */
-        } finally {
-            setHistoryLoading(false);
+            /* ignore */
         }
+    };
+
+    const setYear = (year: number) => {
+        setFiscalYear(year);
+        try {
+            window.localStorage.setItem(STORAGE_YEAR, String(year));
+        } catch {
+            /* ignore */
+        }
+    };
+
+    const loadHistory = useCallback(
+        async (override?: { year?: number; period?: PrimaNotaPeriodKey }) => {
+            setHistoryLoading(true);
+            try {
+                const y = override?.year ?? fiscalYear;
+                const p = override?.period ?? periodKey;
+                const qs = new URLSearchParams({
+                    year: String(y),
+                    period: p,
+                });
+                const res = await fetch(`/api/dashboard/finance/autofatture?${qs}`);
+                const parsed = await readJsonResponse<{
+                    ok?: boolean;
+                    items?: AutofatturaHistoryItem[];
+                    count?: number;
+                    totals?: {
+                        imponibileCents: number;
+                        vatCents: number;
+                        totaleCents: number;
+                    };
+                }>(res);
+                if (parsed.ok) {
+                    const items = parsed.data?.items || [];
+                    setHistory(items);
+                    const t = parsed.data?.totals;
+                    setPeriodTotals({
+                        imponibileCents: t?.imponibileCents ?? 0,
+                        vatCents: t?.vatCents ?? 0,
+                        totaleCents: t?.totaleCents ?? 0,
+                        count: parsed.data?.count ?? items.length,
+                    });
+                }
+            } catch {
+                /* silent */
+            } finally {
+                setHistoryLoading(false);
+            }
+        },
+        [fiscalYear, periodKey],
+    );
+
+    useEffect(() => {
+        setPeriodKey(readStoredPeriod());
+        setFiscalYear(readStoredYear());
     }, []);
 
     useEffect(() => {
         void loadHistory();
     }, [loadHistory]);
+
+    /** Dopo upload/generazione: posiziona il tab sul trimestre della data documento. */
+    const focusPeriodForDate = async (isoDate: string) => {
+        const y = Number(String(isoDate).slice(0, 4));
+        const year = Number.isFinite(y) && y >= 2020 ? y : fiscalYear;
+        const period = periodKeyFromIsoDate(isoDate);
+        setYear(year);
+        setPeriod(period);
+        await loadHistory({ year, period });
+    };
 
     const onVendorChange = (id: string) => {
         setVendorId(id);
@@ -226,7 +348,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 `${parsed.data.message || 'XML scaricato'}` +
                     (pdfPath ? ' · PDF aperto in nuova scheda' : '')
             );
-            await loadHistory();
+            await focusPeriodForDate(foreignInvoiceDate);
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Generazione fallita');
@@ -338,7 +460,8 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
             }
             setMessage(parsed.data?.message || 'Import completato');
             setSummary(parsed.data?.summary || null);
-            await loadHistory();
+            if (needsMeta) await focusPeriodForDate(date);
+            else await loadHistory();
             onImported?.();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Upload fallito');
@@ -455,7 +578,7 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                         Storico Autofatture
                         <span className="ml-2 inline-flex min-w-[1.5rem] justify-center px-1.5 py-0.5 rounded-full bg-slate-800 text-white text-[10px]">
-                            {history.length}
+                            {periodTotals.count}
                         </span>
                     </span>
                     <ChevronDown
@@ -465,7 +588,95 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 </button>
                 {historyOpen && (
                     <div className="flex flex-col flex-1 min-h-0 border-t border-slate-200">
-                        <div className="px-3 py-2 shrink-0 border-b border-slate-100 bg-white">
+                        <div className="px-3 py-2 shrink-0 border-b border-slate-100 bg-white space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div
+                                    className="inline-flex flex-wrap rounded-xl border border-slate-200 bg-slate-50 p-0.5 gap-0.5"
+                                    role="tablist"
+                                    aria-label="Filtro periodo Storico Autofatture"
+                                >
+                                    {PRIMA_NOTA_PERIOD_OPTIONS.map((opt) => {
+                                        const active = periodKey === opt.key;
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={active}
+                                                onClick={() => setPeriod(opt.key)}
+                                                title={opt.label.replace(/2026/g, String(fiscalYear))}
+                                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap ${
+                                                    active
+                                                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                                                        : 'text-slate-500 hover:text-slate-800'
+                                                }`}
+                                            >
+                                                {opt.key === 'YEAR' ? (
+                                                    <>Anno {fiscalYear}</>
+                                                ) : (
+                                                    <>
+                                                        {opt.key}{' '}
+                                                        <span className="hidden md:inline font-normal text-slate-500">
+                                                            {opt.key === 'T1'
+                                                                ? '(Gen - Mar)'
+                                                                : opt.key === 'T2'
+                                                                  ? '(Apr - Giu)'
+                                                                  : opt.key === 'T3'
+                                                                    ? '(Lug - Set)'
+                                                                    : '(Ott - Dic)'}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                                    <span className="font-semibold">Anno</span>
+                                    <select
+                                        value={fiscalYear}
+                                        onChange={(e) => setYear(Number(e.target.value))}
+                                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold"
+                                    >
+                                        {[fiscalYear - 1, fiscalYear, fiscalYear + 1]
+                                            .filter((y, i, a) => a.indexOf(y) === i)
+                                            .concat([2025, 2026, 2027])
+                                            .filter((y, i, a) => a.indexOf(y) === i)
+                                            .sort((a, b) => a - b)
+                                            .map((y) => (
+                                                <option key={y} value={y}>
+                                                    {y}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5">
+                                    <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-500">
+                                        Imponibile estero
+                                    </p>
+                                    <p className="text-sm font-bold font-mono text-indigo-900">
+                                        €{euro(periodTotals.imponibileCents)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-amber-100 bg-amber-50/50 px-2.5 py-1.5">
+                                    <p className="text-[9px] font-bold uppercase tracking-wider text-amber-600">
+                                        IVA teorica 22%
+                                    </p>
+                                    <p className="text-sm font-bold font-mono text-amber-900">
+                                        €{euro(periodTotals.vatCents)}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                        N° autofatture · {bounds.label}
+                                    </p>
+                                    <p className="text-sm font-bold font-mono text-slate-800">
+                                        {periodTotals.count}
+                                    </p>
+                                </div>
+                            </div>
                             <div className="relative">
                                 <Search
                                     size={14}
@@ -487,8 +698,8 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                             </p>
                         ) : filteredHistory.length === 0 ? (
                             <p className="px-3 py-4 text-xs text-slate-400">
-                                {history.length === 0
-                                    ? 'Nessuna autofattura generata ancora.'
+                                {periodTotals.count === 0
+                                    ? `Nessuna autofattura in ${bounds.label}.`
                                     : 'Nessun risultato per la ricerca.'}
                             </p>
                         ) : (
@@ -602,6 +813,28 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                             </table>
                         )}
                         </div>
+                        {filteredHistory.length > 0 && (
+                            <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-3 py-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold text-slate-600">
+                                <span>
+                                    Totale imponibile:{' '}
+                                    <span className="font-mono text-slate-900">
+                                        €{euro(periodTotals.imponibileCents)}
+                                    </span>
+                                </span>
+                                <span>
+                                    IVA teorica:{' '}
+                                    <span className="font-mono text-slate-900">
+                                        €{euro(periodTotals.vatCents)}
+                                    </span>
+                                </span>
+                                <span>
+                                    Documenti:{' '}
+                                    <span className="font-mono text-slate-900">
+                                        {periodTotals.count}
+                                    </span>
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

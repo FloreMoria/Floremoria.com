@@ -269,11 +269,33 @@ function mapHistoryItem(r: {
     };
 }
 
-export async function listGeneratedAutofatture(): Promise<AutofatturaHistoryItem[]> {
+export async function listGeneratedAutofatture(opts?: {
+    year?: number;
+    periodKey?: 'T1' | 'T2' | 'T3' | 'T4' | 'YEAR';
+}): Promise<AutofatturaHistoryItem[]> {
+    const year = opts?.year && opts.year >= 2020 && opts.year <= 2100 ? opts.year : null;
+    const periodKey = opts?.periodKey || null;
+
+    let dateFilter: { gte: Date; lte: Date } | undefined;
+    if (year) {
+        const { periodBounds } = await import('@/lib/financial/primaNotaShared');
+        const key = periodKey || 'YEAR';
+        const bounds = periodBounds(year, key);
+        dateFilter = {
+            gte: new Date(`${bounds.start}T00:00:00.000Z`),
+            lte: new Date(`${bounds.end}T23:59:59.999Z`),
+        };
+    }
+
     const rows = await prisma.manualFinanceExpense.findMany({
-        where: foreignAutofatturaExpenseWhere(),
-        orderBy: { createdAt: 'desc' },
-        take: 500,
+        where: {
+            AND: [
+                foreignAutofatturaExpenseWhere(),
+                ...(dateFilter ? [{ expenseDate: dateFilter }] : []),
+            ],
+        },
+        orderBy: { expenseDate: 'desc' },
+        take: 1000,
     });
 
     return rows.map(mapHistoryItem);

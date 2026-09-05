@@ -5,3 +5,4 @@
 - Risolto refactor colonna 'Giardino Utente': visualizzazione pulita del nome e cognome reale come titolo primario (senza suffissi 'Utente'), stato account/registrazione come sottotitolo, e iniziale reale del nome nell'avatar; tsc+build OK.
 
 [2026-09-05 13:40] fix(finance): Storico Autofatture include upload PDF/SaaS (SDI_AUTOFATTURA_ESTERA); allineato filtro dossier e metadati documentNumber.
+[2026-09-05 15:42] feat(finance): Storico Autofatture con tab T1-T4/Anno, selettore anno, totali imponibile/IVA e sync periodo Prima Nota.

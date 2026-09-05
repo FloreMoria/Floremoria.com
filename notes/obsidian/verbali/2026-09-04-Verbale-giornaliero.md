@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 4 Settembre 2026"
 sync_source: docs/verbali/04-09-2026.md
-synced_at: 2026-09-05T10:25:40.701Z
+synced_at: 2026-09-05T21:58:57.779Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/04-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -16,7 +16,6 @@ synced_at: 2026-09-05T10:25:40.701Z
 
 ## Sezione 1 — Infrastruttura
 
-- `fc170810` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
 - `a0d03563` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
 - `48f5431f` chore(verbali): [skip ci] pipeline BARBARA + DEVIN → Obsidian _(github-actions[bot])_
 - `19f654ae` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
@@ -31,6 +30,4 @@ synced_at: 2026-09-05T10:25:40.701Z
 
 ## Sezione 4 — Logistica
 
-- Pagamenti confermati: **1**
-- Consegne completate: **1**
-- Prove visive (PoD) chiuse: **1**
+- _Nessuna attività registrata per questa giornata._

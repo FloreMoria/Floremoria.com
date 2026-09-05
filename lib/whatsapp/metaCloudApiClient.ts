@@ -60,9 +60,32 @@ export interface MetaCloudCredentials {
     phoneNumberId: string;
 }
 
-/** Prefissi internazionali comuni (clienti diaspora) senza + in input. Include NANP (+1). */
-const INTL_COUNTRY_PREFIXES =
-    '1|33|49|44|41|34|31|32|43|48|30|36|40|351|352|353|358|386|420|421|45|46|47|39|55|52|61|81|86|91|7|90|966|971';
+/**
+ * Prefissi E.164 (ITU) — più lunghi prima per evitare ambiguità (351 vs 39, 505 vs 50…).
+ * Include LATAM (505 Nicaragua, 506 CR, …), EU, NANP (+1), Asia/ME comuni.
+ */
+const COUNTRY_CALLING_CODES: readonly string[] = [
+    '212', '213', '216', '218', '220', '221', '222', '223', '224', '225', '226', '227', '228', '229',
+    '230', '231', '232', '233', '234', '235', '236', '237', '238', '239', '240', '241', '242', '243',
+    '244', '245', '246', '248', '249', '250', '251', '252', '253', '254', '255', '256', '257', '258',
+    '260', '261', '262', '263', '264', '265', '266', '267', '268', '269',
+    '290', '291', '297', '298', '299',
+    '350', '351', '352', '353', '354', '355', '356', '357', '358', '359',
+    '370', '371', '372', '373', '374', '375', '376', '377', '378', '380', '381', '382', '383', '385',
+    '386', '387', '389',
+    '420', '421', '423',
+    '500', '501', '502', '503', '504', '505', '506', '507', '508', '509',
+    '590', '591', '592', '593', '594', '595', '596', '597', '598', '599',
+    '670', '672', '673', '674', '675', '676', '677', '678', '679', '680', '681', '682', '683', '685',
+    '686', '687', '688', '689', '690', '691', '692',
+    '850', '852', '853', '855', '856', '880', '886',
+    '960', '961', '962', '963', '964', '965', '966', '967', '968', '970', '971', '972', '973', '974',
+    '975', '976', '977', '992', '993', '994', '995', '996', '998',
+    '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48',
+    '49', '51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66',
+    '81', '82', '84', '86', '90', '91', '92', '93', '94', '95', '98',
+    '1', '7',
+];
 
 /** Mobile italiano senza prefisso internazionale: 10 cifre che iniziano con 3 (es. 3204910428). */
 function isItalianMobileWithoutCountryCode(digits: string): boolean {
@@ -74,17 +97,28 @@ function isNanpDigits(digits: string): boolean {
     return /^1[2-9]\d{9}$/.test(digits);
 }
 
+/** Match prefisso paese su cifre grezze (senza +). Preferisce i codici più lunghi. */
+function matchCountryCallingCode(digits: string): string | null {
+    if (!digits || digits.length < 8 || digits.length > 15) return null;
+    for (const code of COUNTRY_CALLING_CODES) {
+        if (!digits.startsWith(code)) continue;
+        const nationalLen = digits.length - code.length;
+        if (nationalLen >= 6 && nationalLen <= 12) return code;
+    }
+    return null;
+}
+
 /**
  * Se qualcuno ha anteposto erroneamente +39 a un numero già internazionale
- * (es. +3917134834061 → +17134834061), ripristina il prefisso corretto.
+ * (es. +3917134834061 → +17134834061, +3950587013088 → +50587013088).
  * Non tocca i veri mobili IT (+3932…).
  */
 function repairFalseItalianPrefix(e164: string): string {
     if (!e164.startsWith('+39') || e164.length < 12) return e164;
-    const after39 = e164.slice(3); // cifre dopo +39
+    const after39 = e164.slice(3);
     if (isItalianMobileWithoutCountryCode(after39)) return e164;
     if (isNanpDigits(after39)) return `+${after39}`;
-    if (new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(after39) && !after39.startsWith('39')) {
+    if (matchCountryCallingCode(after39) && !after39.startsWith('39')) {
         return `+${after39}`;
     }
     return e164;
@@ -92,11 +126,12 @@ function repairFalseItalianPrefix(e164: string): string {
 
 /**
  * Normalizza un numero grezzo in E.164 (con prefisso +).
- * Default Italia (+39) solo se il numero non sembra già internazionale.
  *
- * Nota: Meta invia spesso wa_id senza «+» (es. 17134834061 USA). Se il prefisso
- * internazionale non è riconosciuto, un fallback cieco a +39 produce doppi prefissi
- * (+391…). NANP (+1) e altri prefissi noti vanno preservati; i falsi +39 vanno riparati.
+ * Regole:
+ * - Input con «+» o «00» → preserva il prefisso internazionale (poi ripara eventuali +39 spurî).
+ * - Mobile IT 10 cifre (3…) → +39… (prima di match esteri tipo 32=Belgio).
+ * - Prefisso paese ITU riconosciuto (1, 505, 44, …) → +cifre, mai +39 sopra.
+ * - Solo altrimenti default Italia +39.
  */
 export function normalizePhoneE164(raw: string | null | undefined): string | null {
     if (!raw) return null;
@@ -111,11 +146,11 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
         } else {
             p = `+${digits}`;
         }
-    } else if (p.startsWith('39') && p.length >= 11 && isItalianMobileWithoutCountryCode(p.slice(2))) {
-        p = `+${p}`;
     } else if (isItalianMobileWithoutCountryCode(p)) {
         p = `+39${p}`;
-    } else if (isNanpDigits(p) || new RegExp(`^(${INTL_COUNTRY_PREFIXES})\\d{6,12}$`).test(p)) {
+    } else if (p.startsWith('39') && isItalianMobileWithoutCountryCode(p.slice(2))) {
+        p = `+${p}`;
+    } else if (isNanpDigits(p) || matchCountryCallingCode(p)) {
         p = `+${p}`;
     } else {
         p = `+39${p}`;

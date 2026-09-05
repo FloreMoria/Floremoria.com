@@ -87,7 +87,7 @@ export async function enrichChatSessionsForDashboard(
         });
     }
 
-    // Ultimo ordine per telefono → buyerFullName (clienti)
+    // Solo match E.164 esatto (dopo normalize) → buyerFullName. Mai fuzzy / ultimo ordine globale.
     const orders = await prisma.order.findMany({
         where: {
             deletedAt: null,
@@ -136,9 +136,10 @@ export async function enrichChatSessionsForDashboard(
             };
         }
 
+        // Preferisci profilo WhatsApp (Meta); ordine solo se stesso E.164 e nome sessione assente/placeholder.
         const personName =
-            (buyerFull && looksLikeFullName(buyerFull) ? buyerFull : null) ||
             (looksLikeFullName(current) ? current : null) ||
+            (buyerFull && looksLikeFullName(buyerFull) ? buyerFull : null) ||
             buyerFull ||
             current ||
             session.phone.replace(/^whatsapp:/i, '');

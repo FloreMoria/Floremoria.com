@@ -189,17 +189,7 @@
       "workflow": 1,
       "inbound": 2
     },
-    {
-      "name": "+3914152126297",
-      "phone": "whatsapp:+3914152126297",
-      "userType": "UNKNOWN",
-      "status": "AI_ACTIVE",
-      "isTest": false,
-      "operator": 1,
-      "vera_auto": 2,
-      "workflow": 0,
-      "inbound": 2
-    },
+
     {
       "name": "Max Esse",
       "phone": "whatsapp:+393280582684",
@@ -830,18 +820,7 @@
       "prevInbound": "Ok grazie a voi",
       "hoursAfterPrevInbound": 29.2
     },
-    {
-      "name": "+3914152126297",
-      "phone": "whatsapp:+3914152126297",
-      "userType": "UNKNOWN",
-      "isTest": false,
-      "at": "2026-07-16T15:30:58.894Z",
-      "operatorBody": "Buona sera, posso aiutarla?",
-      "prevInbound": "[unsupported]",
-      "prevAuto": "La sto passando a un operatore umano del nostro Staff, che la contatterà il prima possibile.",
-      "prevAutoClass": "vera_auto",
-      "hoursAfterPrevInbound": 0
-    },
+
     {
       "name": "Maria Puliafico",
       "phone": "whatsapp:+393204910428",

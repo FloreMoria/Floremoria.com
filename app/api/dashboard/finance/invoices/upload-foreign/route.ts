@@ -95,12 +95,20 @@ export async function POST(request: Request) {
 
         // Percorso PDF/immagine → archivio SaaS + spesa Contabilità reverse charge
         const vendorName = String(form.get('vendorName') || '').trim() || 'Fornitore SaaS Estero';
-        const invoiceDateRaw = String(form.get('invoiceDate') || '').slice(0, 10);
-        const eurAmount = Number(String(form.get('eurAmount') || '').replace(',', '.'));
+        // Data: default a oggi se il client omette il campo (UI dovrebbe sempre inviarla)
+        const invoiceDateRaw =
+            String(form.get('invoiceDate') || '').slice(0, 10) ||
+            new Date().toISOString().slice(0, 10);
+        // Accetta eurAmount | amount | importo (alias UI / FormData)
+        const amountField =
+            form.get('eurAmount') ?? form.get('amount') ?? form.get('importo') ?? '';
+        const eurAmount = Number(String(amountField).replace(',', '.'));
         const originalCurrency = String(form.get('originalCurrency') || 'EUR')
             .toUpperCase()
             .slice(0, 8);
-        const originalAmount = Number(String(form.get('originalAmount') || eurAmount).replace(',', '.'));
+        const originalAmount = Number(
+            String(form.get('originalAmount') || eurAmount).replace(',', '.'),
+        );
         const countryCode = String(form.get('countryCode') || 'US')
             .toUpperCase()
             .slice(0, 2);
@@ -117,8 +125,8 @@ export async function POST(request: Request) {
 
         if (!invoiceDateRaw || !Number.isFinite(eurAmount) || eurAmount <= 0) {
             return jsonError(
-                'Per PDF/immagine servi: Data fattura e Importo EUR (oltre al file).',
-                400
+                'Per PDF/immagine servono: Data fattura e Importo EUR (oltre al file).',
+                400,
             );
         }
 

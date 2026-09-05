@@ -291,15 +291,32 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
         setMessage(null);
         setSummary(null);
         try {
-            const form = new FormData();
-            form.append('file', file);
             const lower = file.name.toLowerCase();
             const needsMeta = /\.(pdf|png|jpe?g|webp)$/i.test(lower);
+            const date =
+                invoiceDate.trim() || new Date().toISOString().slice(0, 10);
+            const amountRaw = eurAmount.trim().replace(',', '.');
+            const amountNum = Number(amountRaw);
+
             if (needsMeta) {
-                form.append('vendorName', vendorName.trim() || file.name.replace(/\.[^.]+$/, ''));
-                form.append('invoiceDate', invoiceDate);
-                form.append('eurAmount', eurAmount);
-                form.append('originalAmount', eurAmount);
+                if (!date || !Number.isFinite(amountNum) || amountNum <= 0) {
+                    throw new Error(
+                        'Per PDF/immagine servono: Data fattura e Importo EUR (oltre al file).',
+                    );
+                }
+            }
+
+            const form = new FormData();
+            form.append('file', file);
+            if (needsMeta) {
+                form.append(
+                    'vendorName',
+                    vendorName.trim() || file.name.replace(/\.[^.]+$/, ''),
+                );
+                form.append('invoiceDate', date);
+                form.append('eurAmount', String(amountNum));
+                form.append('amount', String(amountNum));
+                form.append('originalAmount', String(amountNum));
                 form.append('originalCurrency', 'EUR');
                 form.append('autofatturaType', autofatturaType);
                 form.append('countryCode', countryCode);
@@ -587,29 +604,103 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                 )}
             </div>
 
-            {/* Upload compatto */}
-            <div className="space-y-1.5 shrink-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    Carica XML / ZIP / PDF
+            {/* Upload PDF/immagine: meta obbligatori visibili */}
+            <div className="space-y-2 shrink-0 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Carica XML / ZIP / PDF o immagine
                 </p>
-                <div className="flex flex-wrap gap-2">
-                    <input
-                        type="text"
-                        value={vendorName}
-                        onChange={(e) => setVendorName(e.target.value)}
-                        placeholder="Fornitore (PDF)"
-                        className="flex-1 min-w-[100px] px-2 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-slate-50"
-                    />
-                    <input
-                        type="date"
-                        value={invoiceDate}
-                        onChange={(e) => setInvoiceDate(e.target.value)}
-                        className="px-2 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-slate-50"
-                    />
+                <p className="text-[10px] text-slate-500">
+                    Per PDF/immagine compilare Data e Importo prima di scegliere il file. XML/ZIP SDI
+                    non richiedono questi campi.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[10px] font-semibold text-slate-500">Fornitore</span>
+                        <input
+                            type="text"
+                            list="autofattura-vendor-presets"
+                            value={vendorName}
+                            onChange={(e) => setVendorName(e.target.value)}
+                            placeholder="Cursor, Google, Vercel, Transatel…"
+                            className="w-full px-2.5 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-white"
+                        />
+                        <datalist id="autofattura-vendor-presets">
+                            {PRESETS.map((p) => (
+                                <option key={p.id} value={p.label} />
+                            ))}
+                            <option value="Cursor" />
+                            <option value="Transatel" />
+                        </datalist>
+                    </label>
+                    <label className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[10px] font-semibold text-slate-500">
+                            Tipo documento
+                        </span>
+                        <select
+                            value={autofatturaType}
+                            onChange={(e) => {
+                                const v = e.target.value as 'TD17' | 'TD18' | 'TD19';
+                                setAutofatturaType(v);
+                                setJurisdiction(v === 'TD18' ? 'UE' : 'EXTRA_UE');
+                                setCountryCode(v === 'TD18' ? 'IE' : 'US');
+                            }}
+                            className="w-full px-2.5 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-white"
+                        >
+                            <option value="TD17">TD17 — Servizi estero</option>
+                            <option value="TD18">TD18 — Beni/acquisti UE</option>
+                            <option value="TD19">TD19</option>
+                        </select>
+                    </label>
+                    <label className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[10px] font-semibold text-slate-500">
+                            Data fattura *
+                        </span>
+                        <input
+                            type="date"
+                            required
+                            value={invoiceDate}
+                            onChange={(e) => setInvoiceDate(e.target.value)}
+                            className="w-full px-2.5 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-white"
+                        />
+                    </label>
+                    <label className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[10px] font-semibold text-slate-500">
+                            Importo Totale Documento / Imponibile (€) *
+                        </span>
+                        <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0.01"
+                            required
+                            value={eurAmount}
+                            onChange={(e) => setEurAmount(e.target.value)}
+                            placeholder="es. 20.00"
+                            className="w-full px-2.5 py-1.5 text-[11px] rounded-lg border border-slate-200 bg-white font-mono"
+                        />
+                    </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
                     <button
                         type="button"
                         disabled={uploading}
-                        onClick={() => inputRef.current?.click()}
+                        onClick={() => {
+                            const amountNum = Number(eurAmount.trim().replace(',', '.'));
+                            // Avviso soft: PDF senza importo fallirebbe subito dopo la selezione file
+                            if (
+                                !invoiceDate.trim() ||
+                                !eurAmount.trim() ||
+                                !Number.isFinite(amountNum) ||
+                                amountNum <= 0
+                            ) {
+                                setError(
+                                    'Compila Data fattura e Importo EUR prima di caricare un PDF o un’immagine (XML/ZIP SDI ok senza).',
+                                );
+                            } else {
+                                setError(null);
+                            }
+                            inputRef.current?.click();
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-white text-indigo-800 text-[11px] font-bold disabled:opacity-50"
                     >
                         {uploading ? (

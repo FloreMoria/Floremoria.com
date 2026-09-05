@@ -1,0 +1,1 @@
+[2026-09-05 13:20] fix(finance): aggiunti campi Data fattura, Importo EUR e tipo TD17/TD18 nel form upload autofatture estere (PDF/immagine).

@@ -720,6 +720,16 @@ export default function FinanceDashboardPage() {
                             ? ' — partite aperte senza payout id'
                             : ' — saldo azzerato'}
                     </p>
+                    {(quadratura?.quarantineDocumentCount ?? 0) > 0 ? (
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('passivo')}
+                            className="mt-1 w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold hover:bg-rose-100 transition-colors"
+                        >
+                            <FileWarning size={14} />
+                            Quarantena: {quadratura?.quarantineDocumentCount} documenti da verificare
+                        </button>
+                    ) : null}
                 </div>
             </div>
 

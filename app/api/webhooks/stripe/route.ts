@@ -222,6 +222,71 @@ export async function POST(request: Request) {
                 };
 
                 addAccountingEntries([entryGross, entryFees]);
+
+                // Neon via cancello unico (idempotente) — non solo filesystem JSON
+                const { appendLedgerEntries } = await import(
+                    '@/lib/financial/historicalLedgerSync'
+                );
+                const { VAT_PCT_FLORAL } = await import('@/lib/financial/vat');
+                const { LEDGER_COMMISSIONI_INCASSI } = await import(
+                    '@/lib/financial/companyBankDetails'
+                );
+                await appendLedgerEntries([
+                    {
+                        sourceKey: `ORDER:${order.id}`,
+                        sourceType: 'ORDER',
+                        sourceId: order.id,
+                        direction: 'ENTRATA',
+                        category: 'RICAVI_VENDITE',
+                        accountingDate: balanceDate,
+                        description: entryGross.description,
+                        netCents: floralVat.imponibileCents,
+                        vatRate: VAT_PCT_FLORAL,
+                        vatCents: floralVat.ivaCents,
+                        totalCents: grossCents,
+                        reconciliationStatus: 'MATCHED',
+                        documentRef: orderNumber,
+                        orderId: order.id,
+                        partnerId: order.partnerId,
+                        entryNature: 'ECONOMICA',
+                        settlementStatus: 'NOT_APPLICABLE',
+                        metadataJson: {
+                            stripeTransactionId: stripeTransactionIdVal || null,
+                            dareAccount: entryGross.dareAccount,
+                            avereAccount: entryGross.avereAccount,
+                            via: 'stripe_webhook',
+                        },
+                    },
+                    ...(feeCents > 0
+                        ? [
+                              {
+                                  sourceKey: `STRIPE_FEE:${stripeTransactionIdVal || order.id}`,
+                                  sourceType: 'STRIPE_MOVEMENT' as const,
+                                  sourceId: stripeTransactionIdVal || order.id,
+                                  direction: 'USCITA' as const,
+                                  category: 'ONERI_BANCARI' as const,
+                                  accountingDate: balanceDate,
+                                  description: entryFees.description,
+                                  counterpartyName: 'Stripe',
+                                  netCents: -feeCents,
+                                  vatRate: 0,
+                                  vatCents: 0,
+                                  totalCents: -feeCents,
+                                  reconciliationStatus: 'MATCHED',
+                                  documentRef: `FEE-${orderNumber}`,
+                                  orderId: order.id,
+                                  entryNature: 'ECONOMICA' as const,
+                                  settlementStatus: 'NOT_APPLICABLE' as const,
+                                  metadataJson: {
+                                      type: 'webhook_fee',
+                                      dareAccount: LEDGER_COMMISSIONI_INCASSI,
+                                      avereAccount: LEDGER_STRIPE_ACCOUNT,
+                                      via: 'stripe_webhook',
+                                  },
+                              },
+                          ]
+                        : []),
+                ]);
                 console.info('[stripe-webhook] Registrata Prima Nota per ordine pagato:', orderNumber);
             } catch (ledgerErr) {
                 console.error('[stripe-webhook] Scrittura contabile fallita:', ledgerErr);

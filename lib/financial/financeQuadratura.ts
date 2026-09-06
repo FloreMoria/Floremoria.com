@@ -33,6 +33,8 @@ export type FinanceQuadratura = {
     /** Saldo conto 17900 Partite da classificare (centesimi). 0 = ok. */
     daClassificareCents: number;
     daClassificareAccount: string;
+    /** Documenti passivi in QUARANTINE (visibili ma esclusi dai totali). */
+    quarantineDocumentCount: number;
 };
 
 /** Somma assoluta delle partite ancora in DA_CLASSIFICARE (attive). */
@@ -47,6 +49,14 @@ async function sumDaClassificareCents(): Promise<number> {
     return Math.abs(agg._sum.totalCents || 0);
 }
 
+async function countQuarantineDocuments(): Promise<number> {
+    const [manual, saas] = await Promise.all([
+        prisma.manualFinanceExpense.count({ where: { verificationStatus: 'QUARANTINE' } }),
+        prisma.saasForeignInvoice.count({ where: { verificationStatus: 'QUARANTINE' } }),
+    ]);
+    return manual + saas;
+}
+
 /**
  * Aggrega differenza saldo, movimenti senza match e documenti mancanti.
  */
@@ -55,7 +65,7 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
     const yearStart = new Date(Date.UTC(year, 0, 1));
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
-    const [manual, unmatchedBank, floristWaiting, docs, bankSumAgg, daClassificareCents] =
+    const [manual, unmatchedBank, floristWaiting, docs, bankSumAgg, daClassificareCents, quarantineDocumentCount] =
         await Promise.all([
         getFinecoManualBalance(),
         prisma.bankStatementLine.count({
@@ -101,6 +111,7 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
             _sum: { amountCents: true },
         }),
         sumDaClassificareCents(),
+        countQuarantineDocuments(),
     ]);
 
     const movementsSumCents = bankSumAgg._sum.amountCents || 0;
@@ -191,5 +202,6 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         missingDocuments: floristWaiting,
         daClassificareCents,
         daClassificareAccount: ACCOUNT_DA_CLASSIFICARE,
+        quarantineDocumentCount,
     };
 }

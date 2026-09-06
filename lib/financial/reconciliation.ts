@@ -147,9 +147,33 @@ export async function matchBankFeeOrTax(movement: ParsedBankMovement): Promise<S
         });
         if (!bankHit) {
             addAccountingEntries([entry]);
+            // Neon: JSON_ENTRY idempotente finché manca BANK_LINE autoritativa
+            const { commitAccountingEntriesToNeon } = await import(
+                '@/lib/financial/commitAccountingToNeon'
+            );
+            await commitAccountingEntriesToNeon([entry], () => ({
+                category:
+                    dareAccount.includes('70800') || dareAccount.includes('Imposte')
+                        ? 'IMPOSTE'
+                        : 'ONERI_BANCARI',
+                entryNature: 'ECONOMICA',
+                settlementStatus: 'NOT_APPLICABLE',
+            }));
         }
     } catch {
         addAccountingEntries([entry]);
+        try {
+            const { commitAccountingEntriesToNeon } = await import(
+                '@/lib/financial/commitAccountingToNeon'
+            );
+            await commitAccountingEntriesToNeon([entry], () => ({
+                category: 'ONERI_BANCARI',
+                entryNature: 'ECONOMICA',
+                settlementStatus: 'NOT_APPLICABLE',
+            }));
+        } catch (neonErr) {
+            console.warn('[matchBankFeeOrTax] Neon commit failed', neonErr);
+        }
     }
 
     const txId = `fineco_fee_${date}_${abs}`;
@@ -1005,13 +1029,13 @@ export async function reconcileTransaction(
 }
 
 /**
- * Ingestione Prima Nota per ordini gestionali già pagati — idempotente via sourceKey JSON_ENTRY.
+ * Ingestione Prima Nota per ordini gestionali già pagati — idempotente via ORDER:id su Neon.
  */
 export async function processManualOrders(): Promise<number> {
     const { scorporaIvaFloreale, VAT_PCT_FLORAL } = await import('@/lib/financial/vat');
     const { upsertAccountingEntries } = await import('@/lib/financial/ledgerStore');
     const { LEDGER_BANK_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
-    const { persistJsonAccountingEntry } = await import('@/lib/financial/historicalLedgerSync');
+    const { appendLedgerEntries } = await import('@/lib/financial/historicalLedgerSync');
 
     const manualOrders = await prisma.order.findMany({
         where: {
@@ -1024,12 +1048,16 @@ export async function processManualOrders(): Promise<number> {
             orderNumber: true,
             totalPriceCents: true,
             createdAt: true,
+            partnerId: true,
+            stripeTransactionId: true,
+            paymentMethodLabel: true,
         },
         take: 2000,
     });
 
     let count = 0;
     for (const order of manualOrders) {
+        if (!order.totalPriceCents || order.totalPriceCents <= 0) continue;
         const orderNumber = order.orderNumber || order.id.slice(0, 8);
         const entryId = `entry_manual_gross_${order.id}`;
         const vat = scorporaIvaFloreale(order.totalPriceCents);
@@ -1046,19 +1074,35 @@ export async function processManualOrders(): Promise<number> {
             status: 'CONFIRMED',
         };
         upsertAccountingEntries([entry]);
-        await persistJsonAccountingEntry({
-            id: entry.id,
-            date: entry.date,
-            description: entry.description,
-            dareAccount: entry.dareAccount,
-            avereAccount: entry.avereAccount,
-            amountCents: entry.amountCents,
-            vatAmountCents: entry.vatAmountCents,
-            invoiceReference: entry.invoiceReference,
-        });
-        // Allinea vatRate sul registro permanente (già gestito da persist via scorporo in ORDER sync)
-        void VAT_PCT_FLORAL;
-        count += 1;
+
+        // Neon: stessa chiave del sync storico → SKIP se già presente (no doppio ricavo)
+        const result = await appendLedgerEntries([
+            {
+                sourceKey: `ORDER:${order.id}`,
+                sourceType: 'ORDER',
+                sourceId: order.id,
+                direction: 'ENTRATA',
+                category: 'RICAVI_VENDITE',
+                accountingDate: order.createdAt,
+                description: entry.description,
+                netCents: vat.imponibileCents,
+                vatRate: VAT_PCT_FLORAL,
+                vatCents: vat.ivaCents,
+                totalCents: order.totalPriceCents,
+                reconciliationStatus: order.stripeTransactionId ? 'MATCHED' : 'PARTIAL',
+                documentRef: orderNumber,
+                orderId: order.id,
+                partnerId: order.partnerId,
+                entryNature: 'ECONOMICA',
+                settlementStatus: 'NOT_APPLICABLE',
+                metadataJson: {
+                    stripeTransactionId: order.stripeTransactionId,
+                    paymentMethodLabel: order.paymentMethodLabel,
+                    via: 'processManualOrders',
+                },
+            },
+        ]);
+        if (result.inserted > 0) count += 1;
     }
     return count;
 }

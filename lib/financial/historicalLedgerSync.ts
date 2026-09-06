@@ -49,10 +49,10 @@ export async function upsertLedgerEntry(
 }
 
 /**
- * Dual-write JSON → PG: DISABILITATO in Fase 2.
- * Il file financial_ledger.json resta cache locale; non genera più scritture Neon.
+ * Dual-write JSON → PG: riattivato via cancello unico (idempotente SKIP).
+ * sourceKey = JSON_ENTRY:{id} — non sostituisce ORDER:/BANK_LINE: autoritativi.
  */
-export async function persistJsonAccountingEntry(_entry: {
+export async function persistJsonAccountingEntry(entry: {
     id: string;
     date: string;
     description: string;
@@ -61,9 +61,25 @@ export async function persistJsonAccountingEntry(_entry: {
     amountCents: number;
     vatAmountCents: number;
     invoiceReference: string | null;
+    isForeignService?: boolean;
 }): Promise<void> {
-    // no-op — scollegato dal ledger permanente
-    return;
+    const { commitAccountingEntriesToNeon } = await import(
+        '@/lib/financial/commitAccountingToNeon'
+    );
+    await commitAccountingEntriesToNeon([
+        {
+            id: entry.id,
+            date: entry.date,
+            description: entry.description,
+            dareAccount: entry.dareAccount,
+            avereAccount: entry.avereAccount,
+            amountCents: entry.amountCents,
+            vatAmountCents: entry.vatAmountCents,
+            isForeignService: Boolean(entry.isForeignService),
+            invoiceReference: entry.invoiceReference,
+            status: 'CONFIRMED',
+        },
+    ]);
 }
 
 /**

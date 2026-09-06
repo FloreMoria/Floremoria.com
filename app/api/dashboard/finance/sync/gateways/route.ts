@@ -6,7 +6,6 @@ import { stripeAccountBadgeFromMovement } from '@/lib/financial/stripeSync';
 import { buildGatewaySyncRows, enrichGatewayRowsWithOrders, extractFloreOrderNumber, groupGatewaySyncRowsForDisplay } from '@/lib/financial/gatewaySyncRows';
 import { computeGatewayQuadratura } from '@/lib/financial/gatewayQuadratura';
 import { isGatewayRelatedFinecoMovement } from '@/lib/financial/gatewayBankMatch';
-import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
@@ -14,15 +13,12 @@ export const dynamic = 'force-dynamic';
 
 const FROM = new Date('2026-01-01T00:00:00.000Z');
 
-/** GET: Stripe COM/EU + PayPal unificati, deduplicati, con date reali. */
+/** GET: Stripe COM/EU + PayPal unificati, deduplicati, con date reali. Solo lettura. */
 export async function GET() {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
 
     try {
-        // Bonifica doppioni PayPal + anomalie partita doppia prima della tabella gateway
-        const paypalSanitize = await sanitizeLedgerDoubleEntryAnomalies();
-
         const [stripeMeta, paypalStatus, stripeMovements, paypalLedger, kindOverridesState, bankLinesRaw] =
             await Promise.all([
             prisma.systemState.findUnique({ where: { key: 'finance.stripe.last_sync' } }),
@@ -237,7 +233,8 @@ export async function GET() {
             paypalLastSyncAt: paypalStatus.lastSyncAt,
             stripeRecordCount: stripeMovements.length,
             paypalRecordCount: paypalStatus.count,
-            paypalSanitize,
+            /** Sanitize non più eseguita in GET (read-only). Solo sync POST. */
+            paypalSanitize: null,
         });
     } catch (error) {
         console.error('[sync/gateways]', error);

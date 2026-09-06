@@ -8,7 +8,6 @@ import {
     listPartnerLedgerExtract,
     listRelatedLedgerEntries,
 } from '@/lib/financial/historicalLedgerQuery';
-import { sanitizeLedgerDoubleEntryAnomalies } from '@/lib/financial/ledgerDoubleEntrySanitize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,9 +22,7 @@ export async function GET(request: Request) {
         const auth = await requireDashboardAdmin();
         if (!auth.ok) return auth.response;
 
-        // Dedup PayPal + sanitizzazione partita doppia prima di listati/PnL
-        await sanitizeLedgerDoubleEntryAnomalies();
-
+        // Dedup / sanitize NON in GET — solo lettura (mutazioni → POST sync esplicito)
         const url = new URL(request.url);
         const view = url.searchParams.get('view') || 'list';
         const fiscalYear = Number(url.searchParams.get('year') || new Date().getFullYear());

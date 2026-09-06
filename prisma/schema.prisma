@@ -1053,6 +1053,12 @@ model FinancialLedgerEntry {
   metadataJson           Json?     @map("metadata_json")
   reversedAt             DateTime? @map("reversed_at")
   reversesEntryId        String?   @map("reverses_entry_id")
+  /** ECONOMICA | FINANZIARIA | TRANSITO — NULL = legacy Fase 2 */
+  entryNature            String?   @map("entry_nature") @db.VarChar(16)
+  /** OPEN | MATCHED | NOT_APPLICABLE — NULL = legacy (escluso da partite aperte) */
+  settlementStatus       String?   @map("settlement_status") @db.VarChar(24)
+  matchedEntryId         String?   @map("matched_entry_id")
+  matchedBankLineId      String?   @map("matched_bank_line_id")
   createdAt              DateTime  @default(now()) @map("created_at")
 
   @@index([fiscalYear, fiscalQuarter])
@@ -1063,6 +1069,7 @@ model FinancialLedgerEntry {
   @@index([partnerId])
   @@index([orderId])
   @@index([sourceType, sourceId])
+  @@index([settlementStatus])
   @@map("financial_ledger_entries")
 }
 

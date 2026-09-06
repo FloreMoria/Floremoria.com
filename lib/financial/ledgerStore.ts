@@ -123,16 +123,11 @@ export function addAccountingEntries(entries: AccountingEntry[]): void {
         }
     }
     saveLedger(ledger);
-    void import('@/lib/financial/historicalLedgerSync')
-        .then(({ persistJsonAccountingEntry }) =>
-            Promise.all(real.map((e) => persistJsonAccountingEntry(mapEntryForPersist(e))))
-        )
-        .catch((err) => console.warn('[ledgerStore] dual-write PG fallito', err));
+    // Fase 2: dual-write JSON→Neon DISABILITATO. Neon solo via commitLedgerEntries.
 }
 
 /**
- * Upsert scritture Prima Nota: sourceKey stabile JSON_ENTRY:{id} (niente :v&lt;Date.now()&gt;).
- * Perché: il suffisso temporale creava una nuova riga Neon a ogni aggiornamento.
+ * Upsert scritture sul file JSON locale (cache). Non scrive su Neon.
  */
 export function upsertAccountingEntries(entries: AccountingEntry[]): void {
     const real = entries.filter((e) => !isFinanceSeedEntryId(e.id));
@@ -144,11 +139,7 @@ export function upsertAccountingEntries(entries: AccountingEntry[]): void {
         else ledger.accountingEntries.push(entry);
     }
     saveLedger(ledger);
-    void import('@/lib/financial/historicalLedgerSync')
-        .then(({ persistJsonAccountingEntry }) =>
-            Promise.all(real.map((e) => persistJsonAccountingEntry(mapEntryForPersist(e))))
-        )
-        .catch((err) => console.warn('[ledgerStore] dual-write upsert PG fallito', err));
+    // Fase 2: dual-write JSON→Neon DISABILITATO.
 }
 
 export function updateTransactionCategory(txId: string, category: string): void {
@@ -158,17 +149,4 @@ export function updateTransactionCategory(txId: string, category: string): void 
         tx.category = category;
         saveLedger(ledger);
     }
-}
-
-function mapEntryForPersist(e: AccountingEntry) {
-    return {
-        id: e.id,
-        date: e.date,
-        description: e.description,
-        dareAccount: e.dareAccount,
-        avereAccount: e.avereAccount,
-        amountCents: e.amountCents,
-        vatAmountCents: e.vatAmountCents,
-        invoiceReference: e.invoiceReference,
-    };
 }

@@ -1,14 +1,12 @@
 /**
  * Motore sync → Registro Storico Permanente (append-only su Neon).
- * Perché: JSON ledger su /tmp è effimero; bilanci e IVA richiedono cronistoria immutabile.
+ * Fase 2: tutte le scritture passano da `commitLedgerEntries` (cancello unico).
  */
 
 import prisma from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
 import {
     categorizeBankLine,
     categorizeManualExpense,
-    fiscalParts,
     type LedgerEntryInput,
 } from '@/lib/financial/historicalLedgerTypes';
 import {
@@ -18,108 +16,43 @@ import {
     VAT_PCT_ORDINARY,
 } from '@/lib/financial/vat';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+import {
+    commitLedgerEntries,
+    commitLedgerEntry,
+} from '@/lib/financial/ledgerWriteGate';
+import { classifyFinecoBankCredit } from '@/lib/financial/payoutClassification';
+import {
+    LEDGER_COMMISSIONI_INCASSI,
+    LEDGER_FINECO_ACCOUNT,
+    LEDGER_STRIPE_ACCOUNT,
+} from '@/lib/financial/companyBankDetails';
+import { isPayoutIdClassificationEnabled } from '@/lib/financial/chartOfAccounts';
 
-function toRow(input: LedgerEntryInput): Prisma.FinancialLedgerEntryCreateManyInput {
-    const parts = fiscalParts(input.accountingDate);
-    return {
-        sourceKey: input.sourceKey.slice(0, 180),
-        sourceType: input.sourceType,
-        sourceId: input.sourceId.slice(0, 128),
-        direction: input.direction,
-        category: input.category,
-        fiscalYear: parts.fiscalYear,
-        fiscalQuarter: parts.fiscalQuarter,
-        periodKey: parts.periodKey,
-        accountingDate: input.accountingDate,
-        valueDate: input.valueDate || null,
-        description: input.description.slice(0, 4000),
-        counterpartyName: input.counterpartyName?.slice(0, 160) || null,
-        counterpartyVat: input.counterpartyVat?.slice(0, 32) || null,
-        netCents: input.netCents,
-        vatRate: input.vatRate ?? 0,
-        vatCents: input.vatCents ?? 0,
-        totalCents: input.totalCents,
-        currency: 'EUR',
-        reconciliationStatus: input.reconciliationStatus || 'UNMATCHED',
-        documentRef: input.documentRef?.slice(0, 160) || null,
-        attachmentUrl: input.attachmentUrl || null,
-        attachmentPath: input.attachmentPath || null,
-        attachmentKind: input.attachmentKind || null,
-        bankLineId: input.bankLineId || null,
-        orderId: input.orderId || null,
-        partnerId: input.partnerId || null,
-        metadataJson: (input.metadataJson || undefined) as Prisma.InputJsonValue | undefined,
-        reversesEntryId: input.reversesEntryId || null,
-    };
-}
-
-/** Inserisce solo chiavi assenti — mai overwrite (immutabilità sync massivo). */
+/** Inserisce solo chiavi/eventi assenti — via cancello unico. */
 export async function appendLedgerEntries(
     entries: LedgerEntryInput[]
 ): Promise<{ inserted: number; skipped: number }> {
-    if (!entries.length) return { inserted: 0, skipped: 0 };
-    const rows = entries.map(toRow);
-    const result = await prisma.financialLedgerEntry.createMany({
-        data: rows,
-        skipDuplicates: true,
-    });
-    return { inserted: result.count, skipped: Math.max(0, entries.length - result.count) };
+    const result = await commitLedgerEntries(entries);
+    return { inserted: result.inserted, skipped: result.skipped };
 }
 
 /**
- * Upsert su sourceKey (ON CONFLICT DO UPDATE).
- * Perché: aggiornamenti Prima Nota devono aggiornare la riga esistente, non crearne versioni :v&lt;Date.now()&gt;.
+ * Insert-or-skip su sourceKey/evento (Fase 2: mai update importi).
+ * Return 'updated' rimosso semanticamente → 'skipped' se già presente.
  */
 export async function upsertLedgerEntry(
     input: LedgerEntryInput
-): Promise<'inserted' | 'updated'> {
-    const row = toRow(input);
-    const existing = await prisma.financialLedgerEntry.findUnique({
-        where: { sourceKey: row.sourceKey as string },
-        select: { id: true },
-    });
-
-    if (!existing) {
-        await prisma.financialLedgerEntry.create({ data: row });
-        return 'inserted';
-    }
-
-    await prisma.financialLedgerEntry.update({
-        where: { sourceKey: row.sourceKey as string },
-        data: {
-            direction: row.direction,
-            category: row.category,
-            fiscalYear: row.fiscalYear,
-            fiscalQuarter: row.fiscalQuarter,
-            periodKey: row.periodKey,
-            accountingDate: row.accountingDate,
-            valueDate: row.valueDate,
-            description: row.description,
-            counterpartyName: row.counterpartyName,
-            counterpartyVat: row.counterpartyVat,
-            netCents: row.netCents,
-            vatRate: row.vatRate,
-            vatCents: row.vatCents,
-            totalCents: row.totalCents,
-            reconciliationStatus: row.reconciliationStatus,
-            documentRef: row.documentRef,
-            attachmentUrl: row.attachmentUrl,
-            attachmentPath: row.attachmentPath,
-            attachmentKind: row.attachmentKind,
-            bankLineId: row.bankLineId,
-            orderId: row.orderId,
-            partnerId: row.partnerId,
-            metadataJson: row.metadataJson,
-            reversedAt: null,
-        },
-    });
-    return 'updated';
+): Promise<'inserted' | 'updated' | 'skipped'> {
+    const outcome = await commitLedgerEntry(input);
+    // Compat call-site: 'updated' non avviene più; mappa skipped.
+    return outcome === 'inserted' ? 'inserted' : 'skipped';
 }
 
 /**
- * Dual-write da scrittura Prima Nota JSON → PG permanente (upsert su sourceKey stabile).
+ * Dual-write JSON → PG: DISABILITATO in Fase 2.
+ * Il file financial_ledger.json resta cache locale; non genera più scritture Neon.
  */
-export async function persistJsonAccountingEntry(entry: {
+export async function persistJsonAccountingEntry(_entry: {
     id: string;
     date: string;
     description: string;
@@ -129,45 +62,8 @@ export async function persistJsonAccountingEntry(entry: {
     vatAmountCents: number;
     invoiceReference: string | null;
 }): Promise<void> {
-    const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
-    if (isFinanceSeedEntryId(entry.id)) return;
-
-    const isRevenue = /Ricavi/i.test(entry.avereAccount || '');
-    const isFlorist = /Produzione|Fiorist/i.test(entry.dareAccount || '');
-    const isSaas = /SaaS|Software/i.test(entry.dareAccount || '');
-    const isBank = /Commission|Banc/i.test(entry.dareAccount || '');
-    let category: LedgerEntryInput['category'] = 'SPESE_OPERATIVE';
-    let direction: LedgerEntryInput['direction'] = 'USCITA';
-    if (isRevenue) {
-        category = 'RICAVI_VENDITE';
-        direction = 'ENTRATA';
-    } else if (isFlorist) category = 'COSTI_FIORISTI';
-    else if (isSaas) category = 'SPESE_SAAS';
-    else if (isBank) category = 'ONERI_BANCARI';
-
-    const signed = direction === 'ENTRATA' ? Math.abs(entry.amountCents) : -Math.abs(entry.amountCents);
-    const net = Math.abs(entry.amountCents) - Math.abs(entry.vatAmountCents || 0);
-    await upsertLedgerEntry({
-        sourceKey: `JSON_ENTRY:${entry.id}`,
-        sourceType: 'JSON_ENTRY',
-        sourceId: entry.id,
-        direction,
-        category,
-        accountingDate: new Date(`${entry.date}T12:00:00.000Z`),
-        description: entry.description,
-        netCents: direction === 'ENTRATA' ? net : -net,
-        vatCents:
-            direction === 'ENTRATA'
-                ? Math.abs(entry.vatAmountCents || 0)
-                : -Math.abs(entry.vatAmountCents || 0),
-        totalCents: signed,
-        documentRef: entry.invoiceReference,
-        reconciliationStatus: 'N/A',
-        metadataJson: {
-            dareAccount: entry.dareAccount,
-            avereAccount: entry.avereAccount,
-        },
-    });
+    // no-op — scollegato dal ledger permanente
+    return;
 }
 
 /**
@@ -376,8 +272,7 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
         sources.SAAS_INVOICE = (sources.SAAS_INVOICE || 0) + 1;
     }
 
-    // 4) Movimenti Fineco
-    const { LEDGER_FINECO_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
+    // 4) Movimenti Fineco — classificazione payout via payout id (flag)
     const bankLines = await prisma.bankStatementLine.findMany({
         orderBy: { accountingDate: 'desc' },
         take: 8000,
@@ -385,14 +280,51 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
     for (const line of bankLines) {
         const d = line.accountingDate || line.valueDate || line.createdAt;
         const isIn = line.amountCents > 0;
-        const category = categorizeBankLine(line.description, line.matchType);
-        // Override entrata generica: se non gateway, ALTRI_RICAVI; gateway già TRASFERIMENTO_INTERNO
-        const resolved =
-            isIn && category === 'SPESE_OPERATIVE'
-                ? 'ALTRI_RICAVI'
-                : category;
-        const isTransfer =
-            resolved === 'TRASFERIMENTO_INTERNO' || resolved === 'PAYPAL_PAYOUT';
+
+        let resolved = categorizeBankLine(line.description, line.matchType);
+        let dareAccount: string;
+        let avereAccount: string;
+        let entryNature: LedgerEntryInput['entryNature'] = null;
+        let settlementStatus: LedgerEntryInput['settlementStatus'] = null;
+        let payoutId: string | undefined;
+        let classificationNotes: string | undefined;
+
+        if (isIn) {
+            const cls = await classifyFinecoBankCredit({
+                amountCents: line.amountCents,
+                accountingDate: d,
+                description: line.description,
+                matchType: line.matchType,
+            });
+            resolved = cls.category;
+            dareAccount = cls.dareAccount;
+            avereAccount = cls.avereAccount;
+            entryNature = cls.entryNature;
+            settlementStatus = cls.settlementStatus;
+            payoutId = cls.payoutId;
+            classificationNotes = cls.notes;
+        } else {
+            if (resolved === 'SPESE_OPERATIVE') {
+                /* keep */
+            }
+            dareAccount =
+                resolved === 'ONERI_BANCARI'
+                    ? LEDGER_COMMISSIONI_INCASSI
+                    : '70900 - Spese operative';
+            avereAccount = LEDGER_FINECO_ACCOUNT;
+            entryNature = 'ECONOMICA';
+            settlementStatus = 'NOT_APPLICABLE';
+        }
+
+        // Override entrata generica legacy solo se flag OFF e ancora SPESE_OPERATIVE
+        if (
+            isIn &&
+            !isPayoutIdClassificationEnabled() &&
+            resolved === 'SPESE_OPERATIVE'
+        ) {
+            resolved = 'ALTRI_RICAVI';
+        }
+
         candidates.push({
             sourceKey: `BANK_LINE:${line.id}`,
             sourceType: 'BANK_LINE',
@@ -406,30 +338,30 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             vatRate: 0,
             vatCents: 0,
             totalCents: line.amountCents,
-            reconciliationStatus: line.matchStatus || 'UNMATCHED',
-            documentRef: line.matchedTxId || line.id,
+            reconciliationStatus:
+                settlementStatus === 'OPEN'
+                    ? 'UNMATCHED'
+                    : line.matchStatus || 'UNMATCHED',
+            documentRef: payoutId || line.matchedTxId || line.id,
             bankLineId: line.id,
             orderId: line.matchedOrderId,
+            entryNature,
+            settlementStatus,
+            matchedBankLineId: null,
             metadataJson: {
                 matchType: line.matchType,
                 documentId: line.documentId,
-                dareAccount: isIn
-                    ? LEDGER_FINECO_ACCOUNT
-                    : resolved === 'ONERI_BANCARI'
-                      ? '70200 - Oneri bancari / Fee gateway'
-                      : '70900 - Spese operative',
-                avereAccount: isIn
-                    ? isTransfer
-                        ? '17100 - Conto transitorio Gateway (giroconto)'
-                        : '60100 - Ricavi da Vendite'
-                    : LEDGER_FINECO_ACCOUNT,
+                dareAccount,
+                avereAccount,
+                payoutId: payoutId || null,
+                classificationNotes: classificationNotes || null,
+                payoutIdClassification: isPayoutIdClassificationEnabled(),
             },
         });
         sources.BANK_LINE = (sources.BANK_LINE || 0) + 1;
     }
 
-    // 5) Stripe fees → conto 10300 (non Fineco)
-    const { LEDGER_STRIPE_ACCOUNT } = await import('@/lib/financial/companyBankDetails');
+    // 5) Stripe fees → Commissione su incassi / Banca c/o Stripe
     const stripeMoves = await prisma.stripeFinanceMovement.findMany({
         where: { feeCents: { gt: 0 } },
         orderBy: { createdAtStripe: 'desc' },
@@ -452,10 +384,13 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
             reconciliationStatus: 'MATCHED',
             documentRef: m.payoutId || m.stripeId,
             orderId: m.orderId,
+            entryNature: 'ECONOMICA',
+            settlementStatus: 'NOT_APPLICABLE',
             metadataJson: {
                 type: m.type,
                 amountCents: m.amountCents,
-                dareAccount: '70200 - Oneri bancari / Fee Stripe',
+                stripeTransactionId: m.stripeId,
+                dareAccount: LEDGER_COMMISSIONI_INCASSI,
                 avereAccount: LEDGER_STRIPE_ACCOUNT,
             },
         });

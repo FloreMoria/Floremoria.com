@@ -32,16 +32,23 @@ export const FLOREMORIA_FINECO_BANK = {
 
 /** Conto Fineco — solo payout fisici (TRASFERIMENTO_INTERNO) e bonifici SEPA. */
 export const LEDGER_FINECO_ACCOUNT = '10100 - Banca Fineco' as const;
-/** Wallet PayPal (incassi/fee prima del payout). */
-export const LEDGER_PAYPAL_ACCOUNT = '10200 - Conto PayPal' as const;
-/** Wallet Stripe (incassi/fee prima del payout). */
-export const LEDGER_STRIPE_ACCOUNT = '10300 - Conto Stripe' as const;
+/** Wallet PayPal — Banca c/o PayPal (transito patrimonio). */
+export const LEDGER_PAYPAL_ACCOUNT = '10200 - Banca c/o PayPal' as const;
+/** Wallet Stripe — Banca c/o Stripe (transito patrimonio). */
+export const LEDGER_STRIPE_ACCOUNT = '10300 - Banca c/o Stripe' as const;
 
 /**
  * Legacy alias: punti ancora a Fineco. Preferire LEDGER_FINECO_ACCOUNT / gateway.
  * @deprecated usare LEDGER_FINECO_ACCOUNT
  */
 export const LEDGER_BANK_ACCOUNT = LEDGER_FINECO_ACCOUNT;
+
+/** Commissioni su incassi (conto economico). */
+export const LEDGER_COMMISSIONI_INCASSI = '70200 - Commissioni su incassi' as const;
+/** Crediti v/clienti. */
+export const LEDGER_CREDITI_CLIENTI = '11000 - Crediti v/clienti' as const;
+/** Partite da classificare (patrimoniale, mai economico). */
+export const LEDGER_DA_CLASSIFICARE = '17900 - Partite da classificare' as const;
 
 export function formatFloremoriaBankBlock(): string {
     return [
@@ -63,6 +70,7 @@ export function buildAlbertoBankContextPrompt(): string {
 COORDINATE BANCARIE AZIENDALI (conto operativo FloreMoria — FinecoBank, NON altri istituti):
 ${formatFloremoriaBankBlock()}
 - In Prima Nota: Fineco = ${LEDGER_FINECO_ACCOUNT}; PayPal = ${LEDGER_PAYPAL_ACCOUNT}; Stripe = ${LEDGER_STRIPE_ACCOUNT}.
-- I payout Stripe/PayPal accreditano l'IBAN Fineco come TRASFERIMENTO_INTERNO (giroconto).
+- Commissioni = ${LEDGER_COMMISSIONI_INCASSI}; partite sospette senza payout id = ${LEDGER_DA_CLASSIFICARE}.
+- I payout Stripe/PayPal accreditano l'IBAN Fineco come TRASFERIMENTO_INTERNO (giroconto) solo con payout id.
 `.trim();
 }

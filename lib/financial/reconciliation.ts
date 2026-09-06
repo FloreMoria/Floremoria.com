@@ -177,12 +177,48 @@ export async function matchBankFeeOrTax(movement: ParsedBankMovement): Promise<S
 }
 
 /**
- * Payout cumulativo Stripe/PayPal: abbina il versamento bancario al gruppo movimenti/ordini del payout.
+ * Payout cumulativo Stripe/PayPal: abbina SOLO se esiste payout id con importo+data compatibili.
+ * La causale restringe i candidati; non decide (Fase 2 + flag).
  */
 export async function matchCumulativePayout(
     movement: ParsedBankMovement
 ): Promise<StatementMatchResult | null> {
     if (movement.amountCents <= 0) return null;
+
+    const { isPayoutIdClassificationEnabled } = await import('@/lib/financial/chartOfAccounts');
+    const { classifyFinecoBankCredit } = await import('@/lib/financial/payoutClassification');
+
+    if (isPayoutIdClassificationEnabled()) {
+        const date = movementDateIso(movement);
+        const center = date ? new Date(`${date}T12:00:00.000Z`) : new Date();
+        const cls = await classifyFinecoBankCredit({
+            amountCents: movement.amountCents,
+            accountingDate: center,
+            description: movement.description,
+            matchType: null,
+        });
+        if (cls.kind === 'PAYOUT_MATCHED') {
+            return matched({
+                matchType: cls.gateway === 'PAYPAL' ? 'PAYPAL_PAYOUT' : 'STRIPE_PAYOUT',
+                matchScore: 96,
+                matchedTxId: cls.payoutId || null,
+                matchedOrderId: null,
+                matchNotes: `${cls.notes} — Dare Fineco / Avere ${cls.avereAccount} (non ricavo)`,
+            });
+        }
+        if (cls.kind === 'PENDING_CLASSIFICATION') {
+            return matched({
+                matchType: 'PENDING_CLASSIFICATION',
+                matchScore: 40,
+                matchedTxId: null,
+                matchedOrderId: null,
+                matchNotes: cls.notes,
+            });
+        }
+        return null;
+    }
+
+    // ——— Legacy (flag OFF): hint causale + payout amount/date ———
     const desc = movement.description;
     const isStripe = STRIPE_HINT_RE.test(desc);
     const isPaypal = PAYPAL_HINT_RE.test(desc);

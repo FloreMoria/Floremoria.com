@@ -9,6 +9,8 @@ export const LEDGER_CATEGORIES = [
     'PAYPAL_PAYOUT',
     /** Giroconto gateway → banca Fineco: non è ricavo di vendita. */
     'TRASFERIMENTO_INTERNO',
+    /** Accredito sospetto payout senza payout id — fuori da CE. */
+    'DA_CLASSIFICARE',
     'COSTI_FIORISTI',
     'SPESE_SAAS',
     'SPESE_OPERATIVE',
@@ -58,6 +60,12 @@ export type LedgerEntryInput = {
     partnerId?: string | null;
     metadataJson?: Record<string, unknown> | null;
     reversesEntryId?: string | null;
+    /** Fase 2 — natura scrittura (NULL = legacy). */
+    entryNature?: 'ECONOMICA' | 'FINANZIARIA' | 'TRANSITO' | null;
+    /** Fase 2 — stato partita (NULL = legacy, escluso da partite aperte). */
+    settlementStatus?: 'OPEN' | 'MATCHED' | 'NOT_APPLICABLE' | null;
+    matchedEntryId?: string | null;
+    matchedBankLineId?: string | null;
 };
 
 export type HistoricalPnl = {
@@ -152,20 +160,21 @@ export function categorizeBankLine(description: string, matchType: string | null
     ) {
         return 'COSTI_FIORISTI';
     }
-    // Payout Stripe/PayPal su Fineco = partita di giro (non ricavo di vendita).
+    // Payout: solo matchType da payout id (Fase 2). La stringa STRIPE/PAYPAL non decide più.
     if (
         matchType === 'STRIPE_PAYOUT' ||
         matchType === 'PAYPAL_PAYOUT' ||
         matchType === 'GATEWAY_PAYOUT' ||
-        matchType === 'INTERNAL_TRANSFER' ||
-        /\b(STRIPE|PAYPAL)\b/.test(u)
+        matchType === 'INTERNAL_TRANSFER'
     ) {
-        if (matchType === 'PAYPAL_CASHBACK' || /CASHBACK|RIMBORSO|REFUND|STORNO/.test(u)) {
-            return 'RIMBORSI';
-        }
         return 'TRASFERIMENTO_INTERNO';
     }
-    if (matchType === 'PAYPAL_CASHBACK') return 'RIMBORSI';
+    if (matchType === 'PENDING_CLASSIFICATION' || matchType === 'DA_CLASSIFICARE') {
+        return 'DA_CLASSIFICARE';
+    }
+    if (matchType === 'PAYPAL_CASHBACK' || /CASHBACK|RIMBORSO|REFUND|STORNO/.test(u)) {
+        return 'RIMBORSI';
+    }
     if (matchType === 'SAAS_SUBSCRIPTION' || /CURSOR|VERCEL|OPENAI|CLAUDE|GOOGLE|META|AWS/.test(u)) {
         return 'SPESE_SAAS';
     }
@@ -178,7 +187,11 @@ export function categorizeBankLine(description: string, matchType: string | null
 
 /** True se la categoria non deve entrare nei ricavi/costi operativi di vendita. */
 export function isInternalTransferCategory(category: string | null | undefined): boolean {
-    return category === 'TRASFERIMENTO_INTERNO' || category === 'PAYPAL_PAYOUT';
+    return (
+        category === 'TRASFERIMENTO_INTERNO' ||
+        category === 'PAYPAL_PAYOUT' ||
+        category === 'DA_CLASSIFICARE'
+    );
 }
 
 export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
@@ -187,6 +200,7 @@ export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     RIMBORSI: 'Rimborsi ricevuti',
     PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
     TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',
+    DA_CLASSIFICARE: 'Da classificare (partite aperte)',
     COSTI_FIORISTI: 'Costi del venduto / Fioristi',
     SPESE_SAAS: 'Spese server / SaaS',
     SPESE_OPERATIVE: 'Spese operative',

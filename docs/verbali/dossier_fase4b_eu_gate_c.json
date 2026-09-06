@@ -1,0 +1,1217 @@
+{
+  "generatedAt": "2026-09-06T22:15:48.204Z",
+  "readOnly": true,
+  "orderSchema": {
+    "buyerFullName": "acquirente",
+    "deceasedName": "defunto (tomba) — proxy destinatario consegna, NON intestatario biglietto separato",
+    "ticketMessage": "messaggio biglietto (testo libero)",
+    "additionalInstructions": "istruzioni aggiuntive (testo libero)",
+    "agencyName": "agenzia funebre B2B",
+    "dedicatedRecipientField": false,
+    "note": "Nessun campo Order.recipientName / deliveryAddressee. recipientName esiste su OfferRedemption, non su Order."
+  },
+  "section1_catalogNameOnly": {
+    "uniqueCustomers": 23,
+    "groupCRows": 33,
+    "nWithAtLeastOneBuyerOrder": 7,
+    "nWithZeroBuyerOrders": 16,
+    "byCustomer": {
+      "Agostino Buttignol": {
+        "listRows": [
+          {
+            "date": "2026-03-29",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Chiara Durì": {
+        "listRows": [
+          {
+            "date": "2026-03-14",
+            "list": "72,48 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Cristiano Mariani": {
+        "listRows": [
+          {
+            "date": "2026-04-01",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "cyrille magali Maman-Sernaglia": {
+        "listRows": [
+          {
+            "date": "2026-06-05",
+            "list": "89,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Elena Lombardi": {
+        "listRows": [
+          {
+            "date": "2026-04-20",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Ester Irace": {
+        "listRows": [
+          {
+            "date": "2026-02-10",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-SA-26-001",
+            "date": "2026-05-19",
+            "deliveryDate": "2026-05-21",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Ester Irace",
+            "deceased": "Rita Gatto",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-SA-26-002",
+            "date": "2026-05-19",
+            "deliveryDate": "2026-05-22",
+            "amount": "34,99 €",
+            "status": "CANCELLED",
+            "partnerPayment": "PAID",
+            "buyer": "Ester Irace",
+            "deceased": "Rita Gatto",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": [
+          {
+            "orderNumber": "FF-PN-26-001",
+            "date": "2026-08-07",
+            "amount": "39,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Daniela Barilari",
+            "deceased": "Antonietta D'Ambrosio",
+            "via": "additionalInstructions",
+            "nameScore": 0.85
+          }
+        ]
+      },
+      "Famiglia Deotti-Buzzi": {
+        "listRows": [
+          {
+            "date": "2026-04-27",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "FRANCESCO REDIVO": {
+        "listRows": [
+          {
+            "date": "2026-03-31",
+            "list": "144,98 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": [
+          {
+            "orderNumber": "FT-PA-26-002",
+            "date": "2026-05-20",
+            "amount": "31,48 €",
+            "status": "CANCELLED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "via": "additionalInstructions",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-PA-26-003",
+            "date": "2026-05-20",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "via": "additionalInstructions",
+            "nameScore": 0.85
+          }
+        ]
+      },
+      "Giulia Grappone": {
+        "listRows": [
+          {
+            "date": "2026-01-16",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Isabella Cesaroni": {
+        "listRows": [
+          {
+            "date": "2026-05-03",
+            "list": "299,90 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-MC-26-003",
+            "date": "2026-07-02",
+            "deliveryDate": "2026-07-04",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-MC-26-004",
+            "date": "2026-07-02",
+            "deliveryDate": "2026-05-31",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-MC-26-005",
+            "date": "2026-07-06",
+            "deliveryDate": "2026-07-30",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-MC-26-006",
+            "date": "2026-08-03",
+            "deliveryDate": "2026-09-05",
+            "amount": "29,99 €",
+            "status": "PENDING",
+            "partnerPayment": "UNPAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": []
+      },
+      "L'alternativa srl": {
+        "listRows": [
+          {
+            "date": "2026-03-18",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Luciano Mammì": {
+        "listRows": [
+          {
+            "date": "2026-01-22",
+            "list": "29,99 €"
+          },
+          {
+            "date": "2026-01-21",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-PA-26-002",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "CANCELLED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-003",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-001",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-002",
+            "date": "2026-06-17",
+            "deliveryDate": "2026-06-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-004",
+            "date": "2026-06-17",
+            "deliveryDate": "2026-06-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FF-PA-26-001",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-04",
+            "amount": "144,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Federica Manzo",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-005",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-06",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-003",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-06",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-007",
+            "date": "2026-07-30",
+            "deliveryDate": "2026-08-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-004",
+            "date": "2026-07-30",
+            "deliveryDate": "2026-08-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-005",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-006",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-008",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-007",
+            "date": "2026-09-01",
+            "deliveryDate": "2026-09-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-009",
+            "date": "2026-09-01",
+            "deliveryDate": "2026-09-04",
+            "amount": "31,48 €",
+            "status": "IN_PROGRESS",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": [
+          {
+            "orderNumber": "FT-PA-26-005",
+            "date": "2026-07-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "via": "ticketMessage",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-001",
+            "date": "2026-05-20",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-004",
+            "date": "2026-07-30",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-006",
+            "date": "2026-08-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-002",
+            "date": "2026-06-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-PA-26-001",
+            "date": "2026-07-04",
+            "amount": "144,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Federica Manzo",
+            "via": "ticketMessage",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-005",
+            "date": "2026-08-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-003",
+            "date": "2026-07-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-007",
+            "date": "2026-09-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          }
+        ]
+      },
+      "LUCIANO MAMMI'": {
+        "listRows": [
+          {
+            "date": "2026-04-20",
+            "list": "59,98 €"
+          },
+          {
+            "date": "2026-03-24",
+            "list": "29,99 €"
+          },
+          {
+            "date": "2026-03-22",
+            "list": "29,99 €"
+          },
+          {
+            "date": "2026-02-22",
+            "list": "29,99 €"
+          },
+          {
+            "date": "2026-02-16",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-PA-26-002",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "CANCELLED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-003",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-001",
+            "date": "2026-05-20",
+            "deliveryDate": "2026-05-22",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-002",
+            "date": "2026-06-17",
+            "deliveryDate": "2026-06-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-004",
+            "date": "2026-06-17",
+            "deliveryDate": "2026-06-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FF-PA-26-001",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-04",
+            "amount": "144,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Federica Manzo",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-005",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-06",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-003",
+            "date": "2026-07-04",
+            "deliveryDate": "2026-07-06",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-007",
+            "date": "2026-07-30",
+            "deliveryDate": "2026-08-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-004",
+            "date": "2026-07-30",
+            "deliveryDate": "2026-08-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-005",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-006",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-008",
+            "date": "2026-08-17",
+            "deliveryDate": "2026-08-19",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-CS-26-007",
+            "date": "2026-09-01",
+            "deliveryDate": "2026-09-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Ermelinda Mammì",
+            "nameScore": 1
+          },
+          {
+            "orderNumber": "FT-PA-26-009",
+            "date": "2026-09-01",
+            "deliveryDate": "2026-09-04",
+            "amount": "31,48 €",
+            "status": "IN_PROGRESS",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Salvatore Tusa",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": [
+          {
+            "orderNumber": "FT-PA-26-005",
+            "date": "2026-07-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Salvatore Tusa",
+            "via": "ticketMessage",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-001",
+            "date": "2026-05-20",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-004",
+            "date": "2026-07-30",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-006",
+            "date": "2026-08-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-002",
+            "date": "2026-06-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-PA-26-001",
+            "date": "2026-07-04",
+            "amount": "144,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Federica Manzo",
+            "via": "ticketMessage",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-005",
+            "date": "2026-08-17",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "UNPAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-003",
+            "date": "2026-07-04",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-CS-26-007",
+            "date": "2026-09-01",
+            "amount": "31,48 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "LUCIANO MAMMI'",
+            "deceased": "Ermelinda Mammì",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          }
+        ]
+      },
+      "Luigina Dereani": {
+        "listRows": [
+          {
+            "date": "2026-02-19",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Maria ANTONIA Pozzi": {
+        "listRows": [
+          {
+            "date": "2026-05-03",
+            "list": "53,48 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Maria Puliafico": {
+        "listRows": [
+          {
+            "date": "2026-05-16",
+            "list": "49,99 €"
+          },
+          {
+            "date": "2026-03-13",
+            "list": "49,99 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-ME-26-001",
+            "date": "2026-07-15",
+            "deliveryDate": "2026-07-17",
+            "amount": "49,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Maria  Puliafico",
+            "deceased": "Carmelo Puliafico",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": [
+          {
+            "orderNumber": "FT-MC-26-003",
+            "date": "2026-07-02",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-MC-26-005",
+            "date": "2026-07-06",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-VR-26-001",
+            "date": "2026-06-22",
+            "amount": "64,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Riccardo Segantini",
+            "deceased": "Maria Teresa Moretto",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-PD-26-002",
+            "date": "2026-07-02",
+            "amount": "104,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Francesco Nicolato",
+            "deceased": "Maria Stecca",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-MC-26-004",
+            "date": "2026-07-02",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-PA-26-001",
+            "date": "2026-07-04",
+            "amount": "144,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Luciano Mammì",
+            "deceased": "Federica Manzo",
+            "via": "ticketMessage",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-ME-26-001",
+            "date": "2026-07-15",
+            "amount": "49,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Maria  Puliafico",
+            "deceased": "Carmelo Puliafico",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-RC-26-002",
+            "date": "2026-08-01",
+            "amount": "29,99 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Valentina Cecchini",
+            "deceased": "Maria Pullano",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FF-VI-26-003",
+            "date": "2026-08-26",
+            "amount": "52,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Silvia Tregnaghi",
+            "deceased": "Maria Silvia De Zotti",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          },
+          {
+            "orderNumber": "FT-MC-26-006",
+            "date": "2026-08-03",
+            "amount": "29,99 €",
+            "status": "PENDING",
+            "partnerPayment": "UNPAID",
+            "buyer": "Isabella Cesaroni",
+            "deceased": "Anna Maria Rumori",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          }
+        ]
+      },
+      "Mimma Congedo": {
+        "listRows": [
+          {
+            "date": "2026-03-01",
+            "list": "144,98 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Moreno Venturino": {
+        "listRows": [
+          {
+            "date": "2026-02-25",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Norm Marchi": {
+        "listRows": [
+          {
+            "date": "2026-02-26",
+            "list": "39,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Petra Manakova": {
+        "listRows": [
+          {
+            "date": "2026-05-25",
+            "list": "84,98 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Rosaria Di Pasquale": {
+        "listRows": [
+          {
+            "date": "2026-04-16",
+            "list": "29,99 €"
+          }
+        ],
+        "ordersCom": [],
+        "destProxy": []
+      },
+      "Rosetta Paladino": {
+        "listRows": [
+          {
+            "date": "2026-06-16",
+            "list": "49,46 €"
+          },
+          {
+            "date": "2026-04-29",
+            "list": "45,97 €"
+          },
+          {
+            "date": "2026-03-14",
+            "list": "69,98 €"
+          },
+          {
+            "date": "2026-01-22",
+            "list": "40,97 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FT-ME-26-002",
+            "date": "2026-08-04",
+            "deliveryDate": "2026-08-06",
+            "amount": "47,46 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Rosetta  Paladino",
+            "deceased": "Teresa Tropea",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": []
+      },
+      "Silvia Tregnaghi": {
+        "listRows": [
+          {
+            "date": "2026-04-28",
+            "list": "54,98 €"
+          },
+          {
+            "date": "2026-03-19",
+            "list": "34,99 €"
+          }
+        ],
+        "ordersCom": [
+          {
+            "orderNumber": "FF-VI-26-003",
+            "date": "2026-08-26",
+            "deliveryDate": "2026-08-28",
+            "amount": "52,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Silvia Tregnaghi",
+            "deceased": "Maria Silvia De Zotti",
+            "nameScore": 1
+          }
+        ],
+        "destProxy": [
+          {
+            "orderNumber": "FF-VI-26-003",
+            "date": "2026-08-26",
+            "amount": "52,98 €",
+            "status": "COMPLETED",
+            "partnerPayment": "PAID",
+            "buyer": "Silvia Tregnaghi",
+            "deceased": "Maria Silvia De Zotti",
+            "via": "deceasedName",
+            "nameScore": 0.85
+          }
+        ]
+      }
+    },
+    "scoreThreshold": ">=0.85 con ≥2 token o cognome lungo+jaccard≥0.5"
+  },
+  "section2_destinatario": {
+    "dedicatedField": false,
+    "fieldsOnOrder": {
+      "buyerFullName": "acquirente",
+      "deceasedName": "defunto (tomba) — proxy consegna, non intestatario biglietto",
+      "ticketMessage": "testo biglietto (libero)",
+      "additionalInstructions": "istruzioni (libero, rumoroso)",
+      "agencyName": "agenzia B2B"
+    },
+    "note": "Nessun Order.recipientName / deliveryAddressee. recipientName esiste solo su OfferRedemption.",
+    "of33_buyerNameHit": 17,
+    "of33_deceasedName_strictSurname": 0,
+    "of33_destOnly_new": 0,
+    "of33_neither_buyer": 16,
+    "conclusion": "Dei 33, 17 hanno almeno un Order .com per nome acquirente (senza filtro data). Il match sul defunto (deceasedName) con cognome significativo NON aggiunge nessuna riga nuova oltre al buyer. Famiglia Deotti-Buzzi / nomi multipli stile destinatario: 0 riscontri."
+  },
+  "section3a_ricaviVendite": {
+    "hierarchyPositivi": {
+      "n": 83,
+      "euro": "3049,95 €",
+      "cents": 304995
+    },
+    "hierarchyNegativi": {
+      "n": 51,
+      "euro": "-2693,19 €",
+      "cents": -269319
+    },
+    "sommaAlgebrica": {
+      "euro": "356,76 €",
+      "cents": 35676
+    },
+    "paypalNegativiSubset": {
+      "n": 27,
+      "euro": "-1490,18 €",
+      "cents": -149018
+    },
+    "pnlBranch": {
+      "countedAsRicavi": {
+        "euro": "3049,95 €",
+        "cents": 304995
+      },
+      "countedAsCosti": {
+        "euro": "2693,19 €",
+        "cents": 269319
+      }
+    },
+    "venditeCaratteristicheMotore": {
+      "euro": "2919,99 €",
+      "cents": 291999
+    },
+    "conclusione": "PRE-L3: algebrica €3364,56 ≠ vendite €5736,32. Negativi nel ramo costi. NON deprimono venditeCaratteristiche. POST-L3: vedi hierarchyPositivi correnti.",
+    "preLotto3_hierarchy": {
+      "positivi": {
+        "n": 147,
+        "euro": "6057,75 €",
+        "cents": 605775
+      },
+      "negativi": {
+        "n": 51,
+        "euro": "-2693,19 €",
+        "cents": -269319
+      },
+      "sommaAlgebrica": {
+        "euro": "3364,56 €",
+        "cents": 336456
+      },
+      "venditeCaratteristicheMotore": {
+        "euro": "5736,32 €",
+        "cents": 573632
+      },
+      "paypalNegativiInHierarchy": {
+        "n": 27,
+        "euro": "-1490,18 €",
+        "note": "subset; misura storica €1623 era conteggio diverso/pre-gerarchia"
+      }
+    }
+  },
+  "section3b_listaVsIncasso": {
+    "matchedN": 36,
+    "withDeltaN": 1,
+    "deltaTotal": "15,00 €",
+    "deltaTotalCents": 1500,
+    "deltas": [
+      {
+        "date": "2026-05-03",
+        "customer": "Isabella Cesaroni",
+        "list": "299,90 €",
+        "collected": "284,90 €",
+        "delta": "15,00 €",
+        "channel": "Stripe EU charge"
+      }
+    ],
+    "matchedListSum": "2219,89 €",
+    "matchedCollectedSum": "2204,89 €",
+    "eu43List": "2559,81 €",
+    "eu43OnCollectedWhereMatchedElseList": "2544,81 €",
+    "method": "exact charge/payment ±3d + PayPal nome+importo; Isabella eccezione 299,90↔284,90"
+  },
+  "section4_lotto3": {
+    "batchId": "FASE4B_L3_20260906_215954",
+    "rowsTouched": 87,
+    "snapshotRef": {
+      "at": "2026-09-06T21:53:19.251Z",
+      "vendite": 573632,
+      "rai": -268471,
+      "expectedVendite": 272852,
+      "expectedRai": 32309
+    },
+    "post": {
+      "vendite": 291999,
+      "venditeEuro": "2919,99 €",
+      "rai": -569251,
+      "raiEuro": "-5692,51 €",
+      "ricaviLordi": "7792,45 €",
+      "ivaDebito": "134,97 €",
+      "ivaCredito": "302,98 €",
+      "ivaNetta": "-168,01 €",
+      "banca": "32.006,13 €",
+      "cashGatewayTransfer": "4391,65 €"
+    },
+    "vsDryRun": {
+      "expectedVendite": "2728,52 €",
+      "actualVendite": "2919,99 €",
+      "venditeDelta": "191,47 €",
+      "expectedRai": "323,09 €",
+      "actualRai": "-5692,51 €",
+      "raiDelta": "-6015,60 €",
+      "noteVendite": "Atteso dry-run €2728,52 sottraeva €3007,80 interi; €191,47 già esclusi da filtro pose → post reale €2919,99",
+      "noteRai": "Dry-run aveva segno invertito (+323). Corretto: −2684,71 − 3007,80 = −5692,51"
+    }
+  }
+}

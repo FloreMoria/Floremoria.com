@@ -62,6 +62,29 @@ Flag: `FINANCE_PAYOUT_ID_CLASSIFICATION` (default ON; off con `0`/`false`/`off`)
 
 Endpoint debug: `GET /api/dashboard/finance/gateway-transit-balance`
 
+### Aggiornamento 2026-09-06 — modello a TRE gambe (non solo raccolta→banca)
+
+Il saldo PayPal −€1.568,30 **non** è un mistero di incassi mancanti: al ~97% è funding SDD Fineco→PayPal non riconosciuto come entrata di transito (vedi `dossier_fase4b_correzione_sdd_vendite.md`).
+
+```
+ENTRA nel transito gateway:
+  (1) Incassi clienti (checkout .com / .eu)
+  (2) Ricariche dalla banca — bonifico OR addebito SDD/SEPA PayPal/Stripe
+
+ESCE dal transito gateway:
+  (3a) Payout verso Fineco
+  (3b) Pagamenti a fornitori / spese operative
+  (3c) Commissioni
+```
+
+Regole forward-looking:
+
+- SDD/bonifico banca→gateway = `TRASFERIMENTO_INTERNO` (funding), mai costo e mai ricavo
+- Spesa pagata dal wallet = costo **una sola volta** (abbinare SDD↔movimento gateway; `paypalSddReconcile.ts`)
+- Payout gateway→banca = transito, mai `RICAVI_VENDITE`
+
+Lotto di riclassifica storica: preparato, **non eseguito** (dossier correzione SDD).
+
 ## Artefatti
 
 - `lib/financial/ledgerWriteGate.ts`

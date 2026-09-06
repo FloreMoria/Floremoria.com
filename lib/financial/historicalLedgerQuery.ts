@@ -230,6 +230,10 @@ export async function computeHistoricalPnl(opts: {
     let oneriBancariCents = 0;
     let ivaCreditoCents = 0;
     let cashGatewayTransferCents = 0;
+    let venditeCaratteristicheCents = 0;
+    let altriRicaviCents = 0;
+    let contributiEsercizioCents = 0;
+    let rimborsiInRicaviCents = 0;
 
     for (const r of fiscalUsable) {
         // Partite di giro: cassa sì, ricavi/costi operativi no.
@@ -239,10 +243,21 @@ export async function computeHistoricalPnl(opts: {
         }
 
         if (r.direction === 'ENTRATA' || r.totalCents > 0) {
-            if (r.category === 'RICAVI_VENDITE' || r.category === 'ALTRI_RICAVI' || r.category === 'RIMBORSI') {
-                ricaviLordiCents += Math.abs(r.totalCents);
+            // CONTRIBUTI_ESERCIZIO resta nel CE (RAI) ma fuori dalle vendite caratteristiche.
+            if (
+                r.category === 'RICAVI_VENDITE' ||
+                r.category === 'ALTRI_RICAVI' ||
+                r.category === 'CONTRIBUTI_ESERCIZIO' ||
+                r.category === 'RIMBORSI'
+            ) {
+                const absTotal = Math.abs(r.totalCents);
+                ricaviLordiCents += absTotal;
                 ricaviNettiCents += Math.abs(r.netCents);
                 ivaDebitoCents += Math.abs(r.vatCents);
+                if (r.category === 'RICAVI_VENDITE') venditeCaratteristicheCents += absTotal;
+                else if (r.category === 'ALTRI_RICAVI') altriRicaviCents += absTotal;
+                else if (r.category === 'CONTRIBUTI_ESERCIZIO') contributiEsercizioCents += absTotal;
+                else if (r.category === 'RIMBORSI') rimborsiInRicaviCents += absTotal;
             }
         } else {
             const abs = Math.abs(r.totalCents);
@@ -340,6 +355,10 @@ export async function computeHistoricalPnl(opts: {
         ivaNettaCents,
         risultatoAnteImposteCents,
         entriesCount: usable.length,
+        venditeCaratteristicheCents,
+        altriRicaviCents,
+        contributiEsercizioCents,
+        rimborsiInRicaviCents,
         cashInflowCents,
         cashOutflowCents,
         cashGatewayTransferCents,

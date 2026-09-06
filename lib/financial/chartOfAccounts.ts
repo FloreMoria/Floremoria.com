@@ -9,6 +9,7 @@ export const ACCOUNT_STRIPE_LEGACY = '10300 - Conto Stripe' as const;
 export const ACCOUNT_PAYPAL_LEGACY = '10200 - Conto PayPal' as const;
 export const ACCOUNT_CREDITI_CLIENTI = '11000 - Crediti v/clienti' as const;
 export const ACCOUNT_RICAVI_VENDITE = '60100 - Ricavi da Vendite' as const;
+export const ACCOUNT_CONTRIBUTI_ESERCIZIO = '65000 - Contributi in conto esercizio' as const;
 export const ACCOUNT_COMMISSIONI_INCASSI = '70200 - Commissioni su incassi' as const;
 export const ACCOUNT_DA_CLASSIFICARE = '17900 - Partite da classificare' as const;
 

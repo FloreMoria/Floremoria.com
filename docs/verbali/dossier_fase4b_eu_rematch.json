@@ -1,0 +1,477 @@
+{
+  "generatedAt": "2026-09-06T22:10:48.256Z",
+  "listTotal": "2559,81 €",
+  "listTotalCents": 255981,
+  "checksumOk": true,
+  "buckets": {
+    "A": {
+      "n": 7,
+      "total": "412,92 €",
+      "cents": 41292,
+      "rows": [
+        {
+          "date": "2026-08-21",
+          "customer": "Oreste Poverello",
+          "list": "89,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FF-PN-26-004 89,99 € 2026-08-21"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-08-10",
+          "customer": "Edy, Lori and Dana Moras",
+          "list": "69,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FF-PN-26-002 69,99 € 2026-08-10"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-08-06",
+          "customer": "Daniela Barilari",
+          "list": "39,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FF-PN-26-001 39,99 € 2026-08-07"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-08-01",
+          "customer": "valentina cecchini",
+          "list": "29,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FT-RC-26-002 29,99 € 2026-08-01"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-07-16",
+          "customer": "Filomena Maiorano",
+          "list": "37,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FT-PD-26-001 37,99 € 2026-07-16"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-07-09",
+          "customer": "Giulio Rosace",
+          "list": "39,99 €",
+          "composite": false,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FF-PD-26-004 39,99 € 2026-07-10"
+          ],
+          "note": "nome+data; importo coincidente"
+        },
+        {
+          "date": "2026-07-02",
+          "customer": "Nicolato Francesco",
+          "list": "104,98 €",
+          "composite": true,
+          "method": "name_date_amount_ok",
+          "com": [
+            "FF-PD-26-002 104,98 € 2026-07-02"
+          ],
+          "note": "nome+data; importo coincidente"
+        }
+      ]
+    },
+    "B": {
+      "n": 1,
+      "total": "109,98 €",
+      "cents": 10998,
+      "deltaTotal": "69,99 €",
+      "deltaTotalCents": 6999,
+      "rows": [
+        {
+          "date": "2026-08-17",
+          "customer": "Amanda Favot",
+          "list": "109,98 €",
+          "composite": true,
+          "com": [
+            "FF-PN-26-003 39,99 € 2026-08-17"
+          ],
+          "delta": "69,99 €",
+          "deltaCents": 6999,
+          "note": "nome+data; delta lista−.com 69,99 €"
+        }
+      ]
+    },
+    "C": {
+      "n": 33,
+      "total": "1926,93 €",
+      "cents": 192693,
+      "rows": [
+        {
+          "date": "2026-06-16",
+          "customer": "Rosetta Paladino",
+          "list": "49,46 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-06-05",
+          "customer": "cyrille magali Maman-Sernaglia",
+          "list": "89,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-05-25",
+          "customer": "Petra Manakova",
+          "list": "84,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-05-16",
+          "customer": "Maria Puliafico",
+          "list": "49,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-05-03",
+          "customer": "Maria ANTONIA Pozzi",
+          "list": "53,48 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-05-03",
+          "customer": "Isabella Cesaroni",
+          "list": "299,90 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-29",
+          "customer": "Rosetta Paladino",
+          "list": "45,97 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-28",
+          "customer": "Silvia Tregnaghi",
+          "list": "54,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-27",
+          "customer": "Famiglia Deotti-Buzzi",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-20",
+          "customer": "LUCIANO MAMMI'",
+          "list": "59,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-20",
+          "customer": "Elena Lombardi",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-16",
+          "customer": "Rosaria Di Pasquale",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-04-01",
+          "customer": "Cristiano Mariani",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-31",
+          "customer": "FRANCESCO REDIVO",
+          "list": "144,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-29",
+          "customer": "Agostino Buttignol",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-24",
+          "customer": "LUCIANO MAMMI'",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-22",
+          "customer": "LUCIANO MAMMI'",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-19",
+          "customer": "Silvia Tregnaghi",
+          "list": "34,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-18",
+          "customer": "L'alternativa srl",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-14",
+          "customer": "Chiara Durì",
+          "list": "72,48 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-14",
+          "customer": "Rosetta Paladino",
+          "list": "69,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-13",
+          "customer": "Maria Puliafico",
+          "list": "49,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-03-01",
+          "customer": "Mimma Congedo",
+          "list": "144,98 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-26",
+          "customer": "Norm Marchi",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-25",
+          "customer": "Moreno Venturino",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-22",
+          "customer": "LUCIANO MAMMI'",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-19",
+          "customer": "Luigina Dereani",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-16",
+          "customer": "LUCIANO MAMMI'",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-02-10",
+          "customer": "Ester Irace",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-01-22",
+          "customer": "Luciano Mammì",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-01-22",
+          "customer": "Rosetta Paladino",
+          "list": "40,97 €",
+          "composite": true,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-01-21",
+          "customer": "Luciano Mammì",
+          "list": "29,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        },
+        {
+          "date": "2026-01-16",
+          "customer": "Giulia Grappone",
+          "list": "39,99 €",
+          "composite": false,
+          "note": "nessun Order nome+data±3"
+        }
+      ]
+    },
+    "D": {
+      "n": 2,
+      "total": "109,98 €",
+      "cents": 10998,
+      "rows": [
+        {
+          "date": "2026-07-03",
+          "customer": "(senza nome)",
+          "list": "69,99 €",
+          "note": "senza nome su lista — nessun match nome possibile",
+          "com": []
+        },
+        {
+          "date": "2026-01-20",
+          "customer": "(senza nome)",
+          "list": "39,99 €",
+          "note": "senza nome su lista — nessun match nome possibile",
+          "com": []
+        }
+      ]
+    }
+  },
+  "sumABCD": "2559,81 €",
+  "sumABCDCents": 255981,
+  "ivaTeorica_C_plus_deltaB": {
+    "byQuarter": {
+      "T1": {
+        "base": "998,24 €",
+        "iva10": "90,79 €",
+        "items": [
+          "2026-03-31 FRANCESCO REDIVO 144,98 € (C)",
+          "2026-03-29 Agostino Buttignol 29,99 € (C)",
+          "2026-03-24 LUCIANO MAMMI' 29,99 € (C)",
+          "2026-03-22 LUCIANO MAMMI' 29,99 € (C)",
+          "2026-03-19 Silvia Tregnaghi 34,99 € (C)",
+          "2026-03-18 L'alternativa srl 39,99 € (C)",
+          "2026-03-14 Chiara Durì 72,48 € (C)",
+          "2026-03-14 Rosetta Paladino 69,98 € (C)",
+          "2026-03-13 Maria Puliafico 49,99 € (C)",
+          "2026-03-01 Mimma Congedo 144,98 € (C)",
+          "2026-02-26 Norm Marchi 39,99 € (C)",
+          "2026-02-25 Moreno Venturino 29,99 € (C)",
+          "2026-02-22 LUCIANO MAMMI' 29,99 € (C)",
+          "2026-02-19 Luigina Dereani 39,99 € (C)",
+          "2026-02-16 LUCIANO MAMMI' 29,99 € (C)",
+          "2026-02-10 Ester Irace 39,99 € (C)",
+          "2026-01-22 Luciano Mammì 29,99 € (C)",
+          "2026-01-22 Rosetta Paladino 40,97 € (C)",
+          "2026-01-21 Luciano Mammì 29,99 € (C)",
+          "2026-01-16 Giulia Grappone 39,99 € (C)"
+        ]
+      },
+      "T2": {
+        "base": "928,69 €",
+        "iva10": "84,44 €",
+        "items": [
+          "2026-06-16 Rosetta Paladino 49,46 € (C)",
+          "2026-06-05 cyrille magali Maman-Sernaglia 89,99 € (C)",
+          "2026-05-25 Petra Manakova 84,98 € (C)",
+          "2026-05-16 Maria Puliafico 49,99 € (C)",
+          "2026-05-03 Maria ANTONIA Pozzi 53,48 € (C)",
+          "2026-05-03 Isabella Cesaroni 299,90 € (C)",
+          "2026-04-29 Rosetta Paladino 45,97 € (C)",
+          "2026-04-28 Silvia Tregnaghi 54,98 € (C)",
+          "2026-04-27 Famiglia Deotti-Buzzi 39,99 € (C)",
+          "2026-04-20 LUCIANO MAMMI' 59,98 € (C)",
+          "2026-04-20 Elena Lombardi 39,99 € (C)",
+          "2026-04-16 Rosaria Di Pasquale 29,99 € (C)",
+          "2026-04-01 Cristiano Mariani 29,99 € (C)"
+        ]
+      },
+      "T3": {
+        "base": "69,99 €",
+        "iva10": "6,36 €",
+        "items": [
+          "2026-08-17 Amanda Favot delta 69,99 € (B)"
+        ]
+      },
+      "T4": {
+        "base": "0,00 €",
+        "iva10": "0,00 €",
+        "items": []
+      }
+    },
+    "baseTotal": "1996,92 €",
+    "iva10Total": "181,59 €",
+    "baseTotalCents": 199692,
+    "iva10TotalCents": 18159
+  },
+  "amanda": {
+    "list": "109,98 €",
+    "bucket": "B",
+    "com": [
+      {
+        "id": "cmsxf7d4o0000ic04toy2f9rk",
+        "orderNumber": "FF-PN-26-003",
+        "buyer": "Amanda Favot",
+        "email": "afavot@rogers.com",
+        "cents": 3999,
+        "date": "2026-08-17",
+        "score": 1
+      }
+    ],
+    "delta": "69,99 €",
+    "secondOrderSameWindow": [],
+    "gapInterpretation": "nessun secondo Order Amanda ±3g → €69,99 = parte non registrata (se bucket B)"
+  },
+  "stripeSubscriptionCreation": {
+    "chargesEuTotal": 47,
+    "chargesEu2026": 30,
+    "withLabelN": 1,
+    "withLabel2026N": 1,
+    "sample": [
+      {
+        "date": "2026-08-17",
+        "amt": "39,99 €",
+        "desc": "Subscription creation",
+        "orderId": null
+      }
+    ]
+  },
+  "lotto3": {
+    "alreadyExecuted": true,
+    "batchId": "FASE4B_L3_20260906_215954",
+    "rows": 87
+  },
+  "studioPackage": "BLOCCATO — numeri provvisori, non inviare"
+}

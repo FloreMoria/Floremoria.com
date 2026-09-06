@@ -5,6 +5,8 @@
 export const LEDGER_CATEGORIES = [
     'RICAVI_VENDITE',
     'ALTRI_RICAVI',
+    /** Contributi pubblici in conto esercizio (es. CCIAA) — nel CE, fuori dalle vendite. */
+    'CONTRIBUTI_ESERCIZIO',
     'RIMBORSI',
     'PAYPAL_PAYOUT',
     /** Giroconto gateway → banca Fineco: non è ricavo di vendita. */
@@ -88,6 +90,14 @@ export type HistoricalPnl = {
     ivaNettaCents: number;
     risultatoAnteImposteCents: number;
     entriesCount: number;
+    /** Solo category RICAVI_VENDITE (post-gerarchia). */
+    venditeCaratteristicheCents?: number;
+    /** Solo category ALTRI_RICAVI. */
+    altriRicaviCents?: number;
+    /** Solo category CONTRIBUTI_ESERCIZIO (nel CE, non nelle vendite). */
+    contributiEsercizioCents?: number;
+    /** Solo category RIMBORSI ancora sommati nei ricavi (difetto strutturale). */
+    rimborsiInRicaviCents?: number;
     /**
      * Flusso di cassa reale (binario A): lordi Fineco + giroconti gateway.
      * Non mescolare con ricavi di competenza fiscale.
@@ -197,6 +207,7 @@ export function isInternalTransferCategory(category: string | null | undefined):
 export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     RICAVI_VENDITE: 'Ricavi vendite',
     ALTRI_RICAVI: 'Altri ricavi',
+    CONTRIBUTI_ESERCIZIO: 'Contributi in conto esercizio',
     RIMBORSI: 'Rimborsi ricevuti',
     PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
     TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',

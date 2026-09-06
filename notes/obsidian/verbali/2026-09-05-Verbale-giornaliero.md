@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 5 Settembre 2026"
 sync_source: docs/verbali/05-09-2026.md
-synced_at: 2026-09-06T03:13:42.892Z
+synced_at: 2026-09-06T21:50:05.218Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/05-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -34,16 +34,8 @@ synced_at: 2026-09-06T03:13:42.892Z
 - `7325bc3c` fix(dashboard): corretto padding titolo utenti e ripristinata corretta visualizzazione nome/avatar nella tabella _(FloreMoria)_
 - `f29b2dda` fix(mobile): bloccato zoom indesiderato e overflow orizzontale su iOS login e chat _(FloreMoria)_
 - `ea05101a` fix(finance): aggiunti campi data fattura e importo nel form di upload autofatture estere _(FloreMoria)_
-- [2026-09-05 13:20] fix(finance): aggiunti campi Data fattura, Importo EUR e tipo TD17/TD18 nel form upload autofatture estere (PDF/immagine).
-- [2026-09-05 13:26] fix(mobile): bloccato zoom indesiderato e overflow orizzontale su iOS login e chat; viewport con maximumScale=1 e userScalable=false, font-size 16px globale su input mobile, overflow-x hidden, safe-area-inset su input bar e break-words su messaggi; tsc+build OK.
-- [2026-09-05 13:33] fix(dashboard): corretto padding titolo utenti e ripristinata corretta visualizzazione nome/avatar nella tabella;
-- [2026-09-05 13:40] fix(finance): Storico Autofatture include upload PDF/SaaS (SDI_AUTOFATTURA_ESTERA); allineato filtro dossier e metadati documentNumber.
-- [2026-09-05 15:42] feat(finance): Storico Autofatture con tab T1-T4/Anno, selettore anno, totali imponibile/IVA e sync periodo Prima Nota.
-- [2026-09-05 18:45] fix/chat: E.164 ITU+505 Nicaragua; riparato +3950587013088→+50587013088; enrich preferisce profilo WA su match telefono esatto.
 
 ## Sezione 4 — Logistica
 
 - `acb73c07` fix(chat): corretto prefisso nicaragua +505, fix logica fallback prefisso +39 e disaccoppiamento nomi ordini _(FloreMoria)_
 - `c853a80a` fix(orders): unificazione chat cliente +17134834061, stop auto-dispatch fioristi su categoria FF e check nome operatore _(FloreMoria)_
-- [2026-09-05 17:00] fix(orders): E.164 no doppio +39 su USA; merge chat Oscar +17134834061; stop auto-dispatch FF; firma FloreMoria Staff; ripristino FF-MC-26-001 in attesa assegnazione.
-- [2026-09-05 19:00] fix(chat): rimozione thread chat spuri +3914152126297 e +3912086708856; cancellate 2 sessioni e 15 messaggi WhatsApp pre-normalizzazione E.164; tsc+build OK.

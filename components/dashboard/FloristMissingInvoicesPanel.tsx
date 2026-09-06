@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     AlertTriangle,
+    FileSpreadsheet,
     Link2,
     Loader2,
     Mail,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import { exportToExcel } from '@/lib/financial/exportSectionExcel';
 import {
     FLORIST_DOC_STATUSES,
     FLORIST_DOC_STATUS_LABELS,
@@ -406,6 +408,93 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         }
     };
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            const year = new Date().getFullYear();
+            await exportToExcel<FloristCompensationRow>({
+                filename: `FloreMoria_FatturePassive_Fioristi_${year}`,
+                sheetName: 'Fatture Passive Fioristi',
+                title: `Registro Fatture e Compensi Fioristi — Anno ${year}`,
+                subtitle: `Esportazione generata il ${new Date().toLocaleDateString('it-IT')} · ${filteredRows.length} record · Filtro: ${statusFilter}`,
+                columns: [
+                    {
+                        header: 'Rif. Ordine',
+                        key: 'orderRef',
+                        format: 'string',
+                        width: 16,
+                        getValue: (r) => formatOrderRef(r),
+                    },
+                    {
+                        header: 'Fiorista Partner',
+                        key: 'partnerName',
+                        format: 'string',
+                        width: 30,
+                        getValue: (r) => r.partnerName,
+                    },
+                    {
+                        header: 'Email / Contatto',
+                        key: 'partnerEmail',
+                        format: 'string',
+                        width: 25,
+                        getValue: (r) => r.partnerEmail || r.partnerWhatsapp || '',
+                    },
+                    {
+                        header: 'Data Ordine',
+                        key: 'orderDate',
+                        format: 'date',
+                        width: 14,
+                        getValue: (r) => formatFinanceDate(r.orderDate),
+                    },
+                    {
+                        header: 'Compenso Fiorista (€)',
+                        key: 'amount',
+                        format: 'currency',
+                        width: 22,
+                        getValue: (r) => r.amountCents / 100,
+                    },
+                    {
+                        header: 'Stato Documento',
+                        key: 'statusLabel',
+                        format: 'string',
+                        width: 24,
+                        getValue: (r) => r.statusLabel || FLORIST_DOC_STATUS_LABELS[r.docStatus] || r.docStatus,
+                    },
+                    {
+                        header: 'Ricevuta / Scontrino',
+                        key: 'receiptStatus',
+                        format: 'string',
+                        width: 20,
+                        getValue: (r) => (r.receiptUrl ? 'Allegato Presente' : 'Non Presente'),
+                    },
+                    {
+                        header: 'Note / Rif. Documento',
+                        key: 'notes',
+                        format: 'string',
+                        width: 35,
+                        getValue: (r) => r.notes || r.orderNumber || '',
+                    },
+                    {
+                        header: 'Bonifico Fineco',
+                        key: 'finecoStatus',
+                        format: 'string',
+                        width: 22,
+                        getValue: (r) => (r.bankLineId ? 'Bonifico Riconciliato' : 'Non agganciato'),
+                    },
+                ],
+                data: filteredRows,
+                summarySums: ['amount'],
+            });
+        } catch (e) {
+            console.error('Export Excel Passivo fallito:', e);
+            alert('Export Excel Passivo fallito');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <div className="space-y-3">
             <div
@@ -426,14 +515,26 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                         Scontrini solo Contabilità (mai GdM/bacheche).
                     </p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => void load()}
-                    className="ml-auto p-2 rounded-xl hover:bg-white/50 text-inherit"
-                    title="Aggiorna"
-                >
-                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                </button>
+                <div className="ml-auto flex items-center gap-2">
+                    <button
+                        type="button"
+                        disabled={exporting || filteredRows.length === 0}
+                        onClick={() => void handleExportExcel()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D6F42] hover:bg-[#165a35] text-white text-[10px] font-bold uppercase tracking-wide transition-colors disabled:opacity-50 shadow-sm"
+                        title="Scarica Excel Sezione"
+                    >
+                        <FileSpreadsheet size={13} />
+                        {exporting ? 'Esportazione…' : 'Scarica Excel Sezione'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void load()}
+                        className="p-2 rounded-xl hover:bg-white/50 text-inherit"
+                        title="Aggiorna"
+                    >
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-1.5">

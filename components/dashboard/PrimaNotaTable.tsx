@@ -6,10 +6,11 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { FileSpreadsheet, Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate, isFinanceSeedEntryId } from '@/lib/financial/formatFinanceDate';
 import { labelSourceTypeIt } from '@/lib/financial/fiscalItalianLabels';
+import { exportToExcel } from '@/lib/financial/exportSectionExcel';
 import { applyFiscalAuthorityHierarchy } from '@/lib/financial/fiscalAuthorityDedupe';
 import type { ConsolidatedFiscalAttachment } from '@/lib/financial/fiscalAuthorityDedupe';
 import {
@@ -397,6 +398,113 @@ export default function PrimaNotaTable({ localEntries: _localEntries, searchTerm
         });
     }, [periodRows, openingBalanceCents]);
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            await exportToExcel<{ entry: PrimaNotaDisplayEntry; runningCents: number }>({
+                filename: `FloreMoria_PrimaNota_${periodKey}_${FISCAL_YEAR}`,
+                sheetName: `Prima Nota ${periodKey}`,
+                title: `Prima Nota — FloreMoria S.r.l. (${bounds.label})`,
+                subtitle: `Esportazione generata il ${new Date().toLocaleDateString('it-IT')} · Saldo Iniziale: € ${(openingBalanceCents / 100).toFixed(2)} · Saldo Finale: € ${(closingBalanceCents / 100).toFixed(2)}`,
+                columns: [
+                    {
+                        header: 'Data Contabile',
+                        key: 'date',
+                        format: 'date',
+                        width: 14,
+                        getValue: (r) => formatFinanceDate(r.entry.date),
+                    },
+                    {
+                        header: 'Causale / Descrizione',
+                        key: 'description',
+                        format: 'string',
+                        width: 45,
+                        getValue: (r) => r.entry.description,
+                    },
+                    {
+                        header: 'Controparte',
+                        key: 'counterpartyName',
+                        format: 'string',
+                        width: 25,
+                        getValue: (r) => r.entry.counterpartyName || '',
+                    },
+                    {
+                        header: 'Categoria Fiscale',
+                        key: 'category',
+                        format: 'string',
+                        width: 24,
+                        getValue: (r) => categoryLabel(r.entry.category),
+                    },
+                    {
+                        header: 'Entrata (€)',
+                        key: 'entrata',
+                        format: 'currency',
+                        width: 16,
+                        getValue: (r) => (r.entry.isEntrata && r.entry.amountCents > 0 ? r.entry.amountCents / 100 : null),
+                    },
+                    {
+                        header: 'Uscita (€)',
+                        key: 'uscita',
+                        format: 'currency',
+                        width: 16,
+                        getValue: (r) => (!r.entry.isEntrata && r.entry.amountCents > 0 ? r.entry.amountCents / 100 : null),
+                    },
+                    {
+                        header: 'Saldo Progressivo (€)',
+                        key: 'saldo',
+                        format: 'currency',
+                        width: 18,
+                        getValue: (r) => r.runningCents / 100,
+                    },
+                    {
+                        header: 'Conto Dare',
+                        key: 'dareAccount',
+                        format: 'string',
+                        width: 24,
+                        getValue: (r) => r.entry.dareAccount,
+                    },
+                    {
+                        header: 'Conto Avere',
+                        key: 'avereAccount',
+                        format: 'string',
+                        width: 24,
+                        getValue: (r) => r.entry.avereAccount,
+                    },
+                    {
+                        header: 'Origine / Fonte',
+                        key: 'sourceLabel',
+                        format: 'string',
+                        width: 20,
+                        getValue: (r) => r.entry.sourceLabel || labelSourceTypeIt(r.entry.sourceType),
+                    },
+                    {
+                        header: 'Rif. Documento / Ordine',
+                        key: 'documentRef',
+                        format: 'string',
+                        width: 22,
+                        getValue: (r) => r.entry.documentRef || r.entry.orderId || r.entry.sourceId || '',
+                    },
+                    {
+                        header: 'Stato Riconciliazione',
+                        key: 'reconciliationStatus',
+                        format: 'string',
+                        width: 20,
+                        getValue: (r) => reconciliationStatusLabel(r.entry.reconciliationStatus),
+                    },
+                ],
+                data: rowsWithRunning,
+                summarySums: ['entrata', 'uscita'],
+            });
+        } catch (e) {
+            console.error('Export Excel Prima Nota fallito:', e);
+            alert('Export Excel Prima Nota fallito');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const openDrawer = (entry: PrimaNotaDisplayEntry) => {
         setSelectedEntry(entry);
         setDrawerOpen(true);
@@ -462,15 +570,27 @@ export default function PrimaNotaTable({ localEntries: _localEntries, searchTerm
                                 );
                             })}
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => void load()}
-                            disabled={isValidating}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 disabled:opacity-60"
-                        >
-                            <RefreshCw size={12} className={isValidating ? 'animate-spin' : undefined} />
-                            Aggiorna
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                disabled={exporting || rowsWithRunning.length === 0}
+                                onClick={() => void handleExportExcel()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#1D6F42] hover:bg-[#165a35] text-white text-[11px] font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                                title="Scarica Excel Sezione"
+                            >
+                                <FileSpreadsheet size={13} />
+                                {exporting ? 'Esportazione…' : 'Scarica Excel Sezione'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void load()}
+                                disabled={isValidating}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 disabled:opacity-60"
+                            >
+                                <RefreshCw size={12} className={isValidating ? 'animate-spin' : undefined} />
+                                Aggiorna
+                            </button>
+                        </div>
                     </div>
 
                     <p className="text-[11px] text-slate-500 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2">

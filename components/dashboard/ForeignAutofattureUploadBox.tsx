@@ -10,6 +10,7 @@ import {
     Code2,
     Download,
     Eye,
+    FileSpreadsheet,
     Globe2,
     Loader2,
     Search,
@@ -18,6 +19,7 @@ import {
     WalletCards,
 } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { exportToExcel } from '@/lib/financial/exportSectionExcel';
 import {
     FINANCE_PASSIVO_CARD_CLASS,
     FINANCE_PASSIVO_TABLE_SCROLL,
@@ -277,6 +279,120 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
         },
         [fiscalYear, periodKey],
     );
+
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            await exportToExcel<AutofatturaHistoryItem>({
+                filename: `FloreMoria_Autofatture_${periodKey}_${fiscalYear}`,
+                sheetName: `Autofatture ${periodKey}`,
+                title: `Storico Autofatture Estere (TD17/TD18/TD19) — ${bounds.label}`,
+                subtitle: `Esportazione generata il ${new Date().toLocaleDateString('it-IT')} · ${filteredHistory.length} autofatture · Imponibile: € ${euro(periodTotals.imponibileCents)} · IVA: € ${euro(periodTotals.vatCents)} · Totale: € ${euro(periodTotals.totaleCents)}`,
+                columns: [
+                    {
+                        header: 'N. Documento',
+                        key: 'documentNumber',
+                        format: 'string',
+                        width: 20,
+                        getValue: (h) => h.documentNumber,
+                    },
+                    {
+                        header: 'Tipo Doc',
+                        key: 'docType',
+                        format: 'string',
+                        width: 12,
+                        getValue: (h) => h.docType,
+                    },
+                    {
+                        header: 'Fornitore Estero',
+                        key: 'vendorName',
+                        format: 'string',
+                        width: 30,
+                        getValue: (h) => h.vendorName,
+                    },
+                    {
+                        header: 'Data Autofattura',
+                        key: 'autofatturaDate',
+                        format: 'date',
+                        width: 16,
+                        getValue: (h) => formatItDate(h.autofatturaDate),
+                    },
+                    {
+                        header: 'Rif. Fattura Estera',
+                        key: 'foreignInvoiceNumber',
+                        format: 'string',
+                        width: 22,
+                        getValue: (h) => h.foreignInvoiceNumber || '—',
+                    },
+                    {
+                        header: 'Data Fattura Estera',
+                        key: 'foreignInvoiceDate',
+                        format: 'date',
+                        width: 16,
+                        getValue: (h) => formatItDate(h.foreignInvoiceDate),
+                    },
+                    {
+                        header: 'Imponibile (€)',
+                        key: 'imponibile',
+                        format: 'currency',
+                        width: 18,
+                        getValue: (h) => h.imponibileCents / 100,
+                    },
+                    {
+                        header: 'Aliquota IVA',
+                        key: 'vatRate',
+                        format: 'string',
+                        width: 14,
+                        getValue: () => '22%',
+                    },
+                    {
+                        header: 'IVA 22% (€)',
+                        key: 'vat',
+                        format: 'currency',
+                        width: 16,
+                        getValue: (h) => h.vatCents / 100,
+                    },
+                    {
+                        header: 'Totale Documento (€)',
+                        key: 'totale',
+                        format: 'currency',
+                        width: 20,
+                        getValue: (h) => h.totaleCents / 100,
+                    },
+                    {
+                        header: 'Riconciliato Fineco',
+                        key: 'reconciled',
+                        format: 'string',
+                        width: 20,
+                        getValue: (h) => (h.reconciled ? 'Sì' : 'No'),
+                    },
+                    {
+                        header: 'Origine',
+                        key: 'origin',
+                        format: 'string',
+                        width: 18,
+                        getValue: (h) => (h.origin === 'upload' ? 'Upload XML/PDF' : 'Generato XML'),
+                    },
+                    {
+                        header: 'Nome File',
+                        key: 'fileName',
+                        format: 'string',
+                        width: 35,
+                        getValue: (h) => h.fileName || '',
+                    },
+                ],
+                data: filteredHistory,
+                summarySums: ['imponibile', 'vat', 'totale'],
+            });
+        } catch (e) {
+            console.error('Export Excel Autofatture fallito:', e);
+            alert('Export Excel Autofatture fallito');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     useEffect(() => {
         setPeriodKey(readStoredPeriod());
@@ -631,25 +747,37 @@ export default function ForeignAutofattureUploadBox({ onImported }: Props) {
                                         );
                                     })}
                                 </div>
-                                <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
-                                    <span className="font-semibold">Anno</span>
-                                    <select
-                                        value={fiscalYear}
-                                        onChange={(e) => setYear(Number(e.target.value))}
-                                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold"
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                        type="button"
+                                        disabled={exporting || filteredHistory.length === 0}
+                                        onClick={() => void handleExportExcel()}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1D6F42] hover:bg-[#165a35] text-white text-[11px] font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                                        title="Scarica Excel Sezione"
                                     >
-                                        {[fiscalYear - 1, fiscalYear, fiscalYear + 1]
-                                            .filter((y, i, a) => a.indexOf(y) === i)
-                                            .concat([2025, 2026, 2027])
-                                            .filter((y, i, a) => a.indexOf(y) === i)
-                                            .sort((a, b) => a - b)
-                                            .map((y) => (
-                                                <option key={y} value={y}>
-                                                    {y}
-                                                </option>
-                                            ))}
-                                    </select>
-                                </label>
+                                        <FileSpreadsheet size={13} />
+                                        {exporting ? 'Esportazione…' : 'Scarica Excel Sezione'}
+                                    </button>
+                                    <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                                        <span className="font-semibold">Anno</span>
+                                        <select
+                                            value={fiscalYear}
+                                            onChange={(e) => setYear(Number(e.target.value))}
+                                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold"
+                                        >
+                                            {[fiscalYear - 1, fiscalYear, fiscalYear + 1]
+                                                .filter((y, i, a) => a.indexOf(y) === i)
+                                                .concat([2025, 2026, 2027])
+                                                .filter((y, i, a) => a.indexOf(y) === i)
+                                                .sort((a, b) => a - b)
+                                                .map((y) => (
+                                                    <option key={y} value={y}>
+                                                        {y}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </label>
+                                </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5">

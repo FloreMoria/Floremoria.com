@@ -242,6 +242,44 @@ export default function FinanceDashboardPage() {
         }
     };
 
+    const [syncingAll, setSyncingAll] = useState(false);
+    const [syncBanner, setSyncBanner] = useState<{ type: 'ok' | 'error'; message: string } | null>(null);
+
+    const handleFullSync = async () => {
+        setSyncingAll(true);
+        setSyncBanner(null);
+        try {
+            const [stripeRes, paypalRes] = await Promise.allSettled([
+                fetch('/api/dashboard/finance/sync/stripe', { method: 'POST' }).then((r) => r.json()),
+                fetch('/api/dashboard/finance/sync/paypal', { method: 'POST' }).then((r) => r.json()),
+            ]);
+
+            await Promise.all([loadGateways(), loadLedger()]);
+            setGatewayTableRefresh((n) => n + 1);
+
+            const details: string[] = [];
+            if (stripeRes.status === 'fulfilled' && (stripeRes.value?.ok || stripeRes.value?.movementsUpserted != null)) {
+                details.push(`Stripe: ${stripeRes.value.movementsUpserted ?? 0} movimenti`);
+            }
+            if (paypalRes.status === 'fulfilled' && (paypalRes.value?.ok || paypalRes.value?.transactionsUpserted != null)) {
+                details.push(`PayPal: ${paypalRes.value.transactionsUpserted ?? 0} tx`);
+            }
+
+            const msg = `Sincronizzazione completata con successo! ${details.length > 0 ? `(${details.join(' · ')})` : ''}`;
+            setSyncBanner({ type: 'ok', message: msg });
+            window.setTimeout(() => setSyncBanner(null), 5000);
+        } catch (err) {
+            console.error('Errore sincronizzazione completa:', err);
+            setSyncBanner({
+                type: 'error',
+                message: err instanceof Error ? err.message : 'Errore durante la sincronizzazione',
+            });
+            window.setTimeout(() => setSyncBanner(null), 6000);
+        } finally {
+            setSyncingAll(false);
+        }
+    };
+
     useEffect(() => {
         void loadGateways();
     }, []);
@@ -463,6 +501,16 @@ export default function FinanceDashboardPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
+                        disabled={exportingLedger}
+                        onClick={() => void handleExportFiscalDossier()}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D6F42] hover:bg-[#165a35] text-white rounded-xl transition-colors text-sm font-semibold shadow-sm disabled:opacity-50"
+                        title="Scarica il Dossier Fiscale Completo in formato Excel (.xlsx)"
+                    >
+                        <FileSpreadsheet size={16} />
+                        {exportingLedger ? 'Esportazione...' : 'Scarica Dossier Fiscale (.xlsx)'}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => {
                             setManualExpensePrefill(null);
                             setManualExpenseOpen(true);
@@ -474,12 +522,13 @@ export default function FinanceDashboardPage() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => void loadLedger()}
-                        disabled={loading}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-sm font-semibold"
+                        onClick={() => void handleFullSync()}
+                        disabled={syncingAll}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors text-sm font-semibold disabled:opacity-60"
+                        title="Sincronizza gateway e contabilità"
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                        Sincronizza
+                        <RefreshCw size={16} className={syncingAll ? 'animate-spin text-[#c5a880]' : ''} />
+                        {syncingAll ? 'Sincronizzazione...' : 'Sincronizza'}
                     </button>
                     <Link
                         href="/dashboard/fornitori"
@@ -489,6 +538,32 @@ export default function FinanceDashboardPage() {
                     </Link>
                 </div>
             </div>
+
+            {syncBanner && (
+                <div
+                    className={`rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-sm font-medium border ${
+                        syncBanner.type === 'ok'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                            : 'bg-rose-50 border-rose-200 text-rose-900'
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        {syncBanner.type === 'ok' ? (
+                            <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                        ) : (
+                            <AlertOctagon size={18} className="text-rose-600 shrink-0" />
+                        )}
+                        <span>{syncBanner.message}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setSyncBanner(null)}
+                        className="text-xs opacity-70 hover:opacity-100 font-bold"
+                    >
+                        Chiudi
+                    </button>
+                </div>
+            )}
 
             {/* Riquadro Fineco + dati societari */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
@@ -812,15 +887,6 @@ export default function FinanceDashboardPage() {
                                 className="w-full max-w-md px-4 py-2 rounded-xl border border-slate-200 outline-none text-sm focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all"
                             />
                             <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    disabled={exportingLedger}
-                                    onClick={() => void handleExportFiscalDossier()}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D6F42] hover:bg-[#165a35] text-white rounded-xl transition-colors text-sm font-semibold disabled:opacity-50"
-                                >
-                                    <FileSpreadsheet size={16} />
-                                    Scarica Dossier Fiscale Completo (.xlsx)
-                                </button>
                                 <button
                                     type="button"
                                     disabled={exportingLedger}

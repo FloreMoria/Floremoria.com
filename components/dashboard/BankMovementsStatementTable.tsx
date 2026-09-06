@@ -5,9 +5,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { FileSpreadsheet, Loader2, RefreshCw } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import { exportToExcel } from '@/lib/financial/exportSectionExcel';
 import {
     bankCategoriesForAmount,
     bankCategoryLabel,
@@ -177,6 +178,93 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
         });
     }, [filtered]);
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            const yearLabel = year === 'all' ? 'Tutti_gli_Anni' : String(year);
+            await exportToExcel<MovementLine & { progressiveCents?: number }>({
+                filename: `FloreMoria_EstrattoContoFineco_${yearLabel}`,
+                sheetName: 'Estratto Conto Fineco',
+                title: `Banca Fineco — Estratto Conto & Movimenti (${yearLabel})`,
+                subtitle: `Esportazione generata il ${new Date().toLocaleDateString('it-IT')} · ${filtered.length} movimenti caricati`,
+                columns: [
+                    {
+                        header: 'Data Contabile',
+                        key: 'accountingDate',
+                        format: 'date',
+                        width: 14,
+                        getValue: (l) => formatFinanceDate(l.accountingDate || l.valueDate || undefined),
+                    },
+                    {
+                        header: 'Data Valuta',
+                        key: 'valueDate',
+                        format: 'date',
+                        width: 14,
+                        getValue: (l) => formatFinanceDate(l.valueDate || l.accountingDate || undefined),
+                    },
+                    {
+                        header: 'Descrizione / Causale',
+                        key: 'description',
+                        format: 'string',
+                        width: 45,
+                        getValue: (l) => l.description,
+                    },
+                    {
+                        header: 'Categoria',
+                        key: 'matchType',
+                        format: 'string',
+                        width: 25,
+                        getValue: (l) => bankCategoryLabel(l.matchType, l.amountCents, l.description),
+                    },
+                    {
+                        header: 'Entrate (€)',
+                        key: 'entrate',
+                        format: 'currency',
+                        width: 16,
+                        getValue: (l) => (l.amountCents > 0 ? l.amountCents / 100 : null),
+                    },
+                    {
+                        header: 'Uscite (€)',
+                        key: 'uscite',
+                        format: 'currency',
+                        width: 16,
+                        getValue: (l) => (l.amountCents < 0 ? Math.abs(l.amountCents) / 100 : null),
+                    },
+                    {
+                        header: 'Saldo Progressivo (€)',
+                        key: 'saldo',
+                        format: 'currency',
+                        width: 18,
+                        getValue: (l) => (l.progressiveCents != null ? l.progressiveCents / 100 : null),
+                    },
+                    {
+                        header: 'Origine',
+                        key: 'origin',
+                        format: 'string',
+                        width: 24,
+                        getValue: (l) => originBadge(l.fileName).label,
+                    },
+                    {
+                        header: 'Rif. Ordine',
+                        key: 'matchedOrderId',
+                        format: 'string',
+                        width: 18,
+                        getValue: (l) => l.matchedOrderId || '',
+                    },
+                ],
+                data: withRunningBalance,
+                summarySums: ['entrate', 'uscite'],
+            });
+        } catch (e) {
+            console.error('Export Excel Fineco fallito:', e);
+            alert('Export Excel fallito');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const displayRows = useMemo(() => [...withRunningBalance].reverse(), [withRunningBalance]);
 
     if (loading) {
@@ -201,7 +289,7 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                     (nessun limite nascosto) · scorri per vederle tutte · clicca la categoria per
                     modificarla
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <label className="text-[11px] text-slate-500 font-semibold" htmlFor="fineco-year">
                         Anno
                     </label>
@@ -221,6 +309,16 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                             </option>
                         ))}
                     </select>
+                    <button
+                        type="button"
+                        disabled={exporting || withRunningBalance.length === 0}
+                        onClick={() => void handleExportExcel()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#1D6F42] hover:bg-[#165a35] text-white text-[11px] font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                        title="Scarica Excel Sezione"
+                    >
+                        <FileSpreadsheet size={13} />
+                        {exporting ? 'Esportazione…' : 'Scarica Excel Sezione'}
+                    </button>
                     <button
                         type="button"
                         onClick={() => void load()}

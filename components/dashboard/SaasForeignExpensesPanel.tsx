@@ -7,8 +7,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, FileUp, Loader2, Trash2, X } from 'lucide-react';
+import { Download, FileSpreadsheet, FileUp, Loader2, Trash2, X } from 'lucide-react';
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
+import { formatFinanceDate } from '@/lib/financial/formatFinanceDate';
+import { exportToExcel } from '@/lib/financial/exportSectionExcel';
 
 type SaasInvoice = {
     id: string;
@@ -148,6 +150,92 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
         await load();
     };
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportExcel = async () => {
+        setExporting(true);
+        try {
+            await exportToExcel<SaasInvoice>({
+                filename: `FloreMoria_SaaS_SpeseEstere_${zipYear}`,
+                sheetName: 'SaaS & Spese Estere',
+                title: `Gestione SaaS & Spese Estere — Anno ${zipYear}`,
+                subtitle: `Esportazione generata il ${new Date().toLocaleDateString('it-IT')} · ${invoices.length} fatture/ricevute caricate`,
+                columns: [
+                    {
+                        header: 'Data Fattura',
+                        key: 'invoiceDate',
+                        format: 'date',
+                        width: 14,
+                        getValue: (inv) => formatFinanceDate(inv.invoiceDate),
+                    },
+                    {
+                        header: 'Fornitore / Servizio',
+                        key: 'vendorName',
+                        format: 'string',
+                        width: 30,
+                        getValue: (inv) => inv.vendorName,
+                    },
+                    {
+                        header: 'Valuta',
+                        key: 'originalCurrency',
+                        format: 'string',
+                        width: 10,
+                        getValue: (inv) => inv.originalCurrency || 'EUR',
+                    },
+                    {
+                        header: 'Importo Originale',
+                        key: 'originalAmount',
+                        format: 'number',
+                        width: 18,
+                        getValue: (inv) => inv.originalAmountCents / 100,
+                    },
+                    {
+                        header: 'Controvalore (€)',
+                        key: 'eurAmount',
+                        format: 'currency',
+                        width: 18,
+                        getValue: (inv) => inv.eurAmountCents / 100,
+                    },
+                    {
+                        header: 'Paese',
+                        key: 'countryCode',
+                        format: 'string',
+                        width: 10,
+                        getValue: (inv) => inv.countryCode || '—',
+                    },
+                    {
+                        header: 'Giurisdizione',
+                        key: 'jurisdiction',
+                        format: 'string',
+                        width: 16,
+                        getValue: (inv) => inv.jurisdiction || 'EXTRA_UE',
+                    },
+                    {
+                        header: 'Autofattura TD',
+                        key: 'autofatturaType',
+                        format: 'string',
+                        width: 18,
+                        getValue: (inv) => inv.autofatturaType || 'TD17',
+                    },
+                    {
+                        header: 'File Documento',
+                        key: 'fileName',
+                        format: 'string',
+                        width: 35,
+                        getValue: (inv) => inv.fileName || '',
+                    },
+                ],
+                data: invoices,
+                summarySums: ['eurAmount'],
+            });
+        } catch (e) {
+            console.error('Export Excel SaaS fallito:', e);
+            alert('Export Excel SaaS fallito');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     if (!open || !mounted) return null;
 
     return createPortal(
@@ -182,13 +270,25 @@ export default function SaasForeignExpensesPanel({ open, onClose, onTotalsChange
                             Fatture passive estere, autofattura TD17/TD18/TD19 ed export ZIP per il commercialista.
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
-                    >
-                        <X size={18} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            disabled={exporting || invoices.length === 0}
+                            onClick={() => void handleExportExcel()}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1D6F42] hover:bg-[#165a35] text-white text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
+                            title="Scarica Excel Sezione"
+                        >
+                            <FileSpreadsheet size={14} />
+                            {exporting ? 'Esportazione…' : 'Scarica Excel Sezione'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-6">

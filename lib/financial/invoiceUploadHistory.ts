@@ -7,6 +7,10 @@ import * as fs from 'fs';
 import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { parseFatturaPaDetail } from '@/lib/financial/parseFatturaPaXml';
+import {
+    buildCanonicalDocumentKey,
+    canonicalDocumentKeysMatch,
+} from '@/lib/financial/canonicalDocumentKey';
 
 export type InvoiceUploadChannel = 'SDI_XML' | 'SDI_XLSX';
 
@@ -446,16 +450,48 @@ async function reverseLedgerForExpense(row: {
     metadataJson: unknown;
 }) {
     const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    const invoiceNumber =
+        typeof meta.invoiceNumber === 'string'
+            ? meta.invoiceNumber
+            : typeof meta.documentNumber === 'string'
+              ? meta.documentNumber
+              : null;
+    const canonical =
+        typeof meta.dedupeKey === 'string'
+            ? meta.dedupeKey
+            : buildCanonicalDocumentKey({
+                  recipientVat:
+                      typeof meta.cessionarioVat === 'string' ? meta.cessionarioVat : null,
+                  supplierVat:
+                      typeof meta.vendorVat === 'string'
+                          ? meta.vendorVat
+                          : typeof meta.cedenteVat === 'string'
+                            ? meta.cedenteVat
+                            : null,
+                  docType:
+                      typeof meta.tipoDocumento === 'string'
+                          ? meta.tipoDocumento
+                          : typeof meta.autofatturaType === 'string'
+                            ? meta.autofatturaType
+                            : null,
+                  docNumber: invoiceNumber,
+                  docDate:
+                      typeof meta.invoiceDate === 'string'
+                          ? meta.invoiceDate
+                          : typeof meta.documentDate === 'string'
+                            ? meta.documentDate
+                            : null,
+              });
     try {
         await prisma.financialLedgerEntry.updateMany({
             where: {
                 OR: [
                     { sourceId: row.id, sourceType: 'MANUAL_EXPENSE' },
                     { sourceKey: `MANUAL_EXPENSE:${row.id}` },
-                    ...(typeof meta.dedupeKey === 'string'
+                    ...(canonical
                         ? [
                               {
-                                  sourceKey: `SDI_ACTIVE:${meta.dedupeKey}`.slice(0, 180),
+                                  sourceKey: `SDI_ACTIVE:${canonical}`.slice(0, 180),
                               },
                           ]
                         : []),
@@ -467,6 +503,11 @@ async function reverseLedgerForExpense(row: {
     } catch {
         /* ignore */
     }
+}
+
+/** Espone match canonico per consumer (upload history / cleanup). */
+export function passiveDocumentKeysMatch(a: string, b: string): boolean {
+    return canonicalDocumentKeysMatch(a, b);
 }
 
 async function deleteExpenseBlob(row: {

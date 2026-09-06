@@ -6,7 +6,7 @@
 import Papa from 'papaparse';
 import type { ParseFatturaBatchResult, ParsedFatturaPa } from '@/lib/financial/parseFatturaPaXml';
 import {
-    buildInvoiceDedupeKey,
+    buildCanonicalDocumentKey,
     normalizeVendorVat,
 } from '@/lib/financial/invoiceDedupe';
 import { detectForeignAutofattura } from '@/lib/financial/foreignAutofattura';
@@ -241,7 +241,13 @@ function rowToInvoice(
         causale: `${label} n. ${invoiceNumber} — ${vendorName}`.slice(0, 2000),
         lineDescriptions: [],
         sourceFileName: `${sourceFileName}#${idx + 1}`,
-        dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        dedupeKey: buildCanonicalDocumentKey({
+            supplierCountry: countryRaw || null,
+            supplierVat: vendorVat,
+            docType: tipoRaw || (isCreditNote ? 'TD04' : 'TD01'),
+            docNumber: invoiceNumber,
+            docDate: invoiceDate,
+        }),
         docKind,
         relatedInvoiceNumber,
         tipoDocumento: tipoRaw || null,

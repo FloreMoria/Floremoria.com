@@ -341,7 +341,12 @@ export async function deleteBankStatement(id: string) {
     const doc = await prisma.bankStatementDocument.findUnique({ where: { id } });
     if (!doc) return false;
     await deleteStoredFile(doc.blobPath, doc.storageKind, doc.blobUrl);
-    await prisma.bankStatementDocument.delete({ where: { id } });
+    // Restrict su FK: eliminare esplicitamente le righe prima del documento
+    // (niente cascade distruttivo implicito verso movimenti / riferimenti).
+    await prisma.$transaction([
+        prisma.bankStatementLine.deleteMany({ where: { documentId: id } }),
+        prisma.bankStatementDocument.delete({ where: { id } }),
+    ]);
     return true;
 }
 

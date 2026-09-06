@@ -8,7 +8,7 @@
 import JSZip from 'jszip';
 import Papa from 'papaparse';
 import {
-    buildInvoiceDedupeKey,
+    buildCanonicalDocumentKey,
     normalizeVendorVat,
 } from '@/lib/financial/invoiceDedupe';
 import { detectForeignAutofattura } from '@/lib/financial/foreignAutofattura';
@@ -431,7 +431,14 @@ export function parseFatturaPaXml(xmlRaw: string, sourceFileName: string): Parse
         causale: descriptionParts.join(' — ').slice(0, 2000),
         lineDescriptions,
         sourceFileName,
-        dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+        dedupeKey: buildCanonicalDocumentKey({
+            recipientVat: cessionarioVat,
+            supplierCountry: idPaese,
+            supplierVat: vendorVat,
+            docType: tipoDocumento || (isCreditNote ? 'TD04' : 'TD01'),
+            docNumber: invoiceNumber,
+            docDate: invoiceDate,
+        }),
         docKind,
         relatedInvoiceNumber,
         tipoDocumento: tipoDocumento || null,
@@ -613,7 +620,12 @@ export function parseYouDooxCsv(buffer: Buffer): ParseFatturaBatchResult {
                 causale: `${label} n. ${invoiceNumber} — ${causale}`.slice(0, 2000),
                 lineDescriptions: [causale],
                 sourceFileName: `csv-row-${idx + 1}`,
-                dedupeKey: buildInvoiceDedupeKey(vendorVat, invoiceNumber, invoiceDate),
+                dedupeKey: buildCanonicalDocumentKey({
+                    supplierVat: vatNorm,
+                    docType: tipoRaw || (sign < 0 ? 'TD04' : 'TD01'),
+                    docNumber: invoiceNumber,
+                    docDate: invoiceDate,
+                }),
                 docKind,
                 relatedInvoiceNumber,
                 tipoDocumento: tipoRaw || null,

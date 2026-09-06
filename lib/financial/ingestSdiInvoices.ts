@@ -14,7 +14,10 @@ import {
     parseInvoiceUpload,
     type ParsedFatturaPa,
 } from '@/lib/financial/parseFatturaPaXml';
-import { dedupeKeysMatch } from '@/lib/financial/invoiceDedupe';
+import {
+    buildCanonicalDocumentKey,
+    dedupeKeysMatch,
+} from '@/lib/financial/invoiceDedupe';
 import type { Prisma } from '@prisma/client';
 import {
     FOREIGN_AUTOFATTURA_SOURCE,
@@ -209,6 +212,13 @@ function buildInvoiceMetadata(
               ? FOREIGN_AUTOFATTURA_SOURCE
               : channel;
     const isForeign = source === FOREIGN_AUTOFATTURA_SOURCE;
+    const canonicalKey = buildCanonicalDocumentKey({
+        recipientVat: inv.cessionarioVat || null,
+        supplierVat: inv.vendorVat || inv.cedenteVat || null,
+        docType: inv.tipoDocumento || (inv.docKind === 'NOTA_CREDITO' ? 'TD04' : 'TD01'),
+        docNumber: inv.invoiceNumber,
+        docDate: inv.invoiceDate,
+    });
     return {
         source,
         ingestChannel: channel,
@@ -224,7 +234,8 @@ function buildInvoiceMetadata(
               : null,
         tipoDocumento: inv.tipoDocumento || null,
         autofatturaType: inv.autofatturaType || null,
-        dedupeKey: inv.dedupeKey,
+        /** Chiave canonica Fase 1 (recipient|supplier|docType|number|date). */
+        dedupeKey: canonicalKey || inv.dedupeKey,
         vendorVat: inv.vendorVat,
         cedenteVat: inv.cedenteVat || inv.vendorVat,
         cessionarioVat: inv.cessionarioVat || null,

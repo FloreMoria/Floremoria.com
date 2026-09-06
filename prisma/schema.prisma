@@ -937,7 +937,7 @@ model BankStatementLine {
   fingerprint       String?  @unique @map("fingerprint") @db.VarChar(64)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
-  document          BankStatementDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document          BankStatementDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
 
   @@index([documentId, lineIndex])
   @@index([matchStatus])

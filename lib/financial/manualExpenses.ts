@@ -8,7 +8,10 @@ import { del } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback } from '@/lib/blob/storeAccess';
 import { addAccountingEntries } from '@/lib/financial/ledgerStore';
-import { LEDGER_BANK_ACCOUNT } from '@/lib/financial/companyBankDetails';
+import {
+    FLOREMORIA_LEGAL_ENTITY,
+    LEDGER_BANK_ACCOUNT,
+} from '@/lib/financial/companyBankDetails';
 import type { AccountingEntry } from '@/lib/financial/types';
 import {
     FOREIGN_AUTOFATTURA_SOURCE,
@@ -16,6 +19,11 @@ import {
 } from '@/lib/financial/foreignAutofattura';
 import { categorizeManualExpense } from '@/lib/financial/historicalLedgerTypes';
 import { upsertLedgerEntry } from '@/lib/financial/historicalLedgerSync';
+import {
+    buildPassiveCanonicalKey,
+    findManualExpenseByCanonicalKey,
+    isExcludedFromFiscalTotals,
+} from '@/lib/financial/passiveDocumentIdentity';
 import type { Prisma } from '@prisma/client';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'manual-expenses');
@@ -88,8 +96,12 @@ export async function listManualExpenses(limit = 100) {
 }
 
 export async function sumManualExpensesCents(): Promise<number> {
-    const agg = await prisma.manualFinanceExpense.aggregate({ _sum: { totalCents: true } });
-    return agg._sum.totalCents || 0;
+    const rows = await prisma.manualFinanceExpense.findMany({
+        select: { totalCents: true, verificationStatus: true },
+    });
+    return rows
+        .filter((r) => !isExcludedFromFiscalTotals(r.verificationStatus))
+        .reduce((s, r) => s + (r.totalCents || 0), 0);
 }
 
 export async function createManualExpense(input: {
@@ -105,6 +117,8 @@ export async function createManualExpense(input: {
     metadataJson?: Record<string, unknown> | null;
     matchedStatementLineId?: string | null;
     reconciled?: boolean;
+    vendorVat?: string | null;
+    invoiceNumber?: string | null;
 }) {
     const expenseDate = new Date(`${input.expenseDate.slice(0, 10)}T12:00:00.000Z`);
     if (Number.isNaN(expenseDate.getTime())) throw new Error('Data non valida');
@@ -116,6 +130,34 @@ export async function createManualExpense(input: {
     const vatCents =
         vatRate > 0 ? Math.round(totalCents - totalCents / (1 + vatRate / 100)) : 0;
     const netCents = totalCents - vatCents;
+
+    const meta = (input.metadataJson || {}) as Record<string, unknown>;
+    const supplierVat =
+        input.vendorVat ||
+        (typeof meta.vendorVat === 'string' ? meta.vendorVat : null) ||
+        (typeof meta.cedenteVat === 'string' ? meta.cedenteVat : null);
+    const docNumber =
+        input.invoiceNumber ||
+        (typeof meta.invoiceNumber === 'string' ? meta.invoiceNumber : null) ||
+        (typeof meta.documentNumber === 'string' ? meta.documentNumber : null);
+    const { key: canonicalDocKey, verificationStatus, storeableCanonicalDocKey } =
+        buildPassiveCanonicalKey({
+        recipientVat: FLOREMORIA_LEGAL_ENTITY.vatNumber,
+        supplierVat,
+        docType: input.docType === 'FATTURA' ? 'TD01' : input.docType,
+        docNumber,
+        docDate: input.expenseDate.slice(0, 10),
+    });
+
+    if (storeableCanonicalDocKey) {
+        const existing = await findManualExpenseByCanonicalKey(storeableCanonicalDocKey);
+        if (existing) {
+            console.warn(
+                `[manual-expenses] IDEMPOTENT SKIP key=${storeableCanonicalDocKey} existing=${existing.id}`
+            );
+            return existing;
+        }
+    }
 
     let stored: {
         blobPath: string | null;
@@ -149,35 +191,60 @@ export async function createManualExpense(input: {
         };
     }
 
-    const row = await prisma.manualFinanceExpense.create({
-        data: {
-            expenseDate,
-            docType: input.docType,
-            vendorName: input.vendorName.trim(),
-            description: input.description.trim(),
-            totalCents,
-            vatRate,
-            vatCents,
-            netCents,
-            fileName: stored.fileName,
-            contentType: stored.contentType,
-            sizeBytes: stored.sizeBytes,
-            blobPath: stored.blobPath,
-            blobUrl: stored.blobUrl,
-            storageKind: stored.storageKind,
-            periodKey: periodKeyFromDate(expenseDate),
-            notes: input.notes?.trim() || null,
-            metadataJson: (input.metadataJson as Prisma.InputJsonValue | undefined) ?? undefined,
-            matchedStatementLineId: input.matchedStatementLineId ?? null,
-            reconciled: Boolean(input.reconciled),
-        },
-    });
+    const mergedMeta: Record<string, unknown> = {
+        ...meta,
+        dedupeKey: canonicalDocKey,
+        vendorVat: supplierVat,
+        invoiceNumber: docNumber,
+    };
 
-    const meta = (input.metadataJson || {}) as Record<string, unknown>;
+    let row;
+    try {
+        row = await prisma.manualFinanceExpense.create({
+            data: {
+                expenseDate,
+                docType: input.docType,
+                vendorName: input.vendorName.trim(),
+                description: input.description.trim(),
+                totalCents,
+                vatRate,
+                vatCents,
+                netCents,
+                fileName: stored.fileName,
+                contentType: stored.contentType,
+                sizeBytes: stored.sizeBytes,
+                blobPath: stored.blobPath,
+                blobUrl: stored.blobUrl,
+                storageKind: stored.storageKind,
+                periodKey: periodKeyFromDate(expenseDate),
+                notes: input.notes?.trim() || null,
+                metadataJson: mergedMeta as Prisma.InputJsonValue,
+                matchedStatementLineId: input.matchedStatementLineId ?? null,
+                reconciled: Boolean(input.reconciled),
+                canonicalDocKey: storeableCanonicalDocKey,
+                verificationStatus,
+            },
+        });
+    } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === 'P2002' && storeableCanonicalDocKey) {
+            const raced = await findManualExpenseByCanonicalKey(storeableCanonicalDocKey);
+            if (raced) return raced;
+        }
+        throw err;
+    }
+
+    if (verificationStatus === 'QUARANTINE') {
+        return {
+            ...row,
+            blobUrl: manualExpenseAttachmentUrl(row),
+        };
+    }
+
     const category = categorizeManualExpense({
         vendorName: input.vendorName,
         description: input.description,
-        metadata: meta,
+        metadata: mergedMeta,
     });
 
     const dareAccount =
@@ -197,15 +264,16 @@ export async function createManualExpense(input: {
         amountCents: totalCents,
         vatAmountCents: vatCents,
         isForeignService: dareAccount.includes('SaaS'),
-        invoiceReference: row.id.slice(-8).toUpperCase(),
+        invoiceReference: docNumber || row.id.slice(-8).toUpperCase(),
         status: 'CONFIRMED',
     };
     addAccountingEntries([entry]);
 
     const attachmentUrl = manualExpenseAttachmentUrl(row);
-    const orderId = typeof meta.orderId === 'string' ? meta.orderId : null;
-    const partnerId = typeof meta.partnerId === 'string' ? meta.partnerId : null;
-    const orderNumber = typeof meta.orderNumber === 'string' ? meta.orderNumber : null;
+    const orderId = typeof mergedMeta.orderId === 'string' ? mergedMeta.orderId : null;
+    const partnerId = typeof mergedMeta.partnerId === 'string' ? mergedMeta.partnerId : null;
+    const orderNumber =
+        typeof mergedMeta.orderNumber === 'string' ? mergedMeta.orderNumber : null;
 
     try {
         await upsertLedgerEntry({
@@ -217,13 +285,13 @@ export async function createManualExpense(input: {
             accountingDate: expenseDate,
             description: entry.description,
             counterpartyName: input.vendorName.trim(),
-            counterpartyVat: typeof meta.vendorVat === 'string' ? meta.vendorVat : null,
+            counterpartyVat: supplierVat,
             netCents: -Math.abs(netCents),
             vatRate,
             vatCents: -Math.abs(vatCents),
             totalCents: -Math.abs(totalCents),
             reconciliationStatus: row.reconciled ? 'MATCHED' : 'UNMATCHED',
-            documentRef: orderNumber || row.fileName || row.id,
+            documentRef: orderNumber || docNumber || row.fileName || row.id,
             attachmentUrl,
             attachmentPath: row.blobPath,
             attachmentKind: row.contentType?.includes('pdf')
@@ -236,14 +304,14 @@ export async function createManualExpense(input: {
             partnerId,
             metadataJson: {
                 docType: row.docType,
-                source: meta.source,
+                source: mergedMeta.source,
                 periodKey: row.periodKey,
                 dareAccount,
                 avereAccount: LEDGER_BANK_ACCOUNT,
+                dedupeKey: canonicalDocKey,
             },
         });
     } catch (err) {
-        // Spesa già persistita: non fare rollback silenzioso — log + prosegui con URL allegato
         console.error('[manual-expenses] sync Prima Nota fallito (spesa comunque salvata)', {
             expenseId: row.id,
             err,
@@ -252,7 +320,6 @@ export async function createManualExpense(input: {
 
     return {
         ...row,
-        // Sempre un URL risolvibile (Blob pubblico o proxy autenticato)
         blobUrl: attachmentUrl,
     };
 }

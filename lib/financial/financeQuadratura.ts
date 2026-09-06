@@ -9,6 +9,7 @@
 import prisma from '@/lib/prisma';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
 import { countFloristWaitingDocuments } from '@/lib/financial/floristCompensationRegister';
+import { ACCOUNT_DA_CLASSIFICARE } from '@/lib/financial/chartOfAccounts';
 
 export type FinanceQuadratura = {
     /** Saldo reale (manuale Fineco) in centesimi; null se non impostato. */
@@ -29,7 +30,22 @@ export type FinanceQuadratura = {
     unmatchedTotal: number;
     unmatchedBankLines: number;
     missingDocuments: number;
+    /** Saldo conto 17900 Partite da classificare (centesimi). 0 = ok. */
+    daClassificareCents: number;
+    daClassificareAccount: string;
 };
+
+/** Somma assoluta delle partite ancora in DA_CLASSIFICARE (attive). */
+async function sumDaClassificareCents(): Promise<number> {
+    const agg = await prisma.financialLedgerEntry.aggregate({
+        where: {
+            reversedAt: null,
+            category: 'DA_CLASSIFICARE',
+        },
+        _sum: { totalCents: true },
+    });
+    return Math.abs(agg._sum.totalCents || 0);
+}
 
 /**
  * Aggrega differenza saldo, movimenti senza match e documenti mancanti.
@@ -39,7 +55,8 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
     const yearStart = new Date(Date.UTC(year, 0, 1));
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
 
-    const [manual, unmatchedBank, floristWaiting, docs, bankSumAgg] = await Promise.all([
+    const [manual, unmatchedBank, floristWaiting, docs, bankSumAgg, daClassificareCents] =
+        await Promise.all([
         getFinecoManualBalance(),
         prisma.bankStatementLine.count({
             where: { matchStatus: { not: 'MATCHED' } },
@@ -83,6 +100,7 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
             },
             _sum: { amountCents: true },
         }),
+        sumDaClassificareCents(),
     ]);
 
     const movementsSumCents = bankSumAgg._sum.amountCents || 0;
@@ -171,5 +189,7 @@ export async function computeFinanceQuadratura(): Promise<FinanceQuadratura> {
         unmatchedBankLines: unmatchedBank,
         unmatchedTotal: unmatchedBank,
         missingDocuments: floristWaiting,
+        daClassificareCents,
+        daClassificareAccount: ACCOUNT_DA_CLASSIFICARE,
     };
 }

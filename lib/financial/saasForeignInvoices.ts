@@ -1,5 +1,6 @@
 /**
  * Archivio fatture SaaS / estere + storage Blob/locale.
+ * Fase 3: chiave canonica + quarantena identità deboli + skip idempotente.
  */
 
 import * as fs from 'fs';
@@ -8,6 +9,12 @@ import { del } from '@vercel/blob';
 import JSZip from 'jszip';
 import prisma from '@/lib/prisma';
 import { putBlobWithAccessFallback, getBlobWithAccessFallback } from '@/lib/blob/storeAccess';
+import { FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
+import {
+    buildPassiveCanonicalKey,
+    findSaasInvoiceByCanonicalKey,
+    isExcludedFromFiscalTotals,
+} from '@/lib/financial/passiveDocumentIdentity';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'saas-invoices');
 const BLOB_PREFIX = 'floremoria-finance/saas-invoices';
@@ -97,9 +104,14 @@ export async function listSaasForeignInvoices(periodKey?: string) {
     });
 }
 
+/** Totali fiscali: esclude QUARANTINE / REJECTED (NULL legacy incluso). */
 export async function sumSaasForeignEurCents(): Promise<number> {
-    const agg = await prisma.saasForeignInvoice.aggregate({ _sum: { eurAmountCents: true } });
-    return agg._sum.eurAmountCents || 0;
+    const rows = await prisma.saasForeignInvoice.findMany({
+        select: { eurAmountCents: true, verificationStatus: true },
+    });
+    return rows
+        .filter((r) => !isExcludedFromFiscalTotals(r.verificationStatus))
+        .reduce((s, r) => s + (r.eurAmountCents || 0), 0);
 }
 
 export async function uploadSaasForeignInvoice(input: {
@@ -115,32 +127,94 @@ export async function uploadSaasForeignInvoice(input: {
     jurisdiction: 'UE' | 'EXTRA_UE';
     autofatturaType: 'NONE' | 'TD17' | 'TD18' | 'TD19';
     notes?: string | null;
+    vendorVat?: string | null;
+    invoiceNumber?: string | null;
 }) {
     const invoiceDate = new Date(`${input.invoiceDate.slice(0, 10)}T12:00:00.000Z`);
     if (Number.isNaN(invoiceDate.getTime())) {
         throw new Error('Data fattura non valida');
     }
-    const stored = await storeFile(input.buffer, input.fileName, input.contentType);
-    return prisma.saasForeignInvoice.create({
-        data: {
-            invoiceDate,
-            vendorName: input.vendorName.trim(),
-            originalCurrency: (input.originalCurrency || 'EUR').toUpperCase().slice(0, 8),
-            originalAmountCents: Math.round(input.originalAmountCents),
-            eurAmountCents: Math.round(input.eurAmountCents),
-            countryCode: input.countryCode?.trim().toUpperCase() || null,
-            jurisdiction: input.jurisdiction,
-            autofatturaType: input.autofatturaType,
-            fileName: input.fileName,
-            contentType: input.contentType || 'application/octet-stream',
-            sizeBytes: input.buffer.byteLength,
-            blobPath: stored.blobPath,
-            blobUrl: stored.blobUrl,
-            storageKind: stored.storageKind,
-            periodKey: periodKeyFromDate(invoiceDate),
-            notes: input.notes?.trim() || null,
-        },
+
+    const docType =
+        input.autofatturaType && input.autofatturaType !== 'NONE'
+            ? input.autofatturaType
+            : 'TD01';
+    const { key: canonicalDocKey, verificationStatus, storeableCanonicalDocKey } =
+        buildPassiveCanonicalKey({
+        recipientVat: FLOREMORIA_LEGAL_ENTITY.vatNumber,
+        supplierVat: input.vendorVat || null,
+        supplierCountry: input.countryCode || null,
+        docType,
+        docNumber: input.invoiceNumber || null,
+        docDate: input.invoiceDate.slice(0, 10),
     });
+
+    if (storeableCanonicalDocKey) {
+        const existing = await findSaasInvoiceByCanonicalKey(storeableCanonicalDocKey);
+        if (existing) {
+            console.warn(
+                `[saas-invoices] IDEMPOTENT SKIP key=${storeableCanonicalDocKey} existing=${existing.id}`
+            );
+            if (!existing.blobPath && input.buffer.byteLength > 0) {
+                const stored = await storeFile(input.buffer, input.fileName, input.contentType);
+                return prisma.saasForeignInvoice.update({
+                    where: { id: existing.id },
+                    data: {
+                        blobPath: stored.blobPath,
+                        blobUrl: stored.blobUrl,
+                        storageKind: stored.storageKind,
+                        fileName: input.fileName,
+                        contentType: input.contentType || 'application/octet-stream',
+                        sizeBytes: input.buffer.byteLength,
+                    },
+                });
+            }
+            return existing;
+        }
+    }
+
+    const stored = await storeFile(input.buffer, input.fileName, input.contentType);
+    try {
+        return await prisma.saasForeignInvoice.create({
+            data: {
+                invoiceDate,
+                vendorName: input.vendorName.trim(),
+                originalCurrency: (input.originalCurrency || 'EUR').toUpperCase().slice(0, 8),
+                originalAmountCents: Math.round(input.originalAmountCents),
+                eurAmountCents: Math.round(input.eurAmountCents),
+                countryCode: input.countryCode?.trim().toUpperCase() || null,
+                jurisdiction: input.jurisdiction,
+                autofatturaType: input.autofatturaType,
+                fileName: input.fileName,
+                contentType: input.contentType || 'application/octet-stream',
+                sizeBytes: input.buffer.byteLength,
+                blobPath: stored.blobPath,
+                blobUrl: stored.blobUrl,
+                storageKind: stored.storageKind,
+                periodKey: periodKeyFromDate(invoiceDate),
+                notes: input.notes?.trim() || null,
+                canonicalDocKey: storeableCanonicalDocKey,
+                verificationStatus,
+                metadataJson: {
+                    dedupeKey: canonicalDocKey,
+                    vendorVat: input.vendorVat || null,
+                    invoiceNumber: input.invoiceNumber || null,
+                },
+            },
+        });
+    } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === 'P2002' && storeableCanonicalDocKey) {
+            const raced = await findSaasInvoiceByCanonicalKey(storeableCanonicalDocKey);
+            if (raced) {
+                console.warn(
+                    `[saas-invoices] IDEMPOTENT SKIP race key=${canonicalDocKey} existing=${raced.id}`
+                );
+                return raced;
+            }
+        }
+        throw err;
+    }
 }
 
 export async function deleteSaasForeignInvoice(id: string) {
@@ -178,7 +252,7 @@ export async function buildSaasInvoicesZip(year: number, month: number): Promise
 
     const zip = new JSZip();
     const indexLines = [
-        'invoiceDate;vendor;currency;originalCents;eurCents;jurisdiction;autofattura;file',
+        'invoiceDate;vendor;currency;originalCents;eurCents;jurisdiction;autofattura;verification;file',
     ];
 
     for (const row of rows) {
@@ -196,6 +270,7 @@ export async function buildSaasInvoicesZip(year: number, month: number): Promise
                 row.eurAmountCents,
                 row.jurisdiction,
                 row.autofatturaType,
+                row.verificationStatus || 'LEGACY',
                 entryName,
             ].join(';')
         );

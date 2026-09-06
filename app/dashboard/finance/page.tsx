@@ -602,8 +602,8 @@ export default function FinanceDashboardPage() {
                 </div>
             </div>
 
-            {/* Fascia di quadratura — 3 controlli */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Fascia di quadratura — 3 controlli + 17900 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         Differenza Saldo Banca
@@ -691,6 +691,36 @@ export default function FinanceDashboardPage() {
                     </p>
                     <span className="text-[10px] text-[#c5a880] font-semibold">Apri tab Passivo →</span>
                 </button>
+
+                <div
+                    className={`rounded-2xl border p-4 shadow-sm space-y-2 ${
+                        (quadratura?.daClassificareCents ?? 0) !== 0
+                            ? 'border-amber-300 bg-amber-50/80'
+                            : 'border-slate-200 bg-white'
+                    }`}
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <AlertOctagon size={12} />
+                        17900 Da classificare
+                    </span>
+                    {(quadratura?.daClassificareCents ?? 0) !== 0 ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-sm font-bold">
+                            <AlertOctagon size={16} />
+                            {formatEuroCents(quadratura?.daClassificareCents ?? 0)}
+                        </div>
+                    ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold">
+                            <CheckCircle2 size={16} />
+                            0,00 €
+                        </div>
+                    )}
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                        {quadratura?.daClassificareAccount || '17900 - Partite da classificare'}
+                        {(quadratura?.daClassificareCents ?? 0) !== 0
+                            ? ' — partite aperte senza payout id'
+                            : ' — saldo azzerato'}
+                    </p>
+                </div>
             </div>
 
             <SaasForeignExpensesPanel

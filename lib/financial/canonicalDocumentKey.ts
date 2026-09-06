@@ -87,6 +87,35 @@ export function buildCanonicalDocumentKey(input: CanonicalDocumentKeyInput): str
     return `${recipient}|${supplier}|${docType}|${docNumber}|${docDate}`;
 }
 
+export type DocumentVerificationStatus = 'CERTIFIED' | 'QUARANTINE' | 'REJECTED';
+
+/**
+ * Chiave “forte” = P.IVA fornitore presente (non NOVAT) + numero documento + data.
+ * Solo CF / NOVAT / NONUM / NODATE → quarantena.
+ */
+export function isStrongCanonicalDocumentKey(key: string | null | undefined): boolean {
+    if (!key) return false;
+    const parts = key.split('|');
+    if (parts.length < 5) return false;
+    const supplier = parts[1] || '';
+    const docNumber = parts[3] || '';
+    const docDate = parts[4] || '';
+    if (!supplier || supplier === 'NOVAT') return false;
+    // Solo codice fiscale italiano (16 alfanumerici) senza P.IVA → debole
+    if (/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/i.test(supplier.replace(/^IT/, ''))) {
+        return false;
+    }
+    if (!docNumber || docNumber === 'NONUM') return false;
+    if (!docDate || docDate === 'NODATE') return false;
+    return true;
+}
+
+export function resolveVerificationStatusFromKey(
+    key: string | null | undefined
+): DocumentVerificationStatus {
+    return isStrongCanonicalDocumentKey(key) ? 'CERTIFIED' : 'QUARANTINE';
+}
+
 /**
  * Compatibilità chiavi legacy a 3 segmenti (VAT|NUM|DATE) e nuove a 5.
  * Match se stesso fornitore + numero + data (tipo documento soft se assente da un lato).

@@ -968,12 +968,17 @@ model SaasForeignInvoice {
   periodKey             String   @map("period_key") @db.VarChar(7)
   notes                 String?  @db.Text
   metadataJson          Json?    @map("metadata_json")
+  /** Chiave canonica documento (nullable in transizione Fase 3). */
+  canonicalDocKey       String?  @unique @map("canonical_doc_key") @db.VarChar(220)
+  /** CERTIFIED | QUARANTINE | REJECTED — NULL = legacy (trattato come CERTIFIED nei totali). */
+  verificationStatus    String?  @map("verification_status") @db.VarChar(16)
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@index([periodKey])
   @@index([invoiceDate])
   @@index([vendorName])
+  @@index([verificationStatus])
   @@map("saas_foreign_invoices")
 }
 
@@ -1000,6 +1005,10 @@ model ManualFinanceExpense {
   matchedStatementLineId  String?  @map("matched_statement_line_id")
   notes                   String?  @db.Text
   metadataJson            Json?    @map("metadata_json")
+  /** Chiave canonica documento (nullable in transizione Fase 3). */
+  canonicalDocKey         String?  @unique @map("canonical_doc_key") @db.VarChar(220)
+  /** CERTIFIED | QUARANTINE | REJECTED — NULL = legacy (incluso nei totali). */
+  verificationStatus      String?  @map("verification_status") @db.VarChar(16)
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -1007,6 +1016,7 @@ model ManualFinanceExpense {
   @@index([expenseDate])
   @@index([vendorName])
   @@index([reconciled])
+  @@index([verificationStatus])
   @@map("manual_finance_expenses")
 }
 

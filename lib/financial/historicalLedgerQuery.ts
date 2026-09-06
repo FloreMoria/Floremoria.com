@@ -197,6 +197,29 @@ export async function computeHistoricalPnl(opts: {
     const withoutPoseRevenue = cleaned.filter((r) => !isPrepaidPoseRevenueEntry(r, poseRefs));
     const usable = applyFiscalAuthorityHierarchy(withoutPoseRevenue);
 
+    // Fase 3: escludi ledger collegati a spese in QUARANTINE/REJECTED
+    const expenseIds = [
+        ...new Set(
+            usable
+                .filter((r) => r.sourceType === 'MANUAL_EXPENSE' && r.sourceId)
+                .map((r) => r.sourceId as string)
+        ),
+    ];
+    const quarantinedIds = new Set<string>();
+    if (expenseIds.length > 0) {
+        const quarantined = await prisma.manualFinanceExpense.findMany({
+            where: {
+                id: { in: expenseIds },
+                verificationStatus: { in: ['QUARANTINE', 'REJECTED'] },
+            },
+            select: { id: true },
+        });
+        for (const q of quarantined) quarantinedIds.add(q.id);
+    }
+    const fiscalUsable = usable.filter(
+        (r) => !(r.sourceType === 'MANUAL_EXPENSE' && r.sourceId && quarantinedIds.has(r.sourceId))
+    );
+
     let ricaviLordiCents = 0;
     let ricaviNettiCents = 0;
     let ivaDebitoCents = 0;
@@ -208,7 +231,7 @@ export async function computeHistoricalPnl(opts: {
     let ivaCreditoCents = 0;
     let cashGatewayTransferCents = 0;
 
-    for (const r of usable) {
+    for (const r of fiscalUsable) {
         // Partite di giro: cassa sì, ricavi/costi operativi no.
         if (isInternalTransferCategory(r.category)) {
             cashGatewayTransferCents += Math.abs(r.totalCents);

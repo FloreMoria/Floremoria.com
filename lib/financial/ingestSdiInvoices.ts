@@ -18,6 +18,10 @@ import {
     buildCanonicalDocumentKey,
     dedupeKeysMatch,
 } from '@/lib/financial/invoiceDedupe';
+import {
+    findManualExpenseByCanonicalKey,
+    buildPassiveCanonicalKey,
+} from '@/lib/financial/passiveDocumentIdentity';
 import type { Prisma } from '@prisma/client';
 import {
     FOREIGN_AUTOFATTURA_SOURCE,
@@ -100,6 +104,9 @@ async function storeArchive(
 }
 
 async function findExistingByDedupeKey(dedupeKey: string) {
+    const byCol = await findManualExpenseByCanonicalKey(dedupeKey);
+    if (byCol) return byCol;
+
     // Preferenza: filtro JSON Prisma (Postgres) — match esatto
     try {
         const hit = await prisma.manualFinanceExpense.findFirst({
@@ -501,41 +508,95 @@ async function persistInvoice(
 
     const counterpartyMatch = await findMatchingCounterparty(inv.vendorVat);
 
-    const row = await prisma.manualFinanceExpense.create({
-        data: {
-            expenseDate,
-            docType: inv.docKind,
-            vendorName: counterpartyMatch.matchedCounterpartyName || inv.vendorName,
-            description:
-                inv.causale ||
-                `${
-                    role === 'ACTIVE'
-                        ? 'Fattura attiva'
-                        : inv.isForeignAutofattura
-                          ? `Autofattura ${inv.autofatturaType || 'TD17'}`
-                          : inv.docKind === 'NOTA_CREDITO'
-                            ? 'Nota di credito'
-                            : 'Fattura'
-                } n. ${inv.invoiceNumber}`,
-            totalCents,
-            vatRate: inv.vatRate,
-            vatCents,
-            netCents,
-            fileName: archive.fileName,
-            contentType,
-            sizeBytes: null,
-            blobPath: archive.blobPath,
-            blobUrl: archive.blobUrl,
-            storageKind: archive.storageKind,
-            periodKey: periodKeyFromDate(expenseDate),
-            notes: `${metaSource} ${inv.dedupeKey}`,
-            metadataJson: buildInvoiceMetadata(inv, archive, channel, {
-                uploadId: uploadId || null,
-                ...counterpartyMatch,
-            }),
-            reconciled: false,
-        },
+    const { key: canonicalDocKey, verificationStatus, storeableCanonicalDocKey } =
+        buildPassiveCanonicalKey({
+        recipientVat: inv.cessionarioVat || null,
+        supplierVat: inv.vendorVat || inv.cedenteVat || null,
+        docType: inv.tipoDocumento || (inv.docKind === 'NOTA_CREDITO' ? 'TD04' : 'TD01'),
+        docNumber: inv.invoiceNumber,
+        docDate: inv.invoiceDate,
     });
+
+    // Idempotenza hard solo su chiave forte (colonna UNIQUE)
+    if (storeableCanonicalDocKey) {
+        const existingByKey = await findManualExpenseByCanonicalKey(storeableCanonicalDocKey);
+        if (existingByKey) {
+            if (!existingByKey.blobPath && archive.blobPath) {
+                await prisma.manualFinanceExpense.update({
+                    where: { id: existingByKey.id },
+                    data: {
+                        blobPath: archive.blobPath,
+                        blobUrl: archive.blobUrl,
+                        storageKind: archive.storageKind,
+                        fileName: archive.fileName,
+                        contentType,
+                    },
+                });
+            }
+            console.warn(
+                `[ingest] IDEMPOTENT SKIP canonical_doc_key=${storeableCanonicalDocKey} existing=${existingByKey.id}`
+            );
+            return existingByKey;
+        }
+    }
+
+    let row;
+    try {
+        row = await prisma.manualFinanceExpense.create({
+            data: {
+                expenseDate,
+                docType: inv.docKind,
+                vendorName: counterpartyMatch.matchedCounterpartyName || inv.vendorName,
+                description:
+                    inv.causale ||
+                    `${
+                        role === 'ACTIVE'
+                            ? 'Fattura attiva'
+                            : inv.isForeignAutofattura
+                              ? `Autofattura ${inv.autofatturaType || 'TD17'}`
+                              : inv.docKind === 'NOTA_CREDITO'
+                                ? 'Nota di credito'
+                                : 'Fattura'
+                    } n. ${inv.invoiceNumber}`,
+                totalCents,
+                vatRate: inv.vatRate,
+                vatCents,
+                netCents,
+                fileName: archive.fileName,
+                contentType,
+                sizeBytes: null,
+                blobPath: archive.blobPath,
+                blobUrl: archive.blobUrl,
+                storageKind: archive.storageKind,
+                periodKey: periodKeyFromDate(expenseDate),
+                notes: `${metaSource} ${canonicalDocKey}`,
+                metadataJson: buildInvoiceMetadata(inv, archive, channel, {
+                    uploadId: uploadId || null,
+                    ...counterpartyMatch,
+                }),
+                reconciled: false,
+                canonicalDocKey: storeableCanonicalDocKey,
+                verificationStatus,
+            },
+        });
+    } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === 'P2002' && storeableCanonicalDocKey) {
+            const raced = await findManualExpenseByCanonicalKey(storeableCanonicalDocKey);
+            if (raced) {
+                console.warn(
+                    `[ingest] IDEMPOTENT SKIP race canonical_doc_key=${canonicalDocKey} existing=${raced.id}`
+                );
+                return raced;
+            }
+        }
+        throw err;
+    }
+
+    // Quarantena: visibile in elenco, esclusa dai totali fiscali / ledger finché non CERTIFIED
+    if (verificationStatus === 'QUARANTINE') {
+        return row;
+    }
 
     addAccountingEntries([toLedgerEntry(row.id, inv, channel)]);
 
@@ -543,7 +604,7 @@ async function persistInvoice(
         try {
             await appendLedgerEntries([
                 {
-                    sourceKey: `SDI_ACTIVE:${inv.dedupeKey}`.slice(0, 180),
+                    sourceKey: `SDI_ACTIVE:${canonicalDocKey}`.slice(0, 180),
                     sourceType: 'MANUAL_EXPENSE',
                     sourceId: row.id,
                     direction: 'ENTRATA',
@@ -562,7 +623,7 @@ async function persistInvoice(
                     attachmentPath: archive.blobPath,
                     metadataJson: {
                         source: 'SDI_ACTIVE',
-                        dedupeKey: inv.dedupeKey,
+                        dedupeKey: canonicalDocKey,
                         uploadId: uploadId || null,
                     },
                 },

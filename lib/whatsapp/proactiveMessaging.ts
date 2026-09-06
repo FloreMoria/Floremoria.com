@@ -129,77 +129,100 @@ export async function startProactiveConversation(
     const useTemplate = requiresTemplate || input.forceTemplate === true;
 
     if (useTemplate) {
-        const templateId = input.templateId?.trim() || PROACTIVE_CONVERSATION_TEMPLATE_ID;
-        const template = getApprovedWhatsAppTemplate(templateId);
         const libraryFilter =
             input.userType === 'FLORIST' || input.userType === 'UTENTE' ? input.userType : undefined;
-        if (!template) {
-            return {
-                ok: false,
-                requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(libraryFilter),
-                session,
-                error: 'Template Meta non riconosciuto.',
-            };
-        }
-        if (libraryFilter && template.library !== libraryFilter) {
-            return {
-                ok: false,
-                requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(libraryFilter),
-                session,
-                error: `Template non disponibile nella Libreria ${libraryFilter === 'FLORIST' ? 'Fioristi' : 'Utenti'}.`,
-            };
+        const defaultTemplateId =
+            libraryFilter === 'FLORIST'
+                ? PROACTIVE_CONVERSATION_TEMPLATE_ID
+                : 'floremoria_generico';
+        const rawTemplateId = input.templateId?.trim() || defaultTemplateId;
+        let template = getApprovedWhatsAppTemplate(rawTemplateId, libraryFilter);
+
+        // Se template non trovato con rawTemplateId ma l'ID era un alias generico
+        if (!template && (rawTemplateId === 'floremoria_generico' || rawTemplateId === 'generico')) {
+            template = getApprovedWhatsAppTemplate('floremoria_generico', libraryFilter);
         }
 
         const fieldValues = resolveFieldValues(input);
-        let components;
+        let components: any;
         let logBody: string;
+        let metaNameToSend = template?.metaName || rawTemplateId;
+        let languageToSend = template?.language || 'it';
+        let bodyParamCount = template?.bodyParamCount;
+        let headerTextParamCount = template?.headerTextParamCount ?? 0;
 
-        try {
-            if (template.id === PROACTIVE_CONVERSATION_TEMPLATE_ID) {
-                const templateValues = validateProactiveTemplateBodyValues({
-                    recipientFirstName: fieldValues.recipientFirstName ?? input.recipientFirstName,
-                    orderCode: fieldValues.orderCode ?? input.orderCode,
-                    staffNotes: fieldValues.staffNotes ?? input.staffNotes,
-                });
-                components = buildProactiveTemplateComponents(templateValues);
-                logBody = renderProactiveTemplateMessage(
-                    templateValues.recipientFirstName,
-                    templateValues.orderCode,
-                    templateValues.staffNotes
-                );
-            } else {
-                components = buildOperatorTemplateComponents(template, fieldValues);
-                logBody = renderOperatorTemplatePreview(template, fieldValues);
+        if (template) {
+            try {
+                if (template.id === PROACTIVE_CONVERSATION_TEMPLATE_ID) {
+                    const templateValues = validateProactiveTemplateBodyValues({
+                        recipientFirstName: fieldValues.recipientFirstName ?? input.recipientFirstName,
+                        orderCode: fieldValues.orderCode ?? input.orderCode,
+                        staffNotes: fieldValues.staffNotes ?? input.staffNotes,
+                    });
+                    components = buildProactiveTemplateComponents(templateValues);
+                    logBody = renderProactiveTemplateMessage(
+                        templateValues.recipientFirstName,
+                        templateValues.orderCode,
+                        templateValues.staffNotes
+                    );
+                } else {
+                    components = buildOperatorTemplateComponents(template, fieldValues);
+                    logBody = renderOperatorTemplatePreview(template, fieldValues);
+                }
+            } catch (e) {
+                const message =
+                    e instanceof ProactiveTemplateValidationError
+                        ? e.message
+                        : 'Parametri template non validi.';
+                return {
+                    ok: false,
+                    requiresTemplate: true,
+                    templates: listApprovedWhatsAppTemplates(libraryFilter),
+                    session,
+                    error: message,
+                };
             }
-        } catch (e) {
-            const message =
-                e instanceof ProactiveTemplateValidationError
-                    ? e.message
-                    : 'Parametri template non validi.';
-            return {
-                ok: false,
-                requiresTemplate: true,
-                templates: listApprovedWhatsAppTemplates(libraryFilter),
-                session,
-                error: message,
-            };
+        } else {
+            // Fallback dinamico solido: template approvato su Meta ma non censito nella mappa locale
+            const bodyParams: Array<{ type: 'text'; text: string }> = [];
+            if (Array.isArray(input.templateParams) && input.templateParams.length > 0) {
+                for (const p of input.templateParams) {
+                    bodyParams.push({ type: 'text', text: String(p ?? '') || '-' });
+                }
+            } else if (Object.keys(fieldValues).length > 0) {
+                for (const [, val] of Object.entries(fieldValues)) {
+                    if (val !== undefined && String(val).trim().length > 0) {
+                        bodyParams.push({ type: 'text', text: String(val).trim() });
+                    }
+                }
+            } else if (input.messageText?.trim()) {
+                bodyParams.push({ type: 'text', text: input.messageText.trim() });
+            }
+
+            components = bodyParams.length > 0 ? [{ type: 'body' as const, parameters: bodyParams }] : [];
+            logBody = `[Template Meta: ${metaNameToSend}] ${bodyParams.map((p) => p.text).join(' · ')}`;
+            bodyParamCount = bodyParams.length > 0 ? bodyParams.length : undefined;
+            headerTextParamCount = 0;
         }
 
         const send = await sendWhatsAppTemplateMessage(
             sessionPhone,
-            template.metaName,
-            template.language,
+            metaNameToSend,
+            languageToSend,
             components,
             {
-                expectedBodyParamCount: template.bodyParamCount,
-                expectedHeaderTextParamCount: template.headerTextParamCount ?? 0,
+                expectedBodyParamCount: bodyParamCount,
+                expectedHeaderTextParamCount: headerTextParamCount,
             }
         );
 
         if (!send.ok) {
-            return { ok: false, session, error: send.error ?? 'Invio template WhatsApp fallito.', send };
+            return {
+                ok: false,
+                session,
+                error: send.error ?? 'Invio template WhatsApp fallito.',
+                send,
+            };
         }
 
         await ensureStaffSession(sessionPhone, input.displayName, input.userType ?? 'UNKNOWN');
@@ -207,8 +230,8 @@ export async function startProactiveConversation(
         const logged = await addMessage(sessionPhone, 'OUTBOUND', logBody, undefined, {
             source: 'operator',
             outboundMode: 'template',
-            templateId: template.id,
-            templateName: template.metaName,
+            templateId: template?.id || rawTemplateId,
+            templateName: metaNameToSend,
             ...buildOutboundWamidMetadata(send.messageId),
         });
 

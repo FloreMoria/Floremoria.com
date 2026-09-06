@@ -240,7 +240,8 @@ function VisioneTab({
         setGenericoUpdateText('');
         setGenericoPanelOpen(false);
       } else {
-        alert(data.error || 'Invio template non riuscito.');
+        const errDetail = data.errorCode ? ` [Codice: ${data.errorCode}]` : '';
+        alert(`${data.error || 'Invio template non riuscito.'}${errDetail}`);
       }
     } catch (err) {
       console.error('Error sending generico template:', err);
@@ -304,10 +305,11 @@ function VisioneTab({
       if (data.success) {
         setSessions(prev => prev.map(s => s.phone === activeChatId ? { ...data.session, status: 'HUMAN_INTERVENTION' } : s));
       } else if (data.requiresTemplate) {
-        alert(data.error || 'Finestra 24h scaduta: avvii una nuova conversazione con template WhatsApp.');
+        alert(data.error || 'Finestra 24h scaduta: utilizzi il pulsante "Template floremoria_generico" o "Nuova conversazione" per inviare un template WhatsApp.');
         setInputText(textToSend);
       } else {
-        alert(data.error || 'Invio non riuscito.');
+        const errDetail = data.errorCode ? ` [Codice: ${data.errorCode}]` : '';
+        alert(`${data.error || 'Invio non riuscito.'}${errDetail}`);
         setInputText(textToSend);
       }
     } catch (err) {

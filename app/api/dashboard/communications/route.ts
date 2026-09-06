@@ -3,7 +3,13 @@ import { after } from 'next/server';
 import { getChatStore, addMessage, setSessionStatus, getSession, markChatSessionAsTest } from '@/lib/chatStore';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
-import { getProactiveWhatsAppTemplate, listApprovedWhatsAppTemplates, type TemplateLibrary } from '@/lib/whatsapp/approvedTemplates';
+import {
+    getApprovedWhatsAppTemplate,
+    getProactiveWhatsAppTemplate,
+    listApprovedWhatsAppTemplates,
+    PROACTIVE_CONVERSATION_TEMPLATE_ID,
+    type TemplateLibrary,
+} from '@/lib/whatsapp/approvedTemplates';
 import { FLOREMORIA_GENERICO_TEMPLATE_ID } from '@/lib/whatsapp/floremoriaGenericoTemplate';
 import { requiresTemplateMessage } from '@/lib/whatsapp/messagingWindow';
 import { startProactiveConversation } from '@/lib/whatsapp/proactiveMessaging';
@@ -86,11 +92,11 @@ export async function POST(req: Request) {
             const library: TemplateLibrary | undefined =
                 libraryRaw === 'FLORIST' || libraryRaw === 'UTENTE' ? libraryRaw : undefined;
             const templates = listApprovedWhatsAppTemplates(library);
-            const template = templates[0] || getProactiveWhatsAppTemplate();
+            const template = templates[0] || (library === 'UTENTE' ? getApprovedWhatsAppTemplate('floremoria_generico', 'UTENTE') : getProactiveWhatsAppTemplate());
             return NextResponse.json({
                 success: true,
                 library: library ?? 'ALL',
-                template: {
+                template: template ? {
                     id: template.id,
                     metaName: template.metaName,
                     label: template.label,
@@ -102,7 +108,7 @@ export async function POST(req: Request) {
                     bodyParamCount: template.bodyParamCount,
                     library: template.library,
                     fields: template.fields,
-                },
+                } : null,
                 templates: templates.map((item) => ({
                     id: item.id,
                     metaName: item.metaName,
@@ -130,7 +136,11 @@ export async function POST(req: Request) {
             }
             const session = await getSession(sessionPhone);
             const contactLibrary: TemplateLibrary | undefined =
-                userType === 'FLORIST' || userType === 'UTENTE' ? userType : undefined;
+                userType === 'FLORIST' || userType === 'UTENTE'
+                    ? userType
+                    : session.userType === 'FLORIST' || session.userType === 'UTENTE'
+                      ? session.userType
+                      : undefined;
             return NextResponse.json({
                 success: true,
                 phone: sessionPhone,
@@ -169,6 +179,7 @@ export async function POST(req: Request) {
                         templates: result.templates,
                         session: result.session,
                         error: result.error,
+                        errorCode: result.send?.errorCode,
                         send: result.send,
                     },
                     { status: result.requiresTemplate ? 409 : 502 }
@@ -204,16 +215,22 @@ export async function POST(req: Request) {
                 return NextResponse.json({ success: false, error: 'Parametro "phone" mancante.' }, { status: 400 });
             }
             const session = await getSession(phone);
+            const resolvedUserType =
+                userType === 'FLORIST' || userType === 'UTENTE'
+                    ? userType
+                    : session.userType === 'FLORIST' || session.userType === 'UTENTE'
+                      ? session.userType
+                      : 'UNKNOWN';
+            const resolvedTemplateId =
+                templateId ||
+                (resolvedUserType === 'FLORIST'
+                    ? PROACTIVE_CONVERSATION_TEMPLATE_ID
+                    : FLOREMORIA_GENERICO_TEMPLATE_ID);
             const result = await startProactiveConversation({
                 phoneRaw: phone.replace(/^whatsapp:/, ''),
                 displayName: displayName || session.name,
-                userType:
-                    userType === 'FLORIST' || userType === 'UTENTE'
-                        ? userType
-                        : session.userType === 'FLORIST' || session.userType === 'UTENTE'
-                          ? session.userType
-                          : 'UNKNOWN',
-                templateId: templateId || FLOREMORIA_GENERICO_TEMPLATE_ID,
+                userType: resolvedUserType,
+                templateId: resolvedTemplateId,
                 templateFieldValues:
                     templateFieldValues &&
                     typeof templateFieldValues === 'object' &&
@@ -228,8 +245,10 @@ export async function POST(req: Request) {
                     {
                         success: false,
                         error: result.error ?? 'Invio template WhatsApp fallito.',
+                        errorCode: result.send?.errorCode,
                         requiresTemplate: result.requiresTemplate ?? false,
                         templates: result.templates,
+                        send: result.send,
                     },
                     { status: result.requiresTemplate ? 409 : 502 }
                 );
@@ -253,12 +272,16 @@ export async function POST(req: Request) {
             }
 
             const session = await getSession(phone);
+            const contactLibrary: TemplateLibrary | undefined =
+                session.userType === 'FLORIST' || session.userType === 'UTENTE'
+                    ? session.userType
+                    : undefined;
             if (requiresTemplateMessage(session)) {
                 return NextResponse.json(
                     {
                         success: false,
                         requiresTemplate: true,
-                        templates: listApprovedWhatsAppTemplates(),
+                        templates: listApprovedWhatsAppTemplates(contactLibrary),
                         error: 'Finestra 24h scaduta: usi "Nuova conversazione" con un template WhatsApp approvato.',
                     },
                     { status: 409 }

@@ -264,8 +264,13 @@ function parseMetaGraphError(body: string): {
             };
         };
         const err = data.error;
+        const mainMsg = err?.error_user_msg || err?.message || body.slice(0, 200);
+        const codePrefix = err?.code
+            ? `Meta Error ${err.code}${err.error_subcode ? ` (subcode ${err.error_subcode})` : ''}: `
+            : '';
+        const fullMessage = `${codePrefix}${mainMsg}`;
         return {
-            message: err?.message || body.slice(0, 200),
+            message: fullMessage,
             code: err?.code,
             subcode: err?.error_subcode,
             errorData: err?.error_data,

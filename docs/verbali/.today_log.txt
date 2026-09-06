@@ -1,2 +1,4 @@
 - Aggiunto padding top generoso (pt-10 / pt-12) sul container della pagina utenti per evitare il taglio del titolo H1 sotto la navbar;
 - Risolto refactor colonna 'Giardino Utente': visualizzazione pulita del nome e cognome reale come titolo primario (senza suffissi 'Utente'), stato account/registrazione come sottotitolo, e iniziale reale del nome nell'avatar; tsc+build OK.
+
+[2026-09-06 15:52] fix(chat): ripristinato invio template whatsapp oltre le 24h e risolto errore libreria utenti; rimosso blocco rigido libraryFilter su getApprovedWhatsAppTemplate/startProactiveConversation, aggiunto fallback dinamico per template Meta non censiti, allineata gestione errori Meta API con codice/messaggio dettagliato; tsc+build OK.

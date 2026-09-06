@@ -335,17 +335,54 @@ export function listApprovedWhatsAppTemplates(
     return [...florist, ...users];
 }
 
-export function getApprovedWhatsAppTemplate(templateId?: string): WhatsAppTemplateDefinition | null {
-    const templates = listApprovedWhatsAppTemplates();
-    if (!templateId) return templates[0] ?? null;
-    if (templateId === ANNIVERSARY_GDM_TEMPLATE_ID) {
+export function getApprovedWhatsAppTemplate(
+    templateId?: string,
+    preferredLibrary?: TemplateLibrary
+): WhatsAppTemplateDefinition | null {
+    const cleanId = templateId?.trim();
+    if (!cleanId) {
+        const fallbackList = preferredLibrary
+            ? listApprovedWhatsAppTemplates(preferredLibrary)
+            : listApprovedWhatsAppTemplates();
+        return fallbackList[0] ?? null;
+    }
+
+    if (cleanId === ANNIVERSARY_GDM_TEMPLATE_ID || cleanId === 'anniversary_gdm_reminder') {
+        const templates = listApprovedWhatsAppTemplates('UTENTE');
         return (
             templates.find((t) => t.id === 'anniversary_gdm_reminder') ||
             templates.find((t) => t.id === ANNIVERSARY_GDM_TEMPLATE_ID) ||
             null
         );
     }
-    return templates.find((t) => t.id === templateId) ?? null;
+
+    // 1. Cerca nella libreria preferita (se specificata)
+    if (preferredLibrary) {
+        const preferredList = listApprovedWhatsAppTemplates(preferredLibrary);
+        const match = preferredList.find(
+            (t) =>
+                t.id.toLowerCase() === cleanId.toLowerCase() ||
+                t.metaName.toLowerCase() === cleanId.toLowerCase()
+        );
+        if (match) return match;
+    }
+
+    // 2. Cerca in tutti i template approvati
+    const all = listApprovedWhatsAppTemplates();
+    const matchAll = all.find(
+        (t) =>
+            t.id.toLowerCase() === cleanId.toLowerCase() ||
+            t.metaName.toLowerCase() === cleanId.toLowerCase()
+    );
+    if (matchAll) {
+        // Se il match è floremoria_generico ma la libreria richiesta è specificata, adatta la libreria
+        if (matchAll.id === 'floremoria_generico' && preferredLibrary) {
+            return getFloremoriaGenericoWhatsAppTemplate(preferredLibrary);
+        }
+        return matchAll;
+    }
+
+    return null;
 }
 
 /** Fold codice ordine nelle note body {{2}} (Scenario A: no header). */

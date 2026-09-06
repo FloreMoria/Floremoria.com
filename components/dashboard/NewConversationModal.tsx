@@ -215,12 +215,12 @@ export default function NewConversationModal({
 
         const library = contact.type === 'FLORIST' ? 'FLORIST' : 'UTENTE';
         const libraryTemplates = allTemplates.filter((t) => t.library === library);
-        // Fiorista: default su floremoria_nuovo_ordine_fiorista (11 variabili precompilate).
+        // Fiorista: default su floremoria_nuovo_ordine_fiorista (11 variabili precompilate); Utente: default su floremoria_generico.
         const preferred =
             templateOverride ||
             (contact.type === 'FLORIST'
                 ? libraryTemplates.find((t) => t.id === 'florist_repeat')
-                : null) ||
+                : libraryTemplates.find((t) => t.id === 'floremoria_generico')) ||
             libraryTemplates[0] ||
             selectedTemplate ||
             null;

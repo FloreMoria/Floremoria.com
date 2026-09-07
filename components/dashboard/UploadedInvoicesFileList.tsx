@@ -563,10 +563,20 @@ export default function UploadedInvoicesFileList({
                                     <Loader2 size={14} className="animate-spin" /> Caricamento…
                                 </p>
                             ) : batchInvoices.length === 0 ? (
-                                <p className="text-xs text-slate-400 py-6 text-center">
+                                <p className="text-xs text-slate-400 py-6 text-center px-4">
                                     Nessuna fattura collegata a questo file.
+                                    <span className="block mt-1 text-[10px] text-slate-400">
+                                        Se il report è stato rinominato o ri-caricato, ricarica la
+                                        pagina; i documenti da ZIP XML restano in Passive/Documenti.
+                                    </span>
                                 </p>
                             ) : (
+                                <>
+                                <p className="text-[10px] text-slate-500 mb-2 px-1">
+                                    {batchInvoices.length} documenti collegati a questo report.
+                                    Le fatture arrivate solo da ZIP/YouDox XML restano in
+                                    Passive/Documenti (le due liste non sono 1:1).
+                                </p>
                                 <table className="w-full text-[11px] table-fixed min-w-[640px]">
                                     <thead className="sticky top-0 bg-white z-10">
                                         <tr className="text-left text-[10px] uppercase text-slate-400 border-b">
@@ -633,6 +643,7 @@ export default function UploadedInvoicesFileList({
                                         ))}
                                     </tbody>
                                 </table>
+                                </>
                             )}
                         </div>
                         <div className="px-4 py-2 border-t border-slate-100 flex justify-end shrink-0">

@@ -655,7 +655,8 @@ async function updateExistingInvoice(
     },
     inv: ParsedFatturaPa,
     archive: { blobPath: string | null; blobUrl: string | null; storageKind: string; fileName: string },
-    channel: InvoiceIngestChannel
+    channel: InvoiceIngestChannel,
+    uploadId?: string
 ) {
     const amountChanged = existing.totalCents !== inv.totalCents;
     if (amountChanged && existing.matchedStatementLineId) {
@@ -665,6 +666,10 @@ async function updateExistingInvoice(
     const prevMeta = (existing.metadataJson || {}) as Record<string, unknown>;
     const expenseDate = new Date(`${inv.invoiceDate}T12:00:00.000Z`);
     const metaSource = resolveMetadataSource(inv, channel);
+    const prevUploadId =
+        typeof prevMeta.uploadId === 'string' && prevMeta.uploadId ? prevMeta.uploadId : null;
+    const prevArchive =
+        typeof prevMeta.archiveFileName === 'string' ? prevMeta.archiveFileName : null;
     const row = await prisma.manualFinanceExpense.update({
         where: { id: existing.id },
         data: {
@@ -683,10 +688,13 @@ async function updateExistingInvoice(
             periodKey: periodKeyFromDate(expenseDate),
             notes: `${metaSource} ${inv.dedupeKey} | aggiornata ${new Date().toISOString().slice(0, 10)}`,
             metadataJson: buildInvoiceMetadata(inv, archive, channel, {
+                // Why: senza questo il dettaglio report resta vuoto dopo re-import/update
+                uploadId: uploadId || prevUploadId,
                 previousTotalCents: existing.totalCents,
                 updatedFromImport: true,
                 updatedAt: new Date().toISOString(),
                 cancelledByCreditNote: prevMeta.cancelledByCreditNote || false,
+                previousArchiveFileName: prevArchive,
             }),
             reconciled: amountChanged ? false : existing.reconciled,
             matchedStatementLineId: amountChanged ? null : existing.matchedStatementLineId,
@@ -810,7 +818,8 @@ export async function ingestParsedPassiveInvoices(input: {
                     existing,
                     inv,
                     archive,
-                    input.source
+                    input.source,
+                    uploadId
                 );
                 updated += 1;
                 totalCents += inv.totalCents;

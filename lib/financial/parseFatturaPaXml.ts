@@ -123,9 +123,11 @@ function decodeXmlEntities(s: string): string {
 
 function textOf(innerXml: string | null): string {
     if (!innerXml) return '';
-    // Se contiene sotto-tag, prendi solo testo foglia grezzo
-    const plain = innerXml.replace(/<[^>]+>/g, ' ');
-    return decodeXmlEntities(plain);
+    // Why: prima CDATA/entities, poi strip tag. Se si fa il contrario,
+    // `<![CDATA[NOME]]>` viene scartato intero da /<[^>]+>/ → "Fornitore SDI".
+    const decoded = decodeXmlEntities(innerXml);
+    const plain = decoded.replace(/<[^>]+>/g, ' ');
+    return plain.replace(/\s+/g, ' ').trim();
 }
 
 function parseItalianOrIsoAmount(raw: string | null | undefined): number | null {

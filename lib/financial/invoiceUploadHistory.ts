@@ -97,6 +97,29 @@ function normalizeFileName(name: string): string {
         .replace(/\s+/g, ' ');
 }
 
+/** Stem report YouDOX: toglie estensione, trimestre (2T) e anno. */
+function uploadFileBaseName(name: string): string {
+    return normalizeFileName(name)
+        .replace(/\.(xlsx|xls|csv)$/i, '')
+        .replace(/[_\s-]*(?:[1-4]t|t[1-4])?[_\s-]*20\d{2}$/i, '')
+        .replace(/[_\s-]+$/g, '');
+}
+
+/** True se due nomi file riportano allo stesso report (anche 2026 vs 2T-2026). */
+export function uploadFileNamesRelated(a: string, b: string): boolean {
+    const na = normalizeFileName(a);
+    const nb = normalizeFileName(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    const ba = uploadFileBaseName(a);
+    const bb = uploadFileBaseName(b);
+    if (ba && bb && ba.length >= 8 && ba === bb) return true;
+    const sa = na.replace(/\.(xlsx|xls|csv)$/i, '');
+    const sb = nb.replace(/\.(xlsx|xls|csv)$/i, '');
+    if (sa.length >= 12 && sb.length >= 12 && (sa.includes(sb) || sb.includes(sa))) return true;
+    return false;
+}
+
 async function readHistory(): Promise<InvoiceUploadRecord[]> {
     const row = await prisma.systemState.findUnique({ where: { key: HISTORY_KEY } });
     if (!row?.value) return [];
@@ -271,6 +294,14 @@ function expenseBelongsToUpload(
     if (typeof meta.archiveFileName === 'string' && meta.archiveFileName === upload.fileName) {
         return true;
     }
+    // Report rinominati (es. …_2026.xlsx vs …_2T-2026.xlsx) o re-import senza uploadId
+    if (expense.fileName && uploadFileNamesRelated(expense.fileName, upload.fileName)) return true;
+    if (
+        typeof meta.archiveFileName === 'string' &&
+        uploadFileNamesRelated(meta.archiveFileName, upload.fileName)
+    ) {
+        return true;
+    }
     return false;
 }
 
@@ -339,7 +370,8 @@ export async function listInvoicesForUpload(uploadId: string): Promise<{
     const upload = await getUploadById(uploadId);
     if (!upload) throw new Error('Upload non trovato');
 
-    const rows = await prisma.manualFinanceExpense.findMany({
+    // 1) Match esatti (uploadId / nome file / archive)
+    let rows = await prisma.manualFinanceExpense.findMany({
         where: {
             OR: [
                 { fileName: upload.fileName },
@@ -360,6 +392,36 @@ export async function listInvoicesForUpload(uploadId: string): Promise<{
         orderBy: { expenseDate: 'desc' },
         take: 500,
     });
+
+    // 2) Fallback: report XLSX rinominato o update che ha perso uploadId
+    if (rows.length === 0 && upload.channel === 'SDI_XLSX') {
+        const candidates = await prisma.manualFinanceExpense.findMany({
+            where: {
+                OR: [
+                    { metadataJson: { path: ['source'], equals: 'SDI_XLSX' } },
+                    { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XLSX' } },
+                    { notes: { contains: 'SDI_XLSX', mode: 'insensitive' } },
+                ],
+            },
+            orderBy: { expenseDate: 'desc' },
+            take: 2000,
+        });
+        rows = candidates.filter((e) => expenseBelongsToUpload(e, upload));
+    } else if (rows.length === 0) {
+        // ZIP/XML: prova match soft sul nome archivio
+        const candidates = await prisma.manualFinanceExpense.findMany({
+            where: {
+                OR: [
+                    { metadataJson: { path: ['source'], equals: 'SDI_XML' } },
+                    { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XML' } },
+                    { fileName: { endsWith: '.xml', mode: 'insensitive' } },
+                ],
+            },
+            orderBy: { expenseDate: 'desc' },
+            take: 3000,
+        });
+        rows = candidates.filter((e) => expenseBelongsToUpload(e, upload));
+    }
 
     const invoices: UploadInvoiceDetail[] = rows.map((r) => mapExpenseToDetail(r));
 

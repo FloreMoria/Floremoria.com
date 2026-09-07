@@ -1,0 +1,129 @@
+{
+  "vincolo": "SOLA ANALISI — nessuna scrittura — competenza da firmare dal commercialista",
+  "a_costi2025In2026": {
+    "dcStudio": {
+      "numero": "66",
+      "data": "2026-03-02",
+      "importo": "3774,30 €",
+      "tipoDocumento": "TD06 Parcella",
+      "causaleCompleta": null,
+      "proforma": "n. 158 del 28/01/2026 (anche in causale bonifico Fineco)",
+      "componentiCausale": [
+        {
+          "voce": "Integrazione nr. 14 fatture estere (giu - dic)",
+          "competenzaPresunta": "2025 (giu–dic esercizio precedente)",
+          "importoInDb": null,
+          "nota": "Importi riga NON presenti in Neon/metadata — spacchettamento solo da XML/parcella o dal commercialista"
+        },
+        {
+          "voce": "Versamento Capitale Sociale",
+          "competenzaPresunta": "patrimoniale (non costo 2026 né 2025 di esercizio)",
+          "importoInDb": null,
+          "nota": "Se è vero versamento capitale → fuori CE; se è consulenza sul versamento → costo. Distinzione del commercialista."
+        }
+      ],
+      "effettoMaxSeTuttoEstero2025": {
+        "euro": "3774,30 €",
+        "raiDa": "-5418,51 €",
+        "raiA": "-1644,21 €",
+        "caveat": "SOLO se l’intera parcella è costo 2025. Con componente capitale l’effetto CE è minore."
+      }
+    },
+    "altriHint2025": [
+      {
+        "date": "2026-03-02",
+        "vendor": "DC STUDIO STP SRL",
+        "amount": "-3774,30 €",
+        "src": "MANUAL_EXPENSE",
+        "desc": "Fattura n. 66 — Proforma n. 158 del 28/01/2026; Integrazione nr. 14 fatture estere (giu - dic); Versamento Capitale Sociale"
+      },
+      {
+        "date": "2026-01-05",
+        "vendor": null,
+        "amount": "-15,95 €",
+        "src": "BANK_LINE",
+        "desc": "Canone Mensile Conto Dicembre 2025"
+      },
+      {
+        "date": "2026-01-02",
+        "vendor": null,
+        "amount": "-25,25 €",
+        "src": "BANK_LINE",
+        "desc": "Imposta di Bollo di Conto Corrente del 31.12.2025"
+      },
+      {
+        "date": "2026-02-05",
+        "vendor": null,
+        "amount": "4597,66 €",
+        "src": "BANK_LINE",
+        "desc": "Ord: Cciaa Como-Lecco Ben: Floremoria S.r.l. Dt-Ord: 05/02/2026 Banca Ord: Iconto Srl Info-Cli: Liquidazione Contributo Bando Nuova Impresa 2025"
+      }
+    ]
+  },
+  "b_riscontiAttivi": {
+    "irin": {
+      "vendor": "IRIN S.R.L. / WOSNIC",
+      "data": "2026-02-18",
+      "importo": "681,49 €",
+      "durata": "12 mesi",
+      "inizio": "2026-02-18",
+      "fine": "2027-02-17",
+      "giorniTotali": 365,
+      "giorni2027": 48,
+      "quotaCompetenza2027": "89,62 €",
+      "quotaCompetenza2026": "591,87 €",
+      "formula": "48/365 × 681,49 €"
+    },
+    "aruba": [
+      {
+        "vendor": "ARUBA SPA",
+        "date": "2026-04-27",
+        "cents": 7319,
+        "desc": "Pacchetto Hosting Easy Windows — floremoria.eu",
+        "start": "2026-04-27",
+        "months": 12,
+        "note": "116/365 gg in 2027",
+        "cents2027": 2326,
+        "amount": "73,19 €",
+        "quota2027Euro": "23,26 €"
+      },
+      {
+        "vendor": "ARUBA SPA",
+        "date": "2026-05-03",
+        "cents": 609,
+        "desc": "Dominio con email — floremoria.com",
+        "start": "2026-05-03",
+        "months": 12,
+        "note": "122/365 gg in 2027",
+        "cents2027": 204,
+        "amount": "6,09 €",
+        "quota2027Euro": "2,04 €"
+      },
+      {
+        "vendor": "ARUBA SPA",
+        "date": "2026-04-30",
+        "cents": 6100,
+        "desc": "Ricarica Credito",
+        "start": "2026-04-30",
+        "months": null,
+        "note": "n/d",
+        "cents2027": 0,
+        "amount": "61,00 €",
+        "quota2027Euro": "0,00 €"
+      }
+    ],
+    "mensiliRicorrentiEsclusi": [
+      "Cursor / Anthropic / Apple / OpenAI / Vercel a consumo o mensili — non risconto annuale (salvo diversa evidenza)"
+    ]
+  },
+  "effettoStimatoSu2026": {
+    "seDcStudioInteraA2025": "3774,30 €",
+    "risconti2027Minimi": "114,92 €",
+    "raiPostL4": "-5418,51 €",
+    "raiSeSoloDc2025": "-1644,21 €",
+    "raiSeDc2025PiuRisconti": "-1529,29 €",
+    "piuEuMaiRegistrati": "1667,02 €",
+    "raiSeDc2025PiuEu": "22,81 €",
+    "disclaimer": "Stime operative per il commercialista. Nessuna scrittura. La firma sulla competenza è sua."
+  }
+}

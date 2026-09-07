@@ -1,0 +1,19 @@
+tipo;data;riferimento;importo;stato;dettaglio;sourceKey_o_id;CONSEGNA FATTA (sì/no);VERDETTO
+STRIPE;2026-05-03;stripe_eu_tx_txn_3TSzMsRrkwwcYwep11EAvI3P;"284,90";available;;cmt3zwnad003rky04cwx9dcan;;
+FINECO;2026-05-07;cmt1vc6uk000zky04prrr20cf;"278,75";FLORIST_TRANSFER;Ord: Stripe Ben: Floremoria S R L Dt-Ord: 07/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: Stripe;cmt1vc6uk000zky04prrr20cf;;
+ORDINE_CANCELLATO;2026-07-02;FT-MC-26-001;"299,90";CANCELLED/UNPAID/DELETED;consegna=2026-07-04; defunto=Anna Maria Rumori; recurring=true;cmr3b3hpu0000la04b54b1ikf;;
+ORDINE_CANCELLATO;2026-07-02;FT-MC-26-002;"29,99";CANCELLED/UNPAID/DELETED;consegna=2026-05-02; defunto=Anna Maria Rumori; recurring=true;cmr3bsi780000jr04wp8jnmln;;
+ORDINE_POSA;2026-07-02;FT-MC-26-003;"29,99";COMPLETED/PAID;consegna=2026-07-04; defunto=Anna Maria Rumori; recurring=true;cmr3cfnah0000jv04uua7zk1k;;
+ORDINE_POSA;2026-07-02;FT-MC-26-004;"29,99";COMPLETED/PAID;consegna=2026-05-31; defunto=Anna Maria Rumori; recurring=true;cmr3hrlmg0000l804yuv8me43;;
+ORDINE_POSA;2026-07-06;FT-MC-26-005;"29,99";COMPLETED/PAID;consegna=2026-07-30; defunto=Anna Maria Rumori; recurring=true;cmr9cbwna000fjy045fho41q0;;
+ORDINE_POSA;2026-08-03;FT-MC-26-006;"29,99";PENDING/UNPAID;consegna=2026-09-12; defunto=Anna Maria Rumori; recurring=true;cmsdhds970000jr04h0v36v4j;;
+LEDGER;2026-05-07;cmt1vc6uk000zky04prrr20cf;"278,75";ENTRATA/TRASFERIMENTO_INTERNO/BANK_LINE;Ord: Stripe Ben: Floremoria S R L Dt-Ord: 07/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: Stripe;BANK_LINE:cmt1vc6uk000zky04prrr20cf;;
+LEDGER;2026-05-26;cmt1vc6uk001bky04y0qwpejc;"20,00";USCITA/COSTI_FIORISTI/BANK_LINE;Beneficiario: Antonella Cingolani Iban: It53f0331768870000020103719 Data Inserimento: 26/05/2026 16:20:24 Canale: Phone/Voice P. Causale: Acauisto Fiori Permil ;BANK_LINE:cmt1vc6uk001bky04y0qwpejc;;
+LEDGER;2026-07-02;FT-MC-26-003;"29,99";ENTRATA/RICAVI_VENDITE/JSON_ENTRY;Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-003;JSON_ENTRY:entry_manual_gross_cmr3cfnah0000jv04uua7zk1k;;
+LEDGER;2026-07-02;FT-MC-26-004;"29,99";ENTRATA/RICAVI_VENDITE/JSON_ENTRY;Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-004;JSON_ENTRY:entry_manual_gross_cmr3hrlmg0000l804yuv8me43;;
+LEDGER;2026-07-06;FT-MC-26-005;"29,99";ENTRATA/RICAVI_VENDITE/JSON_ENTRY;Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-005;JSON_ENTRY:entry_manual_gross_cmr9cbwna000fjy045fho41q0;;
+LEDGER;2026-07-30;cmt3dsdfx000mh104qskn6yb8;"20,00";USCITA/COSTI_FIORISTI/BANK_LINE;Beneficiario: Antonella Cingolani IBAN: IT53F0331768870000020103719 Data Inserim ento: 30/07/2026 11:21:37 Canale: PHONE/ VOICE P. Causale: acauisto fiori per i;BANK_LINE:cmt3dsdfx000mh104qskn6yb8;;
+LEDGER;2026-08-20;FT-MC-26-003;"20,00";USCITA/COSTI_FIORISTI/FLORIST_PAYOUT;Compenso fiorista ordine FT-MC-26-003;FLORIST_PAYOUT:cmr3cfnah0000jv04uua7zk1k;;
+LEDGER;2026-08-20;FT-MC-26-004;"20,00";USCITA/COSTI_FIORISTI/FLORIST_PAYOUT;Compenso fiorista ordine FT-MC-26-004;FLORIST_PAYOUT:cmr3hrlmg0000l804yuv8me43;;
+LEDGER;2026-08-20;FT-MC-26-005;"20,00";USCITA/COSTI_FIORISTI/FLORIST_PAYOUT;Compenso fiorista ordine FT-MC-26-005;FLORIST_PAYOUT:cmr9cbwna000fjy045fho41q0;;
+LEDGER;2026-09-12;FT-MC-26-006;"20,00";USCITA/COSTI_FIORISTI/FLORIST_PAYOUT;Compenso fiorista ordine FT-MC-26-006;FLORIST_PAYOUT:cmsdhds970000jr04h0v36v4j;;

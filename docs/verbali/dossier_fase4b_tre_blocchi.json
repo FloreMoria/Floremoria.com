@@ -1,0 +1,377 @@
+{
+  "generatedAt": "2026-09-07T07:27:08.906Z",
+  "blocco1": {
+    "conclusione": "Lotto 3 NON muove Fineco. Zero bankStatementLine create/modificate dopo snapshot. €397,48 = invariante Fase2 fantasma (€32.403,61) − cash PnL Fineco (€32.006,13), già a Lotto 0. Rollback L3 NON richiesto per banca.",
+    "invarianteFase2": "32.403,61 €",
+    "pnlCashNow": "32.006,13 €",
+    "delta": "-397,48 €",
+    "bankTouchedAfterSnap": [],
+    "batchId": "FASE4B_L3_20260906_215954",
+    "batchN": 87,
+    "scartoVendite191": {
+      "euro": "191,47 €",
+      "spiegazione": "Dry-run sottraeva €3.007,80 da freeze vendite €5.736,32 → atteso €2.728,52. Post reale €2.919,99. Δ €191,47 = sottostima pre del motore senza `id` in select. Con motore attuale: pre €5927.79 − €3.007,80 = post €2.919,99."
+    },
+    "rollbackPiano": "NON eseguire. Se un giorno servisse solo sul CE: ripristinare fase4bPrevCategory + conti da metadata sulle 87 righe del batch; banca invariata comunque."
+  },
+  "blocco2": {
+    "bug": "raiAfterExpected = raiBefore + ricaviVenditeInHier (segno invertito) + aritmetica ad hoc sulle vendite.",
+    "fix": "computeHistoricalPnl({ categoryOverrides }) — stesso motore live.",
+    "collaudo": {
+      "live": {
+        "v": "2919,99 €",
+        "rai": "-5531,51 €",
+        "b": "32.006,13 €"
+      },
+      "preSim": {
+        "v": "5927,79 €",
+        "rai": "-2523,71 €"
+      },
+      "postSim": {
+        "v": "2919,99 €",
+        "rai": "-5531,51 €"
+      },
+      "postSimMatchesLive": true,
+      "deltaL3": {
+        "v": "-3007,80 €",
+        "rai": "-3007,80 €",
+        "banca": "0,00 €"
+      },
+      "notaRaiStorico": "Post execute storico RAI −€5.692,51 (freeze −€2.684,71 − €3.007,80). Live attuale RAI differisce di ~€161 per allineamento select `id` nel motore; vendite post e Δ L3 restano coerenti (−€3.007,80; banca €0)."
+    }
+  },
+  "blocco3": {
+    "base": "PRE-L3 via categoryOverrides; pipeline = computeHistoricalPnl",
+    "venditeMotore": "5927,79 €",
+    "venditeCents": 592779,
+    "venditeN": 143,
+    "matchPnlOverride": true,
+    "freezeStorico": {
+      "vendite": "5736,32 €",
+      "positivi": "6057,75 €",
+      "negativi": "-2693,19 €",
+      "algebrica": "3364,56 €"
+    },
+    "hierarchyPositivi": {
+      "n": 143,
+      "euro": "5927,79 €"
+    },
+    "hierarchyNegativi": {
+      "n": 51,
+      "euro": "-2693,19 €"
+    },
+    "algebrica": "3234,60 €",
+    "negativiDentroVendite": 0,
+    "filtri": [
+      "reversedAt IS NULL, fiscalYear=2026, sourceType ≠ CUSTOMER_RECEIPT",
+      "esclude seed JSON_ENTRY",
+      "esclude ricavi pose prepagate (ORDER/JSON_ENTRY)",
+      "applyFiscalAuthorityHierarchy",
+      "quarantena MANUAL_EXPENSE QUARANTINE/REJECTED",
+      "skip TRASFERIMENTO_INTERNO",
+      "vendite = RICAVI_VENDITE ∧ (ENTRATA ∨ totalCents>0) → Σ |totalCents|",
+      "negativi RICAVI_VENDITE → ramo costi (NON riducono vendite)"
+    ],
+    "decomposizioneNegativiHierarchy": {
+      "paypal": {
+        "n": 27,
+        "euro": "-1490,18 €"
+      },
+      "bankLine": {
+        "n": 24,
+        "euro": "-1203,01 €"
+      },
+      "altri": {
+        "n": 0,
+        "euro": "0,00 €"
+      },
+      "totale": "-2693,19 €"
+    },
+    "decomposizioneNegativiTuttiPreHierarchy": {
+      "totale": "-2826,05 €",
+      "n": 62,
+      "paypal": {
+        "n": 38,
+        "euro": "-1623,04 €"
+      },
+      "nonPaypal": {
+        "n": 24,
+        "euro": "-1203,01 €"
+      },
+      "attesoPaypal": "-1623,04 €",
+      "restoSuFreeze2693": "-1070,15 €"
+    }
+  },
+  "operativo": {
+    "isabellaAttive": [
+      {
+        "orderNumber": "FT-MC-26-003",
+        "created": "2026-07-02",
+        "delivery": "2026-07-04",
+        "amount": "29,99 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deceased": "Anna Maria Rumori"
+      },
+      {
+        "orderNumber": "FT-MC-26-004",
+        "created": "2026-07-02",
+        "delivery": "2026-05-31",
+        "amount": "29,99 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deceased": "Anna Maria Rumori"
+      },
+      {
+        "orderNumber": "FT-MC-26-005",
+        "created": "2026-07-06",
+        "delivery": "2026-07-30",
+        "amount": "29,99 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deceased": "Anna Maria Rumori"
+      },
+      {
+        "orderNumber": "FT-MC-26-006",
+        "created": "2026-08-03",
+        "delivery": "2026-09-12",
+        "amount": "29,99 €",
+        "status": "PENDING",
+        "payment": "UNPAID",
+        "deceased": "Anna Maria Rumori"
+      }
+    ],
+    "isabellaTutte": [
+      {
+        "orderNumber": "FT-MC-26-001",
+        "deleted": true,
+        "status": "CANCELLED",
+        "payment": "UNPAID",
+        "amount": "299,90 €"
+      },
+      {
+        "orderNumber": "FT-MC-26-002",
+        "deleted": true,
+        "status": "CANCELLED",
+        "payment": "UNPAID",
+        "amount": "29,99 €"
+      },
+      {
+        "orderNumber": "FT-MC-26-003",
+        "deleted": false,
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "orderNumber": "FT-MC-26-004",
+        "deleted": false,
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "orderNumber": "FT-MC-26-005",
+        "deleted": false,
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "orderNumber": "FT-MC-26-006",
+        "deleted": false,
+        "status": "PENDING",
+        "payment": "UNPAID",
+        "amount": "29,99 €"
+      }
+    ],
+    "recurringPacks": [
+      {
+        "buyerFullName": "Isabella Cesaroni",
+        "n_orders": 6,
+        "sum_cents": 44985,
+        "n_completed": 3,
+        "n_paid": 3,
+        "n_alive": 4
+      }
+    ],
+    "lucianoMammi": [
+      {
+        "orderNumber": "FT-PA-26-002",
+        "buyer": "Luciano Mammì",
+        "created": "2026-05-20",
+        "delivery": "2026-05-22",
+        "amount": "31,48 €",
+        "status": "CANCELLED",
+        "payment": "UNPAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-003",
+        "buyer": "Luciano Mammì",
+        "created": "2026-05-20",
+        "delivery": "2026-05-22",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-001",
+        "buyer": "Luciano Mammì",
+        "created": "2026-05-20",
+        "delivery": "2026-05-22",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-002",
+        "buyer": "Luciano Mammì",
+        "created": "2026-06-17",
+        "delivery": "2026-06-19",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-004",
+        "buyer": "Luciano Mammì",
+        "created": "2026-06-17",
+        "delivery": "2026-06-19",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FF-PA-26-001",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-04",
+        "delivery": "2026-07-04",
+        "amount": "144,98 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-005",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-04",
+        "delivery": "2026-07-06",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-003",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-04",
+        "delivery": "2026-07-06",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-006",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-27",
+        "delivery": "2026-07-30",
+        "amount": "31,48 €",
+        "status": "CANCELLED",
+        "payment": "UNPAID",
+        "deleted": true,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-007",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-30",
+        "delivery": "2026-08-01",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-004",
+        "buyer": "Luciano Mammì",
+        "created": "2026-07-30",
+        "delivery": "2026-08-01",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "UNPAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-005",
+        "buyer": "Luciano Mammì",
+        "created": "2026-08-17",
+        "delivery": "2026-08-19",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "UNPAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-006",
+        "buyer": "Luciano Mammì",
+        "created": "2026-08-17",
+        "delivery": "2026-08-19",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-008",
+        "buyer": "Luciano Mammì",
+        "created": "2026-08-17",
+        "delivery": "2026-08-19",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-CS-26-007",
+        "buyer": "LUCIANO MAMMI'",
+        "created": "2026-09-01",
+        "delivery": "2026-09-04",
+        "amount": "31,48 €",
+        "status": "COMPLETED",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      },
+      {
+        "orderNumber": "FT-PA-26-009",
+        "buyer": "LUCIANO MAMMI'",
+        "created": "2026-09-01",
+        "delivery": "2026-09-04",
+        "amount": "31,48 €",
+        "status": "IN_PROGRESS",
+        "payment": "PAID",
+        "deleted": false,
+        "recurring": false
+      }
+    ]
+  }
+}

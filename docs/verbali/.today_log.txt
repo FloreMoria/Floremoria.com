@@ -13,3 +13,23 @@
 [2026-09-07 00:14] finance/fase4b: gate sola lettura C name-only — 7/23 clienti con Order buyer, 16 zero; dest field assente, dest-only 0/33; RV pre-L3 +6057,75/−2693,19 alg≠vendite; lista vs incasso 36 abbinati Δ€15; L3 post vendite €2919,99 RAI −€5692,51.
 [2026-09-07 00:35] finance/fase4b: perimetro .eu titolare €1667,02 (33r/34ord) + €892,79 già in.com = €2559,81; archivio €1926,93; Isabella doppio pre-L3 bank€278,75+pose€89,97 vs corr€284,90 (DB 4 pose≠11); analogo Luciano 12×€31,48; 3a pre-L3 +6057,75/−2693,19; 3b Δ€15; L3 post €2919,99/RAI−€5692,51; pacchetto BLOCCATO.
 [2026-09-07 09:00] fix(deploy): exclude scripts/ da tsconfig Next — build Vercel falliva su fase4b-amanda Date|null; fix day() nullable negli script fase4b.
+
+[2026-09-07 09:27] finance/fase4b: tre blocchi post-L3 — banca €397,48=Fase2 fantasma (L3 non muove Fineco; rollback no); dry-run fix categoryOverrides+collaudo match live; vendite +6057,75/−2693,19 vs motore (neg→costi); PayPal −€1623,04 + resto −€1070,15; Isabella 4 pose; NO Lotto 4.
+
+[2026-09-07 09:50] finance/fase4b: export CSV revisione umana — costi_99_coppie (G1–G4), isabella_pacchetto, mammi_serie; sola lettura; stop in attesa VERDETTO titolare.
+
+[2026-09-07 12:20] fix(finance): parser FatturaPA CDATA — vendorName non più «Fornitore SDI»; backfill Ferrante n.18/28 + Cecotti n.5.
+
+[2026-09-07 12:30] fix(finance): dettaglio Report Fatture Ricevute vuoto — match soft nome file (2026↔2T-2026) + preserva uploadId in update; backfill 24 righe.
+
+[2026-09-07 12:45] finance/fase4b: analisi CSV titolare sola lettura — EST 000001 DUP; DC/IRIN 4 scritture cad.; docs≥3=53; G5 autofatture; 10 coppie scartate; Isabella=Stripe fee€4,52 net€280,38 Fineco€278,75; Luciano annullati OK; NO Lotto 4.
+
+[2026-09-07 12:55] finance/fase4b: inventario autofatture vs Report T1–T3 — già SDI 8 (€104,86); da trasmettere 22 (€254,72) di cui T3 tutte 14; flag riuso 000001-EST mag.
+
+[2026-09-07 13:15] finance/fase4b: STOP €12847 errato — ricalcolo Lotto4 solo costi+collasso :v → eccesso €6210,08 (plaus PASS); Isabella qty=11; autofatture senza EST; coppie false a/b; dry-run no exec.
+
+[2026-09-07 13:20] finance/fase4b: ricalcolo L4 definitivo €6295 (plaus PASS); 10 «scartate»=inversioni nome restano in L4; Isabella 11; STOP via.
+
+[2026-09-07 14:35] finance/fase4b: Lotto4 ESEGUITO FASE4B_L4_20260907_123006 — 117 reverse CE invariato PASS; :v residue 0; 6 inversioni/0 fornitori diversi; XML≠PDF 31/05; L5 dry-run SDD €1506 unici.
+
+[2026-09-07 14:50] finance/fase4b: freeze post-L4; L5 ΔRAI unico €1114,03; :v 59vs84 spiegato (0 attive); Ferrante CSV 96-97; L6 competenza DC+IRIN+Aruba sola analisi.

@@ -1,0 +1,2163 @@
+{
+  "generatedAt": "2026-09-07T10:44:04.763Z",
+  "vincolo": "SOLA LETTURA — nessun Lotto 4 eseguito",
+  "punto1_autofattureEst": {
+    "serieNumerata": [
+      {
+        "numero": "000001-2026-EST",
+        "usi": 2,
+        "riusato": true,
+        "docs": [
+          {
+            "date": "2026-01-31",
+            "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+            "importo": "2,01 €",
+            "expenseId": "cmt2q4g0y001njl04qs97dfma"
+          },
+          {
+            "date": "2026-05-31",
+            "vendor": "Stripe Payments Europe Limited",
+            "importo": "3,83 €",
+            "expenseId": "cmt2qaxdf0000kw04g78v1vof"
+          }
+        ]
+      },
+      {
+        "numero": "000002-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-01-31",
+            "vendor": "OpenAI Ireland Limited",
+            "importo": "23,00 €",
+            "expenseId": "cmt2q4fq8001ljl04mde7wglc"
+          }
+        ]
+      },
+      {
+        "numero": "000003-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-01-31",
+            "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+            "importo": "2,70 €",
+            "expenseId": "cmt2q48ju000ijl043xocitk7"
+          }
+        ]
+      },
+      {
+        "numero": "000004-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-02-28",
+            "vendor": "OpenAI Ireland Limited",
+            "importo": "23,00 €",
+            "expenseId": "cmt2q486n000gjl04hsbwxgbj"
+          }
+        ]
+      },
+      {
+        "numero": "000005-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-02-28",
+            "vendor": "OpenAI Ireland Limited",
+            "importo": "31,01 €",
+            "expenseId": "cmt2q47ng000ejl04mpgf86x4"
+          }
+        ]
+      },
+      {
+        "numero": "000006-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-02-28",
+            "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+            "importo": "4,39 €",
+            "expenseId": "cmt2q46lv0009jl04efevu5wr"
+          }
+        ]
+      },
+      {
+        "numero": "000007-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-03-31",
+            "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+            "importo": "11,88 €",
+            "expenseId": "cmt2q47cc000cjl04r0fvp7af"
+          }
+        ]
+      },
+      {
+        "numero": "000008-2026-EST",
+        "usi": 1,
+        "riusato": false,
+        "docs": [
+          {
+            "date": "2026-04-30",
+            "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+            "importo": "6,87 €",
+            "expenseId": "cmt1v8b17000ijr04art7z76j"
+          }
+        ]
+      }
+    ],
+    "duplicatiNumero": [
+      {
+        "numero": "000001-2026-EST",
+        "n": 2,
+        "docs": [
+          "2026-01-31 STRIPE PAYMENTS EUROPE LIMITED 2,01 €",
+          "2026-05-31 Stripe Payments Europe Limited 3,83 €"
+        ]
+      }
+    ],
+    "progressione": {
+      "max": 8,
+      "presenti": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "buchi": [],
+      "notaBuchi": "Nessun buco nella serie numerata 00000N-2026-EST fino al max trovato."
+    },
+    "nota001": "000001-2026-EST usato almeno due volte: 31/01 Stripe €2,01 e 31/05 Stripe ~€3,14/€3,83. Vizio formale → pacchetto commercialista, NON Lotto 4.",
+    "autofattureSenzaNumeroEst": []
+  },
+  "punto2_dueRighePesanti": {
+    "peso": {
+      "dc": "3774,30 €",
+      "irin": "681,49 €",
+      "somma": "4455,79 €",
+      "suTotaleLotto": "€4.455,79 / €7.481,92 ≈ 59,6%"
+    },
+    "dcStudioStp": [
+      {
+        "id": "cmt3zx44j00dxky04ockkqpsb",
+        "sourceKey": "BANK_LINE:cmt311c5f000sl4041s82u7pg",
+        "sourceType": "BANK_LINE",
+        "date": "2026-02-27",
+        "amount": "-3774,30 €",
+        "totalCents": -377430,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": null,
+        "ref": "cmt2q4dvb0019jl04xfxs7wfj",
+        "desc": "Ben: Dc Studio Stp Srl Ins: 27/02/2026 19:31:06 da: Internet Iban: It02y0200822900000107305967 Transid: 2602263139617639480320010900it Cau: ",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt2q4dxz001ajl04d246ecml",
+        "sourceKey": "JSON_ENTRY:entry_sdi_cmt2q4dvb0019jl04xfxs7wfj",
+        "sourceType": "JSON_ENTRY",
+        "date": "2026-03-02",
+        "amount": "-3774,30 €",
+        "totalCents": -377430,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": null,
+        "ref": "66",
+        "desc": "Fattura report DC STUDIO STP SRL n. 66",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt3emxt3000dlg049rox45ea",
+        "sourceKey": "JSON_ENTRY:entry_sdi_cmt2q4dvb0019jl04xfxs7wfj:v1787344281254",
+        "sourceType": "JSON_ENTRY",
+        "date": "2026-03-02",
+        "amount": "-3774,30 €",
+        "totalCents": -377430,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": null,
+        "ref": "66",
+        "desc": "Fattura SDI DC STUDIO STP SRL n. 66",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt3zx449009rky04og18ertn",
+        "sourceKey": "MANUAL_EXPENSE:cmt2q4dvb0019jl04xfxs7wfj",
+        "sourceType": "MANUAL_EXPENSE",
+        "date": "2026-03-02",
+        "amount": "-3774,30 €",
+        "totalCents": -377430,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": "DC STUDIO STP SRL",
+        "ref": "66",
+        "desc": "Fattura n. 66 — Proforma n. 158 del 28/01/2026; Integrazione nr. 14 fatture estere (giu - dic); Versamento Capitale Sociale",
+        "allegato": "sì",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      }
+    ],
+    "irinSrl": [
+      {
+        "id": "cmt2q4f7i001ijl04ml1l85dv",
+        "sourceKey": "JSON_ENTRY:entry_sdi_cmt2q4f4s001hjl04altj34en",
+        "sourceType": "JSON_ENTRY",
+        "date": "2026-02-18",
+        "amount": "-681,49 €",
+        "totalCents": -68149,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": null,
+        "ref": "265",
+        "desc": "Fattura report IRIN S.R.L. n. 265",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt3emt7f0009lg04v1aymwg0",
+        "sourceKey": "JSON_ENTRY:entry_sdi_cmt2q4f4s001hjl04altj34en:v1787344275290",
+        "sourceType": "JSON_ENTRY",
+        "date": "2026-02-18",
+        "amount": "-681,49 €",
+        "totalCents": -68149,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": null,
+        "ref": "265",
+        "desc": "Fattura SDI IRIN S.R.L. n. 265",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt3zx44a009yky04g992qy16",
+        "sourceKey": "MANUAL_EXPENSE:cmt2q4f4s001hjl04altj34en",
+        "sourceType": "MANUAL_EXPENSE",
+        "date": "2026-02-18",
+        "amount": "-681,49 €",
+        "totalCents": -68149,
+        "category": "SPESE_OPERATIVE",
+        "direction": "USCITA",
+        "vendor": "IRIN S.R.L.",
+        "ref": "265",
+        "desc": "Fattura n. 265 — WOSNIC -assistente virtuale IA su website - 12 mesi 558,6+ IVA",
+        "allegato": "sì",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      },
+      {
+        "id": "cmt4lqax0000ml204pen7yraq",
+        "sourceKey": "PAYPAL_TX:54W40024GA901774A",
+        "sourceType": "PAYPAL_MOVEMENT",
+        "date": "2026-02-18",
+        "amount": "-681,49 €",
+        "totalCents": -68149,
+        "category": "RICAVI_VENDITE",
+        "direction": "USCITA",
+        "vendor": "irin srl",
+        "ref": "54W40024GA901774A",
+        "desc": "Pagamento abbonamento · irin srl · Wosnic 49/mese pagamento annuale",
+        "allegato": "no",
+        "nearTargetAmount": true,
+        "nearTargetDate": true
+      }
+    ]
+  },
+  "punto3_perDocumento": {
+    "documentiConAlmeno2Scritture": 73,
+    "documentiCon3oPiu": {
+      "n": 53,
+      "excessEuroSeSiTiene1": "12.847,18 €",
+      "lista": [
+        {
+          "key": "fioreria rossella||2026-08-28",
+          "vendor": "Fioreria Rossella",
+          "num": "",
+          "date": "2026-08-28",
+          "nScritture": 5,
+          "amountAbs": 1700,
+          "amount": "17,00 €",
+          "deveRestarne": 1,
+          "daStornare": 4,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmthel2ac0005l404quzblptv",
+            "cmthnw9g400bhl804z0xl40hj",
+            "cmthnw9g400bil804saro84yj",
+            "cmthejjqs0001l4046z7b6apm",
+            "cmthnw9g400bjl804y3lty21x"
+          ]
+        },
+        {
+          "key": "aruba spa|1000263003864237|2026-04-27",
+          "vendor": "ARUBA SPA",
+          "num": "1000263003864237",
+          "date": "2026-04-27",
+          "nScritture": 4,
+          "amountAbs": 7319,
+          "amount": "73,19 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4b7l000vjl04gz8gwqhd",
+            "cmt3encvt0003k104hnqkziqb",
+            "cmt3zx4480098ky041fasilby",
+            "cmt3zx4480099ky044qm2u5j0"
+          ]
+        },
+        {
+          "key": "aruba spa|1000261000170337|2026-04-30",
+          "vendor": "ARUBA SPA",
+          "num": "1000261000170337",
+          "date": "2026-04-30",
+          "nScritture": 4,
+          "amountAbs": 6100,
+          "amount": "61,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4azm000ujl04drbyq3ij",
+            "cmt3ene410004k1043zfpuxxb",
+            "cmt3zx4480092ky04f6i1xaha",
+            "cmt3zx4480094ky04evp4785b"
+          ]
+        },
+        {
+          "key": "ballarate piero srl|570|2026-05-05",
+          "vendor": "BALLARATE PIERO SRL",
+          "num": "570",
+          "date": "2026-05-05",
+          "nScritture": 4,
+          "amountAbs": 5795,
+          "amount": "57,95 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q49vr000pjl046wrce2ie",
+            "cmt3enk3j0009k104nls4kb9g",
+            "cmt3zx447008xky04metbqrro",
+            "cmt3zx447008yky04uo0sbea6"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|183|2026-05-30",
+          "vendor": "Battistella Fioreria srl",
+          "num": "183",
+          "date": "2026-05-30",
+          "nScritture": 4,
+          "amountAbs": 4000,
+          "amount": "40,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q460w0008jl04xfcp4li4",
+            "cmt3enymv000lk104pw5jvexg",
+            "cmt3zx446008lky0403ej7l0d",
+            "cmt3zx447008mky04edxnu4ei"
+          ]
+        },
+        {
+          "key": "eredi di benda sergio societa agricola|32|2026-04-28",
+          "vendor": "EREDI DI BENDA SERGIO SOCIETA' AGRICOLA",
+          "num": "32",
+          "date": "2026-04-28",
+          "nScritture": 4,
+          "amountAbs": 3300,
+          "amount": "33,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4abp000rjl04vzjlogxm",
+            "cmt3enhnb0007k104f3f1sbjy",
+            "cmt3zx4480096ky04htekkz3z",
+            "cmt3zx4480097ky04nz42c8hn"
+          ]
+        },
+        {
+          "key": "la primavera s.n.c. di calamunci daniel c.|2026/7|2026-06-16",
+          "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+          "num": "2026/7",
+          "date": "2026-06-16",
+          "nScritture": 4,
+          "amountAbs": 3000,
+          "amount": "30,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q45580005jl04ews9vofu",
+            "cmt3eo0s9000nk104socf802u",
+            "cmt3zx446008dky04v42xmci6",
+            "cmt3zx446008eky04ojvphfo0"
+          ]
+        },
+        {
+          "key": "l orchidea di mancini francesca|21|2026-05-25",
+          "vendor": "L'ORCHIDEA DI MANCINI FRANCESCA",
+          "num": "21",
+          "date": "2026-05-25",
+          "nScritture": 4,
+          "amountAbs": 3000,
+          "amount": "30,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q49ag000mjl0436uj6o1k",
+            "cmt3ennt3000ck104216vt3bg",
+            "cmt3zx447008rky0472bnfqsd",
+            "cmt3zx447008sky04qx1e8pmb"
+          ]
+        },
+        {
+          "key": "glofu srl unipersonale|90|2026-06-15",
+          "vendor": "Glofu srl unipersonale",
+          "num": "90",
+          "date": "2026-06-15",
+          "nScritture": 4,
+          "amountAbs": 2592,
+          "amount": "25,92 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q45d40007jl040fgq9rmy",
+            "cmt3eo1x1000ok10463oe2rif",
+            "cmt3zx446008fky04atxvcqm0",
+            "cmt3zx446008gky04tjdfx6wm"
+          ]
+        },
+        {
+          "key": "floragarden di stinga baldassarre|253|2026-05-31",
+          "vendor": "FLORAGARDEN di Stinga Baldassarre",
+          "num": "253",
+          "date": "2026-05-31",
+          "nScritture": 4,
+          "amountAbs": 2500,
+          "amount": "25,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q45aj0006jl049cymlxi4",
+            "cmt3enzow000mk104v6kybk59",
+            "cmt3zx446008iky04in936mt0",
+            "cmt3zx446008jky04xukwgse2"
+          ]
+        },
+        {
+          "key": "provini f.lli di provini antonio c. s.a.s.|2026/0/29|2026-04-20",
+          "vendor": "PROVINI F.LLI DI PROVINI ANTONIO & C. S.A.S.",
+          "num": "2026/0/29",
+          "date": "2026-04-20",
+          "nScritture": 4,
+          "amountAbs": 2500,
+          "amount": "25,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q49nr000ojl04x8rch0aa",
+            "cmt3enlhc000ak104wy4k7zuj",
+            "cmt3zx448009dky04a49og7jz",
+            "cmt3zx448009eky0499znyxwe"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|12/2026|2026-06-18",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "12/2026",
+          "date": "2026-06-18",
+          "nScritture": 4,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q44rx0004jl04kfin9nyc",
+            "cmt3eo34t000pk1040qufsnuh",
+            "cmt3zx446008cky04kj6myp0k",
+            "cmt3zx446008bky049xgje5bq"
+          ]
+        },
+        {
+          "key": "cingolani antonella|27|2026-05-26",
+          "vendor": "CINGOLANI ANTONELLA",
+          "num": "27",
+          "date": "2026-05-26",
+          "nScritture": 4,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q48x5000kjl04s9s0vok3",
+            "cmt3enqcz000ek104ck5odaud",
+            "cmt3zx447008nky04o9vsnl0n",
+            "cmt3zx447008pky04vqb6e2xy"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|7/2026|2026-05-21",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "7/2026",
+          "date": "2026-05-21",
+          "nScritture": 4,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q49ig000njl04hiajnzls",
+            "cmt3enmp3000bk1043awvfcet",
+            "cmt3zx447008tky04kw7mk264",
+            "cmt3zx447008uky04xawcrzu9"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|136|2026-04-30",
+          "vendor": "Battistella Fioreria srl",
+          "num": "136",
+          "date": "2026-04-30",
+          "nScritture": 4,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4arm000tjl04pdlojm6l",
+            "cmt3enfdp0005k104pvotmmak",
+            "cmt3zx4480093ky04yr7dmr8i",
+            "cmt3zx4480095ky04z4yh8dgf"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|5/2026|2026-04-20",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "5/2026",
+          "date": "2026-04-20",
+          "nScritture": 4,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4bni000xjl04mouckf3k",
+            "cmt3ena000001k104a391e5va",
+            "cmt3zx448009cky04915j9vi2",
+            "cmt3zx448009fky04pcgfxlei"
+          ]
+        },
+        {
+          "key": "fioreria rossella||2026-08-26",
+          "vendor": "Fioreria Rossella",
+          "num": "",
+          "date": "2026-08-26",
+          "nScritture": 4,
+          "amountAbs": 1700,
+          "amount": "17,00 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmtabhgrl0001l8048cjax22d",
+            "cmtabipjq0003l804p2dgx6ns",
+            "cmte1n27v008rl804g79rdkx0",
+            "cmte1n27v008sl80470dxkw4j"
+          ]
+        },
+        {
+          "key": "ballarate piero srl|464|2026-04-09",
+          "vendor": "BALLARATE PIERO SRL",
+          "num": "464",
+          "date": "2026-04-09",
+          "nScritture": 4,
+          "amountAbs": 913,
+          "amount": "9,13 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4bvi000yjl048wle1z1f",
+            "cmt3en9nj0000k104w3idp4a6",
+            "cmt3zx449009gky04rvi7mwn8",
+            "cmt3zx449009hky042lbyn86y"
+          ]
+        },
+        {
+          "key": "aruba spa|1000263004039573|2026-05-03",
+          "vendor": "ARUBA SPA",
+          "num": "1000263004039573",
+          "date": "2026-05-03",
+          "nScritture": 4,
+          "amountAbs": 609,
+          "amount": "6,09 €",
+          "deveRestarne": 1,
+          "daStornare": 3,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4ajo000sjl04fz681ov0",
+            "cmt3engf10006k104c3qkru2d",
+            "cmt3zx447008zky04xrml25w4",
+            "cmt3zx4480090ky0496bmnbw4"
+          ]
+        },
+        {
+          "key": "dc studio stp srl|66|2026-03-02",
+          "vendor": "DC STUDIO STP SRL",
+          "num": "66",
+          "date": "2026-03-02",
+          "nScritture": 3,
+          "amountAbs": 377430,
+          "amount": "3774,30 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4dxz001ajl04d246ecml",
+            "cmt3emxt3000dlg049rox45ea",
+            "cmt3zx449009rky04og18ertn"
+          ]
+        },
+        {
+          "key": "irin s.r.l.|265|2026-02-18",
+          "vendor": "IRIN S.R.L.",
+          "num": "265",
+          "date": "2026-02-18",
+          "nScritture": 3,
+          "amountAbs": 68149,
+          "amount": "681,49 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4f7i001ijl04ml1l85dv",
+            "cmt3emt7f0009lg04v1aymwg0",
+            "cmt3zx44a009yky04g992qy16"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|96|2026-03-31",
+          "vendor": "Battistella Fioreria srl",
+          "num": "96",
+          "date": "2026-03-31",
+          "nScritture": 3,
+          "amountAbs": 14500,
+          "amount": "145,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4cgm0011jl041hazgj9e",
+            "cmt3en4l5000ilg04wx80n57m",
+            "cmt3zx449009nky04duyuqr8i"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|235|2026-07-31",
+          "vendor": "Battistella Fioreria srl",
+          "num": "235",
+          "date": "2026-07-31",
+          "nScritture": 3,
+          "amountAbs": 14000,
+          "amount": "140,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m65d80005jt04yj0wsbtm",
+            "cmt3eohxn0010k1046olqdphh",
+            "cmt3zx445007yky04h39gfvd3"
+          ]
+        },
+        {
+          "key": "maspes piante e fiori di maspes c. snc|00426000153|2026-07-26",
+          "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+          "num": "00426000153",
+          "date": "2026-07-26",
+          "nScritture": 3,
+          "amountAbs": 13300,
+          "amount": "133,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m66gm000bjt045sdlvlfp",
+            "cmt3eodnd000xk104c5iosyai",
+            "cmt3zx4450080ky04bxijda8d"
+          ]
+        },
+        {
+          "key": "floris di bordoli loris|4|2026-03-12",
+          "vendor": "FLORIS DI BORDOLI LORIS",
+          "num": "4",
+          "date": "2026-03-12",
+          "nScritture": 3,
+          "amountAbs": 8500,
+          "amount": "85,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4dko0018jl04uppaaydu",
+            "cmt3emz07000elg04eor311d3",
+            "cmt3zx449009qky049wvx07eb"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|1/2026|2026-01-26",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "1/2026",
+          "date": "2026-01-26",
+          "nScritture": 3,
+          "amountAbs": 6001,
+          "amount": "60,01 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4hsc001yjl04wz1u11dr",
+            "cmt3emjq30001lg045a39waok",
+            "cmt3zx44a00a6ky04cnkoc50y"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|210|2026-06-30",
+          "vendor": "Battistella Fioreria srl",
+          "num": "210",
+          "date": "2026-06-30",
+          "nScritture": 3,
+          "amountAbs": 5000,
+          "amount": "50,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q43bj0001jl044kgoqf13",
+            "cmt3eo6v5000sk104ka2gm5py",
+            "cmt3zx4450086ky04iz9cnwc4"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|53|2026-02-28",
+          "vendor": "Battistella Fioreria srl",
+          "num": "53",
+          "date": "2026-02-28",
+          "nScritture": 3,
+          "amountAbs": 4500,
+          "amount": "45,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4ebc001cjl04txj4djba",
+            "cmt3emwv6000clg04y5mxm65h",
+            "cmt3zx449009sky04o47nroql"
+          ]
+        },
+        {
+          "key": "openai ireland limited|000005-2026-est|2026-02-28",
+          "vendor": "OpenAI Ireland Limited",
+          "num": "000005-2026-est",
+          "date": "2026-02-28",
+          "nScritture": 3,
+          "amountAbs": 3101,
+          "amount": "31,01 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q47q5000fjl043xg3eoix",
+            "cmt3enu1l000hk104vwks9w0j",
+            "cmt3zx44a009vky04pdr6fq12"
+          ]
+        },
+        {
+          "key": "margherita flower studio di lo monaco martina|11|2026-07-22",
+          "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+          "num": "11",
+          "date": "2026-07-22",
+          "nScritture": 3,
+          "amountAbs": 3000,
+          "amount": "30,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m65vh0007jt041dbb74z5",
+            "cmt3eogh5000zk10433zt9261",
+            "cmt3zx4450082ky040kqqj2t7"
+          ]
+        },
+        {
+          "key": "la primavera s.n.c. di calamunci daniel c.|2026/1|2026-01-24",
+          "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+          "num": "2026/1",
+          "date": "2026-01-24",
+          "nScritture": 3,
+          "amountAbs": 2701,
+          "amount": "27,01 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4hfn001wjl04okae6en0",
+            "cmt3eml500002lg04f2adhvxv",
+            "cmt3zx44a00a7ky04kpulev8q"
+          ]
+        },
+        {
+          "key": "floragarden di stinga baldassarre|17|2026-02-10",
+          "vendor": "FLORAGARDEN di Stinga Baldassarre",
+          "num": "17",
+          "date": "2026-02-10",
+          "nScritture": 3,
+          "amountAbs": 2500,
+          "amount": "25,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4ggy001qjl04nehrbf60",
+            "cmt3emopd0005lg04403il5bc",
+            "cmt3zx44a00a0ky04lftgdbad"
+          ]
+        },
+        {
+          "key": "battistella fioreria srl|21|2026-01-31",
+          "vendor": "Battistella Fioreria srl",
+          "num": "21",
+          "date": "2026-01-31",
+          "nScritture": 3,
+          "amountAbs": 2500,
+          "amount": "25,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4h2a001ujl04ug1ziynr",
+            "cmt3emmch0003lg04oede02g2",
+            "cmt3zx44a00a3ky041a6szyx5"
+          ]
+        },
+        {
+          "key": "cotugno di piero cotugno|fpr 3/26|2026-01-17",
+          "vendor": "COTUGNO DI PIERO COTUGNO",
+          "num": "fpr 3/26",
+          "date": "2026-01-17",
+          "nScritture": 3,
+          "amountAbs": 2500,
+          "amount": "25,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4i340020jl047ct855yg",
+            "cmt3emh7y0000lg04gqx4auot",
+            "cmt3zx44a00a8ky04ayawpwso"
+          ]
+        },
+        {
+          "key": "openai ireland limited|000004-2026-est|2026-02-28",
+          "vendor": "OpenAI Ireland Limited",
+          "num": "000004-2026-est",
+          "date": "2026-02-28",
+          "nScritture": 3,
+          "amountAbs": 2300,
+          "amount": "23,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q48bv000hjl04pgi0cqju",
+            "cmt3ensqx000gk104z2r5vdgo",
+            "cmt3zx44a009uky043shjqtfw"
+          ]
+        },
+        {
+          "key": "openai ireland limited|000002-2026-est|2026-01-31",
+          "vendor": "OpenAI Ireland Limited",
+          "num": "000002-2026-est",
+          "date": "2026-01-31",
+          "nScritture": 3,
+          "amountAbs": 2300,
+          "amount": "23,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2q4fsy001mjl04vbnf2tpq",
+            "cmt3emqse0007lg049aa7d7qv",
+            "cmt3zx44a00a5ky04selsr9vh"
+          ]
+        },
+        {
+          "key": "fioreria rose e tulipani di ceccotti dante|5|2026-03-24",
+          "vendor": "FIORERIA ROSE E TULIPANI DI CECCOTTI DANTE",
+          "num": "5",
+          "date": "2026-03-24",
+          "nScritture": 3,
+          "amountAbs": 2200,
+          "amount": "22,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt3en03f000flg04cumtjtsa",
+            "cmt3zx449009pky043cz6qq4y",
+            "cmt2q4d9z0016jl048fgqzc9h"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|17/2026|2026-08-03",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "17/2026",
+          "date": "2026-08-03",
+          "nScritture": 3,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m64790002jt04jatn86v2",
+            "cmt3eoj3t0011k104am64j7va",
+            "cmt3zx445007xky04tdhpfzy6"
+          ]
+        },
+        {
+          "key": "shoppingarden di anna bruno|19/2026|2026-08-19",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "19/2026",
+          "date": "2026-08-19",
+          "nScritture": 3,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m649m0003jt043qt3wet0",
+            "cmt3eokhu0012k10403bxt4fy",
+            "cmt3zx445007wky0443uc6uiu"
+          ]
+        },
+        {
+          "key": "cingolani antonella|35|2026-07-30",
+          "vendor": "CINGOLANI ANTONELLA",
+          "num": "35",
+          "date": "2026-07-30",
+          "nScritture": 3,
+          "amountAbs": 2000,
+          "amount": "20,00 €",
+          "deveRestarne": 1,
+          "daStornare": 2,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ],
+          "ids": [
+            "cmt2m66610009jt04a7keusc3",
+            "cmt3eoeyp000yk104wjyt06as",
+            "cmt3zx445007zky04f70hhq55"
+          ]
+        }
+      ]
+    },
+    "documentiCitatiTitolare": [
+      {
+        "key": "aruba spa|1000263003864237|2026-04-27",
+        "vendor": "ARUBA SPA",
+        "num": "1000263003864237",
+        "date": "2026-04-27",
+        "nScritture": 4,
+        "amountAbs": 7319,
+        "amount": "73,19 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4b7l000vjl04gz8gwqhd",
+          "cmt3encvt0003k104hnqkziqb",
+          "cmt3zx4480098ky041fasilby",
+          "cmt3zx4480099ky044qm2u5j0"
+        ]
+      },
+      {
+        "key": "aruba spa|1000261000170337|2026-04-30",
+        "vendor": "ARUBA SPA",
+        "num": "1000261000170337",
+        "date": "2026-04-30",
+        "nScritture": 4,
+        "amountAbs": 6100,
+        "amount": "61,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4azm000ujl04drbyq3ij",
+          "cmt3ene410004k1043zfpuxxb",
+          "cmt3zx4480092ky04f6i1xaha",
+          "cmt3zx4480094ky04evp4785b"
+        ]
+      },
+      {
+        "key": "ballarate piero srl|570|2026-05-05",
+        "vendor": "BALLARATE PIERO SRL",
+        "num": "570",
+        "date": "2026-05-05",
+        "nScritture": 4,
+        "amountAbs": 5795,
+        "amount": "57,95 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q49vr000pjl046wrce2ie",
+          "cmt3enk3j0009k104nls4kb9g",
+          "cmt3zx447008xky04metbqrro",
+          "cmt3zx447008yky04uo0sbea6"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|183|2026-05-30",
+        "vendor": "Battistella Fioreria srl",
+        "num": "183",
+        "date": "2026-05-30",
+        "nScritture": 4,
+        "amountAbs": 4000,
+        "amount": "40,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q460w0008jl04xfcp4li4",
+          "cmt3enymv000lk104pw5jvexg",
+          "cmt3zx446008lky0403ej7l0d",
+          "cmt3zx447008mky04edxnu4ei"
+        ]
+      },
+      {
+        "key": "eredi di benda sergio societa agricola|32|2026-04-28",
+        "vendor": "EREDI DI BENDA SERGIO SOCIETA' AGRICOLA",
+        "num": "32",
+        "date": "2026-04-28",
+        "nScritture": 4,
+        "amountAbs": 3300,
+        "amount": "33,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4abp000rjl04vzjlogxm",
+          "cmt3enhnb0007k104f3f1sbjy",
+          "cmt3zx4480096ky04htekkz3z",
+          "cmt3zx4480097ky04nz42c8hn"
+        ]
+      },
+      {
+        "key": "la primavera s.n.c. di calamunci daniel c.|2026/7|2026-06-16",
+        "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+        "num": "2026/7",
+        "date": "2026-06-16",
+        "nScritture": 4,
+        "amountAbs": 3000,
+        "amount": "30,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q45580005jl04ews9vofu",
+          "cmt3eo0s9000nk104socf802u",
+          "cmt3zx446008dky04v42xmci6",
+          "cmt3zx446008eky04ojvphfo0"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|12/2026|2026-06-18",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "12/2026",
+        "date": "2026-06-18",
+        "nScritture": 4,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q44rx0004jl04kfin9nyc",
+          "cmt3eo34t000pk1040qufsnuh",
+          "cmt3zx446008cky04kj6myp0k",
+          "cmt3zx446008bky049xgje5bq"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|7/2026|2026-05-21",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "7/2026",
+        "date": "2026-05-21",
+        "nScritture": 4,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q49ig000njl04hiajnzls",
+          "cmt3enmp3000bk1043awvfcet",
+          "cmt3zx447008tky04kw7mk264",
+          "cmt3zx447008uky04xawcrzu9"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|136|2026-04-30",
+        "vendor": "Battistella Fioreria srl",
+        "num": "136",
+        "date": "2026-04-30",
+        "nScritture": 4,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4arm000tjl04pdlojm6l",
+          "cmt3enfdp0005k104pvotmmak",
+          "cmt3zx4480093ky04yr7dmr8i",
+          "cmt3zx4480095ky04z4yh8dgf"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|5/2026|2026-04-20",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "5/2026",
+        "date": "2026-04-20",
+        "nScritture": 4,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4bni000xjl04mouckf3k",
+          "cmt3ena000001k104a391e5va",
+          "cmt3zx448009cky04915j9vi2",
+          "cmt3zx448009fky04pcgfxlei"
+        ]
+      },
+      {
+        "key": "ballarate piero srl|464|2026-04-09",
+        "vendor": "BALLARATE PIERO SRL",
+        "num": "464",
+        "date": "2026-04-09",
+        "nScritture": 4,
+        "amountAbs": 913,
+        "amount": "9,13 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4bvi000yjl048wle1z1f",
+          "cmt3en9nj0000k104w3idp4a6",
+          "cmt3zx449009gky04rvi7mwn8",
+          "cmt3zx449009hky042lbyn86y"
+        ]
+      },
+      {
+        "key": "aruba spa|1000263004039573|2026-05-03",
+        "vendor": "ARUBA SPA",
+        "num": "1000263004039573",
+        "date": "2026-05-03",
+        "nScritture": 4,
+        "amountAbs": 609,
+        "amount": "6,09 €",
+        "deveRestarne": 1,
+        "daStornare": 3,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4ajo000sjl04fz681ov0",
+          "cmt3engf10006k104c3qkru2d",
+          "cmt3zx447008zky04xrml25w4",
+          "cmt3zx4480090ky0496bmnbw4"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|96|2026-03-31",
+        "vendor": "Battistella Fioreria srl",
+        "num": "96",
+        "date": "2026-03-31",
+        "nScritture": 3,
+        "amountAbs": 14500,
+        "amount": "145,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4cgm0011jl041hazgj9e",
+          "cmt3en4l5000ilg04wx80n57m",
+          "cmt3zx449009nky04duyuqr8i"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|235|2026-07-31",
+        "vendor": "Battistella Fioreria srl",
+        "num": "235",
+        "date": "2026-07-31",
+        "nScritture": 3,
+        "amountAbs": 14000,
+        "amount": "140,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2m65d80005jt04yj0wsbtm",
+          "cmt3eohxn0010k1046olqdphh",
+          "cmt3zx445007yky04h39gfvd3"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|1/2026|2026-01-26",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "1/2026",
+        "date": "2026-01-26",
+        "nScritture": 3,
+        "amountAbs": 6001,
+        "amount": "60,01 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4hsc001yjl04wz1u11dr",
+          "cmt3emjq30001lg045a39waok",
+          "cmt3zx44a00a6ky04cnkoc50y"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|210|2026-06-30",
+        "vendor": "Battistella Fioreria srl",
+        "num": "210",
+        "date": "2026-06-30",
+        "nScritture": 3,
+        "amountAbs": 5000,
+        "amount": "50,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q43bj0001jl044kgoqf13",
+          "cmt3eo6v5000sk104ka2gm5py",
+          "cmt3zx4450086ky04iz9cnwc4"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|53|2026-02-28",
+        "vendor": "Battistella Fioreria srl",
+        "num": "53",
+        "date": "2026-02-28",
+        "nScritture": 3,
+        "amountAbs": 4500,
+        "amount": "45,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4ebc001cjl04txj4djba",
+          "cmt3emwv6000clg04y5mxm65h",
+          "cmt3zx449009sky04o47nroql"
+        ]
+      },
+      {
+        "key": "la primavera s.n.c. di calamunci daniel c.|2026/1|2026-01-24",
+        "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+        "num": "2026/1",
+        "date": "2026-01-24",
+        "nScritture": 3,
+        "amountAbs": 2701,
+        "amount": "27,01 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4hfn001wjl04okae6en0",
+          "cmt3eml500002lg04f2adhvxv",
+          "cmt3zx44a00a7ky04kpulev8q"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|21|2026-01-31",
+        "vendor": "Battistella Fioreria srl",
+        "num": "21",
+        "date": "2026-01-31",
+        "nScritture": 3,
+        "amountAbs": 2500,
+        "amount": "25,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4h2a001ujl04ug1ziynr",
+          "cmt3emmch0003lg04oede02g2",
+          "cmt3zx44a00a3ky041a6szyx5"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|17/2026|2026-08-03",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "17/2026",
+        "date": "2026-08-03",
+        "nScritture": 3,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2m64790002jt04jatn86v2",
+          "cmt3eoj3t0011k104am64j7va",
+          "cmt3zx445007xky04tdhpfzy6"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|19/2026|2026-08-19",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "19/2026",
+        "date": "2026-08-19",
+        "nScritture": 3,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2m649m0003jt043qt3wet0",
+          "cmt3eokhu0012k10403bxt4fy",
+          "cmt3zx445007wky0443uc6uiu"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|14/2026|2026-07-07",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "14/2026",
+        "date": "2026-07-07",
+        "nScritture": 3,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2m67mi000hjt04ocjlhzkg",
+          "cmt3eo9p6000uk1049nj0c4d8",
+          "cmt3zx4450084ky0414dvri6t"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|3/2026|2026-03-25",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "3/2026",
+        "date": "2026-03-25",
+        "nScritture": 3,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4cza0014jl041k12pjyn",
+          "cmt3en2nu000glg047qqxruld",
+          "cmt3zx449009oky042n7pdees"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|2/2026|2026-02-23",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "2/2026",
+        "date": "2026-02-23",
+        "nScritture": 3,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 2,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4ewr001gjl04ip65su92",
+          "cmt3emuh0000alg04z4gj269f",
+          "cmt3zx44a009xky04tmt2czzn"
+        ]
+      },
+      {
+        "key": "battistella fioreria srl|253|2026-08-31",
+        "vendor": "Battistella Fioreria srl",
+        "num": "253",
+        "date": "2026-08-31",
+        "nScritture": 2,
+        "amountAbs": 13800,
+        "amount": "138,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmtjxelrc0001jv04y27zguqy",
+          "cmtm1uxdz00c6l504dbthj2tf"
+        ]
+      },
+      {
+        "key": "torre domenica|1|2026-06-19",
+        "vendor": "TORRE DOMENICA",
+        "num": "1",
+        "date": "2026-06-19",
+        "nScritture": 2,
+        "amountAbs": 6200,
+        "amount": "62,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q44et0003jl04f81j2zwf",
+          "cmt3zx446008aky0461477y9w"
+        ]
+      },
+      {
+        "key": "domenica torre|1|2026-06-19",
+        "vendor": "DOMENICA TORRE",
+        "num": "1",
+        "date": "2026-06-19",
+        "nScritture": 2,
+        "amountAbs": 6200,
+        "amount": "62,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3eo4ch000qk104t0dkdio1",
+          "cmt3zx4460089ky047uc0m217"
+        ]
+      },
+      {
+        "key": "di paola maria antonietta|16|2026-05-26",
+        "vendor": "DI PAOLA MARIA ANTONIETTA",
+        "num": "16",
+        "date": "2026-05-26",
+        "nScritture": 2,
+        "amountAbs": 4000,
+        "amount": "40,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q492j000ljl04aa3r2mg7",
+          "cmt3zx447008qky04b5g04i5y"
+        ]
+      },
+      {
+        "key": "maria antonietta di paola|5|2026-02-17",
+        "vendor": "MARIA ANTONIETTA DI PAOLA",
+        "num": "5",
+        "date": "2026-02-17",
+        "nScritture": 2,
+        "amountAbs": 4000,
+        "amount": "40,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3ems580008lg04h02uopp8",
+          "cmt3zx44a009zky04ha83nbhc"
+        ]
+      },
+      {
+        "key": "maria antonietta di paola|16|2026-05-26",
+        "vendor": "MARIA ANTONIETTA DI PAOLA",
+        "num": "16",
+        "date": "2026-05-26",
+        "nScritture": 2,
+        "amountAbs": 4000,
+        "amount": "40,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3enp68000dk104krbxeu0z",
+          "cmt3zx447008oky0475hg9bvz"
+        ]
+      },
+      {
+        "key": "calamunci tindaro|2026/9|2026-05-06",
+        "vendor": "CALAMUNCI TINDARO",
+        "num": "2026/9",
+        "date": "2026-05-06",
+        "nScritture": 2,
+        "amountAbs": 2500,
+        "amount": "25,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4a3q000qjl04dqtn1syx",
+          "cmt3zx447008wky04rfwdq7hv"
+        ]
+      },
+      {
+        "key": "di paola maria antonietta|10|2026-04-04",
+        "vendor": "DI PAOLA MARIA ANTONIETTA",
+        "num": "10",
+        "date": "2026-04-04",
+        "nScritture": 2,
+        "amountAbs": 2500,
+        "amount": "25,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4c0t000zjl049vm7t1fe",
+          "cmt3zx449009iky04jjkf2g8q"
+        ]
+      },
+      {
+        "key": "maria antonietta di paola|10|2026-04-04",
+        "vendor": "MARIA ANTONIETTA DI PAOLA",
+        "num": "10",
+        "date": "2026-04-04",
+        "nScritture": 2,
+        "amountAbs": 2500,
+        "amount": "25,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3en648000jlg04d311050z",
+          "cmt3zx449009jky04d373wbev"
+        ]
+      },
+      {
+        "key": "tindaro calamunci|2026/9|2026-05-06",
+        "vendor": "TINDARO CALAMUNCI",
+        "num": "2026/9",
+        "date": "2026-05-06",
+        "nScritture": 2,
+        "amountAbs": 2500,
+        "amount": "25,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3enity0008k104qo566m4v",
+          "cmt3zx447008vky04o46ak9yh"
+        ]
+      },
+      {
+        "key": "vidoz alessia|19|2026-04-01",
+        "vendor": "VIDOZ ALESSIA",
+        "num": "19",
+        "date": "2026-04-01",
+        "nScritture": 2,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4col0012jl046wojnv6j",
+          "cmt3zx449009kky045hlncmuk"
+        ]
+      },
+      {
+        "key": "cannone lucrezia|4|2026-04-22",
+        "vendor": "CANNONE LUCREZIA",
+        "num": "4",
+        "date": "2026-04-22",
+        "nScritture": 2,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt2q4bfj000wjl04zctiv69g",
+          "cmt3zx448009bky0439iaag5f"
+        ]
+      },
+      {
+        "key": "alessia vidoz|19|2026-04-01",
+        "vendor": "ALESSIA VIDOZ",
+        "num": "19",
+        "date": "2026-04-01",
+        "nScritture": 2,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3en3ng000hlg04txxci2wm",
+          "cmt3zx449009lky04cq2mtz9d"
+        ]
+      },
+      {
+        "key": "lucrezia cannone|4|2026-04-22",
+        "vendor": "LUCREZIA CANNONE",
+        "num": "4",
+        "date": "2026-04-22",
+        "nScritture": 2,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmt3enbke0002k104dqys3bqq",
+          "cmt3zx448009aky04gqjhd02o"
+        ]
+      },
+      {
+        "key": "shoppingarden di anna bruno|20/2026|2026-09-03",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "num": "20/2026",
+        "date": "2026-09-03",
+        "nScritture": 2,
+        "amountAbs": 2000,
+        "amount": "20,00 €",
+        "deveRestarne": 1,
+        "daStornare": 1,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ],
+        "ids": [
+          "cmtm1jwna0001l504qgjihg57",
+          "cmtm1uxdz00c5l504gmhgfc3j"
+        ]
+      }
+    ],
+    "regola": "Per ogni identità fornitore+numero+data deve restare 1 scrittura di costo. Stornare 1 gamba per coppia su documenti a 4 scritture lascia 2, non 1."
+  },
+  "punto4_gruppiRifatti": {
+    "definizioneG3": "Solo movimenti banca↔wallet (giroconti, SDD funding). NON autofatture SaaS, NON costi fiorista.",
+    "gruppoG5": "AUTOFATTURE ESTERE — fuori Lotto 4 (commercialista / numerazione).",
+    "conteggi": {
+      "G1 GEMELLE PERFETTE": {
+        "n": 68,
+        "euro": "6666,80 €"
+      },
+      "SCARTATE_ACCOPPIAMENTO_ERRATO": {
+        "n": 10,
+        "euro": "372,01 €"
+      },
+      "G5 AUTOFATTURE ESTERE": {
+        "n": 15,
+        "euro": "162,55 €"
+      },
+      "G2 RICORRENTI NOTE": {
+        "n": 6,
+        "euro": "280,56 €"
+      }
+    },
+    "g5Coppie": 15,
+    "g5Sample": [
+      {
+        "vendors": "STRIPE PAYMENTS EUROPE LIMITED / STRIPE PAYMENTS EUROPE LIMITED",
+        "nums": "000006-2026-est/000006-2026-est",
+        "amount": "4,39 €",
+        "date": "2026-02-28"
+      },
+      {
+        "vendors": "STRIPE PAYMENTS EUROPE LIMITED / STRIPE PAYMENTS EUROPE LIMITED",
+        "nums": "000008-2026-est/000008-2026-est",
+        "amount": "6,87 €",
+        "date": "2026-04-30"
+      },
+      {
+        "vendors": "STRIPE PAYMENTS EUROPE LIMITED / STRIPE PAYMENTS EUROPE LIMITED",
+        "nums": "000007-2026-est/000007-2026-est",
+        "amount": "11,88 €",
+        "date": "2026-03-31"
+      },
+      {
+        "vendors": "OpenAI Ireland Limited / OpenAI Ireland Limited",
+        "nums": "000005-2026-est/000005-2026-est",
+        "amount": "31,01 €",
+        "date": "2026-02-28"
+      },
+      {
+        "vendors": "OpenAI Ireland Limited / OpenAI Ireland Limited",
+        "nums": "000004-2026-est/000004-2026-est",
+        "amount": "23,00 €",
+        "date": "2026-02-28"
+      },
+      {
+        "vendors": "STRIPE PAYMENTS EUROPE LIMITED / STRIPE PAYMENTS EUROPE LIMITED",
+        "nums": "000003-2026-est/000003-2026-est",
+        "amount": "2,70 €",
+        "date": "2026-01-31"
+      },
+      {
+        "vendors": "OpenAI Ireland Limited / OpenAI Ireland Limited",
+        "nums": "000002-2026-est/000002-2026-est",
+        "amount": "23,00 €",
+        "date": "2026-01-31"
+      },
+      {
+        "vendors": "STRIPE PAYMENTS EUROPE LIMITED / STRIPE PAYMENTS EUROPE LIMITED",
+        "nums": "000001-2026-est/000001-2026-est",
+        "amount": "2,01 €",
+        "date": "2026-01-31"
+      },
+      {
+        "vendors": " / Stripe Payments Europe Limited",
+        "nums": "000001-2026-est/000001-2026-est",
+        "amount": "3,14 €",
+        "date": "2026-05-31"
+      },
+      {
+        "vendors": " / Stripe Payments Europe",
+        "nums": "/",
+        "amount": "3,14 €",
+        "date": "2026-05-31"
+      },
+      {
+        "vendors": " / Google Ireland Ltd",
+        "nums": "/",
+        "amount": "25,42 €",
+        "date": "2026-02-18"
+      },
+      {
+        "vendors": " / Stripe Payments Europe",
+        "nums": "/",
+        "amount": "6,62 €",
+        "date": "2026-08-31"
+      },
+      {
+        "vendors": " / Cursor",
+        "nums": "/",
+        "amount": "17,75 €",
+        "date": "2026-09-02"
+      },
+      {
+        "vendors": " / Apple",
+        "nums": "/",
+        "amount": "0,81 €",
+        "date": "2026-08-16"
+      },
+      {
+        "vendors": " / Apple",
+        "nums": "/",
+        "amount": "0,81 €",
+        "date": "2026-07-16"
+      }
+    ]
+  },
+  "punto5_accoppiamentiErrati": {
+    "nScartare": 10,
+    "euroScartare": "372,01 €",
+    "ferranteShoppingarden": [],
+    "sample": [
+      {
+        "a": "SOLANO VINCENZO|fpr 1/26|2026-07-09",
+        "b": "VINCENZO SOLANO|fpr 1/26|2026-07-09",
+        "amount": "38,01 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "TORRE DOMENICA|1|2026-06-19",
+        "b": "DOMENICA TORRE|1|2026-06-19",
+        "amount": "62,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "DI PAOLA MARIA ANTONIETTA|16|2026-05-26",
+        "b": "MARIA ANTONIETTA DI PAOLA|16|2026-05-26",
+        "amount": "40,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "CALAMUNCI TINDARO|2026/9|2026-05-06",
+        "b": "TINDARO CALAMUNCI|2026/9|2026-05-06",
+        "amount": "25,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "CANNONE LUCREZIA|4|2026-04-22",
+        "b": "LUCREZIA CANNONE|4|2026-04-22",
+        "amount": "20,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "DI PAOLA MARIA ANTONIETTA|5|2026-02-17",
+        "b": "MARIA ANTONIETTA DI PAOLA|5|2026-02-17",
+        "amount": "40,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "LUCREZIA CANNONE|4|2026-04-22",
+        "b": "CANNONE LUCREZIA|4|2026-04-22",
+        "amount": "20,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "TINDARO CALAMUNCI|2026/9|2026-05-06",
+        "b": "CALAMUNCI TINDARO|2026/9|2026-05-06",
+        "amount": "25,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "MARIA ANTONIETTA DI PAOLA|16|2026-05-26",
+        "b": "DI PAOLA MARIA ANTONIETTA|16|2026-05-26",
+        "amount": "40,00 €",
+        "reason": "fornitore diverso"
+      },
+      {
+        "a": "DOMENICA TORRE|1|2026-06-19",
+        "b": "TORRE DOMENICA|1|2026-06-19",
+        "amount": "62,00 €",
+        "reason": "fornitore diverso"
+      }
+    ]
+  },
+  "punto6_isabella": {
+    "stripeHits": [
+      {
+        "id": "stripe_eu_tx_txn_3TSzMsRrkwwcYwep11EAvI3P",
+        "date": "2026-05-03",
+        "gross": "284,90 €",
+        "fee": "4,52 €",
+        "net": "280,38 €",
+        "type": "charge",
+        "desc": null
+      }
+    ],
+    "finecoHits": [
+      {
+        "id": "cmt1vc6uk000zky04prrr20cf",
+        "date": "2026-05-07",
+        "amount": "278,75 €",
+        "matchType": "FLORIST_TRANSFER",
+        "desc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 07/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: Stripe"
+      }
+    ],
+    "paypalLedgerHits": [],
+    "otherCesaroniLedger": [],
+    "ordersConfermati": [
+      {
+        "num": "FT-MC-26-003",
+        "created": "2026-07-02",
+        "delivery": "2026-07-04",
+        "status": "COMPLETED",
+        "pay": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "num": "FT-MC-26-004",
+        "created": "2026-07-02",
+        "delivery": "2026-05-31",
+        "status": "COMPLETED",
+        "pay": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "num": "FT-MC-26-005",
+        "created": "2026-07-06",
+        "delivery": "2026-07-30",
+        "status": "COMPLETED",
+        "pay": "PAID",
+        "amount": "29,99 €"
+      },
+      {
+        "num": "FT-MC-26-006",
+        "created": "2026-08-03",
+        "delivery": "2026-09-12",
+        "status": "PENDING",
+        "pay": "UNPAID",
+        "amount": "29,99 €"
+      }
+    ],
+    "deltaFineco": {
+      "titolarePayPalNettoAtteso": "280,38 €",
+      "commissionAttese": "4,52 €",
+      "grossAtteso": "284,90 €",
+      "finecoOsservato": "278,75 €",
+      "deltaVs28038": "-1,63 €",
+      "nota": "Δ Fineco €278,75 vs netto PayPal dichiarato €280,38 = −€1,63. Verificare se payout Fineco è Stripe (non PayPal) o se c’è fee aggiuntiva / altro movimento."
+    },
+    "paypalTables": []
+  },
+  "punto7_luciano": {
+    "cancelledOrders": [
+      {
+        "order": "FT-PA-26-002",
+        "orderId": "cmpe3in7c0001jq04iebeplyj",
+        "amount": "31,48 €",
+        "deleted": false,
+        "revenueEntries": []
+      },
+      {
+        "order": "FT-PA-26-006",
+        "orderId": "cms3d3zua0001ld04sxzsni8e",
+        "amount": "31,48 €",
+        "deleted": true,
+        "revenueEntries": []
+      }
+    ],
+    "conclusione": "OK: nessun ricavo ledger attivo sugli ordini ANNULLATI."
+  },
+  "stop": "Nessuna esecuzione Lotto 4."
+}

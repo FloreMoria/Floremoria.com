@@ -1,0 +1,78 @@
+{
+  "label": "FREEZE_UFFICIALE_POST_LOTTO4",
+  "replaces": "freeze 2026-09-06 (costi €12.984,96 / RAI −€2.184,71)",
+  "timestamp": "2026-09-07T12:45:26.633Z",
+  "batchRef": "FASE4B_L4_20260907_123006",
+  "ricavi": {
+    "ricaviLordiCents": 779245,
+    "ricaviLordiEuro": "7792,45 €",
+    "venditeCaratteristicheCents": 291999,
+    "venditeCaratteristicheEuro": "2919,99 €",
+    "contributiEsercizioCents": 459766,
+    "contributiEsercizioEuro": "4597,66 €",
+    "altriRicaviCents": 3009,
+    "altriRicaviEuro": "30,09 €",
+    "rimborsiCents": 24471,
+    "rimborsiEuro": "244,71 €"
+  },
+  "costi": {
+    "costiTotaliCents": 1321096,
+    "costiTotaliEuro": "13.210,96 €",
+    "costiFioristiCents": 197359,
+    "costiFioristiEuro": "1973,59 €",
+    "costiFatturePassiveSdiCents": 160178,
+    "costiFatturePassiveSdiEuro": "1601,78 €",
+    "costiSaasCents": 106510,
+    "costiSaasEuro": "1065,10 €",
+    "costiOperativiCents": 821375,
+    "costiOperativiEuro": "8213,75 €",
+    "oneriBancariCents": 35674,
+    "oneriBancariEuro": "356,74 €"
+  },
+  "risultato": {
+    "ebitdaCents": -506177,
+    "ebitdaEuro": "-5061,77 €",
+    "risultatoAnteImposteCents": -541851,
+    "risultatoAnteImposteEuro": "-5418,51 €"
+  },
+  "iva": {
+    "debitoCents": 13497,
+    "debitoEuro": "134,97 €",
+    "creditoCents": 27684,
+    "creditoEuro": "276,84 €",
+    "nettaCents": -14187,
+    "nettaEuro": "-141,87 €"
+  },
+  "cassa": {
+    "saldoBancaFinecoCents": 3200613,
+    "saldoBancaFinecoEuro": "32.006,13 €",
+    "cashInflowCents": 807589,
+    "cashOutflowCents": 819024,
+    "cashGatewayTransferCents": 439165
+  },
+  "mastro": {
+    "scrittureAttive2026": 705,
+    "scrittureReversed2026": 433
+  },
+  "transitoGateway": {
+    "stripe": {
+      "transitLedgerCents": -299542,
+      "gatewayAvailableCents": null,
+      "gatewayPendingCents": null,
+      "deltaCents": null,
+      "note": "Expired API Key provided: sk_test_*********************************************************************************************TDkPvR"
+    },
+    "paypal": {
+      "transitLedgerCents": -220704,
+      "gatewayAvailableCents": null,
+      "gatewayPendingCents": null,
+      "deltaCents": null,
+      "note": "Ledger transit (10200 - Banca c/o PayPal / 10200 - Conto PayPal) — saldo API PayPal non wireato; baseline solo ledger"
+    }
+  },
+  "noteMetodologiche": [
+    "Fonte: computeHistoricalPnl({ fiscalYear: 2026 }) + gerarchia fiscale.",
+    "Sostituisce il freeze del 6/09. I delta verso quel freeze includono Lotto 2–4 e movimenti live.",
+    "RAI live −€5.418,51 (non −€5.692,51 post-L3): drift +€274 già pre-L4."
+  ]
+}

@@ -1,0 +1,1277 @@
+{
+  "generatedAt": "2026-09-07T11:07:28.285Z",
+  "correzione": "€12.847 sbagliato: pagamenti contati come costi + JSON :v contate come costi distinti",
+  "plausibilita": {
+    "vecchio12847": {
+      "label": "VECCHIO_errato_12847",
+      "costiTotali": "12.984,96 €",
+      "eccesso": "12.847,18 €",
+      "costiResiduiSeSiStorna": "137,78 €",
+      "ok": false,
+      "motivo": "STOP: residui 137,78 € sotto soglia 4000,00 € o eccesso >85% costi — conteggio sbagliato"
+    },
+    "naiveSenzaCollasso": {
+      "label": "NAIVE_senza_collasso_versioni",
+      "costiTotali": "12.984,96 €",
+      "eccesso": "12.899,18 €",
+      "costiResiduiSeSiStorna": "85,78 €",
+      "ok": false,
+      "motivo": "STOP: residui 85,78 € sotto soglia 4000,00 € o eccesso >85% costi — conteggio sbagliato"
+    },
+    "lotto4Corretto": {
+      "label": "Lotto4_costi_con_collasso_versioni",
+      "costiTotali": "12.984,96 €",
+      "eccesso": "6605,09 €",
+      "costiResiduiSeSiStorna": "6379,87 €",
+      "ok": true,
+      "motivo": "plausibile"
+    }
+  },
+  "jsonVersionsCollapsed": 59,
+  "ricalcolo": {
+    "lotto4": {
+      "nDocs": 56,
+      "excessCents": 660509,
+      "excessEuro": "6605,09 €",
+      "docs": [
+        {
+          "vendor": "DC STUDIO STP SRL",
+          "num": "66",
+          "date": "2026-03-02",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 377430,
+          "excessCents": 377430,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "IRIN S.R.L.",
+          "num": "265",
+          "date": "2026-02-18",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 68149,
+          "excessCents": 68149,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "96",
+          "date": "2026-03-31",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 14500,
+          "excessCents": 14500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "235",
+          "date": "2026-07-31",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 14000,
+          "excessCents": 14000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "253",
+          "date": "2026-08-31",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 13800,
+          "excessCents": 13800,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+          "num": "00426000153",
+          "date": "2026-07-26",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 13300,
+          "excessCents": 13300,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FLORIS DI BORDOLI LORIS",
+          "num": "4",
+          "date": "2026-03-12",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 8500,
+          "excessCents": 8500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "ARUBA SPA",
+          "num": "1000263003864237",
+          "date": "2026-04-27",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 7319,
+          "excessCents": 7319,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Fioreria Rossella",
+          "num": "",
+          "date": "2026-08-28",
+          "nCostLegs": 5,
+          "jsonN": 2,
+          "manualN": 3,
+          "amountAbs": 1700,
+          "excessCents": 6800,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "TORRE DOMENICA",
+          "num": "1",
+          "date": "2026-06-19",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 6200,
+          "excessCents": 6200,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "ARUBA SPA",
+          "num": "1000261000170337",
+          "date": "2026-04-30",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 6100,
+          "excessCents": 6100,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "1/2026",
+          "date": "2026-01-26",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 6001,
+          "excessCents": 6001,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "BALLARATE PIERO SRL",
+          "num": "570",
+          "date": "2026-05-05",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 5795,
+          "excessCents": 5795,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Fioreria Rossella",
+          "num": "",
+          "date": "2026-08-26",
+          "nCostLegs": 4,
+          "jsonN": 2,
+          "manualN": 2,
+          "amountAbs": 1700,
+          "excessCents": 5100,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "210",
+          "date": "2026-06-30",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 5000,
+          "excessCents": 5000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "53",
+          "date": "2026-02-28",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 4500,
+          "excessCents": 4500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "BONFANTE CLAUDIA",
+          "num": "16",
+          "date": "2026-06-23",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 4000,
+          "excessCents": 4000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "183",
+          "date": "2026-05-30",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 4000,
+          "excessCents": 4000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "DI PAOLA MARIA ANTONIETTA",
+          "num": "16",
+          "date": "2026-05-26",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 4000,
+          "excessCents": 4000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "DI PAOLA MARIA ANTONIETTA",
+          "num": "5",
+          "date": "2026-02-17",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 4000,
+          "excessCents": 4000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SOLANO VINCENZO",
+          "num": "fpr 1/26",
+          "date": "2026-07-09",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 3801,
+          "excessCents": 3801,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Fioreria Rossella",
+          "num": "",
+          "date": "2026-08-04",
+          "nCostLegs": 3,
+          "jsonN": 1,
+          "manualN": 2,
+          "amountAbs": 1700,
+          "excessCents": 3400,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "EREDI DI BENDA SERGIO SOCIETA' AGRICOLA",
+          "num": "32",
+          "date": "2026-04-28",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 3300,
+          "excessCents": 3300,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+          "num": "11",
+          "date": "2026-07-22",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 3000,
+          "excessCents": 3000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+          "num": "2026/7",
+          "date": "2026-06-16",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 3000,
+          "excessCents": 3000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "L'ORCHIDEA DI MANCINI FRANCESCA",
+          "num": "21",
+          "date": "2026-05-25",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 3000,
+          "excessCents": 3000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+          "num": "2026/1",
+          "date": "2026-01-24",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2701,
+          "excessCents": 2700,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Glofu srl unipersonale",
+          "num": "90",
+          "date": "2026-06-15",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2592,
+          "excessCents": 2592,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FLORAGARDEN di Stinga Baldassarre",
+          "num": "253",
+          "date": "2026-05-31",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "PROVINI F.LLI DI PROVINI ANTONIO & C. S.A.S.",
+          "num": "2026/0/29",
+          "date": "2026-04-20",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "CALAMUNCI TINDARO",
+          "num": "2026/9",
+          "date": "2026-05-06",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "DI PAOLA MARIA ANTONIETTA",
+          "num": "10",
+          "date": "2026-04-04",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FLORAGARDEN di Stinga Baldassarre",
+          "num": "17",
+          "date": "2026-02-10",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "21",
+          "date": "2026-01-31",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "COTUGNO DI PIERO COTUGNO",
+          "num": "fpr 3/26",
+          "date": "2026-01-17",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2500,
+          "excessCents": 2500,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FIORERIA ROSE E TULIPANI DI CECCOTTI DANTE",
+          "num": "5",
+          "date": "2026-03-24",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2200,
+          "excessCents": 2200,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "17/2026",
+          "date": "2026-08-03",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "19/2026",
+          "date": "2026-08-19",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "CINGOLANI ANTONELLA",
+          "num": "35",
+          "date": "2026-07-30",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "LA BAITA DEL FIORE S.N.C.",
+          "num": "46",
+          "date": "2026-07-22",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "14/2026",
+          "date": "2026-07-07",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "CINGOLANI ANTONELLA",
+          "num": "31",
+          "date": "2026-07-01",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "12/2026",
+          "date": "2026-06-18",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "CINGOLANI ANTONELLA",
+          "num": "27",
+          "date": "2026-05-26",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "7/2026",
+          "date": "2026-05-21",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "VIDOZ ALESSIA",
+          "num": "19",
+          "date": "2026-04-01",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "3/2026",
+          "date": "2026-03-25",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "2/2026",
+          "date": "2026-02-23",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "Battistella Fioreria srl",
+          "num": "136",
+          "date": "2026-04-30",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "CANNONE LUCREZIA",
+          "num": "4",
+          "date": "2026-04-22",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "5/2026",
+          "date": "2026-04-20",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+          "num": "28",
+          "date": "2026-02-23",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "num": "20/2026",
+          "date": "2026-09-03",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+          "num": "18",
+          "date": "2026-02-06",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 2000,
+          "excessCents": 2000,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "BALLARATE PIERO SRL",
+          "num": "464",
+          "date": "2026-04-09",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 913,
+          "excessCents": 913,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        },
+        {
+          "vendor": "ARUBA SPA",
+          "num": "1000263004039573",
+          "date": "2026-05-03",
+          "nCostLegs": 2,
+          "jsonN": 1,
+          "manualN": 1,
+          "amountAbs": 609,
+          "excessCents": 609,
+          "isAutofattura": false,
+          "sourceTypes": [
+            "JSON_ENTRY",
+            "MANUAL_EXPENSE"
+          ]
+        }
+      ]
+    },
+    "g5": {
+      "nDocs": 10,
+      "excessEuro": "114,62 €"
+    },
+    "dcStudioIrin": [
+      {
+        "vendor": "DC STUDIO STP SRL",
+        "num": "66",
+        "date": "2026-03-02",
+        "nCostLegs": 2,
+        "jsonN": 1,
+        "manualN": 1,
+        "amountAbs": 377430,
+        "excessCents": 377430,
+        "isAutofattura": false,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ]
+      },
+      {
+        "vendor": "IRIN S.R.L.",
+        "num": "265",
+        "date": "2026-02-18",
+        "nCostLegs": 2,
+        "jsonN": 1,
+        "manualN": 1,
+        "amountAbs": 68149,
+        "excessCents": 68149,
+        "isAutofattura": false,
+        "sourceTypes": [
+          "JSON_ENTRY",
+          "MANUAL_EXPENSE"
+        ]
+      }
+    ],
+    "pairsL4Confronto": {
+      "n": 59,
+      "euro": "6544,09 €"
+    }
+  },
+  "coppieFalse": {
+    "nota": "Le 10 «scartate» del report precedente erano quasi tutte inversioni di nome (stesso fiorista) — restano in Lotto 4. Qui: a) documenti davvero diversi; b) JSON senza passivo solido → Fase 5.",
+    "a": [],
+    "b": [],
+    "nameInversionsRestanoInLotto4": [
+      {
+        "date": "2026-07-09",
+        "a": "SOLANO VINCENZO",
+        "b": "VINCENZO SOLANO",
+        "num": "fpr 1/26",
+        "amount": "38,01 €"
+      },
+      {
+        "date": "2026-06-23",
+        "a": "BONFANTE CLAUDIA",
+        "b": "CLAUDIA BONFANTE",
+        "num": "16",
+        "amount": "40,00 €"
+      },
+      {
+        "date": "2026-06-19",
+        "a": "TORRE DOMENICA",
+        "b": "DOMENICA TORRE",
+        "num": "1",
+        "amount": "62,00 €"
+      },
+      {
+        "date": "2026-05-26",
+        "a": "DI PAOLA MARIA ANTONIETTA",
+        "b": "MARIA ANTONIETTA DI PAOLA",
+        "num": "16",
+        "amount": "40,00 €"
+      },
+      {
+        "date": "2026-05-06",
+        "a": "CALAMUNCI TINDARO",
+        "b": "TINDARO CALAMUNCI",
+        "num": "2026/9",
+        "amount": "25,00 €"
+      },
+      {
+        "date": "2026-04-04",
+        "a": "DI PAOLA MARIA ANTONIETTA",
+        "b": "MARIA ANTONIETTA DI PAOLA",
+        "num": "10",
+        "amount": "25,00 €"
+      },
+      {
+        "date": "2026-04-01",
+        "a": "VIDOZ ALESSIA",
+        "b": "ALESSIA VIDOZ",
+        "num": "19",
+        "amount": "20,00 €"
+      },
+      {
+        "date": "2026-04-22",
+        "a": "CANNONE LUCREZIA",
+        "b": "LUCREZIA CANNONE",
+        "num": "4",
+        "amount": "20,00 €"
+      },
+      {
+        "date": "2026-02-17",
+        "a": "DI PAOLA MARIA ANTONIETTA",
+        "b": "MARIA ANTONIETTA DI PAOLA",
+        "num": "5",
+        "amount": "40,00 €"
+      }
+    ],
+    "jsonOrfaniN": 5,
+    "jsonOrfaniTop": [
+      {
+        "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+        "num": "2026/1",
+        "date": "2026-01-24",
+        "amountAbs": 2701,
+        "description": "Fattura report LA PRIMAVERA S.n.c. di Calamunci Daniel & C. n. 2026/1",
+        "id": "cmt2q4hfn001wjl04okae6en0"
+      },
+      {
+        "vendor": "",
+        "num": "—",
+        "date": "2026-09-02",
+        "amountAbs": 1775,
+        "description": "Autofattura estera TD17 Cursor",
+        "id": "cmtog1hvi0007ju040fwagmcx"
+      },
+      {
+        "vendor": "",
+        "num": "—",
+        "date": "2026-09-05",
+        "amountAbs": 691,
+        "description": "Trattenuta commissioni Stripe su ordine FF-MC-26-002",
+        "id": "cmtonqtsb0005l804t83t2w10"
+      },
+      {
+        "vendor": "Stripe Payments Europe Limited",
+        "num": "000001-2026-est",
+        "date": "2026-05-31",
+        "amountAbs": 383,
+        "description": "Autofattura estera autofattura estera Stripe Payments Europe Limited n. 000001-2026-EST",
+        "id": "cmtm1k7vv0002l5044fjnsawv"
+      },
+      {
+        "vendor": "",
+        "num": "—",
+        "date": "2026-09-05",
+        "amountAbs": 366,
+        "description": "Trattenuta commissioni Stripe su ordine FF-MC-26-001",
+        "id": "cmtogpsao000bjv04vcl3xvpu"
+      }
+    ]
+  },
+  "autofattureViziFormali": {
+    "senzaEst": [
+      {
+        "date": "2026-02-18",
+        "vendor": "Google Ireland Ltd",
+        "amount": "-25,42 €",
+        "amountCents": -2542,
+        "id": "cmtoj5evh0001l504f5zzewqg"
+      },
+      {
+        "date": "2026-05-02",
+        "vendor": "Cursor",
+        "amount": "-17,75 €",
+        "amountCents": -1775,
+        "id": "cmtog8mw80009ju04d57gyc38"
+      },
+      {
+        "date": "2026-05-06",
+        "vendor": "Anthropic, PBC",
+        "amount": "-18,00 €",
+        "amountCents": -1800,
+        "id": "cmtq1yh9n0001l904ilf1sscs"
+      },
+      {
+        "date": "2026-05-31",
+        "vendor": "Stripe Payments Europe",
+        "amount": "-3,14 €",
+        "amountCents": -314,
+        "id": "cmt2qd1580001lh04arj7bch9"
+      },
+      {
+        "date": "2026-06-02",
+        "vendor": "Cursor",
+        "amount": "-17,75 €",
+        "amountCents": -1775,
+        "id": "cmtogb73y000cju04why8zkxr"
+      },
+      {
+        "date": "2026-06-06",
+        "vendor": "Anthropic, PBC",
+        "amount": "-18,00 €",
+        "amountCents": -1800,
+        "id": "cmtq20h4w0001ju04nr96wec6"
+      },
+      {
+        "date": "2026-06-16",
+        "vendor": "Apple",
+        "amount": "-0,81 €",
+        "amountCents": -81,
+        "id": "cmtolhsxp000djx040j2aho1b"
+      },
+      {
+        "date": "2026-07-02",
+        "vendor": "Cursor",
+        "amount": "-17,75 €",
+        "amountCents": -1775,
+        "id": "cmtoghe9u000fju04nucsg7ca"
+      },
+      {
+        "date": "2026-07-06",
+        "vendor": "Anthropic, PBC",
+        "amount": "-18,00 €",
+        "amountCents": -1800,
+        "id": "cmtq222ts0004ju04b6k8h13p"
+      },
+      {
+        "date": "2026-07-16",
+        "vendor": "Apple",
+        "amount": "-0,81 €",
+        "amountCents": -81,
+        "id": "cmtolg6uc0009jx04tz5nwywb"
+      },
+      {
+        "date": "2026-07-31",
+        "vendor": "Stripe Payments Europe",
+        "amount": "-5,70 €",
+        "amountCents": -570,
+        "id": "cmtoinal30001l204bqg2or55"
+      },
+      {
+        "date": "2026-08-02",
+        "vendor": "Cursor",
+        "amount": "-17,75 €",
+        "amountCents": -1775,
+        "id": "cmtogj0g0000iju046da0u9w6"
+      },
+      {
+        "date": "2026-08-06",
+        "vendor": "Anthropic, PBC",
+        "amount": "-18,00 €",
+        "amountCents": -1800,
+        "id": "cmtq238wt0007ju04ksflt09q"
+      },
+      {
+        "date": "2026-08-16",
+        "vendor": "Apple",
+        "amount": "-0,81 €",
+        "amountCents": -81,
+        "id": "cmtole1cs0005jx04x2wwvpp3"
+      },
+      {
+        "date": "2026-08-31",
+        "vendor": "Stripe Payments Europe",
+        "amount": "-6,62 €",
+        "amountCents": -662,
+        "id": "cmtola3x00001jx04d8dxutke"
+      },
+      {
+        "date": "2026-08-31",
+        "vendor": "Stripe Payments Europe",
+        "amount": "-8,17 €",
+        "amountCents": -817,
+        "id": "cmtoikxhr0001l404hp8rdfna"
+      },
+      {
+        "date": "2026-09-01",
+        "vendor": "Meta Platforms",
+        "amount": "-1,24 €",
+        "amountCents": -124,
+        "id": "cmtojrg5d0001jr04tci3q5ge"
+      },
+      {
+        "date": "2026-09-02",
+        "vendor": "Cursor",
+        "amount": "-17,75 €",
+        "amountCents": -1775,
+        "id": "cmtog1hl20005ju04ttdrzqbg"
+      },
+      {
+        "date": "2026-09-03",
+        "vendor": "Vercel Inc.",
+        "amount": "-17,27 €",
+        "amountCents": -1727,
+        "id": "cmtoape3w0001jv04pbdt257e"
+      },
+      {
+        "date": "2026-09-06",
+        "vendor": "Anthropic, PBC",
+        "amount": "-18,00 €",
+        "amountCents": -1800,
+        "id": "cmtq24ct1000aju041aukrnjh"
+      },
+      {
+        "date": "2026-09-06",
+        "vendor": "Vercel Inc.",
+        "amount": "-2,15 €",
+        "amountCents": -215,
+        "id": "cmtq2e73c0001l804gfz7i5kk"
+      }
+    ],
+    "riuso000001": [
+      {
+        "date": "2026-01-31",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "num": "000001-2026-EST",
+        "amount": "2,01 €",
+        "amountCents": 201
+      },
+      {
+        "date": "2026-05-31",
+        "vendor": "Stripe Payments Europe Limited",
+        "num": "000001-2026-EST",
+        "amount": "3,83 €",
+        "amountCents": 383
+      }
+    ],
+    "stripeMaggio": [
+      {
+        "date": "2026-05-31",
+        "amount": "-3,14 €",
+        "cents": -314,
+        "num": null,
+        "desc": "Autofattura TD17 — Stripe Payments Europe (Software & Servizi SaaS Estero)"
+      },
+      {
+        "date": "2026-05-31",
+        "amount": "3,83 €",
+        "cents": 383,
+        "num": "000001-2026-EST",
+        "desc": "Autofattura TD17 n. 000001-2026-EST — rif. 4PZWHSUS-2026-05 — Software & Servizi SaaS Estero"
+      }
+    ]
+  },
+  "isabella": {
+    "pacchetto11": true,
+    "qty": 11,
+    "order": {
+      "orderNumber": "FT-MC-26-001",
+      "totalCents": 29990,
+      "status": "CANCELLED",
+      "deletedAt": "2026-07-02T09:52:51.010Z"
+    },
+    "fatti": [
+      {
+        "orderNumber": "FT-MC-26-003",
+        "delivery": "2026-07-04"
+      },
+      {
+        "orderNumber": "FT-MC-26-004",
+        "delivery": "2026-05-31"
+      },
+      {
+        "orderNumber": "FT-MC-26-005",
+        "delivery": "2026-07-30"
+      }
+    ],
+    "programmati": [
+      {
+        "orderNumber": "FT-MC-26-006",
+        "delivery": "2026-09-12",
+        "status": "PENDING"
+      }
+    ],
+    "residuiDopoProgrammati": 7
+  },
+  "dryRunLotto4": {
+    "perimetro": "per documento · solo JSON_ENTRY+MANUAL_EXPENSE · collasso :v · no pagamenti · no autofatture G5 · no coppie false",
+    "documenti": 56,
+    "esattamente2": 53,
+    "ge3": 3,
+    "eccessoCents": 660509,
+    "eccessoEuro": "6605,09 €",
+    "vsStorico99": {
+      "storico": "7481,92 €",
+      "delta": "-876,83 €",
+      "lettura": "Intorno ai €7.5k: le 99 coppie erano la direzione giusta; serviva raggruppare per documento + collassare versioni JSON + escludere pagamenti/scarti/G5"
+    },
+    "costiResiduiAttesiSu12984": "6379,87 €",
+    "plausibilita": {
+      "label": "Lotto4_costi_con_collasso_versioni",
+      "costiTotali": "12.984,96 €",
+      "eccesso": "6605,09 €",
+      "costiResiduiSeSiStorna": "6379,87 €",
+      "ok": true,
+      "motivo": "plausibile"
+    },
+    "impattoPnLGerarchia": {
+      "docsConDueGambeCostoAncoraVisibiliInPnL": 0,
+      "excessVisibileInPnL": "0,00 €",
+      "nota": "La gerarchia fiscale (BANK/PayPal autorità) già sopprime quasi tutte le JSON/MANUAL duplicate nel CE. Stornarle pulisce il mastro; il totale costi ufficiale NON scende di ~€6.2k. DC/IRIN in PnL restano sulla gamba pagamento finché non si riclassifica."
+    },
+    "esecuzione": "NO — stop per via titolare"
+  },
+  "stop": true
+}

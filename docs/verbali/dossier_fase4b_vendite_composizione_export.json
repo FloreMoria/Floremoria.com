@@ -1,0 +1,1712 @@
+{
+  "meta": {
+    "base": "PRE-L3 via categoryOverrides; pipeline = computeHistoricalPnl",
+    "venditeMotore": "5927,79 €",
+    "venditeCents": 592779,
+    "venditeN": 143,
+    "matchPnlOverride": true,
+    "freezeStorico": {
+      "vendite": "5736,32 €",
+      "positivi": "6057,75 €",
+      "negativi": "-2693,19 €",
+      "algebrica": "3364,56 €"
+    },
+    "hierarchyPositivi": {
+      "n": 143,
+      "euro": "5927,79 €"
+    },
+    "hierarchyNegativi": {
+      "n": 51,
+      "euro": "-2693,19 €"
+    },
+    "algebrica": "3234,60 €",
+    "negativiDentroVendite": 0,
+    "filtri": [
+      "reversedAt IS NULL, fiscalYear=2026, sourceType ≠ CUSTOMER_RECEIPT",
+      "esclude seed JSON_ENTRY",
+      "esclude ricavi pose prepagate (ORDER/JSON_ENTRY)",
+      "applyFiscalAuthorityHierarchy",
+      "quarantena MANUAL_EXPENSE QUARANTINE/REJECTED",
+      "skip TRASFERIMENTO_INTERNO",
+      "vendite = RICAVI_VENDITE ∧ (ENTRATA ∨ totalCents>0) → Σ |totalCents|",
+      "negativi RICAVI_VENDITE → ramo costi (NON riducono vendite)"
+    ],
+    "decomposizioneNegativiHierarchy": {
+      "paypal": {
+        "n": 27,
+        "euro": "-1490,18 €"
+      },
+      "bankLine": {
+        "n": 24,
+        "euro": "-1203,01 €"
+      },
+      "altri": {
+        "n": 0,
+        "euro": "0,00 €"
+      },
+      "totale": "-2693,19 €"
+    },
+    "decomposizioneNegativiTuttiPreHierarchy": {
+      "totale": "-2826,05 €",
+      "n": 62,
+      "paypal": {
+        "n": 38,
+        "euro": "-1623,04 €"
+      },
+      "nonPaypal": {
+        "n": 24,
+        "euro": "-1203,01 €"
+      },
+      "attesoPaypal": "-1623,04 €",
+      "restoSuFreeze2693": "-1070,15 €"
+    }
+  },
+  "rows": [
+    {
+      "id": "cmt2oe81h0002l204wup8bkbd",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmpcb2j7y0004jv04xlc7wvb2",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8bv0008l204xgsltp9j",
+      "totalCents": 4746,
+      "segno": "+",
+      "amount": "47,46 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsebfvr20002l504aq9nfqfr",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8ef0009l204nc1r7pcq",
+      "totalCents": 5248,
+      "segno": "+",
+      "amount": "52,48 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsrxeaki0001la04r3diximm",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8jm000cl204afzzin0t",
+      "totalCents": 4498,
+      "segno": "+",
+      "amount": "44,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmrusit6y0000l8046wbck8a9",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8z3000ml2045dfrzzs6",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsalfwki0000js04s4hbqh1i",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe96u000rl2043zlfh6ia",
+      "totalCents": 6999,
+      "segno": "+",
+      "amount": "69,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsnghl7y0000ie04c47zru2x",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt9rsyn80008k104ln1vff7g",
+      "totalCents": 5298,
+      "segno": "+",
+      "amount": "52,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmt9rrvrf0001k1042q05rzxt",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtcmmv920004la04znycpk1o",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtcmlgpv0002ld04pbuwptdm",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8rf000il2041g785w30",
+      "totalCents": 3799,
+      "segno": "+",
+      "amount": "37,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmrt166og0000jw0432noy5dn",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe99c000tl204i7rjahcp",
+      "totalCents": 4397,
+      "segno": "+",
+      "amount": "43,97 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmqc1wwci0001i904ons8tse3",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8tw000jl204n2wp5z7s",
+      "totalCents": 10498,
+      "segno": "+",
+      "amount": "104,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmr3zmkcd0000l404p75vvvnm",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8z2000kl204b86vtxfh",
+      "totalCents": 3999,
+      "segno": "+",
+      "amount": "39,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsilmkhn0000l104avptjk6y",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe9ek000vl204idmhr8so",
+      "totalCents": 4746,
+      "segno": "+",
+      "amount": "47,46 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmszsj71a0001l1047w7iat7v",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtcmqs8d000ela04qsd7uq8j",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtcmq7nt0008la04y9kintnz",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8rc000fl20481ymo8g4",
+      "totalCents": 6498,
+      "segno": "+",
+      "amount": "64,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmqpbuuay0004jv04cq34sfpe",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe91m000ol204mjsikzkw",
+      "totalCents": 3999,
+      "segno": "+",
+      "amount": "39,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmsxf7d4o0000ic04toy2f9rk",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8m6000el204z24zg7ku",
+      "totalCents": 3799,
+      "segno": "+",
+      "amount": "37,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmrnjw44c0000la04aa7cf55c",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt2oe8z8000nl204fpuf4oea",
+      "totalCents": 6999,
+      "segno": "+",
+      "amount": "69,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmr5483ir0000l4046lw2q6m0",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt311xwg000fld044cjos6ze",
+      "totalCents": 8999,
+      "segno": "+",
+      "amount": "89,99 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_manual_gross_cmt2pq29v0000la043ksaow9c",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtonqtpq0004l804kjhak1nc",
+      "totalCents": 20498,
+      "segno": "+",
+      "amount": "204,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtonejl60002l5042ncu8z5s",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt79j3en0003l704e628onnv",
+      "totalCents": 5397,
+      "segno": "+",
+      "amount": "53,97 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmt79ib3d0002l2044647smae",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmthl3c06000aik04yi0uyajc",
+      "totalCents": 8498,
+      "segno": "+",
+      "amount": "84,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmthl1iuf0002ik044x8q7oe9",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtit53sp000bl804453ywryu",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtit41020001kz049j33yqkk",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtit9vv9000ejt04j18hugdi",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtit94se0001jt04x8q3maeg",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmtogpsao000ajv04ltjclw8w",
+      "totalCents": 10498,
+      "segno": "+",
+      "amount": "104,98 €",
+      "sourceType": "JSON_ENTRY",
+      "sourceKey": "JSON_ENTRY:entry_stripe_gross_webhook_cmtogl3qv0002l704velys6fj",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00abky04h6fhubwx",
+      "totalCents": 5980,
+      "segno": "+",
+      "amount": "59,80 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw0004h104la60rpaq",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00aeky04my43z8ll",
+      "totalCents": 5144,
+      "segno": "+",
+      "amount": "51,44 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw0008h104js7u761h",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00alky04pitx3scx",
+      "totalCents": 4650,
+      "segno": "+",
+      "amount": "46,50 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw000eh104eb3v1nmi",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00akky0460j22n4z",
+      "totalCents": 210,
+      "segno": "+",
+      "amount": "2,10 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw000dh104rwuy2kqx",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00aiky04cyhd4e8a",
+      "totalCents": 6695,
+      "segno": "+",
+      "amount": "66,95 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw000bh104unus5q3d",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00auky04jfz9liox",
+      "totalCents": 200,
+      "segno": "+",
+      "amount": "2,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000nh104ezed1hv1",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00azky04iypyiwr5",
+      "totalCents": 4774,
+      "segno": "+",
+      "amount": "47,74 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000rh10429i4sbq7",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00ayky047yq210hw",
+      "totalCents": 6240,
+      "segno": "+",
+      "amount": "62,40 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000sh1043lf7y1pk",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00b4ky04c1j9nis4",
+      "totalCents": 19911,
+      "segno": "+",
+      "amount": "199,11 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000xh1049l4qhmkt",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00b6ky04sfol571x",
+      "totalCents": 10221,
+      "segno": "+",
+      "amount": "102,21 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000zh104dexj7qdq",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00biky04vgdo59gw",
+      "totalCents": 22,
+      "segno": "+",
+      "amount": "0,22 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001wky04p5za97zb",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00bmky049xu5vt2m",
+      "totalCents": 4810,
+      "segno": "+",
+      "amount": "48,10 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001tky0445bm7ipz",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44f00c2ky049wi6ehen",
+      "totalCents": 8263,
+      "segno": "+",
+      "amount": "82,63 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001dky041w3g7dsl",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44f00byky04v6z9kwt8",
+      "totalCents": 515,
+      "segno": "+",
+      "amount": "5,15 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001gky04nbwo9leg",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44f00c1ky04neiscg35",
+      "totalCents": 3087,
+      "segno": "+",
+      "amount": "30,87 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001cky04f6ltpjuo",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00cdky040gx0mfjn",
+      "totalCents": 345,
+      "segno": "+",
+      "amount": "3,45 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0011ky04rpvsjy8i",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44h00d3ky04bg2z2ljr",
+      "totalCents": 32,
+      "segno": "+",
+      "amount": "0,32 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000cky04qxo7463t",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44h00ctky0408f31hnj",
+      "totalCents": 3560,
+      "segno": "+",
+      "amount": "35,60 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000lky04v1qtdqah",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44h00cuky04sz43v9xd",
+      "totalCents": 3872,
+      "segno": "+",
+      "amount": "38,72 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000kky044oz1a793",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dmky04i96t891r",
+      "totalCents": 6789,
+      "segno": "+",
+      "amount": "67,89 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0013l40406eeg6og",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00doky04uq68cz2f",
+      "totalCents": 11761,
+      "segno": "+",
+      "amount": "117,61 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0011l404mvps0ll9",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dtky040t5ahh1t",
+      "totalCents": 3824,
+      "segno": "+",
+      "amount": "38,24 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g000wl404cj2xol0d",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44i00djky044vcjhnvj",
+      "totalCents": 3405,
+      "segno": "+",
+      "amount": "34,05 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0016l4047gd2x8bi",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44k00dzky04qmt9vw9e",
+      "totalCents": 3860,
+      "segno": "+",
+      "amount": "38,60 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000ol404px0kb4td",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44l00egky04r8f1wj9d",
+      "totalCents": 3952,
+      "segno": "+",
+      "amount": "39,52 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f0009l4042pt6bfi7",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44l00efky04657f8q2f",
+      "totalCents": 3876,
+      "segno": "+",
+      "amount": "38,76 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000al404w3vm8us9",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqawz0004l2048wq4s2fm",
+      "totalCents": 9,
+      "segno": "+",
+      "amount": "0,09 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1RX76371GK653614X",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqawz0005l204b06gb19j",
+      "totalCents": 3999,
+      "segno": "+",
+      "amount": "39,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:66C04847WL650301D",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqawz0008l204rd41o518",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:22E30531F99808504",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqawz000dl204rh7snoz4",
+      "totalCents": 3999,
+      "segno": "+",
+      "amount": "39,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:44E519039S467634K",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax0000jl2043vrw91a8",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2GU64478W4726692S",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax0000ll204ylq43wrp",
+      "totalCents": 9,
+      "segno": "+",
+      "amount": "0,09 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6ST78293JU579072E",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax0000rl2047r5w0vfr",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4W6628604D401674M",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax0000ul204obz6bad3",
+      "totalCents": 13,
+      "segno": "+",
+      "amount": "0,13 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3BH14596X8651312H",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax1000zl204q0eohb1q",
+      "totalCents": 7248,
+      "segno": "+",
+      "amount": "72,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3D552868PU399581S",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax10016l204uasbtlw0",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:09C2701554000764W",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax1001bl204lggqfa1n",
+      "totalCents": 913,
+      "segno": "+",
+      "amount": "9,13 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9A8499750D2285252",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax2001gl20407rt9lnl",
+      "totalCents": 968,
+      "segno": "+",
+      "amount": "9,68 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:82B58826WV385183C",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax2001jl2043pyjkpc8",
+      "totalCents": 5,
+      "segno": "+",
+      "amount": "0,05 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6T004160S99663535",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax2001ll204ga8akjsg",
+      "totalCents": 5998,
+      "segno": "+",
+      "amount": "59,98 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:5VV92297N9957570R",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax30022l204nod83omn",
+      "totalCents": 9,
+      "segno": "+",
+      "amount": "0,09 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4A479765WU569534F",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax4002fl204isswgujj",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:7VX00022XF1940432",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax4002hl204s7x5mst7",
+      "totalCents": 53,
+      "segno": "+",
+      "amount": "0,53 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1RM44236PH500671G",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax4002il204fupw7a6m",
+      "totalCents": 4999,
+      "segno": "+",
+      "amount": "49,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:43H07985E69976410",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax4002ll20406qtixpm",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4PC01169U59469310",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax5002ql2045o40mewr",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:5H283854666757739",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax60033l204k802zljn",
+      "totalCents": 3000,
+      "segno": "+",
+      "amount": "30,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:62T128000J086073T",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax60035l204benhkl5y",
+      "totalCents": 15,
+      "segno": "+",
+      "amount": "0,15 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:7VN28748BM878350S",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax6003bl204sdmvrzui",
+      "totalCents": 400,
+      "segno": "+",
+      "amount": "4,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:54A57291DE722454K",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax6003el2040atafid7",
+      "totalCents": 2,
+      "segno": "+",
+      "amount": "0,02 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:8BE9856555431964C",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax7003ql204p57q05hu",
+      "totalCents": 18,
+      "segno": "+",
+      "amount": "0,18 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1JL35824UY976774W",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax80041l204gz7hxndx",
+      "totalCents": 22,
+      "segno": "+",
+      "amount": "0,22 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1LR05360L6860764S",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax80047l204ezyzxye3",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6TH09938PJ296300P",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax9004jl204867syh8p",
+      "totalCents": 14498,
+      "segno": "+",
+      "amount": "144,98 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:41V916837L4471622",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax9004ol20462d0vtmo",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:7AG32350H80780641",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax9004tl204fj86qrz4",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4KR3840372651452V",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxa0053l204ptzkj1bl",
+      "totalCents": 18,
+      "segno": "+",
+      "amount": "0,18 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9SH795702M566214T",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxb005al204zgf9x7vo",
+      "totalCents": 13,
+      "segno": "+",
+      "amount": "0,13 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2D501245PN145943U",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxb005jl204uf3bj9wy",
+      "totalCents": 3799,
+      "segno": "+",
+      "amount": "37,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0CW42027YJ1249932",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxc005ql204bu2a5v7e",
+      "totalCents": 13300,
+      "segno": "+",
+      "amount": "133,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0DK39406V3945422V",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxc005tl2049fksyufv",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9JN50230473257055",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxc005ul204g9f5l2sd",
+      "totalCents": 67,
+      "segno": "+",
+      "amount": "0,67 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0N837685J89201114",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxc0060l2043nw9gf9a",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2EH437754S823943P",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxd0068l204cus06r1z",
+      "totalCents": 37,
+      "segno": "+",
+      "amount": "0,37 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0TY64967KD029025W",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxd006gl204euspjy01",
+      "totalCents": 10,
+      "segno": "+",
+      "amount": "0,10 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0PJ054626A178210D",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxe006nl204fhex9per",
+      "totalCents": 9,
+      "segno": "+",
+      "amount": "0,09 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3F007122U1969643X",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxe006ql204ringnbrc",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1MY53925HD243102B",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxe006vl204apiq94ku",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:17H07453VC966154S",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00aaky04cxo41lb8",
+      "totalCents": 3786,
+      "segno": "+",
+      "amount": "37,86 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw0003h1049bmm5kov",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00ajky041ocps8w2",
+      "totalCents": 3884,
+      "segno": "+",
+      "amount": "38,84 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw000ch104rsh5k510",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00apky04yfhhsgjv",
+      "totalCents": 5980,
+      "segno": "+",
+      "amount": "59,80 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000ih1048paugbw8",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00aqky04whkx2cfa",
+      "totalCents": 188,
+      "segno": "+",
+      "amount": "1,88 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000jh1049onhuaza",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00b2ky04s0wm8yhm",
+      "totalCents": 3884,
+      "segno": "+",
+      "amount": "38,84 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000uh104m65yklls",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00axky04i6lpemmj",
+      "totalCents": 3689,
+      "segno": "+",
+      "amount": "36,89 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000ph104cwocju2d",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00beky04l4x9a1fo",
+      "totalCents": 6376,
+      "segno": "+",
+      "amount": "63,76 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul0020ky04dybn6m8h",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00cmky04bjjmoels",
+      "totalCents": 5364,
+      "segno": "+",
+      "amount": "53,64 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000sky04wsqt2cza",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax1000xl204len09jyh",
+      "totalCents": 4999,
+      "segno": "+",
+      "amount": "49,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:83N54580AU0027713",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax60039l204ax8eky1f",
+      "totalCents": 385,
+      "segno": "+",
+      "amount": "3,85 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1TR685039P823783W",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax3001zl204gmukk2fp",
+      "totalCents": 1000,
+      "segno": "+",
+      "amount": "10,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:5S1939199N219094Y",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax30025l204i82sfve1",
+      "totalCents": 4864,
+      "segno": "+",
+      "amount": "48,64 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:32656268SE019460E",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax5002vl204kuymydsd",
+      "totalCents": 3248,
+      "segno": "+",
+      "amount": "32,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:8JD06462TK660002D",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax6003il204kxpwl6b4",
+      "totalCents": 400,
+      "segno": "+",
+      "amount": "4,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9A614478T2629930F",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax80042l204ij7gb0c2",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4M534393CB5993543",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxb005bl204hnr14suz",
+      "totalCents": 4999,
+      "segno": "+",
+      "amount": "49,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6TL5310123588930U",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44k00e3ky04fdaznjb7",
+      "totalCents": 3320,
+      "segno": "+",
+      "amount": "33,20 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000ml4046zdwsf0m",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dkky040ri5xcrn",
+      "totalCents": 2862,
+      "segno": "+",
+      "amount": "28,62 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0015l404e3jw7ftu",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44h00cxky04zz6g8px1",
+      "totalCents": 2799,
+      "segno": "+",
+      "amount": "27,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000hky04cvq0s6v2",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00coky04gefj0xzb",
+      "totalCents": 3894,
+      "segno": "+",
+      "amount": "38,94 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000qky04mnl1yvyo",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00bnky04icoil63v",
+      "totalCents": 4199,
+      "segno": "+",
+      "amount": "41,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001rky0423azhzj8",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00cfky04laml61za",
+      "totalCents": 27875,
+      "segno": "+",
+      "amount": "278,75 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk000zky04prrr20cf",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00b5ky04i83srpcc",
+      "totalCents": 6806,
+      "segno": "+",
+      "amount": "68,06 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000yh1049ptas4yo",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00amky045foywsgp",
+      "totalCents": 2907,
+      "segno": "+",
+      "amount": "29,07 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw000fh104j553mhrd",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dlky04xfwi83dq",
+      "totalCents": 3894,
+      "segno": "+",
+      "amount": "38,94 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0014l404eydg1078",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44k00ecky04rdpralpl",
+      "totalCents": 3959,
+      "segno": "+",
+      "amount": "39,59 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000dl404f4ecyuna",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqawz000al20418qedrj0",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:8YH43677SS377553L",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax10012l204kxqfjv3s",
+      "totalCents": 2999,
+      "segno": "+",
+      "amount": "29,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:95E92452N40245344",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqax3001wl204dplkpxz1",
+      "totalCents": 5348,
+      "segno": "+",
+      "amount": "53,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1T757598T7263511M",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt4lqaxc005vl204m1kdulti",
+      "totalCents": 3148,
+      "segno": "+",
+      "amount": "31,48 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6VK458505N684563M",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44b00afky04e78b5tei",
+      "totalCents": 9,
+      "segno": "+",
+      "amount": "0,09 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw0007h104b2i3kkqo",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44c00b3ky04fzkt9or9",
+      "totalCents": 126,
+      "segno": "+",
+      "amount": "1,26 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx000wh104e5ckbv0f",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00b7ky04kok8qolu",
+      "totalCents": 225,
+      "segno": "+",
+      "amount": "2,25 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfx0010h10443i3mh1y",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00brky04ker9pvlq",
+      "totalCents": 1931,
+      "segno": "+",
+      "amount": "19,31 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001nky045w6871oj",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44f00c7ky0406ock0e9",
+      "totalCents": 2319,
+      "segno": "+",
+      "amount": "23,19 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0017ky04jeimdpe3",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44f00cbky042k0rvkuy",
+      "totalCents": 4848,
+      "segno": "+",
+      "amount": "48,48 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0013ky04sd9vns1k",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00clky040vw533xi",
+      "totalCents": 5356,
+      "segno": "+",
+      "amount": "53,56 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk000tky04za0c04kz",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44h00cyky04u2l2nqs1",
+      "totalCents": 5,
+      "segno": "+",
+      "amount": "0,05 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000fky04qfw1q23z",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44i00dbky045pxte8kv",
+      "totalCents": 2830,
+      "segno": "+",
+      "amount": "28,30 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj0003ky049mzu1ktb",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dqky04ziazrbz0",
+      "totalCents": 14184,
+      "segno": "+",
+      "amount": "141,84 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g000zl404ismo7050",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44k00e7ky04xz0fd7wp",
+      "totalCents": 1943,
+      "segno": "+",
+      "amount": "19,43 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000il404hubv7qc9",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44k00eeky04mhvw34gh",
+      "totalCents": 5724,
+      "segno": "+",
+      "amount": "57,24 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000bl404cbfiyisq",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00dvky0425aem4z3",
+      "totalCents": 13,
+      "segno": "+",
+      "amount": "0,13 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g000vl404gpzggqr1",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44i00deky04pcvzdnsr",
+      "totalCents": 2862,
+      "segno": "+",
+      "amount": "28,62 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g001bl404bzl47woh",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00bvky04x9j0h5yb",
+      "totalCents": 427,
+      "segno": "+",
+      "amount": "4,27 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001jky0430j1fuys",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44i00d8ky04njtjt8o4",
+      "totalCents": 14184,
+      "segno": "+",
+      "amount": "141,84 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj0006ky04822ckao0",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44j00duky04oseqrofn",
+      "totalCents": 2898,
+      "segno": "+",
+      "amount": "28,98 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000tl404y5e783r3",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44e00btky04x957cc2l",
+      "totalCents": 8772,
+      "segno": "+",
+      "amount": "87,72 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001mky04fje9w4n7",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44g00chky04q4ag000e",
+      "totalCents": 4480,
+      "segno": "+",
+      "amount": "44,80 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk000xky04d0h8h7pw",
+      "category": "RICAVI_VENDITE"
+    },
+    {
+      "id": "cmt3zx44d00bhky04b56tejno",
+      "totalCents": 5980,
+      "segno": "+",
+      "amount": "59,80 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001vky04rxpfrq5o",
+      "category": "RICAVI_VENDITE"
+    }
+  ],
+  "negativeRowsHierarchy": [
+    {
+      "id": "cmt3zx44e00bkky04kfjr4r5c",
+      "totalCents": -99,
+      "amount": "-0,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001sky04dpfu23oe"
+    },
+    {
+      "id": "cmt3zx44f00c3ky04pvrzykom",
+      "totalCents": -2199,
+      "amount": "-21,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0018ky04xjjcuxw8"
+    },
+    {
+      "id": "cmt3zx44g00cgky04io4gftp4",
+      "totalCents": -5000,
+      "amount": "-50,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk000yky04qc8gtk1b"
+    },
+    {
+      "id": "cmt3zx44k00e4ky04c2dsthls",
+      "totalCents": -65278,
+      "amount": "-652,78 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000ll404dxctkr4a"
+    },
+    {
+      "id": "cmt4lqax0000ml204pen7yraq",
+      "totalCents": -68149,
+      "amount": "-681,49 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:54W40024GA901774A"
+    },
+    {
+      "id": "cmt4lqax1001al204swt8qb82",
+      "totalCents": -1826,
+      "amount": "-18,26 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6LH97042J7393174S"
+    },
+    {
+      "id": "cmt4lqax2001el2046aoyl7ls",
+      "totalCents": -1055,
+      "amount": "-10,55 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:6AS94292Y7499461C"
+    },
+    {
+      "id": "cmt4lqax2001pl2044jf36ray",
+      "totalCents": -6100,
+      "amount": "-61,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:89M937098L3249633"
+    },
+    {
+      "id": "cmt4lqax2001ql204dh538eo7",
+      "totalCents": -609,
+      "amount": "-6,09 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4NY34846PV611573B"
+    },
+    {
+      "id": "cmt4lqax2001rl204rmcblcmj",
+      "totalCents": -7319,
+      "amount": "-73,19 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:21Y4823370037602X"
+    },
+    {
+      "id": "cmt4lqax30021l204y7gd8c53",
+      "totalCents": -4864,
+      "amount": "-48,64 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9PC816391V7631228"
+    },
+    {
+      "id": "cmt4lqax30027l20405jp5i64",
+      "totalCents": -1655,
+      "amount": "-16,55 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:12R45098BC982781G"
+    },
+    {
+      "id": "cmt4lqax60036l204p5pvuiu2",
+      "totalCents": -385,
+      "amount": "-3,85 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:03N8508046911650L"
+    },
+    {
+      "id": "cmt4lqax60037l204tjemgok6",
+      "totalCents": -400,
+      "amount": "-4,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:96X24044MP787045N"
+    },
+    {
+      "id": "cmt4lqax7003jl204xktdbiyg",
+      "totalCents": -1573,
+      "amount": "-15,73 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:0G2365690V538184J"
+    },
+    {
+      "id": "cmt4lqax7003ul204h1vjkman",
+      "totalCents": -2308,
+      "amount": "-23,08 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9CK21524T2038383L"
+    },
+    {
+      "id": "cmt4lqax8004cl2043u02seuq",
+      "totalCents": -99,
+      "amount": "-0,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:09494489PT424830G"
+    },
+    {
+      "id": "cmt4lqaxa0054l2040yebib4k",
+      "totalCents": -2374,
+      "amount": "-23,74 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2FC511480T776915R"
+    },
+    {
+      "id": "cmt4lqaxb005il204bm9jtnzp",
+      "totalCents": -99,
+      "amount": "-0,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3HX44549752951512"
+    },
+    {
+      "id": "cmt4lqaxb005pl2047feup27j",
+      "totalCents": -26600,
+      "amount": "-266,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2PN145610A1783717"
+    },
+    {
+      "id": "cmt4lqaxd0066l204af06ahn2",
+      "totalCents": -104,
+      "amount": "-1,04 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:1TV83086EB278673D"
+    },
+    {
+      "id": "cmt4lqaxd006al204nl9yomgc",
+      "totalCents": -1312,
+      "amount": "-13,12 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:4E527781EX363273X"
+    },
+    {
+      "id": "cmt4lqaxd006hl204aqd6zsh3",
+      "totalCents": -1790,
+      "amount": "-17,90 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:75B713042K535250S"
+    },
+    {
+      "id": "cmt4lqaxf0070l204qt95btc3",
+      "totalCents": -500,
+      "amount": "-5,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:9UK54955PY001181K"
+    },
+    {
+      "id": "cmt3zx44d00bfky04c0ubi3ct",
+      "totalCents": -2199,
+      "amount": "-21,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001zky04onk2kj7n"
+    },
+    {
+      "id": "cmt4lqax2001dl2047rnyn18t",
+      "totalCents": -968,
+      "amount": "-9,68 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3XB48226F37360348"
+    },
+    {
+      "id": "cmt4lqax50032l204jb2u8b98",
+      "totalCents": -6000,
+      "amount": "-60,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:24A77834LA169935J"
+    },
+    {
+      "id": "cmt4lqaxb005hl204vgi0a7vy",
+      "totalCents": -1000,
+      "amount": "-10,00 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:16S07050NS438281H"
+    },
+    {
+      "id": "cmt4lqaxd0065l204cxwm9agl",
+      "totalCents": -37,
+      "amount": "-0,37 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:8X300208KE6235904"
+    },
+    {
+      "id": "cmt4lqaxe006ol2046jqgk46x",
+      "totalCents": -99,
+      "amount": "-0,99 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:16H927898X484033R"
+    },
+    {
+      "id": "cmt3zx44j00dpky044pqj11rg",
+      "totalCents": -2799,
+      "amount": "-27,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0010l404s14rypcz"
+    },
+    {
+      "id": "cmt4lqax30023l204x97zvhys",
+      "totalCents": -5795,
+      "amount": "-57,95 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:2JG96124DK178913S"
+    },
+    {
+      "id": "cmt4lqax4002el204ommzfm32",
+      "totalCents": -5998,
+      "amount": "-59,98 €",
+      "sourceType": "PAYPAL_MOVEMENT",
+      "sourceKey": "PAYPAL_TX:3U7888371T4430505"
+    },
+    {
+      "id": "cmt3zx44e00bpky04jfw2kzkz",
+      "totalCents": -2500,
+      "amount": "-25,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001pky04u5leiiju"
+    },
+    {
+      "id": "cmt3zx44e00buky04vuljvpt5",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001kky0483onqu5g"
+    },
+    {
+      "id": "cmt3zx44e00bsky04p6l3yblr",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6ul001lky04q14qad02"
+    },
+    {
+      "id": "cmt3zx44l00eiky04s67mhgv3",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f0007l404s810zjbj"
+    },
+    {
+      "id": "cmt3zx44g00ciky04eg9bekrm",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk000wky0482el0nla"
+    },
+    {
+      "id": "cmt3zx44g00ccky04vpsc6o2x",
+      "totalCents": -3000,
+      "amount": "-30,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0012ky04dx6xub4v"
+    },
+    {
+      "id": "cmt3zx44f00bxky04tftcvafb",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001hky04hegpfm5u"
+    },
+    {
+      "id": "cmt3zx44f00c4ky04nicp7yef",
+      "totalCents": -3000,
+      "amount": "-30,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0019ky046lof9dc2"
+    },
+    {
+      "id": "cmt3zx44g00cpky04dw32uu50",
+      "totalCents": -609,
+      "amount": "-6,09 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000nky048yamz17g"
+    },
+    {
+      "id": "cmt3zx44g00cqky04y62zwv00",
+      "totalCents": -6100,
+      "amount": "-61,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000oky04ma0jzy3p"
+    },
+    {
+      "id": "cmt3zx44h00crky04a0c6vq0t",
+      "totalCents": -7319,
+      "amount": "-73,19 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000pky042nx5kyoh"
+    },
+    {
+      "id": "cmt3zx44b00adky04c7ulaant",
+      "totalCents": -500,
+      "amount": "-5,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt3dsdfw0006h10481f6krwc"
+    },
+    {
+      "id": "cmt3zx44g00ceky04wlrlmhwe",
+      "totalCents": -2000,
+      "amount": "-20,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk0010ky0429mqlt15"
+    },
+    {
+      "id": "cmt3zx44i00dhky04vmh7xczs",
+      "totalCents": -2199,
+      "amount": "-21,99 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5g0018l4040h05ea50"
+    },
+    {
+      "id": "cmt3zx44k00e5ky04kh60sv27",
+      "totalCents": -3000,
+      "amount": "-30,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt311c5f000kl404u5s6iwif"
+    },
+    {
+      "id": "cmt3zx44h00d2ky04hajbexsl",
+      "totalCents": -1000,
+      "amount": "-10,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000bky04i6mbu6i7"
+    },
+    {
+      "id": "cmt3zx44h00d1ky04gzqkwlc9",
+      "totalCents": -1000,
+      "amount": "-10,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uj000dky04a31gml8q"
+    },
+    {
+      "id": "cmt3zx44f00c0ky04tokme3g1",
+      "totalCents": -500,
+      "amount": "-5,00 €",
+      "sourceType": "BANK_LINE",
+      "sourceKey": "BANK_LINE:cmt1vc6uk001eky046tp01csd"
+    }
+  ]
+}

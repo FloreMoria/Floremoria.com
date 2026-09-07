@@ -1,0 +1,59 @@
+{
+  "chiarimenti": {
+    "a_lotto5": {
+      "unicoNumeroMiglioramentoRai": "1114,03 €",
+      "raiPre": "-5418,51 €",
+      "raiPostAttesoSeEsegui": "-4304,48 €",
+      "spiegazione": [
+        "€150 = solo SDD ancora etichettati COSTO_* e visibili in gerarchia (2 righe).",
+        "€1.506,98 = tutti gli SDD unici giorno+importo da riclassificare a funding (perimetro anagrafico).",
+        "Numero vero per il RAI: **1114,03 €** = SDD unici che OGGI colpiscono il CE (1114,03 € costi − 0,00 € ricavi).",
+        "Di cui: ~€150 etichetta costo + ~€964 etichetta RICAVI_VENDITE ma direzione USCITA → comunque costi operativi nel motore + resto già fuori gerarchia (~€393, no effetto CE).",
+        "Funding €500 Fineco→PayPal del 5/09: 2026-09-05 SPESE_OPERATIVE -500,00 € — da includere in L5 come giroconto se ancora SPESE_*."
+      ],
+      "dupMultiCat": {
+        "n": 8,
+        "euro": "108,97 €"
+      },
+      "sddUniciEuro": "1506,98 €"
+    },
+    "b_versioni": {
+      "conteggio59": "ricalcolo L4: JSON :v saltate perché la base era già vista nel perimetro costi",
+      "conteggio84": "execute L4: tutte le JSON_ENTRY attive fiscalYear 2026 con suffisso :v",
+      "withBaseSibling": 34,
+      "orphansWithoutBase": 50,
+      "createdDays": {
+        "2026-08-21": 84
+      },
+      "stillActive": 0,
+      "nuoveCreazioniDopoFase2": false,
+      "percorsoRogue": "ledgerWriteGate blocca sourceKey versionate. L’unico `:v${Date.now()}` nel repo è scripts/fase2-acceptance.ts in dryRun (non scrive). Burst unico 2026-08-21 (84 righe). Nessuna produzione post-cancello rilevata.",
+      "conclusion": "59≠84 per perimetro diverso (collasso-con-base vs tutte le :v, incluse 50 orfane). Non è un leak attivo oggi (0 residue)."
+    },
+    "c_ferrante": {
+      "csvRows": "docs/verbali/costi_99_coppie.csv righe 96-97 (G4)",
+      "riga96": "2026-02-23 JSON SHOPPINGARDEN n.2/2026 €20 ↔ MANUAL «Fornitore SDI» n.28 (numero Ferrante sull’allegato mal etichettato)",
+      "riga97": "2026-02-23 JSON FLOWERS DI FERRANTE n.28 €20 ↔ MANUAL SHOPPINGARDEN n.2/2026 €20 — **accoppiamento incrociato vero**",
+      "percheAssenteDalSample10": "Il sample «10 scartate» del dossier analisi era solo inversioni di nome (€372 con doppio verso). Ferrante↔Shoppingarden stava in G4 del CSV, non in quel sample. Dire «assente» era impreciso: assente dal sample inversioni, **presente** nel CSV G4 come falsa coppia fornitori diversi.",
+      "importo": "20,00 €",
+      "destino": "fuori Lotto 4 / fuori Lotto 5 — non toccare; due documenti distinti stesso importo"
+    }
+  },
+  "l5": {
+    "unicoNumeroMiglioramentoRai": "1114,03 €",
+    "raiPre": "-5418,51 €",
+    "raiPostAttesoSeEsegui": "-4304,48 €",
+    "spiegazione": [
+      "€150 = solo SDD ancora etichettati COSTO_* e visibili in gerarchia (2 righe).",
+      "€1.506,98 = tutti gli SDD unici giorno+importo da riclassificare a funding (perimetro anagrafico).",
+      "Numero vero per il RAI: **1114,03 €** = SDD unici che OGGI colpiscono il CE (1114,03 € costi − 0,00 € ricavi).",
+      "Di cui: ~€150 etichetta costo + ~€964 etichetta RICAVI_VENDITE ma direzione USCITA → comunque costi operativi nel motore + resto già fuori gerarchia (~€393, no effetto CE).",
+      "Funding €500 Fineco→PayPal del 5/09: 2026-09-05 SPESE_OPERATIVE -500,00 € — da includere in L5 come giroconto se ancora SPESE_*."
+    ],
+    "dupMultiCat": {
+      "n": 8,
+      "euro": "108,97 €"
+    },
+    "sddUniciEuro": "1506,98 €"
+  }
+}

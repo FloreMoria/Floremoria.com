@@ -1,0 +1,258 @@
+{
+  "batchId": "FASE4B_L4_20260907_123006",
+  "executedAt": "2026-09-07T12:30:06.465Z",
+  "acceptance": "CE_INVARIANTE",
+  "pre": {
+    "at": "2026-09-07T12:30:08.579Z",
+    "costiTotCents": 1321096,
+    "raiCents": -541851,
+    "ivaDebitoCents": 13497,
+    "ivaCreditoCents": 27684,
+    "cashBankCents": 3200613,
+    "activeCount": 822,
+    "ricaviLordiCents": 779245,
+    "ebitdaCents": -506177,
+    "costiEuro": "13.210,96 €",
+    "raiEuro": "-5418,51 €",
+    "bancaEuro": "32.006,13 €",
+    "ivaDebitoEuro": "134,97 €",
+    "ivaCreditoEuro": "276,84 €",
+    "notaRaiStorico": "LIVE pre-L4 = -5418,51 € (Δ vs −€5.692,51 storico = 274,00 €) — acceptance = invariante vs PRE, non vs numero storico se driftato"
+  },
+  "post": {
+    "at": "2026-09-07T12:30:30.548Z",
+    "costiTotCents": 1321096,
+    "raiCents": -541851,
+    "ivaDebitoCents": 13497,
+    "ivaCreditoCents": 27684,
+    "cashBankCents": 3200613,
+    "activeCount": 705,
+    "ricaviLordiCents": 779245,
+    "ebitdaCents": -506177,
+    "costiEuro": "13.210,96 €",
+    "raiEuro": "-5418,51 €",
+    "bancaEuro": "32.006,13 €",
+    "ivaDebitoEuro": "134,97 €",
+    "ivaCreditoEuro": "276,84 €"
+  },
+  "invariant": {
+    "label": "post-Lotto4",
+    "ok": true,
+    "moved": [],
+    "activeDelta": -117
+  },
+  "reversed": 117,
+  "versionedQueued": 84,
+  "docsTouched": 32,
+  "skippedBecauseVisibleInPnl": 0,
+  "vRemainActive": 0,
+  "vRemainLooseContains": 0,
+  "coppie": {
+    "nota": "Le 10 righe sample (€372,01) doppiavano A↔B. Uniche: 6 inversioni €225,01; fornitori diversi 0; Ferrante assente.",
+    "sampleRowsStoriche": 10,
+    "sommaSampleConDuplicatiDiVersoEuro": "372,01",
+    "inversioniNome": {
+      "n": 6,
+      "euro": "225,01",
+      "elenco": [
+        {
+          "date": "2026-07-09",
+          "a": "SOLANO VINCENZO",
+          "b": "VINCENZO SOLANO",
+          "amount": "38,01"
+        },
+        {
+          "date": "2026-06-19",
+          "a": "TORRE DOMENICA",
+          "b": "DOMENICA TORRE",
+          "amount": "62,00"
+        },
+        {
+          "date": "2026-05-26",
+          "a": "DI PAOLA MARIA ANTONIETTA",
+          "b": "MARIA ANTONIETTA DI PAOLA",
+          "num": "16",
+          "amount": "40,00"
+        },
+        {
+          "date": "2026-05-06",
+          "a": "CALAMUNCI TINDARO",
+          "b": "TINDARO CALAMUNCI",
+          "amount": "25,00"
+        },
+        {
+          "date": "2026-04-22",
+          "a": "CANNONE LUCREZIA",
+          "b": "LUCREZIA CANNONE",
+          "amount": "20,00"
+        },
+        {
+          "date": "2026-02-17",
+          "a": "DI PAOLA MARIA ANTONIETTA",
+          "b": "MARIA ANTONIETTA DI PAOLA",
+          "num": "5",
+          "amount": "40,00"
+        }
+      ]
+    },
+    "fornitoriDiversi": {
+      "n": 0,
+      "euro": "0,00",
+      "elenco": []
+    }
+  },
+  "autofattureImporti": {
+    "mag31Stripe": [
+      {
+        "id": "cmt2qd1580001lh04arj7bch9",
+        "amount": "-3,14 €",
+        "cents": -314,
+        "fileName": "Stripe Tax Invoice 4PZWHSUS-2026-05.pdf",
+        "desc": "Autofattura TD17 — Stripe Payments Europe (Software & Servizi SaaS Estero)"
+      },
+      {
+        "id": "cmt2qaxdf0000kw04g78v1vof",
+        "amount": "3,83 €",
+        "cents": 383,
+        "fileName": "Autofattura_TD17_000001-2026-EST_Stripe_Payments_Europe_Limited.xml",
+        "num": "000001-2026-EST",
+        "desc": "Autofattura TD17 n. 000001-2026-EST — rif. 4PZWHSUS-2026-05 — Software & Servizi SaaS Estero"
+      }
+    ],
+    "mismatches": [
+      {
+        "date": "2026-05-31",
+        "vendor": "Stripe Payments Europe",
+        "expenseCents": -314,
+        "xmlCents": -314,
+        "pdfHintCents": 383,
+        "num": null,
+        "note": "due spese Stripe stesso giorno: questa -3,14 € vs sibling 3,83 € (XML vs PDF sospetto)"
+      },
+      {
+        "date": "2026-05-31",
+        "vendor": "Stripe Payments Europe Limited",
+        "expenseCents": 383,
+        "xmlCents": 383,
+        "pdfHintCents": -314,
+        "num": "000001-2026-EST",
+        "note": "due spese Stripe stesso giorno: questa 3,83 € vs sibling -3,14 € (XML vs PDF sospetto)"
+      }
+    ]
+  },
+  "lotto5DryRunPrep": {
+    "attesoMaxSocio": "1616,00 €",
+    "candidatiDescrizioneSddOGiro": 177,
+    "candidatiCostoSddPaypalLike": 46,
+    "sampleSddCost": [
+      {
+        "date": "2026-08-25",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "25,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-08-18",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "0,99 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-08-10",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "20,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-08-04",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "5,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-08-04",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "15,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-28",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "135,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-27",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "21,99 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-20",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "10,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-20",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "0,99 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-14",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "25,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-08",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "20,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-08-19",
+        "cat": "RICAVI_VENDITE",
+        "src": "BANK_LINE",
+        "amount": "5,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-07-06",
+        "cat": "COSTI_FIORISTI",
+        "src": "BANK_LINE",
+        "amount": "20,00 €",
+        "desc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 "
+      },
+      {
+        "date": "2026-06-16",
+        "cat": "RICAVI_VENDITE",
+        "src": "BANK_LINE",
+        "amount": "25,00 €",
+        "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 M"
+      },
+      {
+        "date": "2026-06-19",
+        "cat": "RICAVI_VENDITE",
+        "src": "BANK_LINE",
+        "amount": "0,99 €",
+        "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 M"
+      }
+    ],
+    "status": "PREP_ONLY — dry-run dedicato da eseguire dopo conferma L4"
+  },
+  "stopOnFail": false,
+  "lotto5DryRun": "docs/verbali/dossier_fase4b_lotto5_dryrun.md"
+}

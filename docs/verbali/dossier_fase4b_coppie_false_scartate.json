@@ -1,0 +1,46 @@
+{
+  "a": [],
+  "b": [],
+  "jsonOrfani": [
+    {
+      "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+      "num": "2026/1",
+      "date": "2026-01-24",
+      "amountAbs": 2701,
+      "description": "Fattura report LA PRIMAVERA S.n.c. di Calamunci Daniel & C. n. 2026/1",
+      "id": "cmt2q4hfn001wjl04okae6en0"
+    },
+    {
+      "vendor": "",
+      "num": "—",
+      "date": "2026-09-02",
+      "amountAbs": 1775,
+      "description": "Autofattura estera TD17 Cursor",
+      "id": "cmtog1hvi0007ju040fwagmcx"
+    },
+    {
+      "vendor": "",
+      "num": "—",
+      "date": "2026-09-05",
+      "amountAbs": 691,
+      "description": "Trattenuta commissioni Stripe su ordine FF-MC-26-002",
+      "id": "cmtonqtsb0005l804t83t2w10"
+    },
+    {
+      "vendor": "Stripe Payments Europe Limited",
+      "num": "000001-2026-est",
+      "date": "2026-05-31",
+      "amountAbs": 383,
+      "description": "Autofattura estera autofattura estera Stripe Payments Europe Limited n. 000001-2026-EST",
+      "id": "cmtm1k7vv0002l5044fjnsawv"
+    },
+    {
+      "vendor": "",
+      "num": "—",
+      "date": "2026-09-05",
+      "amountAbs": 366,
+      "description": "Trattenuta commissioni Stripe su ordine FF-MC-26-001",
+      "id": "cmtogpsao000bjv04vcl3xvpu"
+    }
+  ]
+}

@@ -1,9 +1,10 @@
 # Lotto 6 — COMPETENZA (solo analisi per commercialista)
 
-**Generato:** 2026-09-07T12:45:26.633Z  
+**Generato:** 2026-09-07 (aggiornato post-Lotto 5)  
 **Vincolo:** nessuna scrittura contabile. La competenza la firma il commercialista.
 
-Freeze di riferimento: `FREEZE_UFFICIALE_POST_LOTTO4` · RAI **-5418,51 €** · costi **13.210,96 €**
+Freeze di riferimento post-L5: `FREEZE_UFFICIALE_POST_LOTTO5` · RAI **-4304,48 €** · costi **12.096,93 €**  
+(Freeze post-L4 era RAI −5418,51 € — Lotto 5 ha già spostato +€1.114,03.)
 
 ---
 
@@ -22,16 +23,14 @@ Freeze di riferimento: `FREEZE_UFFICIALE_POST_LOTTO4` · RAI **-5418,51 €** �
 | Componente | Competenza presunta | Importo |
 |------------|---------------------|---------|
 | Integrazione nr. 14 fatture estere (giu–dic) | **2025** (esercizio precedente) | *da determinare* |
-| Versamento Capitale Sociale | Patrimoniale / fuori CE (o consulenza sul versamento) | *da determinare* |
+| Versamento Capitale Sociale | **Aumento di capitale 2025** — versamento soci di **€30.000**. Voce plausibilmente tutta competenza **2025** (non costo 2026). Se è consulenza sul versamento vs registrazione patrimoniale, distingue il commercialista — ma il contesto «capitale 2025» rende plausibile che **l’intera parcella** sia 2025, non solo l’integrazione estere. | *da determinare* |
 
-**Effetto massimo se l’intera parcella fosse costo 2025:** +€3.774,30 sul RAI 2026  
-→ RAI da -5418,51 € a **-1644,21 €**.
+**Effetto massimo se l’intera parcella fosse costo 2025:** +€3.774,30 sul RAI 2026.
 
-Con ricavi `.eu` +€1.667,02 (non ancora a libro): **≈ 22,81 €** — la “parità” del socio.  
-**Caveat:** senza spacchettamento riga, non possiamo firmare che tutto i €3.774 siano 2025.
+---
 
 ### Altri hint 2025 in mastro
-- 2026-03-02 DC STUDIO STP SRL -3774,30 € — Fattura n. 66 — Proforma n. 158 del 28/01/2026; Integrazione nr. 14 fatture estere (giu - dic); Versamento Capitale Soci
+- 2026-03-02 DC STUDIO STP SRL -3774,30 € — Fattura n. 66 — Proforma n. 158 del 28/01/2026; Integrazione nr. 14 fatture estere (giu - dic); Versamento Capitale Sociale
 - 2026-01-05  -15,95 € — Canone Mensile Conto Dicembre 2025
 - 2026-01-02  -25,25 € — Imposta di Bollo di Conto Corrente del 31.12.2025
 - 2026-02-05  4597,66 € — Ord: Cciaa Como-Lecco Ben: Floremoria S.r.l. Dt-Ord: 05/02/2026 Banca Ord: Iconto Srl Info-Cli: Liquidazione Contributo 
@@ -62,16 +61,29 @@ Cursor, Anthropic, Apple, OpenAI, Vercel ricorrenti — non trattati come abbona
 
 ---
 
-## Effetto stimato sul risultato 2026 (ordine di grandezza)
+## Effetto stimato sul risultato 2026 (con Lotto 5 incluso)
 
-| Scenario | RAI risultante |
-|----------|----------------|
-| Freeze attuale | -5418,51 € |
-| + DC Studio intera a 2025 | -1644,21 € |
-| + DC 2025 + risconti 2027 (IRIN+Aruba hosting/dominio) | -1529,29 € |
-| + DC 2025 + ricavi .eu €1.667,02 | **22,81 €** |
+Proiezione aggiornata (L5 era stata omessa nella bozza precedente):
 
-**Domanda al commercialista:** spacchettare la parcella 66 (estere 2025 vs capitale) e confermare i risconti.
+```text
+−5.418,51
+ +1.114,03   (Lotto 5 — già eseguito → RAI live −4.304,48)
+ +1.667,02   (ricavi .eu non ancora a libro)
+ +3.774,30   (DC Studio intera → 2025)
+ +   89,62   (IRIN quota 2027)
+────────────
+ = +1.226,46 €
+```
+
+| Scenario | RAI risultante (ordine di grandezza) |
+|----------|--------------------------------------|
+| Freeze post-L4 | −5.418,51 € |
+| **Post-Lotto 5 (live)** | **−4.304,48 €** |
+| + L5 + .eu + DC intera + IRIN | **+1.226,46 €** |
+| + L5 + .eu + **metà DC** (€1.887,15) + IRIN | **≈ −660 €** |
+| Solo DC intera da post-L4 (senza L5, legacy) | −1.644,21 € |
+
+**Domanda al commercialista:** spacchettare la parcella 66 (estere 2025 vs capitale 2025 / consulenza) e confermare i risconti. Contesto: versamento soci €30.000 per aumento capitale 2025.
 
 ---
 

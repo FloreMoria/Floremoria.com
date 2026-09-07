@@ -17,16 +17,16 @@
         },
         {
           "voce": "Versamento Capitale Sociale",
-          "competenzaPresunta": "patrimoniale (non costo 2026 né 2025 di esercizio)",
+          "competenzaPresunta": "2025 — aumento di capitale (versamento soci €30.000)",
           "importoInDb": null,
-          "nota": "Se è vero versamento capitale → fuori CE; se è consulenza sul versamento → costo. Distinzione del commercialista."
+          "nota": "Contesto socio: aumento capitale 2025 con versamento soci €30.000. Plausibile che l’intera fattura DC Studio (non solo l’integrazione estere) sia competenza 2025. Distinzione consulenza vs patrimoniale resta del commercialista."
         }
       ],
       "effettoMaxSeTuttoEstero2025": {
         "euro": "3774,30 €",
-        "raiDa": "-5418,51 €",
-        "raiA": "-1644,21 €",
-        "caveat": "SOLO se l’intera parcella è costo 2025. Con componente capitale l’effetto CE è minore."
+        "raiDaPostL4": "-5418,51 €",
+        "raiAPostL4Legacy": "-1644,21 €",
+        "caveat": "SOLO se l’intera parcella è costo 2025. Contesto capitale 2025 rende plausibile l’intera voce."
       }
     },
     "altriHint2025": [
@@ -117,13 +117,21 @@
     ]
   },
   "effettoStimatoSu2026": {
-    "seDcStudioInteraA2025": "3774,30 €",
-    "risconti2027Minimi": "114,92 €",
     "raiPostL4": "-5418,51 €",
-    "raiSeSoloDc2025": "-1644,21 €",
-    "raiSeDc2025PiuRisconti": "-1529,29 €",
-    "piuEuMaiRegistrati": "1667,02 €",
-    "raiSeDc2025PiuEu": "22,81 €",
-    "disclaimer": "Stime operative per il commercialista. Nessuna scrittura. La firma sulla competenza è sua."
+    "lotto5GiaEseguito": "1114,03 €",
+    "raiPostL5Live": "-4304,48 €",
+    "ricaviEuNonALibro": "1667,02 €",
+    "dcStudioInteraA2025": "3774,30 €",
+    "irinQuota2027": "89,62 €",
+    "proiezioneConL5EuDcIrin": {
+      "formula": "−5418,51 +1114,03 (L5) +1667,02 (.eu) +3774,30 (DC) +89,62 (IRIN)",
+      "rai": "+1226,46 €"
+    },
+    "scenarioMetaDcStudio": {
+      "dcMeta": "1887,15 €",
+      "formula": "−5418,51 +1114,03 +1667,02 +1887,15 +89,62",
+      "raiApprox": "≈ −660 €"
+    },
+    "disclaimer": "Stime operative per il commercialista. Lotto 5 già eseguito a libro. Nessuna scrittura competenza. La firma è del commercialista."
   }
 }

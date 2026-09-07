@@ -33,3 +33,9 @@
 [2026-09-07 14:35] finance/fase4b: Lotto4 ESEGUITO FASE4B_L4_20260907_123006 — 117 reverse CE invariato PASS; :v residue 0; 6 inversioni/0 fornitori diversi; XML≠PDF 31/05; L5 dry-run SDD €1506 unici.
 
 [2026-09-07 14:50] finance/fase4b: freeze post-L4; L5 ΔRAI unico €1114,03; :v 59vs84 spiegato (0 attive); Ferrante CSV 96-97; L6 competenza DC+IRIN+Aruba sola analisi.
+
+[2026-09-07 15:05] chore: push main 4 commit (dry-run overrides, SDI soft-match, script L4-6, dossier freeze); Neon backup-pre-fase4b OK; verify motore=freeze, fascia banca Δ€60 vs cash PnL.
+
+[2026-09-07 15:20] finance/ui: Fatture Passive SDI/YouDOX — elenco XML+XLSX (tutte) + filtro T1–T4/Anno 2026.
+[2026-09-07 15:20] finance/fase4b: Lotto 5 ESEGUITO batch FASE4B_L5_20260907_131645; RAI −5418,51→−4304,48 (+1114,03); banca inv.; PayPal transit −2207,04→−1093,01.
+[2026-09-07 15:20] finance/fase4b: Lotto 6 dossier aggiornato — capitale sociale 2025 (€30k) + proiezione con L5 = +1226,46 / metà DC ≈ −660.

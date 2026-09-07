@@ -30,6 +30,16 @@ type IngestSummary = {
     sampleVendors?: string[];
 };
 
+type PassivePeriodKey = 'T1' | 'T2' | 'T3' | 'T4' | 'YEAR';
+
+const PASSIVE_PERIODS: { key: PassivePeriodKey; label: string; quarter: 1 | 2 | 3 | 4 | null }[] = [
+    { key: 'T1', label: 'T1 (Gen – Mar)', quarter: 1 },
+    { key: 'T2', label: 'T2 (Apr – Giu)', quarter: 2 },
+    { key: 'T3', label: 'T3 (Lug – Set)', quarter: 3 },
+    { key: 'T4', label: 'T4 (Ott – Dic)', quarter: 4 },
+    { key: 'YEAR', label: 'Anno 2026', quarter: null },
+];
+
 export default function SdiInvoicesUploadBox({ onImported }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [dragOver, setDragOver] = useState(false);
@@ -40,12 +50,18 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
     const [summary, setSummary] = useState<IngestSummary | null>(null);
     const [invoices, setInvoices] = useState<PassiveInvoiceTableRow[]>([]);
     const [dupWarn, setDupWarn] = useState<string | null>(null);
+    const [periodKey, setPeriodKey] = useState<PassivePeriodKey>('YEAR');
 
     const loadInvoices = useCallback(async () => {
         try {
-            const res = await fetch(
-                '/api/dashboard/finance/invoices/uploads?channel=SDI_XML&view=invoices'
-            );
+            const period = PASSIVE_PERIODS.find((p) => p.key === periodKey) || PASSIVE_PERIODS[4];
+            const qs = new URLSearchParams({
+                channel: 'SDI_XML',
+                view: 'invoices',
+                year: '2026',
+            });
+            if (period.quarter != null) qs.set('quarter', String(period.quarter));
+            const res = await fetch(`/api/dashboard/finance/invoices/uploads?${qs.toString()}`);
             const parsed = await readJsonResponse<{
                 ok?: boolean;
                 invoices?: PassiveInvoiceTableRow[];
@@ -54,7 +70,7 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
         } catch {
             /* silent */
         }
-    }, []);
+    }, [periodKey]);
 
     useEffect(() => {
         void loadInvoices();
@@ -258,12 +274,35 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
             </div>
 
             <div className="flex flex-col flex-1 min-h-0 gap-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">
-                    Fatture passive ({invoices.length})
-                </p>
+                <div className="shrink-0 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Fatture passive ({invoices.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                        {PASSIVE_PERIODS.map((p) => (
+                            <button
+                                key={p.key}
+                                type="button"
+                                onClick={() => setPeriodKey(p.key)}
+                                className={`text-[10px] px-2 py-1 rounded-lg border transition-colors ${
+                                    periodKey === p.key
+                                        ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#c5a880]'
+                                }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <UploadedInvoicesFileList
                     invoices={invoices}
                     fillHeight
+                    emptyHint={
+                        periodKey === 'YEAR'
+                            ? 'Nessuna fattura passiva SDI/YouDOX per il 2026.'
+                            : `Nessuna fattura passiva nel ${PASSIVE_PERIODS.find((p) => p.key === periodKey)?.label || periodKey}.`
+                    }
                     onChanged={() => void loadInvoices()}
                 />
             </div>

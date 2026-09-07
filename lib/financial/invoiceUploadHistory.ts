@@ -155,14 +155,58 @@ export async function listInvoiceUploads(
 }
 
 /** Elenco flat fatture passive SDI (XML) per tabella dashboard. */
-export async function listPassiveSdiInvoices(limit = 2000): Promise<PassiveSdiInvoiceRow[]> {
+export type PassiveSdiListOpts = {
+    /** Default 2000. */
+    limit?: number;
+    /** Anno fiscale (default 2026). */
+    year?: number;
+    /**
+     * Trimestre 1–4, oppure omit/null = intero anno.
+     * T1 Gen–Mar · T2 Apr–Giu · T3 Lug–Set · T4 Ott–Dic
+     */
+    quarter?: 1 | 2 | 3 | 4 | null;
+};
+
+/** Intervallo [from, to) per anno/trimestre (UTC date-only). */
+export function passiveSdiDateRange(opts?: {
+    year?: number;
+    quarter?: 1 | 2 | 3 | 4 | null;
+}): { from: Date; to: Date } {
+    const year = opts?.year ?? 2026;
+    const q = opts?.quarter ?? null;
+    if (q == null) {
+        return { from: new Date(Date.UTC(year, 0, 1)), to: new Date(Date.UTC(year + 1, 0, 1)) };
+    }
+    const startMonth = (q - 1) * 3;
+    return {
+        from: new Date(Date.UTC(year, startMonth, 1)),
+        to: new Date(Date.UTC(year, startMonth + 3, 1)),
+    };
+}
+
+/**
+ * Fatture passive SDI / YouDOX (XML + report XLSX).
+ * Esclude autofatture estere (box dedicato).
+ */
+export async function listPassiveSdiInvoices(
+    limitOrOpts: number | PassiveSdiListOpts = 2000
+): Promise<PassiveSdiInvoiceRow[]> {
+    const opts: PassiveSdiListOpts =
+        typeof limitOrOpts === 'number' ? { limit: limitOrOpts } : limitOrOpts || {};
+    const limit = opts.limit ?? 2000;
+    const { from, to } = passiveSdiDateRange({ year: opts.year, quarter: opts.quarter });
+
     const rows = await prisma.manualFinanceExpense.findMany({
         where: {
             docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
+            expenseDate: { gte: from, lt: to },
             OR: [
                 { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XML' } },
+                { metadataJson: { path: ['ingestChannel'], equals: 'SDI_XLSX' } },
                 { metadataJson: { path: ['source'], equals: 'SDI_XML' } },
+                { metadataJson: { path: ['source'], equals: 'SDI_XLSX' } },
                 { notes: { contains: 'SDI_XML', mode: 'insensitive' } },
+                { notes: { contains: 'SDI_XLSX', mode: 'insensitive' } },
                 {
                     AND: [
                         { fileName: { endsWith: '.xml', mode: 'insensitive' } },
@@ -170,6 +214,14 @@ export async function listPassiveSdiInvoices(limit = 2000): Promise<PassiveSdiIn
                     ],
                 },
             ],
+            NOT: {
+                OR: [
+                    { metadataJson: { path: ['ingestChannel'], equals: 'SDI_AUTOFATTURA_ESTERA' } },
+                    { metadataJson: { path: ['source'], equals: 'SDI_AUTOFATTURA_ESTERA' } },
+                    { metadataJson: { path: ['ingestChannel'], equals: 'AUTOFATTURA_TD17' } },
+                    { metadataJson: { path: ['source'], equals: 'AUTOFATTURA_TD17' } },
+                ],
+            },
         },
         orderBy: { expenseDate: 'desc' },
         take: limit,
@@ -189,6 +241,7 @@ export async function listPassiveSdiInvoices(limit = 2000): Promise<PassiveSdiIn
             r.fileName ||
             '—';
         const documentDate = r.expenseDate.toISOString().slice(0, 10);
+        const channel = String(meta.ingestChannel || meta.source || '');
         const searchHaystack = [
             fileName,
             r.vendorName,
@@ -197,6 +250,7 @@ export async function listPassiveSdiInvoices(limit = 2000): Promise<PassiveSdiIn
             documentDate,
             formatItDateForSearch(documentDate),
             r.description,
+            channel,
         ]
             .filter(Boolean)
             .join(' ');

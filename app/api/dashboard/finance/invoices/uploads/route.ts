@@ -50,8 +50,26 @@ export async function GET(request: Request) {
         }
 
         if (view === 'invoices' && channel === 'SDI_XML') {
-            const invoices = await listPassiveSdiInvoices();
-            return NextResponse.json({ ok: true, invoices });
+            const yearRaw = searchParams.get('year');
+            const quarterRaw = searchParams.get('quarter');
+            const year = yearRaw ? Number(yearRaw) : 2026;
+            const quarterParsed = quarterRaw ? Number(quarterRaw) : null;
+            const quarter =
+                quarterParsed === 1 ||
+                quarterParsed === 2 ||
+                quarterParsed === 3 ||
+                quarterParsed === 4
+                    ? (quarterParsed as 1 | 2 | 3 | 4)
+                    : null;
+            const invoices = await listPassiveSdiInvoices({
+                year: Number.isFinite(year) && year > 2000 ? year : 2026,
+                quarter,
+            });
+            return NextResponse.json({
+                ok: true,
+                invoices,
+                period: { year: Number.isFinite(year) && year > 2000 ? year : 2026, quarter },
+            });
         }
 
         const uploads = await listInvoiceUploads(channel);

@@ -50,3 +50,5 @@
 - tsc + build OK.
 
 [2026-09-07 16:20] finance/fase5: Passo A fiscalAuthorityDedupe misurato e STOP (RAI −3804→−9117); B/C/D non eseguiti; kill-switch documentato default true; doppi fiorista 18/€465 (Cingolani ok).
+
+[2026-09-07 16:30] finance/fase4b: Lotto6 fioristi LOTTO6_FIORISTI_20260907_142600 — 6 soft-reverse €134 (ΔRAI hier +€40, teorico senza hier +€134); cumulativi elencati no-write; transito dare ORDER=0/38 mai implementato; Fineco Q1 gap €40.

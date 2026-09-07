@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-09-07T14:26:10.012Z",
+  "batchId": "LOTTO6_FIORISTI_20260907_142600",
+  "certainReversed": 6,
+  "certainEuroCents": 13400,
+  "certainEuro": "134,00 €",
+  "note": "Set qualità (non legacy €154 con match dubbi). Controllo Cingolani ×3 incluso.",
+  "deltaRaiWithHierarchyCents": 4000,
+  "deltaRaiWithHierarchy": "40,00 €",
+  "theoreticalRaiWithoutHierarchyCents": 13400,
+  "theoreticalRaiWithoutHierarchy": "134,00 €",
+  "certain": [
+    { "orderNumber": "FT-RC-26-003", "partner": "Fioreria Reggio Calabria", "amount": 2700, "payoutId": "cmt3zx442006jky04at0mk7q0", "bankId": "cmt3zx44b00acky04p9j4kvrl" },
+    { "orderNumber": "FT-LC-26-001", "partner": "Florapiu", "amount": 3000, "payoutId": "cmte1n27s0078l804xq0n1b1l", "bankId": "cmte1n28300bcl80439bca7zh" },
+    { "orderNumber": "FF-VI-26-003", "partner": "Fioreria Rossella", "amount": 1700, "payoutId": "cmte1n27s0076l804j2scbm3g", "bankId": "cmte1n28300b9l804tkvn0x4x" },
+    { "orderNumber": "FT-MC-26-005", "partner": "Cingolani Antonella", "amount": 2000, "payoutId": "cmt3zx4430076ky046yl6hn0i", "bankId": "cmt3zx44c00atky04wv5kqkz7" },
+    { "orderNumber": "FT-MC-26-004", "partner": "Cingolani Antonella", "amount": 2000, "payoutId": "cmt3zx444007fky04qc8u7m2a", "bankId": "cmt3zx44d00bcky04q4td8tcw" },
+    { "orderNumber": "FT-MC-26-003", "partner": "Cingolani Antonella", "amount": 2000, "payoutId": "cmt3zx444007hky048ep60puc", "bankId": "cmt3zx44f00c6ky048lgl8sra" }
+  ],
+  "post": {
+    "raiCents": -376448,
+    "ricaviCents": 779245,
+    "costiCents": 1155693,
+    "bancaCents": 3200613,
+    "stripeCents": -299542,
+    "paypalCents": -59301
+  }
+}

@@ -1,0 +1,374 @@
+{
+  "cumul": [
+    {
+      "payoutOrder": "FT-PD-26-001",
+      "partner": "Fioreria Battistella s.r.l.",
+      "payoutAmt": 2500,
+      "payoutDate": "2026-08-21",
+      "bankAmt": 13800,
+      "bankDate": "2026-09-01",
+      "bankDesc": "Beneficiario: Battistella fioreria srl I BAN: IT68P0835612501000000065729 Data In seriment",
+      "siblingOrders": [
+        {
+          "n": "FT-PD-26-001",
+          "comp": 2500,
+          "del": "2026-07-16"
+        },
+        {
+          "n": "FF-PN-26-004",
+          "comp": 5000,
+          "del": "2026-08-21"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FF-PA-26-001",
+      "partner": "Davide Capitano",
+      "payoutAmt": 8500,
+      "payoutDate": "2026-08-21",
+      "bankAmt": 10300,
+      "bankDate": "2026-07-05",
+      "bankDesc": "Beneficiario: Davide Capitano IBAN: IE86 SUMU99036510611169 Data Inserimento: 05/ 07/2026 ",
+      "siblingOrders": [
+        {
+          "n": "FT-PA-26-005",
+          "comp": 1800,
+          "del": "2026-07-06"
+        },
+        {
+          "n": "FT-PA-26-004",
+          "comp": 1800,
+          "del": "2026-06-19"
+        },
+        {
+          "n": "FF-PA-26-001",
+          "comp": 8500,
+          "del": "2026-07-04"
+        },
+        {
+          "n": "FT-PA-26-007",
+          "comp": 1800,
+          "del": "2026-08-01"
+        },
+        {
+          "n": "FT-PA-26-003",
+          "comp": 1800,
+          "del": "2026-05-22"
+        },
+        {
+          "n": "FT-PA-26-009",
+          "comp": 2000,
+          "del": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FT-PA-26-004",
+      "partner": "Davide Capitano",
+      "payoutAmt": 1800,
+      "payoutDate": "2026-08-20",
+      "bankAmt": 2000,
+      "bankDate": "2026-08-18",
+      "bankDesc": "Beneficiario: Davide Capitano IBAN: IE86 SUMU99036510611169 Data Inserimento: 18/ 08/2026 ",
+      "siblingOrders": [
+        {
+          "n": "FT-PA-26-005",
+          "comp": 1800,
+          "del": "2026-07-06"
+        },
+        {
+          "n": "FT-PA-26-004",
+          "comp": 1800,
+          "del": "2026-06-19"
+        },
+        {
+          "n": "FF-PA-26-001",
+          "comp": 8500,
+          "del": "2026-07-04"
+        },
+        {
+          "n": "FT-PA-26-007",
+          "comp": 1800,
+          "del": "2026-08-01"
+        },
+        {
+          "n": "FT-PA-26-003",
+          "comp": 1800,
+          "del": "2026-05-22"
+        },
+        {
+          "n": "FT-PA-26-009",
+          "comp": 2000,
+          "del": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FT-PA-26-003",
+      "partner": "Davide Capitano",
+      "payoutAmt": 1800,
+      "payoutDate": "2026-08-20",
+      "bankAmt": 2000,
+      "bankDate": "2026-09-02",
+      "bankDesc": "Beneficiario: Davide Capitano IBAN: IE86 SUMU99036510611169 Data Inserimento: 02/ 09/2026 ",
+      "siblingOrders": [
+        {
+          "n": "FT-PA-26-005",
+          "comp": 1800,
+          "del": "2026-07-06"
+        },
+        {
+          "n": "FT-PA-26-004",
+          "comp": 1800,
+          "del": "2026-06-19"
+        },
+        {
+          "n": "FF-PA-26-001",
+          "comp": 8500,
+          "del": "2026-07-04"
+        },
+        {
+          "n": "FT-PA-26-007",
+          "comp": 1800,
+          "del": "2026-08-01"
+        },
+        {
+          "n": "FT-PA-26-003",
+          "comp": 1800,
+          "del": "2026-05-22"
+        },
+        {
+          "n": "FT-PA-26-009",
+          "comp": 2000,
+          "del": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FT-ME-26-001",
+      "partner": "Torre",
+      "payoutAmt": 3000,
+      "payoutDate": "2026-08-20",
+      "bankAmt": 6200,
+      "bankDate": "2026-07-02",
+      "bankDesc": "Beneficiario: Torre Domenica IBAN: IT37R 0760116500001008769182 Data Inserimento: 02/07/20",
+      "siblingOrders": [
+        {
+          "n": "FT-ME-26-001",
+          "comp": 3000,
+          "del": "2026-07-17"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FT-RC-26-001",
+      "partner": "Fioreria Reggio Calabria",
+      "payoutAmt": 2500,
+      "payoutDate": "2026-08-20",
+      "bankAmt": 2700,
+      "bankDate": "2026-08-20",
+      "bankDesc": "Ben: Assumma Matilde Maria Ins: 20/08/20 26 09:59:20 Da: PHONE/VOICE P. Iban: IT3 1E360810",
+      "siblingOrders": [
+        {
+          "n": "FT-RC-26-001",
+          "comp": 2500,
+          "del": "2026-06-15"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FF-PN-26-004",
+      "partner": "Fioreria Battistella s.r.l.",
+      "payoutAmt": 5000,
+      "payoutDate": "2026-08-21",
+      "bankAmt": 13800,
+      "bankDate": "2026-09-01",
+      "bankDesc": "Beneficiario: Battistella fioreria srl I BAN: IT68P0835612501000000065729 Data In seriment",
+      "siblingOrders": [
+        {
+          "n": "FT-PD-26-001",
+          "comp": 2500,
+          "del": "2026-07-16"
+        },
+        {
+          "n": "FF-PN-26-004",
+          "comp": 5000,
+          "del": "2026-08-21"
+        }
+      ]
+    },
+    {
+      "payoutOrder": "FF-SO-26-001",
+      "partner": "L'Orchidea Fiori e Piante",
+      "payoutAmt": 4000,
+      "payoutDate": "2026-09-01",
+      "bankAmt": 4500,
+      "bankDate": "2026-09-01",
+      "bankDesc": "Beneficiario: L'ORCHIDEA SNC DI GOBBI AN TONELLA e SIMONA IBAN: IT57V053875223000 00490142",
+      "siblingOrders": [
+        {
+          "n": "FF-SO-26-001",
+          "comp": 4000,
+          "del": "2026-09-02"
+        }
+      ]
+    }
+  ],
+  "transit": {
+    "paidOrders": 38,
+    "withDare": 0,
+    "withoutDare": 38,
+    "byGwMonth": [
+      {
+        "gw": "OTHER",
+        "month": "2026-07",
+        "with": 0,
+        "without": 14,
+        "withEuro": 0,
+        "withoutEuro": 71530
+      },
+      {
+        "gw": "OTHER",
+        "month": "2026-05",
+        "with": 0,
+        "without": 4,
+        "withEuro": 0,
+        "withoutEuro": 12543
+      },
+      {
+        "gw": "OTHER",
+        "month": "2026-06",
+        "with": 0,
+        "without": 4,
+        "withEuro": 0,
+        "withoutEuro": 17191
+      },
+      {
+        "gw": "OTHER",
+        "month": "2026-08",
+        "with": 0,
+        "without": 8,
+        "withEuro": 0,
+        "withoutEuro": 38037
+      },
+      {
+        "gw": "STRIPE",
+        "month": "2026-08",
+        "with": 0,
+        "without": 4,
+        "withEuro": 0,
+        "withoutEuro": 23939
+      },
+      {
+        "gw": "STRIPE",
+        "month": "2026-09",
+        "with": 0,
+        "without": 4,
+        "withEuro": 0,
+        "withoutEuro": 37292
+      }
+    ],
+    "dareBySource": {
+      "JSON_ENTRY": 9,
+      "BANK_LINE": 15,
+      "PAYPAL_MOVEMENT": 75
+    },
+    "stripeDareLast": "2026-09-05",
+    "paypalDareLast": "2026-09-05",
+    "jsonDareN": 9,
+    "orderLinkedDareN": 0
+  },
+  "finecoGaps": [
+    {
+      "file": "fineco-paste-2026-08-24T20-15-46-786Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2025-12-02",
+      "periodEnd": "2026-08-24"
+    },
+    {
+      "file": "1° trimestre Fineco.pdf",
+      "periodStart": "2026-01-02",
+      "periodEnd": "2026-03-30",
+      "opening": 3212048,
+      "closing": 3244224,
+      "linesN": 41,
+      "sum": 36176,
+      "derived": 3248224,
+      "gap": 4000,
+      "gapEuro": "40,00 €"
+    },
+    {
+      "file": "2 Trimestre Fineco 2026.pdf",
+      "periodStart": "2026-04-01",
+      "periodEnd": "2026-06-25",
+      "opening": 3244224,
+      "closing": 3241798,
+      "linesN": 72,
+      "sum": -2426,
+      "derived": 3241798,
+      "gap": 0,
+      "gapEuro": "0,00 €"
+    },
+    {
+      "file": "fineco-paste-2026-08-21T20-07-21-005Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-08-20"
+    },
+    {
+      "file": "fineco-paste-2026-08-26T14-51-53-517Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-07-06",
+      "periodEnd": "2026-08-26"
+    },
+    {
+      "file": "fineco-paste-2026-08-31T14-57-16-231Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-08-27",
+      "periodEnd": "2026-08-31"
+    },
+    {
+      "file": "fineco-paste-2026-09-02T08-57-00-393Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-09-01",
+      "periodEnd": "2026-09-02"
+    },
+    {
+      "file": "fineco-paste-2026-09-02T19-48-55-729Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-09-02",
+      "periodEnd": "2026-09-02"
+    },
+    {
+      "file": "fineco-paste-2026-09-06T19-47-13-674Z.txt",
+      "skip": true,
+      "reason": "missing open/close",
+      "periodStart": "2026-09-03",
+      "periodEnd": "2026-09-05"
+    }
+  ],
+  "freeze": {
+    "label": "FREEZE_UFFICIALE_POST_LOTTO6_FIORISTI",
+    "at": "2026-09-07T14:26:10.012Z",
+    "rai": -376448,
+    "ricavi": 779245,
+    "costi": 1155693,
+    "banca": 3200613,
+    "stripe": -299542,
+    "paypal": -59301,
+    "euro": {
+      "rai": "-3764,48 €",
+      "ricavi": "7792,45 €",
+      "costi": "11.556,93 €",
+      "banca": "32.006,13 €",
+      "stripe": "-2995,42 €",
+      "paypal": "-593,01 €"
+    }
+  }
+}

@@ -43,6 +43,11 @@ export const metadata: Metadata = {
     icons: {
         apple: [{ url: '/apple-icon-v2.png', sizes: '180x180', type: 'image/png' }],
     },
+    other: {
+        'mobile-web-app-capable': 'yes',
+        'apple-mobile-web-app-capable': 'yes',
+        'apple-mobile-web-app-status-bar-style': 'default',
+    },
 };
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -67,6 +72,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             style={{
                 ...chromeStyle,
                 paddingTop: 'env(safe-area-inset-top, 0px)',
+                paddingLeft: 'env(safe-area-inset-left, 0px)',
+                paddingRight: 'env(safe-area-inset-right, 0px)',
             }}
         >
 

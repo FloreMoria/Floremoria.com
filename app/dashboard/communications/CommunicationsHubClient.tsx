@@ -95,7 +95,7 @@ export default function CommunicationsHubClient({ initialProofs, isDashboardAdmi
 
   return (
     <div className="space-y-6 md:space-y-12 max-w-full min-w-0 overflow-x-hidden">
-      <div className="bg-white rounded-none md:rounded-[32px] shadow-none md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-y md:border border-[#EAE3D9] overflow-hidden font-body max-w-full -mx-4 md:mx-0">
+      <div className="bg-white rounded-2xl md:rounded-[32px] shadow-sm md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAE3D9] overflow-hidden font-body max-w-full mx-0">
         <div className="px-3 pt-3 md:px-8 md:pt-8">
           <StaffPushNotifications />
         </div>
@@ -119,7 +119,7 @@ export default function CommunicationsHubClient({ initialProofs, isDashboardAdmi
         </div>
 
         {/* CONTENT AREA */}
-        <div className="p-0 md:p-8 lg:p-12 min-h-[500px] md:min-h-[650px] bg-white">
+        <div className="p-2 sm:p-4 md:p-8 lg:p-12 min-h-[500px] md:min-h-[650px] bg-white">
           {activeTab === 'visione' && (
             <VisioneTab 
               sessions={sessions} 
@@ -506,7 +506,7 @@ function VisioneTab({
           </div>
         </div>
       )}
-      <div className="flex border-0 md:border border-[#EAE3D9] rounded-none md:rounded-3xl overflow-hidden h-[calc(100dvh-110px)] min-h-[440px] md:h-[680px] bg-[#FAF9F6] shadow-none md:shadow-sm w-full max-w-full min-w-0">
+      <div className="flex border border-[#EAE3D9] rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden h-[560px] sm:h-[620px] md:h-[680px] bg-[#FAF9F6] shadow-sm w-full max-w-full min-w-0">
         
         {/* ── COLONNA 1: CHAT LIST SIDEBAR ── */}
         <div

@@ -1,0 +1,529 @@
+{
+  "generatedAt": "2026-09-07T13:36:13.593Z",
+  "vincolo": "SOLA LETTURA (L5bis già eseguito a parte)",
+  "snapPostL5bis": {
+    "rai": "-3804,48 €",
+    "costi": "11.596,93 €",
+    "banca": "32.006,13 €",
+    "paypal": "-593,01 €",
+    "stripe": "-2995,42 €"
+  },
+  "p2_transit": {
+    "stripeTransit": -299542,
+    "paypalTransit": -59301,
+    "totalGap": 358843,
+    "euMissing": 166702,
+    "remainAfterEu": 192141,
+    "stripe": {
+      "credit": 62483,
+      "debit": 357162,
+      "net": -294679,
+      "byType": {
+        "JSON_ENTRY": {
+          "n": 11,
+          "credit": 62483,
+          "debit": 1057
+        },
+        "STRIPE_MOVEMENT": {
+          "n": 92,
+          "credit": 0,
+          "debit": 11950
+        },
+        "BANK_LINE": {
+          "n": 55,
+          "credit": 0,
+          "debit": 344155
+        }
+      },
+      "paidOrders": 8,
+      "noTransitCreditN": 8,
+      "noTransitCreditEuro": 61231,
+      "feeOnOrders": 2096
+    },
+    "paypal": {
+      "credit": 329698,
+      "debit": 388999,
+      "net": -59301,
+      "byType": {
+        "PAYPAL_MOVEMENT": {
+          "n": 204,
+          "credit": 168295,
+          "debit": 325125
+        },
+        "BANK_LINE": {
+          "n": 47,
+          "credit": 161403,
+          "debit": 63874
+        }
+      },
+      "paidOrders": 4,
+      "noTransitCreditN": 4,
+      "noTransitCreditEuro": 16991
+    },
+    "feesLedgerSample": 11950,
+    "compositionHint": {
+      "euUnregistered": 166702,
+      "comWithoutTransitCredit": 78222,
+      "feesOnOrders": 2096,
+      "note": "comWithoutTransitCredit include listino ordini .com già a libro come ricavo ma senza dare sul wallet — non sono \"mancanti\" dal CE, sono squilibrio patrimoniale del modello a 3 gambe."
+    },
+    "discountLikeOrders": [],
+    "listVsItemsN": 0,
+    "listVsItemsSample": [],
+    "unexplainedRaw": 113919,
+    "composition": {
+      "totalGap": 358843,
+      "totalGapEuro": "3588,43 €",
+      "a_euUnregistered": {
+        "cents": 166702,
+        "euro": "1667,02 €"
+      },
+      "b_feesOnPaidOrders": {
+        "cents": 2096,
+        "euro": "20,96 €",
+        "note": "wallet accredita netto; CE spesso lordo"
+      },
+      "c_residualPatrimoniale": {
+        "cents": 190045,
+        "euro": "1900,45 €",
+        "note": "Incassi .com già a CE senza dare sul transito + asimmetria payout L3 (avere wallet senza dare ricavo). comNoCreditSum è tetto lato ordini, non addendo diretto.",
+        "comOrdersWithoutTransitDare": {
+          "n": 12,
+          "euro": "782,22 €"
+        }
+      },
+      "check": "3588,43 €"
+    },
+    "totalGapPostL5bis": 358843
+  },
+  "p3_buoni": {
+    "model": {
+      "existing": {
+        "totalPriceCents": "listino / totale ordine (centesimi) — oggi usato come ricavo",
+        "grossAmount": "Float? — spesso = importo gateway lordo (incassato)",
+        "stripeFee": "Float? — fee Stripe",
+        "netAmount": "Float? — netto dopo fee",
+        "offerRedemptions": "relazione Offer → buoni usati (value tipicamente % o cents)",
+        "partnerCommissionCents": "fee partner, non sconto cliente"
+      },
+      "missing": {
+        "listPriceCents": "da aggiungere (o rinominare semanticamente totalPriceCents)",
+        "discountCents": "da aggiungere (buono/sconto assoluto)",
+        "amountPaidCents": "da aggiungere (incassato = corrispettivo; match gateway)"
+      },
+      "design": "Order: listPriceCents + discountCents + amountPaidCents (corrispettivo). Matching gateway su amountPaidCents. CE ricavi su amountPaidCents. grossAmount/stripeFee/netAmount restano snapshot gateway."
+    },
+    "discountLike": [],
+    "listVsItems": []
+  },
+  "p4_floristDoubles": {
+    "payoutsN": 27,
+    "payoutsEuro": 77300,
+    "matchedN": 7,
+    "matchedEuro": 17500,
+    "certainN": 5,
+    "certainEuro": 12700,
+    "cumulativeN": 2,
+    "cumulativeEuro": 4800,
+    "bothInPnlCertainEuro": 0,
+    "sampleCertain": [
+      {
+        "payoutId": "cmte1n27s0076l804j2scbm3g",
+        "bankId": "cmte1n28300b9l804tkvn0x4x",
+        "amount": 1700,
+        "days": 2,
+        "florist": "",
+        "bankDesc": "Beneficiario: Rossella Benvegnu IBAN: IT 23Y3608105138205030905055 Data Inserime",
+        "certain": true,
+        "cumulativeSuspect": false,
+        "inPnl": false
+      },
+      {
+        "payoutId": "cmte1n27s0078l804xq0n1b1l",
+        "bankId": "cmte1n28300bcl80439bca7zh",
+        "amount": 3000,
+        "days": 1,
+        "florist": "",
+        "bankDesc": "Beneficiario: Florapiu snc di Scanferla Giovanni e C IBAN: IT74T0538751530000049",
+        "certain": true,
+        "cumulativeSuspect": false,
+        "inPnl": false
+      },
+      {
+        "payoutId": "cmt3zx4430076ky046yl6hn0i",
+        "bankId": "cmte1n28400brl804iejus5lf",
+        "amount": 2000,
+        "days": 10,
+        "florist": "",
+        "bankDesc": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ",
+        "certain": true,
+        "cumulativeSuspect": false,
+        "inPnl": false
+      },
+      {
+        "payoutId": "cmt3zx444007jky049duyffrp",
+        "bankId": "cmthnw9ga00e4l804ib4trhj9",
+        "amount": 4000,
+        "days": 7,
+        "florist": "",
+        "bankDesc": "Beneficiario: MASTRO FIORI DI SARACINO F RANCESCA IBAN: IT45U0326830090052485587",
+        "certain": true,
+        "cumulativeSuspect": false,
+        "inPnl": false
+      },
+      {
+        "payoutId": "cmtiv91ny007fl404ocl8utjx",
+        "bankId": "cmtjw4dvj00byl8049sz8n7kf",
+        "amount": 2000,
+        "days": 1,
+        "florist": "",
+        "bankDesc": "Beneficiario: Davide Capitano IBAN: IE86 SUMU99036510611169 Data Inserimento: 02",
+        "certain": true,
+        "cumulativeSuspect": false,
+        "inPnl": false
+      }
+    ],
+    "sampleCumul": [
+      {
+        "payoutId": "cmte1n27t007ql804qwdmlbw4",
+        "bankId": "cmtjw4dvj00bzl804vchzck2j",
+        "amount": 1800,
+        "days": 8,
+        "florist": "",
+        "bankDesc": "Beneficiario: Ditta di Bruno Anna IBAN: IT83Q0706618427000000137769 Data Inserim",
+        "certain": false,
+        "cumulativeSuspect": true,
+        "inPnl": false
+      },
+      {
+        "payoutId": "cmt3zx442006xky04d1fny638",
+        "bankId": "cmtjw4dvk00c1l804fja7dmm6",
+        "amount": 3000,
+        "days": 12,
+        "florist": "",
+        "bankDesc": "Beneficiario: L'ORCHIDEA SNC DI GOBBI AN TONELLA e SIMONA IBAN: IT57V05387522300",
+        "certain": false,
+        "cumulativeSuspect": true,
+        "inPnl": false
+      }
+    ]
+  },
+  "p5_isabella": {
+    "ordersInDb": 4,
+    "orders": [
+      {
+        "n": "FT-MC-26-003",
+        "listino": "29,99 €",
+        "gross": null,
+        "delivery": "2026-07-04",
+        "status": "COMPLETED",
+        "recurring": true,
+        "florist": 2000,
+        "paid": "PAID"
+      },
+      {
+        "n": "FT-MC-26-004",
+        "listino": "29,99 €",
+        "gross": null,
+        "delivery": "2026-05-31",
+        "status": "COMPLETED",
+        "recurring": true,
+        "florist": 2000,
+        "paid": "PAID"
+      },
+      {
+        "n": "FT-MC-26-005",
+        "listino": "29,99 €",
+        "gross": null,
+        "delivery": "2026-07-30",
+        "status": "COMPLETED",
+        "recurring": true,
+        "florist": 2000,
+        "paid": "PAID"
+      },
+      {
+        "n": "FT-MC-26-006",
+        "listino": "29,99 €",
+        "gross": null,
+        "delivery": "2026-09-12",
+        "status": "PENDING",
+        "recurring": true,
+        "florist": 2000,
+        "paid": "UNPAID"
+      }
+    ],
+    "packageRevenue": "284,90 €",
+    "deliveriesTotal": 11,
+    "due2027": 7,
+    "revenueDefer2027": "181,30 €",
+    "costDefer2027": "140,00 €",
+    "revenuePerPose": "25,90 €",
+    "costPerPose": "20,00 €"
+  },
+  "p6_mammi": {
+    "orders": [
+      {
+        "orderNumber": "FT-CS-26-006",
+        "totalPriceCents": 3148,
+        "grossAmount": null,
+        "netAmount": null,
+        "stripeFee": null,
+        "stripeTransactionId": null,
+        "partnerPaymentStatus": "PAID",
+        "status": "COMPLETED",
+        "buyerFullName": "Luciano Mammì"
+      },
+      {
+        "orderNumber": "FT-CS-26-005",
+        "totalPriceCents": 3148,
+        "grossAmount": null,
+        "netAmount": null,
+        "stripeFee": null,
+        "stripeTransactionId": null,
+        "partnerPaymentStatus": "UNPAID",
+        "status": "COMPLETED",
+        "buyerFullName": "Luciano Mammì"
+      }
+    ],
+    "stripeAmountCents": null,
+    "stripeAmountEuro": null,
+    "stripeStatus": null,
+    "stripeErr": "Expired API Key provided: sk_test_***********************************************************************************************kPvR",
+    "stripeFinanceRows": [],
+    "sharedTxnPatterns": []
+  },
+  "p7_delta60": {
+    "cashPnlFormula": "opening_primo_rendiconto + Σ bank_statement_lines 2026",
+    "cashPnlCents": 3200613,
+    "cashPnlEuro": "32.006,13 €",
+    "pnlReported": "32.006,13 €",
+    "realManualCents": 3194613,
+    "realManualEuro": "31.946,13 €",
+    "realAlignedAt": "2026-09-06T19:45:33.877Z",
+    "realNote": null,
+    "calculatedCents": 3196613,
+    "calculatedEuro": "31.966,13 €",
+    "openingCents": 3212048,
+    "openingEuro": "32.120,48 €",
+    "openingDoc": {
+      "id": "cmt3110pq0000l404ief02mu9",
+      "fileName": "1° trimestre Fineco.pdf",
+      "openingBalanceCents": 3212048,
+      "closingBalanceCents": 3244224,
+      "periodStart": "2026-01-02T12:00:00.000Z",
+      "periodEnd": "2026-03-30T12:00:00.000Z"
+    },
+    "sumLinesCents": -11435,
+    "sumLinesEuro": "-114,35 €",
+    "linesN": 185,
+    "diffCashVsRealCents": 6000,
+    "diffCashVsRealEuro": "60,00 €",
+    "diffCashVsCalcCents": 4000,
+    "diffCashVsCalcEuro": "40,00 €",
+    "diffRealVsCalcCents": -2000,
+    "diffRealVsCalcEuro": "-20,00 €",
+    "exactly60": [],
+    "duplicateGroups": [],
+    "docs": [
+      {
+        "fileName": "fineco-paste-2026-08-24T20-15-46-786Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2025-12-02T12:00:00.000Z",
+        "periodEnd": "2026-08-24T12:00:00.000Z"
+      },
+      {
+        "fileName": "1° trimestre Fineco.pdf",
+        "openingBalanceCents": 3212048,
+        "closingBalanceCents": 3244224,
+        "periodStart": "2026-01-02T12:00:00.000Z",
+        "periodEnd": "2026-03-30T12:00:00.000Z"
+      },
+      {
+        "fileName": "2 Trimestre Fineco 2026.pdf",
+        "openingBalanceCents": 3244224,
+        "closingBalanceCents": 3241798,
+        "periodStart": "2026-04-01T12:00:00.000Z",
+        "periodEnd": "2026-06-25T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-08-21T20-07-21-005Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-07-01T12:00:00.000Z",
+        "periodEnd": "2026-08-20T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-08-26T14-51-53-517Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-07-06T12:00:00.000Z",
+        "periodEnd": "2026-08-26T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-08-31T14-57-16-231Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-08-27T12:00:00.000Z",
+        "periodEnd": "2026-08-31T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-09-02T08-57-00-393Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-09-01T12:00:00.000Z",
+        "periodEnd": "2026-09-02T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-09-02T19-48-55-729Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-09-02T12:00:00.000Z",
+        "periodEnd": "2026-09-02T12:00:00.000Z"
+      },
+      {
+        "fileName": "fineco-paste-2026-09-06T19-47-13-674Z.txt",
+        "openingBalanceCents": null,
+        "closingBalanceCents": null,
+        "periodStart": "2026-09-03T12:00:00.000Z",
+        "periodEnd": "2026-09-05T12:00:00.000Z"
+      }
+    ],
+    "invarianteUfficiale": "cash PnL (opening + Σ movimenti estratto) è l’invariante contabile del motore; il saldo «reale» manuale è allineamento operativo admin e può restare stale. La fascia quadratura usa calculatedBalance (apertura+movimenti o chiusura rendiconto). Δ€60 = cashPnl − realManual."
+  },
+  "p8_margins": {
+    "paidOrders": 38,
+    "carnetExcluded": 4,
+    "exCarnet": 34,
+    "withFloristCost": 24,
+    "withoutFloristCost": 10,
+    "totRevenue": "1393,02 €",
+    "totFloristCost": "803,00 €",
+    "totMargin": "590,02 €",
+    "avgMargin": "24,58 €",
+    "medianMargin": "18,97 €",
+    "marginPct": "42.4%",
+    "sampleLow": [
+      {
+        "n": "FT-CO-26-004",
+        "rev": "32,48 €",
+        "cost": "30,00 €",
+        "margin": "2,48 €"
+      },
+      {
+        "n": "FT-SA-26-001",
+        "rev": "29,99 €",
+        "cost": "25,00 €",
+        "margin": "4,99 €"
+      },
+      {
+        "n": "FT-RC-26-002",
+        "rev": "29,99 €",
+        "cost": "20,00 €",
+        "margin": "9,99 €"
+      },
+      {
+        "n": "FT-CS-26-007",
+        "rev": "31,48 €",
+        "cost": "20,00 €",
+        "margin": "11,48 €"
+      },
+      {
+        "n": "FT-PA-26-009",
+        "rev": "31,48 €",
+        "cost": "20,00 €",
+        "margin": "11,48 €"
+      },
+      {
+        "n": "FT-PD-26-001",
+        "rev": "37,99 €",
+        "cost": "25,00 €",
+        "margin": "12,99 €"
+      },
+      {
+        "n": "FT-PA-26-005",
+        "rev": "31,48 €",
+        "cost": "18,00 €",
+        "margin": "13,48 €"
+      },
+      {
+        "n": "FT-PA-26-004",
+        "rev": "31,48 €",
+        "cost": "18,00 €",
+        "margin": "13,48 €"
+      }
+    ],
+    "sampleHigh": [
+      {
+        "n": "FF-MC-26-002",
+        "rev": "204,98 €",
+        "cost": "110,00 €",
+        "margin": "94,98 €"
+      },
+      {
+        "n": "FF-PA-26-001",
+        "rev": "144,98 €",
+        "cost": "85,00 €",
+        "margin": "59,98 €"
+      },
+      {
+        "n": "FF-SO-26-001",
+        "rev": "84,98 €",
+        "cost": "40,00 €",
+        "margin": "44,98 €"
+      },
+      {
+        "n": "FF-MC-26-001",
+        "rev": "104,98 €",
+        "cost": "60,00 €",
+        "margin": "44,98 €"
+      },
+      {
+        "n": "FF-PN-26-004",
+        "rev": "89,99 €",
+        "cost": "50,00 €",
+        "margin": "39,99 €"
+      },
+      {
+        "n": "FF-VI-26-003",
+        "rev": "52,98 €",
+        "cost": "17,00 €",
+        "margin": "35,98 €"
+      },
+      {
+        "n": "FF-VR-26-001",
+        "rev": "64,98 €",
+        "cost": "40,00 €",
+        "margin": "24,98 €"
+      },
+      {
+        "n": "FT-LC-26-001",
+        "rev": "53,97 €",
+        "cost": "30,00 €",
+        "margin": "23,97 €"
+      }
+    ],
+    "carnetSample": [
+      {
+        "n": "FT-MC-26-003",
+        "listino": "29,99 €",
+        "buyer": "Isabella Cesaroni"
+      },
+      {
+        "n": "FT-MC-26-005",
+        "listino": "29,99 €",
+        "buyer": "Isabella Cesaroni"
+      },
+      {
+        "n": "FT-MC-26-004",
+        "listino": "29,99 €",
+        "buyer": "Isabella Cesaroni"
+      },
+      {
+        "n": "FF-PD-26-004",
+        "listino": "39,99 €",
+        "buyer": "Giulio Rosace"
+      }
+    ]
+  }
+}

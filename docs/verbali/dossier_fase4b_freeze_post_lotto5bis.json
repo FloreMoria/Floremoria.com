@@ -1,0 +1,17 @@
+{
+  "label": "FREEZE_UFFICIALE_POST_LOTTO5BIS",
+  "at": "2026-09-07T13:32:37.944Z",
+  "batchId": "FASE4B_L5BIS_20260907_133232",
+  "raiCents": -380448,
+  "costiTotCents": 1159693,
+  "cashBankCents": 3200613,
+  "paypalTransitCents": -59301,
+  "stripeTransitCents": -299542,
+  "euro": {
+    "rai": "-3804,48 €",
+    "costi": "11.596,93 €",
+    "banca": "32.006,13 €",
+    "paypal": "-593,01 €",
+    "stripe": "-2995,42 €"
+  }
+}

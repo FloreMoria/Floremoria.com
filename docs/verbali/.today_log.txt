@@ -39,3 +39,12 @@
 [2026-09-07 15:20] finance/ui: Fatture Passive SDI/YouDOX — elenco XML+XLSX (tutte) + filtro T1–T4/Anno 2026.
 [2026-09-07 15:20] finance/fase4b: Lotto 5 ESEGUITO batch FASE4B_L5_20260907_131645; RAI −5418,51→−4304,48 (+1114,03); banca inv.; PayPal transit −2207,04→−1093,01.
 [2026-09-07 15:20] finance/fase4b: Lotto 6 dossier aggiornato — capitale sociale 2025 (€30k) + proiezione con L5 = +1226,46 / metà DC ≈ −660.
+
+[2026-09-07 15:40] finance/fase4b: Lotto 5-bis ESEGUITO FASE4B_L5BIS_20260907_133232 funding €500; RAI −4304,48→−3804,48; PayPal transit −1093→−593.
+[2026-09-07 15:40] finance/fase4b: analisi post-L5bis sola lettura — transito €3588 scomposto; buoni design; fioristi 6 certi/€0 CE; Isabella risconto; Mammì txn €31,48; Δ€60=Q1+€40+manual€20; margine ex-carnet €590 (42%).
+
+[2026-09-07 15:45] fix(mobile-ui): dashboard in formato webapp, viewport fit, chat scrollabile e margini laterali mobile:
+- Configurazione viewport/PWA webapp (width=device-width, initialScale=1, userScalable=no, viewportFit=cover, mobile-web-app-capable, apple-mobile-web-app-capable/status-bar-style) su layout root e dashboard;
+- Prevenzione auto-zoom iOS Safari (font-size: 16px !important su tutti gli input, textarea, select) e gestione safe-area-inset;
+- Ottimizzazione visualizzazione chat / CommunicationsHub: rimossi margini negativi invasivi (-mx-4), card con bordi arrotondati (rounded-2xl sm:rounded-3xl md:rounded-[32px]) e sblocco dello scroll verticale continuo su mobile con altezza responsive (h-[560px] sm:h-[620px] md:h-[680px]);
+- tsc + build OK.

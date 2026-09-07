@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-09-07T13:32:37.944Z",
+  "batchId": "FASE4B_L5BIS_20260907_133232",
+  "targetId": "cmtqa8h140000l604sm2q7mzd",
+  "acceptance": {
+    "raiOk": true,
+    "bankOk": true,
+    "ppOk": true,
+    "deltaAtteso": "500,00 €"
+  },
+  "pre": {
+    "rai": "-4304,48 €",
+    "costi": "12.096,93 €",
+    "banca": "32.006,13 €",
+    "ivaD": "134,97 €",
+    "ivaC": "276,84 €",
+    "attive": 705,
+    "stripe": "-2995,42 €",
+    "paypal": "-1093,01 €",
+    "paypalCents": -109301
+  },
+  "post": {
+    "rai": "-3804,48 €",
+    "costi": "11.596,93 €",
+    "banca": "32.006,13 €",
+    "ivaD": "134,97 €",
+    "ivaC": "276,84 €",
+    "attive": 705,
+    "stripe": "-2995,42 €",
+    "paypal": "-593,01 €",
+    "paypalCents": -59301
+  },
+  "delta": {
+    "rai": "500,00 €",
+    "costi": "-500,00 €",
+    "banca": "0,00 €",
+    "paypal": "500,00 €"
+  }
+}

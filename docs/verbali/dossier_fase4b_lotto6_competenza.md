@@ -3,8 +3,8 @@
 **Generato:** 2026-09-07 (aggiornato post-Lotto 5)  
 **Vincolo:** nessuna scrittura contabile. La competenza la firma il commercialista.
 
-Freeze di riferimento post-L5: `FREEZE_UFFICIALE_POST_LOTTO5` · RAI **-4304,48 €** · costi **12.096,93 €**  
-(Freeze post-L4 era RAI −5418,51 € — Lotto 5 ha già spostato +€1.114,03.)
+Freeze di riferimento post-L5bis: `FREEZE_UFFICIALE_POST_LOTTO5BIS` · RAI **−3.804,48 €** · costi **11.596,93 €**  
+(Lotto 5 +€1.114,03 · Lotto 5-bis funding +€500 · post-L4 era −5.418,51 €.)
 
 ---
 
@@ -67,26 +67,36 @@ Proiezione aggiornata (L5 era stata omessa nella bozza precedente):
 
 ```text
 −5.418,51
- +1.114,03   (Lotto 5 — già eseguito → RAI live −4.304,48)
+ +1.114,03   (Lotto 5)
+ +  500,00   (Lotto 5-bis funding — già eseguito → RAI live −3.804,48)
  +1.667,02   (ricavi .eu non ancora a libro)
  +3.774,30   (DC Studio intera → 2025)
  +   89,62   (IRIN quota 2027)
 ────────────
- = +1.226,46 €
+ = +1.726,46 €
 ```
 
 | Scenario | RAI risultante (ordine di grandezza) |
 |----------|--------------------------------------|
 | Freeze post-L4 | −5.418,51 € |
-| **Post-Lotto 5 (live)** | **−4.304,48 €** |
-| + L5 + .eu + DC intera + IRIN | **+1.226,46 €** |
-| + L5 + .eu + **metà DC** (€1.887,15) + IRIN | **≈ −660 €** |
+| Post-Lotto 5 | −4.304,48 € |
+| **Post-Lotto 5-bis (live)** | **−3.804,48 €** |
+| + L5+L5bis + .eu + DC intera + IRIN | **+1.726,46 €** |
+| + L5+L5bis + .eu + **metà DC** + IRIN | **≈ −160 €** |
 | Solo DC intera da post-L4 (senza L5, legacy) | −1.644,21 € |
 
 **Domanda al commercialista:** spacchettare la parcella 66 (estere 2025 vs capitale 2025 / consulenza) e confermare i risconti. Contesto: versamento soci €30.000 per aumento capitale 2025.
 
 ---
 
-## Isabella (promemoria operativo)
+## C) Risconto Isabella Cesaroni
 
-11 consegne pagate · 3 fatte · 1 il **12/09/2026** · **7 ancora da fare**.
+Pacchetto prepagato corrispettivo **€284,90** (11 consegne).  
+**7 consegne** ancora dovute fino alla primavera 2027.
+
+| | Quota 2027 |
+|--|------------|
+| Ricavo da riscontare | **€181,30** (€25,90 × 7) |
+| Costo fiorista da riscontare | **€140,00** (€20 × 7) |
+
+Operativo: 3 fatte · 1 il **12/09/2026** · 7 aperte.

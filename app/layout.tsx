@@ -83,6 +83,11 @@ export const metadata: Metadata = {
       'p:domain_verify': 'b85b790f2d57a2dffff352a13ce6861a',
     },
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+  },
 };
 
 export default function RootLayout({

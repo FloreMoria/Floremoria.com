@@ -44,10 +44,8 @@ export default async function CommunicationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] -mx-4 -my-4 md:mx-0 md:my-0 p-0 md:p-6 lg:p-8">
-      <div className="max-w-[1400px] mx-auto">
-        <CommunicationsHubClient initialProofs={proofs} isDashboardAdmin={isDashboardAdmin} />
-      </div>
+    <div className="w-full bg-[#FAF8F5] rounded-2xl md:rounded-[32px] p-2 sm:p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <CommunicationsHubClient initialProofs={proofs} isDashboardAdmin={isDashboardAdmin} />
     </div>
   );
 }

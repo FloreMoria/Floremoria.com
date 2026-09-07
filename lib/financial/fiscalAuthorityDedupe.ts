@@ -1040,10 +1040,13 @@ export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDe
 
 /**
  * Kill-switch Fase 5 Passo A (smantellamento dedupe a lettura).
- * Misurato 2026-09-07: con `false` i totali CE SI MUOVONO
- * (RAI −3804,48 → −9117,48; costi +€5.874,21; ricavi +€561,21).
- * Il layer maschera doppioni ancora presenti a DB — NON disattivare
- * finché non sono bonificati a monte. Restare `true`.
+ *
+ * Misura post-L6 (2026-09-07, freeze RAI −€3.764,48):
+ * con `false` i totali CE SI MUOVONO ancora:
+ *   RAI −3.764,48 → −8.983,48 (Δ −€5.219,00)
+ *   ricavi +€561,21 · costi +€5.780,21
+ * Controllo Lotto 6: Δ costi ≠ ≈€94/€134 → storno €134 ha tenuto;
+ * restano altri doppioni a DB. NON disattivare finché non bonificati. Restare `true`.
  */
 export const FISCAL_AUTHORITY_DEDUPE_ENABLED = true;
 

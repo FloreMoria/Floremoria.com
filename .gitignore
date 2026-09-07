@@ -35,6 +35,9 @@ yarn-error.log*
 # Log locali cron / automazioni Mac
 /logs/
 
+# Log operativo giornaliero verbali (solo append locale — mai in git)
+docs/verbali/.today_log.txt
+
 # Variabili d'ambiente (segreti) — non versionare. Il template `.env.example` resta tracciato.
 .env
 .env.local

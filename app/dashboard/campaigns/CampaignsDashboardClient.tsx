@@ -4,9 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toCampaignMediaProxyUrl } from '@/lib/dashboard/campaignMediaUrl';
 import CampaignMetricsPanel from '@/components/dashboard/CampaignMetricsPanel';
-import type {
-  CampaignMetricsRow,
-  ChannelMetricsSummary,
+import {
+  parseStoredMetrics,
+  emptyMetrics,
+  type CampaignMetricsRow,
+  type ChannelMetricsSummary,
 } from '@/lib/marketing/socialMetrics/types';
 import {
   Calendar,
@@ -45,6 +47,10 @@ type Campaign = {
   scheduledFor: string | null;
   createdAt: string;
   updatedAt: string;
+  externalId?: string | null;
+  publishedAt?: string | null;
+  metricsJson?: any;
+  metricsSyncedAt?: string | null;
 };
 
 const SOCIAL_TABS = [
@@ -186,6 +192,31 @@ export default function CampaignsDashboardClient() {
         setTiktokPublishReady(data.tiktokPublishReady || false);
         setTiktokGrantedScopes(data.tiktokGrantedScopes || '');
         
+        // Popola subito le metriche salvate a DB per evitare visualizzazioni a 0
+        const initialRows: CampaignMetricsRow[] = (data.campaigns || [])
+          .filter((c: any) => c.status === 'PUBLISHED')
+          .map((c: any) => {
+            const stored = parseStoredMetrics(c.metricsJson);
+            return {
+              id: c.id,
+              status: c.status,
+              targetChannel: c.targetChannel,
+              contentFormat: c.contentFormat,
+              category: c.category,
+              copy: c.copy,
+              imageUrl: c.imageUrl,
+              videoUrl: c.videoUrl,
+              externalId: c.externalId || null,
+              publishedAt: c.publishedAt || c.updatedAt,
+              updatedAt: c.updatedAt,
+              metricsSyncedAt: c.metricsSyncedAt || null,
+              metrics: stored || emptyMetrics(),
+            };
+          });
+        if (initialRows.length > 0) {
+          setMetricsRows(prev => (prev.length === 0 ? initialRows : prev));
+        }
+
         // Risolvi opzione tema selezionato
         if (!data.manualThemeOverride) {
           setSelectedThemeOption('automatic');
@@ -223,11 +254,14 @@ export default function CampaignsDashboardClient() {
       const data = await res.json();
       if (!data.success) {
         setMetricsError(data.error || 'Impossibile caricare le metriche.');
-        setMetricsRows([]);
-        setMetricsSummary(null);
         return;
       }
-      setMetricsRows(Array.isArray(data.rows) ? data.rows : []);
+      if (Array.isArray(data.rows) && data.rows.length > 0) {
+        setMetricsRows(prev => {
+          const incomingIds = new Set(data.rows.map((r: any) => r.id));
+          return [...data.rows, ...prev.filter(p => !incomingIds.has(p.id))];
+        });
+      }
       setMetricsSummary(data.summary || null);
       if (refresh) {
         void fetchData();
@@ -241,9 +275,8 @@ export default function CampaignsDashboardClient() {
   };
 
   useEffect(() => {
-    // Carica metriche solo quando il pannello è aperto (non ad ogni tab change in automatico).
-    if (!metricsOpen) return;
-    void fetchMetrics(activeTab, true);
+    // Carica/aggiorna metriche per il canale selezionato
+    void fetchMetrics(activeTab, metricsOpen);
   }, [activeTab, metricsOpen]);
 
   // Sincronizza tab se cambia URL search param
@@ -1650,19 +1683,25 @@ export default function CampaignsDashboardClient() {
                           <span>Metriche Social (Live)</span>
                         </div>
                         <span className="text-[10px] text-slate-400 font-mono">
-                          {metricsRows.find((m) => m.id === c.id)?.metricsSyncedAt
-                            ? `Sync ${new Date(metricsRows.find((m) => m.id === c.id)!.metricsSyncedAt!).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
-                            : 'Live'}
+                          {(() => {
+                            const row = metricsRows.find((m) => m.id === c.id);
+                            const syncTime = row?.metricsSyncedAt || c.metricsSyncedAt;
+                            return syncTime
+                              ? `Sync ${new Date(syncTime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+                              : 'Live';
+                          })()}
                         </span>
                       </div>
                       {(() => {
                         const row = metricsRows.find((m) => m.id === c.id);
-                        const m = row?.metrics;
+                        const m = row?.metrics || parseStoredMetrics(c.metricsJson);
                         const views = m?.views ?? m?.impressions ?? 0;
                         const reach = m?.reach ?? 0;
-                        const engagement = m?.engagement ?? ((m?.likes ?? 0) + (m?.comments ?? 0));
                         const likes = m?.likes ?? 0;
                         const comments = m?.comments ?? 0;
+                        const shares = m?.shares ?? 0;
+                        const saves = m?.saves ?? 0;
+                        const engagement = m?.engagement ?? (likes + comments + shares + saves);
 
                         return (
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px] font-semibold text-slate-600">
@@ -1686,6 +1725,12 @@ export default function CampaignsDashboardClient() {
                               <span className="text-[10px] text-slate-400 font-bold uppercase">Commenti</span>
                               <span className="text-slate-900 font-black">{comments}</span>
                             </div>
+                            {shares > 0 || saves > 0 ? (
+                              <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                                <span className="text-[10px] text-slate-400 font-bold uppercase">Condivisioni</span>
+                                <span className="text-slate-900 font-black">{shares + saves}</span>
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })()}

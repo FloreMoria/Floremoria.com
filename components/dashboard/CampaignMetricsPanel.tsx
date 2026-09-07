@@ -3,9 +3,10 @@
 import React from 'react';
 import { ExternalLink, RefreshCw, BarChart3 } from 'lucide-react';
 import { toCampaignMediaProxyUrl } from '@/lib/dashboard/campaignMediaUrl';
-import type {
-  CampaignMetricsRow,
-  ChannelMetricsSummary,
+import {
+  summarizeMetrics,
+  type CampaignMetricsRow,
+  type ChannelMetricsSummary,
 } from '@/lib/marketing/socialMetrics/types';
 
 function fmt(n: number | null | undefined): string {
@@ -67,9 +68,15 @@ export default function CampaignMetricsPanel({
   onRefresh,
 }: Props) {
   // Filtra la lista escludendo Storie (mostra solo contenuti permanenti: Reel, Feed, Foto, Caroselli)
-  const activeRows = rows.filter(
-    (row) => row.contentFormat !== 'STORY' && row.contentFormat !== 'STORIES'
-  );
+  const activeRows = React.useMemo(() => {
+    return rows.filter(
+      (row) => row.contentFormat !== 'STORY' && row.contentFormat !== 'STORIES'
+    );
+  }, [rows]);
+
+  const activeSummary = React.useMemo(() => {
+    return summarizeMetrics(activeRows);
+  }, [activeRows]);
 
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6">
@@ -91,15 +98,15 @@ export default function CampaignMetricsPanel({
         </button>
       </div>
 
-      {summary ? (
+      {activeSummary ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100">
           {[
             { label: 'Post Permanenti', value: activeRows.length },
-            { label: 'Con metriche', value: summary.withLiveMetrics },
-            { label: 'Visualizzazioni', value: summary.views },
-            { label: 'Copertura', value: summary.reach },
-            { label: 'Like', value: summary.likes },
-            { label: 'Commenti', value: summary.comments },
+            { label: 'Con metriche', value: activeSummary.withLiveMetrics },
+            { label: 'Visualizzazioni', value: activeSummary.views },
+            { label: 'Copertura', value: activeSummary.reach },
+            { label: 'Like', value: activeSummary.likes },
+            { label: 'Commenti', value: activeSummary.comments },
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-2xl bg-white border border-slate-200 px-3 py-2">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">

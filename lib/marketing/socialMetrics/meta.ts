@@ -98,27 +98,18 @@ async function fetchIgMediaInsights(
     }
   };
 
-  const mediaType = (options?.mediaType || '').toUpperCase();
-
   if (options?.isStory) {
     await queryMetrics(['views', 'reach', 'replies', 'shares', 'total_interactions']);
-  } else if (mediaType === 'VIDEO' || mediaType === 'REELS') {
-    await queryMetrics(['plays', 'views', 'reach', 'saved', 'shares', 'total_interactions']);
-  } else if (mediaType === 'IMAGE' || mediaType === 'CAROUSEL_ALBUM') {
-    await queryMetrics(['impressions', 'reach', 'saved', 'shares', 'total_interactions']);
   } else {
-    // Media type non specificato: proviamo prima le metriche standard, poi quelle video
-    await queryMetrics(['impressions', 'reach', 'saved', 'shares', 'total_interactions']);
-    if (!dataMap.has('impressions') && !dataMap.has('reach')) {
-      await queryMetrics(['plays', 'views']);
-    }
+    // Per tutte le media (Reel, Video, Feed Foto, Caroselli), Graph API v21+ usa 'views', 'reach', 'saved', 'shares', 'total_interactions'
+    await queryMetrics(['views', 'reach', 'saved', 'shares', 'total_interactions']);
   }
 
-  const views = dataMap.get('views') ?? dataMap.get('plays') ?? dataMap.get('impressions') ?? null;
-  const impressions = dataMap.get('impressions') ?? views;
-  const reach = dataMap.get('reach');
-  const saves = dataMap.get('saved');
-  const shares = dataMap.get('shares');
+  const views = dataMap.get('views') ?? dataMap.get('plays') ?? dataMap.get('impressions') ?? base.views ?? null;
+  const impressions = views ?? dataMap.get('impressions');
+  const reach = dataMap.get('reach') ?? base.reach;
+  const saves = dataMap.get('saved') ?? base.saves;
+  const shares = dataMap.get('shares') ?? base.shares;
   const replies = dataMap.get('replies');
 
   const engagement =
@@ -149,83 +140,55 @@ async function fetchFbPostInsights(
   const dataMap = new Map<string, number>();
 
   const queryMetrics = async (metrics: string[]) => {
-    try {
-      const payload = await metaGet<{
-        data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
-      }>(`/${postId}/insights?metric=${metrics.join(',')}`, accessToken);
-
-      if (payload.data && Array.isArray(payload.data)) {
-        for (const item of payload.data) {
-          if (item.name && item.values?.[0]?.value != null) {
-            const val = item.values[0].value;
-            if (typeof val === 'number') {
-              dataMap.set(item.name, val);
-            } else if (typeof val === 'object' && val !== null) {
-              const total = Object.values(val as Record<string, number>).reduce(
-                (acc, v) => acc + (typeof v === 'number' ? v : 0),
-                0
-              );
-              dataMap.set(item.name, total);
-            }
-          }
+    for (const m of metrics) {
+      try {
+        const single = await metaGet<{
+          data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
+        }>(`/${postId}/insights?metric=${m}`, accessToken);
+        const val = single.data?.[0]?.values?.[0]?.value;
+        if (typeof val === 'number') {
+          dataMap.set(m, val);
+        } else if (typeof val === 'object' && val !== null) {
+          const total = Object.values(val as Record<string, number>).reduce(
+            (acc, v) => acc + (typeof v === 'number' ? v : 0),
+            0
+          );
+          dataMap.set(m, total);
         }
-      }
-    } catch {
-      // Fallback metrica per metrica se una combinazione fallisce su Graph API
-      for (const m of metrics) {
-        try {
-          const single = await metaGet<{
-            data?: Array<{ name?: string; values?: Array<{ value?: unknown }> }>;
-          }>(`/${postId}/insights?metric=${m}`, accessToken);
-          const val = single.data?.[0]?.values?.[0]?.value;
-          if (typeof val === 'number') {
-            dataMap.set(m, val);
-          } else if (typeof val === 'object' && val !== null) {
-            const total = Object.values(val as Record<string, number>).reduce(
-              (acc, v) => acc + (typeof v === 'number' ? v : 0),
-              0
-            );
-            dataMap.set(m, total);
-          }
-        } catch {
-          // Metrica non supportata per questa tipologia di post FB
-        }
+      } catch {
+        // Metrica non supportata per questa tipologia di post FB
       }
     }
   };
 
   await queryMetrics([
-    'post_impressions',
+    'post_video_views',
     'post_impressions_unique',
     'post_engaged_users',
     'post_clicks',
     'post_reactions_by_type_total',
-    'post_video_views',
-    'blue_reels_play_count',
   ]);
 
-  const impressions =
-    dataMap.get('post_impressions') ??
-    dataMap.get('post_video_views') ??
-    dataMap.get('blue_reels_play_count') ??
-    0;
-  const reach = dataMap.get('post_impressions_unique') ?? 0;
-  const engagement = dataMap.get('post_engaged_users') ?? 0;
+  const rawViews = dataMap.get('post_video_views') ?? base.views ?? 0;
+  const reach = dataMap.get('post_impressions_unique') ?? (rawViews > 0 ? rawViews : (base.reach ?? 0));
   const clicks = dataMap.get('post_clicks') ?? 0;
   const totalReactions = dataMap.get('post_reactions_by_type_total') ?? 0;
 
   const likes = base.likes ?? totalReactions;
+  const comments = base.comments ?? 0;
+  const shares = base.shares ?? 0;
+  const engagement = dataMap.get('post_engaged_users') ?? ((likes || 0) + (comments || 0) + (shares || 0) + (clicks || 0));
 
   return emptyMetrics({
     ...base,
     likes,
-    comments: base.comments ?? 0,
-    shares: base.shares ?? 0,
-    views: impressions,
-    impressions,
+    comments,
+    shares,
+    views: rawViews,
+    impressions: rawViews,
     reach,
     clicks,
-    engagement: engagement || (likes + (base.comments ?? 0) + (base.shares ?? 0)),
+    engagement,
     source: 'live',
     error: null,
   });
@@ -241,8 +204,8 @@ function pickMatch(
 
   for (const c of campaigns) {
     if (usedCampaignIds.has(c.id)) continue;
-    if (c.externalId && c.externalId !== remote.id) continue;
-    if (c.externalId === remote.id) return c;
+    if (c.externalId && c.externalId !== remote.id && !remote.id.endsWith(c.externalId) && !c.externalId.endsWith(remote.id)) continue;
+    if (c.externalId === remote.id || (c.externalId && remote.id.endsWith(c.externalId))) return c;
 
     const copyMatch = captionsLikelyMatch(c.copy, remote.caption);
     const anchor = (c.publishedAt || c.updatedAt).getTime();
@@ -289,8 +252,8 @@ function mediaThumb(remote: IgRemoteMedia): string | null {
 export async function enrichInstagramCampaignMetrics(
   campaigns: MetaCampaignStub[]
 ): Promise<MetaMetricsEnrichment[]> {
-  const token = process.env.META_ACCESS_TOKEN?.trim();
-  const igUserId = process.env.IG_BUSINESS_ACCOUNT_ID?.trim();
+  const token = process.env.META_ACCESS_TOKEN?.trim() || process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim();
+  const igUserId = process.env.IG_BUSINESS_ACCOUNT_ID?.trim() || process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim();
   if (!token || !igUserId) {
     return campaigns
       .map((c) => ({
@@ -394,21 +357,27 @@ export async function enrichInstagramCampaignMetrics(
 export async function enrichFacebookCampaignMetrics(
   campaigns: MetaCampaignStub[]
 ): Promise<MetaMetricsEnrichment[]> {
-  const userToken = process.env.META_ACCESS_TOKEN?.trim();
-  const pageId = process.env.FB_PAGE_ID?.trim();
+  const userToken =
+    process.env.META_ACCESS_TOKEN?.trim() ||
+    process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim() ||
+    process.env.FB_PAGE_ACCESS_TOKEN?.trim();
+  const pageId = process.env.FB_PAGE_ID?.trim() || process.env.FACEBOOK_PAGE_ID?.trim();
   if (!userToken || !pageId) {
     return [];
   }
 
   let pageToken = userToken;
   try {
-    const pageInfo = await metaGet<{ access_token?: string }>(
-      `/${pageId}?fields=access_token`,
+    const accList = await metaGet<{ data?: Array<{ id: string; access_token?: string }> }>(
+      '/me/accounts',
       userToken
     );
-    pageToken = pageInfo.access_token || userToken;
+    const matched = accList.data?.find((p) => p.id === pageId) || accList.data?.[0];
+    if (matched?.access_token) {
+      pageToken = matched.access_token;
+    }
   } catch (e) {
-    console.warn('[socialMetrics:fb] page token fallback', e instanceof Error ? e.message : e);
+    console.warn('[socialMetrics:fb] page token fallback from me/accounts failed', e instanceof Error ? e.message : e);
   }
 
   let remotes: Array<{
@@ -417,19 +386,43 @@ export async function enrichFacebookCampaignMetrics(
     created_time?: string;
     permalink_url?: string;
     full_picture?: string;
+    views?: number;
     shares?: { count?: number };
     likes?: { summary?: { total_count?: number } };
     comments?: { summary?: { total_count?: number } };
   }> = [];
 
   try {
-    const list = await metaGet<{
-      data?: typeof remotes;
-    }>(
-      `/${pageId}/posts?fields=id,message,created_time,permalink_url,full_picture,shares,likes.summary(true),comments.summary(true)&limit=100`,
-      pageToken
-    );
-    remotes = list.data || [];
+    const [postsList, videosList] = await Promise.all([
+      metaGet<{ data?: typeof remotes }>(
+        `/${pageId}/posts?fields=id,message,created_time,permalink_url,full_picture,shares,likes.summary(true),comments.summary(true)&limit=100`,
+        pageToken
+      ).catch(() => ({ data: [] })),
+      metaGet<{ data?: Array<{ id: string; title?: string; description?: string; views?: number; likes?: { summary?: { total_count?: number } }; comments?: { summary?: { total_count?: number } }; permalink_url?: string; picture?: string; updated_time?: string }> }>(
+        `/${pageId}/videos?fields=id,title,description,views,likes.summary(true),comments.summary(true),permalink_url,picture,updated_time&limit=100`,
+        pageToken
+      ).catch(() => ({ data: [] })),
+    ]);
+
+    const postItems = postsList.data || [];
+    const videoItems = (videosList.data || []).map((v) => ({
+      id: v.id,
+      message: v.description || v.title,
+      created_time: v.updated_time,
+      permalink_url: v.permalink_url,
+      full_picture: v.picture,
+      views: v.views,
+      shares: undefined,
+      likes: v.likes,
+      comments: v.comments,
+    }));
+
+    remotes = [...postItems];
+    for (const v of videoItems) {
+      if (!remotes.some((p) => p.id === v.id || p.id.endsWith(v.id) || v.id.endsWith(p.id))) {
+        remotes.push(v);
+      }
+    }
   } catch (e) {
     console.warn('[socialMetrics:fb] posts list failed', e instanceof Error ? e.message : e);
     remotes = [];
@@ -442,13 +435,18 @@ export async function enrichFacebookCampaignMetrics(
     likes: remote?.likes?.summary?.total_count ?? null,
     comments: remote?.comments?.summary?.total_count ?? null,
     shares: remote?.shares?.count ?? null,
-    permalink: remote?.permalink_url ?? null,
+    views: remote?.views ?? null,
+    permalink: remote?.permalink_url
+      ? remote.permalink_url.startsWith('http')
+        ? remote.permalink_url
+        : `https://www.facebook.com${remote.permalink_url.startsWith('/') ? '' : '/'}${remote.permalink_url}`
+      : null,
     thumbnailUrl: remote?.full_picture ?? null,
   });
 
   for (const c of campaigns) {
     if (!c.externalId) continue;
-    const remote = remotes.find((r) => r.id === c.externalId || r.id.endsWith(c.externalId!));
+    const remote = remotes.find((r) => r.id === c.externalId || r.id.endsWith(c.externalId!) || c.externalId!.endsWith(r.id));
     const base = baseFromRemote(remote);
     const metrics = await fetchFbPostInsights(c.externalId, pageToken, base);
     used.add(c.id);

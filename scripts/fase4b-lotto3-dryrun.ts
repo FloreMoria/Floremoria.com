@@ -123,30 +123,43 @@ async function main() {
     }
 
     const venditeBefore = pnlBefore.venditeCaratteristicheCents ?? 0;
-    const venditeAfterExpected = venditeBefore - ricaviVenditeInHier;
     const raiBefore = pnlBefore.risultatoAnteImposteCents;
-    // Reclass to TRASFERIMENTO_INTERNO: exits ricavi, RAI rises by ricaviVenditeInHier
-    // (altri already out of hierarchy → RAI unchanged for those)
-    const raiAfterExpected = raiBefore + ricaviVenditeInHier;
 
-    // Sales picture (business, not motor-only)
-    const euMissing = 203691;
-    const paypalNegRicavi = 162304; // mislabeled costs — do NOT add to motor vendite
+    // Dry-run = stesso motore PnL con override in memoria (niente aritmetica ad hoc).
+    const categoryOverrides = new Map(targets.map((t) => [t.id, 'TRASFERIMENTO_INTERNO']));
+    const pnlAfterSim = await computeHistoricalPnl({
+        fiscalYear: 2026,
+        categoryOverrides,
+    });
+    const venditeAfterExpected = pnlAfterSim.venditeCaratteristicheCents ?? 0;
+    const raiAfterExpected = pnlAfterSim.risultatoAnteImposteCents;
+
+    // Sales picture (business, not motor-only) — perimetro titolare aggiornato
+    const euMissing = 166702;
+    const paypalNegRicavi = 162304;
     const salesPicture = {
         venditeComPostLotto3_motore: euro(venditeAfterExpected),
         euOrdiniMancantiOrder: euro(euMissing),
         paypalSpeseMalEtichettateComeRicaviNegativi: euro(paypalNegRicavi),
         notaPaypal1623:
-            'Nel motore PnL attuale queste USCITA non riducono venditeCaratteristiche (vanno nei costi). Nel quadro «vendite vere» del titolare vanno tolte dal racconto ricavi, non sommate alle vendite.',
+            'Nel motore PnL attuale queste USCITA non riducono venditeCaratteristiche (vanno nei costi).',
         sommaTitolareIndicativa:
             euro(venditeAfterExpected + euMissing) +
-            ' (.com post-L3 + .eu mancanti). I €1.623 non si aggiungono alle vendite.',
+            ' (.com post-L3 + .eu non in.com). I €1.623 non si aggiungono alle vendite.',
         sommaSeQualcunoSommasseErroneamente1623: euro(
             venditeAfterExpected + euMissing + paypalNegRicavi
         ),
+        motoreSimulato: {
+            venditeDelta: euro(venditeAfterExpected - venditeBefore),
+            raiDelta: euro(raiAfterExpected - raiBefore),
+            ricaviLordiAfter: euro(pnlAfterSim.ricaviLordiCents),
+            cashBankUnchanged: euro(pnlAfterSim.cashBankBalanceCents ?? 0),
+            noteBanca:
+                'cashBankBalanceCents legge Fineco (opening+lines), non il ledger: Lotto 3 non lo muove.',
+        },
     };
 
-    const bankInv = 3240361; // declared invariant
+    const bankInvFase2 = 3240361; // invariante fantasma — NON usare come cash PnL
     const report = {
         mode: 'DRY-RUN',
         snapshotAt,
@@ -159,6 +172,7 @@ async function main() {
             ricaviLordi: euro(pnlBefore.ricaviLordiCents),
             risultatoAnteImposte: euro(raiBefore),
             ivaDebito: euro(pnlBefore.ivaDebitoCents),
+            cashBankBalancePnL: euro(pnlBefore.cashBankBalanceCents ?? 0),
             entriesActive: await prisma.financialLedgerEntry.count({
                 where: { reversedAt: null },
             }),
@@ -178,10 +192,14 @@ async function main() {
             venditeCaratteristiche: euro(venditeAfterExpected),
             venditeCaratteristicheCents: venditeAfterExpected,
             risultatoAnteImposte: euro(raiAfterExpected),
-            bancaInvarianteDichiarato: euro(bankInv),
-            iva: 'invariata (vatCents=0 sulle 87)',
+            ricaviLordi: euro(pnlAfterSim.ricaviLordiCents),
+            cashBankBalancePnL: euro(pnlAfterSim.cashBankBalanceCents ?? 0),
+            invarianteFase2Fantasma_nonUsareComeCash: euro(bankInvFase2),
+            ivaDebito: euro(pnlAfterSim.ivaDebitoCents),
             noteRai:
-                'RAI sale di ≈ quota payout oggi in RICAVI_VENDITE in gerarchia (escono dai ricavi). Verificare a esecuzione.',
+                'RAI post = computeHistoricalPnl con categoryOverrides (stesso motore). Togliere ricavi finti peggiora il RAI.',
+            noteVendite:
+                'Vendite post = stesso motore: include eventuali riaperture di gerarchia dopo uscita payout.',
         },
         salesPictureCompleto: salesPicture,
         sampleRows: targets.slice(0, 8),
@@ -227,9 +245,10 @@ Azione proposta: \`category\` → \`TRASFERIMENTO_INTERNO\` + metadata \`fase4bB
 | Metrica | Atteso |
 |---------|--------|
 | Vendite caratteristiche | **${euro(venditeAfterExpected)}** |
-| Risultato ante imposte | ${euro(raiAfterExpected)} (≈ +${euro(ricaviVenditeInHier)} vs pre se escono dai ricavi) |
-| Banca invariante dichiarato | ${euro(bankInv)} (invariato; avvertenza riga fantasma resta) |
-| IVA | invariata |
+| Risultato ante imposte | **${euro(raiAfterExpected)}** (Δ ${euro(raiAfterExpected - raiBefore)}; togliere ricavi finti peggiora il RAI) |
+| Banca cash PnL Fineco | **${euro(pnlAfterSim.cashBankBalanceCents ?? 0)}** (invariata; L3 non tocca bankStatementLine) |
+| Invariante Fase2 fantasma | ${euro(bankInvFase2)} — **non** usare come cash |
+| IVA | ${euro(pnlAfterSim.ivaDebitoCents)} |
 
 ---
 
@@ -238,10 +257,10 @@ Azione proposta: \`category\` → \`TRASFERIMENTO_INTERNO\` + metadata \`fase4bB
 | Pezzo | Euro | Ruolo |
 |-------|------|-------|
 | Vendite \`.com\` post-Lotto 3 (motore) | **${euro(venditeAfterExpected)}** | PnL \`RICAVI_VENDITE\` dopo riclassifica payout |
-| Ordini \`.eu\` assenti da \`Order\` | **€2.036,91** | Corrispettivi da registro (lista titolare) |
+| Ordini \`.eu\` non in \`.com\` (perimetro titolare) | **€1.667,02** | Corrispettivi da inserire |
 | Spese PayPal etichettate \`RICAVI_VENDITE\` negativi | **€1.623,04** | **Non sono vendite** — costi mal classificati; nel motore non alzano le vendite |
 
-**Somma vendite caratteristiche di lavoro (.com post-L3 + .eu mancanti):** **${euro(venditeAfterExpected + euMissing)}**  
+**Somma vendite caratteristiche di lavoro (.com post-L3 + .eu non in.com):** **${euro(venditeAfterExpected + euMissing)}**  
 (I €1.623 non si aggiungono; se sommati per errore si otterrebbe ${euro(venditeAfterExpected + euMissing + paypalNegRicavi)}.)
 
 ---

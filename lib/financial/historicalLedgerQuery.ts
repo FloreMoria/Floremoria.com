@@ -158,6 +158,11 @@ export async function listHistoricalLedgerEntries(filters: HistoricalLedgerFilte
 export async function computeHistoricalPnl(opts: {
     fiscalYear: number;
     fiscalQuarter?: number | null;
+    /**
+     * Dry-run / what-if: sostituisce `category` per id prima di gerarchia e CE.
+     * Non scrive sul DB. Serve a far coincidere dry-run e motore reale.
+     */
+    categoryOverrides?: Map<string, string>;
 }): Promise<HistoricalPnl> {
     const where: Record<string, unknown> = {
         reversedAt: null,
@@ -167,9 +172,10 @@ export async function computeHistoricalPnl(opts: {
     };
     if (opts.fiscalQuarter) where.fiscalQuarter = opts.fiscalQuarter;
 
-    const rows = await prisma.financialLedgerEntry.findMany({
+    const rowsRaw = await prisma.financialLedgerEntry.findMany({
         where,
         select: {
+            id: true,
             category: true,
             direction: true,
             totalCents: true,
@@ -184,6 +190,14 @@ export async function computeHistoricalPnl(opts: {
             metadataJson: true,
         },
     });
+
+    // Why: dry-run deve mutare solo la vista in memoria, stesso percorso del PnL live.
+    const rows = opts.categoryOverrides?.size
+        ? rowsRaw.map((r) => {
+              const next = opts.categoryOverrides!.get(r.id);
+              return next != null ? { ...r, category: next } : r;
+          })
+        : rowsRaw;
 
     const { isFinanceSeedEntryId } = await import('@/lib/financial/formatFinanceDate');
 

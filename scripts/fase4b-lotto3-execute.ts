@@ -31,8 +31,8 @@ function batchIdNow(): string {
     return `FASE4B_L3_${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}_${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`;
 }
 
-function day(d: Date) {
-    return d.toISOString().slice(0, 10);
+function day(d: Date | null | undefined) {
+    return d ? d.toISOString().slice(0, 10) : '';
 }
 function daysBetween(a: string, b: Date) {
     return Math.abs(Date.parse(a + 'T12:00:00Z') - Date.parse(day(b) + 'T12:00:00Z')) / 86400000;

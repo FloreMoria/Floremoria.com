@@ -21,8 +21,8 @@ function scorpora10(grossCents: number) {
 function qOf(date: string) {
     return Math.ceil(parseInt(date.slice(5, 7), 10) / 3);
 }
-function day(d: Date) {
-    return d.toISOString().slice(0, 10);
+function day(d: Date | null | undefined) {
+    return d ? d.toISOString().slice(0, 10) : '';
 }
 function daysBetween(a: string, b: Date) {
     return Math.abs(Date.parse(a + 'T12:00:00Z') - Date.parse(day(b) + 'T12:00:00Z')) / 86400000;

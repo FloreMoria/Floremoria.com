@@ -13,8 +13,8 @@ function euro(c: number) {
         minimumFractionDigits: 2,
     });
 }
-function day(d: Date) {
-    return d.toISOString().slice(0, 10);
+function day(d: Date | null | undefined) {
+    return d ? d.toISOString().slice(0, 10) : '';
 }
 function daysBetween(a: string, b: Date) {
     const bd = b.toISOString().slice(0, 10);

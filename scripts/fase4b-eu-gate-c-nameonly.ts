@@ -407,8 +407,8 @@ async function main() {
         },
     });
 
-    function day(d: Date) {
-        return d.toISOString().slice(0, 10);
+    function day(d: Date | null | undefined) {
+        return d ? d.toISOString().slice(0, 10) : '';
     }
     function daysBetweenIso(a: string, b: string) {
         return Math.abs(Date.parse(a + 'T12:00:00Z') - Date.parse(b + 'T12:00:00Z')) / 86400000;

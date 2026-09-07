@@ -13,8 +13,8 @@ function euro(c: number) {
         minimumFractionDigits: 2,
     });
 }
-function day(d: Date) {
-    return d.toISOString().slice(0, 10);
+function day(d: Date | null | undefined) {
+    return d ? d.toISOString().slice(0, 10) : '';
 }
 
 async function main() {
@@ -205,12 +205,12 @@ async function main() {
                         d: day(b.accountingDate),
                         amt: euro(b.amountCents),
                         mt: b.matchType,
-                        desc: b.description.slice(0, 120),
+                        desc: (b.description || '').slice(0, 120),
                     })),
                     bankGatewayInWindow: bankGateway.map((b) => ({
                         d: day(b.accountingDate),
                         amt: euro(b.amountCents),
-                        desc: b.description.slice(0, 100),
+                        desc: (b.description || '').slice(0, 100),
                     })),
                     ledgerHit: led.map((r) => ({
                         st: r.sourceType,
@@ -242,12 +242,12 @@ async function main() {
                         d: day(w.accountingDate),
                         amt: euro(w.totalCents),
                         cat: w.category,
-                        desc: w.description.slice(0, 90),
+                        desc: (w.description || '').slice(0, 90),
                     })),
                     bankExactAnywhere: bankExactAnywhere.map((b) => ({
                         d: day(b.accountingDate),
                         amt: euro(b.amountCents),
-                        desc: b.description.slice(0, 80),
+                        desc: (b.description || '').slice(0, 80),
                     })),
                     stripeExactAnywhere: stripeExactAnywhere.map((s) => ({
                         d: day(s.createdAtStripe),

@@ -12,3 +12,4 @@
 [2026-09-07 00:09] finance/fase4b: STOP pacchetto studio; rematch .eu A7€412,92 B1€109,98Δ€69,99 C33€1926,93 D2€109,98 Σ€2559,81; IVA C+ΔB €181,59; Amanda B no 2° ordine; Subscription creation=1/47 charge EU; L3 già eseguito.
 [2026-09-07 00:14] finance/fase4b: gate sola lettura C name-only — 7/23 clienti con Order buyer, 16 zero; dest field assente, dest-only 0/33; RV pre-L3 +6057,75/−2693,19 alg≠vendite; lista vs incasso 36 abbinati Δ€15; L3 post vendite €2919,99 RAI −€5692,51.
 [2026-09-07 00:35] finance/fase4b: perimetro .eu titolare €1667,02 (33r/34ord) + €892,79 già in.com = €2559,81; archivio €1926,93; Isabella doppio pre-L3 bank€278,75+pose€89,97 vs corr€284,90 (DB 4 pose≠11); analogo Luciano 12×€31,48; 3a pre-L3 +6057,75/−2693,19; 3b Δ€15; L3 post €2919,99/RAI−€5692,51; pacchetto BLOCCATO.
+[2026-09-07 09:00] fix(deploy): exclude scripts/ da tsconfig Next — build Vercel falliva su fase4b-amanda Date|null; fix day() nullable negli script fase4b.

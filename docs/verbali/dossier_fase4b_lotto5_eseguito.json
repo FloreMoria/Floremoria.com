@@ -1,0 +1,158 @@
+{
+  "generatedAt": "2026-09-07T13:16:51.891Z",
+  "batchId": "FASE4B_L5_20260907_131645",
+  "rowsReclassified": 14,
+  "hitEuro": "1114,03 €",
+  "acceptance": {
+    "raiPre": "-5418,51 €",
+    "raiPostAtteso": "-4304,48 €",
+    "deltaAtteso": "1114,03 €",
+    "raiOk": true,
+    "bankOk": true,
+    "ivaOk": true
+  },
+  "pre": {
+    "at": "2026-09-07T13:16:48.125Z",
+    "rai": "-5418,51 €",
+    "raiCents": -541851,
+    "costi": "13.210,96 €",
+    "costiCents": 1321096,
+    "banca": "32.006,13 €",
+    "bancaCents": 3200613,
+    "ivaDebito": "134,97 €",
+    "ivaCredito": "276,84 €",
+    "attive": 705,
+    "vendite": "2919,99 €",
+    "stripeTransit": "-2995,42 €",
+    "stripeTransitCents": -299542,
+    "paypalTransit": "-2207,04 €",
+    "paypalTransitCents": -220704
+  },
+  "post": {
+    "at": "2026-09-07T13:16:51.891Z",
+    "rai": "-4304,48 €",
+    "raiCents": -430448,
+    "costi": "12.096,93 €",
+    "costiCents": 1209693,
+    "banca": "32.006,13 €",
+    "bancaCents": 3200613,
+    "ivaDebito": "134,97 €",
+    "ivaCredito": "276,84 €",
+    "attive": 705,
+    "vendite": "2919,99 €",
+    "stripeTransit": "-2995,42 €",
+    "stripeTransitCents": -299542,
+    "paypalTransit": "-1093,01 €",
+    "paypalTransitCents": -109301
+  },
+  "delta": {
+    "rai": "1114,03 €",
+    "raiCents": 111403,
+    "costi": "-1114,03 €",
+    "costiCents": -111403,
+    "banca": "0,00 €",
+    "paypalTransit": "1114,03 €",
+    "paypalTransitCents": 111403,
+    "stripeTransit": "0,00 €"
+  },
+  "targets": [
+    {
+      "id": "cmte1n28500byl804iiaczf0h",
+      "date": "2026-08-04",
+      "prevCategory": "COSTI_FIORISTI",
+      "amountCents": 1500,
+      "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C Per 1052091070758/ADD TO BALANC E · SEPA Direct Debit"
+    },
+    {
+      "id": "cmte1n28500c3l804kpi832dj",
+      "date": "2026-07-28",
+      "prevCategory": "COSTI_FIORISTI",
+      "amountCents": 13500,
+      "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C Per 1051929982678/ADD TO BALANC E · SEPA Direct Debit"
+    },
+    {
+      "id": "cmt3zx44e00bkky04kfjr4r5c",
+      "date": "2026-06-19",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 99,
+      "description": "Apple Services · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44f00c3ky04pvrzykom",
+      "date": "2026-05-26",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 2199,
+      "description": "Google Payment Ireland Limited · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44g00cgky04io4gftp4",
+      "date": "2026-05-06",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 5000,
+      "description": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c per 1050079751091/Add To Balance"
+    },
+    {
+      "id": "cmt3zx44k00e4ky04c2dsthls",
+      "date": "2026-02-20",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 65278,
+      "description": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c per 1048371001909/Paypal"
+    },
+    {
+      "id": "cmt3zx44j00dpky044pqj11rg",
+      "date": "2026-03-13",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 2799,
+      "description": "Google Payment Ireland Limited · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44e00bpky04jfw2kzkz",
+      "date": "2026-06-16",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 2500,
+      "description": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c per 1050949185761/Add To Balance"
+    },
+    {
+      "id": "cmt3zx44b00adky04c7ulaant",
+      "date": "2026-08-19",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 500,
+      "description": "Very Mobile · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44h00d1ky04gzqkwlc9",
+      "date": "2026-04-14",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 1000,
+      "description": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c per 1049521847390/Add To Balance"
+    },
+    {
+      "id": "cmt3zx44f00c4ky04nicp7yef",
+      "date": "2026-05-26",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 3000,
+      "description": "ORCHIDEADONGO.IT · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44g00cqky04y62zwv00",
+      "date": "2026-04-29",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 6100,
+      "description": "Aruba Spa · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44h00crky04a0c6vq0t",
+      "date": "2026-04-29",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 7319,
+      "description": "Aruba Spa · Addebito Fineco via PayPal"
+    },
+    {
+      "id": "cmt3zx44g00cpky04dw32uu50",
+      "date": "2026-04-29",
+      "prevCategory": "RICAVI_VENDITE",
+      "amountCents": 609,
+      "description": "Aruba Spa · Addebito Fineco via PayPal"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "label": "FREEZE_UFFICIALE_POST_LOTTO5",
+  "at": "2026-09-07T13:16:51.891Z",
+  "batchId": "FASE4B_L5_20260907_131645",
+  "costiTotCents": 1209693,
+  "raiCents": -430448,
+  "cashBankCents": 3200613,
+  "ivaDebitoCents": 13497,
+  "ivaCreditoCents": 27684,
+  "activeCount": 705,
+  "venditeCaratteristicheCents": 291999,
+  "stripeTransitCents": -299542,
+  "paypalTransitCents": -109301,
+  "euro": {
+    "costi": "12.096,93 €",
+    "rai": "-4304,48 €",
+    "banca": "32.006,13 €",
+    "ivaDebito": "134,97 €",
+    "ivaCredito": "276,84 €",
+    "paypalTransit": "-1093,01 €",
+    "stripeTransit": "-2995,42 €"
+  }
+}

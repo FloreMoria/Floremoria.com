@@ -1038,8 +1038,20 @@ export function suppressSubordinateOutflowsCoveredByAuthority<T extends FiscalDe
     });
 }
 
+/**
+ * Kill-switch Fase 5 Passo A (smantellamento dedupe a lettura).
+ * Misurato 2026-09-07: con `false` i totali CE SI MUOVONO
+ * (RAI −3804,48 → −9117,48; costi +€5.874,21; ricavi +€561,21).
+ * Il layer maschera doppioni ancora presenti a DB — NON disattivare
+ * finché non sono bonificati a monte. Restare `true`.
+ */
+export const FISCAL_AUTHORITY_DEDUPE_ENABLED = true;
+
 /** Pipeline unica per listati Prima Nota e aggregati PnL. */
 export function applyFiscalAuthorityHierarchy<T extends FiscalDedupableEntry>(rows: T[]): T[] {
+    if (!FISCAL_AUTHORITY_DEDUPE_ENABLED) {
+        return rows;
+    }
     // PayPal prima: gli storni tecnici non devono coprire ricavi ordine come autorità.
     const step0 = applyPaypalStateMachine(rows);
     // Riconciliazione SDD Fineco ↔ PayPal/Stripe: collassa duplicati gateway.

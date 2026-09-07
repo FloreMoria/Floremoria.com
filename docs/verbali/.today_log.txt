@@ -48,3 +48,5 @@
 - Prevenzione auto-zoom iOS Safari (font-size: 16px !important su tutti gli input, textarea, select) e gestione safe-area-inset;
 - Ottimizzazione visualizzazione chat / CommunicationsHub: rimossi margini negativi invasivi (-mx-4), card con bordi arrotondati (rounded-2xl sm:rounded-3xl md:rounded-[32px]) e sblocco dello scroll verticale continuo su mobile con altezza responsive (h-[560px] sm:h-[620px] md:h-[680px]);
 - tsc + build OK.
+
+[2026-09-07 16:20] finance/fase5: Passo A fiscalAuthorityDedupe misurato e STOP (RAI −3804→−9117); B/C/D non eseguiti; kill-switch documentato default true; doppi fiorista 18/€465 (Cingolani ok).

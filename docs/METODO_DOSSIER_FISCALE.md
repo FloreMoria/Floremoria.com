@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.1 — 8 settembre 2026.
+Versione 1.2 — 8 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -135,18 +135,25 @@ del dossier e il loro esito è scritto nel foglio 0.
 | C3 | Continuità saldo | saldo iniziale + Σ movimenti − saldo finale dichiarato | 0 |
 | C4 | Incassi e corrispettivi | somma incassi clienti dai gateway − totale registro corrispettivi | 0 |
 | C5 | Coerenza documenti | somma imponibili + IVA − somma totali documento | 0 |
-| C6 | Nessuno storno tecnico | numero coppie di righe di importo uguale e opposto riferite allo **stesso identificativo di documento**, generate dal sistema | 0 |
+| C6 | Nessuno storno tecnico | numero coppie di righe con lo **stesso identificativo di documento** e **imponibile** uguale e opposto | 0 |
 | C7 | Identificazione fornitori | numero documenti senza partita IVA o codice fiscale | 0 |
 | C8 | Mastri ammessi | numero righe con mastro fuori dall'elenco chiuso | 0 |
 | C9 | Partite di giro | numero movimenti di transito classificati come ricavo o costo | 0 |
 | C10 | Doppia gamba transito | per ogni gateway: somma dare − somma avere − saldo wallet dichiarato | 0 |
 
+**C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
+alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
+tecnica generata dall'ingestione di un acquisto estero gli imponibili sono esattamente opposti
+(− 17,75 e + 17,75), ma i totali **non lo sono**: la riga positiva porta l'IVA del reverse
+charge e la negativa ha IVA zero, quindi i totali sono − 17,75 e + 21,66. Confrontando i
+totali la coppia non si vede.
+
 **C6 non deve mai intercettare un rimborso a un cliente né una nota di credito.** Il
-discriminante è preciso: una riga è uno storno tecnico solo se ha lo stesso identificativo di
-documento della riga che annulla, importo esattamente opposto, ed è stata generata dal sistema
-e non da un fatto esterno. Un rimborso a un cliente ha un proprio identificativo, una propria
-data e nasce da un evento reale: è un fatto economico, non un artefatto. Se il controllo
-segnala un rimborso, è il controllo a essere scritto male.
+discriminante è preciso: una riga è uno storno tecnico solo se condivide l'identificativo di
+documento con la riga che annulla, ha imponibile esattamente opposto, ed è stata generata dal
+sistema e non da un fatto esterno. Un rimborso a un cliente ha un proprio identificativo, una
+propria data e nasce da un evento reale: è un fatto economico, non un artefatto. Se il
+controllo segnala un rimborso, è il controllo a essere scritto male.
 
 **C1 è il controllo che il dossier di agosto non aveva**, ed è quello che ha lasciato
 passare 19 movimenti bancari per € 387,90 — tutti costi.
@@ -205,6 +212,36 @@ stessa commissione con codici diversi (`txn_` e `stripe_tx_`).
 
 Il sistema le riconosce, le **esclude dai totali**, e le dichiara in una riga a parte del
 foglio del gateway: *"escluse N righe tecniche per € X — non sono fatti economici"*.
+
+### 6.4 Acquisti da fornitori esteri
+
+Un acquisto da un fornitore estero è **un solo fatto economico** e produce **una sola riga**
+nel foglio Acquisti:
+
+| Campo | Contenuto |
+|---|---|
+| Imponibile | positivo, l'importo del documento del fornitore |
+| Aliquota | quella applicabile in reverse charge |
+| IVA | calcolata sull'imponibile |
+| Tipo | Autofattura, con il codice appropriato |
+| Identificativo | il documento del fornitore |
+
+Quella riga sola genera poi i **due movimenti IVA** del §4.2, uno a debito e uno a credito.
+Non serve, e non è ammessa, una riga negativa che annulli quella positiva.
+
+**Il difetto trovato nel dossier T2 2026.** Lo stesso documento estero veniva intercettato da
+due canali di ingestione diversi — uno manuale e uno automatico dai servizi in abbonamento —
+che lo registravano entrambi: il primo con imponibile negativo e IVA zero, il secondo con
+imponibile positivo e IVA in reverse charge, sotto lo stesso nome di file. Sommando la colonna
+imponibile i due si annullavano e il costo spariva dal totale: € 780,08 invece di € 855,53
+sui sei documenti coinvolti.
+
+**Regola sulla doppia ingestione.** Quando due canali intercettano lo stesso documento —
+stesso fornitore, stesso identificativo, stessa data — ne sopravvive **uno solo**, scelto
+secondo la gerarchia delle fonti del §2. L'altro viene scartato in ingresso e annotato nel
+foglio Eccezioni con la dicitura "documento già acquisito da altro canale". Non si registrano
+entrambi, e non si compensano con una riga di segno opposto: una compensazione nasconde il
+problema invece di risolverlo, ed è indistinguibile da un costo che non c'è.
 
 ---
 
@@ -318,6 +355,13 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.2 — 8 settembre 2026**
+- §5 — C6 si misura sull'**imponibile**, non sul totale documento. La v1.1 non lo diceva e
+  il controllo restituiva 0 coppie invece di 6, perché nelle coppie tecniche i totali non
+  sono opposti (la riga positiva porta l'IVA del reverse charge).
+- §6.4 — nuova sezione sugli acquisti da fornitori esteri: una sola riga per documento, e
+  regola sulla doppia ingestione dello stesso documento da canali diversi.
 
 **1.1 — 8 settembre 2026**
 - §2 — il vincolo sugli estratti conto passa dal formato alla provenienza: ammesso qualsiasi

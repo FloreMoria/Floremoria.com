@@ -1,0 +1,168 @@
+{
+  "generatedAt": "2026-09-08T13:18:16.874Z",
+  "period": "T2 2026",
+  "method": "docs/METODO_DOSSIER_FISCALE.md §5",
+  "phase": 1,
+  "results": [
+    {
+      "id": "C1",
+      "name": "Completezza banca",
+      "formula": "n° estratto conto − n° Prima Nota canale banca",
+      "measured": 19,
+      "measuredDisplay": "19",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 19,
+      "deltaDisplay": "19",
+      "unit": "rows",
+      "passed": false,
+      "detail": "estratto=72 · PN banca=53"
+    },
+    {
+      "id": "C2",
+      "name": "Quadratura banca",
+      "formula": "Σ Prima Nota − (entrate − uscite estratto)",
+      "measured": 38790,
+      "measuredDisplay": "387,90 €",
+      "expected": 0,
+      "expectedDisplay": "0,00 €",
+      "delta": 38790,
+      "deltaDisplay": "387,90 €",
+      "unit": "cents",
+      "passed": false,
+      "detail": "Σ PN=363.64 · net estratto=-24.26 (E 1291.54 − U 1315.80)"
+    },
+    {
+      "id": "C3",
+      "name": "Continuità saldo",
+      "formula": "saldo iniziale + Σ movimenti − saldo finale",
+      "measured": 0,
+      "measuredDisplay": "0,00 €",
+      "expected": 0,
+      "expectedDisplay": "0,00 €",
+      "delta": 0,
+      "deltaDisplay": "0,00 €",
+      "unit": "cents",
+      "passed": true,
+      "detail": "doc=2 Trimestre Fineco 2026.pdf · open=32442.24 · Σ=-24.26 · close=32417.98 · nLinee=72"
+    },
+    {
+      "id": "C4",
+      "name": "Incassi e corrispettivi",
+      "formula": "Σ incassi clienti gateway − totale registro corrispettivi",
+      "measured": 169990,
+      "measuredDisplay": "1699,90 €",
+      "expected": 0,
+      "expectedDisplay": "0,00 €",
+      "delta": 169990,
+      "deltaDisplay": "1699,90 €",
+      "unit": "cents",
+      "passed": false,
+      "detail": "gateway=1997.24 (Stripe charges/payments 1524.86 + PayPal) · corrispettivi report=297.34 · nCorrispettivi=8"
+    },
+    {
+      "id": "C5",
+      "name": "Coerenza documenti",
+      "formula": "Σ(imponibile + IVA) − Σ totali documento",
+      "measured": 1840,
+      "measuredDisplay": "18,40 €",
+      "expected": 0,
+      "expectedDisplay": "0,00 €",
+      "delta": 1840,
+      "deltaDisplay": "18,40 €",
+      "unit": "cents",
+      "passed": false,
+      "detail": "manual=33 · saas=6 · parti=843.99 · totali=825.59"
+    },
+    {
+      "id": "C6",
+      "name": "Nessuna riga tecnica",
+      "formula": "n° righe negative che stornano positiva stesso documento",
+      "measured": 6,
+      "measuredDisplay": "6",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 6,
+      "deltaDisplay": "6",
+      "unit": "rows",
+      "passed": false,
+      "detail": "negative rilevate=6 · Cursor -17.75; Cursor -17.75; Stripe Payments Europe -3.14; Apple -0.81; Anthropic, PBC -18.00; Anthropic, PBC -18.00 · spese=33"
+    },
+    {
+      "id": "C7",
+      "name": "Identificazione fornitori",
+      "formula": "n° documenti senza P.IVA o CF",
+      "measured": 12,
+      "measuredDisplay": "12",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 12,
+      "deltaDisplay": "12",
+      "unit": "docs",
+      "passed": false,
+      "detail": "esempi: Cursor; Cursor; Stripe Payments Europe; Apple; Anthropic, PBC…"
+    },
+    {
+      "id": "C8",
+      "name": "Mastri ammessi",
+      "formula": "n° righe con mastro fuori elenco chiuso §6.1",
+      "measured": 0,
+      "measuredDisplay": "0",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 0,
+      "deltaDisplay": "0",
+      "unit": "rows",
+      "passed": true,
+      "detail": "tutte le 53 righe PN in elenco chiuso (dopo normalizzazione legacy)"
+    },
+    {
+      "id": "C9",
+      "name": "Partite di giro",
+      "formula": "n° movimenti di transito classificati come ricavo o costo",
+      "measured": 10,
+      "measuredDisplay": "10",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 10,
+      "deltaDisplay": "10",
+      "unit": "rows",
+      "passed": false,
+      "detail": "righe ledger T2 ispezionate=246"
+    },
+    {
+      "id": "C10",
+      "name": "Doppia gamba transito",
+      "formula": "per gateway: Σ dare − Σ avere − saldo wallet dichiarato",
+      "measured": 2,
+      "measuredDisplay": "2",
+      "expected": 0,
+      "expectedDisplay": "0",
+      "delta": 2,
+      "deltaDisplay": "2",
+      "unit": "rows",
+      "passed": false,
+      "detail": "FALLITO su entrambi i gateway (atteso in Fase 1: gamba dare mai scritta / saldo PayPal n/d)",
+      "perGateway": [
+        {
+          "gateway": "STRIPE",
+          "measured": null,
+          "expected": 0,
+          "passed": false,
+          "detail": "ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_*********************************************************************************************TDkPvR"
+        },
+        {
+          "gateway": "PAYPAL",
+          "measured": -59301,
+          "expected": 0,
+          "passed": false,
+          "detail": "ledger dare−avere=-593.01 · wallet dich.=n/d · Ledger transit (10200 - Banca c/o PayPal / 10200 - Conto PayPal) — saldo API PayPal non wireato; baseline solo ledger · FALLITO: saldo wallet PayPal non dichiarato (API non collegata) e/o gamba dare incompleta"
+        }
+      ]
+    }
+  ],
+  "augustBaselineCheck": {
+    "ok": true,
+    "mismatches": []
+  }
+}

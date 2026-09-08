@@ -24,6 +24,22 @@ interface Product {
     category?: Category;
     images?: { url: string }[];
     manifestCover?: string | null;
+    /** 10 | 22 | null — mai default implicito */
+    vatRatePercent?: number | null;
+    floristStandardCostCents?: number | null;
+    /** Calcolati server-side a ogni load */
+    soldUnits?: number;
+    unitMarginCents?: number | null;
+    totalMarginCents?: number | null;
+}
+
+function formatEurFromCents(cents: number | null | undefined): string {
+    if (cents == null || !Number.isFinite(cents)) return '—';
+    return (cents / 100).toLocaleString('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+    });
 }
 
 function ProductThumbnail({ product }: { product: Product }) {
@@ -75,11 +91,17 @@ function DrawerImagePreview({ product, mediaUrl }: { product: Pick<Product, 'id'
 interface ClientProductsTableProps {
     initialProducts: Product[];
     initialCategories: Category[];
+    initialSoldPeriod?: 'year' | 'last12m' | 'all';
 }
 
-export default function ClientProductsTable({ initialProducts, initialCategories }: ClientProductsTableProps) {
+export default function ClientProductsTable({
+    initialProducts,
+    initialCategories,
+    initialSoldPeriod = 'year',
+}: ClientProductsTableProps) {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [categories, setCategories] = useState<Category[]>(initialCategories);
+    const [soldPeriod, setSoldPeriod] = useState<'year' | 'last12m' | 'all'>(initialSoldPeriod);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -102,7 +124,9 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         basePriceCents: 0,
         categoryId: '',
         mediaUrl: '',
-        isActive: true
+        isActive: true,
+        vatRatePercent: '' as '' | '10' | '22',
+        floristStandardCostEur: '',
     });
 
     const openDrawer = (product?: Product) => {
@@ -115,7 +139,15 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                 basePriceCents: product.basePriceCents / 100,
                 categoryId: product.categoryId || '',
                 mediaUrl: product.mediaUrl || '',
-                isActive: product.isActive ?? true
+                isActive: product.isActive ?? true,
+                vatRatePercent:
+                    product.vatRatePercent === 10 || product.vatRatePercent === 22
+                        ? String(product.vatRatePercent) as '10' | '22'
+                        : '',
+                floristStandardCostEur:
+                    product.floristStandardCostCents != null
+                        ? (product.floristStandardCostCents / 100).toFixed(2)
+                        : '',
             });
         } else {
             setFormData({
@@ -124,12 +156,15 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                 name: '',
                 shortDescription: '',
                 basePriceCents: 0,
-                categoryId: categories.length > 0 ? categories[0].id : '',
+                categoryId: '',
                 mediaUrl: '',
-                isActive: true
+                isActive: true,
+                vatRatePercent: '',
+                floristStandardCostEur: '',
             });
         }
         setIsDrawerOpen(true);
+        setIsSuccess(false);
     };
 
     const closeDrawer = () => {
@@ -198,8 +233,18 @@ export default function ClientProductsTable({ initialProducts, initialCategories
         const method = isUpdate ? 'PUT' : 'POST';
 
         const payload = {
-            ...formData,
-            basePriceCents: Math.round(Number(formData.basePriceCents) * 100) // Convert to cents
+            name: formData.name,
+            slug: formData.slug,
+            shortDescription: formData.shortDescription,
+            categoryId: formData.categoryId,
+            mediaUrl: formData.mediaUrl,
+            isActive: formData.isActive,
+            basePriceCents: Math.round(Number(formData.basePriceCents) * 100),
+            vatRatePercent: formData.vatRatePercent === '' ? null : Number(formData.vatRatePercent),
+            floristStandardCostEur:
+                formData.floristStandardCostEur.trim() === ''
+                    ? null
+                    : formData.floristStandardCostEur,
         };
 
         try {
@@ -330,6 +375,16 @@ export default function ClientProductsTable({ initialProducts, initialCategories
             Nome: p.name,
             Categoria: getCategoryDisplayName(p.category),
             PrezzoEURO: (p.basePriceCents / 100).toFixed(2),
+            AliquotaIVA: p.vatRatePercent === 10 || p.vatRatePercent === 22 ? `${p.vatRatePercent}%` : '',
+            CostoStandardFioristaEURO:
+                p.floristStandardCostCents != null
+                    ? (p.floristStandardCostCents / 100).toFixed(2)
+                    : '',
+            Venduti: p.soldUnits ?? 0,
+            MargineUnitarioEURO:
+                p.unitMarginCents != null ? (p.unitMarginCents / 100).toFixed(2) : '',
+            MargineTotaleEURO:
+                p.totalMarginCents != null ? (p.totalMarginCents / 100).toFixed(2) : '',
             Stato: p.isActive ? 'Attivo' : 'Inattivo'
         }));
         exportToCSV(exportData, 'prodotti_export.csv');
@@ -374,6 +429,24 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 <option value="INACTIVE">Solo Inattivi (Bozze)</option>
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Venduti (periodo)</label>
+                            <select
+                                value={soldPeriod}
+                                onChange={(e) => {
+                                    const v = e.target.value as 'year' | 'last12m' | 'all';
+                                    setSoldPeriod(v);
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('soldPeriod', v);
+                                    window.location.href = url.toString();
+                                }}
+                                className="w-full border-gray-200 rounded-xl text-sm p-2 outline-none focus:ring-2 focus:ring-black"
+                            >
+                                <option value="year">Anno corrente</option>
+                                <option value="last12m">Ultimi 12 mesi</option>
+                                <option value="all">Totale</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             )}
@@ -387,14 +460,19 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider w-16">Img</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Nome Prodotto</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider">Categoria / Pagina</th>
-                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-32">Prezzo (€)</th>
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-28">Prezzo (€)</th>
+                                <th className="font-semibold py-4 px-3 uppercase text-[11px] tracking-wider text-center w-20">IVA</th>
+                                <th className="font-semibold py-4 px-3 uppercase text-[11px] tracking-wider text-right w-28">Costo fiorista</th>
+                                <th className="font-semibold py-4 px-3 uppercase text-[11px] tracking-wider text-right w-20">Venduti</th>
+                                <th className="font-semibold py-4 px-3 uppercase text-[11px] tracking-wider text-right w-28">Margine u.</th>
+                                <th className="font-semibold py-4 px-3 uppercase text-[11px] tracking-wider text-right w-28">Margine tot.</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center w-24">Stato</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-24">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {sortedProducts.length === 0 ? (
-                                <tr><td colSpan={6} className="p-8 text-center text-gray-400">Nessun prodotto presente.</td></tr>
+                                <tr><td colSpan={11} className="p-8 text-center text-gray-400">Nessun prodotto presente.</td></tr>
                             ) : sortedProducts.map(product => (
                                 <tr key={product.id} onClick={() => openDrawer(product)} className="hover:bg-gray-50/50 transition-colors group cursor-pointer">
                                     <td className="py-3 px-4">
@@ -420,6 +498,23 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                             onBlur={(e) => updateInlinePrice(product.id, e.target.value)}
                                             className="w-20 text-right bg-transparent border-b border-dashed border-gray-300 focus:border-fm-gold hover:border-gray-400 outline-none font-medium text-gray-900 transition-colors py-1"
                                         />
+                                    </td>
+                                    <td className="py-3 px-3 text-center">
+                                        {product.vatRatePercent === 10 || product.vatRatePercent === 22 ? (
+                                            <span className="text-[12px] font-semibold text-gray-800">{product.vatRatePercent}%</span>
+                                        ) : (
+                                            <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">manca</span>
+                                        )}
+                                    </td>
+                                    <td className="py-3 px-3 text-right text-[12px] text-gray-800">
+                                        {formatEurFromCents(product.floristStandardCostCents)}
+                                    </td>
+                                    <td className="py-3 px-3 text-right font-medium text-gray-900">{product.soldUnits ?? 0}</td>
+                                    <td className="py-3 px-3 text-right text-[12px] text-gray-800">
+                                        {formatEurFromCents(product.unitMarginCents)}
+                                    </td>
+                                    <td className="py-3 px-3 text-right text-[12px] text-gray-800">
+                                        {formatEurFromCents(product.totalMarginCents)}
                                     </td>
                                     <td className="py-3 px-4 text-center">
                                         <div className="flex items-center justify-center gap-2">
@@ -585,6 +680,57 @@ export default function ClientProductsTable({ initialProducts, initialCategories
                                     <option value="true">🟢 Attivo (Pubblico)</option>
                                     <option value="false">🟠 Bozza (Nascosto)</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    Aliquota IVA
+                                </label>
+                                <select
+                                    value={formData.vatRatePercent}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            vatRatePercent: e.target.value as '' | '10' | '22',
+                                        })
+                                    }
+                                    className={`w-full border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all font-medium ${
+                                        formData.vatRatePercent === '' ? 'text-amber-700 bg-amber-50' : ''
+                                    }`}
+                                >
+                                    <option value="">— non compilata —</option>
+                                    <option value="10">10% (floreale)</option>
+                                    <option value="22">22% (accessori)</option>
+                                </select>
+                                {formData.vatRatePercent === '' ? (
+                                    <p className="mt-1 text-[11px] text-amber-700">
+                                        Obbligatoria per i corrispettivi: nessun default automatico.
+                                    </p>
+                                ) : null}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    Costo standard fiorista (€)
+                                </label>
+                                <div className="relative">
+                                    <Euro size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.floristStandardCostEur}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                floristStandardCostEur: e.target.value,
+                                            })
+                                        }
+                                        placeholder="facoltativo"
+                                        className="w-full border-gray-200 rounded-xl p-3 pl-9 outline-none focus:ring-2 focus:ring-fm-gold focus:border-fm-gold transition-all"
+                                    />
+                                </div>
                             </div>
                         </div>
 

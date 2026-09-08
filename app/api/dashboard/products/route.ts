@@ -38,6 +38,14 @@ export async function POST(request: Request) {
                 isBouquet: normalized.isBouquet !== undefined ? Boolean(normalized.isBouquet) : true,
                 mediaUrl: (normalized.mediaUrl as string | null) ?? null,
                 isActive: normalized.isActive !== undefined ? Boolean(normalized.isActive) : true,
+                vatRatePercent:
+                    normalized.vatRatePercent === undefined
+                        ? null
+                        : (normalized.vatRatePercent as number | null),
+                floristStandardCostCents:
+                    normalized.floristStandardCostCents === undefined
+                        ? null
+                        : (normalized.floristStandardCostCents as number | null),
             },
             include: {
                 category: true,

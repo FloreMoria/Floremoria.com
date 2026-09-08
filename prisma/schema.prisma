@@ -318,6 +318,16 @@ model Product {
   isBouquet        Boolean        @default(true)
   mediaUrl         String?
   deletedAt        DateTime?
+  /**
+   * Aliquota IVA del prodotto in punti percentuali (10 o 22).
+   * Null = non compilata: vietato default implicito (METODO §8.1).
+   */
+  vatRatePercent   Int?           @map("vat_rate_percent")
+  /**
+   * Costo standard fiorista in centesimi EUR (parametro aziendale, non stima).
+   * Usi: incarico, margine, fattura da ricevere (METODO §6.4).
+   */
+  floristStandardCostCents Int?   @map("florist_standard_cost_cents")
   orderItems       OrderItem[]
   category         Category       @relation(fields: [categoryId], references: [id])
   images           ProductImage[]

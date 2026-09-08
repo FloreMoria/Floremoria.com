@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.2 — 8 settembre 2026.
+Versione 1.4 — 8 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -213,7 +213,39 @@ stessa commissione con codici diversi (`txn_` e `stripe_tx_`).
 Il sistema le riconosce, le **esclude dai totali**, e le dichiara in una riga a parte del
 foglio del gateway: *"escluse N righe tecniche per € X — non sono fatti economici"*.
 
-### 6.4 Acquisti da fornitori esteri
+### 6.4 Costo standard del fiorista e fatture da ricevere
+
+Il compenso del fiorista non è una stima: è un parametro deciso da noi al momento
+dell'incarico. Un bouquet da € 45 significa € 45 di fiori. Questo rende il **costo standard**
+un dato affidabile, e gli assegna tre usi legittimi:
+
+1. **operativo** — generare l'incarico al fiorista con l'importo già determinato;
+2. **gestionale** — calcolare il margine atteso per prodotto e per ordine;
+3. **contabile, in un caso solo** — iscrivere la **fattura da ricevere** quando la
+   prestazione è stata eseguita e il documento del fornitore non è ancora arrivato.
+
+**La regola sul terzo uso.** Il costo standard può generare **una sola** scrittura: quella di
+fattura da ricevere, che è per natura provvisoria e va chiusa. Quando il documento del
+fornitore arriva:
+- la scrittura di stima si chiude;
+- il costo definitivo è quello del documento;
+- l'eventuale differenza fra stimato e fatturato si rileva come rettifica, con il riferimento
+  alla stima che sostituisce.
+
+**Quello che il costo standard non deve mai fare** è generare una scrittura di costo
+definitiva che resti nel libro accanto al pagamento o alla fattura. È il difetto trovato nel
+2026 con i `FLORIST_PAYOUT`: il sistema scriveva il compenso per consegna, il titolare pagava
+con bonifico, il fiorista emetteva fattura, e lo stesso costo finiva a libro due o tre volte.
+La differenza fra una fattura da ricevere e quel difetto è che la prima **si chiude** quando
+arriva il documento, la seconda resta.
+
+**Controllo associato**: nessuna consegna può avere contemporaneamente una scrittura di costo
+da standard **aperta** e un documento del fornitore registrato. Se accade, è un doppio conto e
+va nel foglio Eccezioni.
+
+---
+
+### 6.5 Acquisti da fornitori esteri
 
 Un acquisto da un fornitore estero è **un solo fatto economico** e produce **una sola riga**
 nel foglio Acquisti:
@@ -264,13 +296,41 @@ righe di natura diversa, non ha un totale unico: ha un totale per natura.
 È il foglio che nel dossier di agosto mancava del tutto, ed è quello senza il quale il
 commercialista non può liquidare l'IVA.
 
-Una riga per ogni incasso da cliente. Colonne:
+**Una riga per ogni combinazione ordine + aliquota.** Non una riga per ordine: un ordine che
+contiene fiori al 10% e un biglietto al 22% produce **due righe**, con lo stesso numero
+d'ordine e lo stesso riferimento di transazione, e importi che sommati danno l'incassato.
+
+Colonne:
 
 `Data` · `Canale` · `Numero ordine` · `Riferimento transazione gateway` · `Importo di
 listino` · `Sconto o buono` · `Incassato lordo` · `Aliquota` · `Imponibile` · `IVA`
 
+### 8.1 Da dove viene l'aliquota
+
+L'aliquota si determina **riga per riga dell'ordine**, secondo la natura del bene:
+
+| Categoria | Aliquota |
+|---|---|
+| Fiori recisi, piante, composizioni floreali | 10% |
+| Accessori: biglietto, nastro commemorativo, lumino, ceri, fotografia e simili | 22% |
+| Consegna | non addebitata: nessuna riga |
+
+Ogni prodotto a catalogo porta la propria aliquota come **attributo del prodotto**. Non si
+deduce dal nome, non si indovina per categoria di testo, non si applica un valore di default.
+
+**La fonte è la riga d'ordine nel database, non l'email di conferma.** L'email è un documento
+generato *a partire* dall'ordine: sta più in basso nella gerarchia del §2 e leggerla come
+fonte significherebbe ricostruire un dato che il sistema possiede già. Se l'email contiene un
+dettaglio che l'ordine non ha, il problema non è che vada letta l'email — è che il database
+degli ordini è incompleto, e va completato.
+
+**Recupero dello storico.** Solo per gli ordini già chiusi in cui le righe non sono
+recuperabili dal database, si ammette una lettura una-tantum delle ricevute inviate al
+cliente, a condizione che ogni riga così ricostruita sia marcata con l'origine
+"ricostruita da ricevuta" e compaia nel foglio Eccezioni. È un recupero storico, mai il
+metodo a regime.
+
 Regole:
-- l'aliquota viene dai prodotti dell'ordine, non da un valore fisso;
 - i rimborsi sono righe negative, mai righe cancellate, e devono riportare il **numero
   dell'ordine originario** e la data dell'incasso che stornano;
 - se l'ordine originario appartiene a un periodo IVA **già liquidato**, la riga va **anche**
@@ -356,12 +416,26 @@ fondo a questo file, con data e motivo.
 
 ## Registro delle modifiche
 
+**1.4 — 8 settembre 2026**
+- §6.4 — nuova: il costo standard del fiorista è un parametro deciso dall'azienda, non una
+  stima. Usi ammessi: incarico operativo, margine, e **una sola** scrittura contabile —
+  la fattura da ricevere, che si chiude all'arrivo del documento del fornitore.
+- §6.5 — ex §6.4 (acquisti da fornitori esteri), rinumerata.
+
+**1.3 — 8 settembre 2026**
+- §8 — il registro corrispettivi ha una riga per **ordine + aliquota**, non per ordine: un
+  ordine con fiori e accessori produce due righe.
+- §8.1 — nuova: l'aliquota è un attributo del prodotto a catalogo (10% fiori e piante, 22%
+  accessori) e si legge dalla riga d'ordine, mai dall'email di conferma, che è un derivato.
+  Lettura delle ricevute ammessa solo come recupero storico, con marcatura dell'origine.
+
 **1.2 — 8 settembre 2026**
 - §5 — C6 si misura sull'**imponibile**, non sul totale documento. La v1.1 non lo diceva e
   il controllo restituiva 0 coppie invece di 6, perché nelle coppie tecniche i totali non
   sono opposti (la riga positiva porta l'IVA del reverse charge).
 - §6.4 — nuova sezione sugli acquisti da fornitori esteri: una sola riga per documento, e
-  regola sulla doppia ingestione dello stesso documento da canali diversi.
+  regola sulla doppia ingestione dello stesso documento da canali diversi. *(rinumerata §6.5
+  nella v1.4)*
 
 **1.1 — 8 settembre 2026**
 - §2 — il vincolo sugli estratti conto passa dal formato alla provenienza: ammesso qualsiasi

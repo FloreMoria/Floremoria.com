@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-09-08T14:07:47.781Z",
+  "methodVersion": "1.2",
+  "phase": 2,
+  "period": "T2 2026",
+  "acquistiImponibileCents": 85553,
+  "acquistiImponibileEuro": 855.53,
+  "targetCents": 85553,
+  "legacyCancelledCents": 78008,
+  "section64Ok": true,
+  "exceptionCountTotal": 6,
+  "section64Exceptions": 6,
+  "section64Details": [
+    {
+      "cosa": "Cursor · cursor-invoice-2026-05-02-in_1TSaMUB4TZWxSIGUPIU7hwfb.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -1775,
+      "perche": "documento già acquisito da altro canale"
+    },
+    {
+      "cosa": "Anthropic, PBC · Invoice-EFH5U5AF-0001.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -1800,
+      "perche": "documento già acquisito da altro canale"
+    },
+    {
+      "cosa": "Stripe Payments Europe · Stripe Tax Invoice 4PZWHSUS-2026-05.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -314,
+      "perche": "documento già acquisito da altro canale"
+    },
+    {
+      "cosa": "Cursor · cursor-invoice-2026-06-02-in_1Tdp9YB4TZWxSIGUM4aRclZS.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -1775,
+      "perche": "documento già acquisito da altro canale"
+    },
+    {
+      "cosa": "Anthropic, PBC · Invoice-EFH5U5AF-0002.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -1800,
+      "perche": "documento già acquisito da altro canale"
+    },
+    {
+      "cosa": "Apple · I tuoi acquisti Apple3.pdf",
+      "dove": "Acquisti (canale manuale)",
+      "importoCents": -81,
+      "perche": "documento già acquisito da altro canale"
+    }
+  ],
+  "acquistiRowCount": 42,
+  "xlsxPath": "/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/docs/verbali/Dossier_Fiscale_FloreMoria_2026_T2_v1.2_fase2.xlsx"
+}

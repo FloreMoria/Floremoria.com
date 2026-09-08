@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         const stamp = month
             ? report.bounds.label.replace(/[/\s]+/g, '_')
             : `${year}_${fiscalPeriodFilenameStamp(period)}`;
-        const filename = `Dossier_Fiscale_FloreMoria_${stamp}.xlsx`;
+        const filename = `Dossier_Fiscale_FloreMoria_${stamp}_v1.2.xlsx`;
 
         if (format === 'paypal-fees-csv') {
             const csv = buildPaypalMonthlyFeesCsv(report.paypalMonthlyFees);

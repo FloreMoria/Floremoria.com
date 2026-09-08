@@ -10,6 +10,7 @@ import {
     FileText,
     Pencil,
     Star,
+    Trash2,
     UserCircle2,
     X,
 } from 'lucide-react';
@@ -28,6 +29,10 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    // Delete confirmation state
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     useEffect(() => {
         setPartner(initialPartner);
     }, [initialPartner]);
@@ -39,6 +44,26 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
 
     const closeEdit = () => {
         if (!isSubmitting) setIsEditOpen(false);
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/dashboard/partners/${partner.id}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Errore durante la cancellazione del fiorista');
+            }
+            setIsDeleteOpen(false);
+            router.push('/dashboard/fioristi');
+            router.refresh();
+        } catch (e: any) {
+            alert(e.message || 'Errore durante la cancellazione.');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -135,6 +160,15 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
                         Modifica
                     </button>
                     <ClientPrintButton />
+                    <button
+                        type="button"
+                        onClick={() => setIsDeleteOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors sm:ml-auto"
+                        title="Elimina definitivamente fiorista"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Elimina Fiorista
+                    </button>
                 </div>
             </div>
 
@@ -405,6 +439,66 @@ export default function ClientFloristDossierHeader({ partner: initialPartner }: 
                                 }`}
                             >
                                 {isSubmitting ? 'Salvataggio…' : saveSuccess ? 'Salvato!' : 'Salva modifiche'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {/* MODALE CONFERMA CANCELLAZIONE DEFINITIVA */}
+            {isDeleteOpen ? (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    onClick={() => !isDeleting && setIsDeleteOpen(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <Trash2 size={24} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    Cancellare definitivamente il fiorista?
+                                </h3>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Stai per eliminare definitivamente <span className="font-semibold text-gray-900">{partner.shopName}</span>
+                                    {partner.ownerName ? ` (${formatPersonName(partner.ownerName)})` : ''}.
+                                </p>
+                                <p className="text-xs text-red-700 font-medium mt-2.5 bg-red-50 p-2.5 rounded-lg border border-red-200 leading-relaxed">
+                                    ⚠️ L'operazione rimuoverà il fiorista dall'anagrafica della dashboard e dalla rete territoriale.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-2 pt-3 border-t border-gray-100">
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setIsDeleteOpen(false)}
+                                className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={handleDelete}
+                                className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                        Cancellazione...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={16} />
+                                        Elimina Definitivamente
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

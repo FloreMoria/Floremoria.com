@@ -119,10 +119,36 @@ export async function DELETE(request: Request, context: any) {
     try {
         const { id } = await context.params;
 
-        await prisma.partner.update({
-            where: { id },
-            data: { deletedAt: new Date() }
+        const original = await prisma.partner.findUnique({ where: { id } });
+        if (!original) {
+            return NextResponse.json({ error: 'Partner non trovato' }, { status: 404 });
+        }
+
+        // Dissocia assegnazioni defunti e riferimenti fiorista da agenzie
+        await prisma.partnerDeceasedAssignment.deleteMany({
+            where: { partnerId: id }
         });
+
+        await prisma.partner.updateMany({
+            where: { defaultFloristId: id },
+            data: { defaultFloristId: null }
+        });
+
+        // Tenta hard delete; se vincolato da relazioni storiche, applica soft-delete con liberazione codice univoco
+        try {
+            await prisma.partner.delete({
+                where: { id }
+            });
+        } catch {
+            await prisma.partner.update({
+                where: { id },
+                data: {
+                    deletedAt: new Date(),
+                    isActive: false,
+                    uniqueCode: original.uniqueCode ? `${original.uniqueCode}_del_${Date.now()}` : null,
+                }
+            });
+        }
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {

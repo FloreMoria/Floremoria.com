@@ -97,6 +97,10 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
     const [filterSearch, setFilterSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
 
+    // Deletion state & modal
+    const [partnerToDelete, setPartnerToDelete] = useState<ExtendedPartner | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [formData, setFormData] = useState<ExtendedPartner>({
         id: '',
         shopName: '',
@@ -217,6 +221,30 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
             alert('Errore di rete. Controllare la connessione.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeletePartner = async () => {
+        if (!partnerToDelete) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/dashboard/partners/${partnerToDelete.id}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Errore durante la cancellazione del fiorista');
+            }
+            setPartners((prev) => prev.filter((p) => p.id !== partnerToDelete.id));
+            if (formData.id === partnerToDelete.id) {
+                closeDrawer();
+            }
+            setPartnerToDelete(null);
+            router.refresh();
+        } catch (e: any) {
+            alert(e.message || 'Errore di rete durante la cancellazione.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -434,7 +462,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Ordini Attivi</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Rating Admin</th>
                                 <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-center">Stato</th>
-                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-24">Azioni</th>
+                                <th className="font-semibold py-4 px-4 uppercase text-[11px] tracking-wider text-right w-28">Azioni</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -516,7 +544,7 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                             </span>
                                         </div>
                                     </td>
-                                    <td className="py-3 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <td className="py-3 px-4 text-right opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                         <div className="flex items-center justify-end gap-1">
                                             <button
                                                 type="button"
@@ -529,6 +557,18 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                                                 aria-label="Apri scheda fiorista"
                                             >
                                                 <Edit2 size={16} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPartnerToDelete(partner);
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Elimina definitivamente fiorista"
+                                                aria-label={`Elimina ${partner.shopName}`}
+                                            >
+                                                <Trash2 size={16} />
                                             </button>
                                         </div>
                                     </td>
@@ -572,6 +612,17 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {formData.id ? (
+                            <button
+                                type="button"
+                                onClick={() => setPartnerToDelete(formData)}
+                                className="p-2.5 bg-white rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 shadow-sm transition-all border border-gray-100"
+                                title="Elimina fiorista definitivamente"
+                                aria-label="Elimina fiorista"
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        ) : null}
                         <button
                             type="submit"
                             form="partnerForm"
@@ -1080,6 +1131,66 @@ export default function ClientPartnersTable({ initialPartners }: Props) {
                     }}
                 />
             ) : null}
+
+            {/* MODALE CONFERMA CANCELLAZIONE DEFINITIVA FIORISTA */}
+            {partnerToDelete && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    onClick={() => !isDeleting && setPartnerToDelete(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <Trash2 size={24} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    Cancellare definitivamente il fiorista?
+                                </h3>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Stai per eliminare definitivamente <span className="font-semibold text-gray-900">{partnerToDelete.shopName}</span>
+                                    {partnerToDelete.ownerName ? ` (${formatPersonName(partnerToDelete.ownerName)})` : ''}.
+                                </p>
+                                <p className="text-xs text-red-700 font-medium mt-2.5 bg-red-50 p-2.5 rounded-lg border border-red-200 leading-relaxed">
+                                    ⚠️ L'operazione rimuoverà il fiorista dall'anagrafica della dashboard e dalla rete territoriale.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-2 pt-3 border-t border-gray-100">
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setPartnerToDelete(null)}
+                                className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={handleDeletePartner}
+                                className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                        Cancellazione...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={16} />
+                                        Elimina Definitivamente
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

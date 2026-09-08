@@ -1,53 +1,46 @@
-# Verbale — Dossier Fiscale Fase 1 (METODO v1.1) — STOP su C6
+# Verbale — Dossier Fiscale Fase 1: controlli T2 2026 — CHIUSA
 
 **Generato:** 2026-09-08  
-**Spec:** `docs/METODO_DOSSIER_FISCALE.md` **v1.1** §5  
+**Spec:** `docs/METODO_DOSSIER_FISCALE.md` §5 — C6 confronta gli **imponibili** (semantica v1.2)  
 **Ambito:** sola verifica — nessun cambiamento a dati o generatore XLSX
 
 ---
 
-## STOP — C6 ≠ 6
+## Fase 1 chiusa
 
-Con la formulazione **v1.1**, C6 misura:
+Dopo correzione specifica: C6 non confronta il totale documento, ma l’**imponibile**.  
+Le 6 coppie esistono (stesso numero documento; imponibili esattamente opposti; totali diversi perché la riga positiva porta IVA reverse charge e la negativa ha IVA 0). Universo = foglio «Fatture Passive e Autofatture»: `manualFinanceExpense` ↔ `saasForeignInvoice`.
 
-> numero **coppie** di righe di importo uguale e opposto, stesso identificativo di documento, generate dal sistema (mai rimborsi / note di credito)
+| ID | Misurato | Atteso formula | Baseline agosto | Esito |
+|----|----------|----------------|-----------------|-------|
+| C1 | **19** | 0 | 19 | FAIL (allineato) |
+| C2 | **€ 387,90** | 0 | € 387,90 | FAIL (allineato) |
+| C3 | € 0,00 | 0 | — | OK |
+| C4 | € 1.699,90 | 0 | — | FAIL |
+| C5 | € 18,40 | 0 | — | FAIL |
+| C6 | **6** | 0 | **6** | FAIL (allineato) |
+| C7 | **12** | 0 | 12 | FAIL (allineato) |
+| C8 | 0 | 0 | — | OK |
+| C9 | 10 | 0 | — | FAIL |
+| C10 | fail ×2 | 0 | fail ×2 | FAIL (allineato) |
 
-| | Valore |
-|--|--------|
-| **C6 misurato oggi** | **0** coppie |
-| Atteso da baseline agosto (e da te) | **6** |
-| Negativi di sistema **senza** coppia sullo stesso id documento | **6** (Cursor×2, Anthropic×2, Stripe Tax, Apple) |
-
-Quei 6 erano le «righe tecniche negative» del dossier agosto / v1.0. Sotto v1.1 **non sono coppie di storno**: ogni riga ha il proprio `documentNumber`/`fileName`, non esiste la gamba positiva con lo stesso identificativo e importo opposto. Restano candidati al foglio Eccezioni, non a C6.
-
-**Non proseguo** (né Fase 2) finché non mi dici come trattare questo scostamento:
-1. la baseline «6» va riletta come i 6 orfani (fuori da C6), e C6=0 è corretto; oppure
-2. va ampliata la definizione operativa di «stesso identificativo» / «generata dal sistema».
+**Baseline chiave:** C1=19 · C2=€387,90 · **C6=6** · C7=12 · C10 fallito su entrambi i gateway.
 
 ---
 
-## Esito degli altri controlli (invariati rispetto a prima)
+## Nota su C6 / acquisto estero
 
-| ID | Misurato | Atteso | Esito |
-|----|----------|--------|-------|
-| C1 | **19** | 0 | FAIL |
-| C2 | **€ 387,90** | 0 | FAIL |
-| C3 | € 0,00 | 0 | OK |
-| C4 | € 1.699,90 | 0 | FAIL |
-| C5 | € 18,40 | 0 | FAIL |
-| C6 | **0** (v1.1) | 0 formula / **6** baseline ago | vedi STOP |
-| C7 | **12** | 0 | FAIL |
-| C8 | 0 | 0 | OK |
-| C9 | 10 | 0 | FAIL |
-| C10 | fail ×2 | 0 | FAIL |
-
-C1, C2, C7, C10 restano allineati alla lettura agosto. Solo C6 cambia per effetto della v1.1.
+La coppia non è uno storno “classico”: è il modo attuale di registrare un acquisto estero (riga fornitore senza IVA + riga autofattura con IVA RC e segno invertito sull’imponibile). Sommando gli imponibili il costo scompare dal dossier. Forma corretta (METODO §6.4, quando il file v1.2 è in repo): **una sola riga** con imponibile positivo e IVA reverse charge.
 
 ---
 
 ## File
 
-- `docs/METODO_DOSSIER_FISCALE.md` (v1.1)
-- `lib/financial/dossierFiscalControls.ts` (C6 riscritto)
+- `lib/financial/dossierFiscalControls.ts` (C6 su imponibile, universo manual+saas)
 - `scripts/dossier-fiscal-controls-t2-2026.ts`
 - `docs/verbali/dossier_fase1_controlli_t2_2026.json`
+- `docs/METODO_DOSSIER_FISCALE.md` (in attesa commit v1.2 da titolare se non ancora sostituito)
+
+---
+
+**Prossimo passo (solo su OK):** Fase 2 — fogli Eccezioni + Quadratura (§4, §9).

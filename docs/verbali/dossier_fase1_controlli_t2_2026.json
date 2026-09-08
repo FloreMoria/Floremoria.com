@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-09-08T13:24:04.597Z",
+  "generatedAt": "2026-09-08T13:37:56.103Z",
   "period": "T2 2026",
-  "method": "docs/METODO_DOSSIER_FISCALE.md §5",
+  "method": "docs/METODO_DOSSIER_FISCALE.md §5 — C6 su imponibile (semantica v1.2)",
+  "methodVersion": "1.2-c6-imponibile",
   "phase": 1,
   "results": [
     {
@@ -77,16 +78,16 @@
     {
       "id": "C6",
       "name": "Nessuno storno tecnico",
-      "formula": "n° coppie importo uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)",
-      "measured": 0,
-      "measuredDisplay": "0",
+      "formula": "n° coppie imponibile uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)",
+      "measured": 6,
+      "measuredDisplay": "6",
       "expected": 0,
       "expectedDisplay": "0",
-      "delta": 0,
-      "deltaDisplay": "0",
+      "delta": 6,
+      "deltaDisplay": "6",
       "unit": "rows",
-      "passed": true,
-      "detail": "coppie=0 · negativi sistema senza coppia (non C6)=6 · spese=33"
+      "passed": false,
+      "detail": "coppie=6 · cursor-invoice-2026-05-02-in_1tsamub4tzwxsigupiu imponibile ±17.75 (manual↔saas); cursor-invoice-2026-06-02-in_1tdp9yb4tzwxsigum4a imponibile ±17.75 (manual↔saas); stripe tax invoice 4pzwhsus-2026-05.pdf imponibile ±3.14 (manual↔saas); i tuoi acquisti apple3.pdf imponibile ±0.81 (manual↔saas); invoice-efh5u5af-0001.pdf imponibile ±18.00 (manual↔saas); invoice-efh5u5af-0002.pdf imponibile ±18.00 (manual↔saas) · negativi sistema senza coppia=0 · manual=33 · saas=6"
     },
     {
       "id": "C7",
@@ -149,7 +150,7 @@
           "measured": null,
           "expected": 0,
           "passed": false,
-          "detail": "ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_***********************************************************************************************kPvR"
+          "detail": "ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_*********************************************************************************************TDkPvR"
         },
         {
           "gateway": "PAYPAL",
@@ -162,9 +163,7 @@
     }
   ],
   "augustBaselineCheck": {
-    "ok": false,
-    "mismatches": [
-      "C6: agosto=6 (agosto v1.0: 6 autofatture negative; v1.1 conta solo COPPIE stesso id documento) · oggi=0 · coppie=0 · negativi sistema senza coppia (non C6)=6 · spese=33"
-    ]
+    "ok": true,
+    "mismatches": []
   }
 }

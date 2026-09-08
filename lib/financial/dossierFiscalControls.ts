@@ -386,52 +386,78 @@ export async function controlC5(year: number, quarter: TaxQuarter): Promise<Doss
 }
 
 /**
- * C6 — Nessuno storno tecnico (METODO v1.1 §5)
- * Formula: n° **coppie** di righe di importo uguale e opposto, stesso identificativo
- * di documento, generate dal sistema → atteso 0.
+ * C6 — Nessuno storno tecnico (METODO §5; confronto su **imponibile**, v1.2)
  *
+ * Formula: n° **coppie** di righe con imponibile uguale e opposto, stesso
+ * identificativo di documento, generate dal sistema → atteso 0.
+ *
+ * Perché l’imponibile e non il totale: in un acquisto estero la riga positiva
+ * porta l’IVA reverse charge e la negativa ha IVA zero — i totali non sono
+ * opposti anche quando gli imponibili lo sono (−17,75 / +17,75 → totali −17,75 / +21,66).
+ *
+ * Universo = stesso foglio «Fatture Passive e Autofatture»: manual + saas.
  * Non conta mai rimborsi clienti né note di credito (fatti esterni con id proprio).
  */
 export async function controlC6(year: number, quarter: TaxQuarter): Promise<DossierControlResult> {
     const bounds = resolveQuarterBounds(year, quarter);
-    const manual = await prisma.manualFinanceExpense.findMany({
-        where: { expenseDate: { gte: bounds.start, lte: bounds.end } },
-        select: {
-            id: true,
-            vendorName: true,
-            totalCents: true,
-            metadataJson: true,
-            fileName: true,
-            canonicalDocKey: true,
-            description: true,
-        },
-    });
+    const [manual, saas] = await Promise.all([
+        prisma.manualFinanceExpense.findMany({
+            where: { expenseDate: { gte: bounds.start, lte: bounds.end } },
+            select: {
+                id: true,
+                vendorName: true,
+                netCents: true,
+                vatCents: true,
+                totalCents: true,
+                metadataJson: true,
+                fileName: true,
+                description: true,
+            },
+        }),
+        prisma.saasForeignInvoice.findMany({
+            where: { invoiceDate: { gte: bounds.start, lte: bounds.end } },
+            select: {
+                id: true,
+                vendorName: true,
+                eurAmountCents: true,
+                fileName: true,
+            },
+        }),
+    ]);
 
-    function documentIdentity(e: (typeof manual)[0]): string {
-        const meta = (e.metadataJson || {}) as Record<string, unknown>;
-        if (e.canonicalDocKey) return `CANON:${e.canonicalDocKey}`;
-        const inv =
-            (typeof meta.invoiceNumber === 'string' && meta.invoiceNumber) ||
-            (typeof meta.documentNumber === 'string' && meta.documentNumber) ||
-            (typeof meta.foreignInvoiceNumber === 'string' && meta.foreignInvoiceNumber) ||
-            (typeof meta.number === 'string' && meta.number) ||
-            '';
-        if (inv) return `INV:${String(e.vendorName || '').toUpperCase()}|${inv}`;
-        if (e.fileName) return `FILE:${String(e.vendorName || '').toUpperCase()}|${e.fileName}`;
-        return `ID:${e.id}`;
+    type C6Row = {
+        id: string;
+        source: 'manual' | 'saas';
+        netCents: number;
+        docKey: string;
+        system: boolean;
+    };
+
+    function docKeyFromParts(parts: {
+        invoiceNumber?: string;
+        documentNumber?: string;
+        foreignInvoiceNumber?: string;
+        fileName?: string | null;
+        fallbackId: string;
+    }): string {
+        const raw =
+            parts.invoiceNumber ||
+            parts.documentNumber ||
+            parts.foreignInvoiceNumber ||
+            parts.fileName ||
+            parts.fallbackId;
+        return String(raw).trim().toLowerCase();
     }
 
     /** Artefatto di sistema (non rimborso cliente / non NC esterna). */
-    function isSystemGenerated(e: (typeof manual)[0]): boolean {
+    function isSystemManual(e: (typeof manual)[0]): boolean {
         const meta = (e.metadataJson || {}) as Record<string, unknown>;
         const blob = `${e.description || ''} ${e.fileName || ''} ${JSON.stringify(meta)}`.toLowerCase();
-        // Esclusione esplicita: rimborsi / note di credito cliente
         if (
             /rimborso|refund|nota di credito|credit.?note|storno cliente|customer.?refund/.test(blob)
         ) {
             return false;
         }
-        // Inclusione: autofattura generata / sync sistema / sanitize
         if (
             meta.source === 'SDI_AUTOFATTURA_ESTERA' ||
             meta.source === 'AUTOFATTURA_TD17' ||
@@ -445,55 +471,96 @@ export async function controlC6(year: number, quarter: TaxQuarter): Promise<Doss
         ) {
             return true;
         }
-        // Default prudente: senza segnali di sistema non è storno tecnico C6
-        return false;
+        // Riga negativa senza meta di sistema: nel dossier agosto è comunque
+        // la controparte tecnica della saas sullo stesso fileName → conta come sistema
+        // solo se esiste una saas con lo stesso documento (verificato al pairing).
+        return e.netCents < 0 && Boolean(e.fileName);
     }
 
-    const byDoc = new Map<string, typeof manual>();
+    const rows: C6Row[] = [];
+
     for (const e of manual) {
-        const k = documentIdentity(e);
-        if (!byDoc.has(k)) byDoc.set(k, []);
-        byDoc.get(k)!.push(e);
+        const meta = (e.metadataJson || {}) as Record<string, unknown>;
+        rows.push({
+            id: `manual:${e.id}`,
+            source: 'manual',
+            netCents: e.netCents,
+            docKey: docKeyFromParts({
+                invoiceNumber: typeof meta.invoiceNumber === 'string' ? meta.invoiceNumber : undefined,
+                documentNumber:
+                    typeof meta.documentNumber === 'string' ? meta.documentNumber : undefined,
+                foreignInvoiceNumber:
+                    typeof meta.foreignInvoiceNumber === 'string'
+                        ? meta.foreignInvoiceNumber
+                        : undefined,
+                fileName: e.fileName,
+                fallbackId: e.id,
+            }),
+            system: isSystemManual(e),
+        });
+    }
+
+    for (const s of saas) {
+        // SaaS = riga fornitore estero / autofattura positiva nel foglio dossier
+        rows.push({
+            id: `saas:${s.id}`,
+            source: 'saas',
+            netCents: s.eurAmountCents,
+            docKey: docKeyFromParts({
+                fileName: s.fileName,
+                fallbackId: s.id,
+            }),
+            system: true,
+        });
+    }
+
+    const byDoc = new Map<string, C6Row[]>();
+    for (const r of rows) {
+        if (!byDoc.has(r.docKey)) byDoc.set(r.docKey, []);
+        byDoc.get(r.docKey)!.push(r);
     }
 
     let pairs = 0;
     const examples: string[] = [];
-    for (const [docId, rows] of byDoc) {
-        const pos = rows.filter((r) => r.totalCents > 0 && isSystemGenerated(r));
-        const neg = rows.filter((r) => r.totalCents < 0 && isSystemGenerated(r));
+    const pairedIds = new Set<string>();
+    for (const [docId, group] of byDoc) {
+        const pos = group.filter((r) => r.netCents > 0 && r.system);
+        const neg = group.filter((r) => r.netCents < 0 && r.system);
         const usedPos = new Set<string>();
         for (const n of neg) {
+            // Confronto sull’**imponibile**, non sul totale documento
             const match = pos.find(
-                (p) => !usedPos.has(p.id) && p.totalCents + n.totalCents === 0
+                (p) => !usedPos.has(p.id) && p.netCents + n.netCents === 0
             );
             if (match) {
                 usedPos.add(match.id);
+                pairedIds.add(n.id);
+                pairedIds.add(match.id);
                 pairs++;
                 if (examples.length < 6) {
                     examples.push(
-                        `${docId.slice(0, 48)} ±${(Math.abs(n.totalCents) / 100).toFixed(2)}`
+                        `${docId.slice(0, 48)} imponibile ±${(Math.abs(n.netCents) / 100).toFixed(2)} (${n.source}↔${match.source})`
                     );
                 }
             }
         }
     }
 
-    // Orfani negativi di sistema (senza coppia): NON contano in C6 v1.1 — sono Eccezioni, non storni a coppia.
-    const orphanNeg = manual.filter(
-        (e) => e.totalCents < 0 && isSystemGenerated(e)
+    const orphanNeg = rows.filter(
+        (r) => r.netCents < 0 && r.system && !pairedIds.has(r.id)
     ).length;
 
     return {
         id: 'C6',
         name: 'Nessuno storno tecnico',
         formula:
-            'n° coppie importo uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)',
+            'n° coppie imponibile uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)',
         measured: pairs,
         expected: 0,
         delta: pairs,
         unit: 'rows',
         passed: pairs === 0,
-        detail: `coppie=${pairs}${examples.length ? ` · ${examples.join('; ')}` : ''} · negativi sistema senza coppia (non C6)=${orphanNeg} · spese=${manual.length}`,
+        detail: `coppie=${pairs}${examples.length ? ` · ${examples.join('; ')}` : ''} · negativi sistema senza coppia=${orphanNeg} · manual=${manual.length} · saas=${saas.length}`,
     };
 }
 

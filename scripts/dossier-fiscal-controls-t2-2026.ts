@@ -37,7 +37,7 @@ const AUGUST_BASELINE: Partial<
     C6: {
         measured: 6,
         unit: 'rows',
-        note: 'agosto v1.0: 6 autofatture negative; v1.1 conta solo COPPIE stesso id documento',
+        note: '6 coppie stesso id documento con imponibili opposti (manual↔saas; totali non opposti per IVA RC)',
     },
     C7: { measured: 12, unit: 'docs', note: 'documenti senza P.IVA/CF nel foglio Acquisti' },
     C10: { measured: 2, unit: 'rows', note: 'fallito su entrambi i gateway' },
@@ -71,8 +71,8 @@ async function main() {
     const out = {
         generatedAt: new Date().toISOString(),
         period: 'T2 2026',
-        method: 'docs/METODO_DOSSIER_FISCALE.md §5 (v1.1)',
-        methodVersion: '1.1',
+        method: 'docs/METODO_DOSSIER_FISCALE.md §5 — C6 su imponibile (semantica v1.2)',
+        methodVersion: '1.2-c6-imponibile',
         phase: 1,
         results: results.map((r) => ({
             id: r.id,

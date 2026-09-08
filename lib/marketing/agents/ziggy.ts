@@ -14,14 +14,16 @@ export const ZIGGY_PLATFORM_GUIDELINES: Record<string, SocialPlatformGuidelines>
       "Fermare lo scroll con un hook basato su verità emotiva o un piccolo gesto simbolico (es. 'Non sempre si può essere presenti').",
       "Evitare frasi sensazionalistiche, melodrammatiche o eccessivamente tristi.",
       "Preferire termini come 'presenza, vicinanza, ricordo, cura, stabilità, legame continuo'.",
+      "Ogni 3 giorni, valorizzare le testimonianze autentiche: citare un estratto da una delle 34 recensioni 5.0 ★ di Google Business Profile, usando esclusivamente il solo nome di battesimo (es. 'Mario', 'Silvia', 'Elena').",
       "Strutturare il testo in paragrafi brevi e scansionabili da mobile.",
       "Includere una Call to Action (CTA) sobria, focalizzata sull'aiutare o sul sollievo."
     ],
     imageRules: [
       "Stile 'Quiet Luxury': inquadratura editoriale, still life naturale, palette di colori desaturati (avorio, cipria, salvia, grigio pietra).",
       "Uso della luce naturale e diffusa, evitando contrasti forti o ombre dure.",
+      "Per il formato Quote Card: sfondo caldo sobrio (sfocato floreale/pietra), virgolettato della recensione, valutazione 5.0 ★★★★★ Google e firma con solo nome di battesimo.",
       "Mostrare composizioni reali nel loro contesto (es. appoggiate su legno invecchiato o pietra chiara).",
-      "Assolutamente vietati: scritte sovrimpresse, loghi, persone in posa, o estetica cupa da agenzia funebre."
+      "Assolutamente vietati: scritte sensazionalistiche, persone in posa, o estetica cupa da agenzia funebre."
     ],
     hashtagsCount: 5
   },
@@ -31,10 +33,12 @@ export const ZIGGY_PLATFORM_GUIDELINES: Record<string, SocialPlatformGuidelines>
     copyRules: [
       "Copy leggermente più disteso e narrativo rispetto a Instagram, focalizzato sul valore del ricordo continuo e sulla cura dei propri cari.",
       "Utilizzare storie semplici e comprensibili, stimolando una reazione emotiva pulita.",
-      "Rassicurare sull'affidabilità e sulla serietà del servizio."
+      "Ogni 3 giorni, inserire una prova sociale concreta: menzionare le 34 recensioni a 5.0 stelle su Google e l'esperienza vissuta da una famiglia (con solo nome di battesimo).",
+      "Rassicurare sull'affidabilità e sulla serietà del servizio, evidenziando la foto di avvenuta consegna su WhatsApp."
     ],
     imageRules: [
       "Immagini confortanti, calde e ad alta definizione.",
+      "Formato Quote Card con citazione sincera, 5 stelle oro e stile grafico pulito.",
       "Dettagli floreali morbidi, composizioni armoniose e stabilità visiva."
     ],
     hashtagsCount: 5

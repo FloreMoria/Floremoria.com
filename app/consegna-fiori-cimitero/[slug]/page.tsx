@@ -17,6 +17,7 @@ import {
 } from '@/lib/catalogProductOrder';
 import { getDeterministicWeather, getDeterministicDistance } from '@/utils/seo-enrichment';
 import Image from 'next/image';
+import GoogleSocialProofBadge from '@/components/GoogleSocialProofBadge';
 
 interface MunicipalityPageProps {
     params: Promise<{
@@ -105,7 +106,12 @@ export default async function MunicipalityPage({ params }: MunicipalityPageProps
                 <p className="text-xl md:text-2xl text-fm-rose font-medium tracking-tight opacity-90">
                     Servizio garantito a {comuneData.name} ({comuneData.province})
                 </p>
-                <p className="mt-6 max-w-2xl mx-auto text-fm-muted text-lg font-body leading-relaxed">
+
+                <div className="mt-5 flex justify-center">
+                    <GoogleSocialProofBadge variant="pill" />
+                </div>
+
+                <p className="mt-5 max-w-2xl mx-auto text-fm-muted text-lg font-body leading-relaxed">
                     {comuneData.description} Il nostro servizio ti permette di onorare e ricordare i tuoi cari con la massima comodità e rispetto.
                 </p>
                 

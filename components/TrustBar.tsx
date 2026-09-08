@@ -5,9 +5,9 @@ import React from 'react';
 
 const trustItems = [
   { icon: Leaf, text: 'Impegno Ecosostenibile' },
-  { icon: Camera, text: 'Foto via Whatsapp' },
+  { icon: Camera, text: 'Foto via WhatsApp' },
   { icon: Truck, text: 'Consegna gratuita' },
-  { icon: Star, text: '5.0 Google', fill: true },
+  { icon: Star, text: '5.0 ★ Google (34 recensioni)', fill: true, href: 'https://g.page/r/CYtHIOAB65TOEB0/review' },
   { icon: ShieldCheck, text: 'Garanzia di soddisfazione' },
 ];
 
@@ -34,14 +34,34 @@ export default function TrustBar({ compactBottom = false }: TrustBarProps) {
                   key={`${arrayIndex}-${index}`} 
                   className="flex items-center justify-center gap-3 w-[50vw] md:w-[33.33vw] lg:w-[25vw] xl:w-[20vw]"
                 >
-                  <Icon 
-                    className="w-5 h-5 text-fm-gold" 
-                    fill={item.fill ? "currentColor" : "none"} 
-                    strokeWidth={item.fill ? 0 : 1.5}
-                  />
-                  <span className="font-body text-[15px] md:text-base font-medium text-slate-700">
-                    {item.text}
-                  </span>
+                  {item.href ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
+                      <Icon 
+                        className="w-5 h-5 text-fm-gold shrink-0" 
+                        fill={item.fill ? "currentColor" : "none"} 
+                        strokeWidth={item.fill ? 0 : 1.5}
+                      />
+                      <span className="font-body text-[15px] md:text-base font-semibold text-slate-800 underline underline-offset-2">
+                        {item.text}
+                      </span>
+                    </a>
+                  ) : (
+                    <>
+                      <Icon 
+                        className="w-5 h-5 text-fm-gold shrink-0" 
+                        fill={item.fill ? "currentColor" : "none"} 
+                        strokeWidth={item.fill ? 0 : 1.5}
+                      />
+                      <span className="font-body text-[15px] md:text-base font-medium text-slate-700">
+                        {item.text}
+                      </span>
+                    </>
+                  )}
                 </div>
               );
             })}

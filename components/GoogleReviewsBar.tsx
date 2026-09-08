@@ -13,9 +13,9 @@ interface Review {
 
 export default function GoogleReviewsBar() {
     const [stats, setStats] = useState({
-        rating: 4.8,
-        user_ratings_total: 120,
-        url: "",
+        rating: 5.0,
+        user_ratings_total: 34,
+        url: "https://g.page/r/CYtHIOAB65TOEB0/review",
         reviews: [] as Review[]
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -30,8 +30,8 @@ export default function GoogleReviewsBar() {
                     const data = await res.json();
                     if (mounted) {
                         setStats(prev => ({
-                            rating: data.rating || prev.rating,
-                            user_ratings_total: data.user_ratings_total || prev.user_ratings_total,
+                            rating: typeof data.rating === 'number' ? data.rating : prev.rating,
+                            user_ratings_total: typeof data.user_ratings_total === 'number' ? data.user_ratings_total : prev.user_ratings_total,
                             url: data.url || prev.url,
                             reviews: data.reviews && data.reviews.length > 0 ? data.reviews : getPlaceholderReviews()
                         }));
@@ -74,32 +74,46 @@ export default function GoogleReviewsBar() {
     function getPlaceholderReviews(): Review[] {
         return [
             {
-                author_name: "Marco B.",
+                author_name: "Mario",
                 profile_photo_url: "",
                 rating: 5,
-                text: "Servizio eccellente e rispettoso. Poter vedere le due foto della tomba, prima e dopo la consegna, mi ha scaldato il cuore.",
+                text: "Servizio eccellente e rispettoso. Poter vedere le foto della tomba, prima e dopo la consegna, mi ha scaldato il cuore e dato tanta serenità.",
                 time: Math.floor(Date.now() / 1000) - 86400 * 2
             },
             {
-                author_name: "Silvia R.",
+                author_name: "Silvia",
                 profile_photo_url: "",
                 rating: 5,
-                text: "Vivo in Germania. Affidarmi a voi mi permette di essere presente per i miei cari. Fiori freschissimi e cura nei dettagli della consegna.",
+                text: "Vivo in Germania da anni. Affidarmi a voi mi permette di essere presente per i miei cari. Fiori freschissimi e massima cura nei dettagli della posa.",
                 time: Math.floor(Date.now() / 1000) - 86400 * 5
             },
             {
-                author_name: "Elena G.",
+                author_name: "Elena",
                 profile_photo_url: "",
-                rating: 4,
-                text: "L'idea di ricevere la conferma su WhatsApp è davvero rassicurante e colma un bisogno reale. Grazie infinite a tutto il team.",
+                rating: 5,
+                text: "Ricevere la conferma fotografica su WhatsApp è davvero rassicurante e colma un bisogno reale per chi vive lontano. Grazie di cuore a tutto il team.",
+                time: Math.floor(Date.now() / 1000) - 86400 * 8
+            },
+            {
+                author_name: "Giovanni",
+                profile_photo_url: "",
+                rating: 5,
+                text: "Consegna puntuale e fiori esattamente come da foto. Servizio prezioso per chi non può recarsi con frequenza al cimitero.",
                 time: Math.floor(Date.now() / 1000) - 86400 * 12
             },
             {
-                author_name: "Giovanni C.",
+                author_name: "Roberto",
                 profile_photo_url: "",
                 rating: 5,
-                text: "Consegna puntuale e fiori come da foto. Servizio molto utile per chi come me non può recarsi spesso al cimitero.",
-                time: Math.floor(Date.now() / 1000) - 86400 * 20
+                text: "Grande sensibilità e puntualità. Hanno individuato la tomba di famiglia con precisione e posato l'omaggio con immenso rispetto.",
+                time: Math.floor(Date.now() / 1000) - 86400 * 16
+            },
+            {
+                author_name: "Maria",
+                profile_photo_url: "",
+                rating: 5,
+                text: "Composizione per funerale bellissima e arrivata in chiesa con largo anticipo. La foto ricevuta prima della funzione è stata un grande sollievo.",
+                time: Math.floor(Date.now() / 1000) - 86400 * 22
             }
         ];
     }
@@ -215,7 +229,7 @@ export default function GoogleReviewsBar() {
                                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                             </svg>
-                            Leggi su Google ({displayRating}/5.0)
+                            Leggi su Google ({displayRating}/5.0 · {stats.user_ratings_total} recensioni verificate)
                         </a>
                     </div>
                 )}

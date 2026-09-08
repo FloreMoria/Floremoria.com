@@ -3,6 +3,7 @@ import React from 'react';
 import ProductGrid from '@/components/shared/ProductGrid';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 import AnimalBanner from '@/components/shared/AnimalBanner';
+import GoogleSocialProofBadge from '@/components/GoogleSocialProofBadge';
 import { CATALOG_SLUGS_FUNERALE, productsBySlugOrder } from '@/lib/catalogProductOrder';
 
 export const metadata: Metadata = {
@@ -17,9 +18,12 @@ export default function FuneralCatalogPage() {
     return (
         <div className="space-y-6 lg:space-y-10 pb-16">
             <section className="text-center space-y-4 max-w-3xl mx-auto">
-                <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-4 leading-tight">
+                <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-2 leading-tight">
                     Fiori per il funerale
                 </h1>
+                <div className="flex justify-center mb-3">
+                    <GoogleSocialProofBadge variant="pill" />
+                </div>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
                     Composizioni per funerali, camere ardenti e cerimonie. La consegna è fisica e a mano da fioristi partner locali in chiesa, crematorio o cimitero — mai tramite corriere. Ogni ordine funebre (catalogo FF) ha corsia di priorità urgente: posizionamento garantito con almeno 60-90 minuti di anticipo rispetto all&apos;inizio del rito o alla chiusura della camera ardente, con foto di conferma su WhatsApp al committente.
                 </p>

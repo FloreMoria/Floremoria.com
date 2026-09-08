@@ -19,6 +19,7 @@ import {
 } from '@/lib/floremPreDeliveryPhoto';
 import { canAddProductToCart } from '@/lib/floremCartCategory';
 import FloremCartCategoryModal from '@/components/FloremCartCategoryModal';
+import GoogleSocialProofBadge from '@/components/GoogleSocialProofBadge';
 
 interface ProductClientViewProps {
     product: Product;
@@ -400,13 +401,16 @@ export default function ProductClientView({ product, relatedProducts, initialCom
                         {backToCatalog.label}
                     </Link>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-gray-900 tracking-tight leading-tight">
                             {product.name}
                         </h1>
-                        <p className="text-2xl sm:text-3xl font-display font-semibold text-fm-gold tracking-tight transition-all duration-300">
-                            €{totalPrice.toFixed(2)}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-2xl sm:text-3xl font-display font-semibold text-fm-gold tracking-tight transition-all duration-300">
+                                €{totalPrice.toFixed(2)}
+                            </p>
+                            <GoogleSocialProofBadge variant="pill" className="w-fit" />
+                        </div>
                     </div>
 
                     {/* Gallery Reworked */}

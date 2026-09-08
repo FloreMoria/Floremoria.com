@@ -39,10 +39,16 @@ export function isReelDay(reference = new Date()): boolean {
   return getRomeDayIndex(reference) % 4 === 0;
 }
 
+/** Cadenza Quote Card / Testimonianza Google 5.0: ogni 3 giorni. */
+export function isQuoteCardDay(reference = new Date()): boolean {
+  return getRomeDayIndex(reference) % 3 === 0;
+}
+
 /**
  * Slot editoriali giornalieri FloreMoria:
  * - Ogni giorno: story IG, story FB
  * - Ogni 2 giorni: post IG, FB, LinkedIn, TikTok, Pinterest
+ * - Ogni 3 giorni: focus Quote Card / Testimonianza Reale Google (5.0 ★)
  * - Ogni 4 giorni: reel IG, FB, TikTok + YouTube Shorts
  */
 export function getDailyPublishSlots(reference = new Date()): PublishSlot[] {
@@ -144,6 +150,11 @@ export async function getActiveTheme(referenceDate = new Date()): Promise<string
   // 15 Marzo - 22 Marzo: Festa del Papà
   if (month === 2 && day >= 15 && day <= 22) {
     return 'Festa del Papà - Guida silenziosa, forza del ricordo, rispetto e gratitudine per la figura paterna.';
+  }
+
+  // Cadenza ogni 3 giorni: Testimonianze Reali e Riprova Sociale Google (5.0 ★)
+  if (isQuoteCardDay(referenceDate)) {
+    return 'Testimonianza Verificata Google (5.0 ★) - Quote Card visiva ad alto impatto emotivo: estratto autentico da recensione reale su Google Business Profile, firma con solo nome di battesimo, rassicurazione sul sollievo di aver affidato il ricordo o il funerale con discrezione e foto su WhatsApp.';
   }
 
   return 'Identitario FloreMoria - Stile Quiet Luxury, sobria eleganza, vicinanza e presenza concreta da lontano per onorare la memoria.';

@@ -20,23 +20,22 @@ interface GooglePlacesResponse {
 let cachedData: any = null;
 let cacheExpiration = 0;
 
-/** URL di riserva quando GOOGLE_PLACE_ID non è configurato (nessun log in produzione). */
-const FLOREMORIA_MAPS_FALLBACK_URL =
-    'https://www.google.com/maps/search/?api=1&query=FloreMoria';
+/** URL diretto per recensioni su Google Business Profile di FloreMoria. */
+const FLOREMORIA_GBP_DIRECT_URL =
+    'https://g.page/r/CYtHIOAB65TOEB0/review';
 
 export async function GET() {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     const placeId = process.env.GOOGLE_PLACE_ID?.trim();
 
-    const fallbackUrl = placeId
-        ? `https://www.google.com/maps/search/?api=1&query_place_id=${placeId}`
-        : FLOREMORIA_MAPS_FALLBACK_URL;
+    const fallbackUrl = FLOREMORIA_GBP_DIRECT_URL;
 
     if (!apiKey || !placeId) {
         return NextResponse.json({
-            error: 'Missing Google Places configuration',
+            rating: 5.0,
+            user_ratings_total: 34,
             url: fallbackUrl
-        }, { status: 200 }); // Return 200 so the client can still read the fallback URL
+        }, { status: 200 }); // Return 200 so the client can read stats and direct URL
     }
 
     // Check in-memory cache

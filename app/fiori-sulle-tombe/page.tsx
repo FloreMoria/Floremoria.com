@@ -2,6 +2,7 @@ import ProductGrid from '@/components/shared/ProductGrid';
 import { CATALOG_SLUGS_CIMITERO, productsBySlugOrder } from '@/lib/catalogProductOrder';
 import MunicipalitySearch from '@/components/MunicipalitySearch';
 import AnimalBanner from '@/components/shared/AnimalBanner';
+import GoogleSocialProofBadge from '@/components/GoogleSocialProofBadge';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,9 +16,12 @@ export default function CatalogPage() {
     return (
         <div className="space-y-6 lg:space-y-10">
             <section className="text-center space-y-4 max-w-3xl mx-auto">
-                <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-4 leading-tight">
+                <h1 className="text-4xl md:text-[40px] font-display font-bold text-fm-text mb-2 leading-tight">
                     Fiori sulle tombe
                 </h1>
+                <div className="flex justify-center mb-3">
+                    <GoogleSocialProofBadge variant="pill" />
+                </div>
                 <p className="text-lg text-fm-muted font-body leading-relaxed">
                     Scegli tra le nostre composizioni floreali per onorare la memoria dei tuoi cari. La consegna è eseguita a mano da fioristi partner nelle immediate vicinanze del cimitero — non tramite pacco postale. Se non conosci il loculo, la ricerca sui registri cimiteriali comunali è inclusa nel servizio.
                 </p>

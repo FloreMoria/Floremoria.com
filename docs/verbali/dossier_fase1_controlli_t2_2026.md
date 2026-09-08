@@ -1,87 +1,53 @@
-# Verbale — Dossier Fiscale Fase 1: controlli T2 2026
+# Verbale — Dossier Fiscale Fase 1 (METODO v1.1) — STOP su C6
 
-**Generato:** 2026-09-08T13:18:16.874Z
-**Spec:** `docs/METODO_DOSSIER_FISCALE.md` §5
+**Generato:** 2026-09-08  
+**Spec:** `docs/METODO_DOSSIER_FISCALE.md` **v1.1** §5  
 **Ambito:** sola verifica — nessun cambiamento a dati o generatore XLSX
 
-## Esito controlli
+---
 
-| ID | Controllo | Misurato | Atteso | Scostamento | Esito |
-|----|-----------|----------|--------|-------------|-------|
-| C1 | Completezza banca | 19 | 0 | 19 | **FAIL** |
-| C2 | Quadratura banca | 387,90 € | 0,00 € | 387,90 € | **FAIL** |
-| C3 | Continuità saldo | 0,00 € | 0,00 € | 0,00 € | OK |
-| C4 | Incassi e corrispettivi | 1699,90 € | 0,00 € | 1699,90 € | **FAIL** |
-| C5 | Coerenza documenti | 18,40 € | 0,00 € | 18,40 € | **FAIL** |
-| C6 | Nessuna riga tecnica | 6 | 0 | 6 | **FAIL** |
-| C7 | Identificazione fornitori | 12 | 0 | 12 | **FAIL** |
-| C8 | Mastri ammessi | 0 | 0 | 0 | OK |
-| C9 | Partite di giro | 10 | 0 | 10 | **FAIL** |
-| C10 | Doppia gamba transito | 2 | 0 | 2 | **FAIL** |
+## STOP — C6 ≠ 6
 
-### Dettaglio
+Con la formulazione **v1.1**, C6 misura:
 
-#### C1 — Completezza banca
+> numero **coppie** di righe di importo uguale e opposto, stesso identificativo di documento, generate dal sistema (mai rimborsi / note di credito)
 
-- Formula: n° estratto conto − n° Prima Nota canale banca
-- estratto=72 · PN banca=53
+| | Valore |
+|--|--------|
+| **C6 misurato oggi** | **0** coppie |
+| Atteso da baseline agosto (e da te) | **6** |
+| Negativi di sistema **senza** coppia sullo stesso id documento | **6** (Cursor×2, Anthropic×2, Stripe Tax, Apple) |
 
-#### C2 — Quadratura banca
+Quei 6 erano le «righe tecniche negative» del dossier agosto / v1.0. Sotto v1.1 **non sono coppie di storno**: ogni riga ha il proprio `documentNumber`/`fileName`, non esiste la gamba positiva con lo stesso identificativo e importo opposto. Restano candidati al foglio Eccezioni, non a C6.
 
-- Formula: Σ Prima Nota − (entrate − uscite estratto)
-- Σ PN=363.64 · net estratto=-24.26 (E 1291.54 − U 1315.80)
+**Non proseguo** (né Fase 2) finché non mi dici come trattare questo scostamento:
+1. la baseline «6» va riletta come i 6 orfani (fuori da C6), e C6=0 è corretto; oppure
+2. va ampliata la definizione operativa di «stesso identificativo» / «generata dal sistema».
 
-#### C3 — Continuità saldo
+---
 
-- Formula: saldo iniziale + Σ movimenti − saldo finale
-- doc=2 Trimestre Fineco 2026.pdf · open=32442.24 · Σ=-24.26 · close=32417.98 · nLinee=72
+## Esito degli altri controlli (invariati rispetto a prima)
 
-#### C4 — Incassi e corrispettivi
+| ID | Misurato | Atteso | Esito |
+|----|----------|--------|-------|
+| C1 | **19** | 0 | FAIL |
+| C2 | **€ 387,90** | 0 | FAIL |
+| C3 | € 0,00 | 0 | OK |
+| C4 | € 1.699,90 | 0 | FAIL |
+| C5 | € 18,40 | 0 | FAIL |
+| C6 | **0** (v1.1) | 0 formula / **6** baseline ago | vedi STOP |
+| C7 | **12** | 0 | FAIL |
+| C8 | 0 | 0 | OK |
+| C9 | 10 | 0 | FAIL |
+| C10 | fail ×2 | 0 | FAIL |
 
-- Formula: Σ incassi clienti gateway − totale registro corrispettivi
-- gateway=1997.24 (Stripe charges/payments 1524.86 + PayPal) · corrispettivi report=297.34 · nCorrispettivi=8
+C1, C2, C7, C10 restano allineati alla lettura agosto. Solo C6 cambia per effetto della v1.1.
 
-#### C5 — Coerenza documenti
-
-- Formula: Σ(imponibile + IVA) − Σ totali documento
-- manual=33 · saas=6 · parti=843.99 · totali=825.59
-
-#### C6 — Nessuna riga tecnica
-
-- Formula: n° righe negative che stornano positiva stesso documento
-- negative rilevate=6 · Cursor -17.75; Cursor -17.75; Stripe Payments Europe -3.14; Apple -0.81; Anthropic, PBC -18.00; Anthropic, PBC -18.00 · spese=33
-
-#### C7 — Identificazione fornitori
-
-- Formula: n° documenti senza P.IVA o CF
-- esempi: Cursor; Cursor; Stripe Payments Europe; Apple; Anthropic, PBC…
-
-#### C8 — Mastri ammessi
-
-- Formula: n° righe con mastro fuori elenco chiuso §6.1
-- tutte le 53 righe PN in elenco chiuso (dopo normalizzazione legacy)
-
-#### C9 — Partite di giro
-
-- Formula: n° movimenti di transito classificati come ricavo o costo
-- righe ledger T2 ispezionate=246
-
-#### C10 — Doppia gamba transito
-
-- Formula: per gateway: Σ dare − Σ avere − saldo wallet dichiarato
-- FALLITO su entrambi i gateway (atteso in Fase 1: gamba dare mai scritta / saldo PayPal n/d)
-  - **STRIPE**: measured=n/d · FAIL — ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_*********************************************************************************************TDkPvR
-  - **PAYPAL**: measured=-593,01 € · FAIL — ledger dare−avere=-593.01 · wallet dich.=n/d · Ledger transit (10200 - Banca c/o PayPal / 10200 - Conto PayPal) — saldo API PayPal non wireato; baseline solo ledger · FALLITO: saldo wallet PayPal non dichiarato (API non collegata) e/o gamba dare incompleta
-
-## Confronto con baseline dossier agosto
-
-Valori attesi dal file consegnato ad agosto: **C1 = 19** · **C2 = € 387,90** · **C6 = 6** · **C7 = 12** · **C10 fallito su entrambi**.
-
-**Allineato alla baseline agosto** sui controlli chiave.
+---
 
 ## File
 
-- `lib/financial/dossierFiscalControls.ts`
+- `docs/METODO_DOSSIER_FISCALE.md` (v1.1)
+- `lib/financial/dossierFiscalControls.ts` (C6 riscritto)
 - `scripts/dossier-fiscal-controls-t2-2026.ts`
 - `docs/verbali/dossier_fase1_controlli_t2_2026.json`
-- `docs/METODO_DOSSIER_FISCALE.md` (specifica, committata in questo giro)

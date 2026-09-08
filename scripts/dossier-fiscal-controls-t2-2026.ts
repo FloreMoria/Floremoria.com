@@ -34,7 +34,11 @@ const AUGUST_BASELINE: Partial<
 > = {
     C1: { measured: 19, unit: 'rows', note: 'estratto 72 − PN Fineco 53' },
     C2: { measured: 38790, unit: 'cents', note: 'Σ PN 363,64 − net estratto −24,26' },
-    C6: { measured: 6, unit: 'rows', note: 'autofatture con riga tecnica negativa' },
+    C6: {
+        measured: 6,
+        unit: 'rows',
+        note: 'agosto v1.0: 6 autofatture negative; v1.1 conta solo COPPIE stesso id documento',
+    },
     C7: { measured: 12, unit: 'docs', note: 'documenti senza P.IVA/CF nel foglio Acquisti' },
     C10: { measured: 2, unit: 'rows', note: 'fallito su entrambi i gateway' },
 };
@@ -67,7 +71,8 @@ async function main() {
     const out = {
         generatedAt: new Date().toISOString(),
         period: 'T2 2026',
-        method: 'docs/METODO_DOSSIER_FISCALE.md §5',
+        method: 'docs/METODO_DOSSIER_FISCALE.md §5 (v1.1)',
+        methodVersion: '1.1',
         phase: 1,
         results: results.map((r) => ({
             id: r.id,

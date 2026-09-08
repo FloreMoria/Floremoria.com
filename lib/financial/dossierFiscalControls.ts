@@ -386,8 +386,11 @@ export async function controlC5(year: number, quarter: TaxQuarter): Promise<Doss
 }
 
 /**
- * C6 — Nessuna riga tecnica
- * Formula: n° righe con importo negativo che stornano una riga positiva dello stesso documento → 0
+ * C6 — Nessuno storno tecnico (METODO v1.1 §5)
+ * Formula: n° **coppie** di righe di importo uguale e opposto, stesso identificativo
+ * di documento, generate dal sistema → atteso 0.
+ *
+ * Non conta mai rimborsi clienti né note di credito (fatti esterni con id proprio).
  */
 export async function controlC6(year: number, quarter: TaxQuarter): Promise<DossierControlResult> {
     const bounds = resolveQuarterBounds(year, quarter);
@@ -399,61 +402,98 @@ export async function controlC6(year: number, quarter: TaxQuarter): Promise<Doss
             totalCents: true,
             metadataJson: true,
             fileName: true,
+            canonicalDocKey: true,
+            description: true,
         },
     });
 
-    /**
-     * Spec §5: negative che stornano una positiva dello stesso documento.
-     * Nel T2 agosto le 6 righe erano autofatture TD17 a totale negativo (Cursor,
-     * Anthropic, Stripe Tax, Apple): in Neon non c’è la gamba positiva con la stessa
-     * chiave documento. Si contano: (a) negative con controparte positiva stesso
-     * fornitore+importo; (b) autofattura/reverse-charge a totale < 0 (caso agosto).
-     */
-    const byVendorAmt = new Map<string, { pos: number; negIds: string[] }>();
-    for (const e of manual) {
-        const key = `${String(e.vendorName || '').toUpperCase()}|${Math.abs(e.totalCents)}`;
-        if (!byVendorAmt.has(key)) byVendorAmt.set(key, { pos: 0, negIds: [] });
-        const g = byVendorAmt.get(key)!;
-        if (e.totalCents > 0) g.pos++;
-        else if (e.totalCents < 0) g.negIds.push(e.id);
-    }
-    const paired = new Set<string>();
-    for (const g of byVendorAmt.values()) {
-        if (g.pos > 0) for (const id of g.negIds) paired.add(id);
+    function documentIdentity(e: (typeof manual)[0]): string {
+        const meta = (e.metadataJson || {}) as Record<string, unknown>;
+        if (e.canonicalDocKey) return `CANON:${e.canonicalDocKey}`;
+        const inv =
+            (typeof meta.invoiceNumber === 'string' && meta.invoiceNumber) ||
+            (typeof meta.documentNumber === 'string' && meta.documentNumber) ||
+            (typeof meta.foreignInvoiceNumber === 'string' && meta.foreignInvoiceNumber) ||
+            (typeof meta.number === 'string' && meta.number) ||
+            '';
+        if (inv) return `INV:${String(e.vendorName || '').toUpperCase()}|${inv}`;
+        if (e.fileName) return `FILE:${String(e.vendorName || '').toUpperCase()}|${e.fileName}`;
+        return `ID:${e.id}`;
     }
 
-    let techRows = 0;
-    const examples: string[] = [];
-    for (const e of manual) {
-        if (e.totalCents >= 0) continue;
+    /** Artefatto di sistema (non rimborso cliente / non NC esterna). */
+    function isSystemGenerated(e: (typeof manual)[0]): boolean {
         const meta = (e.metadataJson || {}) as Record<string, unknown>;
-        const isAutofattura =
+        const blob = `${e.description || ''} ${e.fileName || ''} ${JSON.stringify(meta)}`.toLowerCase();
+        // Esclusione esplicita: rimborsi / note di credito cliente
+        if (
+            /rimborso|refund|nota di credito|credit.?note|storno cliente|customer.?refund/.test(blob)
+        ) {
+            return false;
+        }
+        // Inclusione: autofattura generata / sync sistema / sanitize
+        if (
             meta.source === 'SDI_AUTOFATTURA_ESTERA' ||
             meta.source === 'AUTOFATTURA_TD17' ||
             meta.source === 'AUTOFATTURA_TD18' ||
-            meta.isReverseCharge === true ||
             meta.isForeignAutofattura === true ||
-            /autofattura|td17|td18|cursor|anthropic|stripe tax|apple/i.test(
-                `${e.vendorName} ${e.fileName || ''} ${JSON.stringify(meta)}`
+            meta.isReverseCharge === true ||
+            typeof meta.saasForeignInvoiceId === 'string' ||
+            typeof meta.sanitizeReason === 'string' ||
+            meta.origin === 'system' ||
+            meta.generatedBy === 'system'
+        ) {
+            return true;
+        }
+        // Default prudente: senza segnali di sistema non è storno tecnico C6
+        return false;
+    }
+
+    const byDoc = new Map<string, typeof manual>();
+    for (const e of manual) {
+        const k = documentIdentity(e);
+        if (!byDoc.has(k)) byDoc.set(k, []);
+        byDoc.get(k)!.push(e);
+    }
+
+    let pairs = 0;
+    const examples: string[] = [];
+    for (const [docId, rows] of byDoc) {
+        const pos = rows.filter((r) => r.totalCents > 0 && isSystemGenerated(r));
+        const neg = rows.filter((r) => r.totalCents < 0 && isSystemGenerated(r));
+        const usedPos = new Set<string>();
+        for (const n of neg) {
+            const match = pos.find(
+                (p) => !usedPos.has(p.id) && p.totalCents + n.totalCents === 0
             );
-        if (paired.has(e.id) || isAutofattura) {
-            techRows++;
-            if (examples.length < 6) {
-                examples.push(`${e.vendorName} ${(e.totalCents / 100).toFixed(2)}`);
+            if (match) {
+                usedPos.add(match.id);
+                pairs++;
+                if (examples.length < 6) {
+                    examples.push(
+                        `${docId.slice(0, 48)} ±${(Math.abs(n.totalCents) / 100).toFixed(2)}`
+                    );
+                }
             }
         }
     }
 
+    // Orfani negativi di sistema (senza coppia): NON contano in C6 v1.1 — sono Eccezioni, non storni a coppia.
+    const orphanNeg = manual.filter(
+        (e) => e.totalCents < 0 && isSystemGenerated(e)
+    ).length;
+
     return {
         id: 'C6',
-        name: 'Nessuna riga tecnica',
-        formula: 'n° righe negative che stornano positiva stesso documento',
-        measured: techRows,
+        name: 'Nessuno storno tecnico',
+        formula:
+            'n° coppie importo uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)',
+        measured: pairs,
         expected: 0,
-        delta: techRows,
+        delta: pairs,
         unit: 'rows',
-        passed: techRows === 0,
-        detail: `negative rilevate=${techRows}${examples.length ? ` · ${examples.join('; ')}` : ''} · spese=${manual.length}`,
+        passed: pairs === 0,
+        detail: `coppie=${pairs}${examples.length ? ` · ${examples.join('; ')}` : ''} · negativi sistema senza coppia (non C6)=${orphanNeg} · spese=${manual.length}`,
     };
 }
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T13:18:16.874Z",
+  "generatedAt": "2026-09-08T13:24:04.597Z",
   "period": "T2 2026",
   "method": "docs/METODO_DOSSIER_FISCALE.md §5",
   "phase": 1,
@@ -76,17 +76,17 @@
     },
     {
       "id": "C6",
-      "name": "Nessuna riga tecnica",
-      "formula": "n° righe negative che stornano positiva stesso documento",
-      "measured": 6,
-      "measuredDisplay": "6",
+      "name": "Nessuno storno tecnico",
+      "formula": "n° coppie importo uguale/opposto, stesso id documento, generate dal sistema (no rimborsi)",
+      "measured": 0,
+      "measuredDisplay": "0",
       "expected": 0,
       "expectedDisplay": "0",
-      "delta": 6,
-      "deltaDisplay": "6",
+      "delta": 0,
+      "deltaDisplay": "0",
       "unit": "rows",
-      "passed": false,
-      "detail": "negative rilevate=6 · Cursor -17.75; Cursor -17.75; Stripe Payments Europe -3.14; Apple -0.81; Anthropic, PBC -18.00; Anthropic, PBC -18.00 · spese=33"
+      "passed": true,
+      "detail": "coppie=0 · negativi sistema senza coppia (non C6)=6 · spese=33"
     },
     {
       "id": "C7",
@@ -149,7 +149,7 @@
           "measured": null,
           "expected": 0,
           "passed": false,
-          "detail": "ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_*********************************************************************************************TDkPvR"
+          "detail": "ledger dare−avere=-2995.42 · wallet dich.=n/d · Expired API Key provided: sk_test_***********************************************************************************************kPvR"
         },
         {
           "gateway": "PAYPAL",
@@ -162,7 +162,9 @@
     }
   ],
   "augustBaselineCheck": {
-    "ok": true,
-    "mismatches": []
+    "ok": false,
+    "mismatches": [
+      "C6: agosto=6 (agosto v1.0: 6 autofatture negative; v1.1 conta solo COPPIE stesso id documento) · oggi=0 · coppie=0 · negativi sistema senza coppia (non C6)=6 · spese=33"
+    ]
   }
 }

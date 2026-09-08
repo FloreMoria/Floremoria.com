@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.0 — 8 settembre 2026.
+Versione 1.1 — 8 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -32,14 +32,26 @@ e senza logiche di preferenza nascoste nel codice.
 
 | # | Fonte | È verità su | Formato accettato |
 |---|---|---|---|
-| 1 | Estratto conto bancario | la cassa: cosa è entrato e uscito, e quando | solo PDF ufficiale con saldo iniziale e finale |
+| 1 | Estratto conto bancario | la cassa: cosa è entrato e uscito, e quando | qualsiasi file scaricato dal portale della banca (PDF, CSV, XLS) che riporti saldo iniziale e finale |
 | 2 | Report gateway (Stripe, PayPal) | gli incassi dai clienti e le commissioni | export ufficiale del gateway |
 | 3 | Fatture, autofatture, corrispettivi | i documenti fiscali e l'IVA | XML SDI, PDF |
 | 4 | Ordini del gestionale | il fatto commerciale: chi ha comprato cosa | database interno |
 
-**Regola sugli estratti conto**: un estratto incollato a mano, senza saldo iniziale e
-finale, non è una fonte. Il sistema lo rifiuta in ingresso. Non si può riconciliare un
-elenco di movimenti che non dichiara da dove parte e dove arriva.
+**Regola sugli estratti conto.** Il vincolo non è sul formato ma su due condizioni, entrambe
+necessarie:
+
+1. **Il file è stato scaricato dal portale della banca.** PDF, CSV o XLS sono equivalenti.
+   Testo incollato a mano in un foglio non è ammesso in nessun caso: non è verificabile da
+   dove viene, e un file di cui non si conosce la provenienza non può essere una fonte di
+   verità.
+2. **Il file riporta il saldo iniziale e il saldo finale dichiarati dalla banca.** Non
+   calcolati da noi. Sono i due estremi che rendono possibile il controllo C3: senza,
+   l'estratto è un elenco di movimenti che non dice da dove parte né dove arriva, e
+   nessuna riconciliazione è possibile.
+
+Un file che non soddisfa entrambe le condizioni viene rifiutato in ingresso, con il motivo
+scritto. Il sistema registra per ogni estratto: nome del file, data di download, periodo
+coperto, saldo iniziale e finale letti.
 
 ---
 
@@ -80,12 +92,20 @@ al foglio Eccezioni. Non si nasconde, non si arrotonda, non si mette in fondo.
 | IVA a debito | foglio 1 |
 | Imponibile acquisti per aliquota | foglio 4, solo fatture italiane |
 | IVA a credito | foglio 4 |
-| IVA reverse charge (autofatture) | foglio 4, dichiarata a parte |
-| **Saldo del periodo** | debito meno credito |
+| IVA reverse charge — a debito | foglio 4, autofatture |
+| IVA reverse charge — a credito | foglio 4, autofatture (stesso importo) |
+| **Saldo del periodo** | totale debito meno totale credito |
 
-L'IVA delle autofatture estere **non entra nel saldo**: nel reverse charge la stessa
-imposta sta contemporaneamente a debito e a credito. Va comunque esposta, come voce
-separata, perché il commercialista deve vederla nei registri.
+**Sul reverse charge.** L'IVA delle autofatture estere entra nel calcolo **due volte**: una
+riga a debito e una riga a credito, dello stesso importo. L'effetto sul saldo è nullo, ma le
+due righe devono comparire entrambe, perché nei registri IVA quell'imposta esiste su entrambi
+i lati — registro acquisti e registro vendite — e da lì passa nei quadri della dichiarazione.
+Esporla come una nota fuori dal calcolo, come faceva la versione 1.0 di questo metodo, dà un
+saldo giusto ma registri formalmente incompleti.
+
+Il foglio 0 riporta quindi due totali distinti: **IVA a debito complessiva** (vendite +
+reverse charge) e **IVA a credito complessiva** (acquisti + reverse charge), e il saldo è la
+loro differenza.
 
 ### 4.3 Raccordo finanziario
 | Voce |
@@ -115,11 +135,18 @@ del dossier e il loro esito è scritto nel foglio 0.
 | C3 | Continuità saldo | saldo iniziale + Σ movimenti − saldo finale dichiarato | 0 |
 | C4 | Incassi e corrispettivi | somma incassi clienti dai gateway − totale registro corrispettivi | 0 |
 | C5 | Coerenza documenti | somma imponibili + IVA − somma totali documento | 0 |
-| C6 | Nessuna riga tecnica | numero righe con importo negativo che stornano una riga positiva dello stesso documento | 0 |
+| C6 | Nessuno storno tecnico | numero coppie di righe di importo uguale e opposto riferite allo **stesso identificativo di documento**, generate dal sistema | 0 |
 | C7 | Identificazione fornitori | numero documenti senza partita IVA o codice fiscale | 0 |
 | C8 | Mastri ammessi | numero righe con mastro fuori dall'elenco chiuso | 0 |
 | C9 | Partite di giro | numero movimenti di transito classificati come ricavo o costo | 0 |
 | C10 | Doppia gamba transito | per ogni gateway: somma dare − somma avere − saldo wallet dichiarato | 0 |
+
+**C6 non deve mai intercettare un rimborso a un cliente né una nota di credito.** Il
+discriminante è preciso: una riga è uno storno tecnico solo se ha lo stesso identificativo di
+documento della riga che annulla, importo esattamente opposto, ed è stata generata dal sistema
+e non da un fatto esterno. Un rimborso a un cliente ha un proprio identificativo, una propria
+data e nasce da un evento reale: è un fatto economico, non un artefatto. Se il controllo
+segnala un rimborso, è il controllo a essere scritto male.
 
 **C1 è il controllo che il dossier di agosto non aveva**, ed è quello che ha lasciato
 passare 19 movimenti bancari per € 387,90 — tutti costi.
@@ -207,7 +234,14 @@ listino` · `Sconto o buono` · `Incassato lordo` · `Aliquota` · `Imponibile` 
 
 Regole:
 - l'aliquota viene dai prodotti dell'ordine, non da un valore fisso;
-- i rimborsi sono righe negative, non righe cancellate;
+- i rimborsi sono righe negative, mai righe cancellate, e devono riportare il **numero
+  dell'ordine originario** e la data dell'incasso che stornano;
+- se l'ordine originario appartiene a un periodo IVA **già liquidato**, la riga va **anche**
+  nel foglio Eccezioni con la dicitura "rimborso su periodo chiuso": il trattamento fiscale
+  (variazione in diminuzione, rettifica dei corrispettivi, o altro) dipende da come sono
+  certificate le nostre vendite, ed è una decisione del commercialista. **Il sistema segnala
+  il caso e non lo classifica**: non deve mai scrivere da sé "nota di credito" né decidere
+  quale norma applicare;
 - `Incassato lordo` deve coincidere con l'importo che il gateway dichiara: è la chiave
   con cui il commercialista ritrova il movimento;
 - se un incasso del gateway non trova l'ordine corrispondente, non si esclude e non si
@@ -240,7 +274,30 @@ difficili.
 
 ---
 
-## 11. Denominazione e tracciabilità
+## 11. Periodo, competenza e cassa
+
+Il dossier ha **due orizzonti** e non vanno confusi, perché seguono regole diverse.
+
+| | Dossier trimestrale | Dossier annuale |
+|---|---|---|
+| Serve per | liquidazione IVA e LIPE | bilancio e dichiarazione dei redditi |
+| Criterio | data del documento e data dell'incasso | competenza economica |
+| Rettifiche | nessuna | risconti, fatture da ricevere, costi e ricavi di altri esercizi |
+
+Il dossier trimestrale espone i fatti come sono avvenuti nel periodo, senza rettifiche.
+
+Il dossier annuale espone **in un blocco separato e dichiarato** le rettifiche di competenza:
+ricavi incassati per prestazioni non ancora rese, costi di esercizi precedenti pagati
+nell'anno, prestazioni ricevute e non ancora fatturate. Ogni rettifica riporta l'importo, il
+periodo di destinazione e il motivo.
+
+**Regola**: una rettifica di competenza non modifica mai le righe originali. Si aggiunge come
+riga di rettifica, con il riferimento alla riga che rettifica. Chi legge deve poter vedere sia
+il dato di cassa sia quello di competenza, e capire come si passa dall'uno all'altro.
+
+---
+
+## 12. Denominazione e tracciabilità
 
 Nome file: `Dossier_Fiscale_FloreMoria_<anno>_<periodo>_v<n>.xlsx`
 
@@ -250,3 +307,33 @@ applicata, periodo coperto, e l'elenco delle fonti usate con il loro identificat
 
 Due dossier generati in momenti diversi sugli stessi dati devono dare gli stessi numeri.
 Se non lo fanno, c'è una funzione che modifica i dati mentre li legge.
+
+**Versionamento del metodo.** Quando questo documento cambia, la versione riportata in cima
+sale e il foglio 0 di ogni dossier successivo dichiara quale versione ha applicato. Due
+dossier costruiti con versioni diverse del metodo non sono confrontabili riga per riga, e chi
+li confronta deve poterlo sapere senza indovinarlo. Le modifiche al metodo si annotano in
+fondo a questo file, con data e motivo.
+
+
+---
+
+## Registro delle modifiche
+
+**1.1 — 8 settembre 2026**
+- §2 — il vincolo sugli estratti conto passa dal formato alla provenienza: ammesso qualsiasi
+  file scaricato dal portale della banca purché riporti i saldi dichiarati dalla banca;
+  resta vietato il testo incollato a mano.
+- §4.2 — l'IVA delle autofatture in reverse charge entra nel calcolo su entrambi i lati
+  invece di essere esposta fuori dal saldo: effetto nullo sul saldo, registri completi.
+- §5 — C6 riformulato per non intercettare rimborsi e note di credito, che sono fatti
+  economici e non artefatti del sistema.
+- §8 — i rimborsi riportano l'ordine originario; quelli su periodi IVA già liquidati vanno
+  in Eccezioni senza che il sistema ne decida il trattamento fiscale.
+- §11 — nuova sezione sulla distinzione fra dossier trimestrale (cassa, IVA) e annuale
+  (competenza, bilancio).
+- §12 — versionamento del metodo dichiarato nel foglio 0 di ogni dossier.
+
+**1.0 — 8 settembre 2026**
+- Prima stesura, a seguito dell'analisi del dossier T2 2026 che presentava 19 movimenti
+  bancari mancanti per € 387,90, nessun registro dei corrispettivi, 6 righe tecniche di
+  storno e un totale di canale non omogeneo.

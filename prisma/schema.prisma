@@ -325,7 +325,9 @@ model Product {
   vatRatePercent   Int?           @map("vat_rate_percent")
   /**
    * Costo standard fiorista in centesimi EUR (parametro aziendale, non stima).
-   * Usi: incarico, margine, fattura da ricevere (METODO §6.4).
+   * Convenzione (METODO §6.4): `null` = non compilato; `0` = confermato gratis
+   * (il fiorista non addebita la voce). Non collassare i due casi.
+   * Usi: incarico, margine, fattura da ricevere.
    */
   floristStandardCostCents Int?   @map("florist_standard_cost_cents")
   orderItems       OrderItem[]

@@ -1,0 +1,341 @@
+{
+  "punto1": {
+    "channels": {
+      "report": "Report_Fatture_ricevute_*.xlsx → ManualFinanceExpense source=SDI_XLSX",
+      "youdox": "YouDOX sync → ManualFinanceExpense source=SDI_XML"
+    },
+    "bySource": {
+      "SDI_XLSX": 50,
+      "SDI_XML": 15,
+      "SDI_AUTOFATTURA_ESTERA": 29,
+      "UNKNOWN": 7,
+      "AUTOFATTURA_TD17": 1
+    },
+    "reportUnique2026": 61,
+    "youdoxSdiXml2026": 15,
+    "overlapCount": 13,
+    "overlapTotaleDocumentoEuro": 623,
+    "overlapImponibileEuro": 568.16,
+    "overlaps": [
+      {
+        "date": "2026-08-19",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "docNum": "19/2026",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-08-03",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "docNum": "17/2026",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-07-31",
+        "vendor": "Battistella Fioreria srl",
+        "docNum": "235",
+        "reportTotaleEuro": 140,
+        "reportImponibileEuro": 127.27,
+        "youdoxTotaleEuro": 140
+      },
+      {
+        "date": "2026-07-22",
+        "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+        "docNum": "11",
+        "reportTotaleEuro": 30,
+        "reportImponibileEuro": 27.27,
+        "youdoxTotaleEuro": 30
+      },
+      {
+        "date": "2026-07-30",
+        "vendor": "CINGOLANI ANTONELLA",
+        "docNum": "35",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 20,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-07-26",
+        "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+        "docNum": "00426000153",
+        "reportTotaleEuro": 133,
+        "reportImponibileEuro": 120.91,
+        "youdoxTotaleEuro": 133
+      },
+      {
+        "date": "2026-07-22",
+        "vendor": "LA BAITA DEL FIORE S.N.C.",
+        "docNum": "46",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-07-07",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "docNum": "14/2026",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-03-24",
+        "vendor": "FIORERIA ROSE E TULIPANI DI CECCOTTI DANTE",
+        "docNum": "5",
+        "reportTotaleEuro": 22,
+        "reportImponibileEuro": 20,
+        "youdoxTotaleEuro": 22
+      },
+      {
+        "date": "2026-02-23",
+        "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+        "docNum": "28",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-02-06",
+        "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+        "docNum": "18",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-09-03",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "docNum": "20/2026",
+        "reportTotaleEuro": 20,
+        "reportImponibileEuro": 18.18,
+        "youdoxTotaleEuro": 20
+      },
+      {
+        "date": "2026-08-31",
+        "vendor": "Battistella Fioreria srl",
+        "docNum": "253",
+        "reportTotaleEuro": 138,
+        "reportImponibileEuro": 125.45,
+        "youdoxTotaleEuro": 138
+      }
+    ]
+  },
+  "punto2": {
+    "matched9": [
+      {
+        "list": {
+          "date": "2026-08-21",
+          "name": "Oreste Poverello",
+          "eur": 89.99
+        },
+        "orderNumber": "FF-PN-26-004",
+        "payment": "PAID",
+        "buyer": "Oreste Poverello",
+        "createdAt": "2026-08-21",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-10",
+          "name": "Edy, Lori and Dana Moras",
+          "eur": 69.99
+        },
+        "orderNumber": "FF-PN-26-002",
+        "payment": "PAID",
+        "buyer": "Edy, Lori and Dana Moras",
+        "createdAt": "2026-08-10",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-06",
+          "name": "Daniela Barilari",
+          "eur": 39.99
+        },
+        "orderNumber": "FF-PN-26-001",
+        "payment": "PAID",
+        "buyer": "Daniela Barilari",
+        "createdAt": "2026-08-07",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-01",
+          "name": "valentina cecchini",
+          "eur": 29.99
+        },
+        "orderNumber": "FT-RC-26-002",
+        "payment": "PAID",
+        "buyer": "Valentina Cecchini",
+        "createdAt": "2026-08-01",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-16",
+          "name": "Filomena Maiorano",
+          "eur": 37.99
+        },
+        "orderNumber": "FT-PD-26-001",
+        "payment": "PAID",
+        "buyer": "Filomena Maiorano",
+        "createdAt": "2026-07-16",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-09",
+          "name": "Giulio Rosace",
+          "eur": 39.99
+        },
+        "orderNumber": "FF-PD-26-004",
+        "payment": "PAID",
+        "buyer": "Giulio Rosace",
+        "createdAt": "2026-07-10",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-03",
+          "name": "Confartigianato Pordenone",
+          "eur": 69.99
+        },
+        "orderNumber": "FF-PD-26-003",
+        "payment": "PAID",
+        "buyer": "Confartigianato Pordenone",
+        "createdAt": "2026-07-03",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-02",
+          "name": "Nicolato Francesco",
+          "eur": 104.98
+        },
+        "orderNumber": "FF-PD-26-002",
+        "payment": "PAID",
+        "buyer": "Francesco Nicolato",
+        "createdAt": "2026-07-02",
+        "stripeTransactionId": null
+      }
+    ],
+    "missing9": [
+      {
+        "date": "2026-08-17",
+        "name": "Amanda Favot",
+        "eur": 109.98
+      }
+    ],
+    "amandaCandidates": [
+      {
+        "orderNumber": "FF-PN-26-003",
+        "createdAt": "2026-08-17T16:00:37.177Z",
+        "buyerFullName": "Amanda Favot",
+        "totalPriceCents": 3999,
+        "grossAmount": null,
+        "partnerPaymentStatus": "PAID",
+        "status": "COMPLETED",
+        "isTest": false,
+        "stripeTransactionId": null
+      }
+    ],
+    "matchedCount": 8,
+    "listTotaleEuro": 592.89
+  },
+  "punto3_refine": {
+    "stripeUniqueChargePaymentPositive": {
+      "n": 20,
+      "amountEuro": 1137.55,
+      "matchedToOrderByAmountDate": 9,
+      "unmatchedToOrder": [
+        {
+          "stripeId": "txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+          "type": "charge",
+          "eur": 29.99,
+          "day": "2026-05-11"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TSzMsRrkwwcYwep11EAvI3P",
+          "type": "charge",
+          "eur": 284.9,
+          "day": "2026-05-03"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3Tf2qURrkwwcYwep1JTdxIH6",
+          "type": "charge",
+          "eur": 89.99,
+          "day": "2026-06-05"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TaxywRrkwwcYwep0nknWw0e",
+          "type": "charge",
+          "eur": 84.98,
+          "day": "2026-05-25"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3THRDzRrkwwcYwep1IWuTvYj",
+          "type": "charge",
+          "eur": 29.99,
+          "day": "2026-04-01"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TQnuORrkwwcYwep1Dfft678",
+          "type": "charge",
+          "eur": 39.99,
+          "day": "2026-04-27"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TOEwqRrkwwcYwep0PWa3mde",
+          "type": "charge",
+          "eur": 39.99,
+          "day": "2026-04-20"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TMlfaRrkwwcYwep1OK1tykj",
+          "type": "charge",
+          "eur": 29.99,
+          "day": "2026-04-16"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TR8vSRrkwwcYwep0aagA2z5",
+          "type": "charge",
+          "eur": 54.98,
+          "day": "2026-04-28"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TitsVRrkwwcYwep03OyeUT2",
+          "type": "charge",
+          "eur": 49.46,
+          "day": "2026-06-16"
+        },
+        {
+          "stripeId": "stripe_eu_tx_txn_3TRYzSRrkwwcYwep0XTghGkM",
+          "type": "charge",
+          "eur": 45.97,
+          "day": "2026-04-29"
+        }
+      ]
+    },
+    "paypalRicaviPositive": {
+      "n": 24,
+      "amountEuro": 472.38
+    },
+    "paypalAllPositiveExclSaasPayout": {
+      "n": 35,
+      "amountEuro": 579.36
+    },
+    "itemBuckets": {
+      "totalRows": 97,
+      "included": 77,
+      "cancelled_only": 5,
+      "test_only": 2,
+      "deleted_only": 0,
+      "test_and_deleted": 1,
+      "cancelled_and_deleted": 12,
+      "other": 0
+    }
+  }
+}

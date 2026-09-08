@@ -1,0 +1,1138 @@
+{
+  "generatedAt": "2026-09-08T17:12:59.153Z",
+  "methodVersion": "1.6",
+  "punto1": {
+    "reportFiles": [
+      "/Users/floremoria/Downloads/Report_Fatture_ricevute_2026.xlsx",
+      "/Users/floremoria/Downloads/Report_Fatture_ricevute_2026-T1.xlsx",
+      "/Users/floremoria/Downloads/Report_Fatture_ricevute_2026-T2.xlsx",
+      "/Users/floremoria/Downloads/Report_Fatture_ricevute_2026-T3.xlsx"
+    ],
+    "reportUnique2026": 61,
+    "manual2026": 102,
+    "manualSourceCounts": {
+      "SDI_XLSX": 50,
+      "SDI_XML": 15,
+      "SDI_AUTOFATTURA_ESTERA": 29,
+      "UNKNOWN": 7,
+      "AUTOFATTURA_TD17": 1
+    },
+    "youdoxLikeCount": 95,
+    "overlapCount": 61,
+    "overlapTotaleEuro": 6556.96,
+    "overlaps": [
+      {
+        "key": "PIVA:01786960789|2026-08-19|19/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-08-19",
+        "docNum": "19/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-08-03|17/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-08-03",
+        "docNum": "17/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-07-31|235",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-07-31",
+        "docNum": "235",
+        "reportTotaleCents": 14000,
+        "youdoxTotaleCents": 14000,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:03912650136|2026-07-22|11",
+        "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+        "date": "2026-07-22",
+        "docNum": "11",
+        "reportTotaleCents": 3000,
+        "youdoxTotaleCents": 3000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01032230433|2026-07-30|35",
+        "vendor": "CINGOLANI ANTONELLA",
+        "date": "2026-07-30",
+        "docNum": "35",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:01558540132|2026-07-26|426000153",
+        "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+        "date": "2026-07-26",
+        "docNum": "00426000153",
+        "reportTotaleCents": 13300,
+        "youdoxTotaleCents": 13300,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:06669020965|2026-07-22|46",
+        "vendor": "LA BAITA DEL FIORE S.N.C.",
+        "date": "2026-07-22",
+        "docNum": "46",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:10807330583|2026-07-09|fpr1/26",
+        "vendor": "SOLANO VINCENZO",
+        "date": "2026-07-09",
+        "docNum": "FPR 1/26",
+        "reportTotaleCents": 3801,
+        "youdoxTotaleCents": 3801,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-07-07|14/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-07-07",
+        "docNum": "14/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01032230433|2026-07-01|31",
+        "vendor": "CINGOLANI ANTONELLA",
+        "date": "2026-07-01",
+        "docNum": "31",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-06-30|210",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-06-30",
+        "docNum": "210",
+        "reportTotaleCents": 5000,
+        "youdoxTotaleCents": 5000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02180440238|2026-06-23|16",
+        "vendor": "BONFANTE CLAUDIA",
+        "date": "2026-06-23",
+        "docNum": "16",
+        "reportTotaleCents": 4000,
+        "youdoxTotaleCents": 4000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02079000838|2026-06-19|1",
+        "vendor": "TORRE DOMENICA",
+        "date": "2026-06-19",
+        "docNum": "1",
+        "reportTotaleCents": 6200,
+        "youdoxTotaleCents": 6200,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-06-18|12/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-06-18",
+        "docNum": "12/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:10121290968|2026-06-15|90",
+        "vendor": "Glofu srl unipersonale",
+        "date": "2026-06-15",
+        "docNum": "90",
+        "reportTotaleCents": 2592,
+        "youdoxTotaleCents": 2592,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:03812750838|2026-06-16|2026/7",
+        "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+        "date": "2026-06-16",
+        "docNum": "2026/7",
+        "reportTotaleCents": 3000,
+        "youdoxTotaleCents": 3000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02068720651|2026-05-31|253",
+        "vendor": "FLORAGARDEN di Stinga Baldassarre",
+        "date": "2026-05-31",
+        "docNum": "253",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-05-30|183",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-05-30",
+        "docNum": "183",
+        "reportTotaleCents": 4000,
+        "youdoxTotaleCents": 4000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:IE3206488LH|2026-02-28|6-2026-est",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "date": "2026-02-28",
+        "docNum": "000006-2026-EST",
+        "reportTotaleCents": 439,
+        "youdoxTotaleCents": 439,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE3206488LH|2026-04-30|8-2026-est",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "date": "2026-04-30",
+        "docNum": "000008-2026-EST",
+        "reportTotaleCents": 687,
+        "youdoxTotaleCents": 687,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE3206488LH|2026-03-31|7-2026-est",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "date": "2026-03-31",
+        "docNum": "000007-2026-EST",
+        "reportTotaleCents": 1188,
+        "youdoxTotaleCents": 1188,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE4143435AH|2026-02-28|5-2026-est",
+        "vendor": "OpenAI Ireland Limited",
+        "date": "2026-02-28",
+        "docNum": "000005-2026-EST",
+        "reportTotaleCents": 3101,
+        "youdoxTotaleCents": 3101,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE4143435AH|2026-02-28|4-2026-est",
+        "vendor": "OpenAI Ireland Limited",
+        "date": "2026-02-28",
+        "docNum": "000004-2026-EST",
+        "reportTotaleCents": 2300,
+        "youdoxTotaleCents": 2300,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE3206488LH|2026-01-31|3-2026-est",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "date": "2026-01-31",
+        "docNum": "000003-2026-EST",
+        "reportTotaleCents": 270,
+        "youdoxTotaleCents": 270,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:01032230433|2026-05-26|27",
+        "vendor": "CINGOLANI ANTONELLA",
+        "date": "2026-05-26",
+        "docNum": "27",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04722740877|2026-05-26|16",
+        "vendor": "DI PAOLA MARIA ANTONIETTA",
+        "date": "2026-05-26",
+        "docNum": "16",
+        "reportTotaleCents": 4000,
+        "youdoxTotaleCents": 4000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:03719480133|2026-05-25|21",
+        "vendor": "L'ORCHIDEA DI MANCINI FRANCESCA",
+        "date": "2026-05-25",
+        "docNum": "21",
+        "reportTotaleCents": 3000,
+        "youdoxTotaleCents": 3000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-05-21|7/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-05-21",
+        "docNum": "7/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:00282140060|2026-04-20|2026/0/29",
+        "vendor": "PROVINI F.LLI DI PROVINI ANTONIO & C. S.A.S.",
+        "date": "2026-04-20",
+        "docNum": "2026/0/29",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02238170134|2026-05-05|570",
+        "vendor": "BALLARATE PIERO SRL",
+        "date": "2026-05-05",
+        "docNum": "570",
+        "reportTotaleCents": 5795,
+        "youdoxTotaleCents": 5795,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01493540833|2026-05-06|2026/9",
+        "vendor": "CALAMUNCI TINDARO",
+        "date": "2026-05-06",
+        "docNum": "2026/9",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:05237210280|2026-04-28|32",
+        "vendor": "EREDI DI BENDA SERGIO SOCIETA' AGRICOLA",
+        "date": "2026-04-28",
+        "docNum": "32",
+        "reportTotaleCents": 3300,
+        "youdoxTotaleCents": 3300,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01573850516|2026-05-03|1000263004039573",
+        "vendor": "ARUBA SPA",
+        "date": "2026-05-03",
+        "docNum": "1000263004039573",
+        "reportTotaleCents": 609,
+        "youdoxTotaleCents": 609,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-04-30|136",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-04-30",
+        "docNum": "136",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01573850516|2026-04-30|1000261000170337",
+        "vendor": "ARUBA SPA",
+        "date": "2026-04-30",
+        "docNum": "1000261000170337",
+        "reportTotaleCents": 6100,
+        "youdoxTotaleCents": 6100,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01573850516|2026-04-27|1000263003864237",
+        "vendor": "ARUBA SPA",
+        "date": "2026-04-27",
+        "docNum": "1000263003864237",
+        "reportTotaleCents": 7319,
+        "youdoxTotaleCents": 7319,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:12208220967|2026-04-22|4",
+        "vendor": "CANNONE LUCREZIA",
+        "date": "2026-04-22",
+        "docNum": "4",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-04-20|5/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-04-20",
+        "docNum": "5/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02238170134|2026-04-09|464",
+        "vendor": "BALLARATE PIERO SRL",
+        "date": "2026-04-09",
+        "docNum": "464",
+        "reportTotaleCents": 913,
+        "youdoxTotaleCents": 913,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04722740877|2026-04-04|10",
+        "vendor": "DI PAOLA MARIA ANTONIETTA",
+        "date": "2026-04-04",
+        "docNum": "10",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-03-31|96",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-03-31",
+        "docNum": "96",
+        "reportTotaleCents": 14500,
+        "youdoxTotaleCents": 14500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:00384700316|2026-04-01|19",
+        "vendor": "VIDOZ ALESSIA",
+        "date": "2026-04-01",
+        "docNum": "19",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-03-25|3/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-03-25",
+        "docNum": "3/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:02930301201|2026-03-24|5",
+        "vendor": "FIORERIA ROSE E TULIPANI DI CECCOTTI DANTE",
+        "date": "2026-03-24",
+        "docNum": "5",
+        "reportTotaleCents": 2200,
+        "youdoxTotaleCents": 2200,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:04054310133|2026-03-12|4",
+        "vendor": "FLORIS DI BORDOLI LORIS",
+        "date": "2026-03-12",
+        "docNum": "4",
+        "reportTotaleCents": 8500,
+        "youdoxTotaleCents": 8500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:03928110133|2026-03-02|66",
+        "vendor": "DC STUDIO STP SRL",
+        "date": "2026-03-02",
+        "docNum": "66",
+        "reportTotaleCents": 377430,
+        "youdoxTotaleCents": 377430,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01719220939|2026-02-28|53",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-02-28",
+        "docNum": "53",
+        "reportTotaleCents": 4500,
+        "youdoxTotaleCents": 4500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04138950821|2026-02-23|28",
+        "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+        "date": "2026-02-23",
+        "docNum": "28",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:01786960789|2026-02-23|2/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-02-23",
+        "docNum": "2/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04263500276|2026-02-18|265",
+        "vendor": "IRIN S.R.L.",
+        "date": "2026-02-18",
+        "docNum": "265",
+        "reportTotaleCents": 68149,
+        "youdoxTotaleCents": 68149,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04722740877|2026-02-17|5",
+        "vendor": "DI PAOLA MARIA ANTONIETTA",
+        "date": "2026-02-17",
+        "docNum": "5",
+        "reportTotaleCents": 4000,
+        "youdoxTotaleCents": 4000,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:IE4143435AH|2026-01-31|2-2026-est",
+        "vendor": "OpenAI Ireland Limited",
+        "date": "2026-01-31",
+        "docNum": "000002-2026-EST",
+        "reportTotaleCents": 2300,
+        "youdoxTotaleCents": 2300,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:IE3206488LH|2026-01-31|1-2026-est",
+        "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+        "date": "2026-01-31",
+        "docNum": "000001-2026-EST",
+        "reportTotaleCents": 201,
+        "youdoxTotaleCents": 201,
+        "youdoxSource": "SDI_AUTOFATTURA_ESTERA"
+      },
+      {
+        "key": "PIVA:02068720651|2026-02-10|17",
+        "vendor": "FLORAGARDEN di Stinga Baldassarre",
+        "date": "2026-02-10",
+        "docNum": "17",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:04138950821|2026-02-06|18",
+        "vendor": "FLOWERS DI FERRANTE IGNAZIO",
+        "date": "2026-02-06",
+        "docNum": "18",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:01719220939|2026-01-31|21",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-01-31",
+        "docNum": "21",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:03812750838|2026-01-24|2026/1",
+        "vendor": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+        "date": "2026-01-24",
+        "docNum": "2026/1",
+        "reportTotaleCents": 2701,
+        "youdoxTotaleCents": 2701,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-01-26|1/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-01-26",
+        "docNum": "1/2026",
+        "reportTotaleCents": 6001,
+        "youdoxTotaleCents": 6001,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:03195710649|2026-01-17|fpr3/26",
+        "vendor": "COTUGNO DI PIERO COTUGNO",
+        "date": "2026-01-17",
+        "docNum": "FPR 3/26",
+        "reportTotaleCents": 2500,
+        "youdoxTotaleCents": 2500,
+        "youdoxSource": "SDI_XLSX"
+      },
+      {
+        "key": "PIVA:01786960789|2026-09-03|20/2026",
+        "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+        "date": "2026-09-03",
+        "docNum": "20/2026",
+        "reportTotaleCents": 2000,
+        "youdoxTotaleCents": 2000,
+        "youdoxSource": "SDI_XML"
+      },
+      {
+        "key": "PIVA:01719220939|2026-08-31|253",
+        "vendor": "Battistella Fioreria srl",
+        "date": "2026-08-31",
+        "docNum": "253",
+        "reportTotaleCents": 13800,
+        "youdoxTotaleCents": 13800,
+        "youdoxSource": "SDI_XLSX"
+      }
+    ],
+    "note": "Match: stesso fornitore (P.IVA o nome) + data documento + numero progressivo. Youdox = ManualFinanceExpense con indizi SDI/YouDOX."
+  },
+  "punto2": {
+    "listCount": 9,
+    "listTotaleEuro": 592.89,
+    "matchedOnCom": 8,
+    "missingOnCom": [
+      {
+        "date": "2026-08-17",
+        "name": "Amanda Favot",
+        "eur": 109.98
+      }
+    ],
+    "matched": [
+      {
+        "list": {
+          "date": "2026-08-21",
+          "name": "Oreste Poverello",
+          "eur": 89.99
+        },
+        "orderNumber": "FF-PN-26-004",
+        "orderId": "cmt2pq29v0000la043ksaow9c",
+        "createdAt": "2026-08-21T08:53:56.611Z",
+        "buyer": "Oreste Poverello",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-10",
+          "name": "Edy, Lori and Dana Moras",
+          "eur": 69.99
+        },
+        "orderNumber": "FF-PN-26-002",
+        "orderId": "cmsnghl7y0000ie04c47zru2x",
+        "createdAt": "2026-08-10T16:38:52.079Z",
+        "buyer": "Edy, Lori and Dana Moras",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-06",
+          "name": "Daniela Barilari",
+          "eur": 39.99
+        },
+        "orderNumber": "FF-PN-26-001",
+        "orderId": "cmsilmkhn0000l104avptjk6y",
+        "createdAt": "2026-08-07T07:03:51.611Z",
+        "buyer": "Daniela Barilari",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-08-01",
+          "name": "valentina cecchini",
+          "eur": 29.99
+        },
+        "orderNumber": "FT-RC-26-002",
+        "orderId": "cmsalfwki0000js04s4hbqh1i",
+        "createdAt": "2026-08-01T16:36:31.267Z",
+        "buyer": "Valentina Cecchini",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-16",
+          "name": "Filomena Maiorano",
+          "eur": 37.99
+        },
+        "orderNumber": "FT-PD-26-001",
+        "orderId": "cmrnjw44c0000la04aa7cf55c",
+        "createdAt": "2026-07-16T13:34:26.268Z",
+        "buyer": "Filomena Maiorano",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-09",
+          "name": "Giulio Rosace",
+          "eur": 39.99
+        },
+        "orderNumber": "FF-PD-26-004",
+        "orderId": "cmrekxg4p0000l704cv80kg3m",
+        "createdAt": "2026-07-10T06:53:32.521Z",
+        "buyer": "Giulio Rosace",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-03",
+          "name": "Confartigianato Pordenone",
+          "eur": 69.99
+        },
+        "orderNumber": "FF-PD-26-003",
+        "orderId": "cmr5483ir0000l4046lw2q6m0",
+        "createdAt": "2026-07-03T15:56:00.340Z",
+        "buyer": "Confartigianato Pordenone",
+        "stripeTransactionId": null
+      },
+      {
+        "list": {
+          "date": "2026-07-02",
+          "name": "Nicolato Francesco",
+          "eur": 104.98
+        },
+        "orderNumber": "FF-PD-26-002",
+        "orderId": "cmr3zmkcd0000l404p75vvvnm",
+        "createdAt": "2026-07-02T20:59:31.069Z",
+        "buyer": "Francesco Nicolato",
+        "stripeTransactionId": null
+      }
+    ],
+    "gatewayMultiOrderViaMovement": [],
+    "gatewayMultiOrderViaOrderField": [],
+    "perimeterClaim": {
+      "total43": 43,
+      "totalEuro": 2559.81,
+      "onComFrom2Jul": {
+        "n": 9,
+        "euro": 592.89
+      },
+      "isabellaCarnet": 299.9,
+      "unregistered": {
+        "n": 33,
+        "euro": 1667.02
+      }
+    }
+  },
+  "punto3": {
+    "dateFilter": "Order.createdAt / StripeFinanceMovement.createdAtStripe / Ledger.accountingDate — T2 = 2026-04-01..2026-06-30",
+    "stripeT2": {
+      "totalRows": 135,
+      "byType": {
+        "payout": {
+          "n": 54,
+          "amount": 262130
+        },
+        "payout_minimum_balance_hold": {
+          "n": 16,
+          "amount": 138298
+        },
+        "payout_minimum_balance_release": {
+          "n": 16,
+          "amount": 138298
+        },
+        "charge": {
+          "n": 20,
+          "amount": 120806
+        },
+        "payment": {
+          "n": 13,
+          "amount": 31680
+        },
+        "refund": {
+          "n": 3,
+          "amount": 13995
+        },
+        "stripe_fee": {
+          "n": 3,
+          "amount": 55
+        },
+        "contribution": {
+          "n": 10,
+          "amount": 374
+        }
+      },
+      "chargeLike": {
+        "n": 33,
+        "amountEuro": 1524.86,
+        "withOrder": 0,
+        "withoutOrder": 33,
+        "withoutOrderSample": [
+          {
+            "stripeId": "txn_3Tl97E4W4pZWhSUs1948B9mT",
+            "type": "charge",
+            "amountEuro": 64.98,
+            "date": "2026-06-22"
+          },
+          {
+            "stripeId": "txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-06-17"
+          },
+          {
+            "stripeId": "txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-06-17"
+          },
+          {
+            "stripeId": "txn_3ThmH14W4pZWhSUs14CAHHaS",
+            "type": "charge",
+            "amountEuro": 43.97,
+            "date": "2026-06-13"
+          },
+          {
+            "stripeId": "txn_3TcirV4W4pZWhSUs05MMgxPE",
+            "type": "charge",
+            "amountEuro": 54.98,
+            "date": "2026-05-30"
+          },
+          {
+            "stripeId": "txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+            "type": "payment",
+            "amountEuro": 32.48,
+            "date": "2026-05-23"
+          },
+          {
+            "stripeId": "txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-05-20"
+          },
+          {
+            "stripeId": "txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-05-20"
+          },
+          {
+            "stripeId": "txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+            "type": "charge",
+            "amountEuro": 34.99,
+            "date": "2026-05-19"
+          },
+          {
+            "stripeId": "txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+            "type": "charge",
+            "amountEuro": 29.99,
+            "date": "2026-05-11"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-06-17"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-06-17"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+            "type": "charge",
+            "amountEuro": 43.97,
+            "date": "2026-06-13"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+            "type": "charge",
+            "amountEuro": 64.98,
+            "date": "2026-06-22"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-05-20"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "type": "payment",
+            "amountEuro": 31.48,
+            "date": "2026-05-20"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+            "type": "charge",
+            "amountEuro": 34.99,
+            "date": "2026-05-19"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TcirV4W4pZWhSUs05MMgxPE",
+            "type": "charge",
+            "amountEuro": 54.98,
+            "date": "2026-05-30"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+            "type": "payment",
+            "amountEuro": 32.48,
+            "date": "2026-05-23"
+          },
+          {
+            "stripeId": "stripe_tx_txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+            "type": "charge",
+            "amountEuro": 29.99,
+            "date": "2026-05-11"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TT0p4RrkwwcYwep1MNarUZe",
+            "type": "payment",
+            "amountEuro": 0,
+            "date": "2026-05-03"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TSzMsRrkwwcYwep11EAvI3P",
+            "type": "charge",
+            "amountEuro": 284.9,
+            "date": "2026-05-03"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3Tf2qURrkwwcYwep1JTdxIH6",
+            "type": "charge",
+            "amountEuro": 89.99,
+            "date": "2026-06-05"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TaxywRrkwwcYwep0nknWw0e",
+            "type": "charge",
+            "amountEuro": 84.98,
+            "date": "2026-05-25"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TXhANRrkwwcYwep0VwwAbM9",
+            "type": "payment",
+            "amountEuro": 0,
+            "date": "2026-05-16"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3THRDzRrkwwcYwep1IWuTvYj",
+            "type": "charge",
+            "amountEuro": 29.99,
+            "date": "2026-04-01"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TQnuORrkwwcYwep1Dfft678",
+            "type": "charge",
+            "amountEuro": 39.99,
+            "date": "2026-04-27"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TOEwqRrkwwcYwep0PWa3mde",
+            "type": "charge",
+            "amountEuro": 39.99,
+            "date": "2026-04-20"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TMlfaRrkwwcYwep1OK1tykj",
+            "type": "charge",
+            "amountEuro": 29.99,
+            "date": "2026-04-16"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TR8vSRrkwwcYwep0aagA2z5",
+            "type": "charge",
+            "amountEuro": 54.98,
+            "date": "2026-04-28"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TOFWURrkwwcYwep1T5ie17D",
+            "type": "payment",
+            "amountEuro": 0,
+            "date": "2026-04-20"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TitsVRrkwwcYwep03OyeUT2",
+            "type": "charge",
+            "amountEuro": 49.46,
+            "date": "2026-06-16"
+          },
+          {
+            "stripeId": "stripe_eu_tx_txn_3TRYzSRrkwwcYwep0XTghGkM",
+            "type": "charge",
+            "amountEuro": 45.97,
+            "date": "2026-04-29"
+          }
+        ]
+      },
+      "refunds": {
+        "n": 3,
+        "amountEuro": 139.95
+      },
+      "referenceHand": {
+        "stripe": "33 / €1524.86",
+        "paypal": "35 / €593.79",
+        "refunds": "3 / €139.95"
+      }
+    },
+    "paypalT2": {
+      "totalRows": 90,
+      "byCategory": {
+        "SPESE_SAAS": {
+          "n": 9,
+          "amount": 18073
+        },
+        "RICAVI_VENDITE": {
+          "n": 46,
+          "amount": 99476
+        },
+        "RIMBORSI": {
+          "n": 11,
+          "amount": 10698
+        },
+        "PAYPAL_PAYOUT": {
+          "n": 15,
+          "amount": 32168
+        },
+        "ONERI_BANCARI": {
+          "n": 9,
+          "amount": 1443
+        }
+      },
+      "positiveIncassi": {
+        "n": 35,
+        "amountEuro": 579.36,
+        "withoutOrder": 35
+      }
+    },
+    "ordersT2": {
+      "byStatus": {
+        "COMPLETED": 8,
+        "CANCELLED": 3
+      },
+      "paidCount": 10,
+      "allNonTest": 11,
+      "list": [
+        {
+          "orderNumber": "FT-SA-26-001",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-05-19",
+          "buyer": "Ester Irace",
+          "euro": 29.99
+        },
+        {
+          "orderNumber": "FT-SA-26-002",
+          "status": "CANCELLED",
+          "payment": "PAID",
+          "date": "2026-05-19",
+          "buyer": "Ester Irace",
+          "euro": 34.99
+        },
+        {
+          "orderNumber": "FT-PA-26-002",
+          "status": "CANCELLED",
+          "payment": "UNPAID",
+          "date": "2026-05-20",
+          "buyer": "Luciano Mammì",
+          "euro": 31.48
+        },
+        {
+          "orderNumber": "FT-PA-26-003",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-05-20",
+          "buyer": "Luciano Mammì",
+          "euro": 31.48
+        },
+        {
+          "orderNumber": "FT-CS-26-001",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-05-20",
+          "buyer": "Luciano Mammì",
+          "euro": 31.48
+        },
+        {
+          "orderNumber": "FT-CO-26-004",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-05-23",
+          "buyer": "DANIELA RAMPOLDI",
+          "euro": 32.48
+        },
+        {
+          "orderNumber": "FF-RM-26-001",
+          "status": "CANCELLED",
+          "payment": "PAID",
+          "date": "2026-05-30",
+          "buyer": "Claudia  Burtone",
+          "euro": 54.98
+        },
+        {
+          "orderNumber": "FT-RC-26-001",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-06-13",
+          "buyer": "Andrea Gaeta",
+          "euro": 43.97
+        },
+        {
+          "orderNumber": "FT-CS-26-002",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-06-17",
+          "buyer": "Luciano Mammì",
+          "euro": 31.48
+        },
+        {
+          "orderNumber": "FT-PA-26-004",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-06-17",
+          "buyer": "Luciano Mammì",
+          "euro": 31.48
+        },
+        {
+          "orderNumber": "FF-VR-26-001",
+          "status": "COMPLETED",
+          "payment": "PAID",
+          "date": "2026-06-22",
+          "buyer": "Riccardo Segantini",
+          "euro": 64.98
+        }
+      ],
+      "euTaggedInT2": 0,
+      "ownerListAprJunUnregisteredCount": 13,
+      "noteEuDiff": "Lista titolare Apr–Giu: 13 vendite .eu non su .com. DB T2 PAID≈10 (mix UNKNOWN/EU). I 9 .eu→.com partono dal 02/07 (T3), non sono nel T2."
+    },
+    "sold77vs97": {
+      "catalogSoldUnitsAll": 77,
+      "orderItemRowsTotal": 97,
+      "orderItemQtyTotal": 107,
+      "includedNonCancelledNonTest": {
+        "rows": 77,
+        "qty": 77
+      },
+      "onCancelled": {
+        "rows": 5,
+        "qty": 5
+      },
+      "onTest": {
+        "rows": 3,
+        "qty": 3
+      },
+      "onDeleted": {
+        "rows": 13,
+        "qty": 23
+      },
+      "gapExplanation": "Venduti catalogo = Σ quantity OrderItem su ordini non CANCELLED/non test/non deleted. 97 = tutte le righe OrderItem. Delta ≈ righe su ordini CANCELLED (e/o test/deleted)."
+    }
+  },
+  "punto4": {
+    "nastroPiccoliAmici": {
+      "name": "Nastro Piccoli Amici",
+      "vatRatePercent": 22,
+      "floristStandardCostCents": 0,
+      "slug": "nastro-commemorativo-piccoli-amici"
+    },
+    "confirmedZeroCostProducts": [
+      {
+        "name": "Foto stato di fatto prima della consegna",
+        "vatRatePercent": 22,
+        "floristStandardCostCents": 0
+      },
+      {
+        "name": "Messaggio",
+        "vatRatePercent": 22,
+        "floristStandardCostCents": 0
+      },
+      {
+        "name": "Nastro commemorativo",
+        "vatRatePercent": 22,
+        "floristStandardCostCents": 0
+      }
+    ],
+    "missingVatCount": 0,
+    "costZeroCount": 5,
+    "costNullCount": 0,
+    "schemaNote": "Oggi floristStandardCostCents Int? — 0 e null sono distinguibili. Per prodotti futuri: usare null=non compilato, 0=confermato gratis. Nessuna migration aggiuntiva necessaria se si rispetta la convenzione."
+  }
+}

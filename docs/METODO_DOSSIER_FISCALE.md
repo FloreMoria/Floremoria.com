@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.4 — 8 settembre 2026.
+Versione 1.6 — 8 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -52,6 +52,20 @@ necessarie:
 Un file che non soddisfa entrambe le condizioni viene rifiutato in ingresso, con il motivo
 scritto. Il sistema registra per ogni estratto: nome del file, data di download, periodo
 coperto, saldo iniziale e finale letti.
+
+**Gerarchia fra canali di ingestione delle fatture passive.** Lo stesso documento può arrivare
+da più canali. Quando due canali portano una fattura con **stesso fornitore, stessa data e
+stesso numero progressivo**, si tratta dello stesso documento e ne sopravvive uno solo:
+
+| Priorità | Canale |
+|---|---|
+| 1 | Youdox |
+| 2 | Report fatture ricevute (file periodico) |
+| 3 | Inserimento manuale |
+
+Il documento del canale con priorità più bassa **non compare in tabella e non concorre ad
+alcun totale**. Viene annotato nel foglio Eccezioni come "documento già acquisito da canale
+prioritario", secondo la §6.5.
 
 ---
 
@@ -305,7 +319,46 @@ Colonne:
 `Data` · `Canale` · `Numero ordine` · `Riferimento transazione gateway` · `Importo di
 listino` · `Sconto o buono` · `Incassato lordo` · `Aliquota` · `Imponibile` · `IVA`
 
-### 8.1 Da dove viene l'aliquota
+### 8.1 Ordini con doppia registrazione fra canali
+
+Dal **2 luglio 2026** gli ordini ricevuti sul sito `.eu` vengono **riportati a mano** anche
+sul `.com`, per registrare l'utente. L'incasso resta sul gateway del `.eu`, la registrazione
+dell'ordine sta sul `.com`. Lo stesso fatto commerciale esiste quindi in due posti, e questo
+apre un rischio preciso: contarlo due volte, una come ordine `.com` e una come vendita `.eu`
+non contabilizzata.
+
+**Regola.** Ogni ordine porta due informazioni distinte:
+
+| Campo | Significato |
+|---|---|
+| `Canale di incasso` | dove il cliente ha pagato — determina su quale gateway cercare la transazione |
+| `Canale di registrazione` | dove l'ordine è stato inserito a sistema |
+
+Il registro corrispettivi si costruisce **una riga per fatto commerciale**, mai una per
+registrazione. Il criterio di unicità è **l'incasso sul gateway**: due registrazioni che
+puntano allo stesso incasso sono lo stesso ordine.
+
+**Controllo associato**: nessuna transazione di gateway può essere collegata a più di un
+ordine. Se accade, entrambe le registrazioni vanno nel foglio Eccezioni con la dicitura
+"ordine registrato su due canali".
+
+**Perimetro `.eu` 2026 — verificato l'8 settembre 2026.** 43 ordini, € 2.559,81 in totale:
+
+| Finestra | Ordini | Importo | Stato |
+|---|---|---|---|
+| fino al 01/07/2026 | 34 | € 1.966,92 | solo sul `.eu` |
+| dal 02/07/2026 | 9 | € 592,89 | anche sul `.com` |
+
+Dei 34 solo-`.eu`, uno — il carnet da € 299,90 del 03/05/2026 — risulta a libro per altra via.
+Restano quindi **33 ordini per € 1.667,02 non registrati**, e **10 ordini per € 892,79 già a
+libro**. Nessun doppio conteggio: le due categorie sono disgiunte e il checksum torna.
+
+Ogni conteggio futuro di ordini `.eu` deve distinguere le due finestre, altrimenti somma
+ordini che sul `.com` sono già registrati.
+
+---
+
+### 8.2 Da dove viene l'aliquota
 
 L'aliquota si determina **riga per riga dell'ordine**, secondo la natura del bene:
 
@@ -415,6 +468,20 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.6 — 8 settembre 2026**
+- §2 — gerarchia fra canali di ingestione delle fatture passive: Youdox vince sul report
+  periodico, che vince sull'inserimento manuale. Stesso fornitore + data + numero = stesso
+  documento.
+- §8.1 — corretta la data del riporto `.eu` → `.com`: **2 luglio 2026**, non 1° maggio.
+  Aggiunto il perimetro verificato: 43 ordini / € 2.559,81, di cui 33 non registrati per
+  € 1.667,02. Nessun doppio conteggio.
+
+**1.5 — 8 settembre 2026**
+- §8.1 — nuova: ordini `.eu` riportati a mano sul `.com` dal 1° maggio 2026. Distinzione fra
+  canale di incasso e canale di registrazione; il criterio di unicità del corrispettivo è
+  l'incasso sul gateway, non la registrazione dell'ordine.
+- §8.2 — ex §8.1 (da dove viene l'aliquota), rinumerata.
 
 **1.4 — 8 settembre 2026**
 - §6.4 — nuova: il costo standard del fiorista è un parametro deciso dall'azienda, non una

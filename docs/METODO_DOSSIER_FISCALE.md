@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.7 — 8 settembre 2026.
+Versione 1.9 — 9 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -49,9 +49,17 @@ necessarie:
    l'estratto è un elenco di movimenti che non dice da dove parte né dove arriva, e
    nessuna riconciliazione è possibile.
 
-Un file che non soddisfa entrambe le condizioni viene rifiutato in ingresso, con il motivo
-scritto. Il sistema registra per ogni estratto: nome del file, data di download, periodo
-coperto, saldo iniziale e finale letti.
+Le due condizioni valgono per i **nuovi** caricamenti. Il sistema registra per ogni estratto:
+nome del file, data di download, periodo coperto, saldo iniziale e finale letti.
+
+**Sui dati già in archivio non si torna indietro.** Documenti caricati prima di questa regola
+restano dove sono e continuano a valere: il titolare li ha verificati e i movimenti sono
+quelli. Dove i saldi dichiarati mancano, il controllo C3 su quel periodo risulta **non
+verificabile** — non fallito, e non è un motivo per bloccare nulla. Il dossier lo dichiara in
+una riga e va avanti.
+
+Chiudere l'ingresso serve a non aggiungere altri documenti non verificabili, non a invalidare
+quelli esistenti.
 
 **Gerarchia fra canali di ingestione delle fatture passive.** Lo stesso documento può arrivare
 da più canali. Quando due canali portano una fattura con **stesso fornitore, stessa data e
@@ -71,44 +79,44 @@ prioritario", secondo la §6.5.
 
 ## 3. I fogli del dossier
 
-Sette fogli, in quest'ordine. Nessuno è facoltativo.
+Ordine pensato per il commercialista che apre il file per la liquidazione IVA.
+Nessuno è facoltativo.
 
 | # | Foglio | Contenuto |
 |---|---|---|
-| 0 | **Quadratura** | esito dei controlli, liquidazione IVA, raccordo finanziario |
-| 1 | **Registro corrispettivi** | ogni incasso da cliente, con imponibile e IVA |
-| 2 | **Prima Nota** | ogni movimento con il suo mastro |
-| 3 | **Estratto conto** | i movimenti bancari come li dice la banca |
-| 4 | **Acquisti** | fatture passive e autofatture |
-| 5 | **Gateway Stripe** | i movimenti del wallet |
-| 6 | **Gateway PayPal** | i movimenti del wallet |
-| 7 | **Eccezioni** | tutto ciò che il sistema non è riuscito a riconciliare |
+| 1 | **Corrispettivi** | ogni incasso gateway: data, canale, riferimento transazione, ordine se c’è, lordo, aliquota, stato aliquota, imponibile, IVA |
+| 2 | **Acquisti** | fornitore, P.IVA, tipo/numero/data documento, imponibile, aliquota, IVA |
+| 3 | **Banca** | i movimenti dell’estratto conto |
+| 4 | **Liquidazione IVA** | IVA a debito, a credito, saldo trimestre; reverse charge su entrambi i lati. In testa: se il file quadra e di quanto |
+| 5 | **Da chiarire** | righe non classificabili, con motivo in parole semplici |
+| 6 | **Prima Nota** | allegato interno — ogni movimento con mastro |
+| 7 | **Gateway Stripe** | allegato interno — wallet |
+| 8 | **Gateway PayPal** | allegato interno — wallet |
+| 9 | **Quadratura** | strumento interno in coda: esito C1–C10, raccordo, tracciabilità |
 
-Il foglio 0 è il primo che si apre e il primo che si legge. Il foglio 7 esiste sempre,
-anche vuoto: un dossier senza foglio Eccezioni suggerisce che non ci siano eccezioni,
-il che è un'affermazione, e va fatta esplicitamente.
+I fogli 1–5 sono quelli che il commercialista usa senza spiegazioni. I fogli 6–8 sono
+allegati di dettaglio. Il foglio 9 è il nostro strumento di controllo: non va in testa.
+
+Il foglio **Da chiarire** esiste sempre, anche vuoto: un dossier senza quel foglio
+suggerisce che non ci siano eccezioni, il che è un’affermazione, e va fatta esplicitamente.
 
 ---
 
-## 4. Foglio 0 — Quadratura
+## 4. Liquidazione IVA e Quadratura
 
-Quattro blocchi, in quest'ordine.
+### 4.1 Foglio Liquidazione IVA
+In testa al foglio: una riga che dice se il file **quadra** e, se no, di quanto
+(scostamento aggregato dei controlli verificabili falliti). Poi la liquidazione:
 
-### 4.1 Esito dei controlli
-In cima, prima di ogni altro numero. Se anche un solo controllo fallisce, la prima riga
-del dossier è **"DOSSIER NON QUADRATO"** con l'elenco dei controlli falliti e il rimando
-al foglio Eccezioni. Non si nasconde, non si arrotonda, non si mette in fondo.
-
-### 4.2 Liquidazione IVA del periodo
 | Voce | Da dove viene |
 |---|---|
-| Imponibile vendite per aliquota | foglio 1, sommato per aliquota |
-| IVA a debito | foglio 1 |
-| Imponibile acquisti per aliquota | foglio 4, solo fatture italiane |
-| IVA a credito | foglio 4 |
-| IVA reverse charge — a debito | foglio 4, autofatture |
-| IVA reverse charge — a credito | foglio 4, autofatture (stesso importo) |
-| **Saldo del periodo** | totale debito meno totale credito |
+| Imponibile vendite per aliquota | foglio Corrispettivi, sommato per aliquota |
+| IVA a debito | foglio Corrispettivi |
+| Imponibile acquisti per aliquota | foglio Acquisti, solo fatture italiane |
+| IVA a credito | foglio Acquisti |
+| IVA reverse charge — a debito | foglio Acquisti, autofatture |
+| IVA reverse charge — a credito | foglio Acquisti, autofatture (stesso importo) |
+| **Saldo del trimestre** | totale debito meno totale credito |
 
 **Sul reverse charge.** L'IVA delle autofatture estere entra nel calcolo **due volte**: una
 riga a debito e una riga a credito, dello stesso importo. L'effetto sul saldo è nullo, ma le
@@ -117,11 +125,16 @@ i lati — registro acquisti e registro vendite — e da lì passa nei quadri de
 Esporla come una nota fuori dal calcolo, come faceva la versione 1.0 di questo metodo, dà un
 saldo giusto ma registri formalmente incompleti.
 
-Il foglio 0 riporta quindi due totali distinti: **IVA a debito complessiva** (vendite +
-reverse charge) e **IVA a credito complessiva** (acquisti + reverse charge), e il saldo è la
-loro differenza.
+Il foglio riporta due totali distinti: **IVA a debito complessiva** (vendite + reverse charge)
+e **IVA a credito complessiva** (acquisti + reverse charge), e il saldo è la loro differenza.
 
-### 4.3 Raccordo finanziario
+### 4.2 Foglio Quadratura (in coda — strumento interno)
+Esito controlli C1–C10, sintesi certezza aliquote §8.3, raccordo finanziario, tracciabilità
+(§12). Se anche un solo controllo *verificabile* fallisce, la prima riga del foglio è
+**"DOSSIER NON QUADRATO"** con l'elenco dei falliti e il rimando a **Da chiarire**.
+Un controllo *non verificabile* (es. C3 senza saldi dichiarati) non è un fallimento.
+
+### 4.3 Raccordo finanziario (nel foglio Quadratura)
 | Voce |
 |---|
 | Saldo banca a inizio periodo (dichiarato dalla banca) |
@@ -129,18 +142,15 @@ loro differenza.
 | Totale uscite |
 | Saldo calcolato |
 | Saldo banca a fine periodo (dichiarato dalla banca) |
-| **Differenza — deve essere zero** |
-
-### 4.4 Conto economico del periodo
-Ricavi, costi, risultato. Con l'indicazione esplicita di cosa è escluso (partite di giro,
-movimenti patrimoniali) e perché.
+| **Differenza — C3; se saldi assenti → non verificabile** |
 
 ---
 
 ## 5. I controlli — il cuore del metodo
 
-Ogni controllo ha un nome, una formula, un esito atteso. Girano tutti a ogni generazione
-del dossier e il loro esito è scritto nel foglio 0.
+Ogni controllo ha un nome, una formula, un esito atteso. Girano a ogni generazione del
+dossier (e su richiesta esplicita dal badge Contabilità); l’esito è scritto nel foglio
+Quadratura in coda e persistito per la UI.
 
 | ID | Controllo | Formula | Atteso |
 |---|---|---|---|
@@ -503,6 +513,16 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.9 — 9 settembre 2026**
+- §3 — ordine fogli ripensato per la liquidazione IVA del commercialista: Corrispettivi →
+  Acquisti → Banca → Liquidazione IVA → Da chiarire; Quadratura e controlli C1–C10 in coda.
+  Liquidazione espone reverse charge su entrambi i lati e, in testa, se il file quadra.
+
+**1.8 — 9 settembre 2026**
+- §2 — la regola sui file ufficiali vale per i nuovi caricamenti. I documenti già in archivio
+  restano validi; dove mancano i saldi dichiarati, C3 è *non verificabile* su quel periodo,
+  non fallito, e non blocca il lavoro.
 
 **1.7 — 8 settembre 2026**
 - §8.2 — nuova: il corrispettivo è l'importo **lordo** pagato dal cliente, mai il netto

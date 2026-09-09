@@ -44,6 +44,11 @@ export type DossierControlResult = {
     delta: number;
     unit: 'rows' | 'cents' | 'docs';
     passed: boolean;
+    /**
+     * false = controllo non eseguibile (es. C3 senza saldi dichiarati).
+     * Non conta come fallimento e non deve bloccare l’export (METODO §2 v1.8).
+     */
+    verifiable?: boolean;
     detail: string;
     /** Dettaglio per gateway (solo C10). */
     perGateway?: Array<{
@@ -241,9 +246,10 @@ export async function controlC3(year: number, quarter: TaxQuarter): Promise<Doss
             expected: 0,
             delta: NaN,
             unit: 'cents',
-            passed: false,
+            passed: true,
+            verifiable: false,
             detail:
-                'Nessun estratto PDF con opening+closing nel periodo — controllo non eseguibile (METODO §2: paste senza saldi non è fonte)',
+                'non verificabile — nessun estratto del periodo con saldo iniziale e finale dichiarati dalla banca (METODO §2 v1.8: archivio paste/file senza saldi resta valido ma C3 non si misura)',
         };
     }
 
@@ -274,6 +280,7 @@ export async function controlC3(year: number, quarter: TaxQuarter): Promise<Doss
         delta: measured,
         unit: 'cents',
         passed: measured === 0,
+        verifiable: true,
         detail: `doc=${pick.fileName || pick.id} · open=${(opening / 100).toFixed(2)} · Σ=${(sumMov / 100).toFixed(2)} · close=${(closing / 100).toFixed(2)} · nLinee=${lines.length}`,
     };
 }
@@ -784,4 +791,26 @@ export async function runAllDossierControls(
         await controlC9(year, quarter),
         await controlC10(year, quarter),
     ];
+}
+
+/** Esegue C1–C10 e persiste lo snapshot per il badge Contabilità. */
+export async function runAndPersistDossierControls(
+    year: number,
+    quarter: TaxQuarter
+): Promise<DossierControlResult[]> {
+    const {
+        saveDossierControlsSnapshot,
+        summarizeControls,
+    } = await import('@/lib/financial/dossierControlsStore');
+    const controls = await runAllDossierControls(year, quarter);
+    const summary = summarizeControls(controls);
+    await saveDossierControlsSnapshot({
+        year,
+        quarter,
+        periodLabel: `T${quarter} ${year}`,
+        ranAt: new Date().toISOString(),
+        ...summary,
+        controls,
+    });
+    return controls;
 }

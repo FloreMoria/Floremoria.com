@@ -23,7 +23,7 @@ import {
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 import { foreignAutofatturaExpenseWhere } from '@/lib/financial/autofatturaHistory';
-import { buildDossierCorrispettiviRows } from '@/lib/financial/dossierCorrispettiviBuild';
+import { buildGatewayCorrispettivi } from '@/lib/financial/dossierCorrispettiviBuild';
 
 /** Tax ID Stripe Payments Europe Ltd (IE). */
 const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
@@ -83,9 +83,10 @@ export function resolveMonthBounds(year: number, month: number): QuarterlyBounds
 }
 
 export type CorrispettivoRow = {
-    orderId: string;
+    /** Null se incasso gateway senza ordine collegato (§8 — registro da gateway). */
+    orderId: string | null;
     orderNumber: string;
-    /** Data ordine (legacy CSV). */
+    /** Data ordine (legacy CSV) — allineata alla data incasso se non c’è ordine. */
     date: string;
     /** Data effettiva incasso gateway / pagamento. */
     paymentDate: string;
@@ -101,11 +102,9 @@ export type CorrispettivoRow = {
     gatewayFeeCents: number;
     netCents: number;
     transactionId: string;
-    /** METODO §8.3 — certezza aliquota. */
-    vatCertainty?: 'DETERMINATA' | 'MISTA' | 'PRESUNTA' | 'MANCANTE';
+    /** METODO §8.3 — tre stati soltanto. */
+    vatCertainty?: 'DETERMINATA' | 'PRESUNTA' | 'MANCANTE';
     vatRuleNote?: string;
-    listinoCents?: number;
-    scontoCents?: number;
 };
 
 export type ReverseChargeRow = {
@@ -202,24 +201,6 @@ export type TaxQuarterlyReport = {
     /** @deprecated Usare floristPassivo — mantenuto per compat JSON. */
     floristLiquidazioni: FloristLiquidazioneRow[];
 };
-
-function isPaypalPaymentLabel(label: string | null | undefined): boolean {
-    return /paypal/i.test(label || '');
-}
-
-function resolveGatewayName(params: {
-    paymentMethodLabel: string | null;
-    hasPaypalLedger: boolean;
-    hasStripeMovement: boolean;
-}): string {
-    if (isPaypalPaymentLabel(params.paymentMethodLabel) || params.hasPaypalLedger) {
-        return 'PayPal';
-    }
-    if (params.hasStripeMovement || /stripe|card|apple|google/i.test(params.paymentMethodLabel || '')) {
-        return 'Stripe';
-    }
-    return params.paymentMethodLabel?.trim() || 'Stripe';
-}
 
 function readExpenseMeta(raw: unknown): Record<string, unknown> {
     return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
@@ -599,104 +580,39 @@ export async function buildTaxQuarterlyReport(
         }
     }
 
-    const corrispettiviInput: Array<{
-        order: (typeof orders)[number];
-        grossCents: number;
-        paymentDate: Date;
-        gateway: string;
-        transactionId: string;
-        listinoCents: number;
-        scontoCents: number;
-    }> = [];
+    // Registro corrispettivi = incassi gateway (§2 / §8), non elenco ordini.
+    const builtCorrispettivi = await buildGatewayCorrispettivi({
+        start: bounds.start,
+        end: bounds.end,
+    });
 
+    if (builtCorrispettivi.totals.mancanteShare > 0.3) {
+        throw new Error(
+            `STOP dossier: aliquota MANCANTE su ${(builtCorrispettivi.totals.mancanteShare * 100).toFixed(1)}% del lordo gateway (soglia 30%). Completare Product.vatRatePercent / collegamenti ordine prima dell’export.`
+        );
+    }
+
+    const feeByOrderId = new Map<string, number>();
     for (const order of orders) {
-        // Pose di abbonamento prepagato: niente corrispettivo (solo passivo fiorista).
         if (isPrepaidSubscriptionPoseOrder(order)) continue;
-
         const stripeMove = stripeByOrderId.get(order.id);
         const paypalMove =
             paypalByOrderId.get(order.id) ||
             (order.orderNumber ? paypalByOrderNumber.get(order.orderNumber) : undefined);
-
-        // Preferisci l'importo catturato dal gateway (centesimi esatti), poi grossAmount, poi listino.
-        const grossCents =
-            stripeMove && stripeMove.amountCents > 0
-                ? Math.abs(stripeMove.amountCents)
-                : paypalMove && paypalMove.grossCents > 0
-                  ? paypalMove.grossCents
-                  : order.grossAmount != null
-                    ? euroFloatToCents(order.grossAmount)
-                    : order.totalPriceCents;
-
         let feeCents = order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
-        let transactionId = order.stripeTransactionId || '';
-        let paymentDate = order.createdAt;
-        const gateway = resolveGatewayName({
-            paymentMethodLabel: order.paymentMethodLabel,
-            hasPaypalLedger: Boolean(paypalMove),
-            hasStripeMovement: Boolean(stripeMove),
-        });
-
-        if (stripeMove && gateway === 'Stripe') {
-            feeCents = stripeMove.feeCents > 0 ? stripeMove.feeCents : feeCents;
-            transactionId =
-                stripeMove.sourceId || stripeMove.stripeId || transactionId;
-            paymentDate = stripeMove.createdAtStripe;
-        } else if (paypalMove && gateway === 'PayPal') {
-            feeCents = paypalMove.feeCents > 0 ? paypalMove.feeCents : feeCents;
-            transactionId = paypalMove.transactionId || transactionId;
-            paymentDate = paypalMove.paymentDate;
-        }
-
-        const listinoCents = order.totalPriceCents;
-        const scontoCents = Math.max(0, listinoCents - Math.abs(grossCents));
-
-        corrispettiviInput.push({
-            order,
-            grossCents,
-            paymentDate,
-            gateway,
-            transactionId,
-            listinoCents,
-            scontoCents,
-        });
-
-        // feeCents reserved for legacy summary fields below via gateway maps
-        void feeCents;
-    }
-
-    const builtCorrispettivi = buildDossierCorrispettiviRows({
-        orders: corrispettiviInput.map((e) => ({
-            order: e.order,
-            grossCents: e.grossCents,
-            paymentDate: e.paymentDate,
-            gateway: e.gateway,
-            transactionId: e.transactionId,
-            listinoCents: e.listinoCents,
-            scontoCents: e.scontoCents,
-        })),
-    });
-
-    const feeByOrderId = new Map<string, number>();
-    for (const e of corrispettiviInput) {
-        const stripeMove = stripeByOrderId.get(e.order.id);
-        const paypalMove =
-            paypalByOrderId.get(e.order.id) ||
-            (e.order.orderNumber ? paypalByOrderNumber.get(e.order.orderNumber) : undefined);
-        let feeCents = e.order.stripeFee != null ? euroFloatToCents(e.order.stripeFee) : 0;
-        if (e.gateway === 'Stripe' && stripeMove?.feeCents) feeCents = stripeMove.feeCents;
-        if (e.gateway === 'PayPal' && paypalMove?.feeCents) feeCents = paypalMove.feeCents;
-        feeByOrderId.set(e.order.id, feeCents);
+        if (stripeMove?.feeCents) feeCents = Math.max(feeCents, stripeMove.feeCents);
+        if (paypalMove?.feeCents) feeCents = Math.max(feeCents, paypalMove.feeCents);
+        feeByOrderId.set(order.id, feeCents);
     }
 
     const corrispettivi: CorrispettivoRow[] = builtCorrispettivi.rows.map((r) => {
-        const feeCents = feeByOrderId.get(r.orderId) || 0;
-        const order = orders.find((o) => o.id === r.orderId);
+        const order = r.orderId ? orders.find((o) => o.id === r.orderId) : undefined;
+        const feeCents = r.orderId ? feeByOrderId.get(r.orderId) || 0 : 0;
         return {
             orderId: r.orderId,
             orderNumber: r.orderNumber,
             date: r.date,
-            paymentDate: r.paymentDate,
+            paymentDate: r.date,
             buyerName: order?.buyerFullName || order?.buyerEmail || 'Cliente',
             buyerTaxId: order?.user?.vatNumber?.trim() || '',
             buyerCountry: order?.buyerCountry?.trim() || 'IT',
@@ -711,8 +627,6 @@ export async function buildTaxQuarterlyReport(
             transactionId: r.transactionId,
             vatCertainty: r.vatCertainty,
             vatRuleNote: r.vatRuleNote,
-            listinoCents: r.listinoCents,
-            scontoCents: r.scontoCents,
         };
     });
     const corrispettiviExceptions = builtCorrispettivi.exceptions;
@@ -940,9 +854,10 @@ export async function buildTaxQuarterlyReport(
     const ivaEligible = corrispettivi.filter((r) => r.vatCertainty !== 'MANCANTE');
     const ivaDebitoVendite10Cents = ivaEligible.reduce((s, r) => s + r.ivaDebitoCents, 0);
     const saldoIvaStimatoCents = ivaDebitoVendite10Cents - floristIvaCreditoCents;
+    const grossAllCents = corrispettivi.reduce((s, r) => s + r.grossCents, 0);
 
     const ivaSummary: IvaPeriodSummary = {
-        corrispettiviLordoCents: ivaEligible.reduce((s, r) => s + r.grossCents, 0),
+        corrispettiviLordoCents: grossAllCents,
         imponibileVendite10Cents: ivaEligible.reduce((s, r) => s + r.imponibileCents, 0),
         ivaDebitoVendite10Cents,
         reverseChargeImponibileCents,
@@ -953,7 +868,7 @@ export async function buildTaxQuarterlyReport(
     };
 
     const summary = {
-        corrispettiviLordoCents: ivaSummary.corrispettiviLordoCents,
+        corrispettiviLordoCents: grossAllCents,
         corrispettiviImponibileCents: ivaSummary.imponibileVendite10Cents,
         ivaDebito10Cents: ivaSummary.ivaDebitoVendite10Cents,
         gatewayFeesCents: corrispettivi.reduce((s, r) => s + r.gatewayFeeCents, 0),

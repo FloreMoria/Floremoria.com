@@ -262,8 +262,10 @@ model Order {
   stripeFee              Float?            @map("stripe_fee")
   netAmount              Float?            @map("net_amount")
   /**
-   * ID movimento Stripe (stripe_tx_…) oppure PaymentIntent/chiave idempotenza partner (pi_/cs_/Idempotency-Key).
-   * Unique: evita doppi ordini su retry API dopo timeout.
+   * Identificativo transazione gateway per collegare Order ↔ registro corrispettivi.
+   * Checkout COM (da 2026-09): PaymentIntent Stripe (`pi_…`).
+   * Storico / partner: può essere anche `txn_…`, `cs_…` o Idempotency-Key.
+   * Ordini manuali (.eu → .com): valore incollato in creazione dashboard.
    */
   stripeTransactionId    String?           @unique @map("stripe_transaction_id") @db.VarChar(255)
   /**

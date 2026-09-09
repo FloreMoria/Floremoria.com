@@ -82,6 +82,8 @@ type GatewayIncasso = {
     orderId: string | null;
     channelBlob: string;
     isEu: boolean;
+    /** Chiavi alternative per match Order.stripeTransactionId (pi_/txn_/ch_/…). */
+    linkIds: string[];
 };
 
 async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso[]> {
@@ -118,6 +120,11 @@ async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso
 
         const txId = (r.sourceId || r.stripeId || '').trim();
         if (!txId) continue;
+        const meta = (r.metadataJson || {}) as Record<string, unknown>;
+        const rawStripeId =
+            typeof meta.rawStripeId === 'string'
+                ? meta.rawStripeId
+                : r.stripeId.replace(/^stripe_(?:com|eu)_tx_/, '').replace(/^stripe_tx_/, '');
         const blob = `${r.stripeId} ${r.sourceId || ''} ${r.description || ''} ${JSON.stringify(r.metadataJson || {})}`;
         out.push({
             gateway: 'Stripe',
@@ -127,6 +134,7 @@ async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso
             orderId: r.orderId,
             channelBlob: blob,
             isEu: /stripe_eu/i.test(r.stripeId) || isEuChannel(blob, r.createdAtStripe),
+            linkIds: [...new Set([txId, r.stripeId, rawStripeId, r.sourceId || ''].filter(Boolean))],
         });
     }
     return out;
@@ -199,6 +207,7 @@ async function loadPaypalIncassi(start: Date, end: Date): Promise<GatewayIncasso
             orderId: r.orderId,
             channelBlob: blob,
             isEu: isEuChannel(blob, date),
+            linkIds: [...new Set([txId, parsed?.canonicalKey || '', r.sourceKey].filter(Boolean))],
         });
     }
     return out;
@@ -264,10 +273,12 @@ export async function buildGatewayCorrispettivi(params: {
             : [];
     const orderById = new Map(orders.map((o) => [o.id, o]));
 
-    // Match secondario: stripeTransactionId / orderNumber in description
+    // Match secondario: Order.stripeTransactionId ∈ linkIds (pi_/txn_/ch_/…)
     const orphans = incassi.filter((i) => !i.orderId || !orderById.has(i.orderId));
     if (orphans.length > 0) {
-        const txIds = orphans.map((o) => o.transactionId).filter(Boolean);
+        const txIds = [
+            ...new Set(orphans.flatMap((o) => o.linkIds.length ? o.linkIds : [o.transactionId])),
+        ].filter(Boolean);
         const extra = await prisma.order.findMany({
             where: {
                 deletedAt: null,
@@ -277,7 +288,10 @@ export async function buildGatewayCorrispettivi(params: {
                         .filter((o) => o.transactionId.length >= 8)
                         .slice(0, 50)
                         .map((o) => ({
-                            orderNumber: { contains: o.transactionId.slice(0, 12), mode: 'insensitive' as const },
+                            orderNumber: {
+                                contains: o.transactionId.slice(0, 12),
+                                mode: 'insensitive' as const,
+                            },
                         })),
                 ],
             },
@@ -301,7 +315,9 @@ export async function buildGatewayCorrispettivi(params: {
             orderById.set(o.id, o);
             for (const g of orphans) {
                 if (g.orderId) continue;
-                if (o.stripeTransactionId && o.stripeTransactionId === g.transactionId) {
+                const st = (o.stripeTransactionId || '').trim();
+                if (!st) continue;
+                if (g.linkIds.some((id) => id === st) || g.transactionId === st) {
                     g.orderId = o.id;
                 }
             }

@@ -58,6 +58,14 @@ export async function POST(request: Request) {
             isRecurring: Boolean(body.isRecurring),
             additionalInstructions: body.additionalInstructions ?? null,
             isTest: testModeActive,
+            gatewayTransactionId:
+                typeof body.gatewayTransactionId === 'string'
+                    ? body.gatewayTransactionId
+                    : typeof body.stripeTransactionId === 'string'
+                      ? body.stripeTransactionId
+                      : null,
+            paymentMethodLabel:
+                typeof body.paymentMethodLabel === 'string' ? body.paymentMethodLabel : null,
         });
 
         // Creazione Dashboard = pagamento già confermato → notifiche subito (dedup in workflow).

@@ -546,6 +546,14 @@ export async function POST(request: Request) {
                       }
                     : {}),
             },
+            // Perché: stripeSync e il registro corrispettivi risolvono l’ordine da metadata
+            // sul PaymentIntent/Charge — la sola metadata della Session non basta.
+            payment_intent_data: {
+                metadata: {
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                },
+            },
             success_url: successUrl,
             cancel_url: `${baseUrl}/checkout`,
         });

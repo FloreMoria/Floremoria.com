@@ -100,32 +100,75 @@ function accountMeta(account: StripeAccountConfig, extra?: Record<string, unknow
     };
 }
 
-async function resolveOrderIdFromSource(
+async function resolveOrderLinkFromSource(
     stripe: Stripe,
-    sourceId: string | null | undefined
-): Promise<string | null> {
-    if (!sourceId) return null;
+    sourceId: string | null | undefined,
+    balanceTxnId?: string | null
+): Promise<{ orderId: string | null; enrich: Record<string, string> }> {
+    const enrich: Record<string, string> = {};
+    if (!sourceId && !balanceTxnId) return { orderId: null, enrich };
+
+    const candidateIds = new Set<string>();
+    if (sourceId) candidateIds.add(sourceId);
+    if (balanceTxnId) candidateIds.add(balanceTxnId);
+
     try {
-        if (sourceId.startsWith('ch_') || sourceId.startsWith('py_')) {
-            const charge = await stripe.charges.retrieve(sourceId);
+        if (sourceId && (sourceId.startsWith('ch_') || sourceId.startsWith('py_'))) {
+            const charge = await stripe.charges.retrieve(sourceId, {
+                expand: ['payment_intent'],
+            });
+            candidateIds.add(charge.id);
+            const pi =
+                typeof charge.payment_intent === 'string'
+                    ? charge.payment_intent
+                    : charge.payment_intent?.id || null;
+            if (pi) candidateIds.add(pi);
+
+            const receiptEmail =
+                charge.receipt_email ||
+                charge.billing_details?.email ||
+                null;
+            if (receiptEmail) enrich.receiptEmail = receiptEmail;
+            const billingName = charge.billing_details?.name;
+            if (billingName) enrich.billingName = billingName;
+
+            const piMeta =
+                typeof charge.payment_intent === 'object' && charge.payment_intent
+                    ? charge.payment_intent.metadata || {}
+                    : {};
+            const orderIdMeta =
+                charge.metadata?.orderId ||
+                (typeof piMeta.orderId === 'string' ? piMeta.orderId : null);
+            if (orderIdMeta) {
+                const byId = await prisma.order.findFirst({
+                    where: { id: orderIdMeta, deletedAt: null },
+                    select: { id: true },
+                });
+                if (byId) return { orderId: byId.id, enrich };
+            }
+
             const orderNumber =
                 charge.metadata?.orderNumber ||
-                (typeof charge.payment_intent === 'string'
-                    ? undefined
-                    : (charge.payment_intent as Stripe.PaymentIntent | null)?.metadata
-                          ?.orderNumber);
+                (typeof piMeta.orderNumber === 'string' ? piMeta.orderNumber : null);
             if (orderNumber) {
                 const order = await prisma.order.findFirst({
                     where: { orderNumber, deletedAt: null },
                     select: { id: true },
                 });
-                return order?.id ?? null;
+                if (order) return { orderId: order.id, enrich };
             }
         }
     } catch {
-        /* ignore */
+        /* ignore Stripe retrieve errors */
     }
-    return null;
+
+    const ids = [...candidateIds].filter(Boolean);
+    if (ids.length === 0) return { orderId: null, enrich };
+    const byTx = await prisma.order.findFirst({
+        where: { deletedAt: null, stripeTransactionId: { in: ids } },
+        select: { id: true },
+    });
+    return { orderId: byTx?.id ?? null, enrich };
 }
 
 /** Sincronizza balance transactions per un account. */
@@ -157,12 +200,14 @@ export async function syncStripeBalanceMovements(params?: {
         for (const bt of list.data) {
             try {
                 const sourceId = typeof bt.source === 'string' ? bt.source : bt.source?.id ?? null;
-                const orderId = await resolveOrderIdFromSource(stripe, sourceId);
+                const linked = await resolveOrderLinkFromSource(stripe, sourceId, bt.id);
+                const orderId = linked.orderId;
                 const stripeId = scopedStripeId(account, bt.id);
                 const meta = accountMeta(account, {
                     rawStripeId: bt.id,
                     fee_details: bt.fee_details as unknown as object[],
                     exchange_rate: bt.exchange_rate,
+                    ...linked.enrich,
                 });
                 await prisma.stripeFinanceMovement.upsert({
                     where: { stripeId },

@@ -195,6 +195,8 @@ function CreateOrderFormPanel({
     const [partnerPaymentStatus, setPartnerPaymentStatus] = useState(draft.partnerPaymentStatus);
     const [isRecurring, setIsRecurring] = useState(draft.isRecurring);
     const [additionalInstructions, setAdditionalInstructions] = useState(draft.additionalInstructions);
+    const [gatewayTransactionId, setGatewayTransactionId] = useState('');
+    const [paymentMethodLabel, setPaymentMethodLabel] = useState('');
     const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>(draft.selectedAccessoryIds);
     const initialTicketParts = (() => {
         const parts = parseTicketMessageParts(draft.ticketMessage);
@@ -423,6 +425,8 @@ function CreateOrderFormPanel({
                     partnerPaymentStatus,
                     isRecurring,
                     additionalInstructions: additionalInstructions || null,
+                    gatewayTransactionId: gatewayTransactionId.trim() || null,
+                    paymentMethodLabel: paymentMethodLabel.trim() || null,
                     accessories: selectedAccessoryIds.map((accId) => ({ productId: accId, quantity: 1 })),
                     ticketMessage,
                 }),
@@ -722,6 +726,31 @@ function CreateOrderFormPanel({
                                 <option value="PAID">Pagato (import / manuale)</option>
                                 <option value="UNPAID">Non pagato</option>
                             </select>
+                            <input
+                                placeholder="Riferimento transazione gateway (obbligatorio se pagato)"
+                                value={gatewayTransactionId}
+                                onChange={(e) => setGatewayTransactionId(e.target.value)}
+                                required={partnerPaymentStatus === 'PAID'}
+                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm md:col-span-2 font-mono"
+                                title="Stripe: payment_intent (pi_…) o ID PayPal della transazione"
+                            />
+                            <select
+                                value={paymentMethodLabel}
+                                onChange={(e) => setPaymentMethodLabel(e.target.value)}
+                                className="border border-gray-200 rounded-xl px-3 py-2 text-sm md:col-span-2"
+                            >
+                                <option value="">— Canale di incasso —</option>
+                                <option value="Stripe">Stripe (carta)</option>
+                                <option value="PayPal (Stripe)">PayPal (via Stripe)</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Bonifico">Bonifico</option>
+                                <option value="Altro">Altro</option>
+                            </select>
+                            <p className="text-[11px] text-slate-500 md:col-span-2 -mt-2">
+                                Per ordini riportati da .eu: incolla qui il <span className="font-mono">pi_…</span> Stripe
+                                o il codice transazione PayPal, altrimenti il registro corrispettivi non collega
+                                l’incasso.
+                            </p>
                             <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
                                 <input
                                     type="checkbox"

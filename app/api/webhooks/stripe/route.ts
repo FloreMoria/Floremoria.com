@@ -84,7 +84,17 @@ export async function POST(request: Request) {
     let paymentMethodLabel: string | undefined = undefined;
     let balanceDate = new Date();
 
-    const paymentIntentId = session.payment_intent as string;
+    const paymentIntentId =
+        typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : session.payment_intent?.id || undefined;
+
+    // Identificativo stabile per collegare Order ↔ gateway (registro corrispettivi).
+    // Preferiamo il PaymentIntent (pi_…); il balance txn (txn_…) resta solo fonte fee/importi.
+    if (paymentIntentId) {
+        stripeTransactionIdVal = paymentIntentId;
+    }
+
     if (paymentIntentId) {
         try {
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
@@ -96,12 +106,16 @@ export async function POST(request: Request) {
                 grossAmountVal = balanceTransaction.amount / 100;
                 stripeFeeVal = balanceTransaction.fee / 100;
                 netAmountVal = balanceTransaction.net / 100;
-                stripeTransactionIdVal = balanceTransaction.id;
                 balanceDate = new Date(balanceTransaction.created * 1000);
+                if (!stripeTransactionIdVal) {
+                    stripeTransactionIdVal = balanceTransaction.id;
+                }
                 console.info('[stripe-webhook] Recuperata transazione contabile reale Stripe:', {
                     grossAmountVal,
                     stripeFeeVal,
                     netAmountVal,
+                    paymentIntentId,
+                    balanceTxnId: balanceTransaction.id,
                     stripeTransactionIdVal,
                 });
             }

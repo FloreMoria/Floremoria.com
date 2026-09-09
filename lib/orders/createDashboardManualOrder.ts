@@ -57,6 +57,12 @@ export type CreateDashboardManualOrderInput = {
     additionalInstructions?: string | null;
     /** Sandbox admin: ordine di test (non impostare da checkout pubblico). */
     isTest?: boolean;
+    /**
+     * Riferimento transazione gateway (Stripe pi_/ch_/txn_ o ID PayPal).
+     * Obbligatorio in pratica per collegare l’incasso al registro corrispettivi.
+     */
+    gatewayTransactionId?: string | null;
+    paymentMethodLabel?: string | null;
 };
 
 function parseOptionalDate(value?: string | null): Date | undefined {
@@ -207,6 +213,19 @@ export async function createDashboardManualOrder(
         if (!partner) throw new Error('Fiorista selezionato non trovato.');
     }
 
+    const gatewayTx = input.gatewayTransactionId?.trim() || null;
+    if (gatewayTx) {
+        const clash = await prisma.order.findFirst({
+            where: { stripeTransactionId: gatewayTx.slice(0, 255), deletedAt: null },
+            select: { orderNumber: true },
+        });
+        if (clash) {
+            throw new Error(
+                `Riferimento transazione già usato sull’ordine ${clash.orderNumber || '(senza numero)'}.`
+            );
+        }
+    }
+
     const orderDataBase: Prisma.OrderCreateInput = {
         buyerFullName: formatPersonName(input.buyerFullName) || null,
         buyerEmail: email,
@@ -226,6 +245,12 @@ export async function createDashboardManualOrder(
         partnerPaymentStatus,
         status,
         additionalInstructions: buildManualInstructions(input.additionalInstructions),
+        ...(input.gatewayTransactionId?.trim()
+            ? { stripeTransactionId: input.gatewayTransactionId.trim().slice(0, 255) }
+            : {}),
+        ...(input.paymentMethodLabel?.trim()
+            ? { paymentMethodLabel: input.paymentMethodLabel.trim().slice(0, 64) }
+            : {}),
         ...(input.partnerId?.trim()
             ? { partner: { connect: { id: input.partnerId.trim() } } }
             : {}),

@@ -1,18 +1,19 @@
 # Inventario dello stato — Contabilità e Finanza
 
 **Data verifica:** 2026-09-09  
-**Commit verificato:** `f754058dd814c48cfb29afb24c5b4883cd464a1d` (`f754058d`)  
+**Commit verificato (codice ispezionato):** `f754058dd814c48cfb29afb24c5b4883cd464a1d` (`f754058d`)  
+**Commit di questo inventario:** vedi git log su `docs/INVENTARIO_CONTABILITA.md`  
 **Metodo di riferimento:** `docs/METODO_DOSSIER_FISCALE.md` **v1.7** (8 settembre 2026)  
 **Regola:** vince il codice; dove verbale/metodo e codice divergono, la divergenza è segnalata.
 
-### Conteggio riassuntivo (tutte le tabelle sotto)
+### Conteggio riassuntivo (righe tabella Stato · Voce · Evidenza · Nota)
 
 | Stato | Conteggio |
 |---|---:|
-| **FATTO** | 48 |
-| **PARZIALE** | 52 |
-| **DA FARE** | 18 |
-| **DA VERIFICARE** | 9 |
+| **FATTO** | 84 |
+| **PARZIALE** | 40 |
+| **DA FARE** | 10 |
+| **DA VERIFICARE** | 5 |
 
 ---
 

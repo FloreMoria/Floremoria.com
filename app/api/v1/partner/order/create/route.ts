@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
@@ -16,6 +16,11 @@ import {
     revalidatePartnerOrderDashboardCaches,
     resolveB2bOrderAssociations,
 } from '@/lib/partners/partnerOrderService';
+import {
+    extractPartnerIdempotencyKeys,
+    findExistingPartnerOrderByIdempotency,
+    partnerDuplicateOrderResponseBody,
+} from '@/lib/partners/partnerOrderIdempotency';
 import { formatDeceasedName, type DeceasedNameInput } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
 import {
@@ -155,12 +160,26 @@ export async function POST(request: Request) {
                 ? b.partnerNotifyEmail.trim().toLowerCase().slice(0, 255)
                 : undefined;
         const lineItems = Array.isArray(b.lineItems) ? (b.lineItems as LineItem[]) : [];
-        const externalAnnouncementId =
-            typeof b.annuncioId === 'string'
-                ? b.annuncioId.trim()
-                : typeof b.external_announcement_id === 'string'
-                  ? b.external_announcement_id.trim()
-                  : undefined;
+        const idempotencyKeys = extractPartnerIdempotencyKeys(request, b);
+        const externalAnnouncementId = idempotencyKeys.externalOrderId || undefined;
+
+        // Short-circuit: retry dopo timeout partner/Stripe → stesso ordine, niente secondo create.
+        if (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId) {
+            const existing = await findExistingPartnerOrderByIdempotency(prisma, idempotencyKeys);
+            if (existing) {
+                console.info('[B2B Partner API] order/create idempotent hit', {
+                    tag: `partner:${auth.partnerId}`,
+                    orderId: existing.id,
+                    orderNumber: existing.orderNumber,
+                    paymentKey: idempotencyKeys.paymentKey,
+                    externalOrderId: idempotencyKeys.externalOrderId,
+                });
+                return NextResponse.json(partnerDuplicateOrderResponseBody(existing), {
+                    status: 200,
+                    headers: jsonHeaders(request),
+                });
+            }
+        }
 
         const additionalInstructionsRaw =
             typeof b.additionalInstructions === 'string'
@@ -172,7 +191,11 @@ export async function POST(request: Request) {
         const stripeCheckoutSessionId =
             typeof b.stripeCheckoutSessionId === 'string' ? b.stripeCheckoutSessionId.trim() : undefined;
         const stripePaymentIntentId =
-            typeof b.stripePaymentIntentId === 'string' ? b.stripePaymentIntentId.trim() : undefined;
+            typeof b.stripePaymentIntentId === 'string'
+                ? b.stripePaymentIntentId.trim()
+                : typeof b.paymentIntentId === 'string'
+                  ? b.paymentIntentId.trim()
+                  : undefined;
         const stripeConnectedAccountId =
             typeof b.stripeConnectedAccountId === 'string' ? b.stripeConnectedAccountId.trim() : undefined;
         const casperApplicationFeeAmount =
@@ -323,91 +346,134 @@ export async function POST(request: Request) {
             agencyNameOverride: agencyNameBody,
         });
 
-        const order = await prisma.$transaction(async (tx) => {
-            const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
-            const b2bFields = buildB2bOrderCreateData(association, effectiveFloristPartnerId);
-            return tx.order.create({
-                data: {
-                    orderNumber,
-                    status: effectiveFloristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
-                    partnerPaymentStatus: partnerAlreadyPaid ? 'PAID' : 'UNPAID',
-                    paymentMethodLabel: partnerPaymentKind,
-                    isTest: isTestOrder,
-                    financeNotes: isTestOrder ? buildPartnerTestFinanceNote(auth.publicId) : undefined,
-                    deceasedName: deceasedName.trim(),
-                    cemeteryName: cemeteryName.trim(),
-                    cemeteryCity: cemeteryCity.trim(),
-                    gravePosition: gravePosition || null,
-                    deliveryProvince,
-                    deliveryDate,
-                    ticketMessage: ticketMessage ?? null,
-                    additionalInstructions: finalInstructions || null,
-                    buyerFullName: buyerFullName.trim(),
-                    buyerEmail,
-                    customerPhone: buyerPhone || null,
-                    totalPriceCents: subtotalCents,
-                    currency: 'EUR',
-                    ...b2bFields,
-                    funeralDate: funeralDate || null,
-                    partnerNotifyEmail: partnerNotifyEmail || null,
-                    externalAnnouncementId: externalAnnouncementId || null,
-                    items: {
-                        create: resolved.map((r) => ({
-                            productId: r.productId,
-                            quantity: r.quantity,
-                            priceCents: r.priceCents,
-                        })),
-                    },
-                },
-                include: {
-                    items: {
-                        include: {
-                            product: true,
+        let order;
+        try {
+            order = await prisma.$transaction(async (tx) => {
+                // Race: secondo create concorrente con stessa chiave → P2002 fuori dalla tx.
+                if (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId) {
+                    const existingInTx = await findExistingPartnerOrderByIdempotency(tx, idempotencyKeys);
+                    if (existingInTx) {
+                        return { __duplicate: true as const, existing: existingInTx };
+                    }
+                }
+
+                const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
+                const b2bFields = buildB2bOrderCreateData(association, effectiveFloristPartnerId);
+                const created = await tx.order.create({
+                    data: {
+                        orderNumber,
+                        status: effectiveFloristPartnerId ? 'IN_PROGRESS' : 'ACCEPTED',
+                        partnerPaymentStatus: partnerAlreadyPaid ? 'PAID' : 'UNPAID',
+                        paymentMethodLabel: partnerPaymentKind,
+                        isTest: isTestOrder,
+                        financeNotes: isTestOrder ? buildPartnerTestFinanceNote(auth.publicId) : undefined,
+                        deceasedName: deceasedName.trim(),
+                        cemeteryName: cemeteryName.trim(),
+                        cemeteryCity: cemeteryCity.trim(),
+                        gravePosition: gravePosition || null,
+                        deliveryProvince,
+                        deliveryDate,
+                        ticketMessage: ticketMessage ?? null,
+                        additionalInstructions: finalInstructions || null,
+                        buyerFullName: buyerFullName.trim(),
+                        buyerEmail,
+                        customerPhone: buyerPhone || null,
+                        totalPriceCents: subtotalCents,
+                        currency: 'EUR',
+                        ...b2bFields,
+                        funeralDate: funeralDate || null,
+                        partnerNotifyEmail: partnerNotifyEmail || null,
+                        externalAnnouncementId: externalAnnouncementId || null,
+                        // Persistenza chiave idempotenza (PI / session / Idempotency-Key).
+                        stripeTransactionId: idempotencyKeys.paymentKey || null,
+                        items: {
+                            create: resolved.map((r) => ({
+                                productId: r.productId,
+                                quantity: r.quantity,
+                                priceCents: r.priceCents,
+                            })),
                         },
                     },
-                    partner: true,
-                    agency: true,
-                },
+                    include: {
+                        items: {
+                            include: {
+                                product: true,
+                            },
+                        },
+                        partner: true,
+                        agency: true,
+                    },
+                });
+                return { __duplicate: false as const, created };
             });
-        });
-
-        try {
-            await touchPartnerCredentialLastUsed(auth.credentialId);
-        } catch (touchErr) {
-            console.error('[B2B Partner API] touchPartnerCredentialLastUsed failed (non-blocking):', touchErr);
+        } catch (createErr) {
+            // Concorrenza: unique su stripeTransactionId → restituisci l'ordine già creato.
+            if (
+                createErr instanceof Prisma.PrismaClientKnownRequestError &&
+                createErr.code === 'P2002' &&
+                (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId)
+            ) {
+                const raced = await findExistingPartnerOrderByIdempotency(prisma, idempotencyKeys);
+                if (raced) {
+                    return NextResponse.json(partnerDuplicateOrderResponseBody(raced), {
+                        status: 200,
+                        headers: jsonHeaders(request),
+                    });
+                }
+            }
+            throw createErr;
         }
 
-        if (partnerAlreadyPaid && !effectiveFloristPartnerId) {
-            await autoAssignKnownTombOrder(order.id).catch((autoErr) => {
-                console.error('[B2B Partner API] Auto-assegnazione tomba nota fallita (non bloccante):', autoErr);
+        if (order.__duplicate) {
+            return NextResponse.json(partnerDuplicateOrderResponseBody(order.existing), {
+                status: 200,
+                headers: jsonHeaders(request),
             });
         }
 
-        logPartnerOrderIngestion({
-            source: 'api_v1_partner_order_create',
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            authPartner: partner,
-            association,
-            floristPartnerId: effectiveFloristPartnerId,
-            totalPriceCents: subtotalCents,
-        });
+        const createdOrder = order.created;
 
-        revalidatePartnerOrderDashboardCaches({
-            referralPartnerId: association.referralPartnerId,
-            agencyId: association.agencyId,
-            floristPartnerId: effectiveFloristPartnerId,
-        });
+        // Post-create fuori dal path critico: risposta al partner in <1s (no await email/WhatsApp/auto-assign).
+        after(async () => {
+            try {
+                await touchPartnerCredentialLastUsed(auth.credentialId);
+            } catch (touchErr) {
+                console.error('[B2B Partner API] touchPartnerCredentialLastUsed failed (non-blocking):', touchErr);
+            }
 
-        // Dispatcher multi-canale (email cliente/fiorista/partner + WhatsApp VERA).
-        void sendPartnerOrderNotifications(order.id, {
-            sandboxOrder: isTestOrder,
-        })
-            .then((results) => {
+            if (partnerAlreadyPaid && !effectiveFloristPartnerId) {
+                await autoAssignKnownTombOrder(createdOrder.id).catch((autoErr) => {
+                    console.error(
+                        '[B2B Partner API] Auto-assegnazione tomba nota fallita (non bloccante):',
+                        autoErr
+                    );
+                });
+            }
+
+            logPartnerOrderIngestion({
+                source: 'api_v1_partner_order_create',
+                orderId: createdOrder.id,
+                orderNumber: createdOrder.orderNumber,
+                authPartner: partner,
+                association,
+                floristPartnerId: effectiveFloristPartnerId,
+                totalPriceCents: subtotalCents,
+            });
+
+            revalidatePartnerOrderDashboardCaches({
+                referralPartnerId: association.referralPartnerId,
+                agencyId: association.agencyId,
+                floristPartnerId: effectiveFloristPartnerId,
+            });
+
+            try {
+                const results = await sendPartnerOrderNotifications(createdOrder.id, {
+                    sandboxOrder: isTestOrder,
+                });
                 console.info('[B2B Partner API] sendPartnerOrderNotifications', {
                     tag: `partner:${partner.id}`,
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
+                    orderId: createdOrder.id,
+                    orderNumber: createdOrder.orderNumber,
                     results: results.map((r) => ({
                         channel: r.channel,
                         ok: r.ok,
@@ -415,31 +481,35 @@ export async function POST(request: Request) {
                         error: r.error,
                     })),
                 });
-            })
-            .catch((notifyErr) => {
+            } catch (notifyErr) {
                 console.error('[B2B Partner API] sendPartnerOrderNotifications failed (non-blocking):', {
                     tag: `partner:${partner.id}`,
-                    orderId: order.id,
+                    orderId: createdOrder.id,
                     error: notifyErr,
                 });
-            });
+            }
+        });
 
         return NextResponse.json(
             {
+                success: true,
+                duplicate: false,
+                orderId: createdOrder.id,
+                code: createdOrder.orderNumber,
                 data: {
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
-                    totalPriceCents: order.totalPriceCents,
-                    currency: order.currency,
-                    agencyId: order.agencyId,
-                    partnerId: order.partnerId,
-                    referralPartnerId: order.referralPartnerId,
-                    partnershipChannel: order.partnershipChannel,
-                    partnerCommissionCents: order.partnerCommissionCents,
-                    partnerCommissionSettlementStatus: order.partnerCommissionSettlementStatus,
-                    isTest: order.isTest,
-                    partnerPaymentStatus: order.partnerPaymentStatus,
-                    paymentMethodLabel: order.paymentMethodLabel,
+                    orderId: createdOrder.id,
+                    orderNumber: createdOrder.orderNumber,
+                    totalPriceCents: createdOrder.totalPriceCents,
+                    currency: createdOrder.currency,
+                    agencyId: createdOrder.agencyId,
+                    partnerId: createdOrder.partnerId,
+                    referralPartnerId: createdOrder.referralPartnerId,
+                    partnershipChannel: createdOrder.partnershipChannel,
+                    partnerCommissionCents: createdOrder.partnerCommissionCents,
+                    partnerCommissionSettlementStatus: createdOrder.partnerCommissionSettlementStatus,
+                    isTest: createdOrder.isTest,
+                    partnerPaymentStatus: createdOrder.partnerPaymentStatus,
+                    paymentMethodLabel: createdOrder.paymentMethodLabel,
                 },
             },
             { status: 201, headers: jsonHeaders(request) }

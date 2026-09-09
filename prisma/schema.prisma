@@ -238,6 +238,7 @@ model Order {
   veraAlertPriority      String?           @default("normal") @map("vera_alert_priority") @db.VarChar(16)
   orderFrozenAt          DateTime?         @map("order_frozen_at")
   orderFrozenReason      String?           @map("order_frozen_reason") @db.Text
+  /** ID annuncio/ordine esterno partner (idempotenza secondaria su retry API). */
   externalAnnouncementId String?           @map("external_announcement_id") @db.VarChar(255)
   deceasedProfileId      String?
   deceasedProfile        DeceasedProfile?  @relation(fields: [deceasedProfileId], references: [id])
@@ -260,7 +261,11 @@ model Order {
   grossAmount            Float?            @map("gross_amount")
   stripeFee              Float?            @map("stripe_fee")
   netAmount              Float?            @map("net_amount")
-  stripeTransactionId    String?           @map("stripe_transaction_id") @db.VarChar(255)
+  /**
+   * ID movimento Stripe (stripe_tx_…) oppure PaymentIntent/chiave idempotenza partner (pi_/cs_/Idempotency-Key).
+   * Unique: evita doppi ordini su retry API dopo timeout.
+   */
+  stripeTransactionId    String?           @unique @map("stripe_transaction_id") @db.VarChar(255)
   /**
    * Compenso fiorista concordato (centesimi) — stessa fonte di Vera WhatsApp.
    * Se null, si calcola da listino/note e si può congelare al primo invio.
@@ -278,6 +283,8 @@ model Order {
   /** Record creati in Modalità Test (sandbox admin). */
   isTest                 Boolean           @default(false) @map("is_test")
   customerReceipts       CustomerOrderReceipt[]
+
+  @@index([externalAnnouncementId])
 }
 
 model OrderItem {

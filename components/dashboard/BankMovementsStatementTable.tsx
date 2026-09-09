@@ -354,7 +354,8 @@ export default function BankMovementsStatementTable({ searchTerm = '' }: Props) 
                                     colSpan={7}
                                     className="px-4 py-10 text-center text-slate-400 italic"
                                 >
-                                    Nessun movimento bancario reale. Carica o incolla un estratto
+                                    Nessun movimento bancario reale. Carica un estratto ufficiale
+                                    (PDF, CSV o Excel) scaricato dal portale della banca.
                                     Fineco nel pannello sopra.
                                 </td>
                             </tr>

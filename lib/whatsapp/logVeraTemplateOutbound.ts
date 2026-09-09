@@ -12,6 +12,8 @@ const TEMPLATE_BODY_ENV: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'WHATSAPP_TEMPLATE_CUSTOMER_ORDER_CONFIRM_BODY',
     customer_waiting_update: 'WHATSAPP_TEMPLATE_CUSTOMER_WAITING_UPDATE_BODY',
     customer_delivery_photo: 'WHATSAPP_TEMPLATE_CUSTOMER_DELIVERY_PHOTO_BODY',
+    customer_review_tomba: 'WHATSAPP_TEMPLATE_CUSTOMER_REVIEW_TOMBA_BODY',
+    customer_review_funerale: 'WHATSAPP_TEMPLATE_CUSTOMER_REVIEW_FUNERALE_BODY',
     ordine_completato: 'WHATSAPP_TEMPLATE_ORDINE_COMPLETATO_BODY',
     florist_reminder: 'WHATSAPP_TEMPLATE_FLORIST_REMINDER_BODY',
     anniversary_gdm_reminder: 'WHATSAPP_TEMPLATE_ANNIVERSARY_GDM_BODY',

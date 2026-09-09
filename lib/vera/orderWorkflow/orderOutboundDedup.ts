@@ -5,6 +5,8 @@ const EVENT_TYPE_BY_TEMPLATE: Partial<Record<VeraTemplateId, string>> = {
     customer_order_confirm: 'ORDER_CONFIRM_TEMPLATE',
     customer_waiting_update: 'WAITING_UPDATE_TEMPLATE',
     customer_delivery_photo: 'DELIVERY_PHOTO_TEMPLATE',
+    customer_review_tomba: 'CUSTOMER_REVIEW_TOMBA_TEMPLATE',
+    customer_review_funerale: 'CUSTOMER_REVIEW_FUNERALE_TEMPLATE',
     ordine_completato: 'ORDINE_COMPLETATO_TEMPLATE',
     florist_reminder: 'FLORIST_REMINDER_TEMPLATE',
     florist_repeat: 'FLORIST_NEW_ORDER_TEMPLATE',

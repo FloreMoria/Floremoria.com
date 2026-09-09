@@ -155,6 +155,38 @@ export function buildCustomerWaitingUpdateParams(input: {
     return params;
 }
 
+export function buildCustomerReviewTombaParams(input: {
+    buyerFirstName?: string | null;
+    deceasedName?: string | null;
+}): string[] {
+    const params = buildVeraTemplateBodyParams('customer_review_tomba', {
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
+        deceasedName: requireText(
+            formatDeceasedName(input.deceasedName, 'chi ama'),
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
+    });
+    logBuiltTemplateParams('customer_review_tomba', params);
+    return params;
+}
+
+export function buildCustomerReviewFuneraleParams(input: {
+    buyerFirstName?: string | null;
+    deceasedName?: string | null;
+}): string[] {
+    const params = buildVeraTemplateBodyParams('customer_review_funerale', {
+        buyerFirstName: resolveSafeBuyerFirstName(input.buyerFirstName),
+        deceasedName: requireText(
+            formatDeceasedName(input.deceasedName, 'chi ama'),
+            'deceasedName',
+            META_TEMPLATE_LIMITS.deceasedName
+        ),
+    });
+    logBuiltTemplateParams('customer_review_funerale', params);
+    return params;
+}
+
 export function buildFloremoriaGenericoParams(input: {
     recipientFirstName?: string | null;
     updateMessage: string;

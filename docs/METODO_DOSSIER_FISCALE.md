@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.6 — 8 settembre 2026.
+Versione 1.7 — 8 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -358,7 +358,22 @@ ordini che sul `.com` sono già registrati.
 
 ---
 
-### 8.2 Da dove viene l'aliquota
+### 8.2 Il corrispettivo è il lordo pagato dal cliente
+
+L'importo che entra nel registro è quello che il **cliente ha pagato**, non quello che il
+gateway ci accredita al netto della sua commissione.
+
+La commissione del gateway è un **costo separato**, con la sua autofattura in reverse charge:
+sottrarla dal corrispettivo significherebbe dichiarare vendite più basse del vero e perdere
+il costo. Sui report dei gateway va quindi presa la colonna dell'importo **lordo**, mai quella
+del netto.
+
+Esempio dal T2 2026: PayPal lordo € 593,79 contro netto € 579,36. La differenza di € 14,43 è
+la commissione, che è un costo, non un minor ricavo.
+
+---
+
+### 8.3 Da dove viene l'aliquota
 
 L'aliquota si determina **riga per riga dell'ordine**, secondo la natura del bene:
 
@@ -370,6 +385,26 @@ L'aliquota si determina **riga per riga dell'ordine**, secondo la natura del ben
 
 Ogni prodotto a catalogo porta la propria aliquota come **attributo del prodotto**. Non si
 deduce dal nome, non si indovina per categoria di testo, non si applica un valore di default.
+
+**I tre stati dell'aliquota.** Non tutti gli incassi hanno un ordine a database. Ogni riga del
+registro dichiara quindi come l'aliquota è stata ottenuta:
+
+| Stato | Quando | Cosa fa il dossier |
+|---|---|---|
+| **determinata** | esiste la riga d'ordine con il prodotto e la sua aliquota | la usa |
+| **presunta** | l'ordine non c'è, ma una regola documentata copre il caso | la applica **e la dichiara** in una colonna dedicata, con la regola citata |
+| **mancante** | non c'è ordine e nessuna regola applicabile | riga in Eccezioni, esclusa dai totali IVA |
+
+Una regola di presunzione è ammessa solo se **scritta in questo metodo** e verificata da una
+fonte esterna al sistema. L'unica in vigore:
+
+> **Canale `.eu` fino al 01/07/2026** — aliquota 10%, salvo `FF-PD-26-002` che contiene un
+> accessorio. Base: verifica ordine per ordine del titolare, settembre 2026.
+
+Il foglio 0 riporta sempre quanto vale ciascuno dei tre stati in euro, così che il
+commercialista veda su quale parte del fatturato l'aliquota è certa e su quale è presunta.
+Un valore presunto non è un valore inventato solo perché è dichiarato tale e la sua regola è
+verificabile.
 
 **La fonte è la riga d'ordine nel database, non l'email di conferma.** L'email è un documento
 generato *a partire* dall'ordine: sta più in basso nella gerarchia del §2 e leggerla come
@@ -468,6 +503,12 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.7 — 8 settembre 2026**
+- §8.2 — nuova: il corrispettivo è l'importo **lordo** pagato dal cliente, mai il netto
+  accreditato dal gateway. La commissione è un costo separato.
+- §8.3 — ex §8.2, più i **tre stati dell'aliquota** (determinata / presunta / mancante) e la
+  regola di presunzione per il canale `.eu` fino al 01/07/2026.
 
 **1.6 — 8 settembre 2026**
 - §2 — gerarchia fra canali di ingestione delle fatture passive: Youdox vince sul report

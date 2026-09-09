@@ -25,6 +25,8 @@ export type VeraTemplateId =
     | 'florist_bonifico_ricevuta'
     | 'florist_ringraziamento'
     | 'customer_cemetery_closed'
+    | 'customer_review_tomba'
+    | 'customer_review_funerale'
     | 'anniversary_gdm_reminder'
     | 'floremoria_generico';
 
@@ -311,6 +313,43 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         library: 'UTENTE',
         bodyCanonical: 'Gentile {{1}} | {{2}} | cimitero {{3}}',
         description: '{{1}} nome, {{2}} defunto, {{3}} cimitero',
+    },
+    customer_review_tomba: {
+        id: 'customer_review_tomba',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_CUSTOMER_REVIEW_TOMBA',
+            'floremoria_recensione_tomba'
+        ),
+        language: 'it',
+        bodyParamCount: 2,
+        bodySlots: ['buyerFirstName', 'deceasedName'],
+        library: 'UTENTE',
+        bodyCanonical:
+            'Gentile {{1}},\n' +
+            'la cura e il rispetto per i suoi cari sono la nostra priorità.\n' +
+            'Ci auguriamo che la foto della posa del suo omaggio floreale per {{2}}, le abbia trasmesso vicinanza e serenità.\n' +
+            'Se ha trovato soddisfazione nel nostro servizio, ci farebbe molto piacere se volesse lasciare una recensione su Google: https://g.page/r/CYtHIOAB65TOEB0/review .\n' +
+            'Con affetto e rispetto da tutto lo Staff di FloreMoria🌹',
+        description:
+            '{{1}} nome utente, {{2}} nome defunto — richiesta recensione Google per posa tomba/anniversario',
+    },
+    customer_review_funerale: {
+        id: 'customer_review_funerale',
+        metaName: envTemplateName(
+            'WHATSAPP_TEMPLATE_CUSTOMER_REVIEW_FUNERALE',
+            'floremoria_recensione_funerale'
+        ),
+        language: 'it',
+        bodyParamCount: 2,
+        bodySlots: ['buyerFirstName', 'deceasedName'],
+        library: 'UTENTE',
+        bodyCanonical:
+            'Gentile {{1}},\n' +
+            'ci auguriamo che la nostra composizione floreale abbia onorato la memoria di {{2}} con la dignità e la cura che questo momento richiedeva. Se il nostro servizio le è stato di conforto, le saremmo grati se volesse condividere un breve pensiero su Google per aiutare altre famiglie: https://g.page/r/CYtHIOAB65TOEB0/review\n' +
+            'La ringraziamo.\n' +
+            'Un caro saluto da tutto lo Staff di FloreMoria🌹',
+        description:
+            '{{1}} nome utente, {{2}} nome defunto — richiesta recensione Google per funerale',
     },
     anniversary_gdm_reminder: {
         id: 'anniversary_gdm_reminder',

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 8 Settembre 2026"
 sync_source: docs/verbali/08-09-2026.md
-synced_at: 2026-09-08T22:04:46.322Z
+synced_at: 2026-09-09T03:13:21.066Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/08-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -22,7 +22,7 @@ synced_at: 2026-09-08T22:04:46.322Z
 
 ## Sezione 2 — Strategia
 
-- [2026-09-08 19:16] docs/finance: METODO v1.6 indagine Report∩Youdox=13 (€623); verifica .eu→.com 9; misure T2 gateway; STOP pre Fase 3.
+- _Nessuna attività registrata per questa giornata._
 
 ## Sezione 3 — Sviluppo
 
@@ -32,15 +32,9 @@ synced_at: 2026-09-08T22:04:46.322Z
 - `b9e33a02` fix(finance): C6 dossier confronta imponibile — Fase 1 T2 chiusa (C6=6) _(FloreMoria)_
 - `4a174ec0` fix(finance): C6 dossier v1.1 (solo coppie storno tecnico) — STOP T2≠6 _(FloreMoria)_
 - `69e29ba9` feat(finance): Fase 1 controlli dossier fiscale T2 2026 (METODO §5) _(FloreMoria)_
-- [2026-09-08 15:20] finance/dossier: Fase1 controlli METODO §5 su T2 — C1=19 C2=€387,90 C6=6 C7=12 C10 fail×2 (baseline agosto OK).
-- [2026-09-08 15:25] finance/dossier: METODO v1.1 + C6 riscritto (coppie storno tecnico); T2 C6=0≠6 → STOP, attesa decisione.
-- [2026-09-08 15:38] fix/finance: C6 dossier su imponibile (manual↔saas); Fase 1 T2 chiusa C6=6 · baseline agosto allineata.
-- [2026-09-08 16:08] feat/finance: Fase 2 dossier v1.2 — Quadratura+Eccezioni+§6.4; Acquisti T2 imponibile €855,53 (6 eccezioni doppia ingestione).
 
 ## Sezione 4 — Logistica
 
 - `0982d2ec` feat(reputation): aggiornato GoogleReviewsBar (34 recensioni 5.0, link GBP), cadenza Quote Card ogni 3gg e TrustSocialProofBadge su Home, Comuni e PDP _(FloreMoria)_
 - `14feecb5` feat(products): aliquota IVA e costo standard fiorista (METODO v1.4) _(FloreMoria)_
 - `774c3166` feat(fioristi): aggiunta cancellazione definitiva fiorista con modale di conferma in tabella e dossier _(FloreMoria)_
-- [2026-09-08 16:37] export: ZIP 38 PDF ricevute cortesia ordini PAID → Downloads + docs/verbali.
-- [2026-09-08 17:01] feat/products: aliquota IVA + costo standard fiorista (METODO v1.4); C1–C4 riportati; STOP pre Fase 3.

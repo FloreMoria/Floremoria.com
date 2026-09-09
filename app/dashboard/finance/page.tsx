@@ -38,6 +38,7 @@ import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingIn
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
 import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
+import DossierControlsBadge from '@/components/dashboard/DossierControlsBadge';
 import {
     FINANCE_TAB_STYLES,
     type FinanceMainTabId,
@@ -565,6 +566,9 @@ export default function FinanceDashboardPage() {
                 </div>
             )}
 
+            {/* Controlli C1–C10 — sempre in cima (METODO §5) */}
+            <DossierControlsBadge />
+
             {/* Riquadro Fineco + dati societari */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -580,8 +584,8 @@ export default function FinanceDashboardPage() {
                         </p>
                         <p className="text-xs text-slate-500">
                             P.IVA / C.F. {FLOREMORIA_LEGAL_ENTITY.vatNumber} · REA{' '}
-                            {FLOREMORIA_LEGAL_ENTITY.reaNumber} · Capitale sociale{' '}
-                            {FLOREMORIA_LEGAL_ENTITY.shareCapital}
+                            {FLOREMORIA_LEGAL_ENTITY.reaNumber} · Capitale sociale:{' '}
+                            {FLOREMORIA_LEGAL_ENTITY.shareCapital ?? 'Dato non disponibile'}
                         </p>
                         <p className="text-xs text-slate-500">
                             Codice SDI:{' '}
@@ -1448,14 +1452,18 @@ export default function FinanceDashboardPage() {
                                                     <span className="font-mono text-rose-600">€{((statements?.statoPatrimoniale?.debitiTributariCents || 0) / 100).toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center py-1 border-b border-slate-100 pb-2">
-                                                    <span className="text-slate-600">Patrimonio Netto (Capitale Sociale + Utile Stimato)</span>
+                                                    <span className="text-slate-600">Patrimonio Netto (utile/perdita di esercizio)</span>
                                                     <span className="font-mono font-semibold text-emerald-600">€{((statements?.statoPatrimoniale?.patrimonioNettoCents || 0) / 100).toFixed(2)}</span>
                                                 </div>
                                             </div>
 
                                             <div className="flex justify-between items-center p-3.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 text-sm">
                                                 <span>Capitale Sociale Deliberato e Versato</span>
-                                                <span className="font-mono">€11.410,00 i.v.</span>
+                                                <span className="font-mono text-slate-500 font-semibold">
+                                                    {statements?.statoPatrimoniale?.capitaleSocialeCents != null
+                                                        ? `€${(statements.statoPatrimoniale.capitaleSocialeCents / 100).toFixed(2)}`
+                                                        : 'Dato non disponibile'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

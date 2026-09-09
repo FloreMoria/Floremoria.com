@@ -1,16 +1,15 @@
 /**
- * Dossier Fiscale Completo — workbook Excel (METODO v1.2).
+ * Dossier Fiscale Completo — workbook Excel (METODO v1.7).
  *
- * Fogli Fase 2:
+ * Fogli:
  *  0. Quadratura (§4)
- *  1. Prima Nota (Master)
- *  2. Estratto Conto Fineco
- *  3. Acquisti — SDI + autofatture, con §6.4 (niente doppia ingestione)
- *  4. Dettaglio Gateway Stripe
- *  5. Dettaglio Gateway PayPal
- *  6. Eccezioni (§9) — sempre presente
- *
- * Fase 3 aggiungerà il Registro corrispettivi (§8).
+ *  1. Registro Corrispettivi (§8 / §8.3)
+ *  2. Prima Nota (Master)
+ *  3. Estratto Conto Fineco
+ *  4. Acquisti — SDI + autofatture (§6.5)
+ *  5. Dettaglio Gateway Stripe
+ *  6. Dettaglio Gateway PayPal
+ *  7. Eccezioni (§9) — sempre presente
  */
 
 import ExcelJS from 'exceljs';
@@ -36,6 +35,9 @@ import {
     runAllDossierControls,
     type DossierControlResult,
 } from '@/lib/financial/dossierFiscalControls';
+import {
+    summarizeCorrispettiviVatCertainty,
+} from '@/lib/financial/dossierCorrispettiviBuild';
 
 const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
@@ -59,7 +61,7 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
 
 const EUR_FORMAT = '€ #,##0.00';
 /** Versione del metodo applicata (METODO §12). */
-export const DOSSIER_METHOD_VERSION = '1.2';
+export const DOSSIER_METHOD_VERSION = '1.7';
 const DOSSIER_VERSION = `dossier-fiscale-metodo-v${DOSSIER_METHOD_VERSION}`;
 
 function euroNum(cents: number): number {
@@ -454,6 +456,43 @@ async function buildQuadraturaSheet(
     }
     ws.addRow([]);
 
+    // --- §8.3 Certezza aliquote ---
+    const vatCert = summarizeCorrispettiviVatCertainty(
+        report.corrispettivi.map((r) => ({
+            date: r.date,
+            paymentDate: r.paymentDate,
+            canaleIncasso: r.gateway,
+            orderNumber: r.orderNumber,
+            orderId: r.orderId,
+            transactionId: r.transactionId,
+            listinoCents: r.listinoCents ?? r.grossCents,
+            scontoCents: r.scontoCents ?? 0,
+            grossCents: r.grossCents,
+            vatRate: r.vatRate,
+            imponibileCents: r.imponibileCents,
+            ivaCents: r.ivaDebitoCents,
+            vatCertainty: r.vatCertainty || 'MANCANTE',
+            vatRuleNote: r.vatRuleNote || '',
+        }))
+    );
+    ws.addRow(['§8.3 Certezza aliquota IVA (lordo per stato)']).getCell(1).font = {
+        bold: true,
+        size: 12,
+        name: 'Calibri',
+    };
+    styleHeaderRow(ws.addRow(['Stato', 'Importo lordo EUR', 'Nota']));
+    for (const [stato, cents, nota] of [
+        ['Determinata', vatCert.determinataGrossCents, 'da Product.vatRatePercent'],
+        ['Mista (ordine composito)', vatCert.mistaGrossCents, 'scomposta per aliquota'],
+        ['Presunta', vatCert.presuntaGrossCents, 'unica regola METODO §8.3 (.eu ≤ 01/07/2026)'],
+        ['Mancante (esclusa da IVA)', vatCert.mancanteGrossCents, 'vedi foglio Eccezioni'],
+    ] as Array<[string, number, string]>) {
+        const r = ws.addRow([stato, euroNum(cents), nota]);
+        applyBorders(r);
+        r.getCell(2).numFmt = EUR_FORMAT;
+    }
+    ws.addRow([]);
+
     // --- 4.2 Liquidazione IVA ---
     // Reverse charge: stesso importo a debito e a credito (§4.2). Preferiamo la somma IVA
     // dalle autofatture del foglio Acquisti; se zero, fallback al report.
@@ -475,8 +514,8 @@ async function buildQuadraturaSheet(
     };
     styleHeaderRow(ws.addRow(['Voce', 'Importo EUR', 'Fonte']));
     const ivaRows: Array<[string, number, string]> = [
-        ['Imponibile vendite (aliquota prodotti)', imponibileVendite, 'corrispettivi / report'],
-        ['IVA a debito vendite', ivaDebitoVendite, 'foglio corrispettivi (Fase 3)'],
+        ['Imponibile vendite (aliquote determinate/miste/presunte)', imponibileVendite, 'Registro Corrispettivi §8'],
+        ['IVA a debito vendite', ivaDebitoVendite, 'Registro Corrispettivi §8'],
         [
             'Imponibile acquisti (totale foglio Acquisti post §6.4)',
             acquistiImponibileCents,
@@ -798,8 +837,55 @@ async function buildPaypalSheet(wb: ExcelJS.Workbook, report: TaxQuarterlyReport
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 }
 
+function buildRegistroCorrispettiviSheet(wb: ExcelJS.Workbook, report: TaxQuarterlyReport) {
+    const ws = wb.addWorksheet('Registro Corrispettivi');
+    const headers = [
+        'Data',
+        'Canale incasso',
+        'Numero ordine',
+        'Riferimento transazione gateway',
+        'Importo listino EUR',
+        'Sconto o buono EUR',
+        'Incassato lordo EUR',
+        'Aliquota %',
+        'Imponibile EUR',
+        'IVA EUR',
+        'Certezza aliquota',
+        'Nota regola',
+    ];
+    styleHeaderRow(ws.addRow(headers));
+
+    for (const r of report.corrispettivi) {
+        const row = ws.addRow([
+            r.paymentDate || r.date,
+            r.gateway,
+            r.orderNumber,
+            r.transactionId || '',
+            euroNum(r.listinoCents ?? r.grossCents),
+            euroNum(r.scontoCents ?? 0),
+            euroNum(r.grossCents),
+            r.vatRate || '',
+            r.vatCertainty === 'MANCANTE' ? '' : euroNum(r.imponibileCents),
+            r.vatCertainty === 'MANCANTE' ? '' : euroNum(r.ivaDebitoCents),
+            r.vatCertainty || '',
+            r.vatRuleNote || '',
+        ]);
+        applyBorders(row);
+        for (const col of [5, 6, 7, 9, 10]) {
+            row.getCell(col).numFmt = EUR_FORMAT;
+        }
+        if (r.vatCertainty === 'MANCANTE') {
+            row.getCell(11).font = { bold: true, color: { argb: 'FFB91C1C' }, name: 'Calibri', size: 10 };
+        }
+    }
+
+    appendSumRow(ws, 6, [5, 6, 7, 9, 10], 'TOTALE (righe in foglio)');
+    autofitColumns(ws, 10, 36);
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+}
+
 /**
- * Genera il buffer .xlsx del Dossier Fiscale (METODO v1.2 — Fase 2: Quadratura + Eccezioni + §6.4).
+ * Genera il buffer .xlsx del Dossier Fiscale (METODO v1.7).
  */
 export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): Promise<Buffer> {
     const wb = new ExcelJS.Workbook();
@@ -840,10 +926,10 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
         italianAcquistiIvaCents,
         ivaRcFromAcquistiCents
     );
+    buildRegistroCorrispettiviSheet(wb, report);
     await buildPrimaNotaMasterSheet(wb, report);
     await buildFinecoSheet(wb, report);
 
-    // Acquisti: riusa le righe già risolte (stesso §6.4 della Quadratura)
     {
         const ws = wb.addWorksheet('Acquisti');
         const headers = [
@@ -875,20 +961,24 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
             row.getCell(8).numFmt = EUR_FORMAT;
             row.getCell(9).numFmt = EUR_FORMAT;
         }
-        appendSumRow(ws, 5, [6, 8, 9], 'TOTALE (imponibile post §6.4)');
+        appendSumRow(ws, 5, [6, 8, 9], 'TOTALE (imponibile post §6.5)');
         autofitColumns(ws);
         ws.views = [{ state: 'frozen', ySplit: 1 }];
     }
 
     await buildStripeSheet(wb, report);
     await buildPaypalSheet(wb, report);
-    buildEccezioniSheet(wb, [...acquisizioneExceptions, ...controlExceptions]);
+    buildEccezioniSheet(wb, [
+        ...acquisizioneExceptions,
+        ...(report.corrispettiviExceptions || []),
+        ...controlExceptions,
+    ]);
 
     const arrayBuffer = await wb.xlsx.writeBuffer();
     return Buffer.from(arrayBuffer);
 }
 
-/** Solo verifica Fase 2: imponibile Acquisti post §6.4 (senza scrivere XLSX). */
+/** Solo verifica: imponibile Acquisti post §6.5 (senza scrivere XLSX). */
 export async function measureAcquistiImponibileCents(
     report: TaxQuarterlyReport
 ): Promise<{ imponibileCents: number; exceptionCount: number }> {

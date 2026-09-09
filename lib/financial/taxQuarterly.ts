@@ -6,9 +6,7 @@ import prisma from '@/lib/prisma';
 import {
     euroFloatToCents,
     formatEuroFromCents,
-    isAccessoryCategory,
     scorporaIvaFloreale,
-    scorporaVenditaFloreale,
     VAT_PCT_FLORAL,
     VAT_PCT_ORDINARY,
 } from '@/lib/financial/vat';
@@ -25,6 +23,7 @@ import {
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 import { foreignAutofatturaExpenseWhere } from '@/lib/financial/autofatturaHistory';
+import { buildDossierCorrispettiviRows } from '@/lib/financial/dossierCorrispettiviBuild';
 
 /** Tax ID Stripe Payments Europe Ltd (IE). */
 const STRIPE_VENDOR_TAX_ID = 'IE3206488LH';
@@ -102,6 +101,11 @@ export type CorrispettivoRow = {
     gatewayFeeCents: number;
     netCents: number;
     transactionId: string;
+    /** METODO §8.3 — certezza aliquota. */
+    vatCertainty?: 'DETERMINATA' | 'MISTA' | 'PRESUNTA' | 'MANCANTE';
+    vatRuleNote?: string;
+    listinoCents?: number;
+    scontoCents?: number;
 };
 
 export type ReverseChargeRow = {
@@ -188,6 +192,8 @@ export type TaxQuarterlyReport = {
         ivaCreditoFlorist10Cents: number;
     };
     corrispettivi: CorrispettivoRow[];
+    /** Eccezioni §8.3 (aliquota mancante / senza match). */
+    corrispettiviExceptions: import('@/lib/financial/dossierAcquistiBuild').DossierExceptionRow[];
     reverseCharge: ReverseChargeRow[];
     floristPassivo: FloristPassivoRow[];
     ivaSummary: IvaPeriodSummary;
@@ -407,7 +413,11 @@ export async function buildTaxQuarterlyReport(
             items: {
                 include: {
                     product: {
-                        include: { category: { select: { slug: true, name: true } } },
+                        select: {
+                            vatRatePercent: true,
+                            name: true,
+                            category: { select: { slug: true, name: true } },
+                        },
                     },
                 },
             },
@@ -589,7 +599,16 @@ export async function buildTaxQuarterlyReport(
         }
     }
 
-    const corrispettivi: CorrispettivoRow[] = [];
+    const corrispettiviInput: Array<{
+        order: (typeof orders)[number];
+        grossCents: number;
+        paymentDate: Date;
+        gateway: string;
+        transactionId: string;
+        listinoCents: number;
+        scontoCents: number;
+    }> = [];
+
     for (const order of orders) {
         // Pose di abbonamento prepagato: niente corrispettivo (solo passivo fiorista).
         if (isPrepaidSubscriptionPoseOrder(order)) continue;
@@ -609,18 +628,6 @@ export async function buildTaxQuarterlyReport(
                     ? euroFloatToCents(order.grossAmount)
                     : order.totalPriceCents;
 
-        let accessoryCents =
-            order.accessoryAmountCents != null ? order.accessoryAmountCents : 0;
-        if (order.accessoryAmountCents == null) {
-            for (const item of order.items) {
-                const cat = item.product?.category;
-                if (isAccessoryCategory(cat?.slug) || isAccessoryCategory(cat?.name)) {
-                    accessoryCents += item.priceCents * item.quantity;
-                }
-            }
-        }
-
-        const vat = scorporaVenditaFloreale({ grossCents, accessoryCents });
         let feeCents = order.stripeFee != null ? euroFloatToCents(order.stripeFee) : 0;
         let transactionId = order.stripeTransactionId || '';
         let paymentDate = order.createdAt;
@@ -641,30 +648,74 @@ export async function buildTaxQuarterlyReport(
             paymentDate = paypalMove.paymentDate;
         }
 
-        const netCents =
-            order.netAmount != null
-                ? euroFloatToCents(order.netAmount)
-                : grossCents - feeCents;
+        const listinoCents = order.totalPriceCents;
+        const scontoCents = Math.max(0, listinoCents - Math.abs(grossCents));
 
-        corrispettivi.push({
-            orderId: order.id,
-            orderNumber: order.orderNumber || order.id.slice(0, 8),
-            date: order.createdAt.toISOString().slice(0, 10),
-            paymentDate: paymentDate.toISOString().slice(0, 10),
-            buyerName: order.buyerFullName || order.buyerEmail || 'Cliente',
-            buyerTaxId: order.user?.vatNumber?.trim() || '',
-            buyerCountry: order.buyerCountry?.trim() || 'IT',
-            gateway,
-            paymentMethod: order.paymentMethodLabel?.trim() || gateway,
+        corrispettiviInput.push({
+            order,
             grossCents,
-            imponibileCents: vat.imponibileCents,
-            ivaDebitoCents: vat.ivaCents,
-            vatRate: VAT_PCT_FLORAL,
-            gatewayFeeCents: feeCents,
-            netCents,
+            paymentDate,
+            gateway,
             transactionId,
+            listinoCents,
+            scontoCents,
         });
+
+        // feeCents reserved for legacy summary fields below via gateway maps
+        void feeCents;
     }
+
+    const builtCorrispettivi = buildDossierCorrispettiviRows({
+        orders: corrispettiviInput.map((e) => ({
+            order: e.order,
+            grossCents: e.grossCents,
+            paymentDate: e.paymentDate,
+            gateway: e.gateway,
+            transactionId: e.transactionId,
+            listinoCents: e.listinoCents,
+            scontoCents: e.scontoCents,
+        })),
+    });
+
+    const feeByOrderId = new Map<string, number>();
+    for (const e of corrispettiviInput) {
+        const stripeMove = stripeByOrderId.get(e.order.id);
+        const paypalMove =
+            paypalByOrderId.get(e.order.id) ||
+            (e.order.orderNumber ? paypalByOrderNumber.get(e.order.orderNumber) : undefined);
+        let feeCents = e.order.stripeFee != null ? euroFloatToCents(e.order.stripeFee) : 0;
+        if (e.gateway === 'Stripe' && stripeMove?.feeCents) feeCents = stripeMove.feeCents;
+        if (e.gateway === 'PayPal' && paypalMove?.feeCents) feeCents = paypalMove.feeCents;
+        feeByOrderId.set(e.order.id, feeCents);
+    }
+
+    const corrispettivi: CorrispettivoRow[] = builtCorrispettivi.rows.map((r) => {
+        const feeCents = feeByOrderId.get(r.orderId) || 0;
+        const order = orders.find((o) => o.id === r.orderId);
+        return {
+            orderId: r.orderId,
+            orderNumber: r.orderNumber,
+            date: r.date,
+            paymentDate: r.paymentDate,
+            buyerName: order?.buyerFullName || order?.buyerEmail || 'Cliente',
+            buyerTaxId: order?.user?.vatNumber?.trim() || '',
+            buyerCountry: order?.buyerCountry?.trim() || 'IT',
+            gateway: r.canaleIncasso,
+            paymentMethod: order?.paymentMethodLabel?.trim() || r.canaleIncasso,
+            grossCents: r.grossCents,
+            imponibileCents: r.imponibileCents,
+            ivaDebitoCents: r.ivaCents,
+            vatRate: r.vatRate,
+            gatewayFeeCents: feeCents,
+            netCents: r.grossCents - feeCents,
+            transactionId: r.transactionId,
+            vatCertainty: r.vatCertainty,
+            vatRuleNote: r.vatRuleNote,
+            listinoCents: r.listinoCents,
+            scontoCents: r.scontoCents,
+        };
+    });
+    const corrispettiviExceptions = builtCorrispettivi.exceptions;
 
     const stripeInvoicesDb = await prisma.stripeServiceInvoice.findMany({
         where: {
@@ -886,12 +937,13 @@ export async function buildTaxQuarterlyReport(
     // Imponibile passivo di riepilogo: costi ordine (senza scorporo fittizio). L'IVA a credito
     // arriva solo dalle fatture SDI di periodo sopra.
 
-    const ivaDebitoVendite10Cents = corrispettivi.reduce((s, r) => s + r.ivaDebitoCents, 0);
+    const ivaEligible = corrispettivi.filter((r) => r.vatCertainty !== 'MANCANTE');
+    const ivaDebitoVendite10Cents = ivaEligible.reduce((s, r) => s + r.ivaDebitoCents, 0);
     const saldoIvaStimatoCents = ivaDebitoVendite10Cents - floristIvaCreditoCents;
 
     const ivaSummary: IvaPeriodSummary = {
-        corrispettiviLordoCents: corrispettivi.reduce((s, r) => s + r.grossCents, 0),
-        imponibileVendite10Cents: corrispettivi.reduce((s, r) => s + r.imponibileCents, 0),
+        corrispettiviLordoCents: ivaEligible.reduce((s, r) => s + r.grossCents, 0),
+        imponibileVendite10Cents: ivaEligible.reduce((s, r) => s + r.imponibileCents, 0),
         ivaDebitoVendite10Cents,
         reverseChargeImponibileCents,
         reverseChargeIvaCents,
@@ -923,6 +975,7 @@ export async function buildTaxQuarterlyReport(
         bounds,
         summary,
         corrispettivi,
+        corrispettiviExceptions,
         reverseCharge,
         floristPassivo,
         ivaSummary,

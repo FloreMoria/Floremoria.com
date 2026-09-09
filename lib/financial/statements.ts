@@ -33,7 +33,10 @@ export interface StatoPatrimoniale {
     creditiClientiCents: number;
     debitiFornitoriCents: number;
     debitiTributariCents: number;
+    /** Utile/perdita di esercizio (senza capitale sociale hardcoded). */
     patrimonioNettoCents: number;
+    /** Null finché non esiste anagrafica societaria a DB. */
+    capitaleSocialeCents: number | null;
 }
 
 export interface StimaImposte {
@@ -53,7 +56,8 @@ export interface FinancialStatements {
  */
 export async function calculateFinancialStatements(): Promise<FinancialStatements> {
     const year = new Date().getFullYear();
-    const capitaleSocialeCents = 1_141_000; // €11.410 i.v.
+    // Capitale sociale: non inventare. Senza record anagrafico → null.
+    const capitaleSocialeCents: number | null = null;
 
     const pnl = await computeHistoricalPnl({ fiscalYear: year });
 
@@ -125,7 +129,9 @@ export async function calculateFinancialStatements(): Promise<FinancialStatement
             creditiClientiCents,
             debitiFornitoriCents,
             debitiTributariCents: Math.max(0, pnl.ivaNettaCents) + iresCents + irapCents,
-            patrimonioNettoCents: capitaleSocialeCents + utileNettoCents,
+            // Solo risultato di esercizio finché manca anagrafica capitale.
+            patrimonioNettoCents: utileNettoCents,
+            capitaleSocialeCents,
         },
         stimaImposte: { iresCents, irapCents, utileNettoCents },
     };

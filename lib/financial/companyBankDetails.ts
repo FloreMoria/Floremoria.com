@@ -13,8 +13,11 @@ export const FLOREMORIA_LEGAL_ENTITY = {
     taxCode: '04188260139',
     /** Numero REA Camera di Commercio di Como. */
     reaNumber: 'CO - 426383',
-    /** Capitale sociale deliberato e versato. */
-    shareCapital: '€ 11.410,00 i.v.',
+    /**
+     * Capitale sociale: non hardcodare in UI/CE.
+     * Null = non presente come anagrafica configurabile a DB → UI mostra «Dato non disponibile».
+     */
+    shareCapital: null as string | null,
     /** Codice Destinatario SDI (fatturazione elettronica). */
     sdiCode: 'K0ROACV',
 } as const;
@@ -56,7 +59,7 @@ export function formatFloremoriaBankBlock(): string {
         `Sede Legale: ${FLOREMORIA_LEGAL_ENTITY.registeredOffice}`,
         `P.IVA / C.F.: ${FLOREMORIA_LEGAL_ENTITY.vatNumber}`,
         `REA: ${FLOREMORIA_LEGAL_ENTITY.reaNumber}`,
-        `Capitale Sociale: ${FLOREMORIA_LEGAL_ENTITY.shareCapital}`,
+        `Capitale Sociale: ${FLOREMORIA_LEGAL_ENTITY.shareCapital ?? 'Dato non disponibile'}`,
         `Codice SDI: ${FLOREMORIA_LEGAL_ENTITY.sdiCode}`,
         `Istituto: ${FLOREMORIA_FINECO_BANK.institute}`,
         `IBAN: ${FLOREMORIA_FINECO_BANK.ibanDisplay}`,

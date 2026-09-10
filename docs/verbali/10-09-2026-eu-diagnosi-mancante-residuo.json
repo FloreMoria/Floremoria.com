@@ -1,0 +1,586 @@
+{
+  "generatedAt": "2026-09-10T15:52:22.878Z",
+  "batchEU_HIST_20260910_A": {
+    "applied": true,
+    "orders": 33,
+    "itemRows": 47,
+    "byQuarter": {
+      "T1": 21,
+      "T2": 12,
+      "T3": 0
+    }
+  },
+  "euOrdersInDb2026": {
+    "total": 33,
+    "byQuarter": {
+      "T1": 21,
+      "T2": 12,
+      "T3": 0,
+      "T4": 0
+    }
+  },
+  "partnerCheck": [
+    {
+      "name": "Amanda Favot",
+      "date": "2026-08-17",
+      "listaEuro": 39.98,
+      "listinoEuro": 39.99,
+      "gwHits": [
+        {
+          "euro": 39.99,
+          "id": "stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+          "account": "EU"
+        }
+      ]
+    },
+    {
+      "name": "Oreste Poverello",
+      "date": "2026-08-21",
+      "listaEuro": 89.99,
+      "listinoEuro": 89.99,
+      "gwHits": [
+        {
+          "euro": 89.99,
+          "id": "stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+          "account": "EU"
+        }
+      ]
+    }
+  ],
+  "euOrdersWith22pctLines": {
+    "n": 10,
+    "details": [
+      {
+        "date": "2026-01-22",
+        "customer": "Rosetta Paladino",
+        "lines": [
+          "Biglietto del Ricordo €2.49",
+          "Lumino Commemorativo €3.49"
+        ]
+      },
+      {
+        "date": "2026-03-01",
+        "customer": "Mimma Congedo",
+        "lines": [
+          "Nastro Commemorativo €14.99"
+        ]
+      },
+      {
+        "date": "2026-03-14",
+        "customer": "Chiara Durì",
+        "lines": [
+          "Biglietto del Ricordo €2.49"
+        ]
+      },
+      {
+        "date": "2026-03-31",
+        "customer": "FRANCESCO REDIVO",
+        "lines": [
+          "Nastro Commemorativo €14.99"
+        ]
+      },
+      {
+        "date": "2026-04-28",
+        "customer": "Silvia Tregnaghi",
+        "lines": [
+          "Nastro Commemorativo €14.99"
+        ]
+      },
+      {
+        "date": "2026-04-29",
+        "customer": "Rosetta Paladino",
+        "lines": [
+          "Biglietto del Ricordo €2.49",
+          "Lumino Commemorativo €3.49"
+        ]
+      },
+      {
+        "date": "2026-05-03",
+        "customer": "Maria ANTONIA Pozzi",
+        "lines": [
+          "Lumino Commemorativo €3.49"
+        ]
+      },
+      {
+        "date": "2026-05-25",
+        "customer": "Petra Manakova",
+        "lines": [
+          "Nastro Commemorativo €14.99"
+        ]
+      },
+      {
+        "date": "2026-06-16",
+        "customer": "Rosetta Paladino",
+        "lines": [
+          "Lumino Commemorativo €6.98",
+          "Biglietto del Ricordo €2.49"
+        ]
+      },
+      {
+        "date": "2026-07-02",
+        "customer": "Nicolato Francesco",
+        "lines": [
+          "Nastro Commemorativo €14.99"
+        ]
+      }
+    ]
+  },
+  "T2": {
+    "share": 47.6,
+    "mancanteEuro": "858.20",
+    "mancanteRows": 43,
+    "noOrder": {
+      "n": 43,
+      "euro": "858.20",
+      "avg": "19.96",
+      "byGw": {
+        "PayPal": {
+          "n": 32,
+          "euro": "415.91"
+        },
+        "Stripe": {
+          "n": 11,
+          "euro": "442.29"
+        }
+      }
+    },
+    "withOrderButMancante": 0,
+    "top10": [
+      {
+        "date": "2026-06-22",
+        "gw": "Stripe",
+        "euro": "64.98",
+        "tx": "ch_3Tl97E4W4pZWhSUs1iFeGfkw"
+      },
+      {
+        "date": "2026-05-30",
+        "gw": "Stripe",
+        "euro": "54.98",
+        "tx": "ch_3TcirV4W4pZWhSUs0tgA5eN1"
+      },
+      {
+        "date": "2026-05-30",
+        "gw": "Stripe",
+        "euro": "-54.98",
+        "tx": "re_3TcirV4W4pZWhSUs06DSwwsn"
+      },
+      {
+        "date": "2026-05-06",
+        "gw": "PayPal",
+        "euro": "48.64",
+        "tx": "32656268SE019460E"
+      },
+      {
+        "date": "2026-06-13",
+        "gw": "Stripe",
+        "euro": "43.97",
+        "tx": "ch_3ThmH14W4pZWhSUs1NIVn7o6"
+      },
+      {
+        "date": "2026-05-19",
+        "gw": "Stripe",
+        "euro": "34.99",
+        "tx": "ch_3TYqjZ4W4pZWhSUs1mfz1KqI"
+      },
+      {
+        "date": "2026-05-23",
+        "gw": "Stripe",
+        "euro": "32.48",
+        "tx": "py_3TaBEw4W4pZWhSUs1kKSJyM4"
+      },
+      {
+        "date": "2026-05-23",
+        "gw": "PayPal",
+        "euro": "32.48",
+        "tx": "8JD06462TK660002D"
+      },
+      {
+        "date": "2026-05-20",
+        "gw": "PayPal",
+        "euro": "31.48",
+        "tx": "4PC01169U59469310"
+      },
+      {
+        "date": "2026-05-20",
+        "gw": "PayPal",
+        "euro": "31.48",
+        "tx": "5H283854666757739"
+      }
+    ],
+    "paypal": {
+      "n": 32,
+      "euro": "415.91",
+      "withEmail": 0,
+      "withName": 0,
+      "sampleMeta": [
+        {
+          "tx": "9A8499750D2285252",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Altro · BALLARATE PIETRO SRL"
+        },
+        {
+          "tx": "8HU9782921899592D",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Storno di blocco conto generico · PayPal"
+        },
+        {
+          "tx": "82B58826WV385183C",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Altro · POSTE ITALIANE"
+        },
+        {
+          "tx": "6T004160S99663535",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Bonus cashback carta di debito"
+        },
+        {
+          "tx": "5S1939199N219094Y",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Pagamento generico · Maria Antonia Pozzi"
+        },
+        {
+          "tx": "5S1939199N219094Y",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "feeReversal",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Commissione PayPal — 5S1939199N219094Y"
+        },
+        {
+          "tx": "4A479765WU569534F",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Bonus cashback carta di debito"
+        },
+        {
+          "tx": "94G42603SL712010S",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Storno di blocco conto generico · PayPal"
+        }
+      ]
+    }
+  },
+  "T3": {
+    "share": 49.8,
+    "mancanteEuro": "1185.83",
+    "mancanteRows": 36,
+    "noOrder": {
+      "n": 36,
+      "euro": "1185.83",
+      "avg": "32.94",
+      "byGw": {
+        "Stripe": {
+          "n": 10,
+          "euro": "483.79"
+        },
+        "PayPal": {
+          "n": 26,
+          "euro": "702.04"
+        }
+      }
+    },
+    "withOrderButMancante": 0,
+    "top10": [
+      {
+        "date": "2026-07-04",
+        "gw": "Stripe",
+        "euro": "144.98",
+        "tx": "py_3TpOrX4W4pZWhSUs0bWli3kl"
+      },
+      {
+        "date": "2026-07-04",
+        "gw": "PayPal",
+        "euro": "144.98",
+        "tx": "41V916837L4471622"
+      },
+      {
+        "date": "2026-07-26",
+        "gw": "PayPal",
+        "euro": "133.00",
+        "tx": "0DK39406V3945422V"
+      },
+      {
+        "date": "2026-08-13",
+        "gw": "Stripe",
+        "euro": "52.48",
+        "tx": "py_3U44XP4W4pZWhSUs0AsseGiK"
+      },
+      {
+        "date": "2026-07-15",
+        "gw": "Stripe",
+        "euro": "49.99",
+        "tx": "py_3TtPv84W4pZWhSUs0d5Tl5Tn"
+      },
+      {
+        "date": "2026-07-15",
+        "gw": "PayPal",
+        "euro": "49.99",
+        "tx": "6TL5310123588930U"
+      },
+      {
+        "date": "2026-08-04",
+        "gw": "Stripe",
+        "euro": "47.46",
+        "tx": "ch_3U0cT94W4pZWhSUs0zCmlTCo"
+      },
+      {
+        "date": "2026-07-19",
+        "gw": "PayPal",
+        "euro": "37.99",
+        "tx": "0CW42027YJ1249932"
+      },
+      {
+        "date": "2026-07-04",
+        "gw": "Stripe",
+        "euro": "31.48",
+        "tx": "py_3TpPFc4W4pZWhSUs0s0z7zvu"
+      },
+      {
+        "date": "2026-07-04",
+        "gw": "Stripe",
+        "euro": "31.48",
+        "tx": "py_3TpPJU4W4pZWhSUs1N3Am5Ht"
+      }
+    ],
+    "paypal": {
+      "n": 26,
+      "euro": "702.04",
+      "withEmail": 0,
+      "withName": 0,
+      "sampleMeta": [
+        {
+          "tx": "41V916837L4471622",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria"
+        },
+        {
+          "tx": "41V916837L4471622",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "feeReversal",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Commissione PayPal — 41V916837L4471622"
+        },
+        {
+          "tx": "7AG32350H80780641",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria"
+        },
+        {
+          "tx": "7AG32350H80780641",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "feeReversal",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Commissione PayPal — 7AG32350H80780641"
+        },
+        {
+          "tx": "4KR3840372651452V",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria"
+        },
+        {
+          "tx": "4KR3840372651452V",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "feeReversal",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Commissione PayPal — 4KR3840372651452V"
+        },
+        {
+          "tx": "9SH795702M566214T",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Bonus cashback carta di debito"
+        },
+        {
+          "tx": "40G72051A36856801",
+          "metaKeys": [
+            "feeCents",
+            "netCents",
+            "provider",
+            "csvImport",
+            "typeLabel",
+            "dareAccount",
+            "referenceId",
+            "avereAccount",
+            "ledgerAccountFixed"
+          ],
+          "email": null,
+          "name": null,
+          "desc": "Storno di blocco conto generico · PayPal"
+        }
+      ]
+    }
+  }
+}

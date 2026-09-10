@@ -1,0 +1,1175 @@
+{
+  "meta": {
+    "source": "Dashboard floremoria.eu + verifica titolare (METODO §8)",
+    "generatedAt": "2026-09-10T15:34:10.337Z",
+    "period": "2026-T1–T3",
+    "orderCount": 43,
+    "countsByQuarter": {
+      "1": 21,
+      "2": 13,
+      "3": 9,
+      "4": 0
+    },
+    "totalListinoEuro": 2489.82,
+    "totalIncassatoRealeEuro": 2474.82,
+    "notes": [
+      "Isabella Cesaroni 03/05: listino 299.90 − sconto 15.00 = gateway 284.90 (Diretto)",
+      "Amanda Favot 17/08: gateway Stripe EU 39.99 (Partner fiorista); lista non valorizzante",
+      "Oreste Poverello 21/08: 89.99 (Partner fiorista)",
+      "Nicolato Francesco 02/07: 104.98 (checkout .eu → .com con partner fiorista)",
+      "Regola §8.2: abbinato a gateway → vince lordo gateway; delta lista in Eccezioni"
+    ]
+  },
+  "orders": [
+    {
+      "id": "eu-2026-001",
+      "date": "2026-01-16",
+      "quarter": 1,
+      "customerName": "Giulia Grappone",
+      "email": "giulia-grappone@hotmail.it",
+      "phone": "3450218710",
+      "deceased": "Mario Grappone",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-002",
+      "date": "2026-01-20",
+      "quarter": 1,
+      "customerName": "",
+      "email": "amministrazione@neosgroup.pn.it",
+      "phone": "0434923236",
+      "deceased": "Lanfranco Sartor",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-003",
+      "date": "2026-01-21",
+      "quarter": 1,
+      "customerName": "Luciano Mammì",
+      "email": "lucmammi@gmail.com",
+      "phone": "3714218889",
+      "deceased": "Ermelinda Mammì",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-004",
+      "date": "2026-01-22",
+      "quarter": 1,
+      "customerName": "Rosetta Paladino",
+      "email": "rosellinapaladino@hotmail.it",
+      "phone": "3208487232",
+      "deceased": "Teresa Tropea",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Di Rose",
+          "lineTotalEuro": 34.99
+        },
+        {
+          "qty": 1,
+          "name": "Biglietto del Ricordo",
+          "lineTotalEuro": 2.49
+        },
+        {
+          "qty": 1,
+          "name": "Lumino Commemorativo",
+          "lineTotalEuro": 3.49
+        }
+      ],
+      "listinoEuro": 40.97,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 40.97,
+      "listinoCents": 4097,
+      "scontoCents": 0,
+      "incassatoRealeCents": 4097,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-005",
+      "date": "2026-01-22",
+      "quarter": 1,
+      "customerName": "Luciano Mammì",
+      "email": "lucmammi@gmail.com",
+      "phone": "3714218889",
+      "deceased": "Salvatore Tusa",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-006",
+      "date": "2026-02-10",
+      "quarter": 1,
+      "customerName": "Ester Irace",
+      "email": "ester.irace@hotmail.it",
+      "phone": "3498314502",
+      "deceased": "Rita Gatto",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-007",
+      "date": "2026-02-16",
+      "quarter": 1,
+      "customerName": "LUCIANO MAMMI'",
+      "email": "luciano.mammi.57@gmail.com",
+      "phone": "3714218889",
+      "deceased": "SALVATORE TUSA",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-008",
+      "date": "2026-02-19",
+      "quarter": 1,
+      "customerName": "Luigina Dereani",
+      "email": "ldereani@yahoo.it",
+      "phone": "3492103282",
+      "deceased": "Leonildo Cattaruzza",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-009",
+      "date": "2026-02-22",
+      "quarter": 1,
+      "customerName": "LUCIANO MAMMI'",
+      "email": "luciano.mammi.57@gmail.com",
+      "phone": "3714218889",
+      "deceased": "Ermelinda Mammì",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-010",
+      "date": "2026-02-25",
+      "quarter": 1,
+      "customerName": "Moreno Venturino",
+      "email": "morenoventurino@libero.it",
+      "phone": "3312258877",
+      "deceased": "Annalisa Piras",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-011",
+      "date": "2026-02-26",
+      "quarter": 1,
+      "customerName": "Norm Marchi",
+      "email": "norm.marchi@shaw.ca",
+      "phone": "250-231-0793",
+      "deceased": "Evelina Fabbro",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Margherite/Gerbere – Vaso fiorito per il ricordo",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-012",
+      "date": "2026-03-01",
+      "quarter": 1,
+      "customerName": "Mimma Congedo",
+      "email": "mimma.congedo@gmail.com",
+      "phone": "3394846648",
+      "deceased": "Lidia Bogde",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Cuscino",
+          "lineTotalEuro": 129.99
+        },
+        {
+          "qty": 1,
+          "name": "Nastro Commemorativo",
+          "lineTotalEuro": 14.99
+        }
+      ],
+      "listinoEuro": 144.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 144.98,
+      "listinoCents": 14498,
+      "scontoCents": 0,
+      "incassatoRealeCents": 14498,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-013",
+      "date": "2026-03-13",
+      "quarter": 1,
+      "customerName": "Maria Puliafico",
+      "email": "mariapuliafico@hotmail.it",
+      "phone": "3204910428",
+      "deceased": "Carmelo Puliafico",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 49.99
+        }
+      ],
+      "listinoEuro": 49.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 49.99,
+      "listinoCents": 4999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 4999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-014",
+      "date": "2026-03-14",
+      "quarter": 1,
+      "customerName": "Rosetta Paladino",
+      "email": "rosellinapaladino@hotmail.it",
+      "phone": "3208487232",
+      "deceased": "Nicola Piraino / Antonia Brando",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Di Rose",
+          "lineTotalEuro": 34.99
+        },
+        {
+          "qty": 1,
+          "name": "Bouquet Di Rose",
+          "lineTotalEuro": 34.99
+        }
+      ],
+      "listinoEuro": 69.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 69.98,
+      "listinoCents": 6998,
+      "scontoCents": 0,
+      "incassatoRealeCents": 6998,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-015",
+      "date": "2026-03-14",
+      "quarter": 1,
+      "customerName": "Chiara Durì",
+      "email": "chiara@asaemea.it",
+      "phone": "3481321645",
+      "deceased": "Sergio Salamon",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Biglietto del Ricordo",
+          "lineTotalEuro": 2.49
+        },
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 69.99
+        }
+      ],
+      "listinoEuro": 72.48,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 72.48,
+      "listinoCents": 7248,
+      "scontoCents": 0,
+      "incassatoRealeCents": 7248,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-016",
+      "date": "2026-03-18",
+      "quarter": 1,
+      "customerName": "L'alternativa srl",
+      "email": "info@alternativasrl.it",
+      "phone": "3473899925",
+      "deceased": "Maurizio Visintin",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-017",
+      "date": "2026-03-19",
+      "quarter": 1,
+      "customerName": "Silvia Tregnaghi",
+      "email": "silviatregnaghi.it@gmail.com",
+      "phone": "3283912589",
+      "deceased": "Santina Stevanin ved. Barbirato",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Di Rose",
+          "lineTotalEuro": 34.99
+        }
+      ],
+      "listinoEuro": 34.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 34.99,
+      "listinoCents": 3499,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3499,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-018",
+      "date": "2026-03-22",
+      "quarter": 1,
+      "customerName": "LUCIANO MAMMI'",
+      "email": "luciano.mammi.57@gmail.com",
+      "phone": "3714218889",
+      "deceased": "Salvatore Tusa",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-019",
+      "date": "2026-03-24",
+      "quarter": 1,
+      "customerName": "LUCIANO MAMMI'",
+      "email": "luciano.mammi.57@gmail.com",
+      "phone": "3714218889",
+      "deceased": "ERMELINDA MAMMI'",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-020",
+      "date": "2026-03-29",
+      "quarter": 1,
+      "customerName": "Agostino Buttignol",
+      "email": "fredbuttignol@gmail.com",
+      "phone": "61 402826475",
+      "deceased": "Tea Buttignol",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-021",
+      "date": "2026-03-31",
+      "quarter": 1,
+      "customerName": "FRANCESCO REDIVO",
+      "email": "FRANZ1185@HOTMAIL.COM",
+      "phone": "3332275015",
+      "deceased": "Rosetta Cavalsi",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Cuscino",
+          "lineTotalEuro": 129.99
+        },
+        {
+          "qty": 1,
+          "name": "Nastro Commemorativo",
+          "lineTotalEuro": 14.99
+        }
+      ],
+      "listinoEuro": 144.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 144.98,
+      "listinoCents": 14498,
+      "scontoCents": 0,
+      "incassatoRealeCents": 14498,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-022",
+      "date": "2026-04-01",
+      "quarter": 2,
+      "customerName": "Cristiano Mariani",
+      "email": "crismariani@gmail.com",
+      "phone": "+34695727454",
+      "deceased": "Donata Mariani",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-023",
+      "date": "2026-04-16",
+      "quarter": 2,
+      "customerName": "Rosaria Di Pasquale",
+      "email": "rosaria.dipasquale@gmail.com",
+      "phone": "3389262922",
+      "deceased": "Maria Panico",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-024",
+      "date": "2026-04-20",
+      "quarter": 2,
+      "customerName": "Elena Lombardi",
+      "email": "elena_lo@libero.it",
+      "phone": "3391992294",
+      "deceased": "Giuliana Santoni in Vielmini",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-025",
+      "date": "2026-04-20",
+      "quarter": 2,
+      "customerName": "LUCIANO MAMMI'",
+      "email": "luciano.mammi.57@gmail.com",
+      "phone": "3714218889",
+      "deceased": "ERMELINDA MAMMI' / SALVATORE TUSA",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        },
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 59.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 59.98,
+      "listinoCents": 5998,
+      "scontoCents": 0,
+      "incassatoRealeCents": 5998,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-026",
+      "date": "2026-04-27",
+      "quarter": 2,
+      "customerName": "Famiglia Deotti-Buzzi",
+      "email": "valentino.deotti@gmail.com",
+      "phone": "3713458049",
+      "deceased": "Severino Di Marco",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Margherite/Gerbere – Vaso fiorito per il ricordo",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-027",
+      "date": "2026-04-28",
+      "quarter": 2,
+      "customerName": "Silvia Tregnaghi",
+      "email": "silviatregnaghi.it@gmail.com",
+      "phone": "3283912589",
+      "deceased": "Lucia Pasquina Guerra",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Nastro Commemorativo",
+          "lineTotalEuro": 14.99
+        },
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 54.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 54.98,
+      "listinoCents": 5498,
+      "scontoCents": 0,
+      "incassatoRealeCents": 5498,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-028",
+      "date": "2026-04-29",
+      "quarter": 2,
+      "customerName": "Rosetta Paladino",
+      "email": "rosellinapaladino@hotmail.it",
+      "phone": "3208487232",
+      "deceased": "Teresa Tropea",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 39.99
+        },
+        {
+          "qty": 1,
+          "name": "Biglietto del Ricordo",
+          "lineTotalEuro": 2.49
+        },
+        {
+          "qty": 1,
+          "name": "Lumino Commemorativo",
+          "lineTotalEuro": 3.49
+        }
+      ],
+      "listinoEuro": 45.97,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 45.97,
+      "listinoCents": 4597,
+      "scontoCents": 0,
+      "incassatoRealeCents": 4597,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-029",
+      "date": "2026-05-03",
+      "quarter": 2,
+      "customerName": "Isabella Cesaroni",
+      "email": "isa.cesaroni@gmail.com",
+      "phone": "+4915775944828",
+      "deceased": null,
+      "products": [
+        {
+          "qty": 1,
+          "name": "Carnet Ricordo Affettuoso",
+          "lineTotalEuro": 299.9
+        }
+      ],
+      "listinoEuro": 299.9,
+      "scontoEuro": 15,
+      "incassatoRealeEuro": 284.9,
+      "listinoCents": 29990,
+      "scontoCents": 1500,
+      "incassatoRealeCents": 28490,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": "§8 Registro Corrispettivi: Listino €299,90 | Sconto €15,00 | Incassato lordo €284,90"
+    },
+    {
+      "id": "eu-2026-030",
+      "date": "2026-05-03",
+      "quarter": 2,
+      "customerName": "Maria ANTONIA Pozzi",
+      "email": "mariaantoniapozzi@virgilio.it",
+      "phone": "331 8607910",
+      "deceased": "PETRUCCI DANIELE",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Lumino Commemorativo",
+          "lineTotalEuro": 3.49
+        },
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 49.99
+        }
+      ],
+      "listinoEuro": 53.48,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 53.48,
+      "listinoCents": 5348,
+      "scontoCents": 0,
+      "incassatoRealeCents": 5348,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-031",
+      "date": "2026-05-16",
+      "quarter": 2,
+      "customerName": "Maria Puliafico",
+      "email": "mariapuliafico@hotmail.it",
+      "phone": "3204910428",
+      "deceased": "Carmelo Puliafico",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 49.99
+        }
+      ],
+      "listinoEuro": 49.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 49.99,
+      "listinoCents": 4999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 4999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-032",
+      "date": "2026-05-25",
+      "quarter": 2,
+      "customerName": "Petra Manakova",
+      "email": "petramanakova@gmail.com",
+      "phone": "3336579533",
+      "deceased": "Fidelma Daniotti",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 69.99
+        },
+        {
+          "qty": 1,
+          "name": "Nastro Commemorativo",
+          "lineTotalEuro": 14.99
+        }
+      ],
+      "listinoEuro": 84.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 84.98,
+      "listinoCents": 8498,
+      "scontoCents": 0,
+      "incassatoRealeCents": 8498,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-033",
+      "date": "2026-06-05",
+      "quarter": 2,
+      "customerName": "cyrille magali Maman-Sernaglia",
+      "email": "cyrilmaman@hotmail.fr",
+      "phone": "0033616450351",
+      "deceased": "Renato Bettin",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 89.99
+        }
+      ],
+      "listinoEuro": 89.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 89.99,
+      "listinoCents": 8999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 8999,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-034",
+      "date": "2026-06-16",
+      "quarter": 2,
+      "customerName": "Rosetta Paladino",
+      "email": "rosellinapaladino@hotmail.it",
+      "phone": "3208487232",
+      "deceased": "Teresa Tropea",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 39.99
+        },
+        {
+          "qty": 2,
+          "name": "Lumino Commemorativo",
+          "lineTotalEuro": 6.98
+        },
+        {
+          "qty": 1,
+          "name": "Biglietto del Ricordo",
+          "lineTotalEuro": 2.49
+        }
+      ],
+      "listinoEuro": 49.46,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 49.46,
+      "listinoCents": 4946,
+      "scontoCents": 0,
+      "incassatoRealeCents": 4946,
+      "canale": "Diretto",
+      "alreadyOnCom": false,
+      "note": null
+    },
+    {
+      "id": "eu-2026-035",
+      "date": "2026-07-02",
+      "quarter": 3,
+      "customerName": "Nicolato Francesco",
+      "email": "pavnico@yahoo.it",
+      "phone": "3406885628",
+      "deceased": "Maria Stecca",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 89.99
+        },
+        {
+          "qty": 1,
+          "name": "Nastro Commemorativo",
+          "lineTotalEuro": 14.99
+        }
+      ],
+      "listinoEuro": 104.98,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 104.98,
+      "listinoCents": 10498,
+      "scontoCents": 0,
+      "incassatoRealeCents": 10498,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-036",
+      "date": "2026-07-03",
+      "quarter": 3,
+      "customerName": "",
+      "email": "DIREZIONE@CONFARTIGIANATO.PORDENONE.IT",
+      "phone": "328 47407420",
+      "deceased": "Lucia Rossi",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 69.99
+        }
+      ],
+      "listinoEuro": 69.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 69.99,
+      "listinoCents": 6999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 6999,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-037",
+      "date": "2026-07-09",
+      "quarter": 3,
+      "customerName": "Giulio Rosace",
+      "email": "GIULIOROSACE@GMAIL.COM",
+      "phone": "3921041814",
+      "deceased": "Guido Tomasi",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-038",
+      "date": "2026-07-16",
+      "quarter": 3,
+      "customerName": "Filomena Maiorano",
+      "email": "menamaiorano68@gmail.com",
+      "phone": "3297790989",
+      "deceased": "Claudio Spadotto",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Kalonche (Kalanchoe) – Pianta fiorita per il ricordo",
+          "lineTotalEuro": 37.99
+        }
+      ],
+      "listinoEuro": 37.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 37.99,
+      "listinoCents": 3799,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3799,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-039",
+      "date": "2026-08-01",
+      "quarter": 3,
+      "customerName": "valentina cecchini",
+      "email": "valentina.cecchini@libero.it",
+      "phone": "3478419867",
+      "deceased": "Maria Pullano",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Ricordo Affettuoso",
+          "lineTotalEuro": 29.99
+        }
+      ],
+      "listinoEuro": 29.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 29.99,
+      "listinoCents": 2999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 2999,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-040",
+      "date": "2026-08-06",
+      "quarter": 3,
+      "customerName": "Daniela Barilari",
+      "email": "superdalldan@gmail.com",
+      "phone": "3335218681",
+      "deceased": "Antonietta D'Ambrosio",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Vicinanza",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-041",
+      "date": "2026-08-10",
+      "quarter": 3,
+      "customerName": "Edy, Lori and Dana Moras",
+      "email": "gillabunny@yahoo.com",
+      "phone": "519-919-0712",
+      "deceased": "Antonio Moras",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 69.99
+        }
+      ],
+      "listinoEuro": 69.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 69.99,
+      "listinoCents": 6999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 6999,
+      "canale": "Diretto",
+      "alreadyOnCom": true,
+      "note": null
+    },
+    {
+      "id": "eu-2026-042",
+      "date": "2026-08-17",
+      "quarter": 3,
+      "customerName": "Amanda Favot",
+      "email": "afavot@rogers.com",
+      "phone": "0014166626157",
+      "deceased": "Sabina Favot",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Omaggio Speciale",
+          "lineTotalEuro": 39.99
+        }
+      ],
+      "listinoEuro": 39.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 39.99,
+      "listinoCents": 3999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 3999,
+      "canale": "Partner",
+      "alreadyOnCom": true,
+      "note": "Incassato lordo gateway Stripe EU €39,99 (vince sulla lista). Partner = consegna fiorista; cliente paga FloreMoria."
+    },
+    {
+      "id": "eu-2026-043",
+      "date": "2026-08-21",
+      "quarter": 3,
+      "customerName": "Oreste Poverello",
+      "email": "oreste.poverello@gmail.com",
+      "phone": "3492218937",
+      "deceased": "Giacomo Poverello",
+      "products": [
+        {
+          "qty": 1,
+          "name": "Bouquet Tributo Eterno",
+          "lineTotalEuro": 89.99
+        }
+      ],
+      "listinoEuro": 89.99,
+      "scontoEuro": 0,
+      "incassatoRealeEuro": 89.99,
+      "listinoCents": 8999,
+      "scontoCents": 0,
+      "incassatoRealeCents": 8999,
+      "canale": "Partner",
+      "alreadyOnCom": true,
+      "note": null
+    }
+  ]
+}

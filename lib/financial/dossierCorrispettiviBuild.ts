@@ -8,6 +8,11 @@ import { scorporaIva, VAT_PCT_FLORAL } from '@/lib/financial/vat';
 import type { DossierExceptionRow } from '@/lib/financial/dossierAcquistiBuild';
 import { classifyPaypalGatewayMovement } from '@/lib/financial/paypalClassify';
 import { parsePaypalSourceKey } from '@/lib/financial/paypalSourceKeys';
+import {
+    loadEuOrders2026Dataset,
+    matchGatewaysToEuOrders,
+    type EuGatewayMatch,
+} from '@/lib/financial/euOrders2026Match';
 
 export type CorrispettivoVatCertainty = 'DETERMINATA' | 'PRESUNTA' | 'MANCANTE';
 
@@ -84,6 +89,8 @@ type GatewayIncasso = {
     isEu: boolean;
     /** Chiavi alternative per match Order.stripeTransactionId (pi_/txn_/ch_/…). */
     linkIds: string[];
+    payerName: string | null;
+    email: string | null;
 };
 
 async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso[]> {
@@ -126,6 +133,16 @@ async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso
                 ? meta.rawStripeId
                 : r.stripeId.replace(/^stripe_(?:com|eu)_tx_/, '').replace(/^stripe_tx_/, '');
         const blob = `${r.stripeId} ${r.sourceId || ''} ${r.description || ''} ${JSON.stringify(r.metadataJson || {})}`;
+        const payerName =
+            (typeof meta.customerName === 'string' && meta.customerName) ||
+            (typeof meta.billing_name === 'string' && meta.billing_name) ||
+            (typeof meta.payerName === 'string' && meta.payerName) ||
+            null;
+        const email =
+            (typeof meta.receipt_email === 'string' && meta.receipt_email) ||
+            (typeof meta.customerEmail === 'string' && meta.customerEmail) ||
+            (typeof meta.email === 'string' && meta.email) ||
+            null;
         out.push({
             gateway: 'Stripe',
             transactionId: txId,
@@ -133,8 +150,13 @@ async function loadStripeIncassi(start: Date, end: Date): Promise<GatewayIncasso
             paymentDate: r.createdAtStripe,
             orderId: r.orderId,
             channelBlob: blob,
-            isEu: /stripe_eu/i.test(r.stripeId) || isEuChannel(blob, r.createdAtStripe),
+            isEu:
+                /stripe_eu/i.test(r.stripeId) ||
+                meta.account === 'EU' ||
+                isEuChannel(blob, r.createdAtStripe),
             linkIds: [...new Set([txId, r.stripeId, rawStripeId, r.sourceId || ''].filter(Boolean))],
+            payerName,
+            email,
         });
     }
     return out;
@@ -208,6 +230,14 @@ async function loadPaypalIncassi(start: Date, end: Date): Promise<GatewayIncasso
             channelBlob: blob,
             isEu: isEuChannel(blob, date),
             linkIds: [...new Set([txId, parsed?.canonicalKey || '', r.sourceKey].filter(Boolean))],
+            payerName:
+                (typeof meta.counterpartyName === 'string' && meta.counterpartyName) ||
+                (typeof meta.payerName === 'string' && meta.payerName) ||
+                null,
+            email:
+                (typeof meta.payerEmail === 'string' && meta.payerEmail) ||
+                (typeof meta.email === 'string' && meta.email) ||
+                null,
         });
     }
     return out;
@@ -327,10 +357,32 @@ export async function buildGatewayCorrispettivi(params: {
     const rows: DossierCorrispettivoRow[] = [];
     const exceptions: DossierExceptionRow[] = [];
 
+    // Match soft verso dataset .eu verificato (nessuna scrittura DB) — abbassa MANCANTE
+    let euMatchByGwKey = new Map<string, EuGatewayMatch>();
+    try {
+        const euDs = loadEuOrders2026Dataset();
+        const probes = incassi.map((g) => ({
+            key: `${g.gateway}:${g.transactionId}`.toLowerCase(),
+            paymentDateIso: g.paymentDate.toISOString().slice(0, 10),
+            grossCents: g.grossCents,
+            payerName: g.payerName,
+            email: g.email,
+        }));
+        const matched = matchGatewaysToEuOrders(probes, euDs.orders, 3);
+        euMatchByGwKey = new Map(matched.map((m) => [m.gatewayKey, m]));
+    } catch (err) {
+        console.warn(
+            '[dossierCorrispettivi] EU fixture match skipped:',
+            err instanceof Error ? err.message : err
+        );
+    }
+
     for (const g of incassi) {
         const order = g.orderId ? orderById.get(g.orderId) : undefined;
         const orderNumber = order?.orderNumber || '';
         const date = g.paymentDate.toISOString().slice(0, 10);
+        const gwKey = `${g.gateway}:${g.transactionId}`.toLowerCase();
+        const euHit = euMatchByGwKey.get(gwKey);
 
         // FF-PD-26-002: eccezione alla presunzione .eu (accessorio) — se non c'è ordine con aliquote, mancante
         const isFfPdAccessory =
@@ -371,7 +423,40 @@ export async function buildGatewayCorrispettivi(params: {
                 vatRate: VAT_PCT_FLORAL,
                 vatCertainty: 'PRESUNTA',
                 vatRuleNote:
-                    'METODO §8.3 — canale .eu fino al 01/07/2026 aliquota 10% (regola documentata)',
+                    'METODO §8.3 — storico .eu senza riga prodotto in anagrafica: default 10% floreale (PRESUNTA)',
+                imponibileCents: vat.imponibileCents,
+                ivaCents: vat.ivaCents,
+            });
+            continue;
+        }
+
+        // Dataset .eu verificato: identifica l'ordine; valorizzazione = lordo gateway (§8.2)
+        if (euHit && !isFfPdAccessory && g.grossCents > 0) {
+            const vat = scorporaIva(g.grossCents, VAT_PCT_FLORAL);
+            const o = euHit.order;
+            if (euHit.listMinusGatewayCents !== 0) {
+                exceptions.push({
+                    cosa: `${o.customerName || o.email || o.id} · lista €${(o.incassatoRealeCents / 100).toFixed(2)} vs gateway €${(Math.abs(g.grossCents) / 100).toFixed(2)}`,
+                    dove: 'Corrispettivi',
+                    importoCents: euHit.listMinusGatewayCents,
+                    perche:
+                        'documento/lista .eu diverge dal gateway: vince il lordo gateway (§8.2)',
+                });
+            }
+            const isabellaNote =
+                o.customerName.toLowerCase().includes('cesaroni') && o.scontoCents > 0
+                    ? ` Listino €${o.listinoEuro.toFixed(2)} | Sconto €${o.scontoEuro.toFixed(2)} | Incassato lordo gateway €${(Math.abs(g.grossCents) / 100).toFixed(2)}.`
+                    : '';
+            rows.push({
+                date,
+                canaleIncasso: g.gateway,
+                transactionId: g.transactionId,
+                orderNumber: orderNumber || o.id,
+                orderId: order?.id ?? null,
+                grossCents: vat.grossCents,
+                vatRate: VAT_PCT_FLORAL,
+                vatCertainty: 'PRESUNTA',
+                vatRuleNote: `METODO §8.3 — storico .eu senza aliquota riga prodotto: default 10% floreale (${euHit.score}) · ${o.customerName || o.email || o.id} · ${o.canale}.${isabellaNote}`,
                 imponibileCents: vat.imponibileCents,
                 ivaCents: vat.ivaCents,
             });

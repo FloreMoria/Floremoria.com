@@ -1,14 +1,23 @@
 /**
- * Costruzione righe foglio Acquisti + eccezioni §6.4 (doppia ingestione).
- * Spec: docs/METODO_DOSSIER_FISCALE.md v1.2 — §2, §6.4, §9.
+ * Costruzione righe foglio Acquisti + eccezioni §6.4 (doppia ingestione) e §2 (canali).
+ * Spec: docs/METODO_DOSSIER_FISCALE.md — §2, §6.4, §9.
  *
  * Un documento estero = una sola riga (imponibile positivo + IVA reverse charge).
  * Se manual e saas intercettano lo stesso id con imponibili opposti, sopravvive
  * la riga nella forma §6.4 (positiva con IVA); l’altra va in Eccezioni.
+ *
+ * Stesso documento passivo = stessa P.IVA fornitore + stesso numero (§2):
+ * YouDox XML > Report XLSX > manuale. Il canale inferiore va in Eccezioni.
  */
 
 import prisma from '@/lib/prisma';
 import type { TaxQuarterlyReport } from '@/lib/financial/taxQuarterly';
+import {
+    buildPassiveIdentityKey,
+    dedupePassiveByChannelPriority,
+    looksLikeInferredVatRate,
+    resolvePassiveIngestChannel,
+} from '@/lib/financial/passiveInvoiceIdentity';
 
 export type DossierExceptionRow = {
     cosa: string;
@@ -28,6 +37,10 @@ export type AcquistoSheetRow = {
     ivaCents: number;
     totaleCents: number;
     source: 'manual' | 'saas' | 'reverse_charge';
+    /** Canale ingestione (per dedupe §2); assente su saas/reverse_charge. */
+    ingestChannel?: string;
+    /** Interno: aliquota non letta dalla fonte (prima di filtrare verso Eccezioni). */
+    vatRateMissing?: boolean;
 };
 
 function normalizeDocKey(raw: string): string {
@@ -57,7 +70,8 @@ function manualDocNumber(
 }
 
 /**
- * Risolve Acquisti del periodo: applica §6.4 sulla doppia ingestione manual↔saas.
+ * Risolve Acquisti del periodo: applica §6.4 sulla doppia ingestione manual↔saas
+ * e §2 sulla gerarchia canali YouDox > Report > manuale.
  * Le fee gateway (report.reverseCharge) restano nel foglio come autofatture TD17.
  */
 export async function resolveAcquistiSheetRows(
@@ -136,6 +150,14 @@ export async function resolveAcquistiSheetRows(
             (typeof meta.vatNumber === 'string' && meta.vatNumber) ||
             '';
         const iva = e.vatCents ?? Math.max(0, (e.totalCents || 0) - imponibile);
+        const channel = resolvePassiveIngestChannel({
+            ingestChannel: meta.ingestChannel,
+            source: meta.source,
+            notes: e.notes,
+            fileName: e.fileName,
+        });
+        const vatRateMissing = meta.vatRateMissing === true || meta.vatRateKnown === false;
+        const rate = e.vatRate ?? 0;
 
         rows.push({
             date: e.expenseDate.toISOString().slice(0, 10),
@@ -144,12 +166,66 @@ export async function resolveAcquistiSheetRows(
             tipoDocumento: tipo,
             documentNumber: docNum,
             imponibileCents: imponibile,
-            vatRate: e.vatRate ?? (iva > 0 ? 22 : 0),
+            vatRate: rate,
             ivaCents: iva,
             totaleCents: e.totalCents || 0,
             source: 'manual',
+            ingestChannel: channel,
+            vatRateMissing,
         });
     }
+
+    // §2 prima: stessa P.IVA + stesso numero → un solo canale (XML > XLSX > MANUAL)
+    const manualRows = rows.filter((r) => r.source === 'manual');
+    const { kept: channelKept, discarded: channelDiscarded } = dedupePassiveByChannelPriority(
+        manualRows,
+        (r) => ({
+            identityKey: buildPassiveIdentityKey(r.vatId, r.documentNumber),
+            channel: resolvePassiveIngestChannel({ source: r.ingestChannel }),
+            documentDate: r.date,
+            totalCents: r.totaleCents,
+        })
+    );
+    for (const d of channelDiscarded) {
+        const reason =
+            d.dateMismatch || d.amountMismatch
+                ? `documento già acquisito da canale prioritario (discrepanza ${[
+                      d.dateMismatch ? 'data' : null,
+                      d.amountMismatch ? 'importo' : null,
+                  ]
+                      .filter(Boolean)
+                      .join('/')})`
+                : 'documento già acquisito da canale prioritario';
+        exceptions.push({
+            cosa: `${d.item.vendorName || 'Fornitore'} · ${d.item.documentNumber}`,
+            dove: `Acquisti (${d.item.ingestChannel || 'canale inferiore'})`,
+            importoCents: d.item.totaleCents,
+            perche: reason,
+        });
+    }
+
+    // Aliquota solo sulle righe sopravvissute al canale
+    const afterRate: AcquistoSheetRow[] = [];
+    for (const r of channelKept) {
+        const missing = Boolean(r.vatRateMissing);
+        if (missing || looksLikeInferredVatRate(r.vatRate)) {
+            exceptions.push({
+                cosa: `${r.vendorName || 'Fornitore'} · ${r.documentNumber}`,
+                dove: 'Acquisti',
+                importoCents: r.totaleCents,
+                perche: missing
+                    ? 'aliquota non esposta dalla fonte — non stimata'
+                    : 'aliquota stimata (es. 10.01%) — non letta dalla fonte',
+            });
+            continue;
+        }
+        const { vatRateMissing: _drop, ...clean } = r;
+        afterRate.push(clean);
+    }
+
+    const nonManual = rows.filter((r) => r.source !== 'manual');
+    rows.length = 0;
+    rows.push(...afterRate, ...nonManual);
 
     for (const s of saas) {
         const tipo =
@@ -195,7 +271,7 @@ export async function resolveAcquistiSheetRows(
     return { rows, exceptions };
 }
 
-/** Somma imponibili foglio Acquisti (post §6.4). */
+/** Somma imponibili foglio Acquisti (post §6.4 / §2). */
 export function sumAcquistiImponibileCents(rows: AcquistoSheetRow[]): number {
     return rows.reduce((s, r) => s + r.imponibileCents, 0);
 }

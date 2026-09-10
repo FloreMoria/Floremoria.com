@@ -25,6 +25,11 @@ export type ParsedFatturaPa = {
     netCents: number;
     vatCents: number;
     vatRate: number;
+    /**
+     * False se l’aliquota non era sul documento/fonte (non stimare).
+     * Default true per XML FatturaPA dove AliquotaIVA è nel DatiRiepilogo.
+     */
+    vatRateKnown?: boolean;
     causale: string;
     lineDescriptions: string[];
     sourceFileName: string;

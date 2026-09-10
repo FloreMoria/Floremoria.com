@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.10 — 10 settembre 2026.
+Versione 1.12 — 10 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -90,18 +90,29 @@ Chiudere l'ingresso serve a non aggiungere altri documenti non verificabili, non
 quelli esistenti.
 
 **Gerarchia fra canali di ingestione delle fatture passive.** Lo stesso documento può arrivare
-da più canali. Quando due canali portano una fattura con **stesso fornitore, stessa data e
-stesso numero progressivo**, si tratta dello stesso documento e ne sopravvive uno solo:
+da più canali. Due documenti sono lo stesso documento quando hanno **stessa partita IVA del
+fornitore** e **stesso numero documento**. Il fornitore si identifica dalla partita IVA, mai
+dal nome (nello stesso archivio possono comparire varianti di ragione sociale per lo stesso
+soggetto). Data e imponibile sono **conferme**, non requisiti: se coincidono P.IVA e numero ma
+differiscono data o importo, il documento è comunque lo stesso — si tiene il canale prioritario
+e la discrepanza va in Eccezioni. Non si usa la regola «almeno due campi uguali» (fonderebbe
+due fatture distinte dello stesso fornitore nello stesso giorno).
+
+Ne sopravvive uno solo secondo la priorità:
 
 | Priorità | Canale |
 |---|---|
-| 1 | Youdox |
-| 2 | Report fatture ricevute (file periodico) |
+| 1 | Youdox (XML SDI) |
+| 2 | Report fatture ricevute (file periodico XLSX) |
 | 3 | Inserimento manuale |
 
 Il documento del canale con priorità più bassa **non compare in tabella e non concorre ad
 alcun totale**. Viene annotato nel foglio Eccezioni come "documento già acquisito da canale
 prioritario", secondo la §6.5.
+
+**Aliquota IVA.** L’aliquota si legge dalla fonte (XML: `AliquotaIVA`; report: colonna aliquota
+se presente). Non si stima dividendo imposta per imponibile (es. 10,01%). Se la fonte non
+espone l’aliquota, la riga va in Eccezioni — non in tabella né nei totali.
 
 ---
 
@@ -414,35 +425,46 @@ del netto.
 Esempio dal T2 2026: PayPal lordo € 593,79 contro netto € 579,36. La differenza di € 14,43 è
 la commissione, che è un costo, non un minor ricavo.
 
+**Lista di origine vs gateway.** Quando un ordine (anche da elenco `.eu` o altra lista di
+lavoro) è abbinato a un movimento gateway, **l'importo incassato viene dal gateway**. La lista
+serve a identificare l'ordine, non a valorizzarlo. Se lista e gateway divergono, vince il
+gateway e la differenza va annotata in Eccezioni.
+
+Lo stesso vale per le vendite con fiorista partner: il cliente paga FloreMoria al **lordo**;
+il compenso al fiorista è un costo operativo separato, non una riduzione del corrispettivo.
+
 ---
 
 ### 8.3 Da dove viene l'aliquota
 
-L'aliquota si determina **riga per riga dell'ordine**, secondo la natura del bene:
+In FloreMoria esistono **due sole aliquote**:
 
-| Categoria | Aliquota |
+| Bene | Aliquota |
 |---|---|
-| Fiori recisi, piante, composizioni floreali | 10% |
-| Accessori: biglietto, nastro commemorativo, lumino, ceri, fotografia e simili | 22% |
-| Consegna | non addebitata: nessuna riga |
+| Fiori recisi, piante, composizioni floreali | **10%** |
+| Accessori (biglietto, nastro commemorativo, lumino, ceri, fotografia, messaggio e simili) | **22%** |
+
+Non ce ne sono altre. L'aliquota si determina **per riga prodotto**, non per ordine: un
+ordine può contenere un bouquet al 10% e un nastro al 22%. Assegnare un'unica aliquota di
+testata all'intero ordine è un errore.
+
+**Ordine di lettura (nessuna stima per divisione imposta/imponibile):**
+
+| Priorità | Caso | Stato | Azione |
+|---|---|---|---|
+| 1 | Riga collegata a un prodotto in anagrafica | **determinata** | aliquota dal campo della pagina Prodotti (`Product.vatRatePercent`) |
+| 2 | Ordine storico `.eu` senza prodotto in anagrafica sulla riga | **presunta** | default **10%** floreale, con motivazione registrata |
+| 3 | Nessuno dei due | **mancante** | riga in Eccezioni, esclusa dai totali IVA |
 
 Ogni prodotto a catalogo porta la propria aliquota come **attributo del prodotto**. Non si
-deduce dal nome, non si indovina per categoria di testo, non si applica un valore di default.
+calcola dividendo imposta per imponibile e non si inventa un'aliquota di testata.
 
-**I tre stati dell'aliquota.** Non tutti gli incassi hanno un ordine a database. Ogni riga del
-registro dichiara quindi come l'aliquota è stata ottenuta:
+Una regola di presunzione è ammessa solo se **scritta in questo metodo**. Oltre al default
+floreale sullo storico `.eu` senza anagrafica:
 
-| Stato | Quando | Cosa fa il dossier |
-|---|---|---|
-| **determinata** | esiste la riga d'ordine con il prodotto e la sua aliquota | la usa |
-| **presunta** | l'ordine non c'è, ma una regola documentata copre il caso | la applica **e la dichiara** in una colonna dedicata, con la regola citata |
-| **mancante** | non c'è ordine e nessuna regola applicabile | riga in Eccezioni, esclusa dai totali IVA |
-
-Una regola di presunzione è ammessa solo se **scritta in questo metodo** e verificata da una
-fonte esterna al sistema. L'unica in vigore:
-
-> **Canale `.eu` fino al 01/07/2026** — aliquota 10%, salvo `FF-PD-26-002` che contiene un
-> accessorio. Base: verifica ordine per ordine del titolare, settembre 2026.
+> **FF-PD-26-002** — contiene un accessorio: non applicare il default 10% sull'intero
+> incasso se manca lo split per riga; resta in Eccezioni finché le aliquote di riga non sono
+> determinate.
 
 Il foglio 0 riporta sempre quanto vale ciascuno dei tre stati in euro, così che il
 commercialista veda su quale parte del fatturato l'aliquota è certa e su quale è presunta.
@@ -546,6 +568,15 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.12 — 10 settembre 2026**
+- §8.2 — se ordine abbinato a gateway, vince il **lordo gateway**; lista solo identifica; delta in Eccezioni.
+- §8.3 — sole aliquote 10%/22% per **riga prodotto**; ordine di lettura determinata → presunta (.eu storico) → mancante; vietata stima imposta/imponibile.
+
+**1.11 — 10 settembre 2026**
+- §2 — identità fattura passiva = **P.IVA fornitore + numero documento** (non il nome; data e
+  imponibile solo come conferma). Priorità canali invariata (YouDox > Report > manuale).
+  Aliquota: letta dalla fonte, mai stimata; se assente → Eccezioni.
 
 **1.10 — 10 settembre 2026**
 - §2 — il periodo in corso ammette l'inserimento della lista movimenti come dato

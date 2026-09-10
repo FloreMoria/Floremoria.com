@@ -143,6 +143,18 @@ const VAT_AMT_KEYS = [
     'imposta',
     'imposta iva',
 ];
+/** Aliquota nominale — mai derivata da imposta/imponibile (evita 10.01%). */
+const VAT_RATE_KEYS = [
+    'aliquota',
+    'aliquota iva',
+    'aliquotaiva',
+    '% iva',
+    'iva %',
+    'perc iva',
+    'percentuale iva',
+    'vat rate',
+    'vat %',
+];
 const TOTAL_KEYS = [
     'totale documento',
     'importo totale',
@@ -211,15 +223,23 @@ function rowToInvoice(
         total < 0;
     const sign = isCreditNote ? -1 : 1;
     const totalAbs = eurosToCents(Math.abs(total));
-    const vatRate =
-        Math.abs(netEuros) > 0 && Math.abs(vatEuros) > 0
-            ? Math.round((Math.abs(vatEuros) / Math.abs(netEuros)) * 10000) / 100
-            : 22;
+    // Perché: dividere imposta/imponibile produce 10.01% — l’aliquota va letta, non stimata.
+    const rateRaw = findCol(row, VAT_RATE_KEYS);
+    const rateParsed = rateRaw ? parseAmount(rateRaw) : null;
+    const vatRateKnown = rateParsed != null && Number.isFinite(rateParsed) && rateParsed >= 0;
+    const vatRate = vatRateKnown ? rateParsed : 0;
     const vatAbs =
         vatEuros !== 0
             ? eurosToCents(Math.abs(vatEuros))
-            : Math.round(totalAbs - totalAbs / (1 + vatRate / 100));
-    const netAbs = netEuros !== 0 ? eurosToCents(Math.abs(netEuros)) : totalAbs - vatAbs;
+            : vatRateKnown
+              ? Math.round(totalAbs - totalAbs / (1 + vatRate / 100))
+              : 0;
+    const netAbs =
+        netEuros !== 0
+            ? eurosToCents(Math.abs(netEuros))
+            : vatAbs > 0
+              ? totalAbs - vatAbs
+              : totalAbs;
     const docKind: ParsedFatturaPa['docKind'] = sign < 0 ? 'NOTA_CREDITO' : 'FATTURA';
     const label = docKind === 'NOTA_CREDITO' ? 'Nota di credito' : 'Fattura';
     const foreign = detectForeignAutofattura({
@@ -238,6 +258,7 @@ function rowToInvoice(
         netCents: sign * Math.max(0, netAbs),
         vatCents: sign * Math.max(0, vatAbs),
         vatRate,
+        vatRateKnown,
         causale: `${label} n. ${invoiceNumber} — ${vendorName}`.slice(0, 2000),
         lineDescriptions: [],
         sourceFileName: `${sourceFileName}#${idx + 1}`,

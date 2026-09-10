@@ -1,0 +1,47 @@
+{
+  "amanda": {
+    "id": "eu-2026-042",
+    "date": "2026-08-17",
+    "quarter": 3,
+    "customerName": "Amanda Favot",
+    "email": "afavot@rogers.com",
+    "phone": "0014166626157",
+    "deceased": "Sabina Favot",
+    "products": [
+      {
+        "qty": 1,
+        "name": "Bouquet Omaggio Speciale",
+        "lineTotalEuro": 39.99
+      }
+    ],
+    "listinoEuro": 39.99,
+    "scontoEuro": 0,
+    "incassatoRealeEuro": 39.99,
+    "listinoCents": 3999,
+    "scontoCents": 0,
+    "incassatoRealeCents": 3999,
+    "canale": "Partner",
+    "alreadyOnCom": true,
+    "note": "Incassato lordo gateway Stripe EU €39,99 (vince sulla lista). Partner = consegna fiorista; cliente paga FloreMoria."
+  },
+  "totals": {
+    "listEuro": 2474.82,
+    "gatewayPreferredEuro": 2474.82,
+    "deltaN": 0,
+    "deltas": []
+  },
+  "matchN": 27,
+  "partnerFixtureN": 2,
+  "T2pp": {
+    "paypalMancanteNoOrder": 32,
+    "withNameInDesc": 0,
+    "samples": []
+  },
+  "T3pp": {
+    "paypalMancanteNoOrder": 26,
+    "withNameInDesc": 1,
+    "samples": [
+      "2026-07-27 €31.48 · LUCIANO MAMMI'"
+    ]
+  }
+}

@@ -22,6 +22,14 @@ import {
     findManualExpenseByCanonicalKey,
     buildPassiveCanonicalKey,
 } from '@/lib/financial/passiveDocumentIdentity';
+import {
+    buildPassiveIdentityKey,
+    normalizePassiveDocNumber,
+    normalizePassiveSupplierVat,
+    passiveChannelRank,
+    resolvePassiveIngestChannel,
+    type PassiveIngestChannel,
+} from '@/lib/financial/passiveInvoiceIdentity';
 import type { Prisma } from '@prisma/client';
 import {
     FOREIGN_AUTOFATTURA_SOURCE,
@@ -141,6 +149,81 @@ async function findExistingByDedupeKey(dedupeKey: string) {
     );
 }
 
+/**
+ * Stesso documento = stessa P.IVA fornitore + stesso numero (METODO §2).
+ * Perché la chiave canonica a 5 segmenti differisce tra XML (recipient IT…) e Report (`*`).
+ */
+async function findExistingByPassiveIdentity(
+    supplierVat: string | null | undefined,
+    docNumber: string | null | undefined
+) {
+    const identityKey = buildPassiveIdentityKey(supplierVat, docNumber);
+    if (!identityKey) return null;
+
+    const vat = normalizePassiveSupplierVat(supplierVat)!;
+    const num = normalizePassiveDocNumber(docNumber)!;
+    const vatBare = vat.replace(/^IT/i, '');
+    const vatVariants = Array.from(new Set([vat, `IT${vatBare}`, vatBare]));
+
+    try {
+        const byIdentityMeta = await prisma.manualFinanceExpense.findFirst({
+            where: {
+                docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
+                metadataJson: { path: ['passiveIdentityKey'], equals: identityKey },
+                NOT: { verificationStatus: 'REJECTED' },
+            },
+            orderBy: { createdAt: 'asc' },
+        });
+        if (byIdentityMeta) return byIdentityMeta;
+    } catch {
+        /* path JSON non supportato → scan sotto */
+    }
+
+    const candidates = await prisma.manualFinanceExpense.findMany({
+        where: {
+            docType: { in: ['FATTURA', 'NOTA_CREDITO'] },
+            OR: vatVariants.flatMap((v) => [
+                { metadataJson: { path: ['vendorVat'], equals: v } },
+                { metadataJson: { path: ['cedenteVat'], equals: v } },
+            ]),
+            NOT: { verificationStatus: 'REJECTED' },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 80,
+    });
+
+    return (
+        candidates.find((r) => {
+            const meta = (r.metadataJson || {}) as Record<string, unknown>;
+            const key =
+                (typeof meta.passiveIdentityKey === 'string' && meta.passiveIdentityKey) ||
+                buildPassiveIdentityKey(
+                    (typeof meta.vendorVat === 'string' && meta.vendorVat) ||
+                        (typeof meta.cedenteVat === 'string' && meta.cedenteVat) ||
+                        null,
+                    (typeof meta.invoiceNumber === 'string' && meta.invoiceNumber) ||
+                        (typeof meta.documentNumber === 'string' && meta.documentNumber) ||
+                        null
+                );
+            return key === identityKey;
+        }) || null
+    );
+}
+
+function channelOfExpense(row: {
+    metadataJson: Prisma.JsonValue | null;
+    notes: string | null;
+    fileName: string | null;
+}): PassiveIngestChannel {
+    const meta = (row.metadataJson || {}) as Record<string, unknown>;
+    return resolvePassiveIngestChannel({
+        ingestChannel: meta.ingestChannel,
+        source: meta.source,
+        notes: row.notes,
+        fileName: row.fileName,
+    });
+}
+
 function fingerprint(inv: {
     totalCents: number;
     netCents: number;
@@ -226,6 +309,11 @@ function buildInvoiceMetadata(
         docNumber: inv.invoiceNumber,
         docDate: inv.invoiceDate,
     });
+    const vatRateKnown = inv.vatRateKnown !== false;
+    const passiveIdentityKey = buildPassiveIdentityKey(
+        inv.vendorVat || inv.cedenteVat,
+        inv.invoiceNumber
+    );
     return {
         source,
         ingestChannel: channel,
@@ -243,6 +331,8 @@ function buildInvoiceMetadata(
         autofatturaType: inv.autofatturaType || null,
         /** Chiave canonica Fase 1 (recipient|supplier|docType|number|date). */
         dedupeKey: canonicalKey || inv.dedupeKey,
+        /** Identità §2: P.IVA fornitore + numero (senza data). */
+        passiveIdentityKey,
         vendorVat: inv.vendorVat,
         cedenteVat: inv.cedenteVat || inv.vendorVat,
         cessionarioVat: inv.cessionarioVat || null,
@@ -252,6 +342,8 @@ function buildInvoiceMetadata(
         lineDescriptions: inv.lineDescriptions,
         sourceFileName: inv.sourceFileName,
         archiveFileName: archive.fileName,
+        vatRateKnown,
+        vatRateMissing: !vatRateKnown,
         ...(extra || {}),
     };
 }
@@ -540,6 +632,31 @@ async function persistInvoice(
         }
     }
 
+    // Identità §2 VAT|NUM (XML e Report hanno chiavi canoniche diverse sul recipient)
+    const existingByIdentity = await findExistingByPassiveIdentity(
+        inv.vendorVat || inv.cedenteVat,
+        inv.invoiceNumber
+    );
+    if (existingByIdentity) {
+        const existingRank = passiveChannelRank(channelOfExpense(existingByIdentity));
+        const incomingRank = passiveChannelRank(channel);
+        if (incomingRank <= existingRank) {
+            console.warn(
+                `[ingest] IDEMPOTENT SKIP identity=${buildPassiveIdentityKey(inv.vendorVat || inv.cedenteVat, inv.invoiceNumber)} existing=${existingByIdentity.id} channel=${channel}`
+            );
+            return existingByIdentity;
+        }
+        // Canale superiore: aggiorna la riga esistente invece di crearne una seconda
+        const { row } = await updateExistingInvoice(
+            existingByIdentity,
+            inv,
+            archive,
+            channel,
+            uploadId
+        );
+        return row;
+    }
+
     let row;
     try {
         row = await prisma.manualFinanceExpense.create({
@@ -773,19 +890,43 @@ export async function ingestParsedPassiveInvoices(input: {
             else if (role === 'ACTIVE') activeInvoices += 1;
             else passiveInvoices += 1;
 
-            // Dedup interno al file (stessa fattura ripetuta nel report)
-            const alreadyInBatch = [...seenInBatch].some((k) => dedupeKeysMatch(k, inv.dedupeKey));
+            // Dedup interno al file (stessa fattura ripetuta nel report) — VAT|NUM
+            const identityKey =
+                buildPassiveIdentityKey(inv.vendorVat || inv.cedenteVat, inv.invoiceNumber) ||
+                inv.dedupeKey;
+            const alreadyInBatch = [...seenInBatch].some(
+                (k) => k === identityKey || dedupeKeysMatch(k, inv.dedupeKey)
+            );
             if (alreadyInBatch) {
                 skippedDuplicates += 1;
                 skippedDetails.push({
                     fileName: inv.sourceFileName,
-                    reason: `Duplicato nel file ${inv.dedupeKey}`,
+                    reason: `Duplicato nel file ${identityKey}`,
                 });
                 continue;
             }
 
-            const existing = await findExistingByDedupeKey(inv.dedupeKey);
+            const existing =
+                (await findExistingByPassiveIdentity(
+                    inv.vendorVat || inv.cedenteVat,
+                    inv.invoiceNumber
+                )) || (await findExistingByDedupeKey(inv.dedupeKey));
             if (existing) {
+                const existingChannel = channelOfExpense(existing);
+                const existingRank = passiveChannelRank(existingChannel);
+                const incomingRank = passiveChannelRank(input.source);
+
+                // Canale inferiore: non compare, non aggiorna, non altera totali
+                if (incomingRank < existingRank) {
+                    skippedDuplicates += 1;
+                    seenInBatch.add(identityKey);
+                    skippedDetails.push({
+                        fileName: inv.sourceFileName,
+                        reason: `documento già acquisito da canale prioritario (${existingChannel} > ${input.source}) ${identityKey}`,
+                    });
+                    continue;
+                }
+
                 const same =
                     fingerprint({
                         totalCents: existing.totalCents,
@@ -804,12 +945,12 @@ export async function ingestParsedPassiveInvoices(input: {
                         docType: inv.docKind,
                     });
 
-                if (same) {
+                if (same && incomingRank === existingRank) {
                     skippedDuplicates += 1;
-                    seenInBatch.add(inv.dedupeKey);
+                    seenInBatch.add(identityKey);
                     skippedDetails.push({
                         fileName: inv.sourceFileName,
-                        reason: `Già presente ${inv.dedupeKey}`,
+                        reason: `Già presente ${identityKey}`,
                     });
                     continue;
                 }
@@ -827,9 +968,15 @@ export async function ingestParsedPassiveInvoices(input: {
                 if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {
                     sampleVendors.push(inv.vendorName);
                 }
-                warnings.push(
-                    `Aggiornata ${inv.dedupeKey}: ${existing.totalCents / 100} € → ${inv.totalCents / 100} €`
-                );
+                if (!same) {
+                    warnings.push(
+                        `Aggiornata ${identityKey}: ${existing.totalCents / 100} € → ${inv.totalCents / 100} €`
+                    );
+                } else if (incomingRank > existingRank) {
+                    warnings.push(
+                        `Promossa a canale ${input.source}: ${identityKey} (era ${existingChannel})`
+                    );
+                }
 
                 cancelledByCreditNote += await markRelatedInvoiceCancelledByCreditNote(inv);
 
@@ -848,13 +995,13 @@ export async function ingestParsedPassiveInvoices(input: {
                     });
                     if (matched) matchedFineco += 1;
                 }
-                seenInBatch.add(inv.dedupeKey);
+                seenInBatch.add(identityKey);
                 continue;
             }
 
             const row = await persistInvoice(inv, archive, input.source, uploadId);
             imported += 1;
-            seenInBatch.add(inv.dedupeKey);
+            seenInBatch.add(identityKey);
             totalCents += inv.totalCents;
             totalNetCents += Math.abs(inv.netCents || inv.totalCents);
             if (sampleVendors.length < 8 && !sampleVendors.includes(inv.vendorName)) {

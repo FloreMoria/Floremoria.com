@@ -11,6 +11,11 @@ import {
     buildCanonicalDocumentKey,
     canonicalDocumentKeysMatch,
 } from '@/lib/financial/canonicalDocumentKey';
+import {
+    buildPassiveIdentityKey,
+    dedupePassiveByChannelPriority,
+    resolvePassiveIngestChannel,
+} from '@/lib/financial/passiveInvoiceIdentity';
 
 export type InvoiceUploadChannel = 'SDI_XML' | 'SDI_XLSX';
 
@@ -227,7 +232,7 @@ export async function listPassiveSdiInvoices(
         take: limit,
     });
 
-    return rows.map((r) => {
+    const mapped = rows.map((r) => {
         const meta = (r.metadataJson || {}) as Record<string, unknown>;
         const invoiceNumber =
             typeof meta.invoiceNumber === 'string'
@@ -269,8 +274,24 @@ export async function listPassiveSdiInvoices(
             reconciled: Boolean(r.reconciled),
             invoiceRole: String(meta.invoiceRole || meta.source || 'PASSIVE'),
             searchHaystack,
+            _channel: resolvePassiveIngestChannel({
+                ingestChannel: meta.ingestChannel,
+                source: meta.source,
+                notes: r.notes,
+                fileName: r.fileName,
+            }),
         };
     });
+
+    // METODO §2: stessa P.IVA + stesso numero → solo canale prioritario in tabella
+    const { kept } = dedupePassiveByChannelPriority(mapped, (r) => ({
+        identityKey: buildPassiveIdentityKey(r.vendorVat, r.invoiceNumber),
+        channel: r._channel,
+        documentDate: r.documentDate,
+        totalCents: r.totalCents,
+    }));
+
+    return kept.map(({ _channel: _ignored, ...row }) => row);
 }
 
 function formatItDateForSearch(iso: string): string {

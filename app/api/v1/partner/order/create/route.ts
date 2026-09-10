@@ -163,8 +163,9 @@ export async function POST(request: Request) {
         const idempotencyKeys = extractPartnerIdempotencyKeys(request, b);
         const externalAnnouncementId = idempotencyKeys.externalOrderId || undefined;
 
-        // Short-circuit: retry dopo timeout partner/Stripe → stesso ordine, niente secondo create.
-        if (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId) {
+        // Short-circuit SOLO su chiave pagamento (PI / Idempotency-Key / session).
+        // L’annuncio funebre non deduplica: più omaggi sullo stesso annuncio sono legittimi.
+        if (idempotencyKeys.paymentKey) {
             const existing = await findExistingPartnerOrderByIdempotency(prisma, idempotencyKeys);
             if (existing) {
                 console.info('[B2B Partner API] order/create idempotent hit', {
@@ -172,7 +173,6 @@ export async function POST(request: Request) {
                     orderId: existing.id,
                     orderNumber: existing.orderNumber,
                     paymentKey: idempotencyKeys.paymentKey,
-                    externalOrderId: idempotencyKeys.externalOrderId,
                 });
                 return NextResponse.json(partnerDuplicateOrderResponseBody(existing), {
                     status: 200,
@@ -349,8 +349,8 @@ export async function POST(request: Request) {
         let order;
         try {
             order = await prisma.$transaction(async (tx) => {
-                // Race: secondo create concorrente con stessa chiave → P2002 fuori dalla tx.
-                if (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId) {
+                // Race: secondo create concorrente con stessa paymentKey → P2002 fuori dalla tx.
+                if (idempotencyKeys.paymentKey) {
                     const existingInTx = await findExistingPartnerOrderByIdempotency(tx, idempotencyKeys);
                     if (existingInTx) {
                         return { __duplicate: true as const, existing: existingInTx };
@@ -411,7 +411,7 @@ export async function POST(request: Request) {
             if (
                 createErr instanceof Prisma.PrismaClientKnownRequestError &&
                 createErr.code === 'P2002' &&
-                (idempotencyKeys.paymentKey || idempotencyKeys.externalOrderId)
+                idempotencyKeys.paymentKey
             ) {
                 const raced = await findExistingPartnerOrderByIdempotency(prisma, idempotencyKeys);
                 if (raced) {

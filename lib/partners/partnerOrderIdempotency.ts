@@ -1,13 +1,17 @@
 /**
- * Idempotenza ordini B2B partner: stessa PaymentIntent / chiave esterna → stesso ordine.
- * Perché: retry Stripe/webhook dopo timeout API non devono creare duplicati.
+ * Idempotenza ordini B2B partner: stesso PaymentIntent / Idempotency-Key → stesso ordine.
+ * Perché: retry Stripe/webhook dopo timeout non devono creare duplicati.
+ * Non usa l’annuncio funebre: sullo stesso annuncio possono esserci più omaggi distinti.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 
 export type PartnerIdempotencyKeys = {
-    /** Chiave primaria persistita su Order.stripeTransactionId. */
+    /** Chiave pagamento persistita su Order.stripeTransactionId (PI / session / Idempotency-Key). */
     paymentKey: string | null;
-    /** Chiave secondaria su Order.externalAnnouncementId. */
+    /**
+     * Annuncio esterno — salvato su Order.externalAnnouncementId a fini operativi,
+     * mai usato per deduplica (più ordini legittimi sullo stesso annuncio).
+     */
     externalOrderId: string | null;
 };
 
@@ -20,7 +24,8 @@ function trimKey(v: unknown): string | null {
 }
 
 /**
- * Estrae chiavi idempotenza da header Idempotency-Key e body partner.
+ * Estrae chiavi da header Idempotency-Key e body partner.
+ * Solo `paymentKey` alimenta la deduplica; `externalOrderId` è solo metadato.
  */
 export function extractPartnerIdempotencyKeys(
     request: Request,
@@ -66,30 +71,24 @@ const existingOrderSelect = {
 export type ExistingPartnerOrder = Prisma.OrderGetPayload<{ select: typeof existingOrderSelect }>;
 
 /**
- * Cerca un ordine non cancellato già creato con la stessa chiave esterna / PaymentIntent.
+ * Cerca un ordine non cancellato già creato con la stessa chiave di pagamento.
+ * Nessun match su externalAnnouncementId / annuncioId.
  */
 export async function findExistingPartnerOrderByIdempotency(
     db: DbClient,
     keys: PartnerIdempotencyKeys
 ): Promise<ExistingPartnerOrder | null> {
-    const or: Prisma.OrderWhereInput[] = [];
-
-    if (keys.paymentKey) {
-        or.push({ stripeTransactionId: keys.paymentKey });
-        // Retrocompatibilità: PI/session storicamente solo in additionalInstructions JSON.
-        or.push({ additionalInstructions: { contains: keys.paymentKey } });
-    }
-    if (keys.externalOrderId) {
-        or.push({ externalAnnouncementId: keys.externalOrderId });
-    }
-
-    if (or.length === 0) return null;
+    if (!keys.paymentKey) return null;
 
     return db.order.findFirst({
         where: {
             deletedAt: null,
             status: { not: 'CANCELLED' },
-            OR: or,
+            OR: [
+                { stripeTransactionId: keys.paymentKey },
+                // Retrocompatibilità: PI/session storicamente solo in additionalInstructions JSON.
+                { additionalInstructions: { contains: keys.paymentKey } },
+            ],
         },
         orderBy: { createdAt: 'asc' },
         select: existingOrderSelect,

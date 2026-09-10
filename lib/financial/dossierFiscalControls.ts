@@ -249,10 +249,11 @@ export async function controlC3(year: number, quarter: TaxQuarter): Promise<Doss
             passed: true,
             verifiable: false,
             detail:
-                'non verificabile — nessun estratto del periodo con saldo iniziale e finale dichiarati dalla banca (METODO §2 v1.8: archivio paste/file senza saldi resta valido ma C3 non si misura)',
+                'non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)',
         };
     }
 
+    // Preferisci documenti con saldi (ufficiali); escludi paste senza saldi (già filtrati).
     // Usa il documento che copre meglio il trimestre (max overlap)
     const pick = withBoth.sort((a, b) => {
         const aSpan =

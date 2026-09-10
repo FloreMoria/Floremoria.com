@@ -35,6 +35,32 @@ const IT_DATE_RE = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/;
 const TYPE_HINT_RE =
     /^(bonifico|sepa\b|addebito|accredito|canone|imposta\b|bollo\b|commissione|pagamento\b|prelievo|versamento|giroconto|stipendio|ricarica|carta\b|pos\b|sdd\b|rid\b|f24\b|competenz|visa\b|mastercard|direct\s*debit)/i;
 
+/**
+ * METODO §2 v1.10 — scarta a monte saldi/totali/intestazioni (anti riga fantasma 21/08/2026).
+ */
+export function isFinecoSaldoOrHeaderLine(line: string): boolean {
+    const t = line.replace(/\u00a0/g, ' ').trim();
+    if (!t) return true;
+    if (
+        /saldo\s+iniziale|saldo\s+finale|saldo\s+disponibile|saldo\s+contabile|totale\s+entrate|totale\s+uscite/i.test(
+            t
+        )
+    ) {
+        return true;
+    }
+    if (/^saldo\b/i.test(t)) return true;
+    // Intestazioni colonna tipiche home banking / export
+    if (
+        /^(data(\s+contabile|\s+valuta)?|valuta|causale|descrizione|dare|avere|importo|tipologia|categoria)\s*$/i.test(
+            t
+        )
+    ) {
+        return true;
+    }
+    if (/^lista\s+movimenti/i.test(t)) return true;
+    return false;
+}
+
 export type FinecoPasteMovement = ParsedBankMovement & {
     typology: string | null;
     dedupKey: string;
@@ -207,7 +233,7 @@ export function parseFinecoPasteText(
         .replace(/\r/g, '\n')
         .split('\n')
         .map((l) => normalizeAmountToken(l.replace(/\u00a0/g, ' ')))
-        .filter((l) => l.length > 0 && !/^lista\s+movimenti/i.test(l) && !/^saldo\b/i.test(l));
+        .filter((l) => l.length > 0 && !isFinecoSaldoOrHeaderLine(l));
 
     let ctxYear = defaultYear;
     let ctxMonth: number | null = null;
@@ -384,10 +410,11 @@ export function parseFinecoPasteText(
         if (!dateIso) {
             anomalies?.push({
                 code: 'PASTE_NO_DATE',
-                message: `Movimento senza data completa (importo ${(draft.amountCents / 100).toFixed(2)} €)`,
+                message: `Riga scartata: manca data operazione valida (importo ${(draft.amountCents / 100).toFixed(2)} €)`,
                 severity: 'warn',
                 lineIndex: idx,
             });
+            return;
         }
 
         let description = draft.descParts.join(' · ').replace(/\s+/g, ' ').trim();
@@ -399,7 +426,29 @@ export function parseFinecoPasteText(
         } else if (draft.typology) {
             description = description ? `${description} · ${draft.typology}` : draft.typology;
         }
-        if (!description) description = draft.typology || 'Movimento Fineco (incolla)';
+        if (!description) description = draft.typology || '';
+
+        // METODO §2: movimento solo con data + causale + importo
+        if (!description.trim()) {
+            anomalies?.push({
+                code: 'PASTE_NO_CAUSALE',
+                message: `Riga scartata: manca causale (data ${dateIso}, importo ${(draft.amountCents / 100).toFixed(2)} €)`,
+                severity: 'warn',
+                lineIndex: idx,
+            });
+            return;
+        }
+
+        // Scarta anche se la «causale» è in realtà un saldo/intestazione
+        if (isFinecoSaldoOrHeaderLine(description)) {
+            anomalies?.push({
+                code: 'PASTE_SALDO_BLOCKED',
+                message: `Riga saldo/intestazione scartata: ${description.slice(0, 80)}`,
+                severity: 'warn',
+                lineIndex: idx,
+            });
+            return;
+        }
 
         const amountCents = draft.amountCents;
         const dedupKey = buildFinecoDedupKey(dateIso, amountCents, description);

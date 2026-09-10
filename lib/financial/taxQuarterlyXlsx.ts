@@ -61,7 +61,7 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
 
 const EUR_FORMAT = '€ #,##0.00';
 /** Versione del metodo che questo export applica davvero (METODO §12). */
-export const DOSSIER_METHOD_VERSION = '1.9';
+export const DOSSIER_METHOD_VERSION = '1.10';
 const DOSSIER_VERSION = `dossier-fiscale-metodo-v${DOSSIER_METHOD_VERSION}`;
 
 function euroNum(cents: number): number {
@@ -541,7 +541,12 @@ function buildLiquidazioneIvaSheet(
     controls: DossierControlResult[],
     acquistiImponibileCents: number,
     italianAcquistiIvaCents: number,
-    ivaRcFromAcquistiCents: number
+    ivaRcFromAcquistiCents: number,
+    provisional: {
+        provisionalLineCount: number;
+        provisionalAmountAbsCents: number;
+        hasProvisional: boolean;
+    }
 ) {
     const ws = wb.addWorksheet('Liquidazione IVA');
     const summary = summarizeControls(controls);
@@ -550,6 +555,20 @@ function buildLiquidazioneIvaSheet(
         if (c.unit === 'cents' && Number.isFinite(c.delta)) return s + Math.abs(c.delta);
         return s;
     }, 0);
+
+    // METODO §4.1 — dichiarazione provvisori in testa
+    if (provisional.hasProvisional) {
+        const provRow = ws.addRow([
+            `ATTENZIONE — periodo PROVVISORIO: ${provisional.provisionalLineCount} righe bancarie da lista movimenti (non certificate) per € ${euroLabel(provisional.provisionalAmountAbsCents)}. Questo dossier NON si consegna come definitivo (METODO §4.1).`,
+        ]);
+        provRow.getCell(1).font = {
+            bold: true,
+            size: 12,
+            name: 'Calibri',
+            color: { argb: 'FFB45309' },
+        };
+        ws.addRow([]);
+    }
 
     const statusRow = ws.addRow([
         failed.length === 0
@@ -869,7 +888,7 @@ function buildRegistroCorrispettiviSheet(wb: ExcelJS.Workbook, report: TaxQuarte
 }
 
 /**
- * Genera il buffer .xlsx del Dossier Fiscale (METODO v1.9).
+ * Genera il buffer .xlsx del Dossier Fiscale (METODO v1.10).
  */
 export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): Promise<Buffer> {
     const wb = new ExcelJS.Workbook();
@@ -893,6 +912,13 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
 
     const controls = await runAndPersistDossierControls(year, quarter);
 
+    const {
+        getProvisionalBankStats,
+        collectUnconfirmedBankExceptions,
+    } = await import('@/lib/financial/bankStatements/provisionalBankStats');
+    const provisional = await getProvisionalBankStats(year, quarter);
+    const unconfirmedBank = await collectUnconfirmedBankExceptions(year, quarter);
+
     const controlExceptions: DossierExceptionRow[] = controls
         .filter((c) => c.verifiable !== false && !c.passed)
         .map((c) => ({
@@ -901,6 +927,13 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
             importoCents: c.unit === 'cents' && Number.isFinite(c.delta) ? c.delta : 0,
             perche: c.detail || `controllo fallito (misurato=${c.measured}, atteso=${c.expected})`,
         }));
+
+    const bankUnconfirmedExceptions: DossierExceptionRow[] = unconfirmedBank.map((u) => ({
+        cosa: u.description.slice(0, 120),
+        dove: `Banca ${u.date}`,
+        importoCents: u.amountCents,
+        perche: u.reason,
+    }));
 
     buildRegistroCorrispettiviSheet(wb, report);
 
@@ -945,13 +978,15 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
         controls,
         acquistiImponibileCents,
         italianAcquistiIvaCents,
-        ivaRcFromAcquistiCents
+        ivaRcFromAcquistiCents,
+        provisional
     );
 
     buildDaChiarireSheet(wb, [
         ...acquisizioneExceptions,
         ...(report.corrispettiviExceptions || []),
         ...controlExceptions,
+        ...bankUnconfirmedExceptions,
     ]);
 
     await buildPrimaNotaMasterSheet(wb, report);

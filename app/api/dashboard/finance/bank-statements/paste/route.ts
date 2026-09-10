@@ -1,24 +1,67 @@
 import { NextResponse } from 'next/server';
 import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
+import {
+    confirmFinecoPaste,
+    previewFinecoPaste,
+} from '@/lib/financial/bankStatements/store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
+
+const MAX_CHARS = 500_000;
+
+function jsonError(error: string, status: number, extra?: Record<string, unknown>) {
+    return NextResponse.json({ ok: false, error, ...extra }, { status });
+}
 
 /**
- * METODO §2 — ingresso testo/incolla chiuso.
- * Usare POST /api/dashboard/finance/bank-statements/upload con file ufficiale banca.
+ * METODO §2 v1.10 — lista movimenti Fineco solo per il periodo aperto (provvisorio).
+ * Periodi chiusi: upload file ufficiale con saldi.
  */
-export async function POST() {
-    const auth = await requireDashboardAdmin();
-    if (!auth.ok) return auth.response;
+export async function POST(request: Request) {
+    try {
+        const auth = await requireDashboardAdmin();
+        if (!auth.ok) return auth.response;
 
-    return NextResponse.json(
-        {
-            ok: false,
-            error:
-                'Incolla movimenti disabilitato (METODO dossier fiscale §2). Carica esclusivamente il file ufficiale scaricato dal portale della banca (PDF, CSV o Excel) con saldo iniziale e finale dichiarati.',
-            code: 'FINECO_PASTE_DISABLED',
-        },
-        { status: 410 }
-    );
+        const body = (await request.json().catch(() => null)) as {
+            action?: string;
+            text?: string;
+        } | null;
+
+        const action = body?.action === 'confirm' ? 'confirm' : 'preview';
+        const text = typeof body?.text === 'string' ? body.text.trim() : '';
+
+        if (!text) {
+            return jsonError('Incolla il testo dei movimenti Fineco.', 400);
+        }
+        if (text.length > MAX_CHARS) {
+            return jsonError('Testo troppo lungo (max 500.000 caratteri).', 400);
+        }
+
+        if (action === 'preview') {
+            const preview = await previewFinecoPaste(text);
+            if (preview.rows.length === 0) {
+                return NextResponse.json(
+                    {
+                        ok: false,
+                        error:
+                            'Nessun movimento riconosciuto. Copia l’elenco dalla lista movimenti Fineco (giorno, mese, causale, tipologia, importo EUR). Saldi e intestazioni sono scartati.',
+                        ...preview,
+                    },
+                    { status: 422 }
+                );
+            }
+            return NextResponse.json({ ok: true, ...preview });
+        }
+
+        const result = await confirmFinecoPaste(text);
+        return NextResponse.json({ ok: true, ...result });
+    } catch (error) {
+        console.error('[bank-statements paste]', error);
+        return jsonError(
+            error instanceof Error ? error.message : 'Elaborazione lista movimenti Fineco fallita',
+            500
+        );
+    }
 }

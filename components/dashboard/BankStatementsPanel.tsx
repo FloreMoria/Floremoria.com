@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ChevronDown,
+    ClipboardPaste,
     Download,
     FileUp,
     Link2,
@@ -78,6 +79,17 @@ type StatementDoc = {
 };
 
 type StatusFilter = 'ALL' | 'MATCHED' | 'UNMATCHED';
+
+type PastePreviewRow = {
+    lineIndex: number;
+    date: string | null;
+    description: string;
+    typology: string | null;
+    amountCents: number;
+    dedupKey: string;
+    status: 'NEW' | 'DUPLICATE' | 'OUT_OF_OPEN_PERIOD';
+};
+
 
 
 type MatchSuggestion = {
@@ -238,6 +250,14 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
     const [matchingLineId, setMatchingLineId] = useState<string | null>(null);
     const [reReconciling, setReReconciling] = useState(false);
+    const [pasteOpen, setPasteOpen] = useState(false);
+    const [pasteText, setPasteText] = useState('');
+    const [pastePreviewing, setPastePreviewing] = useState(false);
+    const [pasteSaving, setPasteSaving] = useState(false);
+    const [pasteError, setPasteError] = useState<string | null>(null);
+    const [pasteRows, setPasteRows] = useState<PastePreviewRow[]>([]);
+    const [pasteSummary, setPasteSummary] = useState<string | null>(null);
+
     const [matchModal, setMatchModal] = useState<{
         line: StatementLine;
         suggestions: MatchSuggestion[];
@@ -384,6 +404,93 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
     const onFiles = (files: FileList | null) => {
         const file = files?.[0];
         if (file) void uploadFile(file);
+    };
+
+    
+    const resetPasteModal = () => {
+        setPasteOpen(false);
+        setPasteText('');
+        setPasteRows([]);
+        setPasteError(null);
+        setPasteSummary(null);
+        setPastePreviewing(false);
+        setPasteSaving(false);
+    };
+
+    const runPastePreview = async () => {
+        setPastePreviewing(true);
+        setPasteError(null);
+        setPasteSummary(null);
+        try {
+            const res = await fetch('/api/dashboard/finance/bank-statements/paste', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'preview', text: pasteText }),
+            });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                error?: string;
+                rows?: PastePreviewRow[];
+                newCount?: number;
+                duplicateCount?: number;
+                outOfPeriodCount?: number;
+                openPeriodLabel?: string;
+                parseSummary?: string;
+            }>(res);
+            if (!parsed.ok) {
+                setPasteRows(parsed.data?.rows || []);
+                throw new Error(parsed.error || 'Anteprima fallita');
+            }
+            setPasteRows(parsed.data?.rows || []);
+            const out = parsed.data?.outOfPeriodCount ?? 0;
+            setPasteSummary(
+                (parsed.data?.parseSummary ||
+                    `${parsed.data?.newCount ?? 0} nuovi · ${parsed.data?.duplicateCount ?? 0} già presenti`) +
+                    (parsed.data?.openPeriodLabel
+                        ? ` · periodo aperto ${parsed.data.openPeriodLabel}`
+                        : '') +
+                    (out > 0 ? ` · ${out} fuori periodo` : '')
+            );
+        } catch (e) {
+            setPasteError(e instanceof Error ? e.message : 'Anteprima fallita');
+        } finally {
+            setPastePreviewing(false);
+        }
+    };
+
+    const runPasteConfirm = async () => {
+        const newCount = pasteRows.filter((r) => r.status === 'NEW').length;
+        if (newCount <= 0) {
+            setPasteError('Nessun movimento nuovo da salvare nel periodo aperto.');
+            return;
+        }
+        setPasteSaving(true);
+        setPasteError(null);
+        try {
+            const res = await fetch('/api/dashboard/finance/bank-statements/paste', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'confirm', text: pasteText }),
+            });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                error?: string;
+                message?: string;
+                savedCount?: number;
+                matchedCount?: number;
+                document?: StatementDoc;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Salvataggio fallito');
+            setUploadSummary(parsed.data?.message || null);
+            if (parsed.data?.document?.id) setActiveDocId(parsed.data.document.id);
+            resetPasteModal();
+            await load();
+            await loadMovements(yearFilter);
+        } catch (e) {
+            setPasteError(e instanceof Error ? e.message : 'Salvataggio fallito');
+        } finally {
+            setPasteSaving(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -608,6 +715,8 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
         yearFilter === 'all' ? 'tutti gli anni' : String(yearFilter);
 
 
+    const pasteNewCount = pasteRows.filter((r) => r.status === 'NEW').length;
+
     return (
         <div
             className={
@@ -648,12 +757,24 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                     <div className="flex items-center gap-3 text-sm text-slate-600">
                         <UploadCloud className="text-[#c5a880] shrink-0" size={22} />
                         <span>
-                            Trascina qui il rendiconto ufficiale scaricato dal portale banca
-                            (PDF, CSV, Excel — max 15 MB). Devono risultare saldo iniziale e
-                            finale dichiarati; l&apos;incolla testo non è ammesso.
+                            Periodi chiusi: solo file ufficiale dal portale (PDF/CSV/Excel) con
+                            saldi dichiarati. Periodo aperto: puoi anche incollare la lista
+                            movimenti (stato <strong>provvisorio</strong>, METODO §2).
                         </span>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                        <button
+                            type="button"
+                            disabled={uploading}
+                            onClick={() => {
+                                setPasteOpen(true);
+                                setPasteError(null);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-xl text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                        >
+                            <ClipboardPaste size={14} />
+                            Lista Movimenti (periodo aperto)
+                        </button>
                         <button
                             type="button"
                             disabled={uploading}
@@ -665,7 +786,7 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                             ) : (
                                 <FileUp size={14} />
                             )}
-                            {uploading ? 'Elaborazione…' : 'Carica Rendiconto Bancario'}
+                            {uploading ? 'Elaborazione…' : 'Carica Estratto Ufficiale'}
                         </button>
                     </div>
                     <input
@@ -987,6 +1108,171 @@ export default function BankStatementsPanel({ variant = 'full' }: BankStatements
                     rendiconti PDF per {yearLabel} · scroll per scorrere tutte le righe
                 </p>
             </div>
+            )}
+
+            
+            {pasteOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="paste-modal-title"
+                >
+                    <div className="w-full sm:max-w-3xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl border border-slate-100">
+                        <div className="sticky top-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-100 bg-white z-10">
+                            <div>
+                                <h3
+                                    id="paste-modal-title"
+                                    className="text-sm font-bold text-slate-800"
+                                >
+                                    Lista Movimenti Fineco (provvisorio)
+                                </h3>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    Solo periodo aperto. Saldi/intestazioni scartati. Dedup su
+                                    fingerprint. All&apos;arrivo dell&apos;estratto ufficiale le
+                                    righe passano a certificate o in Eccezioni.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => resetPasteModal()}
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-50"
+                                aria-label="Chiudi"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="px-4 py-3 space-y-3">
+                            <textarea
+                                value={pasteText}
+                                onChange={(e) => {
+                                    setPasteText(e.target.value);
+                                    setPasteRows([]);
+                                    setPasteSummary(null);
+                                }}
+                                rows={8}
+                                placeholder={`Esempio:\n20\nagosto\nOrd: STRIPE Ben: Stripe Technology Europe Limited\nBonifico SEPA Estero\n37,86 EUR`}
+                                className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#c5a880]/40 resize-y min-h-[140px]"
+                            />
+
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={pastePreviewing || !pasteText.trim()}
+                                    onClick={() => void runPastePreview()}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-50"
+                                >
+                                    {pastePreviewing ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        <ClipboardPaste size={14} />
+                                    )}
+                                    Analizza testo
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={pasteSaving || pasteNewCount <= 0}
+                                    onClick={() => void runPasteConfirm()}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-700 text-white text-xs font-bold disabled:opacity-50"
+                                >
+                                    {pasteSaving ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : null}
+                                    Conferma e Salva {pasteNewCount} Movimenti
+                                </button>
+                            </div>
+
+                            {pasteSummary && (
+                                <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                                    {pasteSummary}
+                                    {pasteRows.length > 0 && (
+                                        <span className="text-slate-400">
+                                            {' '}
+                                            · {pasteNewCount} nuovi /{' '}
+                                            {pasteRows.length - pasteNewCount} scartati o già presenti
+                                        </span>
+                                    )}
+                                </p>
+                            )}
+
+                            {pasteError && (
+                                <p className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                                    {pasteError}
+                                </p>
+                            )}
+
+                            {pasteRows.length > 0 && (
+                                <div className="overflow-auto max-h-[40vh] rounded-xl border border-slate-100">
+                                    <table className="w-full text-sm min-w-[640px]">
+                                        <thead className="sticky top-0 bg-slate-50">
+                                            <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400">
+                                                <th className="px-3 py-2 font-bold">Data</th>
+                                                <th className="px-3 py-2 font-bold">Causale</th>
+                                                <th className="px-3 py-2 font-bold">Tipologia</th>
+                                                <th className="px-3 py-2 font-bold text-right">
+                                                    Importo (€)
+                                                </th>
+                                                <th className="px-3 py-2 font-bold">Stato</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pasteRows.map((row) => (
+                                                <tr
+                                                    key={`${row.dedupKey}-${row.lineIndex}`}
+                                                    className="border-t border-slate-100 align-top"
+                                                >
+                                                    <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
+                                                        {formatFinanceDate(row.date)}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-xs max-w-[240px]">
+                                                        <div
+                                                            className="line-clamp-2"
+                                                            title={row.description}
+                                                        >
+                                                            {row.description}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-[11px] text-slate-600 whitespace-nowrap">
+                                                        {row.typology || '—'}
+                                                    </td>
+                                                    <td
+                                                        className={`px-3 py-2 text-right font-mono text-xs font-semibold ${
+                                                            row.amountCents >= 0
+                                                                ? 'text-emerald-700'
+                                                                : 'text-rose-700'
+                                                        }`}
+                                                    >
+                                                        {formatEuro(row.amountCents)}
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <span
+                                                            className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                                                                row.status === 'NEW'
+                                                                    ? 'bg-sky-50 text-sky-800 border-sky-100'
+                                                                    : row.status ===
+                                                                        'OUT_OF_OPEN_PERIOD'
+                                                                      ? 'bg-amber-50 text-amber-800 border-amber-100'
+                                                                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                                                            }`}
+                                                        >
+                                                            {row.status === 'NEW'
+                                                                ? 'Nuovo'
+                                                                : row.status ===
+                                                                    'OUT_OF_OPEN_PERIOD'
+                                                                  ? 'Fuori periodo'
+                                                                  : 'Già presente'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {matchModal && (

@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.9 — 9 settembre 2026.
+Versione 1.10 — 10 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -49,7 +49,35 @@ necessarie:
    l'estratto è un elenco di movimenti che non dice da dove parte né dove arriva, e
    nessuna riconciliazione è possibile.
 
-Le due condizioni valgono per i **nuovi** caricamenti. Il sistema registra per ogni estratto:
+**Il periodo in corso è l'eccezione, e ha regole proprie.** La banca emette l'estratto conto
+solo a trimestre chiuso: per il trimestre corrente il documento ufficiale **non esiste** e non
+può esistere. Vietare ogni altra fonte significherebbe restare ciechi sul presente per tre mesi
+all'anno.
+
+Per il periodo non ancora chiuso si ammette quindi l'**inserimento della lista movimenti**
+copiata dall'home banking, a queste condizioni, tutte obbligatorie:
+
+| Condizione | Perché |
+|---|---|
+| Le righe nascono con stato **provvisorio** e origine dichiarata | chi legge deve sapere che non sono certificate |
+| Il parser **scarta le righe di saldo e le intestazioni** | è da lì che è nata la riga fantasma da € 32.410,30 il 21 agosto 2026 |
+| Una riga è valida solo con **data + causale + importo** | tutto il resto non è un movimento |
+| La deduplica usa il **fingerprint già esistente** | non si reinventa un confronto per data e importo: le causali identiche si ripetono (canoni, bolli) |
+| Il controllo C3 sul periodo provvisorio è **non verificabile** | senza saldi dichiarati non c'è continuità da verificare |
+| Il dossier dichiara in testa se il periodo contiene righe provvisorie | un dossier provvisorio non si consegna come definitivo |
+
+**Il passaggio a definitivo.** Quando arriva l'estratto ufficiale del trimestre, quello diventa
+la verità primaria: le righe provvisorie che trovano corrispondenza passano a **certificate**,
+e le discrepanze di importo o data si allineano al documento della banca. Le righe provvisorie
+che il documento ufficiale **non conferma** non si cancellano e non si tengono: vanno nel foglio
+Eccezioni con la dicitura "movimento non confermato dall'estratto ufficiale", perché una riga
+che il conto non ha mai avuto è un'informazione, non uno scarto.
+
+Solo a passaggio avvenuto il controllo C3 diventa verificabile su quel periodo.
+
+---
+
+Le due condizioni sopra valgono per i caricamenti di documenti relativi a **periodi chiusi**. Il sistema registra per ogni estratto:
 nome del file, data di download, periodo coperto, saldo iniziale e finale letti.
 
 **Sui dati già in archivio non si torna indietro.** Documenti caricati prima di questa regola
@@ -105,7 +133,12 @@ suggerisce che non ci siano eccezioni, il che è un’affermazione, e va fatta e
 ## 4. Liquidazione IVA e Quadratura
 
 ### 4.1 Foglio Liquidazione IVA
-In testa al foglio: una riga che dice se il file **quadra** e, se no, di quanto
+In testa al foglio, prima di ogni numero: se il periodo contiene righe bancarie
+**provvisorie** — inserite dalla lista movimenti in attesa dell'estratto ufficiale — il dossier
+lo dichiara, con quante righe e per quale importo. Un dossier che contiene un periodo
+provvisorio non si consegna come definitivo.
+
+Poi una riga che dice se il file **quadra** e, se no, di quanto
 (scostamento aggregato dei controlli verificabili falliti). Poi la liquidazione:
 
 | Voce | Da dove viene |
@@ -513,6 +546,13 @@ fondo a questo file, con data e motivo.
 ---
 
 ## Registro delle modifiche
+
+**1.10 — 10 settembre 2026**
+- §2 — il periodo in corso ammette l'inserimento della lista movimenti come dato
+  **provvisorio**, con guardrail anti-saldo, deduplica su fingerprint esistente, C3 non
+  verificabile e passaggio a definitivo all'arrivo dell'estratto ufficiale. Le righe
+  provvisorie non confermate dal documento ufficiale vanno in Eccezioni, non cancellate.
+- §4.1 — il foglio Liquidazione IVA dichiara in testa se il periodo contiene righe provvisorie.
 
 **1.9 — 9 settembre 2026**
 - §3 — ordine fogli ripensato per la liquidazione IVA del commercialista: Corrispettivi →

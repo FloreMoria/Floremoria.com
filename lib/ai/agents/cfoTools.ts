@@ -248,13 +248,22 @@ export async function getCompanyFinancialHealth(): Promise<CompanyFinancialHealt
             grossAmount: true,
             netAmount: true,
             stripeFee: true,
+            isRecurring: true,
+            stripeTransactionId: true,
+            paymentMethodLabel: true,
+            additionalInstructions: true,
+            financeNotes: true,
         },
     });
     sources.push('Order (ultimi 30gg)');
 
+    const { isPrepaidSubscriptionPoseOrder } = await import(
+        '@/lib/financial/prepaidSubscriptionOrders'
+    );
     let inflowsLast30dCents = 0;
     let orderFeesCents = 0;
     for (const o of paidOrders) {
+        if (isPrepaidSubscriptionPoseOrder(o)) continue;
         const gross =
             o.grossAmount != null ? Math.round(o.grossAmount * 100) : o.totalPriceCents;
         inflowsLast30dCents += gross;

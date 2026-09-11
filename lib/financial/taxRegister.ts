@@ -15,6 +15,7 @@ import {
     type FinancePeriodMode,
 } from '@/lib/financial/financePeriod';
 import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristCompensation';
+import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 
 export type TaxRegisterRow = {
     orderId: string;
@@ -149,6 +150,10 @@ export async function buildTaxRegisterReport(params: {
 
     const rows: TaxRegisterRow[] = [];
     for (const order of orders) {
+        // Perché: le pose di carnet/prepagato non sono ricavi IVA — stesso perimetro di
+        // corrispettivi gateway e ledger (isPrepaidSubscriptionPoseOrder).
+        if (isPrepaidSubscriptionPoseOrder(order)) continue;
+
         const receipt = order.customerReceipts[0] || null;
         const grossCents =
             receipt?.grossCents ??

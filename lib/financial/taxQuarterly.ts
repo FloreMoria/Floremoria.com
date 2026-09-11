@@ -629,7 +629,17 @@ export async function buildTaxQuarterlyReport(
             vatRuleNote: r.vatRuleNote,
         };
     });
-    const corrispettiviExceptions = builtCorrispettivi.exceptions;
+    const { collectFinanceNoteExceptions } = await import(
+        '@/lib/financial/collectFinanceNoteExceptions'
+    );
+    const financeNoteExceptions = await collectFinanceNoteExceptions({
+        start: bounds.start,
+        end: bounds.end,
+    });
+    const corrispettiviExceptions = [
+        ...builtCorrispettivi.exceptions,
+        ...financeNoteExceptions,
+    ];
 
     const stripeInvoicesDb = await prisma.stripeServiceInvoice.findMany({
         where: {

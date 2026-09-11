@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.12 — 10 settembre 2026.
+Versione 1.13 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -564,10 +564,37 @@ dossier costruiti con versioni diverse del metodo non sono confrontabili riga pe
 li confronta deve poterlo sapere senza indovinarlo. Le modifiche al metodo si annotano in
 fondo a questo file, con data e motivo.
 
+---
+
+## 13. Prodotti prepagati a consegne multiple (carnet — residui)
+
+**Il prodotto carnet è dismesso.** Il modello commerciale attuale è l'acquisto ricorrente
+con link mensile e scelta libera. Questa sezione vale solo per i **carnet residui** ancora
+in esecuzione (al 11 settembre 2026: un solo caso attivo) e per la lettura corretta dei
+dati storici.
+
+| Momento | Trattamento fiscale operativo | Cosa non fare |
+|---|---|---|
+| Pagamento anticipato del pacchetto | **Ricavo ai fini IVA per l'intero importo** alla data dell'incasso gateway | Spalmare l'IVA sulle consegne successive |
+| Consegne successive (pose / esecuzioni) | Esecuzione operativa a **€ 0**: non generano né ricavo né nuovo incasso | Creare corrispettivi o righe di registro fiscale sulle pose |
+| Fine esercizio | La ripartizione per competenza (risconto passivo sulla quota non ancora consegnata) è una **scrittura del commercialista**, non una registrazione operativa del gestionale | Inventare un modello dati «consegne residue» nel prodotto dismesso |
+
+**Perimetro software.** Il filtro `isPrepaidSubscriptionPoseOrder` esclude le pose senza
+pagamento gateway da: Registro corrispettivi (già gateway-only), Prima Nota ricavi, e
+**Registro fiscale (`taxRegister`)** — stesso criterio, nessun canale IVA che conti due
+volte. Un ordine `isRecurring` che ha invece un pagamento gateway reale non è una posa.
+
+**Eccezioni.** Storni di ricavi fittizi sulle pose e registrazioni di carnet residui si
+annotano nel foglio Eccezioni (prefisso operativo `DOSSIER_ECCEZIONE:` su `financeNotes`),
+senza cancellare le righe di esecuzione.
 
 ---
 
 ## Registro delle modifiche
+
+**1.13 — 11 settembre 2026**
+- §13 — prodotti prepagati a consegne multiple (carnet dismesso; regola IVA intera al
+  pagamento; pose a €0; risconto = scrittura commercialista; perimetro `taxRegister`).
 
 **1.12 — 10 settembre 2026**
 - §8.2 — se ordine abbinato a gateway, vince il **lordo gateway**; lista solo identifica; delta in Eccezioni.

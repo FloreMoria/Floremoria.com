@@ -1,0 +1,1239 @@
+{
+  "generatedAt": "2026-09-11T14:01:16.445Z",
+  "year": 2026,
+  "note": "Pool allineato al bridge C12: stripe charge/payment orderId=null + paypal ricavi orderId=null. Classificazione per natura; duplicati = stesso token TX.",
+  "pool": {
+    "n": 114,
+    "euro": 4427.79,
+    "byNature": {
+      "pagamento_cliente": {
+        "n": 93,
+        "euro": 3509.23,
+        "samples": [
+          {
+            "key": "stripe:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+            "euro": 47.46,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-08-19"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "euro": 31.48,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-08-17"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "euro": 31.48,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-08-17"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U44XP4W4pZWhSUs0Ikhhvek",
+            "euro": 52.48,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-08-13"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+            "euro": 31.48,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-07-04"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "euro": 47.46,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-08-04"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "euro": 31.48,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-07-30"
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+            "euro": 49.99,
+            "reason": "stripe charge/payment >0",
+            "date": "2026-07-15"
+          }
+        ]
+      },
+      "bonifico_gateway_fineco": {
+        "n": 0,
+        "euro": 0,
+        "samples": []
+      },
+      "commissione": {
+        "n": 0,
+        "euro": 0,
+        "samples": []
+      },
+      "rimborso": {
+        "n": 0,
+        "euro": 0,
+        "samples": []
+      },
+      "movimento_interno": {
+        "n": 0,
+        "euro": 0,
+        "samples": []
+      },
+      "duplicato_canali": {
+        "n": 21,
+        "euro": 918.56,
+        "samples": [
+          {
+            "key": "stripe:txn_3U64Fm4W4pZWhSUs0zv3AM23",
+            "euro": 47.46,
+            "reason": "dup token txn_3U64Fm4W4pZWhSUs0zv3AM23 of stripe:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+            "date": "2026-08-19"
+          },
+          {
+            "key": "stripe:txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "euro": 31.48,
+            "reason": "dup token txn_3U5R2d4W4pZWhSUs0z67gjHy of stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "date": "2026-08-17"
+          },
+          {
+            "key": "stripe:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "euro": 31.48,
+            "reason": "dup token txn_3U5QyD4W4pZWhSUs13SNdOmE of stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "date": "2026-08-17"
+          },
+          {
+            "key": "stripe:txn_3U44XP4W4pZWhSUs0Ikhhvek",
+            "euro": 52.48,
+            "reason": "dup token txn_3U44XP4W4pZWhSUs0Ikhhvek of stripe:stripe_tx_txn_3U44XP4W4pZWhSUs0Ikhhvek",
+            "date": "2026-08-13"
+          },
+          {
+            "key": "stripe:txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "euro": 47.46,
+            "reason": "dup token txn_3U0cT94W4pZWhSUs0qUXOKG7 of stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "date": "2026-08-04"
+          },
+          {
+            "key": "stripe:txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "euro": 31.48,
+            "reason": "dup token txn_3TyuTV4W4pZWhSUs0M1W5j6g of stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "date": "2026-07-30"
+          },
+          {
+            "key": "stripe:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "euro": 31.48,
+            "reason": "dup token txn_3TyuIF4W4pZWhSUs0hkSIqAs of stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "date": "2026-07-30"
+          },
+          {
+            "key": "stripe:txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+            "euro": 49.99,
+            "reason": "dup token txn_3TtPv84W4pZWhSUs0Fb7Bd2I of stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+            "date": "2026-07-15"
+          }
+        ]
+      },
+      "non_classificabile": {
+        "n": 0,
+        "euro": 0,
+        "samples": []
+      }
+    },
+    "dupMarked": 21
+  },
+  "compatibility": {
+    "corrOrdersEuro": 2624.21,
+    "orphanPagamentoClienteEuro": 3509.23,
+    "sum": 6133.44,
+    "trioFatturatoLordoEuro": 4046.2,
+    "deltaSumMinusTrio": 2087.24,
+    "interpretation": "Somma > fatturato: residuo = pagamenti orfani non nel trio (altri anni/canali), duplicati non rimossi, o gross gateway ≠ gross ordine",
+    "gwCorrispettivi": {
+      "linkedN": 61,
+      "linkedEuro": 2624.21,
+      "orphanRowsN": 93,
+      "orphanRowsEuro": 2616.08
+    }
+  },
+  "fund500Samples": [],
+  "feesByQuarter2026": {
+    "T1": {
+      "stripeN": 21,
+      "stripeEuro": 15.55,
+      "paypalN": 10,
+      "paypalEuro": 16.5
+    },
+    "T2": {
+      "stripeN": 33,
+      "stripeEuro": 40.11,
+      "paypalN": 9,
+      "paypalEuro": 14.43
+    },
+    "T3": {
+      "stripeN": 40,
+      "stripeEuro": 74.41,
+      "paypalN": 9,
+      "paypalEuro": 17.49
+    },
+    "T4": {
+      "stripeN": 0,
+      "stripeEuro": 0,
+      "paypalN": 0,
+      "paypalEuro": 0
+    }
+  },
+  "feesTotalEuro": {
+    "stripe": 130.07,
+    "paypal": 48.42
+  },
+  "poolRows": [
+    {
+      "key": "stripe:txn_3U64Fm4W4pZWhSUs0zv3AM23",
+      "gateway": "stripe",
+      "date": "2026-08-19",
+      "euro": 47.46,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3U64Fm4W4pZWhSUs0zv3AM23 of stripe:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+      "duplicateOf": "stripe:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+      "token": "txn_3U64Fm4W4pZWhSUs0zv3AM23"
+    },
+    {
+      "key": "stripe:txn_3U5R2d4W4pZWhSUs0z67gjHy",
+      "gateway": "stripe",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3U5R2d4W4pZWhSUs0z67gjHy of stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+      "duplicateOf": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+      "token": "txn_3U5R2d4W4pZWhSUs0z67gjHy"
+    },
+    {
+      "key": "stripe:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+      "gateway": "stripe",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3U5QyD4W4pZWhSUs13SNdOmE of stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+      "duplicateOf": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+      "token": "txn_3U5QyD4W4pZWhSUs13SNdOmE"
+    },
+    {
+      "key": "stripe:txn_3U44XP4W4pZWhSUs0Ikhhvek",
+      "gateway": "stripe",
+      "date": "2026-08-13",
+      "euro": 52.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3U44XP4W4pZWhSUs0Ikhhvek of stripe:stripe_tx_txn_3U44XP4W4pZWhSUs0Ikhhvek",
+      "duplicateOf": "stripe:stripe_tx_txn_3U44XP4W4pZWhSUs0Ikhhvek",
+      "token": "txn_3U44XP4W4pZWhSUs0Ikhhvek"
+    },
+    {
+      "key": "stripe:txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "gateway": "stripe",
+      "date": "2026-08-04",
+      "euro": 47.46,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3U0cT94W4pZWhSUs0qUXOKG7 of stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "duplicateOf": "stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "token": "txn_3U0cT94W4pZWhSUs0qUXOKG7"
+    },
+    {
+      "key": "stripe:txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+      "gateway": "stripe",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TyuTV4W4pZWhSUs0M1W5j6g of stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+      "duplicateOf": "stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+      "token": "txn_3TyuTV4W4pZWhSUs0M1W5j6g"
+    },
+    {
+      "key": "stripe:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+      "gateway": "stripe",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TyuIF4W4pZWhSUs0hkSIqAs of stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+      "duplicateOf": "stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+      "token": "txn_3TyuIF4W4pZWhSUs0hkSIqAs"
+    },
+    {
+      "key": "stripe:txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+      "gateway": "stripe",
+      "date": "2026-07-15",
+      "euro": 49.99,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TtPv84W4pZWhSUs0Fb7Bd2I of stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+      "duplicateOf": "stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+      "token": "txn_3TtPv84W4pZWhSUs0Fb7Bd2I"
+    },
+    {
+      "key": "stripe:txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TpPJU4W4pZWhSUs1xG9UPO0 of stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+      "duplicateOf": "stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+      "token": "txn_3TpPJU4W4pZWhSUs1xG9UPO0"
+    },
+    {
+      "key": "stripe:txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TpPFc4W4pZWhSUs0a5P7iqY of stripe:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+      "duplicateOf": "stripe:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+      "token": "txn_3TpPFc4W4pZWhSUs0a5P7iqY"
+    },
+    {
+      "key": "stripe:txn_3TpOrX4W4pZWhSUs03In3uTa",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 144.98,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TpOrX4W4pZWhSUs03In3uTa of stripe:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+      "duplicateOf": "stripe:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+      "token": "txn_3TpOrX4W4pZWhSUs03In3uTa"
+    },
+    {
+      "key": "stripe:txn_3Tl97E4W4pZWhSUs1948B9mT",
+      "gateway": "stripe",
+      "date": "2026-06-22",
+      "euro": 64.98,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3Tl97E4W4pZWhSUs1948B9mT of stripe:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+      "duplicateOf": "stripe:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+      "token": "txn_3Tl97E4W4pZWhSUs1948B9mT"
+    },
+    {
+      "key": "stripe:txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+      "gateway": "stripe",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TjJKX4W4pZWhSUs0oQvh7vx of stripe:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+      "duplicateOf": "stripe:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+      "token": "txn_3TjJKX4W4pZWhSUs0oQvh7vx"
+    },
+    {
+      "key": "stripe:txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+      "gateway": "stripe",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TjJBK4W4pZWhSUs1SYv8DdG of stripe:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+      "duplicateOf": "stripe:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+      "token": "txn_3TjJBK4W4pZWhSUs1SYv8DdG"
+    },
+    {
+      "key": "stripe:txn_3ThmH14W4pZWhSUs14CAHHaS",
+      "gateway": "stripe",
+      "date": "2026-06-13",
+      "euro": 43.97,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3ThmH14W4pZWhSUs14CAHHaS of stripe:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+      "duplicateOf": "stripe:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+      "token": "txn_3ThmH14W4pZWhSUs14CAHHaS"
+    },
+    {
+      "key": "stripe:txn_3TcirV4W4pZWhSUs05MMgxPE",
+      "gateway": "stripe",
+      "date": "2026-05-30",
+      "euro": 54.98,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TcirV4W4pZWhSUs05MMgxPE of stripe:stripe_tx_txn_3TcirV4W4pZWhSUs05MMgxPE",
+      "duplicateOf": "stripe:stripe_tx_txn_3TcirV4W4pZWhSUs05MMgxPE",
+      "token": "txn_3TcirV4W4pZWhSUs05MMgxPE"
+    },
+    {
+      "key": "stripe:txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+      "gateway": "stripe",
+      "date": "2026-05-23",
+      "euro": 32.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TaBEw4W4pZWhSUs12Q2pKyE of stripe:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+      "duplicateOf": "stripe:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+      "token": "txn_3TaBEw4W4pZWhSUs12Q2pKyE"
+    },
+    {
+      "key": "stripe:txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+      "gateway": "stripe",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TZBFq4W4pZWhSUs1kRE0CNZ of stripe:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+      "duplicateOf": "stripe:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+      "token": "txn_3TZBFq4W4pZWhSUs1kRE0CNZ"
+    },
+    {
+      "key": "stripe:txn_3TZBBT4W4pZWhSUs19WmIUfU",
+      "gateway": "stripe",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TZBBT4W4pZWhSUs19WmIUfU of stripe:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+      "duplicateOf": "stripe:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+      "token": "txn_3TZBBT4W4pZWhSUs19WmIUfU"
+    },
+    {
+      "key": "stripe:txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+      "gateway": "stripe",
+      "date": "2026-05-19",
+      "euro": 34.99,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TYqjZ4W4pZWhSUs1SlZrQ1q of stripe:stripe_tx_txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+      "duplicateOf": "stripe:stripe_tx_txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+      "token": "txn_3TYqjZ4W4pZWhSUs1SlZrQ1q"
+    },
+    {
+      "key": "stripe:txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "gateway": "stripe",
+      "date": "2026-05-11",
+      "euro": 29.99,
+      "nature": "duplicato_canali",
+      "reason": "dup token txn_3TVvy64W4pZWhSUs0pnQ5h0r of stripe:stripe_tx_txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "duplicateOf": "stripe:stripe_tx_txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "token": "txn_3TVvy64W4pZWhSUs0pnQ5h0r"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U64Fm4W4pZWhSUs0zv3AM23",
+      "gateway": "stripe",
+      "date": "2026-08-19",
+      "euro": 47.46,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U64Fm4W4pZWhSUs0zv3AM23"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+      "gateway": "stripe",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U5R2d4W4pZWhSUs0z67gjHy"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+      "gateway": "stripe",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U5QyD4W4pZWhSUs13SNdOmE"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U44XP4W4pZWhSUs0Ikhhvek",
+      "gateway": "stripe",
+      "date": "2026-08-13",
+      "euro": 52.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U44XP4W4pZWhSUs0Ikhhvek"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TpPJU4W4pZWhSUs1xG9UPO0"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+      "gateway": "stripe",
+      "date": "2026-08-04",
+      "euro": 47.46,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U0cT94W4pZWhSUs0qUXOKG7"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+      "gateway": "stripe",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TyuIF4W4pZWhSUs0hkSIqAs"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+      "gateway": "stripe",
+      "date": "2026-07-15",
+      "euro": 49.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TtPv84W4pZWhSUs0Fb7Bd2I"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+      "gateway": "stripe",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TjJKX4W4pZWhSUs0oQvh7vx"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+      "gateway": "stripe",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TjJBK4W4pZWhSUs1SYv8DdG"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+      "gateway": "stripe",
+      "date": "2026-06-13",
+      "euro": 43.97,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3ThmH14W4pZWhSUs14CAHHaS"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 144.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TpOrX4W4pZWhSUs03In3uTa"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+      "gateway": "stripe",
+      "date": "2026-06-22",
+      "euro": 64.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3Tl97E4W4pZWhSUs1948B9mT"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+      "gateway": "stripe",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TZBFq4W4pZWhSUs1kRE0CNZ"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+      "gateway": "stripe",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TZBBT4W4pZWhSUs19WmIUfU"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TYqjZ4W4pZWhSUs1SlZrQ1q",
+      "gateway": "stripe",
+      "date": "2026-05-19",
+      "euro": 34.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TYqjZ4W4pZWhSUs1SlZrQ1q"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TcirV4W4pZWhSUs05MMgxPE",
+      "gateway": "stripe",
+      "date": "2026-05-30",
+      "euro": 54.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TcirV4W4pZWhSUs05MMgxPE"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+      "gateway": "stripe",
+      "date": "2026-05-23",
+      "euro": 32.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TaBEw4W4pZWhSUs12Q2pKyE"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TVvy64W4pZWhSUs0pnQ5h0r",
+      "gateway": "stripe",
+      "date": "2026-05-11",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TVvy64W4pZWhSUs0pnQ5h0r"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+      "gateway": "stripe",
+      "date": "2026-08-10",
+      "euro": 69.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U2vU2RrkwwcYwep06Fy5g4j"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+      "gateway": "stripe",
+      "date": "2026-08-06",
+      "euro": 39.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U1Yc8RrkwwcYwep1l4tJnL9"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+      "gateway": "stripe",
+      "date": "2026-08-01",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TzcRERrkwwcYwep0NIP8g6r"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+      "gateway": "stripe",
+      "date": "2026-08-21",
+      "euro": 89.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U6no5RrkwwcYwep0uomtdte"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+      "gateway": "stripe",
+      "date": "2026-08-17",
+      "euro": 39.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U5RyERrkwwcYwep0qd5uTzR"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+      "gateway": "stripe",
+      "date": "2026-07-03",
+      "euro": 69.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3Tp8tnRrkwwcYwep0biMYl7Q"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+      "gateway": "stripe",
+      "date": "2026-07-02",
+      "euro": 104.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TonoCRrkwwcYwep1GA8NIWP"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+      "gateway": "stripe",
+      "date": "2026-07-09",
+      "euro": 39.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TrNudRrkwwcYwep0zY0M7LI"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+      "gateway": "stripe",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TpPFc4W4pZWhSUs0a5P7iqY"
+    },
+    {
+      "key": "stripe:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+      "gateway": "stripe",
+      "date": "2026-07-16",
+      "euro": 37.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TtjecRrkwwcYwep1EDBi6dh"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U8bE54W4pZWhSUs0ueA2Maq",
+      "gateway": "stripe",
+      "date": "2026-08-26",
+      "euro": 52.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U8bE54W4pZWhSUs0ueA2Maq"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U7xmV4W4pZWhSUs1FFamXIo",
+      "gateway": "stripe",
+      "date": "2026-08-24",
+      "euro": 53.97,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U7xmV4W4pZWhSUs1FFamXIo"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3UAa8I4W4pZWhSUs1ui4IlqC",
+      "gateway": "stripe",
+      "date": "2026-08-31",
+      "euro": 84.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3UAa8I4W4pZWhSUs1ui4IlqC"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U9KCm4W4pZWhSUs0wI7vlzm",
+      "gateway": "stripe",
+      "date": "2026-08-28",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U9KCm4W4pZWhSUs0wI7vlzm"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3U9K9m4W4pZWhSUs1N4SXPkI",
+      "gateway": "stripe",
+      "date": "2026-08-28",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3U9K9m4W4pZWhSUs1N4SXPkI"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+      "gateway": "stripe",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3TyuTV4W4pZWhSUs0M1W5j6g"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy",
+      "gateway": "stripe",
+      "date": "2026-09-01",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3UAtR64W4pZWhSUs1J3PImQy"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL",
+      "gateway": "stripe",
+      "date": "2026-09-01",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3UAtNU4W4pZWhSUs0DFIwZXL"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ",
+      "gateway": "stripe",
+      "date": "2026-09-05",
+      "euro": 204.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3UCNGm4W4pZWhSUs0AnTRWbQ"
+    },
+    {
+      "key": "stripe:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj",
+      "gateway": "stripe",
+      "date": "2026-09-05",
+      "euro": 104.98,
+      "nature": "pagamento_cliente",
+      "reason": "stripe charge/payment >0",
+      "token": "txn_3UCKIc4W4pZWhSUs1A6Thkoj"
+    },
+    {
+      "key": "paypal:cmt4lqawz0004l2048wq4s2fm",
+      "gateway": "paypal",
+      "date": "2026-01-13",
+      "euro": 0.09,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1RX76371GK653614X"
+    },
+    {
+      "key": "paypal:cmt4lqawz0005l204b06gb19j",
+      "gateway": "paypal",
+      "date": "2026-01-16",
+      "euro": 39.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "66C04847WL650301D"
+    },
+    {
+      "key": "paypal:cmt4lqawz0008l204rd41o518",
+      "gateway": "paypal",
+      "date": "2026-01-21",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "22E30531F99808504"
+    },
+    {
+      "key": "paypal:cmt4lqawz000dl204rh7snoz4",
+      "gateway": "paypal",
+      "date": "2026-02-09",
+      "euro": 39.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "44E519039S467634K"
+    },
+    {
+      "key": "paypal:cmt4lqax0000jl2043vrw91a8",
+      "gateway": "paypal",
+      "date": "2026-02-16",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "2GU64478W4726692S"
+    },
+    {
+      "key": "paypal:cmt4lqax0000ll204ylq43wrp",
+      "gateway": "paypal",
+      "date": "2026-02-17",
+      "euro": 0.09,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "6ST78293JU579072E"
+    },
+    {
+      "key": "paypal:cmt4lqax0000rl2047r5w0vfr",
+      "gateway": "paypal",
+      "date": "2026-02-22",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "4W6628604D401674M"
+    },
+    {
+      "key": "paypal:cmt4lqax0000ul204obz6bad3",
+      "gateway": "paypal",
+      "date": "2026-02-24",
+      "euro": 0.13,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "3BH14596X8651312H"
+    },
+    {
+      "key": "paypal:cmt4lqax1000zl204q0eohb1q",
+      "gateway": "paypal",
+      "date": "2026-03-14",
+      "euro": 72.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "3D552868PU399581S"
+    },
+    {
+      "key": "paypal:cmt4lqax10016l204uasbtlw0",
+      "gateway": "paypal",
+      "date": "2026-03-24",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "09C2701554000764W"
+    },
+    {
+      "key": "paypal:cmt4lqax1001bl204lggqfa1n",
+      "gateway": "paypal",
+      "date": "2026-04-10",
+      "euro": 9.13,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "9A8499750D2285252"
+    },
+    {
+      "key": "paypal:cmt4lqax2001gl20407rt9lnl",
+      "gateway": "paypal",
+      "date": "2026-04-10",
+      "euro": 9.68,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "82B58826WV385183C"
+    },
+    {
+      "key": "paypal:cmt4lqax2001jl2043pyjkpc8",
+      "gateway": "paypal",
+      "date": "2026-04-14",
+      "euro": 0.05,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "6T004160S99663535"
+    },
+    {
+      "key": "paypal:cmt4lqax2001ll204ga8akjsg",
+      "gateway": "paypal",
+      "date": "2026-04-20",
+      "euro": 59.98,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "5VV92297N9957570R"
+    },
+    {
+      "key": "paypal:cmt4lqax30022l204nod83omn",
+      "gateway": "paypal",
+      "date": "2026-05-05",
+      "euro": 0.09,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "4A479765WU569534F"
+    },
+    {
+      "key": "paypal:cmt4lqax4002fl204isswgujj",
+      "gateway": "paypal",
+      "date": "2026-05-11",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "7VX00022XF1940432"
+    },
+    {
+      "key": "paypal:cmt4lqax4002hl204s7x5mst7",
+      "gateway": "paypal",
+      "date": "2026-05-12",
+      "euro": 0.53,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1RM44236PH500671G"
+    },
+    {
+      "key": "paypal:cmt4lqax4002il204fupw7a6m",
+      "gateway": "paypal",
+      "date": "2026-05-16",
+      "euro": 49.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "43H07985E69976410"
+    },
+    {
+      "key": "paypal:cmt4lqax4002ll20406qtixpm",
+      "gateway": "paypal",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "4PC01169U59469310"
+    },
+    {
+      "key": "paypal:cmt4lqax5002ql2045o40mewr",
+      "gateway": "paypal",
+      "date": "2026-05-20",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "5H283854666757739"
+    },
+    {
+      "key": "paypal:cmt4lqax60033l204k802zljn",
+      "gateway": "paypal",
+      "date": "2026-05-24",
+      "euro": 30,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "62T128000J086073T"
+    },
+    {
+      "key": "paypal:cmt4lqax60035l204benhkl5y",
+      "gateway": "paypal",
+      "date": "2026-05-26",
+      "euro": 0.15,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "7VN28748BM878350S"
+    },
+    {
+      "key": "paypal:cmt4lqax6003bl204sdmvrzui",
+      "gateway": "paypal",
+      "date": "2026-05-29",
+      "euro": 4,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "54A57291DE722454K"
+    },
+    {
+      "key": "paypal:cmt4lqax6003el2040atafid7",
+      "gateway": "paypal",
+      "date": "2026-06-02",
+      "euro": 0.02,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "8BE9856555431964C"
+    },
+    {
+      "key": "paypal:cmt4lqax7003ql204p57q05hu",
+      "gateway": "paypal",
+      "date": "2026-06-09",
+      "euro": 0.18,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1JL35824UY976774W"
+    },
+    {
+      "key": "paypal:cmt4lqax80041l204gz7hxndx",
+      "gateway": "paypal",
+      "date": "2026-06-16",
+      "euro": 0.22,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1LR05360L6860764S"
+    },
+    {
+      "key": "paypal:cmt4lqax80047l204ezyzxye3",
+      "gateway": "paypal",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "6TH09938PJ296300P"
+    },
+    {
+      "key": "paypal:cmt4lqax9004jl204867syh8p",
+      "gateway": "paypal",
+      "date": "2026-07-04",
+      "euro": 144.98,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "41V916837L4471622"
+    },
+    {
+      "key": "paypal:cmt4lqax9004ol20462d0vtmo",
+      "gateway": "paypal",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "7AG32350H80780641"
+    },
+    {
+      "key": "paypal:cmt4lqax9004tl204fj86qrz4",
+      "gateway": "paypal",
+      "date": "2026-07-04",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "4KR3840372651452V"
+    },
+    {
+      "key": "paypal:cmt4lqaxa0053l204ptzkj1bl",
+      "gateway": "paypal",
+      "date": "2026-07-08",
+      "euro": 0.18,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "9SH795702M566214T"
+    },
+    {
+      "key": "paypal:cmt4lqaxb005al204zgf9x7vo",
+      "gateway": "paypal",
+      "date": "2026-07-14",
+      "euro": 0.13,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "2D501245PN145943U"
+    },
+    {
+      "key": "paypal:cmt4lqaxb005jl204uf3bj9wy",
+      "gateway": "paypal",
+      "date": "2026-07-19",
+      "euro": 37.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "0CW42027YJ1249932"
+    },
+    {
+      "key": "paypal:cmt4lqaxc005ql204bu2a5v7e",
+      "gateway": "paypal",
+      "date": "2026-07-26",
+      "euro": 133,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "0DK39406V3945422V"
+    },
+    {
+      "key": "paypal:cmt4lqaxc005tl2049fksyufv",
+      "gateway": "paypal",
+      "date": "2026-07-27",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "9JN50230473257055"
+    },
+    {
+      "key": "paypal:cmt4lqaxc005ul204g9f5l2sd",
+      "gateway": "paypal",
+      "date": "2026-07-28",
+      "euro": 0.67,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "0N837685J89201114"
+    },
+    {
+      "key": "paypal:cmt4lqaxc0060l2043nw9gf9a",
+      "gateway": "paypal",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "2EH437754S823943P"
+    },
+    {
+      "key": "paypal:cmt4lqaxd0068l204cus06r1z",
+      "gateway": "paypal",
+      "date": "2026-08-01",
+      "euro": 0.37,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "0TY64967KD029025W"
+    },
+    {
+      "key": "paypal:cmt4lqaxd006gl204euspjy01",
+      "gateway": "paypal",
+      "date": "2026-08-04",
+      "euro": 0.1,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "0PJ054626A178210D"
+    },
+    {
+      "key": "paypal:cmt4lqaxe006nl204fhex9per",
+      "gateway": "paypal",
+      "date": "2026-08-11",
+      "euro": 0.09,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "3F007122U1969643X"
+    },
+    {
+      "key": "paypal:cmt4lqaxe006ql204ringnbrc",
+      "gateway": "paypal",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1MY53925HD243102B"
+    },
+    {
+      "key": "paypal:cmt4lqaxe006vl204apiq94ku",
+      "gateway": "paypal",
+      "date": "2026-08-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "17H07453VC966154S"
+    },
+    {
+      "key": "paypal:cmt4lqax1000xl204len09jyh",
+      "gateway": "paypal",
+      "date": "2026-03-13",
+      "euro": 49.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "83N54580AU0027713"
+    },
+    {
+      "key": "paypal:cmt4lqax60039l204ax8eky1f",
+      "gateway": "paypal",
+      "date": "2026-05-27",
+      "euro": 3.85,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1TR685039P823783W"
+    },
+    {
+      "key": "paypal:cmt4lqax3001zl204gmukk2fp",
+      "gateway": "paypal",
+      "date": "2026-05-04",
+      "euro": 10,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "5S1939199N219094Y"
+    },
+    {
+      "key": "paypal:cmt4lqax30025l204i82sfve1",
+      "gateway": "paypal",
+      "date": "2026-05-06",
+      "euro": 48.64,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "32656268SE019460E"
+    },
+    {
+      "key": "paypal:cmt4lqax5002vl204kuymydsd",
+      "gateway": "paypal",
+      "date": "2026-05-23",
+      "euro": 32.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "8JD06462TK660002D"
+    },
+    {
+      "key": "paypal:cmt4lqax6003il204kxpwl6b4",
+      "gateway": "paypal",
+      "date": "2026-06-04",
+      "euro": 4,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "9A614478T2629930F"
+    },
+    {
+      "key": "paypal:cmt4lqax80042l204ij7gb0c2",
+      "gateway": "paypal",
+      "date": "2026-06-17",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "4M534393CB5993543"
+    },
+    {
+      "key": "paypal:cmt4lqaxb005bl204hnr14suz",
+      "gateway": "paypal",
+      "date": "2026-07-15",
+      "euro": 49.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "6TL5310123588930U"
+    },
+    {
+      "key": "paypal:cmt4lqawz000al20418qedrj0",
+      "gateway": "paypal",
+      "date": "2026-01-22",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "8YH43677SS377553L"
+    },
+    {
+      "key": "paypal:cmt4lqax10012l204kxqfjv3s",
+      "gateway": "paypal",
+      "date": "2026-03-22",
+      "euro": 29.99,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "95E92452N40245344"
+    },
+    {
+      "key": "paypal:cmt4lqax3001wl204dplkpxz1",
+      "gateway": "paypal",
+      "date": "2026-05-03",
+      "euro": 53.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "1T757598T7263511M"
+    },
+    {
+      "key": "paypal:cmt4lqaxc005vl204m1kdulti",
+      "gateway": "paypal",
+      "date": "2026-07-30",
+      "euro": 31.48,
+      "nature": "pagamento_cliente",
+      "reason": "paypal incasso/ricavo",
+      "token": "6VK458505N684563M"
+    }
+  ]
+}

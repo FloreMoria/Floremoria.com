@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.16 — 11 settembre 2026.
+Versione 1.17 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -210,6 +210,7 @@ Quadratura in coda e persistito per la UI.
 | C10 | Doppia gamba transito | per ogni gateway: somma dare − somma avere − saldo wallet dichiarato | 0 |
 | C11 | Coerenza di perimetro | sugli **insiemi di orderId** dell’anno solare (corrispettivi, ledger ricavi, taxRegister, taxQuarterly, cfoTools; pose escluse): gli insiemi devono coincidere; misura = n° ordini presenti in un canale e assenti in un altro | 0 |
 | C12 | Data ordine = data incasso | per ogni ordine abbinato a un movimento gateway: \|data ordine − data incasso\|; tolleranza dichiarata ≤ 24h (fuso) non conta come errore | 0 |
+| C13 | Saldo di transito | per ogni gateway: saldo ledger del conto di transito − **saldo wallet dichiarato dall’utente** (cruscotto gateway) | 0 |
 
 **C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
 alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
@@ -241,12 +242,20 @@ canale e assenti in un altro.
 Ogni divergenza oltre la tolleranza di fuso (24 ore, dichiarata) è un dato sbagliato. Il
 controllo deve poter diventare verde.
 
+**C13 — saldo di transito.** A una data scelta, il saldo del conto di transito calcolato
+dal sistema deve coincidere con il saldo **dichiarato** dal cruscotto del gateway (Stripe /
+PayPal), inserito dall’utente come i saldi bancari. Scostamento atteso: nullo. Se non
+coincide, il controllo espone il delta e un campione di eventi ledger presenti da una parte.
+**Senza saldo dichiarato, C13 è non verificabile, non fallito.** Un controllo che confronta
+il sistema con sé stesso (o solo con l’API live senza dichiarazione) non controlla niente.
+C10 resta il controllo di struttura (doppia gamba); C13 è il controllo di **saldo**.
+
 ### 5.1 Controllo, lista di lavoro, risultato
 
 Tre oggetti distinti. **Non si mescolano mai nella stessa vista.** Il colore verde/rosso
 si applica **solo** ai controlli.
 
-| | Controllo (C1–C12) | Lista di lavoro | Risultato |
+| | Controllo (C1–C13) | Lista di lavoro | Risultato |
 |---|---|---|---|
 | Cos’è | Confronta **due letture dello stesso fatto** e verifica che coincidano | Arretrato operativo (es. fatture fiorista da sollecitare, autofatture da trasmettere) | Numero economico: ricavi, costi, RAI, IVA a debito, … |
 | Esito atteso | **Scostamento nullo** fra le due letture — non “un importo economico pari a zero” | Non esiste un zero operativo: la lista è **per definizione non vuota** | **Nessun** valore atteso |
@@ -307,6 +316,30 @@ Finanziamento soci · Da classificare
 **La regola generale**: il ricavo nasce quando il cliente paga, non quando i soldi
 arrivano in banca. Il passaggio dal gateway alla banca è uno spostamento di soldi già
 nostri, e un movimento del genere non può mai creare né un ricavo né un costo.
+
+### 6.2.1 Conto di transito gateway — tre gambe
+
+Il wallet Stripe / PayPal è un **conto patrimoniale** (Transito Stripe / Transito PayPal).
+I corrispettivi restano al **lordo** sulla data di pagamento del cliente: il transito **non**
+tocca ricavi fiscali né aliquote.
+
+Per ogni gateway, ogni evento genera una scrittura ancorata all’**identificativo evento**
+(`pi_`, `ch_`, `txn_`, id PayPal, `po_`, …). Rieseguire l’importazione non crea doppioni:
+chiave univoca sull’evento sorgente, non su data o importo.
+
+| Evento | Effetto sul transito | Contropartita | Chiave tipica |
+|---|---|---|---|
+| pagamento cliente | **entra** al lordo pagato, con riferimento ordine | Ricavi vendite (o crediti se già rilevati) | `STRIPE_TX:{id}` / `PAYPAL_TX:{id}` |
+| commissione gateway (e fee partner) | **esce** come **costo** (Commissioni gateway) — mai riduzione del ricavo | Commissioni gateway | `STRIPE_FEE:{id}` / `PAYPAL_FEE:{id}` |
+| bonifico verso Fineco (payout) | **esce** dal transito ed **entra** in Banca | Banca Fineco | `STRIPE_PAYOUT:{id}` / `PAYPAL_PAYOUT:{id}` |
+| rimborso al cliente | **esce** dal transito, riferimento ordine originale | Rimborsi / ricavi | `STRIPE_REFUND:{id}` / `PAYPAL_REFUND:{id}` |
+
+I **duplicati di canale** (stessa TX come `stripe_eu_…` e Stripe .com) non generano una
+seconda gamba. Hold / release di saldo minimo e conversioni interne non sono fatti
+economici (§6.3).
+
+Solo i movimenti classificati come **pagamento cliente** alimentano la gamba di entrata.
+Bonifici, commissioni, rimborsi e movimenti interni hanno ciascuno la propria gamba.
 
 ### 6.3 Righe tecniche dei gateway
 Stripe e PayPal producono movimenti che non sono fatti economici: `payout_minimum_balance_hold`
@@ -626,6 +659,12 @@ senza cancellare le righe di esecuzione.
 ---
 
 ## Registro delle modifiche
+
+**1.17 — 11 settembre 2026**
+- §5 — **C13 Saldo di transito** (ledger vs saldo wallet **dichiarato** dall’utente; senza
+  dichiarazione → non verificabile).
+- §6.2.1 — conto di transito: tre gambe (incasso / commissione / payout) + rimborsi;
+  idempotenza su id evento; duplicati di canale senza seconda gamba; corrispettivi intatti.
 
 **1.16 — 11 settembre 2026**
 - §5.1 — tripartizione **controllo** / **lista di lavoro** / **risultato**: scostamento nullo

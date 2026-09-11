@@ -33,7 +33,8 @@ export type DossierControlId =
     | 'C9'
     | 'C10'
     | 'C11'
-    | 'C12';
+    | 'C12'
+    | 'C13';
 
 export type DossierControlResult = {
     id: DossierControlId;
@@ -74,6 +75,15 @@ export type DossierControlResult = {
         paymentDate: string;
         gateway: string;
         absDiffHours: number;
+    }>;
+    /** C13: scostamenti saldo transito vs dichiarato. */
+    transitBalanceGaps?: Array<{
+        gateway: 'STRIPE' | 'PAYPAL';
+        ledgerCents: number;
+        declaredCents: number | null;
+        deltaCents: number | null;
+        verifiable: boolean;
+        sampleLedgerEvents: string[];
     }>;
 };
 
@@ -881,6 +891,99 @@ export async function controlC12(year: number, _quarter: TaxQuarter): Promise<Do
     };
 }
 
+/**
+ * C13 — Saldo di transito vs saldo dichiarato dal cruscotto gateway
+ * (dato utente, come i saldi bancari). Senza saldo dichiarato → non verificabile.
+ */
+export async function controlC13(year: number, _quarter: TaxQuarter): Promise<DossierControlResult> {
+    void year;
+    void _quarter;
+    const { sumTransitLedgerCents } = await import('@/lib/financial/gatewayTransitBalance');
+    const {
+        getStripeDeclaredBalance,
+        getPaypalDeclaredBalance,
+    } = await import('@/lib/financial/gatewayDeclaredBalance');
+
+    const [stripeLedger, paypalLedger, stripeDecl, paypalDecl] = await Promise.all([
+        sumTransitLedgerCents(['10300', 'Banca c/o Stripe', 'Conto Stripe']),
+        sumTransitLedgerCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']),
+        getStripeDeclaredBalance(),
+        getPaypalDeclaredBalance(),
+    ]);
+
+    const sampleEvents = async (gateway: 'STRIPE' | 'PAYPAL'): Promise<string[]> => {
+        const prefix = gateway === 'STRIPE' ? 'STRIPE_' : 'PAYPAL_';
+        const rows = await prisma.financialLedgerEntry.findMany({
+            where: {
+                reversedAt: null,
+                sourceKey: { startsWith: prefix },
+            },
+            select: { sourceKey: true, totalCents: true, accountingDate: true },
+            orderBy: { accountingDate: 'desc' },
+            take: 12,
+        });
+        return rows.map(
+            (r) =>
+                `${r.accountingDate.toISOString().slice(0, 10)} ${r.sourceKey} €${(r.totalCents / 100).toFixed(2)}`
+        );
+    };
+
+    const gaps: NonNullable<DossierControlResult['transitBalanceGaps']> = [];
+    let measured = 0;
+
+    for (const g of [
+        {
+            gateway: 'STRIPE' as const,
+            ledger: stripeLedger,
+            decl: stripeDecl,
+        },
+        {
+            gateway: 'PAYPAL' as const,
+            ledger: paypalLedger,
+            decl: paypalDecl,
+        },
+    ]) {
+        const verifiable = g.decl != null;
+        const delta = verifiable ? g.ledger - g.decl!.balanceCents : null;
+        if (verifiable) {
+            measured += Math.abs(delta || 0);
+        }
+        gaps.push({
+            gateway: g.gateway,
+            ledgerCents: g.ledger,
+            declaredCents: g.decl?.balanceCents ?? null,
+            deltaCents: delta,
+            verifiable,
+            sampleLedgerEvents: await sampleEvents(g.gateway),
+        });
+    }
+
+    const detailParts = gaps.map((g) => {
+        if (!g.verifiable) {
+            return `${g.gateway}: ledger=${(g.ledgerCents / 100).toFixed(2)} · dichiarato=n/d → non verificabile`;
+        }
+        return `${g.gateway}: ledger=${(g.ledgerCents / 100).toFixed(2)} · dich.=${((g.declaredCents || 0) / 100).toFixed(2)} · Δ=${((g.deltaCents || 0) / 100).toFixed(2)}`;
+    });
+
+    const fullyVerifiable = gaps.every((g) => g.verifiable);
+    const deltasOk = gaps.every((g) => !g.verifiable || g.deltaCents === 0);
+
+    return {
+        id: 'C13',
+        name: 'Saldo di transito',
+        formula:
+            'per ogni gateway: saldo ledger transito − saldo wallet dichiarato dall’utente = 0; senza saldo dichiarato → non verificabile',
+        measured: fullyVerifiable ? measured : 0,
+        expected: 0,
+        delta: fullyVerifiable ? measured : 0,
+        unit: 'cents',
+        passed: fullyVerifiable ? deltasOk : true,
+        verifiable: fullyVerifiable,
+        detail: detailParts.join(' · '),
+        transitBalanceGaps: gaps,
+    };
+}
+
 export async function runAllDossierControls(
     year: number,
     quarter: TaxQuarter
@@ -898,10 +1001,11 @@ export async function runAllDossierControls(
         await controlC10(year, quarter),
         await controlC11(year, quarter),
         await controlC12(year, quarter),
+        await controlC13(year, quarter),
     ];
 }
 
-/** Esegue C1–C12 e persiste lo snapshot per il badge Contabilità. */
+/** Esegue C1–C13 e persiste lo snapshot per il badge Contabilità. */
 export async function runAndPersistDossierControls(
     year: number,
     quarter: TaxQuarter

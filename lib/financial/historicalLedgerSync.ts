@@ -24,6 +24,7 @@ import { classifyFinecoBankCredit } from '@/lib/financial/payoutClassification';
 import {
     LEDGER_COMMISSIONI_INCASSI,
     LEDGER_FINECO_ACCOUNT,
+    LEDGER_PAYPAL_ACCOUNT,
     LEDGER_STRIPE_ACCOUNT,
 } from '@/lib/financial/companyBankDetails';
 import { isPayoutIdClassificationEnabled } from '@/lib/financial/chartOfAccounts';
@@ -135,27 +136,45 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
         const isPose = isPrepaidSubscriptionPoseOrder(o);
 
         // Ricavo vendita: solo su pagamento reale — non sulle pose di abbonamento prepagato.
+        // Se c’è TX gateway, il ricavo + gamba transito nascono da STRIPE_TX:/PAYPAL_TX:
+        // (idempotenti sull’evento gateway) — evita doppio ricavo ORDER + gateway.
         if (!isPose) {
-            const vat = scorporaIvaFloreale(o.totalPriceCents);
-            candidates.push({
-                sourceKey: `ORDER:${o.id}`,
-                sourceType: 'ORDER',
-                sourceId: o.id,
-                direction: 'ENTRATA',
-                category: 'RICAVI_VENDITE',
-                accountingDate: d,
-                description: `Ricavo ordine ${o.orderNumber || o.id.slice(0, 8)} (${o.paymentMethodLabel || 'checkout'})`,
-                netCents: vat.imponibileCents,
-                vatRate: VAT_PCT_FLORAL,
-                vatCents: vat.ivaCents,
-                totalCents: o.totalPriceCents,
-                reconciliationStatus: o.stripeTransactionId ? 'MATCHED' : 'PARTIAL',
-                documentRef: o.orderNumber || o.id,
-                orderId: o.id,
-                partnerId: o.partnerId,
-                metadataJson: { stripeTransactionId: o.stripeTransactionId },
-            });
-            sources.ORDER = (sources.ORDER || 0) + 1;
+            if (o.stripeTransactionId?.trim()) {
+                sources.ORDER_DEFERRED_TO_GATEWAY_TX = (sources.ORDER_DEFERRED_TO_GATEWAY_TX || 0) + 1;
+            } else {
+                const vat = scorporaIvaFloreale(o.totalPriceCents);
+                const payLabel = (o.paymentMethodLabel || '').toLowerCase();
+                const dareAccount = /paypal/.test(payLabel)
+                    ? LEDGER_PAYPAL_ACCOUNT
+                    : /stripe|carta|card/.test(payLabel)
+                      ? LEDGER_STRIPE_ACCOUNT
+                      : LEDGER_FINECO_ACCOUNT;
+                candidates.push({
+                    sourceKey: `ORDER:${o.id}`,
+                    sourceType: 'ORDER',
+                    sourceId: o.id,
+                    direction: 'ENTRATA',
+                    category: 'RICAVI_VENDITE',
+                    accountingDate: d,
+                    description: `Ricavo ordine ${o.orderNumber || o.id.slice(0, 8)} (${o.paymentMethodLabel || 'checkout'})`,
+                    netCents: vat.imponibileCents,
+                    vatRate: VAT_PCT_FLORAL,
+                    vatCents: vat.ivaCents,
+                    totalCents: o.totalPriceCents,
+                    reconciliationStatus: 'PARTIAL',
+                    documentRef: o.orderNumber || o.id,
+                    orderId: o.id,
+                    partnerId: o.partnerId,
+                    entryNature: 'ECONOMICA',
+                    settlementStatus: 'NOT_APPLICABLE',
+                    metadataJson: {
+                        stripeTransactionId: o.stripeTransactionId,
+                        dareAccount,
+                        avereAccount: '60100 - Ricavi da Vendite',
+                    },
+                });
+                sources.ORDER = (sources.ORDER || 0) + 1;
+            }
         }
 
         // Compenso fiorista — anche sulle pose prepagate (costo vivo evasione).
@@ -408,9 +427,18 @@ export async function syncHistoricalLedgerFromSources(): Promise<{
                 stripeTransactionId: m.stripeId,
                 dareAccount: LEDGER_COMMISSIONI_INCASSI,
                 avereAccount: LEDGER_STRIPE_ACCOUNT,
+                transitLeg: 'fee',
             },
         });
         sources.STRIPE_MOVEMENT = (sources.STRIPE_MOVEMENT || 0) + 1;
+    }
+
+    // 5b) Gambe transito Stripe: TX (entrata), PAYOUT, REFUND — idempotenti su id evento
+    const { buildStripeTransitCandidates } = await import('@/lib/financial/gatewayTransitSync');
+    const transitCandidates = await buildStripeTransitCandidates();
+    for (const c of transitCandidates) {
+        candidates.push(c);
+        sources.STRIPE_TRANSIT = (sources.STRIPE_TRANSIT || 0) + 1;
     }
 
     // 6) Ricevute cliente: aggiorna solo allegato sulle righe ORDER già presenti (no doppio ricavo)

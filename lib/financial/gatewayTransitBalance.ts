@@ -37,7 +37,7 @@ function accountMentionsTransit(meta: unknown, accountCodes: string[]): boolean 
 }
 
 /** Saldo “contabile” del wallet da metadata dare/avere. */
-async function sumTransitAccountCents(accountCodes: string[]): Promise<number> {
+export async function sumTransitLedgerCents(accountCodes: string[]): Promise<number> {
     const rows = await prisma.financialLedgerEntry.findMany({
         where: { reversedAt: null },
         select: { totalCents: true, metadataJson: true },
@@ -58,9 +58,8 @@ async function sumTransitAccountCents(accountCodes: string[]): Promise<number> {
 }
 
 export async function compareGatewayTransitBalances(): Promise<GatewayTransitComparison> {
-    const stripeTransit = await sumTransitAccountCents(['10300', 'Banca c/o Stripe', 'Conto Stripe']);
-    const paypalTransit = await sumTransitAccountCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']);
-
+    const stripeTransit = await sumTransitLedgerCents(['10300', 'Banca c/o Stripe', 'Conto Stripe']);
+    const paypalTransit = await sumTransitLedgerCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']);
     let stripeAvail: number | null = null;
     let stripePending: number | null = null;
     let stripeNote = 'Saldo Stripe non disponibile';

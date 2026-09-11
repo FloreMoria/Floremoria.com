@@ -1,5 +1,5 @@
 /**
- * Snapshot persistito dei controlli C1–C12 (SystemState).
+ * Snapshot persistito dei controlli C1–C13 (SystemState).
  * Il badge Contabilità legge l’ultima esecuzione, non ricalcola a ogni page load.
  */
 import prisma from '@/lib/prisma';

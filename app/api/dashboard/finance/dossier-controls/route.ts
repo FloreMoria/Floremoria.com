@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
                 allPassed: false,
                 controls: [],
                 message:
-                    'Nessuna misurazione registrata. Premi «Esegui controlli» per calcolare C1–C10.',
+                    'Nessuna misurazione registrata. Premi «Esegui controlli» per calcolare C1–C12.',
             });
         }
 

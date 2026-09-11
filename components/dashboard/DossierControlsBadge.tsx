@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Badge persistente C1–C10 in Contabilità (METODO §5).
+ * Badge persistente C1–C12 in Contabilità (METODO §5).
  * Mostra l’ultima esecuzione registrata; non ricalcola al page load.
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -52,7 +52,7 @@ export default function DossierControlsBadge() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [passed, setPassed] = useState(0);
-    const [total, setTotal] = useState(10);
+    const [total, setTotal] = useState(12);
     const [failedCount, setFailedCount] = useState(0);
     const [notVerifiableCount, setNotVerifiableCount] = useState(0);
     const [periodLabel, setPeriodLabel] = useState('');
@@ -95,7 +95,7 @@ export default function DossierControlsBadge() {
                 throw new Error(parsed.error || parsed.data?.error || 'Controlli non disponibili');
             }
             setPassed(parsed.data.passed ?? 0);
-            setTotal(parsed.data.total ?? 10);
+            setTotal(parsed.data.total ?? 12);
             setFailedCount(parsed.data.failedCount ?? 0);
             setNotVerifiableCount(parsed.data.notVerifiableCount ?? 0);
             setPeriodLabel(parsed.data.periodLabel || '');
@@ -193,7 +193,7 @@ export default function DossierControlsBadge() {
                         disabled={controls.length === 0}
                         className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 disabled:opacity-50"
                     >
-                        {open ? 'Nascondi dettaglio' : 'Dettaglio C1–C10'}
+                        {open ? 'Nascondi dettaglio' : 'Dettaglio C1–C12'}
                     </button>
                     <button
                         type="button"

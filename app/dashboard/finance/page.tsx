@@ -39,6 +39,7 @@ import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFisca
 import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
 import PrimaNotaTable from '@/components/dashboard/PrimaNotaTable';
 import DossierControlsBadge from '@/components/dashboard/DossierControlsBadge';
+import FloristInvoiceWorkListPanel from '@/components/dashboard/FloristInvoiceWorkListPanel';
 import {
     FINANCE_TAB_STYLES,
     type FinanceMainTabId,
@@ -566,8 +567,11 @@ export default function FinanceDashboardPage() {
                 </div>
             )}
 
-            {/* Controlli C1–C10 — sempre in cima (METODO §5) */}
+            {/* Controlli C1–C12 — sempre in cima (METODO §5) */}
             <DossierControlsBadge />
+
+            {/* Lista di lavoro (non un controllo): fatture fiorista da sollecitare */}
+            <FloristInvoiceWorkListPanel />
 
             {/* Riquadro Fineco + dati societari */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-3">

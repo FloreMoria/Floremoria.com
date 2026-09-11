@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.13 — 11 settembre 2026.
+Versione 1.15 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -131,7 +131,7 @@ Nessuno è facoltativo.
 | 6 | **Prima Nota** | allegato interno — ogni movimento con mastro |
 | 7 | **Gateway Stripe** | allegato interno — wallet |
 | 8 | **Gateway PayPal** | allegato interno — wallet |
-| 9 | **Quadratura** | strumento interno in coda: esito C1–C10, raccordo, tracciabilità |
+| 9 | **Quadratura** | strumento interno in coda: esito C1–C12, raccordo, tracciabilità |
 
 I fogli 1–5 sono quelli che il commercialista usa senza spiegazioni. I fogli 6–8 sono
 allegati di dettaglio. Il foglio 9 è il nostro strumento di controllo: non va in testa.
@@ -173,7 +173,7 @@ Il foglio riporta due totali distinti: **IVA a debito complessiva** (vendite + r
 e **IVA a credito complessiva** (acquisti + reverse charge), e il saldo è la loro differenza.
 
 ### 4.2 Foglio Quadratura (in coda — strumento interno)
-Esito controlli C1–C10, sintesi certezza aliquote §8.3, raccordo finanziario, tracciabilità
+Esito controlli C1–C12, sintesi certezza aliquote §8.3, raccordo finanziario, tracciabilità
 (§12). Se anche un solo controllo *verificabile* fallisce, la prima riga del foglio è
 **"DOSSIER NON QUADRATO"** con l'elenco dei falliti e il rimando a **Da chiarire**.
 Un controllo *non verificabile* (es. C3 senza saldi dichiarati) non è un fallimento.
@@ -208,6 +208,8 @@ Quadratura in coda e persistito per la UI.
 | C8 | Mastri ammessi | numero righe con mastro fuori dall'elenco chiuso | 0 |
 | C9 | Partite di giro | numero movimenti di transito classificati come ricavo o costo | 0 |
 | C10 | Doppia gamba transito | per ogni gateway: somma dare − somma avere − saldo wallet dichiarato | 0 |
+| C11 | Coerenza di perimetro | sugli **insiemi di orderId** dell’anno solare (corrispettivi, ledger ricavi, taxRegister, taxQuarterly, cfoTools; pose escluse): gli insiemi devono coincidere; misura = n° ordini presenti in un canale e assenti in un altro | 0 |
+| C12 | Data ordine = data incasso | per ogni ordine abbinato a un movimento gateway: \|data ordine − data incasso\|; tolleranza dichiarata ≤ 24h (fuso) non conta come errore | 0 |
 
 **C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
 alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
@@ -230,10 +232,43 @@ passare 19 movimenti bancari per € 387,90 — tutti costi.
 stata scritta. Va implementato lo stesso: un controllo che fallisce e lo dice è
 infinitamente meglio di un difetto silenzioso.
 
+**C11 confronta insiemi di ordini, non somme in euro.** Domanda unica: i cinque canali
+guardano gli stessi orderId sull’anno? Le differenze di data fra cassa e competenza sono
+fisiologiche e **non** devono farlo fallire. Il risultato elenca gli ordini presenti in un
+canale e assenti in un altro.
+
+**C12** — sul .com l’ordine nasce quando il cliente paga: le due date devono coincidere.
+Ogni divergenza oltre la tolleranza di fuso (24 ore, dichiarata) è un dato sbagliato. Il
+controllo deve poter diventare verde.
+
+### 5.1 Controlli vs liste di lavoro
+
+| | Controllo (C1–C12) | Lista di lavoro |
+|---|---|---|
+| Valore atteso | **zero** | non esiste un “zero” operativo |
+| Deve poter diventare verde | **sì**, quando i dati sono corretti | **no**: è progettata per non essere vuota |
+| Cosa misura | coerenza / completezza del sistema | arretrato operativo di Salvatore |
+| Se non può diventare verde | è progettato male e va riscritto | è normale |
+| Vista UI | badge Contabilità / foglio Quadratura | sezione separata, mai mescolata ai C* |
+
+**Le due cose non si mescolano mai nella stessa vista.**
+
+Esempio di lista di lavoro: **«Da sollecitare — fatture fiorista mancanti»** (fiorista, ordini
+coperti, importo pagato, giorni dal pagamento, dal più vecchio). Conteggio e importo totale
+sempre visibili. Non è un controllo e non fa fallire nulla.
+
+### 5.2 Invariante sulle date
+
+- **Data ordine = data pagamento del cliente** (con tolleranza fuso ≤ 24h, C12).
+- Le date dei **pagamenti ai fioristi** e delle **loro fatture** sono indipendenti: si
+  agganciano per **riferimento ordine**, mai per data.
+- Ordini a cavallo d’anno (pagati in un esercizio, consegna nel successivo): elenco generato
+  **a richiesta** per il commercialista; niente meccanismi automatici.
+
 ### Cosa succede quando un controllo fallisce
 Il dossier **si genera comunque**, ma:
 1. la prima riga del foglio 0 dichiara il fallimento;
-2. il controllo fallito è evidenziato in rosso con il suo scostamento in euro;
+2. il controllo fallito è evidenziato in rosso con il suo scostamento;
 3. le righe che lo causano sono elencate una per una nel foglio 7 — Eccezioni.
 
 Non si blocca l'export e non si "aggiusta" il numero perché torni. Un dossier che non
@@ -592,6 +627,17 @@ senza cancellare le righe di esecuzione.
 
 ## Registro delle modifiche
 
+**1.15 — 11 settembre 2026**
+- §5 — C11 riscritto su **insiemi orderId** anno solare (non somme euro); aggiunto **C12**
+  data ordine = data incasso (tolleranza fuso 24h).
+- §5.1 — distinzione **controllo** vs **lista di lavoro**; fatture fiorista = lista «Da
+  sollecitare», mai fra i C*.
+- §5.2 — invariante date: ordine = pagamento cliente; fiorista/fattura per riferimento ordine;
+  cavallo d’anno a richiesta.
+
+**1.14 — 11 settembre 2026**
+- §5 — **C11 Coerenza di perimetro** (prima versione su totali euro; sostituita in 1.15).
+
 **1.13 — 11 settembre 2026**
 - §13 — prodotti prepagati a consegne multiple (carnet dismesso; regola IVA intera al
   pagamento; pose a €0; risconto = scrittura commercialista; perimetro `taxRegister`).
@@ -614,7 +660,7 @@ senza cancellare le righe di esecuzione.
 
 **1.9 — 9 settembre 2026**
 - §3 — ordine fogli ripensato per la liquidazione IVA del commercialista: Corrispettivi →
-  Acquisti → Banca → Liquidazione IVA → Da chiarire; Quadratura e controlli C1–C10 in coda.
+  Acquisti → Banca → Liquidazione IVA → Da chiarire; Quadratura e controlli C1–C12 in coda.
   Liquidazione espone reverse charge su entrambi i lati e, in testa, se il file quadra.
 
 **1.8 — 9 settembre 2026**

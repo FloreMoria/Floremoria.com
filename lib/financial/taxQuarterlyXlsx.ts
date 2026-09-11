@@ -8,7 +8,7 @@
  *  4. Liquidazione IVA
  *  5. Da chiarire
  *  6–8. Allegati interni (Prima Nota, Stripe, PayPal)
- *  9. Quadratura + controlli C1–C10 (strumento interno, in coda)
+ *  9. Quadratura + controlli C1–C12 (strumento interno, in coda)
  */
 
 import ExcelJS from 'exceljs';
@@ -61,7 +61,7 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
 
 const EUR_FORMAT = '€ #,##0.00';
 /** Versione del metodo che questo export applica davvero (METODO §12). */
-export const DOSSIER_METHOD_VERSION = '1.13';
+export const DOSSIER_METHOD_VERSION = '1.15';
 const DOSSIER_VERSION = `dossier-fiscale-metodo-v${DOSSIER_METHOD_VERSION}`;
 
 function euroNum(cents: number): number {
@@ -419,7 +419,7 @@ async function buildQuadraturaSheet(
     }
     ws.addRow([]);
 
-    ws.addRow(['Esito controlli C1–C10 (METODO §5)']).getCell(1).font = {
+    ws.addRow(['Esito controlli C1–C12 (METODO §5)']).getCell(1).font = {
         bold: true,
         size: 12,
         name: 'Calibri',

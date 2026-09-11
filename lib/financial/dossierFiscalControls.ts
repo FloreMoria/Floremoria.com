@@ -31,7 +31,9 @@ export type DossierControlId =
     | 'C7'
     | 'C8'
     | 'C9'
-    | 'C10';
+    | 'C10'
+    | 'C11'
+    | 'C12';
 
 export type DossierControlResult = {
     id: DossierControlId;
@@ -57,6 +59,21 @@ export type DossierControlResult = {
         expected: number;
         passed: boolean;
         detail: string;
+    }>;
+    /** C11: ordini in un canale e non in un altro. */
+    divergentOrders?: Array<{
+        orderId: string;
+        orderNumber: string | null;
+        presentIn: string[];
+        absentFrom: string[];
+    }>;
+    /** C12: divergenze data ordine vs incasso. */
+    dateDivergences?: Array<{
+        orderNumber: string | null;
+        orderDate: string;
+        paymentDate: string;
+        gateway: string;
+        absDiffHours: number;
     }>;
 };
 
@@ -776,6 +793,90 @@ export async function controlC10(year: number, quarter: TaxQuarter): Promise<Dos
     };
 }
 
+/**
+ * C11 — Coerenza di perimetro (insiemi orderId sull’anno solare)
+ * Atteso: i cinque canali espongono lo stesso insieme. Misura = n° ordini divergenti.
+ * Le differenze di data cassa/competenza non entrano.
+ */
+export async function controlC11(year: number, _quarter: TaxQuarter): Promise<DossierControlResult> {
+    void _quarter;
+    const {
+        measureRevenuePerimeterSets,
+        diffPerimeterSets,
+        enrichDivergences,
+    } = await import('@/lib/financial/revenuePerimeterChannels');
+    const channels = await measureRevenuePerimeterSets(year);
+    const diff = diffPerimeterSets(channels);
+    const divergences = await enrichDivergences(diff.divergences);
+    const sizes = channels.map((c) => `${c.label}=${c.orderIds.length}`).join(' · ');
+    const sample = divergences
+        .slice(0, 12)
+        .map((d) => {
+            const n = d.orderNumber || d.orderId.slice(0, 8);
+            return `${n}[+${d.presentIn.join('/')}/−${d.absentFrom.join('/')}]`;
+        })
+        .join('; ');
+
+    return {
+        id: 'C11',
+        name: 'Coerenza di perimetro',
+        formula: `insiemi orderId ${year} (corrispettivi ∩ ledger ∩ taxRegister ∩ taxQuarterly ∩ cfoTools) — atteso coincidenza`,
+        measured: diff.divergentCount,
+        expected: 0,
+        delta: diff.divergentCount,
+        unit: 'rows',
+        passed: diff.divergentCount === 0,
+        detail:
+            `n canali: ${sizes} · divergenti=${diff.divergentCount}` +
+            (sample ? ` · ${sample}` : ''),
+        divergentOrders: divergences.map((d) => ({
+            orderId: d.orderId,
+            orderNumber: d.orderNumber,
+            presentIn: d.presentIn,
+            absentFrom: d.absentFrom,
+        })),
+    };
+}
+
+/**
+ * C12 — Data ordine = data incasso cliente
+ * Tolleranza dichiarata: |Δ| ≤ 24h (fuso) non conta come errore.
+ */
+export async function controlC12(year: number, _quarter: TaxQuarter): Promise<DossierControlResult> {
+    void _quarter;
+    const { findOrderPaymentDateDivergences } = await import(
+        '@/lib/financial/orderPaymentDateControl'
+    );
+    const result = await findOrderPaymentDateDivergences(year);
+    const n = result.divergences.length;
+    const sample = result.divergences
+        .slice(0, 10)
+        .map(
+            (d) =>
+                `${d.orderNumber || d.orderId.slice(0, 8)} ordine=${d.orderDate} incasso=${d.paymentDate} (Δ${d.absDiffHours}h)`
+        )
+        .join('; ');
+
+    return {
+        id: 'C12',
+        name: 'Data ordine = data incasso',
+        formula: `per ogni ordine abbinato a gateway: |data ordine − data incasso| ≤ 24h (fuso dichiarato); oltre = errore`,
+        measured: n,
+        expected: 0,
+        delta: n,
+        unit: 'rows',
+        passed: n === 0,
+        detail: `controllati=${result.checked} · tolleranza fuso=${result.timezoneToleranceHours}h · divergenze=${n}${sample ? ` · ${sample}` : ''}`,
+        dateDivergences: result.divergences.map((d) => ({
+            orderNumber: d.orderNumber,
+            orderDate: d.orderDate,
+            paymentDate: d.paymentDate,
+            gateway: d.gateway,
+            absDiffHours: d.absDiffHours,
+        })),
+    };
+}
+
 export async function runAllDossierControls(
     year: number,
     quarter: TaxQuarter
@@ -791,10 +892,12 @@ export async function runAllDossierControls(
         await controlC8(year, quarter),
         await controlC9(year, quarter),
         await controlC10(year, quarter),
+        await controlC11(year, quarter),
+        await controlC12(year, quarter),
     ];
 }
 
-/** Esegue C1–C10 e persiste lo snapshot per il badge Contabilità. */
+/** Esegue C1–C12 e persiste lo snapshot per il badge Contabilità. */
 export async function runAndPersistDossierControls(
     year: number,
     quarter: TaxQuarter

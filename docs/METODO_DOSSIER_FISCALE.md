@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.15 — 11 settembre 2026.
+Versione 1.16 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -241,17 +241,17 @@ canale e assenti in un altro.
 Ogni divergenza oltre la tolleranza di fuso (24 ore, dichiarata) è un dato sbagliato. Il
 controllo deve poter diventare verde.
 
-### 5.1 Controlli vs liste di lavoro
+### 5.1 Controllo, lista di lavoro, risultato
 
-| | Controllo (C1–C12) | Lista di lavoro |
-|---|---|---|
-| Valore atteso | **zero** | non esiste un “zero” operativo |
-| Deve poter diventare verde | **sì**, quando i dati sono corretti | **no**: è progettata per non essere vuota |
-| Cosa misura | coerenza / completezza del sistema | arretrato operativo di Salvatore |
-| Se non può diventare verde | è progettato male e va riscritto | è normale |
-| Vista UI | badge Contabilità / foglio Quadratura | sezione separata, mai mescolata ai C* |
+Tre oggetti distinti. **Non si mescolano mai nella stessa vista.** Il colore verde/rosso
+si applica **solo** ai controlli.
 
-**Le due cose non si mescolano mai nella stessa vista.**
+| | Controllo (C1–C12) | Lista di lavoro | Risultato |
+|---|---|---|---|
+| Cos’è | Confronta **due letture dello stesso fatto** e verifica che coincidano | Arretrato operativo (es. fatture fiorista da sollecitare, autofatture da trasmettere) | Numero economico: ricavi, costi, RAI, IVA a debito, … |
+| Esito atteso | **Scostamento nullo** fra le due letture — non “un importo economico pari a zero” | Non esiste un zero operativo: la lista è **per definizione non vuota** | **Nessun** valore atteso |
+| Verde / rosso | **Sì** — verde quando i dati sono corretti; se per costruzione non può diventare verde, è progettato male e va riscritto | **Mai** — non è un errore del sistema | **Mai** — non è né verde né rosso: è quello che è |
+| Vista UI | Badge Contabilità / foglio Quadratura | Sezione separata (es. «Da sollecitare — fatture fiorista mancanti») | Fogli Corrispettivi, Acquisti, Liquidazione IVA, CE, … |
 
 Esempio di lista di lavoro: **«Da sollecitare — fatture fiorista mancanti»** (fiorista, ordini
 coperti, importo pagato, giorni dal pagamento, dal più vecchio). Conteggio e importo totale
@@ -626,6 +626,11 @@ senza cancellare le righe di esecuzione.
 ---
 
 ## Registro delle modifiche
+
+**1.16 — 11 settembre 2026**
+- §5.1 — tripartizione **controllo** / **lista di lavoro** / **risultato**: scostamento nullo
+  fra due letture (non “importo zero”); liste non vuote per arretrato; risultati senza
+  atteso né colore. Verde/rosso solo sui controlli; le tre cose mai nella stessa vista.
 
 **1.15 — 11 settembre 2026**
 - §5 — C11 riscritto su **insiemi orderId** anno solare (non somme euro); aggiunto **C12**

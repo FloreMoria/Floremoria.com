@@ -16,14 +16,23 @@ export async function GET() {
         ricaviLordiCents: number;
         ebitdaCents: number;
         risultatoAnteImposteCents: number;
+        /** RAI con contributo CCIAA (risultato d'esercizio). */
+        risultatoEsercizioCents: number;
+        /** RAI senza contributo (risultato della gestione operativa). */
+        risultatoGestioneCents: number;
+        contributiEsercizioCents: number;
         entriesCount: number;
     } | null = null;
     try {
         const pnl = await computeHistoricalPnl({ fiscalYear: new Date().getFullYear() });
+        const contributi = pnl.contributiEsercizioCents || 0;
         financeKpi = {
             ricaviLordiCents: pnl.ricaviLordiCents,
             ebitdaCents: pnl.ebitdaCents,
             risultatoAnteImposteCents: pnl.risultatoAnteImposteCents,
+            risultatoEsercizioCents: pnl.risultatoAnteImposteCents,
+            risultatoGestioneCents: pnl.risultatoAnteImposteCents - contributi,
+            contributiEsercizioCents: contributi,
             entriesCount: pnl.entriesCount,
         };
     } catch {

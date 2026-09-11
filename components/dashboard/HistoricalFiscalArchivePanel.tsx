@@ -264,14 +264,23 @@ export default function HistoricalFiscalArchivePanel() {
                     </div>
                     <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
                         <p className="text-[10px] font-bold uppercase text-amber-800">
-                            RAI (ante imposte)
+                            Risultato d&apos;esercizio (con contributo)
                         </p>
                         <p className="text-xl font-mono font-bold text-amber-900 mt-1">
                             €{euro(pnl.risultatoAnteImposteCents)}
                         </p>
                         <p className="text-[11px] text-amber-800/80 mt-1">
-                            IVA netta €{euro(pnl.ivaNettaCents)} · include contributi se presenti
+                            RAI ante imposte · IVA netta €{euro(pnl.ivaNettaCents)}
                         </p>
+                        {(pnl.contributiEsercizioCents || 0) > 0 && (
+                            <p className="text-[11px] font-semibold text-slate-700 mt-2 border-t border-amber-100 pt-2">
+                                Risultato gestione (senza contributo) €
+                                {euro(
+                                    pnl.risultatoAnteImposteCents -
+                                        (pnl.contributiEsercizioCents || 0)
+                                )}
+                            </p>
+                        )}
                     </div>
                 </div>
             )}
@@ -279,15 +288,43 @@ export default function HistoricalFiscalArchivePanel() {
             {pnl && (pnl.contributiEsercizioCents || 0) > 0 && (
                 <div className="rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-3 text-sm text-teal-950">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-teal-800">
-                        Altri ricavi e proventi — contributo pubblico
+                        Due risultati distinti · contributo CCIAA
                     </p>
-                    <p className="mt-1 font-mono font-bold">
-                        €{euro(pnl.contributiEsercizioCents || 0)}
-                    </p>
-                    <p className="text-[12px] mt-1 text-teal-900/90">
-                        CCIAA Como-Lecco · Bando Nuova Impresa 2025 · fuori campo IVA ·{' '}
-                        <strong>non è fatturato da vendite</strong> (fatturato commerciale ufficiale
-                        resta separato).
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <p className="text-[10px] uppercase text-teal-800/80">
+                                Risultato gestione
+                            </p>
+                            <p className="font-mono font-bold">
+                                €
+                                {euro(
+                                    pnl.risultatoAnteImposteCents -
+                                        (pnl.contributiEsercizioCents || 0)
+                                )}
+                            </p>
+                            <p className="text-[11px] text-teal-900/80">senza contributo</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase text-teal-800/80">Contributo</p>
+                            <p className="font-mono font-bold">
+                                €{euro(pnl.contributiEsercizioCents || 0)}
+                            </p>
+                            <p className="text-[11px] text-teal-900/80">CCIAA · non vendite</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase text-teal-800/80">
+                                Risultato d&apos;esercizio
+                            </p>
+                            <p className="font-mono font-bold">
+                                €{euro(pnl.risultatoAnteImposteCents)}
+                            </p>
+                            <p className="text-[11px] text-teal-900/80">con contributo</p>
+                        </div>
+                    </div>
+                    <p className="text-[12px] mt-2 text-teal-900/90">
+                        CCIAA Como-Lecco · Bando Nuova Impresa 2025 · fuori campo IVA · non è
+                        fatturato da vendite. Mescolare i due numeri nasconde l&apos;andamento
+                        operativo.
                     </p>
                 </div>
             )}

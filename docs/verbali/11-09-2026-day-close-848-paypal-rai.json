@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-09-11T16:06:38.694884Z",
+  "punto1_equazione": {
+    "txEuro": 3472.37,
+    "feeEuro": 130.07,
+    "refundEuro": 139.95,
+    "payoutFinecoEuro": 2878.26,
+    "payoutLedgerEuro": 2878.26,
+    "resultEuro": 324.09,
+    "attesoEuro": 100,
+    "deltaVs100Euro": 224.09,
+    "stripeTransitC13Euro": 324.09,
+    "closedLedgerOnly": [
+      {
+        "date": "2026-09-10",
+        "euro": 297.85,
+        "po": "po_1UDvan4W4pZWhSUsge2pRPub",
+        "action": "reversed"
+      }
+    ],
+    "restoredFinecoMissing": [
+      {
+        "date": "2026-05-28",
+        "euro": 30.87,
+        "po": "po_1TbsDK4W4pZWhSUsHr2btVRJ",
+        "action": "unreversed"
+      },
+      {
+        "date": "2026-07-20",
+        "euro": 47.74,
+        "po": "po_1Tv5P44W4pZWhSUsbKJdN3rS",
+        "action": "unreversed"
+      }
+    ]
+  },
+  "punto2_eccesso": {
+    "stripeTxEuro": 3472.37,
+    "fuoriGatewayEuro": 1474.47,
+    "sommaEuro": 4946.84,
+    "venditeOfficialEuro": 4098.68,
+    "excessEuro": 848.16,
+    "refundExplainsEuro": 139.95,
+    "remainingAfterRefundEuro": 708.21,
+    "composition": {
+      "doublesOperativiEuro": 1304.03,
+      "doublesN": 27,
+      "stripeSenzaVenditaEuro": 89.97,
+      "stripeSenzaVenditaN": 2,
+      "listaSenzaIncassoEuro": -545.84,
+      "listaSenzaIncassoN": 13,
+      "netEuro": 708.21
+    },
+    "note": "Doppi = stesso ordine/importo Manual+Stripe senza orderId condiviso. Net = doubles+stripeOnly-listaOrphan-refund."
+  },
+  "punto3_rai": {
+    "risultatoGestioneSenzaContributoEuro": -8450.18,
+    "risultatoEsercizioConContributoEuro": -3852.52,
+    "contributoEuro": 4597.66,
+    "venditePnLEuro": 3665.31,
+    "altriRicaviEuro": 32.81
+  },
+  "punto4_paypal": {
+    "ledgerAccountEuro": -1990.06,
+    "declaredEuro": 0,
+    "deltaEuro": -1990.06,
+    "buckets": {
+      "spese": {
+        "n": 72,
+        "euro": -2319.64
+      },
+      "fee_paypal": {
+        "n": 16,
+        "euro": -27.69
+      },
+      "prelievi_a_fineco": {
+        "n": 25,
+        "euro": -566.76
+      },
+      "rimborsi": {
+        "n": 11,
+        "euro": 43.32
+      },
+      "accrediti_residui": {
+        "n": 25,
+        "euro": 199.41
+      },
+      "ti_ex_checkout": {
+        "n": 17,
+        "euro": 681.3
+      }
+    },
+    "sddFinecoLatoBancaEuro": -1655.95,
+    "sddPayPalLedgerN": 0,
+    "note": "SDD Fineco→PayPal non accreditati sul conto PayPal ledger."
+  },
+  "punto5_rvNoise": {
+    "stillInRvNoiseN": 0,
+    "stillInRvNoiseEuro": 0,
+    "rvPosEuro": 5084.27,
+    "rvNegEuro": 0,
+    "venditePnLEuro": 3665.31,
+    "raiEsercizioEuro": -3852.52
+  }
+}

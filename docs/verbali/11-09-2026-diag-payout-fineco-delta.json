@@ -1,0 +1,438 @@
+{
+  "generatedAt": "2026-09-11T15:58:42.841Z",
+  "finecoRefEuro": 2878.26,
+  "ledgerPayoutEuro": 3097.5,
+  "deltaEuro": 219.24,
+  "stripeNamedBankEuro": 2878.26,
+  "stripeNamedBankN": 46,
+  "matched": {
+    "n": 44,
+    "euro": 2799.65,
+    "rows": [
+      {
+        "po": "po_1SsXoIRrkwwcYwepKNsJM7Wx",
+        "ledgerEuro": 38.76,
+        "ledgerDate": "2026-01-23",
+        "bankEuro": 38.76,
+        "bankDate": "2026-01-23",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 23/01/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5f000al404w3vm8us9"
+      },
+      {
+        "po": "po_1StzhyRrkwwcYwep9fWIinGV",
+        "ledgerEuro": 39.59,
+        "ledgerDate": "2026-01-27",
+        "bankEuro": 39.59,
+        "bankDate": "2026-01-27",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 27/01/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5f000dl404f4ecyuna"
+      },
+      {
+        "po": "po_1T49LDRrkwwcYwepVxnMxQDz",
+        "ledgerEuro": 38.6,
+        "ledgerDate": "2026-02-24",
+        "bankEuro": 38.6,
+        "bankDate": "2026-02-24",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 24/02/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5f000ol404px0kb4td"
+      },
+      {
+        "po": "po_1T6K8MRrkwwcYwepuWGHjQL8",
+        "ledgerEuro": 28.98,
+        "ledgerDate": "2026-03-02",
+        "bankEuro": 28.98,
+        "bankDate": "2026-03-02",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 02/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5f000tl404y5e783r3"
+      },
+      {
+        "po": "po_1T6gg0RrkwwcYwepPr3MthtM",
+        "ledgerEuro": 38.24,
+        "ledgerDate": "2026-03-03",
+        "bankEuro": 38.24,
+        "bankDate": "2026-03-03",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 03/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5g000wl404cj2xol0d"
+      },
+      {
+        "po": "po_1T7PyuRrkwwcYwepjCFoH2yT",
+        "ledgerEuro": 141.84,
+        "ledgerDate": "2026-03-05",
+        "bankEuro": 141.84,
+        "bankDate": "2026-03-05",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 05/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5g000zl404ismo7050"
+      },
+      {
+        "po": "po_1TCU3IRrkwwcYwep7ak4w35I",
+        "ledgerEuro": 67.89,
+        "ledgerDate": "2026-03-19",
+        "bankEuro": 67.89,
+        "bankDate": "2026-03-19",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 19/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5g0013l40406eeg6og"
+      },
+      {
+        "po": "po_1TDwRhRrkwwcYwepUIqwrL1E",
+        "ledgerEuro": 38.94,
+        "ledgerDate": "2026-03-23",
+        "bankEuro": 38.94,
+        "bankDate": "2026-03-23",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 23/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5g0014l404eydg1078"
+      },
+      {
+        "po": "po_1TEIQPRrkwwcYwep4wBEmB66",
+        "ledgerEuro": 34.05,
+        "ledgerDate": "2026-03-24",
+        "bankEuro": 34.05,
+        "bankDate": "2026-03-24",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 24/03/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt311c5g0016l4047gd2x8bi"
+      },
+      {
+        "po": "po_1THZBHRrkwwcYwepmcvirfFj",
+        "ledgerEuro": 28.3,
+        "ledgerDate": "2026-04-02",
+        "bankEuro": 28.3,
+        "bankDate": "2026-04-02",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 02/04/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj0003ky049mzu1ktb"
+      },
+      {
+        "po": "po_1TJNEORrkwwcYwepQyjbvpKO",
+        "ledgerEuro": 141.84,
+        "ledgerDate": "2026-04-07",
+        "bankEuro": 141.84,
+        "bankDate": "2026-04-07",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 07/04/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj0006ky04822ckao0"
+      },
+      {
+        "po": "po_1TOSH7RrkwwcYwep9gkxsA8o",
+        "ledgerEuro": 27.99,
+        "ledgerDate": "2026-04-21",
+        "bankEuro": 27.99,
+        "bankDate": "2026-04-21",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 21/04/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj000hky04cvq0s6v2"
+      },
+      {
+        "po": "po_1TPB2JRrkwwcYwep4fv1hM3m",
+        "ledgerEuro": 38.72,
+        "ledgerDate": "2026-04-23",
+        "bankEuro": 38.72,
+        "bankDate": "2026-04-23",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 23/04/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj000kky044oz1a793"
+      },
+      {
+        "po": "po_1TRiQ1RrkwwcYwepbV8qdLoY",
+        "ledgerEuro": 38.94,
+        "ledgerDate": "2026-04-30",
+        "bankEuro": 38.94,
+        "bankDate": "2026-04-30",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 30/04/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj000qky04mnl1yvyo"
+      },
+      {
+        "po": "po_1TT9y1RrkwwcYwepGzjrFIdU",
+        "ledgerEuro": 53.64,
+        "ledgerDate": "2026-05-04",
+        "bankEuro": 53.64,
+        "bankDate": "2026-05-04",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 04/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uj000sky04wsqt2cza"
+      },
+      {
+        "po": "po_1TTWeyRrkwwcYwepAFPG1e0z",
+        "ledgerEuro": 44.8,
+        "ledgerDate": "2026-05-05",
+        "bankEuro": 44.8,
+        "bankDate": "2026-05-05",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 05/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uk000xky04d0h8h7pw"
+      },
+      {
+        "po": "po_1TUFpVRrkwwcYwepdieDSIqT",
+        "ledgerEuro": 278.75,
+        "ledgerDate": "2026-05-07",
+        "bankEuro": 278.75,
+        "bankDate": "2026-05-07",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 07/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uk000zky04prrr20cf"
+      },
+      {
+        "po": "po_1Talxf4W4pZWhSUseIgjY0ab",
+        "ledgerEuro": 23.19,
+        "ledgerDate": "2026-05-25",
+        "bankEuro": 23.19,
+        "bankDate": "2026-05-25",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: Floremoria S R L Dt-Ord: 25/05/2026 Banca Ord: Banking Circle",
+        "bankId": "cmt1vc6uk0017ky04jeimdpe3"
+      },
+      {
+        "po": "po_1TbryNRrkwwcYwepAHfw64C5",
+        "ledgerEuro": 82.63,
+        "ledgerDate": "2026-05-28",
+        "bankEuro": 82.63,
+        "bankDate": "2026-05-28",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 28/05/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6uk001dky041w3g7dsl"
+      },
+      {
+        "po": "po_1TgZgbRrkwwcYwep9WTER9qo",
+        "ledgerEuro": 87.72,
+        "ledgerDate": "2026-06-10",
+        "bankEuro": 87.72,
+        "bankDate": "2026-06-10",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 10/06/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6ul001mky04fje9w4n7"
+      },
+      {
+        "po": "po_1TjTO44W4pZWhSUsQSoOcpSY",
+        "ledgerEuro": 41.99,
+        "ledgerDate": "2026-06-18",
+        "bankEuro": 41.99,
+        "bankDate": "2026-06-18",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: Floremoria S R L Dt-Ord: 18/06/2026 Banca Ord: Banking Circle",
+        "bankId": "cmt1vc6ul001rky0423azhzj8"
+      },
+      {
+        "po": "po_1TjpuKRrkwwcYwepqWFBq66Z",
+        "ledgerEuro": 48.1,
+        "ledgerDate": "2026-06-19",
+        "bankEuro": 48.1,
+        "bankDate": "2026-06-19",
+        "bankDesc": "Ord: Stripe Ben: Floremoria S R L Dt-Ord: 19/06/2026 Banca Ord: Citibank Europe Plc Amst Info-Cli: S",
+        "bankId": "cmt1vc6ul001tky0445bm7ipz"
+      },
+      {
+        "po": "po_1TkvQf4W4pZWhSUsCT99Zvo7",
+        "ledgerEuro": 59.8,
+        "ledgerDate": "2026-06-22",
+        "bankEuro": 59.8,
+        "bankDate": "2026-06-22",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: Floremoria S R L Dt-Ord: 22/06/2026 Banca Ord: Banking Circle",
+        "bankId": "cmt1vc6ul001vky04rxpfrq5o"
+      },
+      {
+        "po": "po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+        "ledgerEuro": 63.76,
+        "ledgerDate": "2026-06-25",
+        "bankEuro": 63.76,
+        "bankDate": "2026-06-25",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: Floremoria S R L Dt-Ord: 25/06/2026 Banca Ord: Banking Circle",
+        "bankId": "cmt1vc6ul0020ky04dybn6m8h"
+      },
+      {
+        "po": "po_1TqMxQRrkwwcYwep86yvRSzq",
+        "ledgerEuro": 102.21,
+        "ledgerDate": "2026-07-07",
+        "bankEuro": 102.21,
+        "bankDate": "2026-07-07",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 07/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfx000zh104dexj7qdq"
+      },
+      {
+        "po": "po_1Tqj1GRrkwwcYwepBOo9FXCU",
+        "ledgerEuro": 68.06,
+        "ledgerDate": "2026-07-08",
+        "bankEuro": 68.06,
+        "bankDate": "2026-07-08",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 08/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfx000yh1049ptas4yo"
+      },
+      {
+        "po": "po_1Tr60T4W4pZWhSUsSs6s698H",
+        "ledgerEuro": 199.11,
+        "ledgerDate": "2026-07-09",
+        "bankEuro": 199.11,
+        "bankDate": "2026-07-09",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 09/07/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt3dsdfx000xh1049l4qhmkt"
+      },
+      {
+        "po": "po_1TstnORrkwwcYwepEqY4tWB7",
+        "ledgerEuro": 38.84,
+        "ledgerDate": "2026-07-14",
+        "bankEuro": 38.84,
+        "bankDate": "2026-07-14",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 14/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfx000uh104m65yklls"
+      },
+      {
+        "po": "po_1TvRW5RrkwwcYwepAWCVstvX",
+        "ledgerEuro": 36.89,
+        "ledgerDate": "2026-07-21",
+        "bankEuro": 36.89,
+        "bankDate": "2026-07-21",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 21/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfx000ph104cwocju2d"
+      },
+      {
+        "po": "po_1U0WaT4W4pZWhSUsXzocnouD",
+        "ledgerEuro": 59.8,
+        "ledgerDate": "2026-08-04",
+        "bankEuro": 59.8,
+        "bankDate": "2026-08-04",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 04/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt3dsdfx000ih1048paugbw8"
+      },
+      {
+        "po": "po_1U1FQERrkwwcYwepOa5Y60Rs",
+        "ledgerEuro": 29.07,
+        "ledgerDate": "2026-08-06",
+        "bankEuro": 29.07,
+        "bankDate": "2026-08-06",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 06/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfw000fh104j553mhrd"
+      },
+      {
+        "po": "po_1U1bx44W4pZWhSUsOFL2vjeo",
+        "ledgerEuro": 46.5,
+        "ledgerDate": "2026-08-07",
+        "bankEuro": 46.5,
+        "bankDate": "2026-08-07",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 07/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt3dsdfw000eh104eb3v1nmi"
+      },
+      {
+        "po": "po_1U33EORrkwwcYweps9AoOX0S",
+        "ledgerEuro": 38.84,
+        "ledgerDate": "2026-08-11",
+        "bankEuro": 38.84,
+        "bankDate": "2026-08-11",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 11/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfw000ch104rsh5k510"
+      },
+      {
+        "po": "po_1U3mTNRrkwwcYwepQIiMFglc",
+        "ledgerEuro": 66.95,
+        "ledgerDate": "2026-08-13",
+        "bankEuro": 66.95,
+        "bankDate": "2026-08-13",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 13/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfw000bh104unus5q3d"
+      },
+      {
+        "po": "po_1U5bCT4W4pZWhSUsrk3ZaQkM",
+        "ledgerEuro": 51.44,
+        "ledgerDate": "2026-08-18",
+        "bankEuro": 51.44,
+        "bankDate": "2026-08-18",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 18/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt3dsdfw0008h104js7u761h"
+      },
+      {
+        "po": "po_1U6JXIRrkwwcYwep0UnHbIJn",
+        "ledgerEuro": 37.86,
+        "ledgerDate": "2026-08-20",
+        "bankEuro": 37.86,
+        "bankDate": "2026-08-20",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 20/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmt3dsdfw0003h1049bmm5kov"
+      },
+      {
+        "po": "po_1U6JlQ4W4pZWhSUsG0R3lVE2",
+        "ledgerEuro": 59.8,
+        "ledgerDate": "2026-08-20",
+        "bankEuro": 59.8,
+        "bankDate": "2026-08-20",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 20/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt3dsdfw0004h104la60rpaq"
+      },
+      {
+        "po": "po_1U7loQ4W4pZWhSUs11D6UGlS",
+        "ledgerEuro": 46.5,
+        "ledgerDate": "2026-08-24",
+        "bankEuro": 46.5,
+        "bankDate": "2026-08-24",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 24/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmt7oev7u0002l204h0eop45l"
+      },
+      {
+        "po": "po_1U8UhnRrkwwcYwepefoEMFb1",
+        "ledgerEuro": 87.72,
+        "ledgerDate": "2026-08-26",
+        "bankEuro": 87.72,
+        "bankDate": "2026-08-26",
+        "bankDesc": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 26/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: ",
+        "bankId": "cmta7prjb0002lb04p6blvnoy"
+      },
+      {
+        "po": "po_1U8rHb4W4pZWhSUsBDkeD4qL",
+        "ledgerEuro": 51.58,
+        "ledgerDate": "2026-08-27",
+        "bankEuro": 51.58,
+        "bankDate": "2026-08-27",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 27/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmthd3vo90004jp04c1ubb595"
+      },
+      {
+        "po": "po_1UAJEo4W4pZWhSUsvLx2E0Qw",
+        "ledgerEuro": 50.62,
+        "ledgerDate": "2026-08-31",
+        "bankEuro": 50.62,
+        "bankDate": "2026-08-31",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 31/08/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmthd3vo90001jp04aie0aum2"
+      },
+      {
+        "po": "po_1UB2T54W4pZWhSUsEhmI1zoA",
+        "ledgerEuro": 58.28,
+        "ledgerDate": "2026-09-02",
+        "bankEuro": 58.28,
+        "bankDate": "2026-09-02",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 02/09/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmtkien840003l204awgsukrq"
+      },
+      {
+        "po": "po_1UBP1q4W4pZWhSUsZwRZZvHI",
+        "ledgerEuro": 83.04,
+        "ledgerDate": "2026-09-03",
+        "bankEuro": 83.04,
+        "bankDate": "2026-09-03",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 03/09/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmtq83vdw0005ld04cqukf90b"
+      },
+      {
+        "po": "po_1UBkqR4W4pZWhSUsKTr1NyRd",
+        "ledgerEuro": 59.48,
+        "ledgerDate": "2026-09-04",
+        "bankEuro": 59.48,
+        "bankDate": "2026-09-04",
+        "bankDesc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 04/09/2026 Banca Ord: BANKING CIRCL",
+        "bankId": "cmtq83vdw0003ld0434qp381a"
+      }
+    ]
+  },
+  "unmatchedLedger": {
+    "n": 1,
+    "euro": 297.85,
+    "rows": [
+      {
+        "id": "cmtx39cmy00126dmcy5nyz889",
+        "po": "po_1UDvan4W4pZWhSUsge2pRPub",
+        "sourceKey": "STRIPE_PAYOUT:po_1UDvan4W4pZWhSUsge2pRPub",
+        "euro": 297.85,
+        "date": "2026-09-10",
+        "description": "Payout Stripe → Fineco — STRIPE PAYOUT"
+      }
+    ]
+  },
+  "unusedStripeBank": [
+    {
+      "id": "cmt1vc6uk001cky04f6ltpjuo",
+      "euro": 30.87,
+      "date": "2026-05-28",
+      "desc": "Ord: Stripe Technology Europe Ltd Ben: Floremoria S R L Dt-Ord: 28/05/2026 Banca Ord: Banking Circle Denmark Info-Cli: F"
+    },
+    {
+      "id": "cmt3dsdfx000rh10429i4sbq7",
+      "euro": 47.74,
+      "date": "2026-07-20",
+      "desc": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 20/07/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: "
+    }
+  ]
+}

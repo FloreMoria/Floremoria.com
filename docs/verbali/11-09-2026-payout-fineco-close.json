@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-09-11T16:00:06.018Z",
+  "apply": true,
+  "log": [
+    {
+      "action": "reverse_ledger_absent_from_fineco",
+      "po": "po_1UDvan4W4pZWhSUsge2pRPub",
+      "euro": 297.85,
+      "date": "2026-09-10",
+      "apply": true
+    },
+    {
+      "action": "insert_missing_fineco_payout",
+      "po": "po_1TbsDK4W4pZWhSUsHr2btVRJ",
+      "euro": 30.87,
+      "apply": true
+    },
+    {
+      "action": "insert_missing_fineco_payout",
+      "po": "po_1Tv5P44W4pZWhSUsbKJdN3rS",
+      "euro": 47.74,
+      "apply": true
+    },
+    {
+      "inserted": 0,
+      "skipped": 2
+    }
+  ],
+  "after": {
+    "ledgerPayoutEuro": 2799.65,
+    "finecoRefEuro": 2878.26,
+    "deltaEuro": -78.61
+  }
+}

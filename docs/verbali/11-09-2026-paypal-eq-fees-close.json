@@ -1,0 +1,284 @@
+{
+  "generatedAt": "2026-09-11T18:57:15.309Z",
+  "apply": true,
+  "batch": "PAYPAL_EQ_FEES_CLOSE_20260911",
+  "sdd": {
+    "n": 47,
+    "euro": 1655.95,
+    "status": "già in ledger come TI dare PayPal / avere Fineco (batch PAYPAL_SDD_INBOUND_20260911)",
+    "equationAfterSddExpected": 93.66
+  },
+  "fees": {
+    "restoredN": 4,
+    "restoredEuro": 7.17,
+    "csvSalesTariffa": 47.73,
+    "ledgerFeeEuro": 57.84,
+    "targetBand": "55-60",
+    "inBand": true
+  },
+  "equation": {
+    "incassiReport": 1351.98,
+    "commissioniPre": 24.75,
+    "commissioniPost": 57.84,
+    "speseLedger": 2319.64,
+    "prelieviFinecoRef": 569.88,
+    "sddFinecoToPaypal": 1655.95,
+    "beforeSdd": -1562.29,
+    "afterSddWithFee2475": 93.66,
+    "afterSddWithFeePost": 60.57,
+    "ledgerPaypalAccount": 306.42,
+    "declared": 0,
+    "note": "Equazione pulita (solo vendite report). Ledger include anche cashback/refund SaaS (+~€199) e PAYPAL_REFUND (+€43) → saldo ledger più alto."
+  },
+  "ftMb": {
+    "kind": "ft_mb_paypal_match",
+    "order": "FT-MB-26-001",
+    "buyer": "Carolina Negrini Bertelli",
+    "orderDate": "2026-07-20",
+    "paypalTx": "0CW42027YJ1249932",
+    "paypalDate": "2026-07-19",
+    "paypalNameOnTx": "Andrea Varesi",
+    "euro": 37.99,
+    "decision": "PAYPAL",
+    "toleranceDays": 1
+  },
+  "ftPd": {
+    "kind": "ft_pd_stripe_eu",
+    "order": "FT-PD-26-001",
+    "buyer": "Filomena Maiorano",
+    "stripeKey": "STRIPE_TX:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+    "decision": "STRIPE_EU",
+    "euro": 37.99
+  },
+  "residualManualsPm1": [
+    {
+      "order": "FT-SA-26-001",
+      "buyer": "Ester Irace",
+      "euro": 29.99,
+      "manualDate": "2026-05-19",
+      "orderCreated": "2026-05-19",
+      "nearPaypal": [],
+      "decision": "FUORI_GATEWAY_RESIDUO"
+    },
+    {
+      "order": "FF-CO-26-001",
+      "buyer": "Salvatore Marsiglione",
+      "euro": 44.98,
+      "manualDate": "2026-07-21",
+      "orderCreated": "2026-07-21",
+      "nearPaypal": [],
+      "decision": "FUORI_GATEWAY_INTERNO"
+    }
+  ],
+  "ftCs005": {
+    "orders": [
+      {
+        "n": "FT-CS-26-006",
+        "created": "2026-08-17T13:52:14.507Z",
+        "cemetery": "Comunale di Tortora (CS)",
+        "deceased": "Ermelinda Mammì",
+        "stripe": null,
+        "pm": null
+      },
+      {
+        "n": "FT-CS-26-005",
+        "created": "2026-08-17T13:20:51.613Z",
+        "cemetery": "Comunale di Tortora (CS)",
+        "deceased": "Ermelinda Mammì",
+        "stripe": null,
+        "pm": null
+      },
+      {
+        "n": "FT-PA-26-008",
+        "created": "2026-08-17T13:57:15.658Z",
+        "cemetery": "Sant'Orsola di Palermo",
+        "deceased": "Salvatore Tusa",
+        "stripe": null,
+        "pm": null
+      }
+    ],
+    "paypalPaymentsN": 2,
+    "paypalTx": [
+      "PAYPAL_TX:1MY53925HD243102B",
+      "PAYPAL_TX:17H07453VC966154S"
+    ],
+    "stripeTx": [
+      {
+        "k": "STRIPE_TX:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+        "rev": true
+      },
+      {
+        "k": "STRIPE_TX:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+        "rev": true
+      }
+    ],
+    "decision": "DUPLICATO_SENZA_INCASSO",
+    "reason": "3 ordini Mammì €31,48 il 17/08 (005 13:20, 006 13:52, PA-008 13:57). PayPal registra 2 TX; Stripe aveva 2 TX già stornati come doppi PayPal. FT-CS-26-005 è il primo cronologico senza terza gamba di pagamento — ordine duplicato / checkout ripetuto non pagato altrove."
+  },
+  "stripeEu": {
+    "rawN": 30,
+    "rawEuro": 1928.98,
+    "expectedEuro": 1121.18,
+    "orphanEuro": 807.8,
+    "orphansComOnEuKeys": [
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3TSzMsRrkwwcYwep11EAvI3P",
+        "orderNumber": "FT-MC-26-007",
+        "euro": 284.9
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+        "orderNumber": "FF-PD-26-002",
+        "euro": 104.98
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+        "orderNumber": "FF-PD-26-003",
+        "euro": 69.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+        "orderNumber": "FF-PD-26-004",
+        "euro": 39.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+        "orderNumber": "FT-PD-26-001",
+        "euro": 37.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+        "orderNumber": "FT-RC-26-002",
+        "euro": 29.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+        "orderNumber": "FF-PN-26-001",
+        "euro": 39.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+        "orderNumber": "FF-PN-26-002",
+        "euro": 69.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+        "orderNumber": "FF-PN-26-003",
+        "euro": 39.99
+      },
+      {
+        "key": "STRIPE_TX:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+        "orderNumber": "FF-PN-26-004",
+        "euro": 89.99
+      }
+    ],
+    "orphanSum": 807.8,
+    "note": "10 righe .com (FT/FF) registrate come stripe_eu; somma €807,80. Non toccate (non bloccano modello)."
+  },
+  "stripeTransit": -388.07,
+  "controls": {
+    "C11": {
+      "passed": false,
+      "delta": 53,
+      "measured": 53,
+      "detail": "n canali: Corrispettivi=45 · Ledger ricavi=25 · taxRegister=75 · taxQuarterly=75 · cfoTools=75 · divergenti=53 · FT-SA-26-001[+ledger/taxRegister/taxQuarterly/cfoTools/−corrispettivi]; FT-PA-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CO-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-RC-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-VR-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PA-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-005[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]"
+    },
+    "C12": {
+      "passed": false,
+      "delta": 2,
+      "measured": 2,
+      "detail": "universo corrispettivi=45 · verificati=45 · esclusi_non_risolvibili=0 · tolleranza fuso=24h · divergenze=2 · cmtvn3fp ordine=2026-03-22 incasso=2026-03-24 (Δ48h); cmtvn3fy ordine=2026-03-24 incasso=2026-03-22 (Δ48h)"
+    },
+    "C13": {
+      "passed": false,
+      "verifiable": true,
+      "detail": "STRIPE(transito vendite): ledger=-388.07 · dich.=100.00 · Δ=-488.07 · PAYPAL(conto pagamento): ledger=306.42 · dich.=0.00 · Δ=306.42",
+      "gaps": [
+        {
+          "gateway": "STRIPE",
+          "ledgerCents": -38807,
+          "declaredCents": 10000,
+          "deltaCents": -48807,
+          "verifiable": true,
+          "sampleLedgerEvents": [
+            "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €204.98",
+            "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €-6.91",
+            "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €104.98",
+            "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €-3.66",
+            "2026-09-04 STRIPE_PAYOUT:po_1UBkqR4W4pZWhSUsKTr1NyRd €-59.48",
+            "2026-09-03 STRIPE_PAYOUT:po_1UBP1q4W4pZWhSUsZwRZZvHI €-83.04",
+            "2026-09-02 STRIPE_PAYOUT:po_1UB2T54W4pZWhSUsEhmI1zoA €-58.28",
+            "2026-09-01 STRIPE_FEE:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy €-1.58",
+            "2026-09-01 STRIPE_FEE:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL €-1.58",
+            "2026-08-31 STRIPE_TX:stripe_tx_txn_3UAa8I4W4pZWhSUs1ui4IlqC €84.98",
+            "2026-08-31 STRIPE_FEE:stripe_tx_txn_3UAa8I4W4pZWhSUs1ui4IlqC €-1.52",
+            "2026-08-31 STRIPE_PAYOUT:po_1UAJEo4W4pZWhSUsvLx2E0Qw €-50.62"
+          ]
+        },
+        {
+          "gateway": "PAYPAL",
+          "ledgerCents": 30642,
+          "declaredCents": 0,
+          "deltaCents": 30642,
+          "verifiable": true,
+          "sampleLedgerEvents": [
+            "2026-09-09 PAYPAL_FEE:22A12950PA842023C €-2.25",
+            "2026-09-09 PAYPAL_TX:22A12950PA842023C €55.99",
+            "2026-09-07 PAYPAL_TX:2TR85032CG585613W €-18.00",
+            "2026-09-07 PAYPAL_TX:3MS885357J5563024 €-2.15",
+            "2026-09-04 PAYPAL_TX:0AA82585GY557414F €-17.27",
+            "2026-09-03 PAYPAL_TX:3U991649NR1501110 €-17.75",
+            "2026-09-02 PAYPAL_TX:9DP27547YE017041U €-22.27",
+            "2026-09-01 PAYPAL_TX:1BM73350BR6557418 €31.48",
+            "2026-09-01 PAYPAL_FEE:1BM73350BR6557418 €-1.42",
+            "2026-09-01 PAYPAL_TX:1AP439263F9581143 €31.48",
+            "2026-09-01 PAYPAL_FEE:1AP439263F9581143 €-1.42",
+            "2026-09-01 PAYPAL_TX:3YB17456XU8050735 €-1.24"
+          ]
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "kind": "fee_unreversed",
+      "txId": "21976668V7790432L",
+      "euro": 2.15
+    },
+    {
+      "kind": "fee_unreversed",
+      "txId": "0EE511309V284291P",
+      "euro": 2.18
+    },
+    {
+      "kind": "fee_unreversed",
+      "txId": "1AP439263F9581143",
+      "euro": 1.42
+    },
+    {
+      "kind": "fee_unreversed",
+      "txId": "1BM73350BR6557418",
+      "euro": 1.42
+    },
+    {
+      "kind": "ft_mb_paypal_match",
+      "order": "FT-MB-26-001",
+      "buyer": "Carolina Negrini Bertelli",
+      "orderDate": "2026-07-20",
+      "paypalTx": "0CW42027YJ1249932",
+      "paypalDate": "2026-07-19",
+      "paypalNameOnTx": "Andrea Varesi",
+      "euro": 37.99,
+      "decision": "PAYPAL",
+      "toleranceDays": 1
+    },
+    {
+      "kind": "ft_pd_stripe_eu",
+      "order": "FT-PD-26-001",
+      "buyer": "Filomena Maiorano",
+      "stripeKey": "STRIPE_TX:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+      "decision": "STRIPE_EU",
+      "euro": 37.99
+    }
+  ]
+}

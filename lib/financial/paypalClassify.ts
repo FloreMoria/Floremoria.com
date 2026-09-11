@@ -5,6 +5,14 @@
 
 import type { LedgerCategory } from '@/lib/financial/historicalLedgerTypes';
 
+/**
+ * Pay Later / «Paga in 3» = stesso trattamento di un Express Checkout positivo.
+ * L'incasso per FloreMoria è immediato; il finanziamento è tra PayPal e il cliente.
+ */
+export function isPaypalPayLaterLabel(text: string): boolean {
+    return /pay\s*later|paga\s*in\s*3|paypal\s*later|finanziament/i.test(text || '');
+}
+
 /** Event code PayPal da saltare (non sono ricavi/costi commerciali). */
 const SKIP_EVENT_CODES = new Set([
     'T0200', // currency conversion
@@ -196,6 +204,16 @@ export function classifyPaypalTransaction(input: PaypalClassifyInput): PaypalCla
             category: 'RIMBORSI',
             direction: gross >= 0 ? 'ENTRATA' : 'USCITA',
             reason: 'refund',
+        };
+    }
+
+    // Pay Later / Paga in 3: incasso immediato per noi (PayPal finanzia il cliente).
+    if (gross > 0 && isPaypalPayLaterLabel(text)) {
+        return {
+            record: true,
+            category: 'RICAVI_VENDITE',
+            direction: 'ENTRATA',
+            reason: 'pay_later_as_normal_receipt',
         };
     }
 

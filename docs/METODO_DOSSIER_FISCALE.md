@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.19 — 11 settembre 2026.
+Versione 1.20 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -321,18 +321,38 @@ nostri, e un movimento del genere non può mai creare né un ricavo né un costo
 
 ### 6.2.1 Conti di passaggio denaro — architettura
 
-**Correzione concettuale (v1.19).** PayPal **non** è un gateway di vendita. I pagamenti
-dei clienti transitano tutti da **Stripe**, anche quando il cliente sceglie PayPal come
-*metodo* (carta e Link restano su Stripe). Il conto PayPal è un **secondo conto di
-pagamento** usato per spese (SaaS, addebiti SDD) e per piccoli accrediti residuali verso
-Fineco. Gli ordini mai passati da Stripe (storici .eu, bonifici, da identificare) stanno in
-un contenitore separato — **incassi fuori gateway** — e **non** gonfiano il transito Stripe.
+**Correzione concettuale (v1.20 — 11/09/2026).** Le vendite 2026 si ripartiscono su
+**due gateway reali**, chiusi dai report PayPal HAYUM + Stripe:
+
+| Canale | Importo | Fonte |
+|---|---:|---|
+| **PayPal** (conto `HAYUMYJTWLRTE`) | **€1.351,98** (32) | Report vendite T1+T2+T3 — vedi `docs/verbali/paypal-sales-reports/` |
+| **Stripe** | **€2.746,70** | Residuo sul fatturato ufficiale |
+| **Totale** | **€4.098,68** | Lista operativa (75 ordini) |
+
+Non resta fatturato «fuori». Il contenitore **incassi fuori gateway** (`10400`,
+`MANUAL_INBOUND`) deve tendere a **zero**; ogni riga residua va elencata come eccezione.
+
+PayPal **non** è più solo conto spese: per le 32 vendite del report è gateway di
+incasso. Resta anche conto di pagamento per SaaS/SDD/prelievi Fineco. Stripe resta il
+transito delle vendite *non* PayPal-native (carta/Link e metodo PayPal *via* Stripe).
 
 | Contenitore | Ruolo | Cosa contiene |
 |---|---|---|
-| **Transito Stripe** | unico transito delle **vendite** | incassi cliente (ogni metodo), commissioni Stripe, rimborsi, payout verso Fineco |
-| **Conto PayPal** | conto di pagamento (vita propria) | spese, giroconti, accrediti residuali; **nessun inbound da ordine** |
-| **Incassi fuori gateway** | fuori dal ciclo Stripe | storici .eu, bonifici diretti, pagamenti da identificare |
+| **Transito Stripe** | vendite non-HAYUM | incassi Stripe, fee, rimborsi, payout Fineco |
+| **Conto PayPal HAYUM** | vendite report + conto pagamento | 32 incassi report; fee; spese; prelievi Fineco |
+| **Incassi fuori gateway** | eccezioni | solo ordini davvero fuori dai due gateway (target ≈ 0) |
+
+**T3 PayPal è PROVVISORIO** (1 lug – 10 set): a fine trimestre ricaricare il CSV.
+
+**Pay Later:** l’incasso per FloreMoria è **immediato** (PayPal finanzia il cliente);
+stesso trattamento di un Express Checkout (`pay_later_as_normal_receipt`).
+
+#### Equazione conto PayPal (dato esterno)
+
+`incassi report − commissioni − spese − prelievi Fineco (€569,88) ≟ saldo dichiarato (€0)`
+
+I quattro addendi e lo scarto si dichiarano; non si forzano.
 
 I corrispettivi restano al **lordo** sulla data di pagamento del cliente: questi conti
 **non** toccano ricavi fiscali né aliquote.
@@ -354,18 +374,18 @@ La gamba **payout** usa i giroconti Stripe sull’estratto Fineco come riferimen
 (non un totale calcolato internamente e imposto a forza). Se ledger e Fineco divergono, si
 dichiara lo scarto — non si aggiusta aritmeticamente.
 
-#### Conto PayPal — non ciclo vendite
+#### Conto PayPal HAYUM — vendite report + pagamento
 
-Nessuna scrittura `PAYPAL_TX` con ordine collegato alimenta i ricavi o il transito vendite.
+Le 32 vendite del report (`PAYPAL_TX` marcati `paypalSalesReport`) sono incassi gateway.
 Le uscite SaaS / operative restano **costi** di conto economico. I prelievi verso Fineco
-sono giroconti del conto di pagamento. La riconciliazione (C13 lato PayPal) confronta il
-saldo ledger del conto con il saldo **dichiarato** (es. €0), non l’equazione delle vendite.
+(rif. esterno €569,88) sono giroconti. Equazione esterna:
+
+`incassi €1.351,98 − commissioni − spese − prelievi Fineco ≟ €0`
 
 #### Incassi fuori gateway
 
-Chiave operativa tipica: `MANUAL_INBOUND:{orderId}` (e stock JSON legacy). Mastro dedicato
-(`10400 - Incassi fuori gateway`). Restano abbinabili all’ordine per copertura inbound, ma
-**fuori** dal saldo di transito Stripe (C10/C13 vendite).
+Chiave operativa tipica: `MANUAL_INBOUND:{orderId}`. Mastro `10400`. Dopo il modello
+HAYUM (v1.20) il contenitore deve tendere a zero; ogni residuo è un’eccezione da elencare.
 
 I **duplicati di canale** (stessa TX come `stripe_eu_…` e Stripe .com) non generano una
 seconda gamba. Hold / release di saldo minimo e conversioni interne non sono fatti

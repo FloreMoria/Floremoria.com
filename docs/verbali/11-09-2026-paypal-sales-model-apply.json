@@ -1,0 +1,546 @@
+{
+  "generatedAt": "2026-09-11T16:31:05.258Z",
+  "apply": true,
+  "batch": "PAYPAL_SALES_MODEL_20260911",
+  "reports": {
+    "merchant": "HAYUMYJTWLRTE",
+    "t1": {
+      "quarter": "T1",
+      "fileName": "T1-2026.csv",
+      "periodLabel": "1 gen 2026 - 31 mar 2026",
+      "provisional": false,
+      "reloadNote": null,
+      "qty": 10,
+      "volumeEuro": 382.39,
+      "parsedQty": 10,
+      "parsedEuro": 382.39
+    },
+    "t2": {
+      "quarter": "T2",
+      "fileName": "T2-2026.csv",
+      "periodLabel": "1 apr 2026 - 30 giu 2026",
+      "provisional": false,
+      "reloadNote": null,
+      "qty": 8,
+      "volumeEuro": 321.85,
+      "parsedQty": 8,
+      "parsedEuro": 321.85
+    },
+    "t3": {
+      "quarter": "T3",
+      "fileName": "T3-2026-PROVVISORIO-1lug-10set.csv",
+      "periodLabel": "1 lug 2026 - 10 set 2026",
+      "provisional": true,
+      "reloadNote": "PROVVISORIO: copre 1 lug – 10 set. A fine T3 ricaricare il report completo.",
+      "qty": 14,
+      "volumeEuro": 647.74,
+      "parsedQty": 14,
+      "parsedEuro": 647.74
+    },
+    "ytd": {
+      "quarter": "YTD",
+      "fileName": "YTD-2026-01-01-2026-09-10.csv",
+      "periodLabel": "1 gen 2026 - 10 set 2026",
+      "provisional": true,
+      "reloadNote": "Cumulativo fino al 10/09 (include T3 provvisorio).",
+      "qty": 32,
+      "volumeEuro": 1351.98,
+      "parsedQty": 32,
+      "parsedEuro": 1351.98
+    }
+  },
+  "reversedStripeTx": {
+    "n": 17,
+    "euro": 712.16,
+    "rows": [
+      {
+        "id": "cmtx16lxi003r6de3fu8efvcx",
+        "key": "STRIPE_TX:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+        "euro": 31.48,
+        "paypalDate": "2026-05-20",
+        "paypalTx": "4PC01169U59469310"
+      },
+      {
+        "id": "cmtx16lxi003s6de3a0kz1vp6",
+        "key": "STRIPE_TX:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+        "euro": 31.48,
+        "paypalDate": "2026-05-20",
+        "paypalTx": "5H283854666757739"
+      },
+      {
+        "id": "cmtx16lxi003t6de3ed11b0kj",
+        "key": "STRIPE_TX:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+        "euro": 32.48,
+        "paypalDate": "2026-05-23",
+        "paypalTx": "8JD06462TK660002D"
+      },
+      {
+        "id": "cmtx16lxi003z6de3rx1abb4g",
+        "key": "STRIPE_TX:txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+        "euro": 31.48,
+        "paypalDate": "2026-06-17",
+        "paypalTx": "4M534393CB5993543"
+      },
+      {
+        "id": "cmtx16lxi00406de3ctvi2ipd",
+        "key": "STRIPE_TX:txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+        "euro": 31.48,
+        "paypalDate": "2026-06-17",
+        "paypalTx": "6TH09938PJ296300P"
+      },
+      {
+        "id": "cmtx16lxi00456de3hrdhwlvb",
+        "key": "STRIPE_TX:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+        "euro": 31.48,
+        "paypalDate": "2026-07-04",
+        "paypalTx": "7AG32350H80780641"
+      },
+      {
+        "id": "cmtx16lxi00466de3pskl3sir",
+        "key": "STRIPE_TX:txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+        "euro": 31.48,
+        "paypalDate": "2026-07-04",
+        "paypalTx": "4KR3840372651452V"
+      },
+      {
+        "id": "cmtx16lxi00446de3comyxdqw",
+        "key": "STRIPE_TX:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+        "euro": 144.98,
+        "paypalDate": "2026-07-04",
+        "paypalTx": "41V916837L4471622"
+      },
+      {
+        "id": "cmtx16lxi00486de3frtz9y9x",
+        "key": "STRIPE_TX:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+        "euro": 49.99,
+        "paypalDate": "2026-07-15",
+        "paypalTx": "6TL5310123588930U"
+      },
+      {
+        "id": "cmtx16lxj004a6de3ummq1ud0",
+        "key": "STRIPE_TX:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+        "euro": 31.48,
+        "paypalDate": "2026-07-30",
+        "paypalTx": "6VK458505N684563M"
+      },
+      {
+        "id": "cmtx16lxj004b6de3j4ixuqa0",
+        "key": "STRIPE_TX:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+        "euro": 31.48,
+        "paypalDate": "2026-07-30",
+        "paypalTx": "2EH437754S823943P"
+      },
+      {
+        "id": "cmtx16lxj004h6de3169ssea1",
+        "key": "STRIPE_TX:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+        "euro": 31.48,
+        "paypalDate": "2026-08-17",
+        "paypalTx": "1MY53925HD243102B"
+      },
+      {
+        "id": "cmtx16lxj004i6de3znhsa47e",
+        "key": "STRIPE_TX:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+        "euro": 31.48,
+        "paypalDate": "2026-08-17",
+        "paypalTx": "17H07453VC966154S"
+      },
+      {
+        "id": "cmtx16lxj004m6de3347o7n2g",
+        "key": "STRIPE_TX:stripe_tx_txn_3U7xmV4W4pZWhSUs1FFamXIo",
+        "euro": 53.97,
+        "paypalDate": "2026-08-24",
+        "paypalTx": ""
+      },
+      {
+        "id": "cmtx16lxj004n6de36w13ptyu",
+        "key": "STRIPE_TX:stripe_tx_txn_3U8bE54W4pZWhSUs0ueA2Maq",
+        "euro": 52.98,
+        "paypalDate": "2026-08-26",
+        "paypalTx": ""
+      },
+      {
+        "id": "cmtx16lxj004r6de3jg9z06fb",
+        "key": "STRIPE_TX:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL",
+        "euro": 31.48,
+        "paypalDate": "2026-09-01",
+        "paypalTx": ""
+      },
+      {
+        "id": "cmtx16lxj004s6de3buhcr1f8",
+        "key": "STRIPE_TX:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy",
+        "euro": 31.48,
+        "paypalDate": "2026-09-01",
+        "paypalTx": ""
+      }
+    ]
+  },
+  "reversedManualInbound": {
+    "n": 27,
+    "euro": 1330.03,
+    "rows": [
+      {
+        "id": "cmtx39fxr00156dmcsc07ltz4",
+        "key": "MANUAL_INBOUND:cmsxasq2y000gl304oth7ffq3",
+        "euro": 31.48,
+        "orderNumber": "FT-PA-26-008",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "1MY53925HD243102B"
+      },
+      {
+        "id": "cmtx39fxr00166dmc4z6v6zfe",
+        "key": "MANUAL_INBOUND:cmsxam9pn0001l304jx3gae4y",
+        "euro": 31.48,
+        "orderNumber": "FT-CS-26-006",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "17H07453VC966154S"
+      },
+      {
+        "id": "cmtx39fxr00196dmcjyfal88p",
+        "key": "MANUAL_INBOUND:cmsrxeaki0001la04r3diximm",
+        "euro": 52.48,
+        "orderNumber": "FT-RM-26-002",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxr001a6dmcwzwcmfpm",
+        "key": "MANUAL_INBOUND:cmsnghl7y0000ie04c47zru2x",
+        "euro": 69.99,
+        "orderNumber": "FF-PN-26-002",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001b6dmcmf7zjs4s",
+        "key": "MANUAL_INBOUND:cmsalfwki0000js04s4hbqh1i",
+        "euro": 29.99,
+        "orderNumber": "FT-RC-26-002",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001j6dmc8kmzo9e6",
+        "key": "MANUAL_INBOUND:cmrnjw44c0000la04aa7cf55c",
+        "euro": 37.99,
+        "orderNumber": "FT-PD-26-001",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "0CW42027YJ1249932"
+      },
+      {
+        "id": "cmtx39fxs001l6dmca4tukmbe",
+        "key": "MANUAL_INBOUND:cmr64j74f000fl104rqg5myod",
+        "euro": 31.48,
+        "orderNumber": "FT-CS-26-003",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "7AG32350H80780641"
+      },
+      {
+        "id": "cmtx39fxs001m6dmcwbml7egc",
+        "key": "MANUAL_INBOUND:cmr64du1w0001l104b7v3oxkf",
+        "euro": 31.48,
+        "orderNumber": "FT-PA-26-005",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "4KR3840372651452V"
+      },
+      {
+        "id": "cmtx39fxs001n6dmc11hybuvl",
+        "key": "MANUAL_INBOUND:cmr5483ir0000l4046lw2q6m0",
+        "euro": 69.99,
+        "orderNumber": "FF-PD-26-003",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001p6dmcev6osijp",
+        "key": "MANUAL_INBOUND:cmr3zmkcd0000l404p75vvvnm",
+        "euro": 104.98,
+        "orderNumber": "FF-PD-26-002",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001q6dmcewutg2c6",
+        "key": "MANUAL_INBOUND:cmqpbuuay0004jv04cq34sfpe",
+        "euro": 64.98,
+        "orderNumber": "FF-VR-26-001",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001r6dmcg0t0xsel",
+        "key": "MANUAL_INBOUND:cmqi3gil20001jp04a5criwde",
+        "euro": 31.48,
+        "orderNumber": "FT-PA-26-004",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "4M534393CB5993543"
+      },
+      {
+        "id": "cmtx39fxs001t6dmcyoc8pv46",
+        "key": "MANUAL_INBOUND:cmqc1wwci0001i904ons8tse3",
+        "euro": 43.97,
+        "orderNumber": "FT-RC-26-001",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001u6dmcy6wimp65",
+        "key": "MANUAL_INBOUND:cmpi3vzfm0001k604jn1zpcz1",
+        "euro": 32.48,
+        "orderNumber": "FT-CO-26-004",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "8JD06462TK660002D"
+      },
+      {
+        "id": "cmtx39fxs001v6dmcgjdfd2hl",
+        "key": "MANUAL_INBOUND:cmpe615zq000al404qij79ek3",
+        "euro": 31.48,
+        "orderNumber": "FT-CS-26-001",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "4PC01169U59469310"
+      },
+      {
+        "id": "cmtx39fxs001e6dmc0omhl0tk",
+        "key": "MANUAL_INBOUND:cms7kwdw9000cjx044yhnh3bc",
+        "euro": 31.48,
+        "orderNumber": "FT-CS-26-004",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "6VK458505N684563M"
+      },
+      {
+        "id": "cmtx39fxs001f6dmcbgpglhie",
+        "key": "MANUAL_INBOUND:cms7kh4470001ju04ts9h3ezm",
+        "euro": 31.48,
+        "orderNumber": "FT-PA-26-007",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "2EH437754S823943P"
+      },
+      {
+        "id": "cmtx39fxs001d6dmcmv1c050r",
+        "key": "MANUAL_INBOUND:cmsebfvr20002l504aq9nfqfr",
+        "euro": 47.46,
+        "orderNumber": "FT-ME-26-002",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxr00136dmcpk5i73p9",
+        "key": "MANUAL_INBOUND:cmttyazkg0000jr04ldu6tiab",
+        "euro": 55.99,
+        "orderNumber": "FT-MB-26-002",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxr00146dmcuqnk0vc3",
+        "key": "MANUAL_INBOUND:cmt2pq29v0000la043ksaow9c",
+        "euro": 89.99,
+        "orderNumber": "FF-PN-26-004",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxr00186dmcasfo3vyn",
+        "key": "MANUAL_INBOUND:cmsxf7d4o0000ic04toy2f9rk",
+        "euro": 39.99,
+        "orderNumber": "FF-PN-26-003",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001c6dmcj1vhvza0",
+        "key": "MANUAL_INBOUND:cmsilmkhn0000l104avptjk6y",
+        "euro": 39.99,
+        "orderNumber": "FF-PN-26-001",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001i6dmcxo9af0ib",
+        "key": "MANUAL_INBOUND:cmrlxhp900002jn04pwh9flvv",
+        "euro": 49.99,
+        "orderNumber": "FT-ME-26-001",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "6TL5310123588930U"
+      },
+      {
+        "id": "cmtx39fxs001k6dmc7m196lj5",
+        "key": "MANUAL_INBOUND:cmrekxg4p0000l704cv80kg3m",
+        "euro": 39.99,
+        "orderNumber": "FF-PD-26-004",
+        "reason": "coperto_da_stripe_tx",
+        "paypalTx": null
+      },
+      {
+        "id": "cmtx39fxs001o6dmc242m2dv4",
+        "key": "MANUAL_INBOUND:cmr63hk9q0001l404p4lhstdd",
+        "euro": 144.98,
+        "orderNumber": "FF-PA-26-001",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "41V916837L4471622"
+      },
+      {
+        "id": "cmtx39fxs001s6dmcuiqi135j",
+        "key": "MANUAL_INBOUND:cmqi32zda0002le04svrim4si",
+        "euro": 31.48,
+        "orderNumber": "FT-CS-26-002",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "6TH09938PJ296300P"
+      },
+      {
+        "id": "cmtx39fxs001w6dmcodwiv0o8",
+        "key": "MANUAL_INBOUND:cmpe5uzyf0005l404g6qpnjq4",
+        "euro": 31.48,
+        "orderNumber": "FT-PA-26-003",
+        "reason": "coperto_da_paypal_hayum",
+        "paypalTx": "5H283854666757739"
+      }
+    ]
+  },
+  "residualFuoriGateway": {
+    "n": 4,
+    "euro": 144.44,
+    "rows": [
+      {
+        "id": "cmtx39fxr00176dmc3cgvvvws",
+        "key": "MANUAL_INBOUND:cmsx9hwv00001k104uoepnd89",
+        "euro": 31.48,
+        "date": "2026-08-17",
+        "orderNumber": "FT-CS-26-005",
+        "buyer": "Luciano Mammì"
+      },
+      {
+        "id": "cmtx39fxs001x6dmc22aoinol",
+        "key": "MANUAL_INBOUND:cmpcb2j7y0004jv04xlc7wvb2",
+        "euro": 29.99,
+        "date": "2026-05-19",
+        "orderNumber": "FT-SA-26-001",
+        "buyer": "Ester Irace"
+      },
+      {
+        "id": "cmtx39fxs001g6dmcik8vjfht",
+        "key": "MANUAL_INBOUND:cmrt166og0000jw0432noy5dn",
+        "euro": 37.99,
+        "date": "2026-07-20",
+        "orderNumber": "FT-MB-26-001",
+        "buyer": "Carolina Negrini Bertelli"
+      },
+      {
+        "id": "cmtx39fxs001h6dmc3m38mkgc",
+        "key": "MANUAL_INBOUND:cmrusit6y0000l8046wbck8a9",
+        "euro": 44.98,
+        "date": "2026-07-21",
+        "orderNumber": "FF-CO-26-001",
+        "buyer": "Salvatore Marsiglione"
+      }
+    ]
+  },
+  "markedEuPaypalTx": [
+    {
+      "txId": "66C04847WL650301D",
+      "id": "cmt4lqawz0005l204b06gb19j",
+      "payLater": false,
+      "euro": 39.99
+    },
+    {
+      "txId": "22E30531F99808504",
+      "id": "cmt4lqawz0008l204rd41o518",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "8YH43677SS377553L",
+      "id": "cmt4lqawz000al20418qedrj0",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "44E519039S467634K",
+      "id": "cmt4lqawz000dl204rh7snoz4",
+      "payLater": false,
+      "euro": 39.99
+    },
+    {
+      "txId": "2GU64478W4726692S",
+      "id": "cmt4lqax0000jl2043vrw91a8",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "4W6628604D401674M",
+      "id": "cmt4lqax0000rl2047r5w0vfr",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "83N54580AU0027713",
+      "id": "cmt4lqax1000xl204len09jyh",
+      "payLater": false,
+      "euro": 49.99
+    },
+    {
+      "txId": "3D552868PU399581S",
+      "id": "cmt4lqax1000zl204q0eohb1q",
+      "payLater": false,
+      "euro": 72.48
+    },
+    {
+      "txId": "95E92452N40245344",
+      "id": "cmt4lqax10012l204kxqfjv3s",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "09C2701554000764W",
+      "id": "cmt4lqax10016l204uasbtlw0",
+      "payLater": false,
+      "euro": 29.99
+    },
+    {
+      "txId": "5VV92297N9957570R",
+      "id": "cmt4lqax2001ll204ga8akjsg",
+      "payLater": false,
+      "euro": 59.98
+    },
+    {
+      "txId": "1T757598T7263511M",
+      "id": "cmt4lqax3001wl204dplkpxz1",
+      "payLater": true,
+      "euro": 53.48
+    },
+    {
+      "txId": "43H07985E69976410",
+      "id": "cmt4lqax4002il204fupw7a6m",
+      "payLater": false,
+      "euro": 49.99
+    }
+  ],
+  "payLater": {
+    "date": "2026-05-03",
+    "cents": 5348,
+    "txId": "1T757598T7263511M",
+    "buyerName": "Maria Antonia Pozzi",
+    "note": "Pay Later: trattare come incasso normale; liquidità immediata sul conto HAYUM."
+  },
+  "post": {
+    "stripeTxN": 43,
+    "stripeTxEuro": 2760.21,
+    "stripeTargetEuro": 2746.7,
+    "stripeDeltaVsTargetEuro": 13.51,
+    "manualInboundN": 4,
+    "manualInboundEuro": 144.44,
+    "stripeEuTxN": 30,
+    "stripeEuTxEuro": 1928.98,
+    "stripeEuExpectedEuro": 1121.18
+  },
+  "paypalAccountEquation": {
+    "incassiEuro": 1351.98,
+    "commissioniEuro": 24.75,
+    "speseEuro": 2319.64,
+    "prelieviFinecoRefEuro": 569.88,
+    "prelieviLedgerEuro": 566.76,
+    "resultEuro": -1562.29,
+    "declaredSaldoEuro": 0,
+    "scartoEuro": -1562.29,
+    "note": "Equazione: incassi − commissioni − spese − prelievi Fineco (€569,88). Scarto = quanto manca a saldo 0 con le spese ledger complete."
+  }
+}

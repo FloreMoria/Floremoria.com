@@ -1,0 +1,889 @@
+{
+  "generatedAt": "2026-09-11T16:23:19.227Z",
+  "model": {
+    "paypalSalesEuro": 1351.98,
+    "stripeTargetEuro": 2746.7,
+    "officialEuro": 4098.68
+  },
+  "paypalPayments": {
+    "n": 32,
+    "euro": 1351.98,
+    "fromTxCsv": 27,
+    "synthesized": 5,
+    "rows": [
+      {
+        "date": "2026-01-16",
+        "cents": 3999,
+        "feeCents": 171,
+        "name": "Giulia Grappone",
+        "type": "Pagamento Express Checkout",
+        "txId": "66C04847WL650301D",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-01-21",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "22E30531F99808504",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-01-22",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "8YH43677SS377553L",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-02-09",
+        "cents": 3999,
+        "feeCents": 171,
+        "name": "ester irace",
+        "type": "Pagamento Express Checkout",
+        "txId": "44E519039S467634K",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-02-16",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "2GU64478W4726692S",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-02-22",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "4W6628604D401674M",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-03-13",
+        "cents": 4999,
+        "feeCents": 205,
+        "name": "Maria Agata Puliafico",
+        "type": "Pagamento Express Checkout",
+        "txId": "83N54580AU0027713",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-03-14",
+        "cents": 7248,
+        "feeCents": 281,
+        "name": "Chiara Durì",
+        "type": "Pagamento Express Checkout",
+        "txId": "3D552868PU399581S",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-03-22",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "95E92452N40245344",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-03-24",
+        "cents": 2999,
+        "feeCents": 137,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "09C2701554000764W",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-04-20",
+        "cents": 5998,
+        "feeCents": 239,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "5VV92297N9957570R",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-05-03",
+        "cents": 5348,
+        "feeCents": 217,
+        "name": "Maria Antonia Pozzi",
+        "type": "Pagamento Express Checkout",
+        "txId": "1T757598T7263511M",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-05-16",
+        "cents": 4999,
+        "feeCents": 205,
+        "name": "Maria Agata Puliafico",
+        "type": "Pagamento Express Checkout",
+        "txId": "43H07985E69976410",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-05-20",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "4PC01169U59469310",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-05-20",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "5H283854666757739",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-05-23",
+        "cents": 3248,
+        "feeCents": 145,
+        "name": "DANIELA RAMPOLDI",
+        "type": "Pagamento Express Checkout",
+        "txId": "8JD06462TK660002D",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-06-17",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "4M534393CB5993543",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-06-17",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "6TH09938PJ296300P",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-04",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "7AG32350H80780641",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-04",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "4KR3840372651452V",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-04",
+        "cents": 14498,
+        "feeCents": 528,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "41V916837L4471622",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-15",
+        "cents": 4999,
+        "feeCents": 205,
+        "name": "Maria Agata Puliafico",
+        "type": "Pagamento Express Checkout",
+        "txId": "6TL5310123588930U",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-19",
+        "cents": 3799,
+        "feeCents": 164,
+        "name": "Andrea Varesi",
+        "type": "Pagamento da cellulare",
+        "txId": "0CW42027YJ1249932",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-30",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "6VK458505N684563M",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-07-30",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "2EH437754S823943P",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-08-17",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "1MY53925HD243102B",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-08-17",
+        "cents": 3148,
+        "feeCents": 142,
+        "name": "LUCIANO MAMMI'",
+        "type": "Pagamento Express Checkout",
+        "txId": "17H07453VC966154S",
+        "payLater": false,
+        "synthetic": false
+      },
+      {
+        "date": "2026-08-24",
+        "cents": 5397,
+        "feeCents": 0,
+        "name": "",
+        "type": "SYNTHETIC_FROM_REPORT",
+        "txId": "",
+        "payLater": false,
+        "synthetic": true
+      },
+      {
+        "date": "2026-08-26",
+        "cents": 5298,
+        "feeCents": 0,
+        "name": "",
+        "type": "SYNTHETIC_FROM_REPORT",
+        "txId": "",
+        "payLater": false,
+        "synthetic": true
+      },
+      {
+        "date": "2026-09-01",
+        "cents": 3148,
+        "feeCents": 0,
+        "name": "",
+        "type": "SYNTHETIC_FROM_REPORT",
+        "txId": "",
+        "payLater": false,
+        "synthetic": true
+      },
+      {
+        "date": "2026-09-01",
+        "cents": 3148,
+        "feeCents": 0,
+        "name": "",
+        "type": "SYNTHETIC_FROM_REPORT",
+        "txId": "",
+        "payLater": false,
+        "synthetic": true
+      },
+      {
+        "date": "2026-09-09",
+        "cents": 5599,
+        "feeCents": 0,
+        "name": "",
+        "type": "SYNTHETIC_FROM_REPORT",
+        "txId": "",
+        "payLater": false,
+        "synthetic": true
+      }
+    ]
+  },
+  "punto1_stripeExcess": {
+    "stripeTxEuro": 3472.37,
+    "targetEuro": 2746.7,
+    "excessEuro": 725.67,
+    "doublesN": 17,
+    "doublesEuro": 712.16,
+    "stripeAfterRemovingDoublesEuro": 2760.21,
+    "deltaVsTargetEuro": 13.51,
+    "doubles": [
+      {
+        "paypalDate": "2026-05-20",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "4PC01169U59469310",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-05-20",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+        "stripeId": "cmtx16lxi003r6de3fu8efvcx",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-05-20",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "5H283854666757739",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-05-20",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+        "stripeId": "cmtx16lxi003s6de3a0kz1vp6",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-05-23",
+        "paypalEuro": 32.48,
+        "paypalName": "DANIELA RAMPOLDI",
+        "paypalTx": "8JD06462TK660002D",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-05-23",
+        "stripeEuro": 32.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+        "stripeId": "cmtx16lxi003t6de3ed11b0kj",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-06-17",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "4M534393CB5993543",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-06-17",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+        "stripeId": "cmtx16lxi003z6de3rx1abb4g",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-06-17",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "6TH09938PJ296300P",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-06-17",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+        "stripeId": "cmtx16lxi00406de3ctvi2ipd",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-04",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "7AG32350H80780641",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-04",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+        "stripeId": "cmtx16lxi00456de3hrdhwlvb",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-04",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "4KR3840372651452V",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-04",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+        "stripeId": "cmtx16lxi00466de3pskl3sir",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-04",
+        "paypalEuro": 144.98,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "41V916837L4471622",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-04",
+        "stripeEuro": 144.98,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+        "stripeId": "cmtx16lxi00446de3comyxdqw",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-15",
+        "paypalEuro": 49.99,
+        "paypalName": "Maria Agata Puliafico",
+        "paypalTx": "6TL5310123588930U",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-15",
+        "stripeEuro": 49.99,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+        "stripeId": "cmtx16lxi00486de3frtz9y9x",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-30",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "6VK458505N684563M",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-30",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+        "stripeId": "cmtx16lxj004a6de3ummq1ud0",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-07-30",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "2EH437754S823943P",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-07-30",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+        "stripeId": "cmtx16lxj004b6de3j4ixuqa0",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-08-17",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "1MY53925HD243102B",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-08-17",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+        "stripeId": "cmtx16lxj004h6de3169ssea1",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-08-17",
+        "paypalEuro": 31.48,
+        "paypalName": "LUCIANO MAMMI'",
+        "paypalTx": "17H07453VC966154S",
+        "paypalType": "Pagamento Express Checkout",
+        "payLater": false,
+        "stripeDate": "2026-08-17",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+        "stripeId": "cmtx16lxj004i6de3znhsa47e",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-08-24",
+        "paypalEuro": 53.97,
+        "paypalName": "",
+        "paypalTx": "",
+        "paypalType": "SYNTHETIC_FROM_REPORT",
+        "payLater": false,
+        "stripeDate": "2026-08-24",
+        "stripeEuro": 53.97,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3U7xmV4W4pZWhSUs1FFamXIo",
+        "stripeId": "cmtx16lxj004m6de3347o7n2g",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-08-26",
+        "paypalEuro": 52.98,
+        "paypalName": "",
+        "paypalTx": "",
+        "paypalType": "SYNTHETIC_FROM_REPORT",
+        "payLater": false,
+        "stripeDate": "2026-08-26",
+        "stripeEuro": 52.98,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3U8bE54W4pZWhSUs0ueA2Maq",
+        "stripeId": "cmtx16lxj004n6de36w13ptyu",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-09-01",
+        "paypalEuro": 31.48,
+        "paypalName": "",
+        "paypalTx": "",
+        "paypalType": "SYNTHETIC_FROM_REPORT",
+        "payLater": false,
+        "stripeDate": "2026-09-01",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL",
+        "stripeId": "cmtx16lxj004r6de3jg9z06fb",
+        "orderId": null
+      },
+      {
+        "paypalDate": "2026-09-01",
+        "paypalEuro": 31.48,
+        "paypalName": "",
+        "paypalTx": "",
+        "paypalType": "SYNTHETIC_FROM_REPORT",
+        "payLater": false,
+        "stripeDate": "2026-09-01",
+        "stripeEuro": 31.48,
+        "stripeKey": "STRIPE_TX:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy",
+        "stripeId": "cmtx16lxj004s6de3buhcr1f8",
+        "orderId": null
+      }
+    ]
+  },
+  "punto2_fuoriGateway": {
+    "manualBeforeEuro": 1474.47,
+    "manualsAsPaypalN": 15,
+    "manualsAsPaypalEuro": 636.23,
+    "residualN": 16,
+    "residualEuro": 838.24,
+    "manualsAsPaypal": [
+      {
+        "orderNumber": "FT-CS-26-001",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-05-20",
+        "paypalDate": "2026-05-20",
+        "paypalTx": "4PC01169U59469310",
+        "manualId": "cmtx39fxs001v6dmcgjdfd2hl",
+        "manualKey": "MANUAL_INBOUND:cmpe615zq000al404qij79ek3"
+      },
+      {
+        "orderNumber": "FT-PA-26-003",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-05-20",
+        "paypalDate": "2026-05-20",
+        "paypalTx": "5H283854666757739",
+        "manualId": "cmtx39fxs001w6dmcodwiv0o8",
+        "manualKey": "MANUAL_INBOUND:cmpe5uzyf0005l404g6qpnjq4"
+      },
+      {
+        "orderNumber": "FT-CO-26-004",
+        "buyer": "DANIELA RAMPOLDI",
+        "euro": 32.48,
+        "manualDate": "2026-05-23",
+        "paypalDate": "2026-05-23",
+        "paypalTx": "8JD06462TK660002D",
+        "manualId": "cmtx39fxs001u6dmcy6wimp65",
+        "manualKey": "MANUAL_INBOUND:cmpi3vzfm0001k604jn1zpcz1"
+      },
+      {
+        "orderNumber": "FT-PA-26-004",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-06-17",
+        "paypalDate": "2026-06-17",
+        "paypalTx": "4M534393CB5993543",
+        "manualId": "cmtx39fxs001r6dmcg0t0xsel",
+        "manualKey": "MANUAL_INBOUND:cmqi3gil20001jp04a5criwde"
+      },
+      {
+        "orderNumber": "FT-CS-26-002",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-06-17",
+        "paypalDate": "2026-06-17",
+        "paypalTx": "6TH09938PJ296300P",
+        "manualId": "cmtx39fxs001s6dmcuiqi135j",
+        "manualKey": "MANUAL_INBOUND:cmqi32zda0002le04svrim4si"
+      },
+      {
+        "orderNumber": "FT-CS-26-003",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-07-04",
+        "paypalDate": "2026-07-04",
+        "paypalTx": "7AG32350H80780641",
+        "manualId": "cmtx39fxs001l6dmca4tukmbe",
+        "manualKey": "MANUAL_INBOUND:cmr64j74f000fl104rqg5myod"
+      },
+      {
+        "orderNumber": "FT-PA-26-005",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-07-04",
+        "paypalDate": "2026-07-04",
+        "paypalTx": "4KR3840372651452V",
+        "manualId": "cmtx39fxs001m6dmcwbml7egc",
+        "manualKey": "MANUAL_INBOUND:cmr64du1w0001l104b7v3oxkf"
+      },
+      {
+        "orderNumber": "FF-PA-26-001",
+        "buyer": "Luciano Mammì",
+        "euro": 144.98,
+        "manualDate": "2026-07-04",
+        "paypalDate": "2026-07-04",
+        "paypalTx": "41V916837L4471622",
+        "manualId": "cmtx39fxs001o6dmc242m2dv4",
+        "manualKey": "MANUAL_INBOUND:cmr63hk9q0001l404p4lhstdd"
+      },
+      {
+        "orderNumber": "FT-ME-26-001",
+        "buyer": "Maria  Puliafico",
+        "euro": 49.99,
+        "manualDate": "2026-07-15",
+        "paypalDate": "2026-07-15",
+        "paypalTx": "6TL5310123588930U",
+        "manualId": "cmtx39fxs001i6dmcxo9af0ib",
+        "manualKey": "MANUAL_INBOUND:cmrlxhp900002jn04pwh9flvv"
+      },
+      {
+        "orderNumber": "FT-PD-26-001",
+        "buyer": "Filomena Maiorano",
+        "euro": 37.99,
+        "manualDate": "2026-07-16",
+        "paypalDate": "2026-07-19",
+        "paypalTx": "0CW42027YJ1249932",
+        "manualId": "cmtx39fxs001j6dmc8kmzo9e6",
+        "manualKey": "MANUAL_INBOUND:cmrnjw44c0000la04aa7cf55c"
+      },
+      {
+        "orderNumber": "FT-CS-26-004",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-07-30",
+        "paypalDate": "2026-07-30",
+        "paypalTx": "6VK458505N684563M",
+        "manualId": "cmtx39fxs001e6dmc0omhl0tk",
+        "manualKey": "MANUAL_INBOUND:cms7kwdw9000cjx044yhnh3bc"
+      },
+      {
+        "orderNumber": "FT-PA-26-007",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-07-30",
+        "paypalDate": "2026-07-30",
+        "paypalTx": "2EH437754S823943P",
+        "manualId": "cmtx39fxs001f6dmcbgpglhie",
+        "manualKey": "MANUAL_INBOUND:cms7kh4470001ju04ts9h3ezm"
+      },
+      {
+        "orderNumber": "FT-PA-26-008",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-08-17",
+        "paypalDate": "2026-08-17",
+        "paypalTx": "1MY53925HD243102B",
+        "manualId": "cmtx39fxr00156dmcsc07ltz4",
+        "manualKey": "MANUAL_INBOUND:cmsxasq2y000gl304oth7ffq3"
+      },
+      {
+        "orderNumber": "FT-CS-26-006",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "manualDate": "2026-08-17",
+        "paypalDate": "2026-08-17",
+        "paypalTx": "17H07453VC966154S",
+        "manualId": "cmtx39fxr00166dmc4z6v6zfe",
+        "manualKey": "MANUAL_INBOUND:cmsxam9pn0001l304jx3gae4y"
+      },
+      {
+        "orderNumber": "FT-MB-26-002",
+        "buyer": "Carolina Negrini Bertelli",
+        "euro": 55.99,
+        "manualDate": "2026-09-09",
+        "paypalDate": "2026-09-09",
+        "paypalTx": "",
+        "manualId": "cmtx39fxr00136dmcpk5i73p9",
+        "manualKey": "MANUAL_INBOUND:cmttyazkg0000jr04ldu6tiab"
+      }
+    ],
+    "residual": [
+      {
+        "orderNumber": "FT-CS-26-005",
+        "buyer": "Luciano Mammì",
+        "euro": 31.48,
+        "date": "2026-08-17",
+        "key": "MANUAL_INBOUND:cmsx9hwv00001k104uoepnd89",
+        "id": "cmtx39fxr00176dmc3cgvvvws"
+      },
+      {
+        "orderNumber": "FT-RM-26-002",
+        "buyer": "Angelica Blancussi",
+        "euro": 52.48,
+        "date": "2026-08-13",
+        "key": "MANUAL_INBOUND:cmsrxeaki0001la04r3diximm",
+        "id": "cmtx39fxr00196dmcjyfal88p"
+      },
+      {
+        "orderNumber": "FF-PN-26-002",
+        "buyer": "Edy, Lori and Dana Moras",
+        "euro": 69.99,
+        "date": "2026-08-10",
+        "key": "MANUAL_INBOUND:cmsnghl7y0000ie04c47zru2x",
+        "id": "cmtx39fxr001a6dmcwzwcmfpm"
+      },
+      {
+        "orderNumber": "FT-RC-26-002",
+        "buyer": "Valentina Cecchini",
+        "euro": 29.99,
+        "date": "2026-08-01",
+        "key": "MANUAL_INBOUND:cmsalfwki0000js04s4hbqh1i",
+        "id": "cmtx39fxs001b6dmcmf7zjs4s"
+      },
+      {
+        "orderNumber": "FF-PD-26-003",
+        "buyer": "Confartigianato Pordenone",
+        "euro": 69.99,
+        "date": "2026-07-03",
+        "key": "MANUAL_INBOUND:cmr5483ir0000l4046lw2q6m0",
+        "id": "cmtx39fxs001n6dmc11hybuvl"
+      },
+      {
+        "orderNumber": "FF-PD-26-002",
+        "buyer": "Francesco Nicolato",
+        "euro": 104.98,
+        "date": "2026-07-02",
+        "key": "MANUAL_INBOUND:cmr3zmkcd0000l404p75vvvnm",
+        "id": "cmtx39fxs001p6dmcev6osijp"
+      },
+      {
+        "orderNumber": "FF-VR-26-001",
+        "buyer": "Riccardo Segantini",
+        "euro": 64.98,
+        "date": "2026-06-22",
+        "key": "MANUAL_INBOUND:cmqpbuuay0004jv04cq34sfpe",
+        "id": "cmtx39fxs001q6dmcewutg2c6"
+      },
+      {
+        "orderNumber": "FT-RC-26-001",
+        "buyer": "Andrea Gaeta",
+        "euro": 43.97,
+        "date": "2026-06-13",
+        "key": "MANUAL_INBOUND:cmqc1wwci0001i904ons8tse3",
+        "id": "cmtx39fxs001t6dmcyoc8pv46"
+      },
+      {
+        "orderNumber": "FT-SA-26-001",
+        "buyer": "Ester Irace",
+        "euro": 29.99,
+        "date": "2026-05-19",
+        "key": "MANUAL_INBOUND:cmpcb2j7y0004jv04xlc7wvb2",
+        "id": "cmtx39fxs001x6dmc22aoinol"
+      },
+      {
+        "orderNumber": "FT-MB-26-001",
+        "buyer": "Carolina Negrini Bertelli",
+        "euro": 37.99,
+        "date": "2026-07-20",
+        "key": "MANUAL_INBOUND:cmrt166og0000jw0432noy5dn",
+        "id": "cmtx39fxs001g6dmcik8vjfht"
+      },
+      {
+        "orderNumber": "FF-CO-26-001",
+        "buyer": "Salvatore Marsiglione",
+        "euro": 44.98,
+        "date": "2026-07-21",
+        "key": "MANUAL_INBOUND:cmrusit6y0000l8046wbck8a9",
+        "id": "cmtx39fxs001h6dmc3m38mkgc"
+      },
+      {
+        "orderNumber": "FT-ME-26-002",
+        "buyer": "Rosetta  Paladino",
+        "euro": 47.46,
+        "date": "2026-08-04",
+        "key": "MANUAL_INBOUND:cmsebfvr20002l504aq9nfqfr",
+        "id": "cmtx39fxs001d6dmcmv1c050r"
+      },
+      {
+        "orderNumber": "FF-PN-26-004",
+        "buyer": "Oreste Poverello",
+        "euro": 89.99,
+        "date": "2026-08-21",
+        "key": "MANUAL_INBOUND:cmt2pq29v0000la043ksaow9c",
+        "id": "cmtx39fxr00146dmcuqnk0vc3"
+      },
+      {
+        "orderNumber": "FF-PN-26-003",
+        "buyer": "Amanda Favot",
+        "euro": 39.99,
+        "date": "2026-08-17",
+        "key": "MANUAL_INBOUND:cmsxf7d4o0000ic04toy2f9rk",
+        "id": "cmtx39fxr00186dmcasfo3vyn"
+      },
+      {
+        "orderNumber": "FF-PN-26-001",
+        "buyer": "Daniela Barilari",
+        "euro": 39.99,
+        "date": "2026-08-07",
+        "key": "MANUAL_INBOUND:cmsilmkhn0000l104avptjk6y",
+        "id": "cmtx39fxs001c6dmcj1vhvza0"
+      },
+      {
+        "orderNumber": "FF-PD-26-004",
+        "buyer": "Giulio Rosace",
+        "euro": 39.99,
+        "date": "2026-07-10",
+        "key": "MANUAL_INBOUND:cmrekxg4p0000l704cv80kg3m",
+        "id": "cmtx39fxs001k6dmc7m196lj5"
+      }
+    ],
+    "stripeEuNotDoubleEuro": 1928.98,
+    "stripeEuNotDoubleN": 30,
+    "expectedStripeEuEuro": 1121.18
+  },
+  "punto3_paypalReconcile": {
+    "incassiEuro": 1351.98,
+    "commissioniFromSalesCsvEuro": 47.73,
+    "speseLedgerEuro": -2319.64,
+    "prelieviLedgerEuro": 566.76,
+    "prelieviFinecoRefEuro": 569.88,
+    "equationDraftEuro": -1585.27
+  },
+  "payLaterMay3Rows": [
+    {
+      "tipo": "Pagamento Express Checkout",
+      "lordo": "53,48",
+      "nome": "Maria Antonia Pozzi",
+      "tx": "1T757598T7263511M",
+      "oggetto": "Acquisto Floremoria",
+      "impatto": "Accredito"
+    }
+  ],
+  "unusedPaypalTxNotInReport": [
+    {
+      "date": "2026-05-04",
+      "cents": 1000,
+      "feeCents": 69,
+      "name": "Maria Antonia Pozzi",
+      "type": "Pagamento generico",
+      "txId": "5S1939199N219094Y",
+      "payLater": false
+    }
+  ]
+}

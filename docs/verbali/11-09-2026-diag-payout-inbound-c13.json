@@ -1,0 +1,1153 @@
+{
+  "generatedAt": "2026-09-11T15:06:15.438Z",
+  "operativi": {
+    "activeN": 75,
+    "activeEuro": 4098.68,
+    "byQ": {
+      "T1": {
+        "n": 21,
+        "euro": 1038.23
+      },
+      "T2": {
+        "n": 21,
+        "euro": 1211.03
+      },
+      "T3": {
+        "n": 33,
+        "euro": 1849.42
+      }
+    },
+    "poses": [
+      "FT-MC-26-006",
+      "FT-MC-26-005",
+      "FT-MC-26-003",
+      "FT-MC-26-004"
+    ]
+  },
+  "payoutBefore": {
+    "stripeN": 83,
+    "stripeEuro": 5160.16,
+    "paypalN": 38,
+    "paypalEuro": 1086.03,
+    "totalEuro": 6246.19
+  },
+  "payoutAfter": {
+    "stripeN": 83,
+    "stripeEuro": 5430.17,
+    "paypalN": 25,
+    "paypalEuro": 566.76,
+    "totalEuro": 5996.93,
+    "reversed": 50,
+    "payoutInsert": {
+      "inserted": 37,
+      "skipped": 10
+    }
+  },
+  "duplicates": [
+    {
+      "date": "2026-05-28",
+      "euro": 30.87,
+      "sourceA": "STRIPE_PAYOUT:txn_1TbsDK4W4pZWhSUs8ahBjb4D",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1TbsDK4W4pZWhSUsHr2btVRJ",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-05-25",
+      "euro": 23.19,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1Talxg4W4pZWhSUsM3SdT4Rr",
+      "sourceB": "STRIPE_PAYOUT:po_1Talxf4W4pZWhSUseIgjY0ab",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-05-25",
+      "euro": 23.19,
+      "sourceA": "STRIPE_PAYOUT:txn_1Talxg4W4pZWhSUsM3SdT4Rr",
+      "sourceB": "STRIPE_PAYOUT:po_1Talxf4W4pZWhSUseIgjY0ab",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-18",
+      "euro": 41.99,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1TjTO64W4pZWhSUs9C6IQJsK",
+      "sourceB": "STRIPE_PAYOUT:po_1TjTO44W4pZWhSUsQSoOcpSY",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-18",
+      "euro": 41.99,
+      "sourceA": "STRIPE_PAYOUT:txn_1TjTO64W4pZWhSUs9C6IQJsK",
+      "sourceB": "STRIPE_PAYOUT:po_1TjTO44W4pZWhSUsQSoOcpSY",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-22",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:txn_1TkvQf4W4pZWhSUsEP6tFfQP",
+      "sourceB": "STRIPE_PAYOUT:po_1TkvQf4W4pZWhSUsCT99Zvo7",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-22",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1TkvQf4W4pZWhSUsEP6tFfQP",
+      "sourceB": "STRIPE_PAYOUT:po_1TkvQf4W4pZWhSUsCT99Zvo7",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-25",
+      "euro": 63.76,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1Tm0qh4W4pZWhSUs5YoyXsSa",
+      "sourceB": "STRIPE_PAYOUT:po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-07-09",
+      "euro": 199.11,
+      "sourceA": "STRIPE_PAYOUT:txn_1Tr60T4W4pZWhSUs4i688CMS",
+      "sourceB": "STRIPE_PAYOUT:po_1Tr60T4W4pZWhSUsSs6s698H",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-07-09",
+      "euro": 199.11,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1Tr60T4W4pZWhSUs4i688CMS",
+      "sourceB": "STRIPE_PAYOUT:po_1Tr60T4W4pZWhSUsSs6s698H",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-07-20",
+      "euro": 47.74,
+      "sourceA": "STRIPE_PAYOUT:txn_1Tv5P44W4pZWhSUsie2nqHPE",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1Tv5P44W4pZWhSUsbKJdN3rS",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-07-20",
+      "euro": 47.74,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1Tv5P44W4pZWhSUsie2nqHPE",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1Tv5P44W4pZWhSUsbKJdN3rS",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-04",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:txn_1U0WaT4W4pZWhSUs3fP4d72t",
+      "sourceB": "STRIPE_PAYOUT:po_1U0WaT4W4pZWhSUsXzocnouD",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-07",
+      "euro": 46.5,
+      "sourceA": "STRIPE_PAYOUT:txn_1U1bx44W4pZWhSUso5OsB2MB",
+      "sourceB": "STRIPE_PAYOUT:po_1U1bx44W4pZWhSUsOFL2vjeo",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-07",
+      "euro": 46.5,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U1bx44W4pZWhSUso5OsB2MB",
+      "sourceB": "STRIPE_PAYOUT:po_1U1bx44W4pZWhSUsOFL2vjeo",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-18",
+      "euro": 51.44,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U5bCT4W4pZWhSUstG4NLn4o",
+      "sourceB": "STRIPE_PAYOUT:po_1U5bCT4W4pZWhSUsrk3ZaQkM",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-18",
+      "euro": 51.44,
+      "sourceA": "STRIPE_PAYOUT:txn_1U5bCT4W4pZWhSUstG4NLn4o",
+      "sourceB": "STRIPE_PAYOUT:po_1U5bCT4W4pZWhSUsrk3ZaQkM",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-20",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U6JlQ4W4pZWhSUstkrkD8Pu",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1U6JlQ4W4pZWhSUsG0R3lVE2",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-24",
+      "euro": 46.5,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U7loQ4W4pZWhSUsKnxuxAi5",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1U7loQ4W4pZWhSUs11D6UGlS",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-27",
+      "euro": 51.58,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U8rHb4W4pZWhSUsyo3LCigi",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1U8rHb4W4pZWhSUsBDkeD4qL",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-31",
+      "euro": 50.62,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1UAJEp4W4pZWhSUszgRvaTOQ",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1UAJEo4W4pZWhSUsvLx2E0Qw",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-09-03",
+      "euro": 83.04,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1UBP1r4W4pZWhSUsfzxOqMcq",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1UBP1q4W4pZWhSUsZwRZZvHI",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-09-04",
+      "euro": 59.48,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1UBkqR4W4pZWhSUsEkWcMl9A",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1UBkqR4W4pZWhSUsKTr1NyRd",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-05-28",
+      "euro": 30.87,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1TbsDK4W4pZWhSUs8ahBjb4D",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1TbsDK4W4pZWhSUsHr2btVRJ",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-06-25",
+      "euro": 63.76,
+      "sourceA": "STRIPE_PAYOUT:txn_1Tm0qh4W4pZWhSUs5YoyXsSa",
+      "sourceB": "STRIPE_PAYOUT:po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-08-04",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1U0WaT4W4pZWhSUs3fP4d72t",
+      "sourceB": "STRIPE_PAYOUT:po_1U0WaT4W4pZWhSUsXzocnouD",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-09-02",
+      "euro": 58.28,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_txn_1UB2T64W4pZWhSUsMNff6th4",
+      "sourceB": "STRIPE_PAYOUT:stripe_tx_po_1UB2T54W4pZWhSUsEhmI1zoA",
+      "reason": "speculare API: balance_txn del payout vs id po_*"
+    },
+    {
+      "date": "2026-05-25",
+      "euro": 23.19,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1Talxf4W4pZWhSUseIgjY0ab",
+      "sourceB": "già tenuto po_1Talxf4W4pZWhSUseIgjY0ab",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-05-28",
+      "euro": 30.87,
+      "sourceA": "STRIPE_PAYOUT:po_1TbsDK4W4pZWhSUsHr2btVRJ",
+      "sourceB": "già tenuto po_1TbsDK4W4pZWhSUsHr2btVRJ",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-06-22",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1TkvQf4W4pZWhSUsCT99Zvo7",
+      "sourceB": "già tenuto po_1TkvQf4W4pZWhSUsCT99Zvo7",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-06-25",
+      "euro": 63.76,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+      "sourceB": "già tenuto po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-07-20",
+      "euro": 47.74,
+      "sourceA": "STRIPE_PAYOUT:po_1Tv5P44W4pZWhSUsbKJdN3rS",
+      "sourceB": "già tenuto po_1Tv5P44W4pZWhSUsbKJdN3rS",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-08-07",
+      "euro": 46.5,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U1bx44W4pZWhSUsOFL2vjeo",
+      "sourceB": "già tenuto po_1U1bx44W4pZWhSUsOFL2vjeo",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-06-18",
+      "euro": 41.99,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1TjTO44W4pZWhSUsQSoOcpSY",
+      "sourceB": "già tenuto po_1TjTO44W4pZWhSUsQSoOcpSY",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-08-18",
+      "euro": 51.44,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U5bCT4W4pZWhSUsrk3ZaQkM",
+      "sourceB": "già tenuto po_1U5bCT4W4pZWhSUsrk3ZaQkM",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-07-09",
+      "euro": 199.11,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1Tr60T4W4pZWhSUsSs6s698H",
+      "sourceB": "già tenuto po_1Tr60T4W4pZWhSUsSs6s698H",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-08-04",
+      "euro": 59.8,
+      "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U0WaT4W4pZWhSUsXzocnouD",
+      "sourceB": "già tenuto po_1U0WaT4W4pZWhSUsXzocnouD",
+      "reason": "doppio STRIPE_PAYOUT stesso po_*"
+    },
+    {
+      "date": "2026-05-23",
+      "euro": 31.03,
+      "sourceA": "PAYPAL_PAYOUT:2RD93975121947547",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-06-17",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:6FA114016S3703910",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-06-17",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:2SA31380VW037050J",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-04",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:62J918634F595754E",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-15",
+      "euro": 47.94,
+      "sourceA": "PAYPAL_PAYOUT:36K80265272367642",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-08-17",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:8LS0062362349335V",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-05-20",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:45A05250SA5623111",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-05-20",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:4VN06133RT160251V",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-04",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:9SA47771A0966074S",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-30",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:4UE20710BL2889229",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-30",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:2VE7273696298024R",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-08-17",
+      "euro": 30.06,
+      "sourceA": "PAYPAL_PAYOUT:7S712980A06742112",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    },
+    {
+      "date": "2026-07-04",
+      "euro": 139.7,
+      "sourceA": "PAYPAL_PAYOUT:3NA791576H091913T",
+      "sourceB": "—",
+      "reason": "PayPal mal classificato come PAYOUT (trasferimento ordine, non prelievo→banca)"
+    }
+  ],
+  "fineco": {
+    "stripeEuro": 2878.26,
+    "paypalEuro": 569.88,
+    "totalEuro": 3448.14,
+    "note": "Fonte esterna: accrediti Ord: Stripe/PayPal su estratto Fineco 2026",
+    "deltaTransitMinusFineco": 2548.7900000000004
+  },
+  "equation": {
+    "fatturato": 4098.68,
+    "fees": 178.49,
+    "payoutAttesoPerSaldo100": 3820.19,
+    "saldoAtteso": 100,
+    "payoutLedgerDopo": 5996.93,
+    "finecoPayouts": 3448.14
+  },
+  "inbound": {
+    "inserted": 31,
+    "skipped": 0,
+    "candidates": 31,
+    "coverage": {
+      "dbOrdersMatchedCsv": 42,
+      "withInbound": 62,
+      "missing": [],
+      "csvNotInDb": [
+        "2I2JYD",
+        "OJMIPB",
+        "UFW1P6",
+        "VYEM83",
+        "TBY8FI",
+        "5QC4K2",
+        "XXYD7J",
+        "QGZRJC",
+        "QLZ5OA",
+        "YYGY34",
+        "5SX0R9",
+        "RE6XVW",
+        "FSQVTC",
+        "SLSWE4",
+        "HI6MGJ",
+        "ODUMO5",
+        "WD97U0",
+        "HIW0G6",
+        "ZQ8EDF",
+        "X98W7N",
+        "891QTE",
+        "VV49L1",
+        "DDWH9H",
+        "UP50H8",
+        "4LIM4N",
+        "DS2DFE",
+        "0UZNLL",
+        "OP287H",
+        "1IL0QO",
+        "VI2WRA",
+        "11XO78",
+        "HTRPHJ",
+        "OBSZ70"
+      ]
+    },
+    "createdDaIdentificare": 31
+  },
+  "balances": {
+    "stripeLedgerEuro": -319.93,
+    "paypalLedgerEuro": -1504.72,
+    "totalLedgerEuro": -1824.65,
+    "declaredStripe": 100,
+    "declaredPaypal": 0
+  },
+  "legs2026Euro": {
+    "STRIPE_TX": 3472.37,
+    "STRIPE_FEE": 130.07,
+    "STRIPE_PAYOUT": 5430.17,
+    "STRIPE_REFUND": 139.95,
+    "PAYPAL_TX": 3200.35,
+    "PAYPAL_FEE": 27.69,
+    "PAYPAL_PAYOUT": 566.76,
+    "PAYPAL_REFUND": 43.32,
+    "MANUAL_INBOUND": 1474.47
+  },
+  "c13": {
+    "passed": false,
+    "verifiable": true,
+    "detail": "STRIPE: ledger=-319.93 · dich.=100.00 · Δ=-419.93 · PAYPAL: ledger=-1504.72 · dich.=0.00 · Δ=-1504.72",
+    "gaps": [
+      {
+        "gateway": "STRIPE",
+        "ledgerCents": -31993,
+        "declaredCents": 10000,
+        "deltaCents": -41993,
+        "verifiable": true,
+        "sampleLedgerEvents": [
+          "2026-09-10 STRIPE_PAYOUT:po_1UDvan4W4pZWhSUsge2pRPub €-297.85",
+          "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €204.98",
+          "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €-6.91",
+          "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €104.98",
+          "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €-3.66",
+          "2026-09-04 STRIPE_PAYOUT:po_1UBkqR4W4pZWhSUsKTr1NyRd €-59.48",
+          "2026-09-04 STRIPE_PAYOUT:stripe_tx_po_1UBkqR4W4pZWhSUsKTr1NyRd €-59.48",
+          "2026-09-03 STRIPE_PAYOUT:po_1UBP1q4W4pZWhSUsZwRZZvHI €-83.04",
+          "2026-09-03 STRIPE_PAYOUT:stripe_tx_po_1UBP1q4W4pZWhSUsZwRZZvHI €-83.04",
+          "2026-09-02 STRIPE_PAYOUT:po_1UB2T54W4pZWhSUsEhmI1zoA €-58.28",
+          "2026-09-02 STRIPE_PAYOUT:stripe_tx_po_1UB2T54W4pZWhSUsEhmI1zoA €-58.28",
+          "2026-09-01 STRIPE_TX:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy €31.48"
+        ]
+      },
+      {
+        "gateway": "PAYPAL",
+        "ledgerCents": -150472,
+        "declaredCents": 0,
+        "deltaCents": -150472,
+        "verifiable": true,
+        "sampleLedgerEvents": [
+          "2026-09-09 PAYPAL_FEE:22A12950PA842023C €-2.25",
+          "2026-09-09 PAYPAL_TX:22A12950PA842023C €55.99",
+          "2026-09-07 PAYPAL_TX:2TR85032CG585613W €-18.00",
+          "2026-09-07 PAYPAL_TX:3MS885357J5563024 €-2.15",
+          "2026-09-04 PAYPAL_TX:0AA82585GY557414F €-17.27",
+          "2026-09-03 PAYPAL_TX:3U991649NR1501110 €-17.75",
+          "2026-09-02 PAYPAL_TX:9DP27547YE017041U €-22.27",
+          "2026-09-01 PAYPAL_TX:3YB17456XU8050735 €-1.24",
+          "2026-08-24 PAYPAL_TX:2AM45565K29476531 €-21.99",
+          "2026-08-17 PAYPAL_PAYOUT:1W3271354Y942562S €-0.09",
+          "2026-08-17 PAYPAL_TX:9UK54955PY001181K €-5.00",
+          "2026-08-16 PAYPAL_TX:16H927898X484033R €-0.99"
+        ]
+      }
+    ]
+  },
+  "countDiff": {
+    "taxRegisterN": 74,
+    "csvActiveN": 75,
+    "inTrioNotCsv": [],
+    "inCsvNotTrio": [
+      {
+        "orderNumber": "FT-RM-26-002",
+        "euro": 52.48
+      },
+      {
+        "orderNumber": "2I2JYD",
+        "euro": 49.46
+      },
+      {
+        "orderNumber": "OJMIPB",
+        "euro": 89.99
+      },
+      {
+        "orderNumber": "UFW1P6",
+        "euro": 84.98
+      },
+      {
+        "orderNumber": "VYEM83",
+        "euro": 49.99
+      },
+      {
+        "orderNumber": "TBY8FI",
+        "euro": 53.48
+      },
+      {
+        "orderNumber": "5QC4K2",
+        "euro": 45.97
+      },
+      {
+        "orderNumber": "XXYD7J",
+        "euro": 54.98
+      },
+      {
+        "orderNumber": "QGZRJC",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "QLZ5OA",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "YYGY34",
+        "euro": 59.98
+      },
+      {
+        "orderNumber": "5SX0R9",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "RE6XVW",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "FSQVTC",
+        "euro": 144.98
+      },
+      {
+        "orderNumber": "SLSWE4",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "HI6MGJ",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "ODUMO5",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "WD97U0",
+        "euro": 34.99
+      },
+      {
+        "orderNumber": "HIW0G6",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "ZQ8EDF",
+        "euro": 69.98
+      },
+      {
+        "orderNumber": "X98W7N",
+        "euro": 72.48
+      },
+      {
+        "orderNumber": "891QTE",
+        "euro": 49.99
+      },
+      {
+        "orderNumber": "VV49L1",
+        "euro": 144.98
+      },
+      {
+        "orderNumber": "DDWH9H",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "UP50H8",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "4LIM4N",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "DS2DFE",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "0UZNLL",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "OP287H",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "1IL0QO",
+        "euro": 40.97
+      },
+      {
+        "orderNumber": "VI2WRA",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "11XO78",
+        "euro": 29.99
+      },
+      {
+        "orderNumber": "HTRPHJ",
+        "euro": 39.99
+      },
+      {
+        "orderNumber": "OBSZ70",
+        "euro": 39.99
+      }
+    ]
+  },
+  "fatturato4587": "Fonte: docs/verbali/09-09-2026-collegamento-incassi-ordini.md — «vendite verificate a mano €4.587,01». Stima manuale pre-lista operativa; dismettere a favore di €4.098,68 (75 ordini).",
+  "pass2": {
+    "reversedNonCanonicalPo": 56,
+    "insertedPo": {
+      "inserted": 0,
+      "skipped": 47
+    },
+    "extraDups": [
+      {
+        "date": "2025-11-04",
+        "euro": 65.28,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SPXzNRrkwwcYwepw0yFH2xf",
+        "sourceB": "STRIPE_PAYOUT:po_1SPXzNRrkwwcYwepw0yFH2xf",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-11-06",
+        "euro": 176.09,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SQHCMRrkwwcYwep7lPZZhoW",
+        "sourceB": "STRIPE_PAYOUT:po_1SQHCMRrkwwcYwep7lPZZhoW",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-11-13",
+        "euro": 82.52,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SSo2hRrkwwcYwepFpgAfVbw",
+        "sourceB": "STRIPE_PAYOUT:po_1SSo2hRrkwwcYwepFpgAfVbw",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-11-21",
+        "euro": 106.63,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SVi0aRrkwwcYwepCR51BJtS",
+        "sourceB": "STRIPE_PAYOUT:po_1SVi0aRrkwwcYwepCR51BJtS",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-12-10",
+        "euro": 28.82,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1ScaywRrkwwcYwepsdz4OXip",
+        "sourceB": "STRIPE_PAYOUT:po_1ScaywRrkwwcYwepsdz4OXip",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-12-29",
+        "euro": 13.97,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SjU98RrkwwcYwepGykgsB8X",
+        "sourceB": "STRIPE_PAYOUT:po_1SjU98RrkwwcYwepGykgsB8X",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-10-30",
+        "euro": 62.41,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SNjI9RrkwwcYwepEEnXW1qe",
+        "sourceB": "STRIPE_PAYOUT:po_1SNjI9RrkwwcYwepEEnXW1qe",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-10-31",
+        "euro": 33.43,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SO5mCRrkwwcYwepCbtGo8JC",
+        "sourceB": "STRIPE_PAYOUT:po_1SO5mCRrkwwcYwepCbtGo8JC",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-07-24",
+        "euro": 196.74,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1RoCjURrkwwcYwep5qhFAwDx",
+        "sourceB": "STRIPE_PAYOUT:po_1RoCjURrkwwcYwep5qhFAwDx",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-08-07",
+        "euro": 31.38,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1RtHRERrkwwcYwepbwqRhy78",
+        "sourceB": "STRIPE_PAYOUT:po_1RtHRERrkwwcYwepbwqRhy78",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-08-18",
+        "euro": 192.54,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1RxGXeRrkwwcYwepZNB2viG5",
+        "sourceB": "STRIPE_PAYOUT:po_1RxGXeRrkwwcYwepZNB2viG5",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-08-28",
+        "euro": 39.14,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1S0tQ1RrkwwcYwepspOV6Fu8",
+        "sourceB": "STRIPE_PAYOUT:po_1S0tQ1RrkwwcYwepspOV6Fu8",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-09-01",
+        "euro": 417.58,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1S2LD0RrkwwcYwepvaTGyplV",
+        "sourceB": "STRIPE_PAYOUT:po_1S2LD0RrkwwcYwepvaTGyplV",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-09-08",
+        "euro": 98.39,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1S4snZRrkwwcYwep8VCRkP3S",
+        "sourceB": "STRIPE_PAYOUT:po_1S4snZRrkwwcYwep8VCRkP3S",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-09-26",
+        "euro": 87.94,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SBP6ARrkwwcYwep1qBssF7o",
+        "sourceB": "STRIPE_PAYOUT:po_1SBP6ARrkwwcYwep1qBssF7o",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-10-09",
+        "euro": 102.64,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SG7LFRrkwwcYwepQLU76Bqm",
+        "sourceB": "STRIPE_PAYOUT:po_1SG7LFRrkwwcYwepQLU76Bqm",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-10-28",
+        "euro": 38.61,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SN0Z0RrkwwcYwep1yG1yIHq",
+        "sourceB": "STRIPE_PAYOUT:po_1SN0Z0RrkwwcYwep1yG1yIHq",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2025-10-29",
+        "euro": 141.84,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SNN2eRrkwwcYwepaX64kbBY",
+        "sourceB": "STRIPE_PAYOUT:po_1SNN2eRrkwwcYwepaX64kbBY",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-01-27",
+        "euro": 39.59,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1StzhyRrkwwcYwep9fWIinGV",
+        "sourceB": "STRIPE_PAYOUT:po_1StzhyRrkwwcYwep9fWIinGV",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-02-24",
+        "euro": 38.6,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1T49LDRrkwwcYwepVxnMxQDz",
+        "sourceB": "STRIPE_PAYOUT:po_1T49LDRrkwwcYwepVxnMxQDz",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-02",
+        "euro": 28.98,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1T6K8MRrkwwcYwepuWGHjQL8",
+        "sourceB": "STRIPE_PAYOUT:po_1T6K8MRrkwwcYwepuWGHjQL8",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-03",
+        "euro": 38.24,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1T6gg0RrkwwcYwepPr3MthtM",
+        "sourceB": "STRIPE_PAYOUT:po_1T6gg0RrkwwcYwepPr3MthtM",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-19",
+        "euro": 67.89,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TCU3IRrkwwcYwep7ak4w35I",
+        "sourceB": "STRIPE_PAYOUT:po_1TCU3IRrkwwcYwep7ak4w35I",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-23",
+        "euro": 38.94,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TDwRhRrkwwcYwepUIqwrL1E",
+        "sourceB": "STRIPE_PAYOUT:po_1TDwRhRrkwwcYwepUIqwrL1E",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-24",
+        "euro": 34.05,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TEIQPRrkwwcYwep4wBEmB66",
+        "sourceB": "STRIPE_PAYOUT:po_1TEIQPRrkwwcYwep4wBEmB66",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-04-02",
+        "euro": 28.3,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1THZBHRrkwwcYwepmcvirfFj",
+        "sourceB": "STRIPE_PAYOUT:po_1THZBHRrkwwcYwepmcvirfFj",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-04-07",
+        "euro": 141.84,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TJNEORrkwwcYwepQyjbvpKO",
+        "sourceB": "STRIPE_PAYOUT:po_1TJNEORrkwwcYwepQyjbvpKO",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-04-21",
+        "euro": 27.99,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TOSH7RrkwwcYwep9gkxsA8o",
+        "sourceB": "STRIPE_PAYOUT:po_1TOSH7RrkwwcYwep9gkxsA8o",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-04-30",
+        "euro": 38.94,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TRiQ1RrkwwcYwepbV8qdLoY",
+        "sourceB": "STRIPE_PAYOUT:po_1TRiQ1RrkwwcYwepbV8qdLoY",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-05-04",
+        "euro": 53.64,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TT9y1RrkwwcYwepGzjrFIdU",
+        "sourceB": "STRIPE_PAYOUT:po_1TT9y1RrkwwcYwepGzjrFIdU",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-05-05",
+        "euro": 44.8,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TTWeyRrkwwcYwepAFPG1e0z",
+        "sourceB": "STRIPE_PAYOUT:po_1TTWeyRrkwwcYwepAFPG1e0z",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-05-07",
+        "euro": 278.75,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TUFpVRrkwwcYwepdieDSIqT",
+        "sourceB": "STRIPE_PAYOUT:po_1TUFpVRrkwwcYwepdieDSIqT",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-05-28",
+        "euro": 82.63,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TbryNRrkwwcYwepAHfw64C5",
+        "sourceB": "STRIPE_PAYOUT:po_1TbryNRrkwwcYwepAHfw64C5",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-05-28",
+        "euro": 30.87,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1TbsDK4W4pZWhSUsHr2btVRJ",
+        "sourceB": "STRIPE_PAYOUT:po_1TbsDK4W4pZWhSUsHr2btVRJ",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-06-19",
+        "euro": 48.1,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TjpuKRrkwwcYwepqWFBq66Z",
+        "sourceB": "STRIPE_PAYOUT:po_1TjpuKRrkwwcYwepqWFBq66Z",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-07-08",
+        "euro": 68.06,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1Tqj1GRrkwwcYwepBOo9FXCU",
+        "sourceB": "STRIPE_PAYOUT:po_1Tqj1GRrkwwcYwepBOo9FXCU",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-07-14",
+        "euro": 38.84,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TstnORrkwwcYwepEqY4tWB7",
+        "sourceB": "STRIPE_PAYOUT:po_1TstnORrkwwcYwepEqY4tWB7",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-07-20",
+        "euro": 47.74,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1Tv5P44W4pZWhSUsbKJdN3rS",
+        "sourceB": "STRIPE_PAYOUT:po_1Tv5P44W4pZWhSUsbKJdN3rS",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-07-21",
+        "euro": 36.89,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TvRW5RrkwwcYwepAWCVstvX",
+        "sourceB": "STRIPE_PAYOUT:po_1TvRW5RrkwwcYwepAWCVstvX",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-06",
+        "euro": 29.07,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1U1FQERrkwwcYwepOa5Y60Rs",
+        "sourceB": "STRIPE_PAYOUT:po_1U1FQERrkwwcYwepOa5Y60Rs",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-11",
+        "euro": 38.84,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1U33EORrkwwcYweps9AoOX0S",
+        "sourceB": "STRIPE_PAYOUT:po_1U33EORrkwwcYweps9AoOX0S",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-13",
+        "euro": 66.95,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1U3mTNRrkwwcYwepQIiMFglc",
+        "sourceB": "STRIPE_PAYOUT:po_1U3mTNRrkwwcYwepQIiMFglc",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-20",
+        "euro": 37.86,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1U6JXIRrkwwcYwep0UnHbIJn",
+        "sourceB": "STRIPE_PAYOUT:po_1U6JXIRrkwwcYwep0UnHbIJn",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-20",
+        "euro": 59.8,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U6JlQ4W4pZWhSUsG0R3lVE2",
+        "sourceB": "STRIPE_PAYOUT:po_1U6JlQ4W4pZWhSUsG0R3lVE2",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-24",
+        "euro": 46.5,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U7loQ4W4pZWhSUs11D6UGlS",
+        "sourceB": "STRIPE_PAYOUT:po_1U7loQ4W4pZWhSUs11D6UGlS",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-26",
+        "euro": 87.72,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1U8UhnRrkwwcYwepefoEMFb1",
+        "sourceB": "STRIPE_PAYOUT:po_1U8UhnRrkwwcYwepefoEMFb1",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-27",
+        "euro": 51.58,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1U8rHb4W4pZWhSUsBDkeD4qL",
+        "sourceB": "STRIPE_PAYOUT:po_1U8rHb4W4pZWhSUsBDkeD4qL",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-08-31",
+        "euro": 50.62,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1UAJEo4W4pZWhSUsvLx2E0Qw",
+        "sourceB": "STRIPE_PAYOUT:po_1UAJEo4W4pZWhSUsvLx2E0Qw",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-09-03",
+        "euro": 83.04,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1UBP1q4W4pZWhSUsZwRZZvHI",
+        "sourceB": "STRIPE_PAYOUT:po_1UBP1q4W4pZWhSUsZwRZZvHI",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-09-04",
+        "euro": 59.48,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1UBkqR4W4pZWhSUsKTr1NyRd",
+        "sourceB": "STRIPE_PAYOUT:po_1UBkqR4W4pZWhSUsKTr1NyRd",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-01-23",
+        "euro": 38.76,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1SsXoIRrkwwcYwepKNsJM7Wx",
+        "sourceB": "STRIPE_PAYOUT:po_1SsXoIRrkwwcYwepKNsJM7Wx",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-03-05",
+        "euro": 141.84,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1T7PyuRrkwwcYwepjCFoH2yT",
+        "sourceB": "STRIPE_PAYOUT:po_1T7PyuRrkwwcYwepjCFoH2yT",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-04-23",
+        "euro": 38.72,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TPB2JRrkwwcYwep4fv1hM3m",
+        "sourceB": "STRIPE_PAYOUT:po_1TPB2JRrkwwcYwep4fv1hM3m",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-06-10",
+        "euro": 87.72,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TgZgbRrkwwcYwep9WTER9qo",
+        "sourceB": "STRIPE_PAYOUT:po_1TgZgbRrkwwcYwep9WTER9qo",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-07-07",
+        "euro": 102.21,
+        "sourceA": "STRIPE_PAYOUT:stripe_eu_tx_po_1TqMxQRrkwwcYwep86yvRSzq",
+        "sourceB": "STRIPE_PAYOUT:po_1TqMxQRrkwwcYwep86yvRSzq",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      },
+      {
+        "date": "2026-09-02",
+        "euro": 58.28,
+        "sourceA": "STRIPE_PAYOUT:stripe_tx_po_1UB2T54W4pZWhSUsEhmI1zoA",
+        "sourceB": "STRIPE_PAYOUT:po_1UB2T54W4pZWhSUsEhmI1zoA",
+        "reason": "prefisso non canonico (stripe_tx_po_ / altro) vs po_*"
+      }
+    ],
+    "inboundInserted": 0,
+    "inboundAlready": 75,
+    "unresolved": [],
+    "coverageActive": {
+      "activeCsv": 75,
+      "covered": 75
+    }
+  },
+  "payoutAfterPass2": {
+    "stripeN": 45,
+    "stripeEuro": 3097.5,
+    "paypalN": 25,
+    "paypalEuro": 566.76,
+    "totalEuro": 3664.26,
+    "sampleKeys": [
+      "STRIPE_PAYOUT:po_1Talxf4W4pZWhSUseIgjY0ab",
+      "STRIPE_PAYOUT:po_1TjTO44W4pZWhSUsQSoOcpSY",
+      "STRIPE_PAYOUT:po_1TkvQf4W4pZWhSUsCT99Zvo7",
+      "STRIPE_PAYOUT:po_1Tm0qg4W4pZWhSUsQHVeQeRf",
+      "STRIPE_PAYOUT:po_1Tr60T4W4pZWhSUsSs6s698H"
+    ]
+  },
+  "finecoPass2": {
+    "totalEuro": 3448.14,
+    "deltaTransitMinusFineco": 216.12000000000035
+  },
+  "balancesPass2": {
+    "stripeLedgerEuro": 3928.69,
+    "paypalLedgerEuro": -1504.72,
+    "total": 2423.97,
+    "declaredStripe": 100,
+    "declaredPaypal": 0
+  },
+  "c13Pass2": {
+    "passed": false,
+    "verifiable": true,
+    "detail": "STRIPE: ledger=3928.69 · dich.=100.00 · Δ=3828.69 · PAYPAL: ledger=-1504.72 · dich.=0.00 · Δ=-1504.72",
+    "gaps": [
+      {
+        "gateway": "STRIPE",
+        "ledgerCents": 392869,
+        "declaredCents": 10000,
+        "deltaCents": 382869,
+        "verifiable": true,
+        "sampleLedgerEvents": [
+          "2026-09-10 STRIPE_PAYOUT:po_1UDvan4W4pZWhSUsge2pRPub €-297.85",
+          "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €204.98",
+          "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCNGm4W4pZWhSUs0AnTRWbQ €-6.91",
+          "2026-09-05 STRIPE_TX:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €104.98",
+          "2026-09-05 STRIPE_FEE:stripe_tx_txn_3UCKIc4W4pZWhSUs1A6Thkoj €-3.66",
+          "2026-09-04 STRIPE_PAYOUT:po_1UBkqR4W4pZWhSUsKTr1NyRd €-59.48",
+          "2026-09-03 STRIPE_PAYOUT:po_1UBP1q4W4pZWhSUsZwRZZvHI €-83.04",
+          "2026-09-02 STRIPE_PAYOUT:po_1UB2T54W4pZWhSUsEhmI1zoA €-58.28",
+          "2026-09-01 STRIPE_TX:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy €31.48",
+          "2026-09-01 STRIPE_FEE:stripe_tx_txn_3UAtR64W4pZWhSUs1J3PImQy €-1.58",
+          "2026-09-01 STRIPE_TX:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL €31.48",
+          "2026-09-01 STRIPE_FEE:stripe_tx_txn_3UAtNU4W4pZWhSUs0DFIwZXL €-1.58"
+        ]
+      },
+      {
+        "gateway": "PAYPAL",
+        "ledgerCents": -150472,
+        "declaredCents": 0,
+        "deltaCents": -150472,
+        "verifiable": true,
+        "sampleLedgerEvents": [
+          "2026-09-09 PAYPAL_FEE:22A12950PA842023C €-2.25",
+          "2026-09-09 PAYPAL_TX:22A12950PA842023C €55.99",
+          "2026-09-07 PAYPAL_TX:2TR85032CG585613W €-18.00",
+          "2026-09-07 PAYPAL_TX:3MS885357J5563024 €-2.15",
+          "2026-09-04 PAYPAL_TX:0AA82585GY557414F €-17.27",
+          "2026-09-03 PAYPAL_TX:3U991649NR1501110 €-17.75",
+          "2026-09-02 PAYPAL_TX:9DP27547YE017041U €-22.27",
+          "2026-09-01 PAYPAL_TX:3YB17456XU8050735 €-1.24",
+          "2026-08-24 PAYPAL_TX:2AM45565K29476531 €-21.99",
+          "2026-08-17 PAYPAL_PAYOUT:1W3271354Y942562S €-0.09",
+          "2026-08-17 PAYPAL_TX:9UK54955PY001181K €-5.00",
+          "2026-08-16 PAYPAL_TX:16H927898X484033R €-0.99"
+        ]
+      }
+    ]
+  },
+  "count75Note": "taxRegister=74 perché FT-RM-26-002 (DELIVERED_UNPAID, €52,48) è escluso dal perimetro ricavi automatico; lista operativa lo conta tra i 75 attivi."
+}

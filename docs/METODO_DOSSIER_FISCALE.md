@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.17 — 11 settembre 2026.
+Versione 1.18 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -659,6 +659,13 @@ senza cancellare le righe di esecuzione.
 ---
 
 ## Registro delle modifiche
+
+**1.18 — 11 settembre 2026**
+- Fatturato ufficiale 2026 da **lista operativa**: €4.098,68 su **75** ordini attivi
+  (T1 21 / €1.038,23 · T2 21 / €1.211,03 · T3 33 / €1.849,42); esclusi annullati, test,
+  pose carnet a €0. La stima manuale €4.587 è **dismessa**.
+- Status `DELIVERED_UNPAID` incluso nel perimetro ricavi (chiude 74→75).
+- §6.2.1 — payout Stripe solo su id `po_*` (mai `txn_*` speculari).
 
 **1.17 — 11 settembre 2026**
 - §5 — **C13 Saldo di transito** (ledger vs saldo wallet **dichiarato** dall’utente; senza

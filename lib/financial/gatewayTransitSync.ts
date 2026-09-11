@@ -129,41 +129,46 @@ export async function buildStripeTransitCandidates(opts?: {
         });
     }
 
-    // Payouts → Fineco (uscita dal wallet)
-    const seenPayout = new Set<string>();
+    // Payouts → Fineco (uscita dal wallet). Solo id `po_*` (mai txn_* speculari).
+    const bestPayout = new Map<string, (typeof moves)[number]>();
     for (const m of moves) {
         const typ = (m.type || '').toLowerCase();
         const cat = (m.reportingCategory || '').toLowerCase();
         if (typ !== 'payout' && cat !== 'payout') continue;
-        // Evita doppio: txn_* type=payout speculare su po_*
         const raw = m.stripeId || '';
-        if (typ === 'payout' && /^stripe_.*_tx_txn_/i.test(raw)) continue;
-        if (seenPayout.has(m.stripeId)) continue;
-        seenPayout.add(m.stripeId);
+        const po =
+            (m.payoutId && m.payoutId.startsWith('po_') && m.payoutId) ||
+            (raw.includes('po_') ? raw.replace(/^stripe_(?:com|eu)_tx_/i, '').replace(/^stripe_tx_/i, '') : null);
+        // Speculare API: balance_transaction txn_* del payout — non scrivere
+        if (!po || /txn_/i.test(po)) continue;
+        const prev = bestPayout.get(po);
+        if (!prev) bestPayout.set(po, m);
+    }
+    for (const [po, m] of bestPayout) {
         const abs = Math.abs(m.amountCents);
         if (abs <= 0) continue;
         candidates.push({
-            sourceKey: stripePayoutSourceKey(m.stripeId),
+            sourceKey: stripePayoutSourceKey(po),
             sourceType: 'STRIPE_MOVEMENT',
-            sourceId: m.stripeId.slice(0, 128),
+            sourceId: po.slice(0, 128),
             direction: 'USCITA',
             category: 'TRASFERIMENTO_INTERNO',
             accountingDate: m.createdAtStripe,
-            description: `Payout Stripe → Fineco — ${m.description || m.stripeId}`,
+            description: `Payout Stripe → Fineco — ${m.description || po}`,
             counterpartyName: 'FinecoBank',
             netCents: -abs,
             vatRate: 0,
             vatCents: 0,
             totalCents: -abs,
             reconciliationStatus: 'MATCHED',
-            documentRef: m.payoutId || m.stripeId,
+            documentRef: po,
             orderId: m.orderId,
             entryNature: 'TRANSITO',
             settlementStatus: 'MATCHED',
             metadataJson: {
                 type: 'payout',
                 stripeTransactionId: m.stripeId,
-                payoutId: m.payoutId,
+                payoutId: po,
                 dareAccount: LEDGER_FINECO_ACCOUNT,
                 avereAccount: LEDGER_STRIPE_ACCOUNT,
                 transitLeg: 'payout_to_bank',

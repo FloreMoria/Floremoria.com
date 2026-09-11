@@ -21,6 +21,7 @@ import {
     parsePaypalSourceKey,
 } from '@/lib/financial/paypalSourceKeys';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+import { REVENUE_ACTIVE_ORDER_STATUSES } from '@/lib/financial/officialRevenue2026';
 import { trimestrePeriodLabel } from '@/lib/financial/trimestreLabel';
 import { foreignAutofatturaExpenseWhere } from '@/lib/financial/autofatturaHistory';
 import { buildGatewayCorrispettivi } from '@/lib/financial/dossierCorrispettiviBuild';
@@ -375,7 +376,7 @@ export async function buildTaxQuarterlyReport(
             OR: [
                 { grossAmount: { not: null } },
                 { stripeTransactionId: { not: null } },
-                { status: { in: ['COMPLETED', 'IN_PROGRESS', 'DELIVERING', 'ACCEPTED'] } },
+                { status: { in: [...REVENUE_ACTIVE_ORDER_STATUSES] } },
             ],
         },
         include: {

@@ -17,6 +17,7 @@ import { buildBankReconciliationReport } from '@/lib/financial/bankStatements/st
 import type { BankReconciliationReport } from '@/lib/financial/bankStatements/types';
 import { getFinecoManualBalance } from '@/lib/financial/finecoBalance';
 import { sumSaasForeignEurCents } from '@/lib/financial/saasForeignInvoices';
+import { REVENUE_ACTIVE_ORDER_STATUSES } from '@/lib/financial/officialRevenue2026';
 
 const FLORIST_SHARE = 0.65;
 
@@ -240,7 +241,7 @@ export async function getCompanyFinancialHealth(): Promise<CompanyFinancialHealt
             createdAt: { gte: since },
             OR: [
                 { stripeTransactionId: { not: null } },
-                { status: { in: ['COMPLETED', 'IN_PROGRESS', 'DELIVERING', 'ACCEPTED'] } },
+                { status: { in: [...REVENUE_ACTIVE_ORDER_STATUSES] } },
             ],
         },
         select: {

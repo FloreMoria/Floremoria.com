@@ -5,6 +5,7 @@
 import prisma from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+import { REVENUE_ACTIVE_ORDER_STATUSES } from '@/lib/financial/officialRevenue2026';
 
 export type PerimeterChannelId =
     | 'corrispettivi'
@@ -42,7 +43,7 @@ function orderRevenueWhere(start: Date, end: Date): Prisma.OrderWhereInput {
         OR: [
             { grossAmount: { not: null } },
             { stripeTransactionId: { not: null } },
-            { status: { in: ['COMPLETED', 'IN_PROGRESS', 'DELIVERING', 'ACCEPTED'] } },
+            { status: { in: [...REVENUE_ACTIVE_ORDER_STATUSES] } },
         ],
     };
 }

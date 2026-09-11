@@ -16,6 +16,7 @@ import {
 } from '@/lib/financial/financePeriod';
 import { calculateFloristCompensation } from '@/lib/pricing/calculateFloristCompensation';
 import { isPrepaidSubscriptionPoseOrder } from '@/lib/financial/prepaidSubscriptionOrders';
+import { REVENUE_ACTIVE_ORDER_STATUSES } from '@/lib/financial/officialRevenue2026';
 
 export type TaxRegisterRow = {
     orderId: string;
@@ -116,7 +117,7 @@ export async function buildTaxRegisterReport(params: {
             OR: [
                 { grossAmount: { not: null } },
                 { stripeTransactionId: { not: null } },
-                { status: { in: ['COMPLETED', 'IN_PROGRESS', 'DELIVERING', 'ACCEPTED'] } },
+                { status: { in: [...REVENUE_ACTIVE_ORDER_STATUSES] } },
             ],
         },
         include: {

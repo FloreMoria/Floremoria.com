@@ -1,0 +1,93 @@
+Data;Data Consegna;ID Ordine;Utente;Telefono;Prodotto;Prezzo;Comune Destinazione;Cimitero;Ricorrente;Fiorista;Stato
+03/05/2026;—;FT-MC-26-007;Isabella Cesaroni;4915775944828;Ricordo Affettuoso;284.90 €;Civitanova Alta (MC);Cimitero comunale di Civitanova Alta (MC);No;Cingolani Antonella;In Lavorazione
+09/09/2026;13/09/2026;FT-MB-26-002;Carolina Negrini Bertelli;393312134719;Bouquet Omaggio Solenne;55.99 €;Desio;Monumentale;No;La Baita del Fiore Snc;In Lavorazione
+03/08/2026;12/09/2026;FT-MC-26-006;Isabella Cesaroni;4915775944828;Ricordo Affettuoso;0.00 €;Civitanova Alta (MC);Comunale di Civitanova Alta (MC);Si;Cingolani Antonella;Pagato (Da Consegnare)
+;;;;;;;;;;;
+05/09/2026;07/09/2026;FF-MC-26-002;Oscar Delgadillo;7134834061;Copribara;204.98 €;San Severino Marche (MC);San Severino Marche (MC);No;Ciciliani Gian Pio;Completato
+05/09/2026;07/09/2026;FF-MC-26-001;Oscar Delgadillo;17134834061;Bouquet Memoria Eterna;104.98 €;San Severino Marche (MC);San Severino Marche (MC);No;Ciciliani Gian Pio;Completato
+01/09/2026;04/09/2026;FT-CS-26-007;Luciano Mammi;393714218889;Ricordo Affettuoso;31.48 €;Tortora (cs);Tortora (cs);No;SHOPPINGARDEN di Anna Bruno;Completato
+01/09/2026;04/09/2026;FT-PA-26-009;Luciano Mammi;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Palermo (PA);No;Davide Capitano;Completato
+31/08/2026;02/09/2026;FF-SO-26-001;Stella Scibilia;393401189744;Bouquet Omaggio Solenne;84.98 €;Chempo Di Civo Sondrio;Chempo Di Civo Sondrio;No;L'Orchidea;Completato
+28/08/2026;30/08/2026;FT-TO-26-002;Erika Vanotti;393515454843;Ricordo Affettuoso;29.99 €;Torino;Parco;No;Mastro Fiori;Completato
+28/08/2026;30/08/2026;FT-TO-26-001;Erika Vanotti;393515454843;Ricordo Affettuoso;29.99 €;Torino;Parco;No;Mastro Fiori;Completato
+26/08/2026;28/08/2026;FF-VI-26-003;Silvia Tregnaghi;393283912589;Kalonche (pianta in vaso);52.98 €;Non specificato;Barbarano Mossano (VI);No;Fioreria Rossella;Completato
+;;;;;;;;;;;
+;;;;;;;;;;;
+24/08/2026;26/08/2026;FT-LC-26-001;Annamaria Ferri;393923901242;Tributo Eterno;53.97 €;Robbiate (LC);Comunale di Robbiate (LC);No;Florapiu’ snc di Scanferla Giovanni & C.;Completato
+21/08/2026;21/08/2026;FF-PN-26-004;Oreste Poverello;393492218937;Bouquet Memoria Eterna;89.99 €;Pordenone (PN);Cimitero urbano di Pordenone (PN);No;Fioreria Battistella s.r.l.;Completato
+19/08/2026;21/08/2026;FT-RC-26-003;Andrea Gaeta;3928274508;Omaggio Speciale;47.46 €;Reggio Calabria (RC);Condera (nuovo) di Reggio Calabria;No;Fioreria Reggio Calabria;Completato
+17/08/2026;19/08/2026;FT-PA-26-008;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+17/08/2026;19/08/2026;FT-CS-26-006;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+;;;;;;;;;;;
+17/08/2026;19/08/2026;FT-CS-26-005;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+17/08/2026;18/08/2026;FF-PN-26-003;Amanda Favot;14166626157;Omaggio Speciale;39.99 €;Pordenone (PN);Casa Funeraria San Marco (PN);No;Fioreria Battistella s.r.l.;Completato
+13/08/2026;17/08/2026;FT-RM-26-002;Angelica Blancussi;393393604198;Tributo Eterno;52.48 €;Roma (RM);Flaminio - Prima Porta di Roma;No;Daniele Prima Porta;Consegnato (Da Pagare)
+;;;;;;;;;;;
+10/08/2026;11/08/2026;FF-PN-26-002;Lori And Dana Moras Edy;;Bouquet Omaggio Solenne;69.99 €;Cordenons (PN);Comunale di Cordenons (PN);No;Fioreria Battistella s.r.l.;Completato
+01/08/2026;09/08/2026;FT-RC-26-002;Valentina Cecchini;393478419867;Ricordo Affettuoso;29.99 €;Siderno Superiore (RC);Comunale di Siderno Superiore (RC);No;Carrozza;Completato
+07/08/2026;08/08/2026;FF-PN-26-001;Daniela Barilari;393335218681;Bouquet Rispetto e Vicinanza;39.99 €;Pordenone (PN);Chiesa di San Giorgio Martire (PN);No;Fioreria Battistella s.r.l.;Completato
+04/08/2026;06/08/2026;FT-ME-26-002;Rosetta Paladino;393208487232;Omaggio Speciale;47.46 €;Raccuja (ME);Comunale di Raccuja (ME);No;Calamunci Tindaro;Completato
+30/07/2026;01/08/2026;FT-CS-26-004;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+30/07/2026;01/08/2026;FT-PA-26-007;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+;;;;;;;;;;;
+06/07/2026;30/07/2026;FT-MC-26-005;Isabella Cesaroni;4915775944828;Ricordo Affettuoso;0.00 €;Civitanova Alta (MC);Comunale di Civitanova Alta (MC);Si;Cingolani Antonella;Completato
+20/07/2026;22/07/2026;FT-MB-26-001;Carolina Negrini Bertelli;393312134719;Kalonche (pianta in vaso);37.99 €;Desio (MB);Monumentale di Desio (MB);No;La Baita del Fiore Snc;Completato
+21/07/2026;22/07/2026;FF-CO-26-001;Salvatore Marsiglione;3287521463;Ricordo Affettuoso;44.98 €;Olgiate Comasco (CO);Cremazione;No;Margherita Flower Studio;Completato
+15/07/2026;17/07/2026;FT-ME-26-001;Maria Puliafico;3204910428;Tributo Eterno;49.99 €;Mazzarrà Sant'Andrea (ME);Comunale di Mazzarrà Sant'Andrea (ME);No;Torre;Completato
+16/07/2026;16/07/2026;FT-PD-26-001;Filomena Maiorano;393297790989;Kalonche (pianta in vaso);37.99 €;Pordenone (PN);Cimitero Urbano di Pordenone;No;Fioreria Battistella s.r.l.;Completato
+10/07/2026;11/07/2026;FF-PD-26-004;Giulio Rosace;393921041814;Abbraccio Verde;39.99 €;Pordenone (PN);Casa Funeraria San Marco (PN);No;Fioreria Battistella s.r.l.;Completato
+04/07/2026;06/07/2026;FT-CS-26-003;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+04/07/2026;06/07/2026;FT-PA-26-005;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+03/07/2026;05/07/2026;FF-PD-26-003;Confartigianato Pordenone;+39328 47407420;Bouquet Omaggio Solenne;69.99 €;Pordenone (PN);Casa Funeraria San Marco (PN);No;Fioreria Battistella s.r.l.;Completato
+04/07/2026;04/07/2026;FF-PA-26-001;Luciano Mammì;393714218889;Cuscino;144.98 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+02/07/2026;04/07/2026;FT-MC-26-003;Isabella Cesaroni;4915775944828;Ricordo Affettuoso;0.00 €;Civitanova Alta (MC);Comunale di Civitanova Alta (MC);Si;Cingolani Antonella;Completato
+;;;;;;;;;;;
+02/07/2026;03/07/2026;FF-PD-26-002;Francesco Nicolato;393406885628;Bouquet Memoria Eterna;104.98 €;Pordenone (PN);Casa Funeraria San Marco (PN);No;Fioreria Battistella s.r.l.;Completato
+22/06/2026;24/06/2026;FF-VR-26-001;Riccardo Segantini;3295362800;Bouquet Cordoglio Sincero;64.98 €;Legnago (VR);Comunale di Legnago (VR);No;Fioreria Di Bonfante Claudia;Completato
+17/06/2026;19/06/2026;FT-PA-26-004;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+17/06/2026;19/06/2026;FT-CS-26-002;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+16/06/2026;16/06/2026;2I2JYD;Rosetta Paladino;3208487232;Omaggio Speciale;49.46 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+13/06/2026;15/06/2026;FT-RC-26-001;Andrea Gaeta;3928274508;Omaggio Speciale;43.97 €;Reggio Calabria (RC);Condera (nuovo) di Reggio Calabria;No;Fioreria Reggio Calabria;Completato
+05/06/2026;05/06/2026;OJMIPB;Cyrille Magali Maman-Sernaglia;33616450351;Bouquet Memoria Eterna;89.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+02/07/2026;31/05/2026;FT-MC-26-004;Isabella Cesaroni;4915775944828;Ricordo Affettuoso;0.00 €;Civitanova Alta (MC);Comunale di Civitanova Alta (MC);Si;Cingolani Antonella;Completato
+;;;;;;;;;;;
+23/05/2026;25/05/2026;FT-CO-26-004;Daniela Rampoldi;3395337334;Ricordo Affettuoso;32.48 €;Dongo (CO);Casa privata;No;L'orchidea;Completato
+25/05/2026;25/05/2026;UFW1P6;Petra Manakova;3336579533;Bouquet Omaggio Solenne;84.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+;;;;;;;;;;;
+20/05/2026;22/05/2026;FT-CS-26-001;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Tortora (CS);Comunale di Tortora (CS);No;SHOPPINGARDEN di Anna Bruno;Completato
+20/05/2026;22/05/2026;FT-PA-26-003;Luciano Mammì;393714218889;Ricordo Affettuoso;31.48 €;Palermo (PA);Sant'Orsola di Palermo;No;Davide Capitano;Completato
+;;;;;;;;;;;
+;;;;;;;;;;;
+19/05/2026;21/05/2026;FT-SA-26-001;Ester Irace;3498314502;Ricordo Affettuoso;29.99 €;Praiano (SA);Comunale di Praiano (SA);No;Floragarden di Stinga Baldassarre;Completato
+16/05/2026;16/05/2026;VYEM83;Maria Puliafico;3204910428;Tributo Eterno;49.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+03/05/2026;03/05/2026;TBY8FI;Maria Antonia Pozzi;331 8607910;Lumino;53.48 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+;;;;;;;;;;;
+29/04/2026;29/04/2026;5QC4K2;Rosetta Paladino;3208487232;Omaggio Speciale;45.97 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+28/04/2026;28/04/2026;XXYD7J;Silvia Tregnaghi;3283912589;Nastro commemorativo;54.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+27/04/2026;27/04/2026;QGZRJC;Famiglia Deotti-Buzzi;3713458049;Margherite/Gerbere (pianta in vaso);39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+20/04/2026;20/04/2026;QLZ5OA;Elena Lombardi;3391992294;Bouquet Rispetto e Vicinanza;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+20/04/2026;20/04/2026;YYGY34;Luciano Mammi;3714218889;Ricordo Affettuoso;59.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+16/04/2026;16/04/2026;5SX0R9;Rosaria Di Pasquale;3389262922;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+01/04/2026;01/04/2026;RE6XVW;Cristiano Mariani;34695727454;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+31/03/2026;31/03/2026;FSQVTC;Francesco Redivo;3332275015;Cuscino;144.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+29/03/2026;29/03/2026;SLSWE4;Agostino Buttignol;61 402826475;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+24/03/2026;24/03/2026;HI6MGJ;Luciano Mammi;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+22/03/2026;22/03/2026;ODUMO5;Luciano Mammi;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+19/03/2026;19/03/2026;WD97U0;Silvia Tregnaghi;3283912589;Bouquet di Rose;34.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+18/03/2026;18/03/2026;HIW0G6;L'Alternativa Srl;3473899925;Bouquet Rispetto e Vicinanza;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+14/03/2026;14/03/2026;ZQ8EDF;Rosetta Paladino;3208487232;Bouquet di Rose;69.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+14/03/2026;14/03/2026;X98W7N;Chiara Durì;3481321645;Messaggio;72.48 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+13/03/2026;13/03/2026;891QTE;Maria Puliafico;3204910428;Tributo Eterno;49.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+01/03/2026;01/03/2026;VV49L1;Mimma Congedo;3394846648;Cuscino;144.98 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+26/02/2026;26/02/2026;DDWH9H;Norm Marchi;250-231-0793;Margherite/Gerbere (pianta in vaso);39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+25/02/2026;25/02/2026;UP50H8;Moreno Venturino;3312258877;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+22/02/2026;22/02/2026;4LIM4N;Luciano Mammi;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+19/02/2026;19/02/2026;DS2DFE;Luigina Dereani;3492103282;Bouquet Rispetto e Vicinanza;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+16/02/2026;16/02/2026;0UZNLL;Luciano Mammi;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+10/02/2026;10/02/2026;OP287H;Ester Irace;3498314502;Omaggio Speciale;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+22/01/2026;22/01/2026;1IL0QO;Rosetta Paladino;3208487232;Bouquet di Rose;40.97 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+22/01/2026;22/01/2026;VI2WRA;Luciano Mammì;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+21/01/2026;21/01/2026;11XO78;Luciano Mammì;3714218889;Ricordo Affettuoso;29.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+20/01/2026;20/01/2026;HTRPHJ;amministrazione@neosgroup.pn.it;434923236;Bouquet Rispetto e Vicinanza;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+16/01/2026;16/01/2026;OBSZ70;Giulia Grappone;3450218710;Omaggio Speciale;39.99 €;Italia;Import storico floremoria.eu;No;Nessuno;Completato
+;;;;;;0,00 €;;;;;

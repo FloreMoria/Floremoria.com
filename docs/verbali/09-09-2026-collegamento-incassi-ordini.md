@@ -43,6 +43,8 @@ Report: `docs/verbali/09-09-2026-reconcile-gateway-orders-readonly.md`
 
 Noi in dossier (non usabile) eravamo a €655,84; le vendite verificate a mano sul 2026 intero sono €4.587,01.
 
+> **Aggiornamento 11-09-2026:** €4.587,01 **dismessa**. Fatturato ufficiale = **€4.098,68** su **75** ordini (lista operativa). Vedi `11-09-2026-fatturato-4098-payout-inbound-c13.md` e `lib/financial/officialRevenue2026.ts`.
+
 ## Capitale sociale
 
 €11.410 = versato dichiarato su aggregatore RI → footer `.com` OK, non si tocca. `.eu` con €10.000: leave.

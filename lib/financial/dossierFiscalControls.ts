@@ -19,7 +19,6 @@ import {
     resolveQuarterBounds,
     type TaxQuarter,
 } from '@/lib/financial/taxQuarterly';
-import { compareGatewayTransitBalances } from '@/lib/financial/gatewayTransitBalance';
 
 export type DossierControlId =
     | 'C1'
@@ -745,60 +744,55 @@ export async function controlC9(year: number, quarter: TaxQuarter): Promise<Doss
 }
 
 /**
- * C10 — Doppia gamba transito
- * Formula: per ogni gateway: Σ dare − Σ avere − saldo wallet dichiarato → 0
+ * C10 — Doppia gamba transito **vendite** (solo Stripe).
+ * PayPal non è più nel ciclo vendite: C10 lo esclude (vedi C13 per riconciliazione conto).
  */
 export async function controlC10(year: number, quarter: TaxQuarter): Promise<DossierControlResult> {
     void year;
     void quarter;
-    // Il saldo wallet è un punto nel tempo (dichiarato dal gateway); il ledger transit è cumulativo.
-    const cmp = await compareGatewayTransitBalances();
+    const { sumStripeSalesTransitCents } = await import('@/lib/financial/gatewayTransitBalance');
+    const { getStripeDeclaredBalance } = await import('@/lib/financial/gatewayDeclaredBalance');
+
+    const [stripeLedger, stripeDecl] = await Promise.all([
+        sumStripeSalesTransitCents(year),
+        getStripeDeclaredBalance(),
+    ]);
+
+    const delta =
+        stripeDecl == null ? null : stripeLedger - stripeDecl.balanceCents;
+    const passed = stripeDecl != null && delta === 0;
 
     const perGateway: NonNullable<DossierControlResult['perGateway']> = [
         {
             gateway: 'STRIPE',
-            measured: cmp.stripe.deltaCents ?? Number.NaN,
+            measured: delta ?? Number.NaN,
             expected: 0,
-            passed: cmp.stripe.deltaCents === 0,
-            detail: `ledger dare−avere=${(cmp.stripe.transitLedgerCents / 100).toFixed(2)} · wallet dich.=${
-                cmp.stripe.gatewayAvailableCents == null
-                    ? 'n/d'
-                    : (cmp.stripe.gatewayAvailableCents / 100).toFixed(2)
-            } · ${cmp.stripe.note}`,
+            passed,
+            detail: `transito vendite TX−FEE−REFUND−PAYOUT=${(stripeLedger / 100).toFixed(2)} · wallet dich.=${
+                stripeDecl == null ? 'n/d' : (stripeDecl.balanceCents / 100).toFixed(2)
+            }`,
         },
         {
             gateway: 'PAYPAL',
-            measured: cmp.paypal.deltaCents ?? Number.NaN,
+            measured: 0,
             expected: 0,
-            passed: false, // saldo API non wireato → non può passare
-            detail: `ledger dare−avere=${(cmp.paypal.transitLedgerCents / 100).toFixed(2)} · wallet dich.=n/d · ${cmp.paypal.note}`,
+            passed: true,
+            detail:
+                'escluso da C10 — PayPal non è transito vendite (conto di pagamento; vedi C13 riconciliazione)',
         },
     ];
-
-    // Fallback PayPal: se non c'è saldo dichiarato, lo scostamento è il solo saldo ledger ≠ 0
-    // oppure fallimento strutturale (gamba dare assente). Misura “fallito” se delta null o ≠ 0.
-    if (cmp.paypal.deltaCents == null) {
-        perGateway[1].measured = cmp.paypal.transitLedgerCents; // ≠ 0 ⇒ fallisce
-        perGateway[1].passed = false;
-        perGateway[1].detail +=
-            ' · FALLITO: saldo wallet PayPal non dichiarato (API non collegata) e/o gamba dare incompleta';
-    }
-
-    const bothFailed = perGateway.every((g) => !g.passed);
-    const measured = perGateway.filter((g) => !g.passed).length;
 
     return {
         id: 'C10',
         name: 'Doppia gamba transito',
-        formula: 'per gateway: Σ dare − Σ avere − saldo wallet dichiarato',
-        measured,
+        formula:
+            'solo Stripe (transito vendite): Σ TX − FEE − REFUND − PAYOUT − saldo dichiarato → 0; PayPal escluso',
+        measured: passed ? 0 : 1,
         expected: 0,
-        delta: measured,
+        delta: passed ? 0 : 1,
         unit: 'rows',
-        passed: perGateway.every((g) => g.passed),
-        detail: bothFailed
-            ? 'FALLITO su entrambi i gateway (atteso in Fase 1: gamba dare mai scritta / saldo PayPal n/d)'
-            : perGateway.map((g) => `${g.gateway}:${g.passed ? 'OK' : 'KO'}`).join(' · '),
+        passed,
+        detail: perGateway.map((g) => `${g.gateway}:${g.passed ? 'OK' : 'KO'}`).join(' · '),
         perGateway,
     };
 }
@@ -892,27 +886,30 @@ export async function controlC12(year: number, _quarter: TaxQuarter): Promise<Do
 }
 
 /**
- * C13 — Saldo di transito vs saldo dichiarato dal cruscotto gateway
- * (dato utente, come i saldi bancari). Senza saldo dichiarato → non verificabile.
+ * C13 — Saldo di transito vendite (solo Stripe) vs saldo dichiarato.
+ * PayPal non è più transito vendite: si misura una **riconciliazione del conto
+ * di pagamento** PayPal (ledger vs dichiarato), separata, senza formula di ciclo vendite.
+ * Senza saldo dichiarato → non verificabile sul pezzo interessato.
  */
 export async function controlC13(year: number, _quarter: TaxQuarter): Promise<DossierControlResult> {
-    void year;
     void _quarter;
-    const { sumTransitLedgerCents } = await import('@/lib/financial/gatewayTransitBalance');
+    const {
+        sumStripeSalesTransitCents,
+        sumPaypalPaymentAccountCents,
+    } = await import('@/lib/financial/gatewayTransitBalance');
     const {
         getStripeDeclaredBalance,
         getPaypalDeclaredBalance,
     } = await import('@/lib/financial/gatewayDeclaredBalance');
 
-    const [stripeLedger, paypalLedger, stripeDecl, paypalDecl] = await Promise.all([
-        sumTransitLedgerCents(['10300', 'Banca c/o Stripe', 'Conto Stripe']),
-        sumTransitLedgerCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']),
+    const [stripeLedger, paypalAccount, stripeDecl, paypalDecl] = await Promise.all([
+        sumStripeSalesTransitCents(year),
+        sumPaypalPaymentAccountCents(),
         getStripeDeclaredBalance(),
         getPaypalDeclaredBalance(),
     ]);
 
-    const sampleEvents = async (gateway: 'STRIPE' | 'PAYPAL'): Promise<string[]> => {
-        const prefix = gateway === 'STRIPE' ? 'STRIPE_' : 'PAYPAL_';
+    const sampleEvents = async (prefix: string): Promise<string[]> => {
         const rows = await prisma.financialLedgerEntry.findMany({
             where: {
                 reversedAt: null,
@@ -931,38 +928,47 @@ export async function controlC13(year: number, _quarter: TaxQuarter): Promise<Do
     const gaps: NonNullable<DossierControlResult['transitBalanceGaps']> = [];
     let measured = 0;
 
-    for (const g of [
-        {
-            gateway: 'STRIPE' as const,
-            ledger: stripeLedger,
-            decl: stripeDecl,
-        },
-        {
-            gateway: 'PAYPAL' as const,
-            ledger: paypalLedger,
-            decl: paypalDecl,
-        },
-    ]) {
-        const verifiable = g.decl != null;
-        const delta = verifiable ? g.ledger - g.decl!.balanceCents : null;
-        if (verifiable) {
-            measured += Math.abs(delta || 0);
-        }
+    // Stripe = unico transito vendite
+    {
+        const verifiable = stripeDecl != null;
+        const delta = verifiable ? stripeLedger - stripeDecl!.balanceCents : null;
+        if (verifiable) measured += Math.abs(delta || 0);
         gaps.push({
-            gateway: g.gateway,
-            ledgerCents: g.ledger,
-            declaredCents: g.decl?.balanceCents ?? null,
+            gateway: 'STRIPE',
+            ledgerCents: stripeLedger,
+            declaredCents: stripeDecl?.balanceCents ?? null,
             deltaCents: delta,
             verifiable,
-            sampleLedgerEvents: await sampleEvents(g.gateway),
+            sampleLedgerEvents: await sampleEvents('STRIPE_'),
+        });
+    }
+
+    // PayPal = riconciliazione conto di pagamento (non ciclo vendite)
+    {
+        const verifiable = paypalDecl != null;
+        const delta = verifiable ? paypalAccount - paypalDecl!.balanceCents : null;
+        if (verifiable) measured += Math.abs(delta || 0);
+        gaps.push({
+            gateway: 'PAYPAL',
+            ledgerCents: paypalAccount,
+            declaredCents: paypalDecl?.balanceCents ?? null,
+            deltaCents: delta,
+            verifiable,
+            sampleLedgerEvents: await sampleEvents('PAYPAL_'),
         });
     }
 
     const detailParts = gaps.map((g) => {
-        if (!g.verifiable) {
-            return `${g.gateway}: ledger=${(g.ledgerCents / 100).toFixed(2)} · dichiarato=n/d → non verificabile`;
+        if (g.gateway === 'STRIPE') {
+            if (!g.verifiable) {
+                return `STRIPE(transito vendite): ledger=${(g.ledgerCents / 100).toFixed(2)} · dichiarato=n/d → non verificabile`;
+            }
+            return `STRIPE(transito vendite): ledger=${(g.ledgerCents / 100).toFixed(2)} · dich.=${((g.declaredCents || 0) / 100).toFixed(2)} · Δ=${((g.deltaCents || 0) / 100).toFixed(2)}`;
         }
-        return `${g.gateway}: ledger=${(g.ledgerCents / 100).toFixed(2)} · dich.=${((g.declaredCents || 0) / 100).toFixed(2)} · Δ=${((g.deltaCents || 0) / 100).toFixed(2)}`;
+        if (!g.verifiable) {
+            return `PAYPAL(conto pagamento): ledger=${(g.ledgerCents / 100).toFixed(2)} · dichiarato=n/d → non verificabile`;
+        }
+        return `PAYPAL(conto pagamento): ledger=${(g.ledgerCents / 100).toFixed(2)} · dich.=${((g.declaredCents || 0) / 100).toFixed(2)} · Δ=${((g.deltaCents || 0) / 100).toFixed(2)}`;
     });
 
     const fullyVerifiable = gaps.every((g) => g.verifiable);
@@ -970,9 +976,9 @@ export async function controlC13(year: number, _quarter: TaxQuarter): Promise<Do
 
     return {
         id: 'C13',
-        name: 'Saldo di transito',
+        name: 'Saldo di transito / conto pagamento',
         formula:
-            'per ogni gateway: saldo ledger transito − saldo wallet dichiarato dall’utente = 0; senza saldo dichiarato → non verificabile',
+            'Stripe (unico transito vendite): Σ STRIPE_TX − FEE − REFUND − PAYOUT − saldo dichiarato = 0; PayPal (conto pagamento, non ciclo vendite): saldo ledger conto − dichiarato = 0; senza dichiarato → non verificabile',
         measured: fullyVerifiable ? measured : 0,
         expected: 0,
         delta: fullyVerifiable ? measured : 0,

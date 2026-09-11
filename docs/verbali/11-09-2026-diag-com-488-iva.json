@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-09-11T15:18:20.474Z",
+  "confronto": {
+    "listaComEuro": 2431.66,
+    "listaEuEuro": 1667.02,
+    "motoreFreezeVenditeEuro": 2919.99,
+    "deltaEuro": 488.33,
+    "pnlVenditeOggiEuro": 4784.94,
+    "notaMotore": "€2919,99 = vendite caratteristiche post-Lotto3 (freeze), etichettate storicamente «.com»; non è una query filtrata FT-/FF-."
+  },
+  "ipotesiDelta": {
+    "note": "Tutti i PayPal Checkout/Ordine FloreMoria orfani (≥€20). Somma può ≠488 se il freeze includeva anche altro; dettaglio sotto.",
+    "rowsN": 14,
+    "euro": 577.32,
+    "iva10SeFlorealeEuro": 52.5,
+    "ivaInLedgerEuro": 0,
+    "byQ": {
+      "T1": {
+        "n": 10,
+        "euro": 382.39,
+        "iva10": 34.79,
+        "vatLedger": 0
+      },
+      "T2": {
+        "n": 3,
+        "euro": 163.45,
+        "iva10": 14.85,
+        "vatLedger": 0
+      },
+      "T3": {
+        "n": 1,
+        "euro": 31.48,
+        "iva10": 2.86,
+        "vatLedger": 0
+      }
+    },
+    "rows": [
+      {
+        "date": "2026-01-16",
+        "q": 1,
+        "euro": 39.99,
+        "iva10": 3.64,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:66C04847WL650301D",
+        "description": "Pagamento Express Checkout · Giulia Grappone · Acquisto Floremoria",
+        "matchedEuIds": [
+          "OBSZ70"
+        ]
+      },
+      {
+        "date": "2026-01-21",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:22E30531F99808504",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "VI2WRA",
+          "11XO78"
+        ]
+      },
+      {
+        "date": "2026-01-22",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:8YH43677SS377553L",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "VI2WRA",
+          "11XO78"
+        ]
+      },
+      {
+        "date": "2026-02-09",
+        "q": 1,
+        "euro": 39.99,
+        "iva10": 3.64,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:44E519039S467634K",
+        "description": "Pagamento Express Checkout · ester irace · Acquisto Floremoria",
+        "matchedEuIds": [
+          "OP287H"
+        ]
+      },
+      {
+        "date": "2026-02-16",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:2GU64478W4726692S",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "0UZNLL"
+        ]
+      },
+      {
+        "date": "2026-02-22",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:4W6628604D401674M",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "UP50H8",
+          "4LIM4N"
+        ]
+      },
+      {
+        "date": "2026-03-13",
+        "q": 1,
+        "euro": 49.99,
+        "iva10": 4.54,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:83N54580AU0027713",
+        "description": "Pagamento Express Checkout · Maria Agata Puliafico · Acquisto Floremoria",
+        "matchedEuIds": [
+          "891QTE"
+        ]
+      },
+      {
+        "date": "2026-03-14",
+        "q": 1,
+        "euro": 72.48,
+        "iva10": 6.59,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:3D552868PU399581S",
+        "description": "Pagamento Express Checkout · Chiara Durì · Acquisto Floremoria",
+        "matchedEuIds": [
+          "X98W7N"
+        ]
+      },
+      {
+        "date": "2026-03-22",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:95E92452N40245344",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "HI6MGJ",
+          "ODUMO5"
+        ]
+      },
+      {
+        "date": "2026-03-24",
+        "q": 1,
+        "euro": 29.99,
+        "iva10": 2.73,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:09C2701554000764W",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "HI6MGJ",
+          "ODUMO5"
+        ]
+      },
+      {
+        "date": "2026-04-20",
+        "q": 2,
+        "euro": 59.98,
+        "iva10": 5.45,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:5VV92297N9957570R",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+        "matchedEuIds": [
+          "YYGY34"
+        ]
+      },
+      {
+        "date": "2026-05-03",
+        "q": 2,
+        "euro": 53.48,
+        "iva10": 4.86,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:1T757598T7263511M",
+        "description": "Pagamento Express Checkout · Maria Antonia Pozzi · Acquisto Floremoria",
+        "matchedEuIds": [
+          "TBY8FI"
+        ]
+      },
+      {
+        "date": "2026-05-16",
+        "q": 2,
+        "euro": 49.99,
+        "iva10": 4.54,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:43H07985E69976410",
+        "description": "Pagamento Express Checkout · Maria Agata Puliafico · Acquisto Floremoria",
+        "matchedEuIds": [
+          "VYEM83"
+        ]
+      },
+      {
+        "date": "2026-07-27",
+        "q": 3,
+        "euro": 31.48,
+        "iva10": 2.86,
+        "vatLedger": 0,
+        "sourceKey": "PAYPAL_TX:9JN50230473257055",
+        "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria",
+        "matchedEuIds": []
+      }
+    ]
+  },
+  "paypalOrphansAll": {
+    "checkoutN": 14,
+    "checkoutEuro": 577.32,
+    "attributedToEuLista": {
+      "n": 13,
+      "euro": 545.84,
+      "byQ": {
+        "T1": {
+          "n": 10,
+          "euro": 382.39,
+          "iva10": 34.79,
+          "vatLedger": 0
+        },
+        "T2": {
+          "n": 3,
+          "euro": 163.45,
+          "iva10": 14.85,
+          "vatLedger": 0
+        }
+      }
+    },
+    "pureExtraCheckout": {
+      "n": 1,
+      "euro": 31.48,
+      "rows": [
+        {
+          "date": "2026-07-27",
+          "q": 3,
+          "euro": 31.48,
+          "iva10": 2.86,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:9JN50230473257055",
+          "description": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria",
+          "matchedEuIds": []
+        }
+      ]
+    },
+    "noiseNonCheckout": {
+      "n": 27,
+      "euro": 349.37,
+      "rows": [
+        {
+          "date": "2026-04-10",
+          "q": 2,
+          "euro": 9.68,
+          "iva10": 0.88,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:82B58826WV385183C",
+          "description": "Altro · POSTE ITALIANE"
+        },
+        {
+          "date": "2026-04-10",
+          "q": 2,
+          "euro": 9.13,
+          "iva10": 0.83,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:9A8499750D2285252",
+          "description": "Altro · BALLARATE PIETRO SRL"
+        },
+        {
+          "date": "2026-05-04",
+          "q": 2,
+          "euro": 10,
+          "iva10": 0.91,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:5S1939199N219094Y",
+          "description": "Pagamento generico · Maria Antonia Pozzi"
+        },
+        {
+          "date": "2026-05-06",
+          "q": 2,
+          "euro": 48.64,
+          "iva10": 4.42,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:32656268SE019460E",
+          "description": "Altro · BALLARATE PIETRO SRL"
+        },
+        {
+          "date": "2026-05-24",
+          "q": 2,
+          "euro": 30,
+          "iva10": 2.73,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:62T128000J086073T",
+          "description": "Altro · ORCHIDEADONGO.IT"
+        },
+        {
+          "date": "2026-07-19",
+          "q": 3,
+          "euro": 37.99,
+          "iva10": 3.45,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:0CW42027YJ1249932",
+          "description": "Pagamento da cellulare · Andrea Varesi"
+        },
+        {
+          "date": "2026-07-26",
+          "q": 3,
+          "euro": 133,
+          "iva10": 12.09,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:0DK39406V3945422V",
+          "description": "Altro · MASPES PIANTE E FIORI"
+        },
+        {
+          "date": "2026-09-09",
+          "q": 3,
+          "euro": 55.99,
+          "iva10": 5.09,
+          "vatLedger": 0,
+          "sourceKey": "PAYPAL_TX:22A12950PA842023C",
+          "description": "Composizione floreale in vaso per il ricordo di Silvana Fumagalli domenica 13 di mattina.  "
+        }
+      ]
+    }
+  },
+  "ivaDebito": {
+    "ledgerVatOnExplainRows": 0,
+    "stima10pctOnExplainRows": 52.5,
+    "conclusione": "Su queste righe il ledger ha vatCents=0: non hanno prodotto IVA a debito nel motore PnL. L’IVA dichiarata del dossier nasce da corrispettivi/taxRegister (ordini/gateway), non da queste TX orfane — quindi la Δ €488 nel PnL «vendite» NON si traduce 1:1 in IVA a debito già liquidata, salvo che le stesse somme siano entrate nei corrispettivi come incassi senza ordine.",
+    "corrispettiviKeys": [
+      "date",
+      "canaleIncasso",
+      "transactionId",
+      "orderNumber",
+      "orderId",
+      "grossCents",
+      "vatRate",
+      "vatCertainty",
+      "vatRuleNote",
+      "imponibileCents",
+      "ivaCents"
+    ],
+    "corrispettiviRows": 141,
+    "corrispettiviGrossEuro": 4724.04
+  },
+  "verdetto": "La lista ordini è il dato commerciale corretto per .com (€2431,66). Il motore €2919,99 mescolava vendite ledger (PayPal orfani = spesso .eu) sotto l’etichetta vendite caratteristiche."
+}

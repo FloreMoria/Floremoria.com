@@ -40,13 +40,15 @@ function accountMentionsTransit(meta: unknown, accountCodes: string[]): boolean 
 export async function sumTransitLedgerCents(accountCodes: string[]): Promise<number> {
     const rows = await prisma.financialLedgerEntry.findMany({
         where: { reversedAt: null },
-        select: { totalCents: true, metadataJson: true },
+        select: { totalCents: true, metadataJson: true, sourceKey: true },
         take: 50000,
     });
     let balance = 0;
     for (const r of rows) {
         if (!accountMentionsTransit(r.metadataJson, accountCodes)) continue;
         const meta = (r.metadataJson || {}) as Record<string, unknown>;
+        // Fuori gateway / legacy JSON non appartengono al transito vendite Stripe
+        if (meta.fuoriGateway || meta.fuoriGatewayLegacyJson) continue;
         const dare = String(meta.dareAccount || '');
         const avere = String(meta.avereAccount || '');
         const dareIs = accountCodes.some((c) => dare.includes(c));
@@ -55,6 +57,40 @@ export async function sumTransitLedgerCents(accountCodes: string[]): Promise<num
         else if (avereIs && !dareIs) balance -= Math.abs(r.totalCents);
     }
     return balance;
+}
+
+/**
+ * Saldo del **solo** transito vendite Stripe, ancorato alle chiavi canoniche
+ * `STRIPE_TX` / `FEE` / `REFUND` / `PAYOUT` (non MANUAL_INBOUND, non JSON, non PayPal).
+ * Se `fiscalYear` è valorizzato, conta solo movimenti di quell’anno (flusso periodo).
+ */
+export async function sumStripeSalesTransitCents(fiscalYear?: number): Promise<number> {
+    const rows = await prisma.financialLedgerEntry.findMany({
+        where: {
+            reversedAt: null,
+            ...(fiscalYear != null ? { fiscalYear } : {}),
+            OR: [
+                { sourceKey: { startsWith: 'STRIPE_TX:' } },
+                { sourceKey: { startsWith: 'STRIPE_FEE:' } },
+                { sourceKey: { startsWith: 'STRIPE_REFUND:' } },
+                { sourceKey: { startsWith: 'STRIPE_PAYOUT:' } },
+            ],
+        },
+        select: { sourceKey: true, totalCents: true },
+        take: 50000,
+    });
+    let balance = 0;
+    for (const r of rows) {
+        const abs = Math.abs(r.totalCents);
+        if (r.sourceKey.startsWith('STRIPE_TX:')) balance += abs;
+        else balance -= abs; // fee, refund, payout escono dal wallet
+    }
+    return balance;
+}
+
+/** Saldo conto di pagamento PayPal (spese / residuali / giroconti) — non transito vendite. */
+export async function sumPaypalPaymentAccountCents(): Promise<number> {
+    return sumTransitLedgerCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']);
 }
 
 export async function compareGatewayTransitBalances(): Promise<GatewayTransitComparison> {

@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-09-11T15:39:54.438Z",
+  "apply": true,
+  "log": [
+    {
+      "declared": {
+        "stripe": 100,
+        "paypal": 0
+      }
+    },
+    {
+      "manualInboundToFuoriGateway": {
+        "n": 31,
+        "euro": 1474.47,
+        "apply": true
+      }
+    },
+    {
+      "paypalInboundVenditeCleared": {
+        "n": 14,
+        "euro": 577.32,
+        "apply": true
+      },
+      "paypalExpenseReclass": {
+        "n": 9,
+        "euro": 242.67,
+        "apply": true
+      },
+      "paypalNegRvToCost": {
+        "n": 36,
+        "euro": 1563.06,
+        "apply": true
+      }
+    },
+    {
+      "jsonOffStripeTransit": {
+        "n": 9,
+        "euro": 624.83,
+        "apply": true
+      }
+    }
+  ],
+  "stripeSalesTransitAfterEuro": 1829.39,
+  "stripeDeclaredEuro": 100,
+  "deltaC13StripeEuro": 1729.39
+}

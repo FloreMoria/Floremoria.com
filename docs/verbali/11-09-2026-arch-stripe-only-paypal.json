@@ -1,0 +1,1158 @@
+{
+  "generatedAt": "2026-09-11T15:34:19.863Z",
+  "apply": false,
+  "applyLog": [],
+  "applyLogN": 0,
+  "finecoRef": {
+    "stripePayoutEuro": 2878.26,
+    "paypalCreditEuro": 569.88,
+    "totalEuro": 3448.14,
+    "stripeT1": 466.89,
+    "stripeT2": 1091.04,
+    "stripeT3": 1320.33,
+    "paypalT1": 324.37,
+    "paypalT2": 170.41,
+    "paypalT3": 75.1
+  },
+  "punto1_stripeTransit": {
+    "addendi": {
+      "incassiCliente_STRIPE_TX": {
+        "n": 60,
+        "euro": 3472.37
+      },
+      "commissioni_STRIPE_FEE": {
+        "n": 94,
+        "euro": 130.07
+      },
+      "rimborsi_STRIPE_REFUND": {
+        "n": 3,
+        "euro": 139.95
+      },
+      "payout_ledger_po": {
+        "n": 45,
+        "euro": 3097.5
+      },
+      "payout_Fineco_riferimento": {
+        "euro": 2878.26
+      }
+    },
+    "equazione_con_payout_Fineco": {
+      "formula": "TX − FEE − REFUND − Fineco_payout",
+      "resultEuro": 324.09,
+      "attesoEuro": 100,
+      "deltaVs100Euro": 224.09
+    },
+    "equazione_con_payout_ledger": {
+      "resultEuro": 104.85,
+      "deltaVs100Euro": 4.85
+    },
+    "cosaGonfiava": {
+      "MANUAL_INBOUND_su_meta_stripe": {
+        "n": 31,
+        "euro": 1474.47,
+        "rows": [
+          {
+            "sk": "MANUAL_INBOUND:cms7kwdw9000cjx044yhnh3bc",
+            "euro": 31.48,
+            "date": "2026-07-30",
+            "orderId": "cms7kwdw9000cjx044yhnh3bc",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-004",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cms7kh4470001ju04ts9h3ezm",
+            "euro": 31.48,
+            "date": "2026-07-30",
+            "orderId": "cms7kh4470001ju04ts9h3ezm",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PA-26-007",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmrt166og0000jw0432noy5dn",
+            "euro": 37.99,
+            "date": "2026-07-20",
+            "orderId": "cmrt166og0000jw0432noy5dn",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-MB-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmrusit6y0000l8046wbck8a9",
+            "euro": 44.98,
+            "date": "2026-07-21",
+            "orderId": "cmrusit6y0000l8046wbck8a9",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-CO-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsebfvr20002l504aq9nfqfr",
+            "euro": 47.46,
+            "date": "2026-08-04",
+            "orderId": "cmsebfvr20002l504aq9nfqfr",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-ME-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmttyazkg0000jr04ldu6tiab",
+            "euro": 55.99,
+            "date": "2026-09-09",
+            "orderId": "cmttyazkg0000jr04ldu6tiab",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-MB-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmt2pq29v0000la043ksaow9c",
+            "euro": 89.99,
+            "date": "2026-08-21",
+            "orderId": "cmt2pq29v0000la043ksaow9c",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PN-26-004",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsxasq2y000gl304oth7ffq3",
+            "euro": 31.48,
+            "date": "2026-08-17",
+            "orderId": "cmsxasq2y000gl304oth7ffq3",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PA-26-008",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsxam9pn0001l304jx3gae4y",
+            "euro": 31.48,
+            "date": "2026-08-17",
+            "orderId": "cmsxam9pn0001l304jx3gae4y",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-006",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsx9hwv00001k104uoepnd89",
+            "euro": 31.48,
+            "date": "2026-08-17",
+            "orderId": "cmsx9hwv00001k104uoepnd89",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-005",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsxf7d4o0000ic04toy2f9rk",
+            "euro": 39.99,
+            "date": "2026-08-17",
+            "orderId": "cmsxf7d4o0000ic04toy2f9rk",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PN-26-003",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsrxeaki0001la04r3diximm",
+            "euro": 52.48,
+            "date": "2026-08-13",
+            "orderId": "cmsrxeaki0001la04r3diximm",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-RM-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsnghl7y0000ie04c47zru2x",
+            "euro": 69.99,
+            "date": "2026-08-10",
+            "orderId": "cmsnghl7y0000ie04c47zru2x",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PN-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsalfwki0000js04s4hbqh1i",
+            "euro": 29.99,
+            "date": "2026-08-01",
+            "orderId": "cmsalfwki0000js04s4hbqh1i",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-RC-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmsilmkhn0000l104avptjk6y",
+            "euro": 39.99,
+            "date": "2026-08-07",
+            "orderId": "cmsilmkhn0000l104avptjk6y",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PN-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmrlxhp900002jn04pwh9flvv",
+            "euro": 49.99,
+            "date": "2026-07-15",
+            "orderId": "cmrlxhp900002jn04pwh9flvv",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-ME-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmrnjw44c0000la04aa7cf55c",
+            "euro": 37.99,
+            "date": "2026-07-16",
+            "orderId": "cmrnjw44c0000la04aa7cf55c",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PD-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmrekxg4p0000l704cv80kg3m",
+            "euro": 39.99,
+            "date": "2026-07-10",
+            "orderId": "cmrekxg4p0000l704cv80kg3m",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PD-26-004",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmr64j74f000fl104rqg5myod",
+            "euro": 31.48,
+            "date": "2026-07-04",
+            "orderId": "cmr64j74f000fl104rqg5myod",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-003",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmr64du1w0001l104b7v3oxkf",
+            "euro": 31.48,
+            "date": "2026-07-04",
+            "orderId": "cmr64du1w0001l104b7v3oxkf",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PA-26-005",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmr5483ir0000l4046lw2q6m0",
+            "euro": 69.99,
+            "date": "2026-07-03",
+            "orderId": "cmr5483ir0000l4046lw2q6m0",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PD-26-003",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmr63hk9q0001l404p4lhstdd",
+            "euro": 144.98,
+            "date": "2026-07-04",
+            "orderId": "cmr63hk9q0001l404p4lhstdd",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PA-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmr3zmkcd0000l404p75vvvnm",
+            "euro": 104.98,
+            "date": "2026-07-02",
+            "orderId": "cmr3zmkcd0000l404p75vvvnm",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-PD-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmqpbuuay0004jv04cq34sfpe",
+            "euro": 64.98,
+            "date": "2026-06-22",
+            "orderId": "cmqpbuuay0004jv04cq34sfpe",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FF-VR-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmqi3gil20001jp04a5criwde",
+            "euro": 31.48,
+            "date": "2026-06-17",
+            "orderId": "cmqi3gil20001jp04a5criwde",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PA-26-004",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmqi32zda0002le04svrim4si",
+            "euro": 31.48,
+            "date": "2026-06-17",
+            "orderId": "cmqi32zda0002le04svrim4si",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-002",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmqc1wwci0001i904ons8tse3",
+            "euro": 43.97,
+            "date": "2026-06-13",
+            "orderId": "cmqc1wwci0001i904ons8tse3",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-RC-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmpi3vzfm0001k604jn1zpcz1",
+            "euro": 32.48,
+            "date": "2026-05-23",
+            "orderId": "cmpi3vzfm0001k604jn1zpcz1",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CO-26-004",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmpe615zq000al404qij79ek3",
+            "euro": 31.48,
+            "date": "2026-05-20",
+            "orderId": "cmpe615zq000al404qij79ek3",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-CS-26-001",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmpe5uzyf0005l404g6qpnjq4",
+            "euro": 31.48,
+            "date": "2026-05-20",
+            "orderId": "cmpe5uzyf0005l404g6qpnjq4",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-PA-26-003",
+            "onStripeMeta": true
+          },
+          {
+            "sk": "MANUAL_INBOUND:cmpcb2j7y0004jv04xlc7wvb2",
+            "euro": 29.99,
+            "date": "2026-05-19",
+            "orderId": "cmpcb2j7y0004jv04xlc7wvb2",
+            "cat": "RICAVI_VENDITE",
+            "desc": "Incasso da identificare — ordine FT-SA-26-001",
+            "onStripeMeta": true
+          }
+        ]
+      },
+      "JSON_ENTRY_su_stripe": {
+        "n": 9,
+        "euro": 624.83
+      },
+      "equazione_gonfiata_TX_plus_MANUAL": {
+        "resultEuro": 1798.56,
+        "deltaVs100Euro": 1698.56
+      }
+    },
+    "ledgerTransitAllTimeEuro": 3928.69,
+    "ledgerTransitAfterEuro": 3928.69,
+    "payoutDelta_ledger_vs_Fineco": 219.24,
+    "fuori": {
+      "deltaVs100Euro": 224.09,
+      "interpretazione": "Transito calcolati €224.09 sopra i €100 — troppi inbound e/o pochi outflow",
+      "candidati": [
+        {
+          "name": "incassiCliente_STRIPE_TX",
+          "euro": 3472.37,
+          "note": "se troppo alti: includono non-vendite o doppi; se bassi: manca TX"
+        },
+        {
+          "name": "commissioni",
+          "euro": 130.07
+        },
+        {
+          "name": "rimborsi",
+          "euro": 139.95
+        },
+        {
+          "name": "payout_ledger_vs_Fineco",
+          "euro": 219.24
+        },
+        {
+          "name": "MANUAL_INBOUND_era_nel_transito",
+          "euro": 1474.47
+        }
+      ]
+    }
+  },
+  "punto2_paypal": {
+    "inboundVenditeDaAzzerare": {
+      "n": 14,
+      "euro": 577.32,
+      "sample": [
+        {
+          "id": "cmt4lqawz0005l204b06gb19j",
+          "sk": "PAYPAL_TX:66C04847WL650301D",
+          "euro": 39.99,
+          "cents": 3999,
+          "sign": 3999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-01-16",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Giulia Grappone · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqawz0008l204rd41o518",
+          "sk": "PAYPAL_TX:22E30531F99808504",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-01-21",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqawz000dl204rh7snoz4",
+          "sk": "PAYPAL_TX:44E519039S467634K",
+          "euro": 39.99,
+          "cents": 3999,
+          "sign": 3999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-02-09",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · ester irace · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax0000jl2043vrw91a8",
+          "sk": "PAYPAL_TX:2GU64478W4726692S",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-02-16",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax0000rl2047r5w0vfr",
+          "sk": "PAYPAL_TX:4W6628604D401674M",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-02-22",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax1000zl204q0eohb1q",
+          "sk": "PAYPAL_TX:3D552868PU399581S",
+          "euro": 72.48,
+          "cents": 7248,
+          "sign": 7248,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-03-14",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Chiara Durì · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax10016l204uasbtlw0",
+          "sk": "PAYPAL_TX:09C2701554000764W",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-03-24",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001ll204ga8akjsg",
+          "sk": "PAYPAL_TX:5VV92297N9957570R",
+          "euro": 59.98,
+          "cents": 5998,
+          "sign": 5998,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-04-20",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax4002il204fupw7a6m",
+          "sk": "PAYPAL_TX:43H07985E69976410",
+          "euro": 49.99,
+          "cents": 4999,
+          "sign": 4999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-05-16",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Maria Agata Puliafico · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqaxc005tl2049fksyufv",
+          "sk": "PAYPAL_TX:9JN50230473257055",
+          "euro": 31.48,
+          "cents": 3148,
+          "sign": 3148,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-07-27",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Ordine FloreMoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax1000xl204len09jyh",
+          "sk": "PAYPAL_TX:83N54580AU0027713",
+          "euro": 49.99,
+          "cents": 4999,
+          "sign": 4999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-03-13",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Maria Agata Puliafico · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqawz000al20418qedrj0",
+          "sk": "PAYPAL_TX:8YH43677SS377553L",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-01-22",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax10012l204kxqfjv3s",
+          "sk": "PAYPAL_TX:95E92452N40245344",
+          "euro": 29.99,
+          "cents": 2999,
+          "sign": 2999,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-03-22",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · LUCIANO MAMMI' · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax3001wl204dplkpxz1",
+          "sk": "PAYPAL_TX:1T757598T7263511M",
+          "euro": 53.48,
+          "cents": 5348,
+          "sign": 5348,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-05-03",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Maria Antonia Pozzi · Acquisto Floremoria",
+          "nature": null,
+          "onPpMeta": true
+        }
+      ]
+    },
+    "expenseLikeAncoraInRvODubbio": {
+      "n": 75,
+      "euro": 2366.39,
+      "sample": [
+        {
+          "id": "cmt4lqax0000wl2042bnroxju",
+          "sk": "PAYPAL_TX:4H853123U78395159",
+          "euro": 27.99,
+          "cents": 2799,
+          "sign": -2799,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-03-12",
+          "orderId": null,
+          "desc": "Pagamento preautorizzato utenza · Google Payment Ireland Limited · 2500 AI Credits (Google One)",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax10015l204v3ebgytw",
+          "sk": "PAYPAL_TX:9BM635819G269870X",
+          "euro": 21.99,
+          "cents": 2199,
+          "sign": -2199,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-03-23",
+          "orderId": null,
+          "desc": "Pagamento preautorizzato utenza · Google Payment Ireland Ltd. · Google AI Pro (2 TB) (Google One)",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax0000ol20436qfd2po",
+          "sk": "PAYPAL_TX:4U3379959N1053207",
+          "euro": 25.42,
+          "cents": 2542,
+          "sign": -2542,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-02-18",
+          "orderId": null,
+          "desc": "Transazione generica con carta di debito PayPal · OPENAI · OPENAI",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax40028l204wmpk3nbs",
+          "sk": "PAYPAL_TX:7GF23476882551712",
+          "euro": 18,
+          "cents": 1800,
+          "sign": -1800,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-05-06",
+          "orderId": null,
+          "desc": "Transazione generica con carta di debito PayPal · CLAUDE.AI SUBSCRIPTION · CLAUDE.AI SUBSCRIPTION",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax50030l204ulck7xlw",
+          "sk": "PAYPAL_TX:207413328A941631E",
+          "euro": 21.99,
+          "cents": 2199,
+          "sign": -2199,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-05-23",
+          "orderId": null,
+          "desc": "Pagamento preautorizzato utenza · Google Payment Ireland Limited · Google AI Pro (2 TB) (Google One)",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax7003rl204ldlxrllh",
+          "sk": "PAYPAL_TX:28911748GK440544R",
+          "euro": 17.34,
+          "cents": 1734,
+          "sign": -1734,
+          "cat": "SPESE_SAAS",
+          "dir": "USCITA",
+          "date": "2026-06-10",
+          "orderId": null,
+          "desc": "Transazione generica con carta di debito PayPal · TWILIO.COM · TWILIO.COM",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqawy0000l204hjrevh8f",
+          "sk": "PAYPAL_TX:8S998539NP0416745",
+          "euro": 18.85,
+          "cents": 1885,
+          "sign": -1885,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-01-12",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax0000ml204pen7yraq",
+          "sk": "PAYPAL_TX:54W40024GA901774A",
+          "euro": 681.49,
+          "cents": 68149,
+          "sign": -68149,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-02-18",
+          "orderId": null,
+          "desc": "Pagamento abbonamento · irin srl · Wosnic 49/mese pagamento annuale",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax10019l204ho3jdcdp",
+          "sk": "PAYPAL_TX:8H2761552M155881R",
+          "euro": 9.13,
+          "cents": 913,
+          "sign": -913,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-09",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax1001al204swt8qb82",
+          "sk": "PAYPAL_TX:6LH97042J7393174S",
+          "euro": 9.13,
+          "cents": 913,
+          "sign": -913,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-10",
+          "orderId": null,
+          "desc": "Transazione generica con carta di debito PayPal · BALLARATE PIETRO SRL · BALLARATE PIETRO SRL",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax1001bl204lggqfa1n",
+          "sk": "PAYPAL_TX:9A8499750D2285252",
+          "euro": 9.13,
+          "cents": 913,
+          "sign": 913,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-04-10",
+          "orderId": null,
+          "desc": "Altro · BALLARATE PIETRO SRL",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001el2046aoyl7ls",
+          "sk": "PAYPAL_TX:6AS94292Y7499461C",
+          "euro": 10.55,
+          "cents": 1055,
+          "sign": -1055,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-10",
+          "orderId": null,
+          "desc": "Transazione generica con carta di debito PayPal · POSTE ITALIANE · POSTE ITALIANE",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001gl20407rt9lnl",
+          "sk": "PAYPAL_TX:82B58826WV385183C",
+          "euro": 9.68,
+          "cents": 968,
+          "sign": 968,
+          "cat": "RICAVI_VENDITE",
+          "dir": "ENTRATA",
+          "date": "2026-04-10",
+          "orderId": null,
+          "desc": "Altro · POSTE ITALIANE",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001pl2044jf36ray",
+          "sk": "PAYPAL_TX:89M937098L3249633",
+          "euro": 61,
+          "cents": 6100,
+          "sign": -6100,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-27",
+          "orderId": null,
+          "desc": "Pagamento Express Checkout · Aruba Spa · 188898448",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001ql204dh538eo7",
+          "sk": "PAYPAL_TX:4NY34846PV611573B",
+          "euro": 6.09,
+          "cents": 609,
+          "sign": -609,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-27",
+          "orderId": null,
+          "desc": "Pagamento preautorizzato utenza · Aruba Spa · MO21262195",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax2001rl204rmcblcmj",
+          "sk": "PAYPAL_TX:21Y4823370037602X",
+          "euro": 73.19,
+          "cents": 7319,
+          "sign": -7319,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-04-27",
+          "orderId": null,
+          "desc": "Pagamento preautorizzato utenza · Aruba Spa · MO21262606",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax3001sl204ndpbalho",
+          "sk": "PAYPAL_TX:874150392V844421B",
+          "euro": 17.75,
+          "cents": 1775,
+          "sign": -1775,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-05-02",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax30021l204y7gd8c53",
+          "sk": "PAYPAL_TX:9PC816391V7631228",
+          "euro": 48.64,
+          "cents": 4864,
+          "sign": -4864,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-05-05",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax30027l20405jp5i64",
+          "sk": "PAYPAL_TX:12R45098BC982781G",
+          "euro": 16.55,
+          "cents": 1655,
+          "sign": -1655,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-05-06",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        },
+        {
+          "id": "cmt4lqax50031l204hdw601hn",
+          "sk": "PAYPAL_TX:51Y238123B712060X",
+          "euro": 30,
+          "cents": 3000,
+          "sign": -3000,
+          "cat": "RICAVI_VENDITE",
+          "dir": "USCITA",
+          "date": "2026-05-23",
+          "orderId": null,
+          "desc": "Blocco generico",
+          "nature": null,
+          "onPpMeta": true
+        }
+      ]
+    },
+    "payoutLedger": {
+      "n": 25,
+      "euro": 566.76
+    },
+    "payoutFinecoRef": 569.88,
+    "costiGiaInCe": {
+      "n": 43,
+      "euro": 541.6,
+      "byCat": {
+        "SPESE_SAAS": 51267,
+        "ONERI_BANCARI": 2769,
+        "ALTRI_COSTI": 124
+      }
+    },
+    "negativiInRicaviVendite": {
+      "n": 36,
+      "euro": 1563.06
+    },
+    "ledgerTransitEuro": -1504.72,
+    "ledgerTransitAfterEuro": -1504.72
+  },
+  "punto3_altriRicavi": {
+    "n": 1,
+    "euro": 30.09,
+    "top": {
+      "date": "2026-04-07",
+      "euro": 30.09,
+      "description": "Ord: Wix.com Luxembourg Sarl Ben: Floremoria Srl Dt-Ord: 07/04/2026 Banca Ord: Adyen B.v. Info-Cli: Wix Payments",
+      "counterparty": null,
+      "sourceKey": "BANK_LINE:cmt1vc6uj0007ky04spv5jwp7",
+      "sourceType": "BANK_LINE",
+      "bankLine": {
+        "id": "cmt1vc6uj0007ky04spv5jwp7",
+        "valueDate": "2026-04-07T12:00:00.000Z",
+        "accountingDate": "2026-04-07T12:00:00.000Z",
+        "amountCents": 3009,
+        "description": "Ord: Wix.com Luxembourg Sarl Ben: Floremoria Srl Dt-Ord: 07/04/2026 Banca Ord: Adyen B.v. Info-Cli: Wix Payments",
+        "rawJson": {
+          "page": 1,
+          "cells": [
+            "07.04.26",
+            "07.04.26",
+            "Ord: Wix.com Luxembourg Sarl Ben: Floremoria Srl Dt-Ord: 07/04/2026 Banca Ord: Adyen B.v. Info-Cli:",
+            "",
+            "30,09",
+            ""
+          ],
+          "parser": "fineco-pdf-tabular"
+        },
+        "matchType": "FLORIST_TRANSFER",
+        "matchNotes": "Non abbinato — classificazione suggerita: FLORIST_TRANSFER. Usa Abbina / Associa."
+      }
+    },
+    "all": [
+      {
+        "date": "2026-04-07",
+        "euro": 30.09,
+        "desc": "Ord: Wix.com Luxembourg Sarl Ben: Floremoria Srl Dt-Ord: 07/04/2026 Banca Ord: Adyen B.v. Info-Cli: Wix Payments",
+        "cp": null,
+        "sk": "BANK_LINE:cmt1vc6uj0007ky04spv5jwp7"
+      }
+    ],
+    "pnlAltriRicaviEuro": 30.09,
+    "pnlVenditeEuro": 4784.94,
+    "pnlRaiEuro": -2731.92
+  },
+  "punto4_scarto": {
+    "venditeOfficialEuro": 4098.68,
+    "feeRefEuro": 178.49,
+    "expectedNetEuro": 3920.19,
+    "finecoPlusSaldoEuro": 3548.14,
+    "gapEuro": 372.05,
+    "a_settembreNonVersato": {
+      "septListaEuro": 428.91,
+      "t3ListaEuro": 1849.42,
+      "finecoStripeT3Euro": 1320.33,
+      "t3OrdiniMenoFinecoStripeEuro": 529.09,
+      "note": "Proxy: T3 lista − giroconti Stripe Fineco T3 (non è 1:1 con pending Stripe)",
+      "septOrders": [
+        {
+          "id": "FT-MB-26-002",
+          "euro": 55.99
+        },
+        {
+          "id": "FF-MC-26-002",
+          "euro": 204.98
+        },
+        {
+          "id": "FF-MC-26-001",
+          "euro": 104.98
+        },
+        {
+          "id": "FT-CS-26-007",
+          "euro": 31.48
+        },
+        {
+          "id": "FT-PA-26-009",
+          "euro": 31.48
+        }
+      ]
+    },
+    "b_commissioniRealSuperiori": {
+      "feeLedgerEuro": 130.07,
+      "feeRefEuro": 178.49,
+      "deltaEuro": -48.42
+    },
+    "c_ordiniFuoriStripe": {
+      "n": 31,
+      "euro": 1474.47,
+      "rows": [
+        {
+          "id": "FT-PA-26-005",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-001",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CO-26-004",
+          "euro": 32.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-SA-26-001",
+          "euro": 29.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-004",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-VR-26-001",
+          "euro": 64.98,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PD-26-002",
+          "euro": 104.98,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-MB-26-002",
+          "euro": 55.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-006",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-PA-26-004",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PD-26-003",
+          "euro": 69.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-002",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PA-26-001",
+          "euro": 144.98,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-CO-26-001",
+          "euro": 44.98,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-ME-26-001",
+          "euro": 49.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-ME-26-002",
+          "euro": 47.46,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PN-26-001",
+          "euro": 39.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PN-26-003",
+          "euro": 39.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-005",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-MB-26-001",
+          "euro": 37.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-RC-26-002",
+          "euro": 29.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-PD-26-001",
+          "euro": 37.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PN-26-002",
+          "euro": 69.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-RC-26-001",
+          "euro": 43.97,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-CS-26-003",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-PA-26-007",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-PA-26-008",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-PA-26-003",
+          "euro": 31.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PD-26-004",
+          "euro": 39.99,
+          "stripeTx": null
+        },
+        {
+          "id": "FT-RM-26-002",
+          "euro": 52.48,
+          "stripeTx": null
+        },
+        {
+          "id": "FF-PN-26-004",
+          "euro": 89.99,
+          "stripeTx": null
+        }
+      ]
+    }
+  },
+  "punto6_feeInCe": {
+    "feeByCategoryCents": {
+      "ONERI_BANCARI": 13007
+    },
+    "feeByCategoryEuro": {
+      "ONERI_BANCARI": 130.07
+    },
+    "inCe": true
+  },
+  "declared": {
+    "before": {
+      "stripe": {
+        "balanceCents": 10000,
+        "asOf": "2026-09-11",
+        "alignedAt": "2026-09-11T15:08:25.411Z",
+        "note": "Cruscotto Stripe €100"
+      },
+      "paypal": {
+        "balanceCents": 0,
+        "asOf": "2026-09-11",
+        "alignedAt": "2026-09-11T15:08:25.493Z",
+        "note": "Cruscotto PayPal €0"
+      }
+    }
+  },
+  "afterApplyEq": null
+}

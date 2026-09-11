@@ -61,7 +61,7 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
 
 const EUR_FORMAT = '€ #,##0.00';
 /** Versione del metodo che questo export applica davvero (METODO §12). */
-export const DOSSIER_METHOD_VERSION = '1.18';
+export const DOSSIER_METHOD_VERSION = '1.19';
 const DOSSIER_VERSION = `dossier-fiscale-metodo-v${DOSSIER_METHOD_VERSION}`;
 
 function euroNum(cents: number): number {

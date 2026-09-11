@@ -1,6 +1,9 @@
 /**
- * Completa il conto di transito gateway (Stripe / PayPal).
- * Tre gambe + rimborsi, ancorate all’id evento sorgente (idempotenti via sourceKey).
+ * Completa il **transito vendite Stripe** (unico).
+ * Quattro gambe + rimborsi, ancorate all’id evento sorgente (idempotenti via sourceKey).
+ *
+ * PayPal non è gateway di vendita: non scrivere inbound ricavi su PAYPAL_TX.
+ * Incassi fuori gateway (`MANUAL_INBOUND`) restano fuori da questo sync.
  *
  * Non tocca i corrispettivi (ricavi fiscali restano sul perimetro gateway/ordine).
  */
@@ -268,7 +271,7 @@ export async function syncGatewayTransitLegs(opts?: {
     return { inserted: r.inserted, skipped: r.skipped, candidates: candidates.length };
 }
 
-/** Ordini abbinati a gateway (corrispettivi) con gamba in entrata sul ledger. */
+/** Copertura inbound: STRIPE_TX e/o MANUAL_INBOUND (fuori gateway). PayPal TX non conta. */
 export async function measureInboundTransitCoverage(year: number): Promise<{
     gatewayLinkedOrders: number;
     withInboundLeg: number;
@@ -280,7 +283,10 @@ export async function measureInboundTransitCoverage(year: number): Promise<{
     const { measureRevenuePerimeterSets } = await import(
         '@/lib/financial/revenuePerimeterChannels'
     );
-    const { sumTransitLedgerCents } = await import('@/lib/financial/gatewayTransitBalance');
+    const {
+        sumStripeSalesTransitCents,
+        sumPaypalPaymentAccountCents,
+    } = await import('@/lib/financial/gatewayTransitBalance');
     const sets = await measureRevenuePerimeterSets(year);
     const corr = sets.find((s) => s.id === 'corrispettivi');
     const orderIds = corr?.orderIds || [];
@@ -291,11 +297,8 @@ export async function measureInboundTransitCoverage(year: number): Promise<{
             orderId: { in: orderIds.length ? orderIds : ['__none__'] },
             OR: [
                 { sourceKey: { startsWith: 'STRIPE_TX:' } },
-                { sourceKey: { startsWith: 'PAYPAL_TX:' } },
-                {
-                    sourceType: 'ORDER',
-                    // legacy webhook: ORDER with dare transit
-                },
+                { sourceKey: { startsWith: 'MANUAL_INBOUND:' } },
+                { sourceType: 'ORDER' },
             ],
         },
         select: { orderId: true, sourceKey: true, sourceType: true, metadataJson: true },
@@ -307,67 +310,47 @@ export async function measureInboundTransitCoverage(year: number): Promise<{
         if (!r.orderId) continue;
         const meta = (r.metadataJson || {}) as Record<string, unknown>;
         const dare = String(meta.dareAccount || '');
-        const isInboundKey =
-            r.sourceKey.startsWith('STRIPE_TX:') || r.sourceKey.startsWith('PAYPAL_TX:');
-        const isOrderDare =
-            r.sourceType === 'ORDER' && (/10300|10200|Stripe|PayPal/i.test(dare));
-        if (isInboundKey || isOrderDare) {
-            // inbound keys always count; PayPal TX should have dare
-            if (isInboundKey) {
-                if (r.sourceKey.startsWith('PAYPAL_TX:') && dare && !/10200|PayPal/i.test(dare)) {
-                    // TX senza dare wallet: non conta
-                } else {
-                    withLeg.add(r.orderId);
-                }
-            }
-            if (isOrderDare) withLeg.add(r.orderId);
+        if (
+            r.sourceKey.startsWith('STRIPE_TX:') ||
+            r.sourceKey.startsWith('MANUAL_INBOUND:') ||
+            (r.sourceType === 'ORDER' && /10300|10400|Stripe|fuori gateway/i.test(dare))
+        ) {
+            withLeg.add(r.orderId);
         }
     }
 
-    // Also: PAYPAL_TX / STRIPE_TX may lack orderId but Order.stripeTransactionId matches
+    // STRIPE_TX può mancare di orderId ma matchare Order.stripeTransactionId
     const orders = await prisma.order.findMany({
         where: { id: { in: orderIds } },
         select: { id: true, orderNumber: true, stripeTransactionId: true },
     });
-    const txKeys = new Set<string>();
+    const byTx = await prisma.financialLedgerEntry.findMany({
+        where: {
+            reversedAt: null,
+            sourceKey: { startsWith: 'STRIPE_TX:' },
+        },
+        select: { sourceKey: true, sourceId: true },
+        take: 20000,
+    });
     for (const o of orders) {
-        if (!o.stripeTransactionId?.trim()) continue;
+        if (withLeg.has(o.id) || !o.stripeTransactionId?.trim()) continue;
         const tok = normalizeGatewayEventToken(o.stripeTransactionId);
-        txKeys.add(tok);
-        txKeys.add(o.stripeTransactionId.trim());
-    }
-    if (txKeys.size) {
-        const byTx = await prisma.financialLedgerEntry.findMany({
-            where: {
-                reversedAt: null,
-                OR: [
-                    { sourceKey: { startsWith: 'STRIPE_TX:' } },
-                    { sourceKey: { startsWith: 'PAYPAL_TX:' } },
-                ],
-            },
-            select: { sourceKey: true, sourceId: true, metadataJson: true },
-            take: 20000,
+        const hit = byTx.some((r) => {
+            const id = r.sourceId || r.sourceKey.split(':').slice(1).join(':');
+            const rTok = normalizeGatewayEventToken(id);
+            return (
+                rTok === tok ||
+                id.includes(tok) ||
+                r.sourceKey.includes(tok) ||
+                r.sourceKey.includes(o.stripeTransactionId!)
+            );
         });
-        for (const o of orders) {
-            if (withLeg.has(o.id)) continue;
-            const tok = o.stripeTransactionId
-                ? normalizeGatewayEventToken(o.stripeTransactionId)
-                : '';
-            const hit = byTx.some((r) => {
-                const id = r.sourceId || r.sourceKey.split(':').slice(1).join(':');
-                const rTok = normalizeGatewayEventToken(id);
-                return (
-                    (tok && (rTok === tok || id.includes(tok) || r.sourceKey.includes(tok))) ||
-                    (o.stripeTransactionId && r.sourceKey.includes(o.stripeTransactionId))
-                );
-            });
-            if (hit) withLeg.add(o.id);
-        }
+        if (hit) withLeg.add(o.id);
     }
 
     const missing = orders.filter((o) => !withLeg.has(o.id));
-    const stripeBal = await sumTransitLedgerCents(['10300', 'Banca c/o Stripe', 'Conto Stripe']);
-    const paypalBal = await sumTransitLedgerCents(['10200', 'Banca c/o PayPal', 'Conto PayPal']);
+    const stripeBal = await sumStripeSalesTransitCents();
+    const paypalBal = await sumPaypalPaymentAccountCents();
 
     return {
         gatewayLinkedOrders: orderIds.length,

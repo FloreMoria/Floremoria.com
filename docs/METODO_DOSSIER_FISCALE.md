@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.18 — 11 settembre 2026.
+Versione 1.19 — 11 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -33,7 +33,7 @@ e senza logiche di preferenza nascoste nel codice.
 | # | Fonte | È verità su | Formato accettato |
 |---|---|---|---|
 | 1 | Estratto conto bancario | la cassa: cosa è entrato e uscito, e quando | qualsiasi file scaricato dal portale della banca (PDF, CSV, XLS) che riporti saldo iniziale e finale |
-| 2 | Report gateway (Stripe, PayPal) | gli incassi dai clienti e le commissioni | export ufficiale del gateway |
+| 2 | Report gateway (**Stripe**; PayPal solo come conto di pagamento / spese) | gli incassi dai clienti (via Stripe) e le commissioni Stripe; movimenti PayPal di spesa/residuo | export ufficiale |
 | 3 | Fatture, autofatture, corrispettivi | i documenti fiscali e l'IVA | XML SDI, PDF |
 | 4 | Ordini del gestionale | il fatto commerciale: chi ha comprato cosa | database interno |
 
@@ -207,10 +207,10 @@ Quadratura in coda e persistito per la UI.
 | C7 | Identificazione fornitori | numero documenti senza partita IVA o codice fiscale | 0 |
 | C8 | Mastri ammessi | numero righe con mastro fuori dall'elenco chiuso | 0 |
 | C9 | Partite di giro | numero movimenti di transito classificati come ricavo o costo | 0 |
-| C10 | Doppia gamba transito | per ogni gateway: somma dare − somma avere − saldo wallet dichiarato | 0 |
+| C10 | Doppia gamba transito | **solo Stripe** (unico transito vendite): Σ TX − FEE − REFUND − PAYOUT − saldo dichiarato; PayPal escluso | 0 |
 | C11 | Coerenza di perimetro | sugli **insiemi di orderId** dell’anno solare (corrispettivi, ledger ricavi, taxRegister, taxQuarterly, cfoTools; pose escluse): gli insiemi devono coincidere; misura = n° ordini presenti in un canale e assenti in un altro | 0 |
 | C12 | Data ordine = data incasso | per ogni ordine abbinato a un movimento gateway: \|data ordine − data incasso\|; tolleranza dichiarata ≤ 24h (fuso) non conta come errore | 0 |
-| C13 | Saldo di transito | per ogni gateway: saldo ledger del conto di transito − **saldo wallet dichiarato dall’utente** (cruscotto gateway) | 0 |
+| C13 | Saldo transito / conto pagamento | Stripe: saldo transito vendite − dichiarato; PayPal: riconciliazione **conto di pagamento** (non ciclo vendite) − dichiarato | 0 |
 
 **C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
 alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
@@ -242,13 +242,13 @@ canale e assenti in un altro.
 Ogni divergenza oltre la tolleranza di fuso (24 ore, dichiarata) è un dato sbagliato. Il
 controllo deve poter diventare verde.
 
-**C13 — saldo di transito.** A una data scelta, il saldo del conto di transito calcolato
-dal sistema deve coincidere con il saldo **dichiarato** dal cruscotto del gateway (Stripe /
-PayPal), inserito dall’utente come i saldi bancari. Scostamento atteso: nullo. Se non
-coincide, il controllo espone il delta e un campione di eventi ledger presenti da una parte.
-**Senza saldo dichiarato, C13 è non verificabile, non fallito.** Un controllo che confronta
-il sistema con sé stesso (o solo con l’API live senza dichiarazione) non controlla niente.
-C10 resta il controllo di struttura (doppia gamba); C13 è il controllo di **saldo**.
+**C13 — saldo transito / conto pagamento.** Stripe è l’**unico** transito vendite: il saldo
+calcolato (`STRIPE_TX − FEE − REFUND − PAYOUT`) deve coincidere con il saldo **dichiarato**
+dal cruscotto Stripe. PayPal non è più nel ciclo vendite: C13 vi misura solo la
+**riconciliazione del conto di pagamento** (ledger vs dichiarato, es. €0). Scostamento
+atteso: nullo su ciascun pezzo verificabile. **Senza saldo dichiarato, quel pezzo è non
+verificabile, non fallito.** C10 resta il controllo di struttura sul solo Stripe; C13 è il
+controllo di **saldo**.
 
 ### 5.1 Controllo, lista di lavoro, risultato
 
@@ -296,7 +296,8 @@ Nessuna riga può avere un mastro che non sia in questo elenco. Testo libero vie
 **Economici — costi**: Costi del venduto (fioristi) · Commissioni gateway · Servizi e
 software · Oneri bancari · Spese generali · Compensi professionali
 
-**Patrimoniali**: Banca · Transito Stripe · Transito PayPal · Crediti verso clienti ·
+**Patrimoniali**: Banca · Transito Stripe (unico transito vendite) · Conto PayPal (pagamento,
+non vendite) · Incassi fuori gateway · Crediti verso clienti ·
 Debiti verso fornitori · Fatture da ricevere · Risconti · IVA a credito · IVA a debito ·
 Finanziamento soci · Da classificare
 
@@ -305,41 +306,70 @@ Finanziamento soci · Da classificare
 | Se il movimento è… | Mastro | Nota |
 |---|---|---|
 | bonifico a un fiorista per una consegna | Costi del venduto (fioristi) | mai "Spese generali" |
-| addebito SDD PayPal con causale "Add To Balance" | Transito PayPal | è ricarica del wallet, **mai un ricavo** |
-| bonifico dalla banca al wallet di un gateway | Transito del gateway | partita di giro |
-| accredito di un payout dal gateway alla banca | Banca / Transito del gateway | partita di giro, **mai un ricavo** |
-| incasso di un cliente sul gateway | Ricavi vendite / Transito del gateway | è qui che nasce il ricavo |
+| addebito SDD PayPal con causale "Add To Balance" | Conto PayPal (pagamento) | ricarica del wallet PayPal, **mai un ricavo** né gamba vendite |
+| bonifico dalla banca al wallet di un gateway | Transito Stripe o Conto PayPal | partita di giro sul contenitore giusto |
+| accredito di un payout dal gateway alla banca | Banca / Transito Stripe (o Conto PayPal se residuale) | partita di giro, **mai un ricavo** |
+| incasso di un cliente sul gateway | Ricavi vendite / **Transito Stripe** | anche se il metodo è PayPal *via* Stripe; mai `PAYPAL_TX` come ricavo |
 | deposito SIAE, marchi, brevetti, software | Spese generali o immobilizzazione | **mai** Costi del venduto |
-| commissione trattenuta dal gateway | Commissioni gateway | costo, con autofattura |
+| commissione trattenuta da Stripe | Commissioni gateway | costo, con autofattura |
 | canone o imposta di bollo del conto | Oneri bancari | |
+| spesa SaaS / fornitore pagata da PayPal | Costi (SaaS / operative) / Conto PayPal | **costo CE**, non riduzione di ricavo |
 
 **La regola generale**: il ricavo nasce quando il cliente paga, non quando i soldi
 arrivano in banca. Il passaggio dal gateway alla banca è uno spostamento di soldi già
 nostri, e un movimento del genere non può mai creare né un ricavo né un costo.
 
-### 6.2.1 Conto di transito gateway — tre gambe
+### 6.2.1 Conti di passaggio denaro — architettura
 
-Il wallet Stripe / PayPal è un **conto patrimoniale** (Transito Stripe / Transito PayPal).
-I corrispettivi restano al **lordo** sulla data di pagamento del cliente: il transito **non**
-tocca ricavi fiscali né aliquote.
+**Correzione concettuale (v1.19).** PayPal **non** è un gateway di vendita. I pagamenti
+dei clienti transitano tutti da **Stripe**, anche quando il cliente sceglie PayPal come
+*metodo* (carta e Link restano su Stripe). Il conto PayPal è un **secondo conto di
+pagamento** usato per spese (SaaS, addebiti SDD) e per piccoli accrediti residuali verso
+Fineco. Gli ordini mai passati da Stripe (storici .eu, bonifici, da identificare) stanno in
+un contenitore separato — **incassi fuori gateway** — e **non** gonfiano il transito Stripe.
 
-Per ogni gateway, ogni evento genera una scrittura ancorata all’**identificativo evento**
-(`pi_`, `ch_`, `txn_`, id PayPal, `po_`, …). Rieseguire l’importazione non crea doppioni:
-chiave univoca sull’evento sorgente, non su data o importo.
+| Contenitore | Ruolo | Cosa contiene |
+|---|---|---|
+| **Transito Stripe** | unico transito delle **vendite** | incassi cliente (ogni metodo), commissioni Stripe, rimborsi, payout verso Fineco |
+| **Conto PayPal** | conto di pagamento (vita propria) | spese, giroconti, accrediti residuali; **nessun inbound da ordine** |
+| **Incassi fuori gateway** | fuori dal ciclo Stripe | storici .eu, bonifici diretti, pagamenti da identificare |
+
+I corrispettivi restano al **lordo** sulla data di pagamento del cliente: questi conti
+**non** toccano ricavi fiscali né aliquote.
+
+#### Transito Stripe — quattro addendi
+
+Equazione di controllo (saldo wallet dichiarato dall’utente, es. €100):
+
+`incassi cliente − commissioni − rimborsi − payout Fineco = saldo dichiarato`
 
 | Evento | Effetto sul transito | Contropartita | Chiave tipica |
 |---|---|---|---|
-| pagamento cliente | **entra** al lordo pagato, con riferimento ordine | Ricavi vendite (o crediti se già rilevati) | `STRIPE_TX:{id}` / `PAYPAL_TX:{id}` |
-| commissione gateway (e fee partner) | **esce** come **costo** (Commissioni gateway) — mai riduzione del ricavo | Commissioni gateway | `STRIPE_FEE:{id}` / `PAYPAL_FEE:{id}` |
-| bonifico verso Fineco (payout) | **esce** dal transito ed **entra** in Banca | Banca Fineco | `STRIPE_PAYOUT:{id}` / `PAYPAL_PAYOUT:{id}` |
-| rimborso al cliente | **esce** dal transito, riferimento ordine originale | Rimborsi / ricavi | `STRIPE_REFUND:{id}` / `PAYPAL_REFUND:{id}` |
+| pagamento cliente (anche se metodo PayPal *via* Stripe) | **entra** al lordo | Ricavi vendite | `STRIPE_TX:{id}` |
+| commissione Stripe | **esce** come **costo** (mai riduzione del ricavo) | Commissioni / oneri | `STRIPE_FEE:{id}` |
+| rimborso al cliente | **esce** | Rimborsi | `STRIPE_REFUND:{id}` |
+| bonifico verso Fineco (payout) | **esce** ed **entra** in Banca | Banca Fineco | `STRIPE_PAYOUT:po_*` |
+
+La gamba **payout** usa i giroconti Stripe sull’estratto Fineco come riferimento esterno
+(non un totale calcolato internamente e imposto a forza). Se ledger e Fineco divergono, si
+dichiara lo scarto — non si aggiusta aritmeticamente.
+
+#### Conto PayPal — non ciclo vendite
+
+Nessuna scrittura `PAYPAL_TX` con ordine collegato alimenta i ricavi o il transito vendite.
+Le uscite SaaS / operative restano **costi** di conto economico. I prelievi verso Fineco
+sono giroconti del conto di pagamento. La riconciliazione (C13 lato PayPal) confronta il
+saldo ledger del conto con il saldo **dichiarato** (es. €0), non l’equazione delle vendite.
+
+#### Incassi fuori gateway
+
+Chiave operativa tipica: `MANUAL_INBOUND:{orderId}` (e stock JSON legacy). Mastro dedicato
+(`10400 - Incassi fuori gateway`). Restano abbinabili all’ordine per copertura inbound, ma
+**fuori** dal saldo di transito Stripe (C10/C13 vendite).
 
 I **duplicati di canale** (stessa TX come `stripe_eu_…` e Stripe .com) non generano una
 seconda gamba. Hold / release di saldo minimo e conversioni interne non sono fatti
 economici (§6.3).
-
-Solo i movimenti classificati come **pagamento cliente** alimentano la gamba di entrata.
-Bonifici, commissioni, rimborsi e movimenti interni hanno ciascuno la propria gamba.
 
 ### 6.3 Righe tecniche dei gateway
 Stripe e PayPal producono movimenti che non sono fatti economici: `payout_minimum_balance_hold`
@@ -659,6 +689,14 @@ senza cancellare le righe di esecuzione.
 ---
 
 ## Registro delle modifiche
+
+**1.19 — 11 settembre 2026**
+- §6.2.1 — **architettura**: un solo transito vendite (**Stripe**); PayPal = conto di
+  pagamento (spese / residuali, nessun inbound da ordine); **incassi fuori gateway**
+  separati (`10400`, `MANUAL_INBOUND`). PayPal non è gateway di vendita (è metodo *dentro*
+  Stripe).
+- §5 — C10 solo Stripe; C13 = saldo transito vendite Stripe + riconciliazione conto PayPal.
+- §6.1 / §6.2 — mastri e regole di attribuzione allineati.
 
 **1.18 — 11 settembre 2026**
 - Fatturato ufficiale 2026 da **lista operativa**: €4.098,68 su **75** ordini attivi

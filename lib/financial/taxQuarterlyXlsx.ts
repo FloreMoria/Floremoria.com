@@ -525,6 +525,35 @@ async function buildQuadraturaSheet(
     }
 
     ws.addRow([]);
+    ws.addRow(['Altri ricavi e proventi — contributo pubblico (non vendite)']).getCell(1).font = {
+        bold: true,
+        size: 12,
+        name: 'Calibri',
+    };
+    styleHeaderRow(ws.addRow(['Voce', 'Importo EUR', 'Nota']));
+    {
+        const contribRow = await prisma.financialLedgerEntry.findFirst({
+            where: {
+                reversedAt: null,
+                fiscalYear: report.bounds.start.getUTCFullYear(),
+                category: 'CONTRIBUTI_ESERCIZIO',
+                totalCents: { gt: 0 },
+            },
+            select: { totalCents: true, description: true, accountingDate: true },
+            orderBy: { totalCents: 'desc' },
+        });
+        const r = ws.addRow([
+            'Contributo CCIAA / Bando Nuova Impresa (fuori campo IVA)',
+            contribRow ? euroNum(contribRow.totalCents) : euroNum(0),
+            contribRow
+                ? `${contribRow.accountingDate.toISOString().slice(0, 10)} — non è fatturato vendite (€4.098,68 ufficiale resta separato)`
+                : 'nessun contributo nel ledger anno',
+        ]);
+        applyBorders(r);
+        r.getCell(2).numFmt = EUR_FORMAT;
+    }
+
+    ws.addRow([]);
     ws.addRow(['Tracciabilità (§12)']).getCell(1).font = { bold: true, name: 'Calibri', size: 11 };
     ws.addRow([`Generato: ${new Date().toISOString()}`]);
     ws.addRow([`Metodo: v${DOSSIER_METHOD_VERSION}`]);

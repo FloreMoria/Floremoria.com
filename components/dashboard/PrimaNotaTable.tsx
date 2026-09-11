@@ -122,8 +122,11 @@ function accountsFromNeon(r: NeonRow): { dare: string; avere: string } {
 function accountForCategory(category: string, revenueSide: boolean): string {
     switch (category) {
         case 'RICAVI_VENDITE':
-        case 'ALTRI_RICAVI':
             return '60100 - Ricavi da Vendite';
+        case 'ALTRI_RICAVI':
+            return '60900 - Altri ricavi e proventi';
+        case 'CONTRIBUTI_ESERCIZIO':
+            return '65000 - Contributi in conto esercizio (non vendite)';
         case 'TRASFERIMENTO_INTERNO':
         case 'PAYPAL_PAYOUT':
             return '17100 - Conto transitorio Gateway (giroconto)';
@@ -134,7 +137,7 @@ function accountForCategory(category: string, revenueSide: boolean): string {
         case 'ONERI_BANCARI':
             return '70200 - Oneri bancari / Fee gateway';
         default:
-            return revenueSide ? '60900 - Altri ricavi' : '70900 - Spese operative';
+            return revenueSide ? '60900 - Altri ricavi e proventi' : '70900 - Spese operative';
     }
 }
 

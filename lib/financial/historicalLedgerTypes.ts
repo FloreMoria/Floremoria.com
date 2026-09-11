@@ -206,8 +206,8 @@ export function isInternalTransferCategory(category: string | null | undefined):
 
 export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     RICAVI_VENDITE: 'Ricavi vendite',
-    ALTRI_RICAVI: 'Altri ricavi',
-    CONTRIBUTI_ESERCIZIO: 'Contributi in conto esercizio',
+    ALTRI_RICAVI: 'Altri ricavi e proventi',
+    CONTRIBUTI_ESERCIZIO: 'Contributi pubblici (altri ricavi — non vendite)',
     RIMBORSI: 'Rimborsi ricevuti',
     PAYPAL_PAYOUT: 'Trasferimento PayPal → banca (giroconto)',
     TRASFERIMENTO_INTERNO: 'Partita di giro (gateway → Fineco)',

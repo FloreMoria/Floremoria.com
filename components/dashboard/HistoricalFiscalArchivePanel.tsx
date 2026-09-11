@@ -37,6 +37,9 @@ type Pnl = {
     ivaCreditoCents: number;
     ivaNettaCents: number;
     risultatoAnteImposteCents: number;
+    venditeCaratteristicheCents?: number;
+    altriRicaviCents?: number;
+    contributiEsercizioCents?: number;
     entriesCount: number;
 };
 
@@ -224,8 +227,15 @@ export default function HistoricalFiscalArchivePanel() {
                             €{euro(pnl.ricaviLordiCents)}
                         </p>
                         <p className="text-[11px] text-emerald-700/80 mt-1">
-                            Netto €{euro(pnl.ricaviNettiCents)} · IVA debito €{euro(pnl.ivaDebitoCents)}
+                            Vendite €{euro(pnl.venditeCaratteristicheCents || 0)} · Altri €
+                            {euro(pnl.altriRicaviCents || 0)}
                         </p>
+                        {(pnl.contributiEsercizioCents || 0) > 0 && (
+                            <p className="text-[11px] font-semibold text-teal-800 mt-1 border-t border-emerald-100 pt-1">
+                                Contributo pubblico (non vendite) €
+                                {euro(pnl.contributiEsercizioCents || 0)}
+                            </p>
+                        )}
                     </div>
                     <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
                         <p className="text-[10px] font-bold uppercase text-rose-700 flex items-center gap-1">
@@ -253,14 +263,32 @@ export default function HistoricalFiscalArchivePanel() {
                         </p>
                     </div>
                     <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
-                        <p className="text-[10px] font-bold uppercase text-amber-800">IVA &amp; risultato</p>
+                        <p className="text-[10px] font-bold uppercase text-amber-800">
+                            RAI (ante imposte)
+                        </p>
                         <p className="text-xl font-mono font-bold text-amber-900 mt-1">
                             €{euro(pnl.risultatoAnteImposteCents)}
                         </p>
                         <p className="text-[11px] text-amber-800/80 mt-1">
-                            IVA netta €{euro(pnl.ivaNettaCents)} (credito €{euro(pnl.ivaCreditoCents)})
+                            IVA netta €{euro(pnl.ivaNettaCents)} · include contributi se presenti
                         </p>
                     </div>
+                </div>
+            )}
+
+            {pnl && (pnl.contributiEsercizioCents || 0) > 0 && (
+                <div className="rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-3 text-sm text-teal-950">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-teal-800">
+                        Altri ricavi e proventi — contributo pubblico
+                    </p>
+                    <p className="mt-1 font-mono font-bold">
+                        €{euro(pnl.contributiEsercizioCents || 0)}
+                    </p>
+                    <p className="text-[12px] mt-1 text-teal-900/90">
+                        CCIAA Como-Lecco · Bando Nuova Impresa 2025 · fuori campo IVA ·{' '}
+                        <strong>non è fatturato da vendite</strong> (fatturato commerciale ufficiale
+                        resta separato).
+                    </p>
                 </div>
             )}
 

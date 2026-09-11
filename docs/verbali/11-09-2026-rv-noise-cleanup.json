@@ -1,0 +1,596 @@
+{
+  "generatedAt": "2026-09-11T15:50:29.221Z",
+  "apply": true,
+  "officialSalesEuro": 4098.68,
+  "actionsN": 59,
+  "byNature": {
+    "json_doppio": {
+      "n": 38,
+      "euro": 2011.83
+    },
+    "json_unico_keep": {
+      "n": 4,
+      "euro": 137.43
+    },
+    "paypal_sdd_ricarica": {
+      "n": 12,
+      "euro": -238.98
+    },
+    "movimento_fiorista": {
+      "n": 5,
+      "euro": -390
+    }
+  },
+  "actions": [
+    {
+      "id": "cmt2oe81h0002l204wup8bkbd",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 29.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-SA-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-SA-26-001"
+    },
+    {
+      "id": "cmt2oe81h0001l204i52w71y6",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CS-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CS-26-001"
+    },
+    {
+      "id": "cmt2oe81g0000l20495h2fl29",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PA-26-008 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PA-26-008"
+    },
+    {
+      "id": "cmt2oe81h0003l204nio2jpbq",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 32.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CO-26-004 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CO-26-004"
+    },
+    {
+      "id": "cmt2oe8400004l204dk8gi8h4",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 144.98,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PA-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PA-26-001"
+    },
+    {
+      "id": "cmt2oe8bu0005l204nrns626u",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PA-26-005 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PA-26-005"
+    },
+    {
+      "id": "cmt2oe8bu0006l20445g4wd4e",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PA-26-003 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PA-26-003"
+    },
+    {
+      "id": "cmt2oe8bu0007l2043drce6pn",
+      "from": "RICAVI_VENDITE",
+      "to": "RICAVI_VENDITE",
+      "euro": 29.99,
+      "nature": "json_unico_keep",
+      "reason": "JSON unica copertura per FT-MC-26-003 — resta ricavo, si collega orderId",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-003"
+    },
+    {
+      "id": "cmt2oe8bv0008l204xgsltp9j",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 47.46,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-ME-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-ME-26-002"
+    },
+    {
+      "id": "cmt2oe8ef0009l204nc1r7pcq",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 52.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-RM-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-RM-26-002"
+    },
+    {
+      "id": "cmt2oe8jm000cl204afzzin0t",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 44.98,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-CO-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-CO-26-001"
+    },
+    {
+      "id": "cmt2oe8rd000hl204gx68ks7g",
+      "from": "RICAVI_VENDITE",
+      "to": "RICAVI_VENDITE",
+      "euro": 29.99,
+      "nature": "json_unico_keep",
+      "reason": "JSON unica copertura per FT-MC-26-004 — resta ricavo, si collega orderId",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-004"
+    },
+    {
+      "id": "cmt2oe8z3000ml2045dfrzzs6",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 29.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-RC-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-RC-26-002"
+    },
+    {
+      "id": "cmt2oe96u000rl2043zlfh6ia",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 69.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PN-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PN-26-002"
+    },
+    {
+      "id": "cmt9rsyn80008k104ln1vff7g",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 52.98,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FF-VI-26-003",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FF-VI-26-003"
+    },
+    {
+      "id": "cmtcmmv920004la04znycpk1o",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 29.99,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FT-TO-26-001",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FT-TO-26-001"
+    },
+    {
+      "id": "cmt2oe8jl000al204op2rvppg",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 39.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PD-26-004 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PD-26-004"
+    },
+    {
+      "id": "cmt2oe8rf000il2041g785w30",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 37.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-MB-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-MB-26-001"
+    },
+    {
+      "id": "cmt2oe8z2000ll204aiuo6dfy",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CS-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CS-26-002"
+    },
+    {
+      "id": "cmt2oe99c000tl204i7rjahcp",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 43.97,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-RC-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-RC-26-001"
+    },
+    {
+      "id": "cmt2oe9ej000ul204s0wbs0dh",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CS-26-003 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CS-26-003"
+    },
+    {
+      "id": "cmt2oe8jm000bl204he564lrr",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CS-26-004 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CS-26-004"
+    },
+    {
+      "id": "cmt2oe8tw000jl204n2wp5z7s",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 104.98,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PD-26-002 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PD-26-002"
+    },
+    {
+      "id": "cmt2oe8z2000kl204b86vtxfh",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 39.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PN-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PN-26-001"
+    },
+    {
+      "id": "cmt2oe971000sl204d9ankvrh",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PA-26-007 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PA-26-007"
+    },
+    {
+      "id": "cmt2oe9ek000vl204idmhr8so",
+      "from": "RICAVI_VENDITE",
+      "to": "RICAVI_VENDITE",
+      "euro": 47.46,
+      "nature": "json_unico_keep",
+      "reason": "JSON unica copertura per FT-RC-26-003 — resta ricavo, si collega orderId",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-RC-26-003"
+    },
+    {
+      "id": "cmtcmqs8d000ela04qsd7uq8j",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 29.99,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FT-TO-26-002",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FT-TO-26-002"
+    },
+    {
+      "id": "cmt2oe8jn000dl204gdoyf4u0",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-CS-26-006 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-CS-26-006"
+    },
+    {
+      "id": "cmt2oe8rc000fl20481ymo8g4",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 64.98,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-VR-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-VR-26-001"
+    },
+    {
+      "id": "cmt2oe91m000ol204mjsikzkw",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 39.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PN-26-003 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PN-26-003"
+    },
+    {
+      "id": "cmt2oe96t000pl204j3010395",
+      "from": "RICAVI_VENDITE",
+      "to": "RICAVI_VENDITE",
+      "euro": 29.99,
+      "nature": "json_unico_keep",
+      "reason": "JSON unica copertura per FT-MC-26-005 — resta ricavo, si collega orderId",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-MC-26-005"
+    },
+    {
+      "id": "cmt2oe8m6000el204z24zg7ku",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 37.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PD-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PD-26-001"
+    },
+    {
+      "id": "cmt2oe8rc000gl204zuy51jzg",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 49.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-ME-26-001 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-ME-26-001"
+    },
+    {
+      "id": "cmt2oe8z8000nl204fpuf4oea",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 69.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PD-26-003 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PD-26-003"
+    },
+    {
+      "id": "cmt2oe96t000ql204peenjbtp",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FT-PA-26-004 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FT-PA-26-004"
+    },
+    {
+      "id": "cmt311xwg000fld044cjos6ze",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 89.99,
+      "nature": "json_doppio",
+      "reason": "JSON duplica ordine FF-PN-26-004 già coperto da Stripe/MANUAL",
+      "desc": "Incasso ordine manuale confermato/pagato - Ordine FF-PN-26-004"
+    },
+    {
+      "id": "cmt3zx44f00bxky04tftcvafb",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44g00ccky04vpsc6o2x",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -30,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44g00ceky04wlrlmhwe",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44g00ciky04eg9bekrm",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44i00dhky04vmh7xczs",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -21.99,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44k00e5ky04kh60sv27",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -30,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44l00eiky04s67mhgv3",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt79j3en0003l704e628onnv",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 53.97,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FT-LC-26-001",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FT-LC-26-001"
+    },
+    {
+      "id": "cmthl3c06000aik04yi0uyajc",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 84.98,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FF-SO-26-001",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FF-SO-26-001"
+    },
+    {
+      "id": "cmt3zx44h00d2ky04hajbexsl",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -10,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44f00c0ky04tokme3g1",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -5,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44e00buky04vuljvpt5",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44e00bsky04p6l3yblr",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -20,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmt3zx44d00bfky04c0ubi3ct",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": -21.99,
+      "nature": "paypal_sdd_ricarica",
+      "reason": "SDD PayPal = ricarica wallet / partita di giro, non ricavo",
+      "desc": "Paypal Europe S.a.r.l. Et Cie S.c.a Addebito Sdd Fattura a Vs Carico da Lu96zzz0000000000000000058 Mand 4da2225a55j8c pe"
+    },
+    {
+      "id": "cmtit53sp000bl804453ywryu",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FT-CS-26-007",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FT-CS-26-007"
+    },
+    {
+      "id": "cmtit9vv9000ejt04j18hugdi",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 31.48,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FT-PA-26-009",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FT-PA-26-009"
+    },
+    {
+      "id": "cmtogpsao000ajv04ltjclw8w",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 104.98,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FF-MC-26-001",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FF-MC-26-001"
+    },
+    {
+      "id": "cmtonqtpq0004l804kjhak1nc",
+      "from": "RICAVI_VENDITE",
+      "to": "TRASFERIMENTO_INTERNO",
+      "euro": 204.98,
+      "nature": "json_doppio",
+      "reason": "JSON Stripe duplica STRIPE_TX per FF-MC-26-002",
+      "desc": "Incasso lordo clienti tramite Stripe - Ordine FF-MC-26-002"
+    },
+    {
+      "id": "cmt3zx44c00asky049xgu0sky",
+      "from": "SPESE_OPERATIVE",
+      "to": "COSTI_FIORISTI",
+      "euro": -140,
+      "nature": "movimento_fiorista",
+      "reason": "bonifico fiorista era in spese operative",
+      "desc": "Beneficiario: Battistella fioreria srl I BAN: IT68P0835612501000000065729 Data In serimento: 02/08/2026 19:03:14 Canale:"
+    },
+    {
+      "id": "cmt3zx44f00bzky04nxudu8dg",
+      "from": "SPESE_OPERATIVE",
+      "to": "COSTI_FIORISTI",
+      "euro": -40,
+      "nature": "movimento_fiorista",
+      "reason": "bonifico fiorista era in spese operative",
+      "desc": "Beneficiario: Battistella Fioreria S.r.l. Iban: It68p0835612501000000065729 Data Inserimento: 31/05/2026 09:24:38 Canale"
+    },
+    {
+      "id": "cmt3zx44g00ckky04cc086tem",
+      "from": "SPESE_OPERATIVE",
+      "to": "COSTI_FIORISTI",
+      "euro": -20,
+      "nature": "movimento_fiorista",
+      "reason": "bonifico fiorista era in spese operative",
+      "desc": "Ben: Battistella Fioreria Srl Ins: 04/05/2026 15:33:47 da: Phone/Voice P. Iban: It68p0835612501000000065729 Transid: 260"
+    },
+    {
+      "id": "cmt3zx44i00d5ky04hy2ew01o",
+      "from": "SPESE_OPERATIVE",
+      "to": "COSTI_FIORISTI",
+      "euro": -145,
+      "nature": "movimento_fiorista",
+      "reason": "bonifico fiorista era in spese operative",
+      "desc": "Beneficiario: Battistella Fioreria Srl Iban: It68p0835612501000000065729 Data Inserimento: 07/04/2026 17:53:22 Canale: P"
+    },
+    {
+      "id": "cmt3zx44j00dwky043uksf43r",
+      "from": "SPESE_OPERATIVE",
+      "to": "COSTI_FIORISTI",
+      "euro": -45,
+      "nature": "movimento_fiorista",
+      "reason": "bonifico fiorista era in spese operative",
+      "desc": "Beneficiario: Battistella Fioreria Srl Iban: It68p0835612501000000065729 Data Inserimento: 02/03/2026 16:00:41 Canale: P"
+    }
+  ],
+  "contributo": {
+    "id": "cmt3zx44k00e9ky04exlfxeyg",
+    "category": "CONTRIBUTI_ESERCIZIO",
+    "euro": 4597.66,
+    "inCe": true,
+    "inVendite": false,
+    "raiBeforeWithContrib": -3898.56,
+    "raiBeforeWithoutContrib": -8496.22,
+    "freezeRai376448_includesContributo": true,
+    "corrispettiviHits": 0,
+    "ivaErrataEuro": 0,
+    "corrSample": []
+  },
+  "pnl": {
+    "before": {
+      "vendite": 3858.25,
+      "altri": 32.81,
+      "contributi": 4597.66,
+      "ricaviLordi": 8963.91,
+      "rai": -3898.56
+    },
+    "after": {
+      "vendite": 3665.31,
+      "altri": 32.81,
+      "contributi": 4597.66,
+      "ricaviLordi": 8770.97,
+      "rai": -3852.52,
+      "raiSenzaContributo": -8450.18
+    }
+  },
+  "rvPosAfter": {
+    "euro": 5084.27,
+    "vsOfficial": 985.59,
+    "bySrc": {
+      "JSON_ENTRY": 137.43,
+      "STRIPE_TX": 3472.37,
+      "MANUAL_INBOUND": 1474.47
+    }
+  }
+}

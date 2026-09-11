@@ -856,17 +856,21 @@ export async function controlC12(year: number, _quarter: TaxQuarter): Promise<Do
                 `${d.orderNumber || d.orderId.slice(0, 8)} ordine=${d.orderDate} incasso=${d.paymentDate} (Δ${d.absDiffHours}h)`
         )
         .join('; ');
+    const exclSample = (result.exclusions || [])
+        .slice(0, 8)
+        .map((e) => e.orderNumber || e.orderId.slice(0, 8))
+        .join(', ');
 
     return {
         id: 'C12',
         name: 'Data ordine = data incasso',
-        formula: `per ogni ordine abbinato a gateway: |data ordine − data incasso| ≤ 24h (fuso dichiarato); oltre = errore`,
+        formula: `per ogni ordine in perimetro corrispettivi abbinabile a gateway: |data ordine − data incasso| ≤ 24h (fuso dichiarato); oltre = errore`,
         measured: n,
         expected: 0,
         delta: n,
         unit: 'rows',
-        passed: n === 0,
-        detail: `controllati=${result.checked} · tolleranza fuso=${result.timezoneToleranceHours}h · divergenze=${n}${sample ? ` · ${sample}` : ''}`,
+        passed: n === 0 && result.checked === result.universeSize,
+        detail: `universo corrispettivi=${result.universeSize} · verificati=${result.checked} · esclusi_non_risolvibili=${result.exclusions?.length || 0}${exclSample ? ` (${exclSample})` : ''} · tolleranza fuso=${result.timezoneToleranceHours}h · divergenze=${n}${sample ? ` · ${sample}` : ''}`,
         dateDivergences: result.divergences.map((d) => ({
             orderNumber: d.orderNumber,
             orderDate: d.orderDate,

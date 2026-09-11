@@ -1,0 +1,1841 @@
+{
+  "generatedAt": "2026-09-11T13:50:54.919Z",
+  "year": 2026,
+  "c12": {
+    "checked": 44,
+    "divergences": 2,
+    "corrSetSize": 44,
+    "gwRowsWithOrder": 61,
+    "exclusion": {
+      "criterion": "C12 carica solo Order con stripeTransactionId OR paymentMethodLabel; poi conta solo quelli con data movimento Stripe/PayPal risolvibile. Gli ordini nei corrispettivi per soli altri criteri (es. membership via TX senza label, o solo link soft) restano fuori.",
+      "corrOrders": 44,
+      "poolWithTxOrLabel": 44,
+      "excludedByPrefilter": [],
+      "inCorrNotResolvablePayDate": [
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "2GU64478W4726692S",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FT-LC-26-001",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3U7xmV4W4pZWhSUs1FFamXIo",
+          "paymentMethodLabel": "PayPal (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FF-VI-26-003",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3U8bE54W4pZWhSUs0ueA2Maq",
+          "paymentMethodLabel": "PayPal (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FT-TO-26-001",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3U9K9m4W4pZWhSUs1N4SXPkI",
+          "paymentMethodLabel": "Carta (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FT-TO-26-002",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3U9KCm4W4pZWhSUs0wI7vlzm",
+          "paymentMethodLabel": "Carta (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FF-SO-26-001",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3UAa8I4W4pZWhSUs1ui4IlqC",
+          "paymentMethodLabel": "Carta (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "5VV92297N9957570R",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "95E92452N40245344",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "3D552868PU399581S",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FF-MC-26-001",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3UCKIc4W4pZWhSUs1A6Thkoj",
+          "paymentMethodLabel": "Carta (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "09C2701554000764W",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "1T757598T7263511M",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "43H07985E69976410",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FT-PA-26-009",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3UAtR64W4pZWhSUs1J3PImQy",
+          "paymentMethodLabel": "PayPal (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FF-MC-26-002",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3UCNGm4W4pZWhSUs0AnTRWbQ",
+          "paymentMethodLabel": "Carta (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "83N54580AU0027713",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": "FT-CS-26-007",
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "txn_3UAtNU4W4pZWhSUs0DFIwZXL",
+          "paymentMethodLabel": "PayPal (Stripe)",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "66C04847WL650301D",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "4W6628604D401674M",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "22E30531F99808504",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "44E519039S467634K",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        },
+        {
+          "orderNumber": null,
+          "reason": "C12_resolve: in pool ma nessun movimento Stripe/PayPal risolto per data",
+          "stripeTransactionId": "8YH43677SS377553L",
+          "paymentMethodLabel": "paypal",
+          "howInCorrispettivi": "gw_row.orderId"
+        }
+      ],
+      "resolvablePayDateCount": 22
+    }
+  },
+  "perimeter": {
+    "trio": 74,
+    "corrispettivi": 44,
+    "onlyTrioCount": 30,
+    "gwNoOrderRows": 93,
+    "stripeOrphans": 60,
+    "paypalOrphans": 92,
+    "orphansBuilt": 114
+  },
+  "classification30": {
+    "A": {
+      "n": 20,
+      "euro": 869.1000000000001,
+      "rows": [
+        {
+          "orderNumber": "FT-PA-26-003",
+          "date": "2026-05-20",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-001",
+          "date": "2026-05-20",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-CO-26-004",
+          "date": "2026-05-23",
+          "cliente": "DANIELA RAMPOLDI",
+          "euro": 32.48,
+          "channel": "incerto",
+          "note": "match_sim: paypal:cmt4lqax5002vl204kuymydsd"
+        },
+        {
+          "orderNumber": "FT-RC-26-001",
+          "date": "2026-06-13",
+          "cliente": "Andrea Gaeta",
+          "euro": 43.97,
+          "channel": "incerto",
+          "note": "ambiguous_2_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-002",
+          "date": "2026-06-17",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-PA-26-004",
+          "date": "2026-06-17",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FF-VR-26-001",
+          "date": "2026-06-22",
+          "cliente": "Riccardo Segantini",
+          "euro": 64.98,
+          "channel": "incerto",
+          "note": "ambiguous_2_candidates"
+        },
+        {
+          "orderNumber": "FF-PA-26-001",
+          "date": "2026-07-04",
+          "cliente": "Luciano Mammì",
+          "euro": 144.98,
+          "channel": "incerto",
+          "note": "match_sim: paypal:cmt4lqax9004jl204867syh8p"
+        },
+        {
+          "orderNumber": "FT-PA-26-005",
+          "date": "2026-07-04",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-003",
+          "date": "2026-07-04",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-ME-26-001",
+          "date": "2026-07-15",
+          "cliente": "Maria  Puliafico",
+          "euro": 49.99,
+          "channel": "incerto",
+          "note": "match_sim: paypal:cmt4lqaxb005bl204hnr14suz"
+        },
+        {
+          "orderNumber": "FT-MB-26-001",
+          "date": "2026-07-20",
+          "cliente": "Carolina Negrini Bertelli",
+          "euro": 37.99,
+          "channel": "manuale",
+          "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review"
+        },
+        {
+          "orderNumber": "FF-CO-26-001",
+          "date": "2026-07-21",
+          "cliente": "Salvatore Marsiglione",
+          "euro": 44.98,
+          "channel": "manuale",
+          "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review"
+        },
+        {
+          "orderNumber": "FT-PA-26-007",
+          "date": "2026-07-30",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-004",
+          "date": "2026-07-30",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-ME-26-002",
+          "date": "2026-08-04",
+          "cliente": "Rosetta  Paladino",
+          "euro": 47.46,
+          "channel": "incerto",
+          "note": "ambiguous_2_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-005",
+          "date": "2026-08-17",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-CS-26-006",
+          "date": "2026-08-17",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-PA-26-008",
+          "date": "2026-08-17",
+          "cliente": "Luciano Mammì",
+          "euro": 31.48,
+          "channel": "incerto",
+          "note": "ambiguous_6_candidates"
+        },
+        {
+          "orderNumber": "FT-MB-26-002",
+          "date": "2026-09-09",
+          "cliente": "Carolina Negrini Bertelli",
+          "euro": 55.99,
+          "channel": "manuale",
+          "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review"
+        }
+      ]
+    },
+    "B": {
+      "n": 9,
+      "euro": 522.9,
+      "rows": [
+        {
+          "orderNumber": "FF-PD-26-002",
+          "date": "2026-07-02",
+          "cliente": "Francesco Nicolato",
+          "euro": 104.98,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP"
+        },
+        {
+          "orderNumber": "FF-PD-26-003",
+          "date": "2026-07-03",
+          "cliente": "Confartigianato Pordenone",
+          "euro": 69.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q"
+        },
+        {
+          "orderNumber": "FF-PD-26-004",
+          "date": "2026-07-10",
+          "cliente": "Giulio Rosace",
+          "euro": 39.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI"
+        },
+        {
+          "orderNumber": "FT-PD-26-001",
+          "date": "2026-07-16",
+          "cliente": "Filomena Maiorano",
+          "euro": 37.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh"
+        },
+        {
+          "orderNumber": "FT-RC-26-002",
+          "date": "2026-08-01",
+          "cliente": "Valentina Cecchini",
+          "euro": 29.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r"
+        },
+        {
+          "orderNumber": "FF-PN-26-001",
+          "date": "2026-08-07",
+          "cliente": "Daniela Barilari",
+          "euro": 39.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9"
+        },
+        {
+          "orderNumber": "FF-PN-26-002",
+          "date": "2026-08-10",
+          "cliente": "Edy, Lori and Dana Moras",
+          "euro": 69.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j"
+        },
+        {
+          "orderNumber": "FF-PN-26-003",
+          "date": "2026-08-17",
+          "cliente": "Amanda Favot",
+          "euro": 39.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR"
+        },
+        {
+          "orderNumber": "FF-PN-26-004",
+          "date": "2026-08-21",
+          "cliente": "Oreste Poverello",
+          "euro": 89.99,
+          "channel": ".eu_storico",
+          "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte"
+        }
+      ]
+    },
+    "C": {
+      "n": 1,
+      "euro": 29.99,
+      "rows": [
+        {
+          "orderNumber": "FT-SA-26-001",
+          "date": "2026-05-19",
+          "cliente": "Ester Irace",
+          "euro": 29.99,
+          "channel": "incerto",
+          "note": "no_orphan_match"
+        }
+      ]
+    },
+    "all": [
+      {
+        "orderId": "cmpcb2j7y0004jv04xlc7wvb2",
+        "orderNumber": "FT-SA-26-001",
+        "date": "2026-05-19",
+        "cliente": "Ester Irace",
+        "email": "ester.irace@hotmail.it",
+        "amountCents": 2999,
+        "euro": 29.99,
+        "channel": "incerto",
+        "category": "C",
+        "note": "no_orphan_match",
+        "status": "COMPLETED",
+        "candidates": []
+      },
+      {
+        "orderId": "cmpe5uzyf0005l404g6qpnjq4",
+        "orderNumber": "FT-PA-26-003",
+        "date": "2026-05-20",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax4002ll20406qtixpm",
+            "gateway": "paypal",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax5002ql2045o40mewr",
+            "gateway": "paypal",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmpe615zq000al404qij79ek3",
+        "orderNumber": "FT-CS-26-001",
+        "date": "2026-05-20",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TZBFq4W4pZWhSUs1kRE0CNZ",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TZBBT4W4pZWhSUs19WmIUfU",
+            "gateway": "stripe",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax4002ll20406qtixpm",
+            "gateway": "paypal",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax5002ql2045o40mewr",
+            "gateway": "paypal",
+            "date": "2026-05-20",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmpi3vzfm0001k604jn1zpcz1",
+        "orderNumber": "FT-CO-26-004",
+        "date": "2026-05-23",
+        "cliente": "DANIELA RAMPOLDI",
+        "email": "dadaramp@gmail.com",
+        "amountCents": 3248,
+        "euro": 32.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "match_sim: paypal:cmt4lqax5002vl204kuymydsd",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+            "gateway": "stripe",
+            "date": "2026-05-23",
+            "euro": 32.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TaBEw4W4pZWhSUs12Q2pKyE",
+            "gateway": "stripe",
+            "date": "2026-05-23",
+            "euro": 32.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax5002vl204kuymydsd",
+            "gateway": "paypal",
+            "date": "2026-05-23",
+            "euro": 32.48,
+            "name": "DANIELA RAMPOLDI",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmqc1wwci0001i904ons8tse3",
+        "orderNumber": "FT-RC-26-001",
+        "date": "2026-06-13",
+        "cliente": "Andrea Gaeta",
+        "email": "sirflavio2023@libero.it",
+        "amountCents": 4397,
+        "euro": 43.97,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_2_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3ThmH14W4pZWhSUs14CAHHaS",
+            "gateway": "stripe",
+            "date": "2026-06-13",
+            "euro": 43.97,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS",
+            "gateway": "stripe",
+            "date": "2026-06-13",
+            "euro": 43.97,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmqi32zda0002le04svrim4si",
+        "orderNumber": "FT-CS-26-002",
+        "date": "2026-06-17",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax80047l204ezyzxye3",
+            "gateway": "paypal",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax80042l204ij7gb0c2",
+            "gateway": "paypal",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmqi3gil20001jp04a5criwde",
+        "orderNumber": "FT-PA-26-004",
+        "date": "2026-06-17",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TjJKX4W4pZWhSUs0oQvh7vx",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TjJBK4W4pZWhSUs1SYv8DdG",
+            "gateway": "stripe",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax80047l204ezyzxye3",
+            "gateway": "paypal",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax80042l204ij7gb0c2",
+            "gateway": "paypal",
+            "date": "2026-06-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmqpbuuay0004jv04cq34sfpe",
+        "orderNumber": "FF-VR-26-001",
+        "date": "2026-06-22",
+        "cliente": "Riccardo Segantini",
+        "email": "riksegantini@gmail.com",
+        "amountCents": 6498,
+        "euro": 64.98,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_2_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3Tl97E4W4pZWhSUs1948B9mT",
+            "gateway": "stripe",
+            "date": "2026-06-22",
+            "euro": 64.98,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT",
+            "gateway": "stripe",
+            "date": "2026-06-22",
+            "euro": 64.98,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmr3zmkcd0000l404p75vvvnm",
+        "orderNumber": "FF-PD-26-002",
+        "date": "2026-07-02",
+        "cliente": "Francesco Nicolato",
+        "email": "pavnico@yahoo.it",
+        "amountCents": 10498,
+        "euro": 104.98,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+            "gateway": "stripe",
+            "date": "2026-07-02",
+            "euro": 104.98,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmr5483ir0000l4046lw2q6m0",
+        "orderNumber": "FF-PD-26-003",
+        "date": "2026-07-03",
+        "cliente": "Confartigianato Pordenone",
+        "email": "direzione@confartigianato.pordenone.it",
+        "amountCents": 6999,
+        "euro": 69.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+            "gateway": "stripe",
+            "date": "2026-07-03",
+            "euro": 69.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmr63hk9q0001l404p4lhstdd",
+        "orderNumber": "FF-PA-26-001",
+        "date": "2026-07-04",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 14498,
+        "euro": 144.98,
+        "channel": "incerto",
+        "category": "A",
+        "note": "match_sim: paypal:cmt4lqax9004jl204867syh8p",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TpOrX4W4pZWhSUs03In3uTa",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 144.98,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpOrX4W4pZWhSUs03In3uTa",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 144.98,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax9004jl204867syh8p",
+            "gateway": "paypal",
+            "date": "2026-07-04",
+            "euro": 144.98,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmr64du1w0001l104b7v3oxkf",
+        "orderNumber": "FT-PA-26-005",
+        "date": "2026-07-04",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax9004ol20462d0vtmo",
+            "gateway": "paypal",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax9004tl204fj86qrz4",
+            "gateway": "paypal",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmr64j74f000fl104rqg5myod",
+        "orderNumber": "FT-CS-26-003",
+        "date": "2026-07-04",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpPJU4W4pZWhSUs1xG9UPO0",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TpPFc4W4pZWhSUs0a5P7iqY",
+            "gateway": "stripe",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqax9004ol20462d0vtmo",
+            "gateway": "paypal",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqax9004tl204fj86qrz4",
+            "gateway": "paypal",
+            "date": "2026-07-04",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmrekxg4p0000l704cv80kg3m",
+        "orderNumber": "FF-PD-26-004",
+        "date": "2026-07-10",
+        "cliente": "Giulio Rosace",
+        "email": "giuliorosace@gmail.com",
+        "amountCents": 3999,
+        "euro": 39.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+            "gateway": "stripe",
+            "date": "2026-07-09",
+            "euro": 39.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmrlxhp900002jn04pwh9flvv",
+        "orderNumber": "FT-ME-26-001",
+        "date": "2026-07-15",
+        "cliente": "Maria  Puliafico",
+        "email": "mariapuliafico@hotmail.it",
+        "amountCents": 4999,
+        "euro": 49.99,
+        "channel": "incerto",
+        "category": "A",
+        "note": "match_sim: paypal:cmt4lqaxb005bl204hnr14suz",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+            "gateway": "stripe",
+            "date": "2026-07-15",
+            "euro": 49.99,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TtPv84W4pZWhSUs0Fb7Bd2I",
+            "gateway": "stripe",
+            "date": "2026-07-15",
+            "euro": 49.99,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxb005bl204hnr14suz",
+            "gateway": "paypal",
+            "date": "2026-07-15",
+            "euro": 49.99,
+            "name": "Maria Agata Puliafico",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmrnjw44c0000la04aa7cf55c",
+        "orderNumber": "FT-PD-26-001",
+        "date": "2026-07-16",
+        "cliente": "Filomena Maiorano",
+        "email": "menamaiorano68@gmail.com",
+        "amountCents": 3799,
+        "euro": 37.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+            "gateway": "stripe",
+            "date": "2026-07-16",
+            "euro": 37.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmrt166og0000jw0432noy5dn",
+        "orderNumber": "FT-MB-26-001",
+        "date": "2026-07-20",
+        "cliente": "Carolina Negrini Bertelli",
+        "email": "varreis@gmail.com",
+        "amountCents": 3799,
+        "euro": 37.99,
+        "channel": "manuale",
+        "category": "A",
+        "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review",
+        "status": "COMPLETED",
+        "candidates": []
+      },
+      {
+        "orderId": "cmrusit6y0000l8046wbck8a9",
+        "orderNumber": "FF-CO-26-001",
+        "date": "2026-07-21",
+        "cliente": "Salvatore Marsiglione",
+        "email": null,
+        "amountCents": 4498,
+        "euro": 44.98,
+        "channel": "manuale",
+        "category": "A",
+        "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review",
+        "status": "COMPLETED",
+        "candidates": []
+      },
+      {
+        "orderId": "cms7kh4470001ju04ts9h3ezm",
+        "orderNumber": "FT-PA-26-007",
+        "date": "2026-07-30",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxc0060l2043nw9gf9a",
+            "gateway": "paypal",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqaxc005vl204m1kdulti",
+            "gateway": "paypal",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cms7kwdw9000cjx044yhnh3bc",
+        "orderNumber": "FT-CS-26-004",
+        "date": "2026-07-30",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TyuIF4W4pZWhSUs0hkSIqAs",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3TyuTV4W4pZWhSUs0M1W5j6g",
+            "gateway": "stripe",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxc0060l2043nw9gf9a",
+            "gateway": "paypal",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqaxc005vl204m1kdulti",
+            "gateway": "paypal",
+            "date": "2026-07-30",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmsalfwki0000js04s4hbqh1i",
+        "orderNumber": "FT-RC-26-002",
+        "date": "2026-08-01",
+        "cliente": "Valentina Cecchini",
+        "email": "valentina.cecchini@libero.it",
+        "amountCents": 2999,
+        "euro": 29.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+            "gateway": "stripe",
+            "date": "2026-08-01",
+            "euro": 29.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmsebfvr20002l504aq9nfqfr",
+        "orderNumber": "FT-ME-26-002",
+        "date": "2026-08-04",
+        "cliente": "Rosetta  Paladino",
+        "email": "rosellinapaladino@hotmail.it",
+        "amountCents": 4746,
+        "euro": 47.46,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_2_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "gateway": "stripe",
+            "date": "2026-08-04",
+            "euro": 47.46,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "gateway": "stripe",
+            "date": "2026-08-04",
+            "euro": 47.46,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmsilmkhn0000l104avptjk6y",
+        "orderNumber": "FF-PN-26-001",
+        "date": "2026-08-07",
+        "cliente": "Daniela Barilari",
+        "email": "superdalldan@gmail.com",
+        "amountCents": 3999,
+        "euro": 39.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+            "gateway": "stripe",
+            "date": "2026-08-06",
+            "euro": 39.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmsnghl7y0000ie04c47zru2x",
+        "orderNumber": "FF-PN-26-002",
+        "date": "2026-08-10",
+        "cliente": "Edy, Lori and Dana Moras",
+        "email": "gillabunny@yahoo.com",
+        "amountCents": 6999,
+        "euro": 69.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+            "gateway": "stripe",
+            "date": "2026-08-10",
+            "euro": 69.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmsx9hwv00001k104uoepnd89",
+        "orderNumber": "FT-CS-26-005",
+        "date": "2026-08-17",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxe006ql204ringnbrc",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqaxe006vl204apiq94ku",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmsxam9pn0001l304jx3gae4y",
+        "orderNumber": "FT-CS-26-006",
+        "date": "2026-08-17",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxe006ql204ringnbrc",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqaxe006vl204apiq94ku",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmsxasq2y000gl304oth7ffq3",
+        "orderNumber": "FT-PA-26-008",
+        "date": "2026-08-17",
+        "cliente": "Luciano Mammì",
+        "email": "luciano.mammi.57@gmail.com",
+        "amountCents": 3148,
+        "euro": 31.48,
+        "channel": "incerto",
+        "category": "A",
+        "note": "ambiguous_6_candidates",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5R2d4W4pZWhSUs0z67gjHy",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "stripe:stripe_tx_txn_3U5QyD4W4pZWhSUs13SNdOmE",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": null,
+            "strong": false
+          },
+          {
+            "key": "paypal:cmt4lqaxe006ql204ringnbrc",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          },
+          {
+            "key": "paypal:cmt4lqaxe006vl204apiq94ku",
+            "gateway": "paypal",
+            "date": "2026-08-17",
+            "euro": 31.48,
+            "name": "LUCIANO MAMMI'",
+            "strong": true
+          }
+        ]
+      },
+      {
+        "orderId": "cmsxf7d4o0000ic04toy2f9rk",
+        "orderNumber": "FF-PN-26-003",
+        "date": "2026-08-17",
+        "cliente": "Amanda Favot",
+        "email": "afavot@rogers.com",
+        "amountCents": 3999,
+        "euro": 39.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+            "gateway": "stripe",
+            "date": "2026-08-17",
+            "euro": 39.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmt2pq29v0000la043ksaow9c",
+        "orderNumber": "FF-PN-26-004",
+        "date": "2026-08-21",
+        "cliente": "Oreste Poverello",
+        "email": "oreste.poverello@gmail.com",
+        "amountCents": 8999,
+        "euro": 89.99,
+        "channel": ".eu_storico",
+        "category": "B",
+        "note": "match_sim_weak_no_name: stripe:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+        "status": "COMPLETED",
+        "candidates": [
+          {
+            "key": "stripe:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+            "gateway": "stripe",
+            "date": "2026-08-21",
+            "euro": 89.99,
+            "name": null,
+            "strong": false
+          }
+        ]
+      },
+      {
+        "orderId": "cmttyazkg0000jr04ldu6tiab",
+        "orderNumber": "FT-MB-26-002",
+        "date": "2026-09-09",
+        "cliente": "Carolina Negrini Bertelli",
+        "email": "varreis@gmail.com",
+        "amountCents": 5599,
+        "euro": 55.99,
+        "channel": "manuale",
+        "category": "A",
+        "note": "manual_no_tx_no_orphan_match_presumed_A_pending_review",
+        "status": "IN_PROGRESS",
+        "candidates": []
+      }
+    ]
+  },
+  "matchSimulation": {
+    "uniqueStrong": {
+      "n": 3,
+      "euroOrders": 227.45,
+      "pairs": [
+        {
+          "orderNumber": "FT-CO-26-004",
+          "orderEuro": 32.48,
+          "orderDate": "2026-05-23",
+          "cliente": "DANIELA RAMPOLDI",
+          "orphanKey": "paypal:cmt4lqax5002vl204kuymydsd",
+          "gateway": "paypal",
+          "orphanDate": "2026-05-23",
+          "orphanEuro": 32.48,
+          "orphanName": "DANIELA RAMPOLDI"
+        },
+        {
+          "orderNumber": "FF-PA-26-001",
+          "orderEuro": 144.98,
+          "orderDate": "2026-07-04",
+          "cliente": "Luciano Mammì",
+          "orphanKey": "paypal:cmt4lqax9004jl204867syh8p",
+          "gateway": "paypal",
+          "orphanDate": "2026-07-04",
+          "orphanEuro": 144.98,
+          "orphanName": "LUCIANO MAMMI'"
+        },
+        {
+          "orderNumber": "FT-ME-26-001",
+          "orderEuro": 49.99,
+          "orderDate": "2026-07-15",
+          "cliente": "Maria  Puliafico",
+          "orphanKey": "paypal:cmt4lqaxb005bl204hnr14suz",
+          "gateway": "paypal",
+          "orphanDate": "2026-07-15",
+          "orphanEuro": 49.99,
+          "orphanName": "Maria Agata Puliafico"
+        }
+      ]
+    },
+    "uniqueWeakDateAmountOnly": {
+      "n": 9,
+      "note": "univoci su data±3 + importo ma senza nome — NON candidati forti",
+      "pairs": [
+        {
+          "orderNumber": "FF-PD-26-002",
+          "orderEuro": 104.98,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3TonoCRrkwwcYwep1GA8NIWP",
+          "orphanName": null,
+          "orphanEuro": 104.98
+        },
+        {
+          "orderNumber": "FF-PD-26-003",
+          "orderEuro": 69.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3Tp8tnRrkwwcYwep0biMYl7Q",
+          "orphanName": null,
+          "orphanEuro": 69.99
+        },
+        {
+          "orderNumber": "FF-PD-26-004",
+          "orderEuro": 39.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3TrNudRrkwwcYwep0zY0M7LI",
+          "orphanName": null,
+          "orphanEuro": 39.99
+        },
+        {
+          "orderNumber": "FT-PD-26-001",
+          "orderEuro": 37.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3TtjecRrkwwcYwep1EDBi6dh",
+          "orphanName": null,
+          "orphanEuro": 37.99
+        },
+        {
+          "orderNumber": "FT-RC-26-002",
+          "orderEuro": 29.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3TzcRERrkwwcYwep0NIP8g6r",
+          "orphanName": null,
+          "orphanEuro": 29.99
+        },
+        {
+          "orderNumber": "FF-PN-26-001",
+          "orderEuro": 39.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3U1Yc8RrkwwcYwep1l4tJnL9",
+          "orphanName": null,
+          "orphanEuro": 39.99
+        },
+        {
+          "orderNumber": "FF-PN-26-002",
+          "orderEuro": 69.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3U2vU2RrkwwcYwep06Fy5g4j",
+          "orphanName": null,
+          "orphanEuro": 69.99
+        },
+        {
+          "orderNumber": "FF-PN-26-003",
+          "orderEuro": 39.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3U5RyERrkwwcYwep0qd5uTzR",
+          "orphanName": null,
+          "orphanEuro": 39.99
+        },
+        {
+          "orderNumber": "FF-PN-26-004",
+          "orderEuro": 89.99,
+          "orphanKey": "stripe:stripe_eu_tx_txn_3U6no5RrkwwcYwep0uomtdte",
+          "orphanName": null,
+          "orphanEuro": 89.99
+        }
+      ]
+    },
+    "ambiguous": {
+      "n": 14,
+      "items": [
+        {
+          "orderNumber": "FT-PA-26-003",
+          "candidates": [
+            "paypal:cmt4lqax4002ll20406qtixpm",
+            "paypal:cmt4lqax5002ql2045o40mewr"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-001",
+          "candidates": [
+            "paypal:cmt4lqax4002ll20406qtixpm",
+            "paypal:cmt4lqax5002ql2045o40mewr"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-002",
+          "candidates": [
+            "paypal:cmt4lqax80047l204ezyzxye3",
+            "paypal:cmt4lqax80042l204ij7gb0c2"
+          ]
+        },
+        {
+          "orderNumber": "FT-PA-26-004",
+          "candidates": [
+            "paypal:cmt4lqax80047l204ezyzxye3",
+            "paypal:cmt4lqax80042l204ij7gb0c2"
+          ]
+        },
+        {
+          "orderNumber": "FT-PA-26-005",
+          "candidates": [
+            "paypal:cmt4lqax9004ol20462d0vtmo",
+            "paypal:cmt4lqax9004tl204fj86qrz4"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-003",
+          "candidates": [
+            "paypal:cmt4lqax9004ol20462d0vtmo",
+            "paypal:cmt4lqax9004tl204fj86qrz4"
+          ]
+        },
+        {
+          "orderNumber": "FT-PA-26-007",
+          "candidates": [
+            "paypal:cmt4lqaxc0060l2043nw9gf9a",
+            "paypal:cmt4lqaxc005vl204m1kdulti"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-004",
+          "candidates": [
+            "paypal:cmt4lqaxc0060l2043nw9gf9a",
+            "paypal:cmt4lqaxc005vl204m1kdulti"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-005",
+          "candidates": [
+            "paypal:cmt4lqaxe006ql204ringnbrc",
+            "paypal:cmt4lqaxe006vl204apiq94ku"
+          ]
+        },
+        {
+          "orderNumber": "FT-CS-26-006",
+          "candidates": [
+            "paypal:cmt4lqaxe006ql204ringnbrc",
+            "paypal:cmt4lqaxe006vl204apiq94ku"
+          ]
+        },
+        {
+          "orderNumber": "FT-PA-26-008",
+          "candidates": [
+            "paypal:cmt4lqaxe006ql204ringnbrc",
+            "paypal:cmt4lqaxe006vl204apiq94ku"
+          ]
+        },
+        {
+          "orderNumber": "FT-RC-26-001",
+          "candidates": [
+            "stripe:txn_3ThmH14W4pZWhSUs14CAHHaS",
+            "stripe:stripe_tx_txn_3ThmH14W4pZWhSUs14CAHHaS"
+          ]
+        },
+        {
+          "orderNumber": "FF-VR-26-001",
+          "candidates": [
+            "stripe:txn_3Tl97E4W4pZWhSUs1948B9mT",
+            "stripe:stripe_tx_txn_3Tl97E4W4pZWhSUs1948B9mT"
+          ]
+        },
+        {
+          "orderNumber": "FT-ME-26-002",
+          "candidates": [
+            "stripe:txn_3U0cT94W4pZWhSUs0qUXOKG7",
+            "stripe:stripe_tx_txn_3U0cT94W4pZWhSUs0qUXOKG7"
+          ]
+        }
+      ]
+    },
+    "stillOrphanOrders": {
+      "n": 4,
+      "euro": 168.95000000000002,
+      "orderNumbers": [
+        "FT-SA-26-001",
+        "FT-MB-26-001",
+        "FF-CO-26-001",
+        "FT-MB-26-002"
+      ]
+    },
+    "stillOrphanIncassi": {
+      "n": 102,
+      "euro": 3677.44,
+      "byGateway": {
+        "stripe": 51,
+        "paypal": 51
+      }
+    }
+  }
+}

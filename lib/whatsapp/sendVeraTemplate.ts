@@ -20,14 +20,12 @@ export interface SendVeraTemplateResult {
 }
 
 /**
- * Meta #132000 rifiuta parametri body vuoti.
- * Per slot opzionali (es. {{3}} conferma ordine) preserviamo un singolo spazio
- * invece di coercizzare a "-" (che apparirebbe nel messaggio).
+ * Meta #132000 rifiuta parametri body vuoti o composti solo da spazi.
+ * Se vuoto, coercizziamo a "-" per garantire la validità del payload.
  */
 function coerceMetaBodyParam(text: string): string {
     const sanitized = sanitizeMetaTemplateParam(text);
     if (sanitized) return sanitized;
-    if (typeof text === 'string' && text.length > 0 && !text.trim()) return ' ';
     return '-';
 }
 

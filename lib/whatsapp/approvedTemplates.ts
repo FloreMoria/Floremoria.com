@@ -313,7 +313,9 @@ export function listApprovedWhatsAppTemplates(
 ): WhatsAppTemplateDefinition[] {
     const florist = [
         getFloremoriaGenericoWhatsAppTemplate('FLORIST'),
-        ...listVeraFloristLibraryTemplates().filter((t) => t.id !== 'floremoria_generico'),
+        ...listVeraFloristLibraryTemplates().filter(
+            (t) => t.id !== 'floremoria_generico' && t.id !== 'florist_reminder'
+        ),
         getFloristReminderWhatsAppTemplate(),
         getProactiveWhatsAppTemplate(),
     ];
@@ -354,6 +356,18 @@ export function getApprovedWhatsAppTemplate(
             templates.find((t) => t.id === ANNIVERSARY_GDM_TEMPLATE_ID) ||
             null
         );
+    }
+
+    // Alias messaggio personalizzato fiorista (proactive staff)
+    if (
+        cleanId === PROACTIVE_CONVERSATION_TEMPLATE_ID ||
+        cleanId === 'proactive_staff' ||
+        cleanId === PROACTIVE_CONVERSATION_META_TEMPLATE_NAME ||
+        cleanId === PROACTIVE_CONVERSATION_META_TEMPLATE_NAME_LEGACY ||
+        cleanId.toLowerCase() === 'floremoria_messaggio_personalizzato_fiorista_ft' ||
+        cleanId.toLowerCase() === 'floremoria_messaggio_personalizzato_fiorista'
+    ) {
+        return getProactiveWhatsAppTemplate();
     }
 
     // 1. Cerca nella libreria preferita (se specificata)
@@ -430,7 +444,13 @@ export function buildOperatorTemplateComponents(
         ) {
             raw = extractFirstName(raw) || raw;
         }
-        if (field.key === 'recipientFirstName' && !raw.trim()) {
+        if (
+            (field.key === 'recipientFirstName' ||
+                field.key === 'userFirstName' ||
+                field.key === 'buyerFirstName' ||
+                field.key === 'floristFirstName') &&
+            !raw.trim()
+        ) {
             raw = 'Cliente';
         }
         if (field.key === 'updateMessage') {
@@ -440,10 +460,7 @@ export function buildOperatorTemplateComponents(
             raw = normalizeOrderCode(raw);
         }
         const sanitized = sanitizeMetaTemplateParam(raw);
-        // Slot opzionali (es. staffMessage {{3}} conferma ordine): Meta richiede un valore non vuoto.
-        if (!sanitized && !field.required) {
-            return { type: 'text' as const, text: ' ' };
-        }
+        // Meta rifiuta parametri vuoti o di soli spazi (#132000): assicuriamo sempre un valore valido.
         return {
             type: 'text' as const,
             text: sanitized || '-',
@@ -531,26 +548,16 @@ export interface ProactiveTemplateBodyValues {
     staffNotes: string;
 }
 
-/** Valida i tre campi obbligatori — nessun fallback fittizio verso Meta. */
+/** Valida i campi per il template proattivo ({{1}} nome, {{2}} codice ordine, {{3}} note staff). */
 export function validateProactiveTemplateBodyValues(input: {
     recipientFirstName?: string;
     orderCode?: string;
     staffNotes?: string;
 }): ProactiveTemplateBodyValues {
-    const recipientFirstName = extractFirstName(input.recipientFirstName ?? '');
-    const orderCode = normalizeOrderCode(input.orderCode ?? '');
+    const recipientFirstName = extractFirstName(input.recipientFirstName ?? '') || 'Cliente';
+    const orderCode = normalizeOrderCode(input.orderCode ?? '') || '-';
     const staffNotes = sanitizeMetaTemplateParam(input.staffNotes ?? '');
 
-    if (!recipientFirstName) {
-        throw new ProactiveTemplateValidationError(
-            'Inserisca il nome del destinatario (variabile {{1}}, es. Carlo).'
-        );
-    }
-    if (!orderCode) {
-        throw new ProactiveTemplateValidationError(
-            'Inserisca il codice ordine (variabile {{2}}, es. FF-PN-26-004).'
-        );
-    }
     if (!staffNotes) {
         throw new ProactiveTemplateValidationError('Compili le note dello staff (variabile body {{3}}).');
     }

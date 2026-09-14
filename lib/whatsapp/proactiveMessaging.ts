@@ -13,6 +13,7 @@ import {
     getProactiveWhatsAppTemplate,
     listApprovedWhatsAppTemplates,
     PROACTIVE_CONVERSATION_TEMPLATE_ID,
+    PROACTIVE_CONVERSATION_META_TEMPLATE_NAME,
     ProactiveTemplateValidationError,
     renderOperatorTemplatePreview,
     renderProactiveTemplateMessage,
@@ -153,7 +154,11 @@ export async function startProactiveConversation(
 
         if (template) {
             try {
-                if (template.id === PROACTIVE_CONVERSATION_TEMPLATE_ID) {
+                if (
+                    template.id === PROACTIVE_CONVERSATION_TEMPLATE_ID ||
+                    template.id === 'proactive_staff' ||
+                    template.metaName === PROACTIVE_CONVERSATION_META_TEMPLATE_NAME
+                ) {
                     const templateValues = validateProactiveTemplateBodyValues({
                         recipientFirstName: fieldValues.recipientFirstName ?? input.recipientFirstName,
                         orderCode: fieldValues.orderCode ?? input.orderCode,
@@ -187,13 +192,13 @@ export async function startProactiveConversation(
             const bodyParams: Array<{ type: 'text'; text: string }> = [];
             if (Array.isArray(input.templateParams) && input.templateParams.length > 0) {
                 for (const p of input.templateParams) {
-                    bodyParams.push({ type: 'text', text: String(p ?? '') || '-' });
+                    const text = String(p ?? '').trim();
+                    bodyParams.push({ type: 'text', text: text || '-' });
                 }
             } else if (Object.keys(fieldValues).length > 0) {
                 for (const [, val] of Object.entries(fieldValues)) {
-                    if (val !== undefined && String(val).trim().length > 0) {
-                        bodyParams.push({ type: 'text', text: String(val).trim() });
-                    }
+                    const text = String(val ?? '').trim();
+                    bodyParams.push({ type: 'text', text: text || '-' });
                 }
             } else if (input.messageText?.trim()) {
                 bodyParams.push({ type: 'text', text: input.messageText.trim() });

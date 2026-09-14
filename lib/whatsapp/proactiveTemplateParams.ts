@@ -18,13 +18,15 @@ export function formatGentileSalutation(recipientFirstName: string): string {
     return `Gentile ${firstName}`;
 }
 
-/** Normalizza il codice ordine rimuovendo prefissi ridondanti (es. "Ordine FF-..."). */
+/** Normalizza il codice ordine rimuovendo prefissi ridondanti (es. "Ordine FF-..."). Se vuoto o "-", preserva "-". */
 export function normalizeOrderCode(raw: string): string {
-    return raw
-        .trim()
+    const trimmed = (raw || '').trim();
+    if (!trimmed || trimmed === '-' || trimmed === 'N/A' || trimmed === 'NESSUNO') return '-';
+    const cleaned = trimmed
         .replace(/^(ordine|order|rif\.?|riferimento)\s*/i, '')
         .replace(/^[-–—:\s]+/, '')
         .trim();
+    return cleaned || '-';
 }
 
 export interface ProactiveTemplateParams {

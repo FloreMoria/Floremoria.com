@@ -1,0 +1,392 @@
+{
+  "generatedAt": "2026-09-08T14:37:39.293Z",
+  "note": "PDF generati dalla ricevuta di cortesia (HTML email/archivio). Non sono fatture elettroniche SDI. L’email storica non aveva allegato PDF.",
+  "paidOrders": 38,
+  "pdfOk": 38,
+  "pdfFail": 0,
+  "fromArchive": 0,
+  "regenerated": 38,
+  "zipPath": "/Users/floremoria/Downloads/Floremoria_dot_com/floremoria/docs/verbali/FloreMoria_Ricevute_Cortesia_ordini_PAID.zip",
+  "items": [
+    {
+      "orderNumber": "FT-SA-26-001",
+      "status": "OK",
+      "fileName": "2026-05-19_FT-SA-26-001.pdf",
+      "createdAt": "2026-05-19T07:22:36.623Z",
+      "buyerEmail": "ester.irace@hotmail.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-SA-26-002",
+      "status": "OK",
+      "fileName": "2026-05-19_FT-SA-26-002.pdf",
+      "createdAt": "2026-05-19T16:42:04.753Z",
+      "buyerEmail": "ester.irace@hotmail.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PA-26-003",
+      "status": "OK",
+      "fileName": "2026-05-20_FT-PA-26-003.pdf",
+      "createdAt": "2026-05-20T14:32:19.335Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-CS-26-001",
+      "status": "OK",
+      "fileName": "2026-05-20_FT-CS-26-001.pdf",
+      "createdAt": "2026-05-20T14:37:07.094Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-CO-26-004",
+      "status": "OK",
+      "fileName": "2026-05-23_FT-CO-26-004.pdf",
+      "createdAt": "2026-05-23T08:48:10.786Z",
+      "buyerEmail": "dadaramp@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-RM-26-001",
+      "status": "OK",
+      "fileName": "2026-05-30_FF-RM-26-001.pdf",
+      "createdAt": "2026-05-30T09:06:15.271Z",
+      "buyerEmail": "claudiaburtone@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-RC-26-001",
+      "status": "OK",
+      "fileName": "2026-06-13_FT-RC-26-001.pdf",
+      "createdAt": "2026-06-13T07:45:59.491Z",
+      "buyerEmail": "sirflavio2023@libero.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-CS-26-002",
+      "status": "OK",
+      "fileName": "2026-06-17_FT-CS-26-002.pdf",
+      "createdAt": "2026-06-17T13:05:20.014Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PA-26-004",
+      "status": "OK",
+      "fileName": "2026-06-17_FT-PA-26-004.pdf",
+      "createdAt": "2026-06-17T13:15:51.447Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-VR-26-001",
+      "status": "OK",
+      "fileName": "2026-06-22_FF-VR-26-001.pdf",
+      "createdAt": "2026-06-22T14:45:19.978Z",
+      "buyerEmail": "riksegantini@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-MC-26-003",
+      "status": "OK",
+      "fileName": "2026-07-02_FT-MC-26-003.pdf",
+      "createdAt": "2026-07-02T10:10:17.129Z",
+      "buyerEmail": "isa.cesaroni@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-MC-26-004",
+      "status": "OK",
+      "fileName": "2026-07-02_FT-MC-26-004.pdf",
+      "createdAt": "2026-07-02T12:39:32.920Z",
+      "buyerEmail": "isa.cesaroni@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PD-26-002",
+      "status": "OK",
+      "fileName": "2026-07-02_FF-PD-26-002.pdf",
+      "createdAt": "2026-07-02T20:59:31.069Z",
+      "buyerEmail": "pavnico@yahoo.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PD-26-003",
+      "status": "OK",
+      "fileName": "2026-07-03_FF-PD-26-003.pdf",
+      "createdAt": "2026-07-03T15:56:00.340Z",
+      "buyerEmail": "direzione@confartigianato.pordenone.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PA-26-001",
+      "status": "OK",
+      "fileName": "2026-07-04_FF-PA-26-001.pdf",
+      "createdAt": "2026-07-04T08:23:08.510Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PA-26-005",
+      "status": "OK",
+      "fileName": "2026-07-04_FT-PA-26-005.pdf",
+      "createdAt": "2026-07-04T08:48:14.180Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-CS-26-003",
+      "status": "OK",
+      "fileName": "2026-07-04_FT-CS-26-003.pdf",
+      "createdAt": "2026-07-04T08:52:24.400Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-MC-26-005",
+      "status": "OK",
+      "fileName": "2026-07-06_FT-MC-26-005.pdf",
+      "createdAt": "2026-07-06T14:53:59.686Z",
+      "buyerEmail": "isa.cesaroni@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PD-26-004",
+      "status": "OK",
+      "fileName": "2026-07-10_FF-PD-26-004.pdf",
+      "createdAt": "2026-07-10T06:53:32.521Z",
+      "buyerEmail": "giuliorosace@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-ME-26-001",
+      "status": "OK",
+      "fileName": "2026-07-15_FT-ME-26-001.pdf",
+      "createdAt": "2026-07-15T10:19:36.084Z",
+      "buyerEmail": "mariapuliafico@hotmail.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PD-26-001",
+      "status": "OK",
+      "fileName": "2026-07-16_FT-PD-26-001.pdf",
+      "createdAt": "2026-07-16T13:34:26.268Z",
+      "buyerEmail": "menamaiorano68@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-MB-26-001",
+      "status": "OK",
+      "fileName": "2026-07-20_FT-MB-26-001.pdf",
+      "createdAt": "2026-07-20T09:37:00.496Z",
+      "buyerEmail": "varreis@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-CO-26-001",
+      "status": "OK",
+      "fileName": "2026-07-21_FF-CO-26-001.pdf",
+      "createdAt": "2026-07-21T15:10:25.354Z",
+      "buyerEmail": null,
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PA-26-007",
+      "status": "OK",
+      "fileName": "2026-07-30_FT-PA-26-007.pdf",
+      "createdAt": "2026-07-30T13:46:09.559Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-RC-26-002",
+      "status": "OK",
+      "fileName": "2026-08-01_FT-RC-26-002.pdf",
+      "createdAt": "2026-08-01T16:36:31.267Z",
+      "buyerEmail": "valentina.cecchini@libero.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-ME-26-002",
+      "status": "OK",
+      "fileName": "2026-08-04_FT-ME-26-002.pdf",
+      "createdAt": "2026-08-04T07:07:38.750Z",
+      "buyerEmail": "rosellinapaladino@hotmail.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PN-26-001",
+      "status": "OK",
+      "fileName": "2026-08-07_FF-PN-26-001.pdf",
+      "createdAt": "2026-08-07T07:03:51.611Z",
+      "buyerEmail": "superdalldan@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PN-26-002",
+      "status": "OK",
+      "fileName": "2026-08-10_FF-PN-26-002.pdf",
+      "createdAt": "2026-08-10T16:38:52.079Z",
+      "buyerEmail": "gillabunny@yahoo.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-CS-26-006",
+      "status": "OK",
+      "fileName": "2026-08-17_FT-CS-26-006.pdf",
+      "createdAt": "2026-08-17T13:52:14.507Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-PA-26-008",
+      "status": "OK",
+      "fileName": "2026-08-17_FT-PA-26-008.pdf",
+      "createdAt": "2026-08-17T13:57:15.658Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PN-26-003",
+      "status": "OK",
+      "fileName": "2026-08-17_FF-PN-26-003.pdf",
+      "createdAt": "2026-08-17T16:00:37.177Z",
+      "buyerEmail": "afavot@rogers.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-RC-26-003",
+      "status": "OK",
+      "fileName": "2026-08-19_FT-RC-26-003.pdf",
+      "createdAt": "2026-08-19T07:49:16.510Z",
+      "buyerEmail": "sirflavio2023@libero.it",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FF-PN-26-004",
+      "status": "OK",
+      "fileName": "2026-08-21_FF-PN-26-004.pdf",
+      "createdAt": "2026-08-21T08:53:56.611Z",
+      "buyerEmail": "oreste.poverello@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": false
+    },
+    {
+      "orderNumber": "FT-LC-26-001",
+      "status": "OK",
+      "fileName": "2026-08-24_FT-LC-26-001.pdf",
+      "createdAt": "2026-08-24T13:18:51.818Z",
+      "buyerEmail": "ferriannamaria18@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": true
+    },
+    {
+      "orderNumber": "FF-VI-26-003",
+      "status": "OK",
+      "fileName": "2026-08-26_FF-VI-26-003.pdf",
+      "createdAt": "2026-08-26T07:25:43.947Z",
+      "buyerEmail": "silviatregnaghi.it@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": true
+    },
+    {
+      "orderNumber": "FF-SO-26-001",
+      "status": "OK",
+      "fileName": "2026-08-31_FF-SO-26-001.pdf",
+      "createdAt": "2026-08-31T18:39:25.863Z",
+      "buyerEmail": "stella.scibilia1951@gmail.com",
+      "customerEmailSentAt": null,
+      "source": "regenerated",
+      "hadArchiveRow": true
+    },
+    {
+      "orderNumber": "FT-CS-26-007",
+      "status": "OK",
+      "fileName": "2026-09-01_FT-CS-26-007.pdf",
+      "createdAt": "2026-09-01T15:13:05.810Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": "2026-09-02T07:24:29.447Z",
+      "source": "regenerated",
+      "hadArchiveRow": true
+    },
+    {
+      "orderNumber": "FT-PA-26-009",
+      "status": "OK",
+      "fileName": "2026-09-01_FT-PA-26-009.pdf",
+      "createdAt": "2026-09-01T15:17:03.998Z",
+      "buyerEmail": "luciano.mammi.57@gmail.com",
+      "customerEmailSentAt": "2026-09-02T07:24:35.938Z",
+      "source": "regenerated",
+      "hadArchiveRow": true
+    }
+  ]
+}

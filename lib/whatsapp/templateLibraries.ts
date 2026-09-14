@@ -108,6 +108,7 @@ export const USER_LIBRARY_IDS: VeraTemplateId[] = [
 
 const FLORIST_LABELS: Partial<Record<VeraTemplateId, string>> = {
     floremoria_generico: 'Aggiornamento generico (floremoria_generico)',
+    proactive_staff: 'Messaggio personalizzato fiorista (staff)',
     florist_bonifico_ricevuta: 'Conferma Bonifico Fiorista',
     florist_ringraziamento: 'Ringraziamento post-consegna fiorista',
     florist_first_001: 'Nuovo ordine fiorista · parte 1 (nome/codice/compenso)',

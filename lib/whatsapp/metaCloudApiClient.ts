@@ -326,6 +326,23 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
 
     // Debug mirato #132000: JSON esatto subito prima del fetch (senza token).
     if (payloadType === 'template') {
+        const templatePayload = (payload.template ?? {}) as {
+            name?: string;
+            language?: { code?: string };
+            components?: unknown[];
+        };
+        console.log(
+            '===> META PAYLOAD INVIATO:',
+            JSON.stringify(
+                {
+                    templateName: templatePayload.name,
+                    language: templatePayload.language,
+                    components: templatePayload.components,
+                },
+                null,
+                2
+            )
+        );
         logTemplatePayloadExact(payload);
     } else {
         console.log(
@@ -352,6 +369,7 @@ async function postWhatsAppMessage(payload: Record<string, unknown>): Promise<Wh
         if (!res.ok) {
             const body = await res.text().catch(() => '');
             const parsed = parseMetaGraphError(body);
+            console.error('===> META ERROR RESPONSE:', JSON.stringify(parsed, null, 2));
             console.error('[meta-cloud-api] ===== META ERROR RESPONSE (full) =====');
             console.error(
                 JSON.stringify(
@@ -498,9 +516,10 @@ function validateTemplateComponents(
             if (headerTextCount !== options.expectedHeaderTextParamCount) {
                 return `Template Meta: attesi ${options.expectedHeaderTextParamCount} parametri header testo, ricevuti ${headerTextCount}.`;
             }
-            for (const param of header?.parameters ?? []) {
-                if (param.type === 'text' && !param.text?.trim()) {
-                    return 'Parametro header testo vuoto.';
+            for (let i = 0; i < (header?.parameters?.length ?? 0); i += 1) {
+                const param = header?.parameters?.[i];
+                if (param?.type === 'text' && (!param.text || !param.text.trim())) {
+                    return `Parametro header {{${i + 1}}} vuoto: ogni variabile Meta deve contenere un testo valido.`;
                 }
             }
         }
@@ -519,8 +538,8 @@ function validateTemplateComponents(
     for (let i = 0; i < body.parameters.length; i += 1) {
         const param = body.parameters[i];
         if (param?.type === 'text') {
-            if (!param.text?.trim()) {
-                return `Parametro template {{${i + 1}}} vuoto.`;
+            if (!param.text || !param.text.trim()) {
+                return `Parametro body {{${i + 1}}} vuoto: ogni variabile Meta deve contenere un testo valido.`;
             }
         } else if (param?.type === 'image') {
             if (!param.image?.link?.trim()) {

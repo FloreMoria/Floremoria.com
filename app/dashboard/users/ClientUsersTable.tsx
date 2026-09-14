@@ -153,7 +153,8 @@ export default function ClientUsersTable({
 
     // Logica di Filtraggio e Ordinamento Avanzato
     const filteredUsers = useMemo(() => {
-        let list = [...users];
+        // Escludi rigorosamente fioristi e partner
+        let list = users.filter((u) => u.role !== 'FLORIST' && (u.role as string) !== 'PARTNER');
 
         // 1. Ricerca Globale (Nome, Email, Telefono, Città)
         if (searchTerm.trim()) {

@@ -5,6 +5,7 @@ import { runDashboardQuery } from '@/lib/dashboardSafeQuery';
 import DashboardDbAlert from '@/components/dashboard/DashboardDbAlert';
 import { getDashboardTestModeActive } from '@/lib/dashboard/testMode';
 import { buildUnifiedUsersList } from '@/lib/users/unifiedUsers';
+import UserSalesAnalytics from '@/components/dashboard/users/UserSalesAnalytics';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,15 @@ export default async function UsersPage() {
                 where: visibleDashboardOrdersWhere(testModeActive),
                 orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
                 include: {
-                    items: { include: { product: true } },
+                    items: {
+                        include: {
+                            product: {
+                                include: {
+                                    category: true,
+                                },
+                            },
+                        },
+                    },
                     user: {
                         include: {
                             role: true,
@@ -86,6 +95,8 @@ export default async function UsersPage() {
             </div>
 
             <ClientUsersTable initialUsers={groupedUsers} florists={floristsResult.data || []} />
+
+            <UserSalesAnalytics users={groupedUsers} orders={orders} />
         </div>
     );
 }

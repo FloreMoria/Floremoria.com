@@ -386,6 +386,8 @@ export default async function GiardinoPage({ params }: GiardinoPageProps) {
                                             {hasPhoto ? (
                                                 <GardenOrderPhotoGallery
                                                     deceasedName={order.deceasedName}
+                                                    orderNumber={order.orderNumber}
+                                                    orderId={order.id}
                                                     before={proofPhotos.before}
                                                     after={proofPhotos.after}
                                                     deliveredLabel={dateText}

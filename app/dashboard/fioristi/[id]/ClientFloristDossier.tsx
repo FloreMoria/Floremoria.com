@@ -16,6 +16,7 @@ import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import FloristDeliveryEditModal from '@/components/dashboard/FloristDeliveryEditModal';
 import PartnerHistoricalLedgerSnippet from '@/components/dashboard/PartnerHistoricalLedgerSnippet';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
+import { downloadImageDirectly, buildOrderPhotoFilename } from '@/lib/utils/downloadMedia';
 
 const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
     { value: 'ACCEPTED', label: 'Ricevuto' },
@@ -50,7 +51,12 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
     const [toast, setToast] = useState<string | null>(null);
 
     // Lightbox State
-    const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+    const [selectedPhoto, setSelectedPhoto] = useState<{
+        url: string;
+        orderNumber?: string;
+        orderId: string;
+        deceasedName?: string;
+    } | null>(null);
 
     const selectedOrder = orders.find((o) => o.id === selectedOrderId) ?? null;
 
@@ -252,7 +258,18 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                                                     </td>
                                                     <td className="py-3 px-4 text-center align-middle">
                                                         {hasPhoto ? (
-                                                            <button onClick={(e) => { e.stopPropagation(); setSelectedPhoto(proofUrls[0]); }} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-fm-gold transition-all mx-auto group block">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedPhoto({
+                                                                        url: proofUrls[0],
+                                                                        orderNumber: order.orderNumber,
+                                                                        orderId: order.id,
+                                                                        deceasedName: order.deceasedName,
+                                                                    });
+                                                                }}
+                                                                className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-fm-gold transition-all mx-auto group block"
+                                                            >
                                                                 <Image src={proofUrls[0]} alt="Foto Consegna" fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
                                                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                                                     <Maximize2 size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -340,7 +357,7 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                     <div className="relative flex flex-col items-center w-full max-w-5xl h-full max-h-[90vh]" onClick={e => e.stopPropagation()}>
                         <div className="relative w-full h-full rounded-xl overflow-hidden shadow-2xl mb-6">
                             <Image
-                                src={selectedPhoto}
+                                src={selectedPhoto.url}
                                 alt="Ingrandimento Foto Consegna"
                                 fill
                                 className="object-contain"
@@ -348,8 +365,13 @@ export default function ClientFloristDossier({ partner, orders: initialOrders, f
                             />
                         </div>
                         <button
-                            onClick={() => {
-                                alert(`Download avviato per: ${selectedPhoto}`);
+                            onClick={async () => {
+                                const filename = buildOrderPhotoFilename(
+                                    selectedPhoto.orderNumber || selectedPhoto.deceasedName || selectedPhoto.orderId || 'fiorista',
+                                    1,
+                                    1
+                                );
+                                await downloadImageDirectly(selectedPhoto.url, filename);
                             }}
                             className="flex-shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-transform hover:scale-105 z-[110]"
                         >

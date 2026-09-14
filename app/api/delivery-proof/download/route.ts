@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { authorizeProofPhotoDownload } from '@/lib/deliveryProof/authorizeProofPhotoDownload';
-import { downloadFilenameFromProofUrl } from '@/lib/deliveryProof/proofFilenames';
+import { buildOrderPhotoFilename } from '@/lib/utils/downloadMedia';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         const contentType = upstream.headers.get('content-type') || 'image/jpeg';
         const buffer = Buffer.from(await upstream.arrayBuffer());
-        const filename = downloadFilenameFromProofUrl(auth.allowedUrl, auth.deceasedName);
+        const defaultExt = contentType.includes('png')
+            ? 'png'
+            : contentType.includes('webp')
+            ? 'webp'
+            : 'jpg';
+        const reference = auth.orderNumber || auth.deceasedName || 'foto-posa';
+        const filename = buildOrderPhotoFilename(
+            reference,
+            auth.photoIndex,
+            auth.totalPhotos,
+            defaultExt
+        );
 
         return new NextResponse(buffer, {
             status: 200,

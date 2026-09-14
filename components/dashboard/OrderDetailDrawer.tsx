@@ -629,6 +629,7 @@ export default function OrderDetailDrawer({
                         <OrderDetailProofUpload
                             key={localOrder.id}
                             orderId={localOrder.id}
+                            orderNumber={localOrder.orderNumber}
                             initialBefore={getOrderProofPhotos(localOrder).before}
                             initialAfter={getOrderProofPhotos(localOrder).after}
                             onPhotosUpdated={(before, after) => {

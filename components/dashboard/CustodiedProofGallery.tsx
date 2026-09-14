@@ -11,12 +11,12 @@ import {
     RotateCw,
     Trash2,
 } from 'lucide-react';
-import { downloadFilenameFromProofUrl } from '@/lib/deliveryProof/proofFilenames';
+import { downloadImageDirectly, buildOrderPhotoFilename } from '@/lib/utils/downloadMedia';
 import GardenSharePanel from '@/components/memorial/GardenSharePanel';
-import { downloadMedia } from '@/lib/utils/downloadMedia';
 
 type Props = {
     orderId: string;
+    orderNumber?: string | null;
     deceasedName: string;
     initialBefore: string[];
     initialAfter: string[];
@@ -32,21 +32,13 @@ type Props = {
     senderName?: string | null;
 };
 
-/** Download HD via proxy autenticato e helper universale downloadMedia. */
+/** Download HD via proxy autenticato e helper universale downloadImageDirectly. */
 async function forceDownload(orderId: string, url: string, filename: string) {
     const proxyEndpoint = `/api/delivery-proof/download?orderId=${encodeURIComponent(orderId)}&url=${encodeURIComponent(url)}`;
-    const res = await downloadMedia({
-        url: proxyEndpoint,
-        filename,
-        title: 'Foto Garanzia Consegna FloreMoria',
-    });
+    const res = await downloadImageDirectly(proxyEndpoint, filename);
     if (!res.success) {
         // Fallback sull'URL diretto se il proxy restituisce errore
-        const fallbackRes = await downloadMedia({
-            url,
-            filename,
-            title: 'Foto Garanzia Consegna FloreMoria',
-        });
+        const fallbackRes = await downloadImageDirectly(url, filename);
         if (!fallbackRes.success) {
             throw new Error(fallbackRes.error || 'Download non riuscito.');
         }
@@ -62,7 +54,10 @@ type PhotoTileProps = {
     url: string;
     label: string;
     orderId: string;
+    orderNumber?: string | null;
     deceasedName: string;
+    photoIndex?: number;
+    totalPhotos?: number;
     isAdmin: boolean;
     onMutated: () => void;
     onUrlChange: (nextUrl: string) => void;
@@ -73,7 +68,10 @@ function PhotoTile({
     url,
     label,
     orderId,
+    orderNumber,
     deceasedName,
+    photoIndex,
+    totalPhotos,
     isAdmin,
     onMutated,
     onUrlChange,
@@ -122,11 +120,12 @@ function PhotoTile({
         setBusy('download');
         setError(null);
         try {
-            await forceDownload(
-                orderId,
-                url,
-                downloadFilenameFromProofUrl(url, deceasedName)
+            const filename = buildOrderPhotoFilename(
+                orderNumber || deceasedName || orderId,
+                photoIndex,
+                totalPhotos
             );
+            await forceDownload(orderId, url, filename);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Download fallito.');
         } finally {
@@ -234,6 +233,7 @@ function PhotoTile({
 
 export default function CustodiedProofGallery({
     orderId,
+    orderNumber,
     deceasedName,
     initialBefore,
     initialAfter,
@@ -260,6 +260,7 @@ export default function CustodiedProofGallery({
 
     const hasPhotos = beforeUrls.length > 0 || afterUrls.length > 0;
     const primaryAfter = afterUrls[0] ?? beforeUrls[0];
+    const totalPhotos = beforeUrls.length + afterUrls.length;
 
     const refresh = () => router.refresh();
 
@@ -270,7 +271,6 @@ export default function CustodiedProofGallery({
     if (!hasPhotos) {
         return null;
     }
-
 
     const gridClass = compact ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-3 gap-2';
 
@@ -292,7 +292,10 @@ export default function CustodiedProofGallery({
                                 url={url}
                                 label={`Prima ${i + 1}`}
                                 orderId={orderId}
+                                orderNumber={orderNumber}
                                 deceasedName={deceasedName}
+                                photoIndex={i + 1}
+                                totalPhotos={totalPhotos}
                                 isAdmin={isAdmin}
                                 onMutated={refresh}
                                 onUrlChange={(next) =>
@@ -317,7 +320,10 @@ export default function CustodiedProofGallery({
                                 url={url}
                                 label={`Dopo ${i + 1}`}
                                 orderId={orderId}
+                                orderNumber={orderNumber}
                                 deceasedName={deceasedName}
+                                photoIndex={beforeUrls.length + i + 1}
+                                totalPhotos={totalPhotos}
                                 isAdmin={isAdmin}
                                 onMutated={refresh}
                                 onUrlChange={(next) =>
@@ -349,13 +355,14 @@ export default function CustodiedProofGallery({
                 <div className="flex flex-col sm:flex-row gap-2">
                     <button
                         type="button"
-                        onClick={() =>
-                            forceDownload(
-                                orderId,
-                                primaryAfter,
-                                downloadFilenameFromProofUrl(primaryAfter, deceasedName)
-                            )
-                        }
+                        onClick={() => {
+                            const filename = buildOrderPhotoFilename(
+                                orderNumber || deceasedName || orderId,
+                                1,
+                                totalPhotos
+                            );
+                            void forceDownload(orderId, primaryAfter, filename);
+                        }}
                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 border border-[#c5a880]/40 bg-[#c5a880]/10 hover:bg-[#c5a880]/20 text-[#8a7048] rounded-xl text-xs font-bold transition-colors"
                     >
                         <Download size={13} />

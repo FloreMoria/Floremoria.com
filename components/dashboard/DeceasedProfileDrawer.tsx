@@ -35,7 +35,7 @@ import PhoneInput from '@/components/ui/PhoneInput';
 
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import type { DeceasedDetailPayload } from '@/lib/deceased/getDeceasedDetail';
-import { downloadMedia } from '@/lib/utils/downloadMedia';
+import { downloadImageDirectly, buildOrderPhotoFilename } from '@/lib/utils/downloadMedia';
 
 import type { DeceasedLeaderRow } from '@/lib/deceased/listDeceasedLeaderRows';
 import {
@@ -142,11 +142,10 @@ export default function DeceasedProfileDrawer({
 
 
     const triggerDirectImageDownload = async (url: string, filename?: string) => {
-        const res = await downloadMedia({
+        const res = await downloadImageDirectly(
             url,
-            filename: filename || 'foto-garanzia.jpg',
-            title: 'Foto Defunto FloreMoria',
-        });
+            filename || 'foto-defunto.jpg'
+        );
         if (!res.success) {
             showToast(res.error || 'Errore durante il download della foto.');
         }
@@ -807,7 +806,14 @@ export default function DeceasedProfileDrawer({
                                                      </button>
                                                      <button
                                                          type="button"
-                                                         onClick={() => triggerDirectImageDownload(url, `foto-defunto-${idx + 1}.jpg`)}
+                                                         onClick={() => {
+                                                             const filename = buildOrderPhotoFilename(
+                                                                 detail.fullName || 'defunto',
+                                                                 idx + 1,
+                                                                 detail.deliveryPhotoUrls.length
+                                                             );
+                                                             triggerDirectImageDownload(url, filename);
+                                                         }}
                                                          className="p-1.5 bg-[#c5a880] text-white rounded-full hover:bg-[#8a7048] shadow"
                                                          title="Scarica foto reale sul dispositivo"
                                                      >
@@ -898,6 +904,7 @@ export default function DeceasedProfileDrawer({
                                                          <div className="px-3.5 pb-3.5 pt-0" onClick={(e) => e.stopPropagation()}>
                                                              <CustodiedProofGallery
                                                                  orderId={order.id}
+                                                                 orderNumber={order.orderNumber}
                                                                  deceasedName={order.deceasedName}
                                                                  initialBefore={proof.before}
                                                                  initialAfter={proof.after}

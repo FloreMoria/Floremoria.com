@@ -7,11 +7,12 @@ import {
     setDashboardOverlayOpen,
     useEdgeSwipeBack,
 } from '@/lib/dashboard/useEdgeSwipeBack';
-import { downloadMedia } from '@/lib/utils/downloadMedia';
+import { downloadImageDirectly } from '@/lib/utils/downloadMedia';
 
 interface MediaLightboxProps {
     imageUrl: string;
     downloadUrl?: string | null;
+    filename?: string;
     alt?: string;
     onClose: () => void;
 }
@@ -19,6 +20,7 @@ interface MediaLightboxProps {
 export default function MediaLightbox({
     imageUrl,
     downloadUrl,
+    filename,
     alt = 'Allegato WhatsApp',
     onClose,
 }: MediaLightboxProps) {
@@ -60,11 +62,8 @@ export default function MediaLightbox({
         setDownloadError(null);
         try {
             const targetUrl = downloadUrl || imageUrl;
-            const res = await downloadMedia({
-                url: targetUrl,
-                filename: `floremoria-foto-${Date.now()}.jpg`,
-                title: 'Foto FloreMoria',
-            });
+            const targetFilename = filename || `floremoria-foto-${Date.now()}.jpg`;
+            const res = await downloadImageDirectly(targetUrl, targetFilename);
             if (!res.success) {
                 setDownloadError(res.error || 'Download fallito.');
                 setTimeout(() => setDownloadError(null), 4000);
@@ -75,7 +74,7 @@ export default function MediaLightbox({
         } finally {
             setDownloading(false);
         }
-    }, [downloadUrl, imageUrl, downloading]);
+    }, [downloadUrl, imageUrl, filename, downloading]);
 
     const handleShare = useCallback(async () => {
         if (sharing) return;

@@ -16,7 +16,14 @@ export async function authorizeProofPhotoDownload(params: {
     orderId: string;
     photoUrl: string;
 }): Promise<
-    | { ok: true; deceasedName: string; allowedUrl: string }
+    | {
+          ok: true;
+          deceasedName: string;
+          orderNumber: string | null;
+          allowedUrl: string;
+          photoIndex: number;
+          totalPhotos: number;
+      }
     | { ok: false; status: number; error: string }
 > {
     const orderId = params.orderId.trim();
@@ -36,6 +43,7 @@ export async function authorizeProofPhotoDownload(params: {
         where: { id: orderId, deletedAt: null },
         select: {
             id: true,
+            orderNumber: true,
             userId: true,
             buyerEmail: true,
             deceasedName: true,
@@ -71,18 +79,22 @@ export async function authorizeProofPhotoDownload(params: {
     }
 
     const proof = getOrderProofPhotos(order);
-    const allowed = [...proof.before, ...proof.after].map(normalizeUrl);
-    if (!allowed.includes(photoUrl)) {
+    const allUrls = [...proof.before, ...proof.after];
+    const allowed = allUrls.map(normalizeUrl);
+    const matchIndex = allowed.findIndex((u) => u === photoUrl);
+    if (matchIndex === -1) {
         return { ok: false, status: 403, error: 'Foto non collegata a questo ordine.' };
     }
 
     // Preferisci URL originale completo se presente (con query firmate).
-    const original =
-        [...proof.before, ...proof.after].find((u) => normalizeUrl(u) === photoUrl) || photoUrl;
+    const original = allUrls[matchIndex] || photoUrl;
 
     return {
         ok: true,
         deceasedName: order.deceasedProfile?.fullName || order.deceasedName || 'posa',
+        orderNumber: order.orderNumber || null,
         allowedUrl: original,
+        photoIndex: matchIndex + 1,
+        totalPhotos: allUrls.length,
     };
 }

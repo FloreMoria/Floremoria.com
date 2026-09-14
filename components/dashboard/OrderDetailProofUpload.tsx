@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ZoomIn, Loader2, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ZoomIn, Loader2, X, Image as ImageIcon, Download } from 'lucide-react';
 import type { ProofPhotoSlot } from '@/lib/deliveryProof/proofPhotoUrls';
+import { downloadImageDirectly, buildOrderPhotoFilename } from '@/lib/utils/downloadMedia';
 
 type Props = {
     orderId: string;
+    orderNumber?: string | null;
     initialBefore?: string[];
     initialAfter?: string[];
     onPhotosUpdated?: (before: string[], after: string[]) => void;
@@ -18,6 +20,7 @@ function isImageFile(file: File): boolean {
 
 export default function OrderDetailProofUpload({
     orderId,
+    orderNumber,
     initialBefore = [],
     initialAfter = [],
     onPhotosUpdated,
@@ -163,7 +166,7 @@ export default function OrderDetailProofUpload({
                                 {label}
                             </div>
 
-                            {/* Action overlay (Zoom & Delete) */}
+                            {/* Action overlay (Zoom, Download & Delete) */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                 <button
                                     type="button"
@@ -172,6 +175,21 @@ export default function OrderDetailProofUpload({
                                     title="Ingrandisci anteprima"
                                 >
                                     <ZoomIn size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const filename = buildOrderPhotoFilename(
+                                            orderNumber || orderId,
+                                            idx + 1,
+                                            allPhotos.length
+                                        );
+                                        await downloadImageDirectly(url, filename);
+                                    }}
+                                    className="p-1.5 bg-[#c5a880] text-white rounded-full hover:bg-[#8a7048] shadow"
+                                    title="Scarica foto sul dispositivo"
+                                >
+                                    <Download size={14} />
                                 </button>
                                 <button
                                     type="button"
@@ -245,14 +263,32 @@ export default function OrderDetailProofUpload({
                     className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
                     onClick={() => setZoomUrl(null)}
                 >
-                    <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-black">
-                        <button
-                            type="button"
-                            onClick={() => setZoomUrl(null)}
-                            className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-full hover:bg-black transition-colors z-10"
-                        >
-                            <X size={20} />
-                        </button>
+                    <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-black flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const matchIdx = allPhotos.findIndex((p) => p.url === zoomUrl);
+                                    const filename = buildOrderPhotoFilename(
+                                        orderNumber || orderId,
+                                        matchIdx >= 0 ? matchIdx + 1 : 1,
+                                        allPhotos.length
+                                    );
+                                    await downloadImageDirectly(zoomUrl, filename);
+                                }}
+                                className="p-2 bg-black/60 text-white rounded-full hover:bg-black transition-colors"
+                                title="Scarica foto"
+                            >
+                                <Download size={18} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setZoomUrl(null)}
+                                className="p-2 bg-black/60 text-white rounded-full hover:bg-black transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={zoomUrl}

@@ -244,6 +244,7 @@ export function UserBachecaOrderCard({
                 <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-slate-100 pt-6 lg:pt-0 lg:pl-8 flex flex-col justify-center">
                     <CustodiedProofGallery
                         orderId={order.id}
+                        orderNumber={order.orderNumber}
                         deceasedName={deceasedDisplayName}
                         initialBefore={proofPhotos.before}
                         initialAfter={proofPhotos.after}

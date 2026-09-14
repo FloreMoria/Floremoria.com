@@ -1,13 +1,11 @@
 /**
- * Helper riutilizzabile per il download universale cross-device di foto e allegati.
+ * Helper riutilizzabile per il download diretto su disco di immagini e allegati.
  * 
- * - Su SMARTPHONE / MOBILE (iOS & Android):
- *   Usa la Web Share API ('navigator.share' con 'files') per permettere all'utente
- *   di salvare la foto direttamente nel Rullino/Galleria (Camera Roll) o condividerla.
- * 
- * - Su DESKTOP / COMPUTER (e fallback mobile):
- *   Effettua il fetch (diretto o tramite proxy '/api/download'), converte in Blob,
- *   genera l'Object URL e innesca il download con tag <a> programmatico.
+ * COMPORTAMENTO:
+ * - Esegue il download DIRETTO sul disco locale (cartella Download del browser/SO).
+ * - Nessuna invocazione di navigator.share() o schede di condivisione di sistema.
+ * - Effettua il fetch come blob (con fallback automatico su /api/download in caso di CORS o restrizioni upstream).
+ * - Crea un Object URL e innesca il download con tag <a> programmatico e attributo download.
  */
 
 export interface DownloadMediaOptions {
@@ -21,13 +19,63 @@ export interface DownloadMediaResult {
     error?: string;
 }
 
-/** Prepara un nome file pulito e valido con estensione corretta. */
+/**
+ * Pulisce una stringa da caratteri non validi per i filesystem di macOS, Windows e Linux.
+ */
+export function sanitizeFilenamePart(text: string): string {
+    return text
+        .trim()
+        .replace(/[/\\?%*:|"<>#]/g, '-')
+        .replace(/\s+/g, ' ')
+        .replace(/-+/g, '-')
+        .replace(/^[-. ]+|[-. ]+$/g, '');
+}
+
+/**
+ * Genera il nome file convenzionale per le foto:
+ * - Foto singola: '[CodiceOrdine].[estensione]' (es. 'FT-VE-26-001.jpg')
+ * - Più foto contemporanee / galleria: '[CodiceOrdine] (1).[estensione]', '[CodiceOrdine] (2).[estensione]', ecc.
+ */
+export function buildOrderPhotoFilename(
+    reference: string,
+    index?: number,
+    totalCount?: number,
+    defaultExt = 'jpg'
+): string {
+    const raw = (reference || '').trim();
+    if (!raw) {
+        const fallbackBase = 'floremoria-foto';
+        if (totalCount && totalCount > 1 && index !== undefined) {
+            return `${fallbackBase} (${index}).${defaultExt}`;
+        }
+        return `${fallbackBase}.${defaultExt}`;
+    }
+
+    // Verifica se raw ha già un'estensione
+    let base = raw;
+    let ext = defaultExt;
+    const extMatch = raw.match(/\.([a-z0-9]{3,4})$/i);
+    if (extMatch) {
+        ext = extMatch[1].toLowerCase();
+        base = raw.slice(0, -extMatch[0].length);
+    }
+
+    const cleanBase = sanitizeFilenamePart(base) || 'floremoria-foto';
+
+    if (totalCount !== undefined && totalCount > 1 && index !== undefined) {
+        return `${cleanBase} (${index}).${ext}`;
+    }
+
+    return `${cleanBase}.${ext}`;
+}
+
+/** Prepara un nome file pulito e valido con estensione corretta (compatibilità). */
 export function sanitizeDownloadFilename(rawUrl: string, customName?: string): string {
     if (customName && customName.trim()) {
-        const clean = customName.trim().replace(/[/\\?%*:|"<>]/g, '_');
+        const clean = sanitizeFilenamePart(customName);
         if (!/\.[a-z0-9]{3,4}$/i.test(clean)) {
             const extMatch = rawUrl.split('?')[0].match(/\.([a-z0-9]{3,4})$/i);
-            const ext = extMatch ? extMatch[1] : 'jpg';
+            const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
             return `${clean}.${ext}`;
         }
         return clean;
@@ -37,7 +85,7 @@ export function sanitizeDownloadFilename(rawUrl: string, customName?: string): s
         const cleanUrl = rawUrl.split('?')[0];
         const basename = cleanUrl.split('/').pop();
         if (basename && /\.[a-z0-9]{3,4}$/i.test(basename)) {
-            return basename.replace(/[/\\?%*:|"<>]/g, '_');
+            return sanitizeFilenamePart(basename);
         }
     } catch {
         /* fallback sotto */
@@ -46,20 +94,27 @@ export function sanitizeDownloadFilename(rawUrl: string, customName?: string): s
     return `floremoria-foto-${Date.now()}.jpg`;
 }
 
-export async function downloadMedia(options: DownloadMediaOptions): Promise<DownloadMediaResult> {
-    const { url, filename, title } = options;
-
+/**
+ * Esegue il download diretto del file dal browser salvandolo sul disco.
+ * Non invoca mai la Web Share API (navigator.share).
+ */
+export async function downloadImageDirectly(
+    url: string,
+    filename?: string
+): Promise<DownloadMediaResult> {
     if (!url || !url.trim()) {
         return { success: false, error: 'URL del file non valido.' };
     }
 
     const cleanUrl = url.trim();
-    const finalFilename = sanitizeDownloadFilename(cleanUrl, filename);
+    const finalFilename = filename && filename.trim()
+        ? sanitizeFilenamePart(filename)
+        : sanitizeDownloadFilename(cleanUrl);
 
     try {
-        // Step 1: Tentativo di Fetch diretto del Blob
         let blob: Blob | null = null;
 
+        // 1. Fetch diretto del Blob
         try {
             const directRes = await fetch(cleanUrl, { cache: 'no-store' });
             if (directRes.ok) {
@@ -69,7 +124,7 @@ export async function downloadMedia(options: DownloadMediaOptions): Promise<Down
             blob = null;
         }
 
-        // Step 2: Fallback tramite API Proxy interna se il fetch diretto fallisce (es. CORS cross-origin)
+        // 2. Fallback via proxy se fetch diretto fallisce (CORS / autorizzazione cross-origin)
         if (!blob) {
             const proxyEndpoint = `/api/download?url=${encodeURIComponent(cleanUrl)}&filename=${encodeURIComponent(finalFilename)}`;
             const proxyRes = await fetch(proxyEndpoint, { cache: 'no-store' });
@@ -79,30 +134,12 @@ export async function downloadMedia(options: DownloadMediaOptions): Promise<Down
             blob = await proxyRes.blob();
         }
 
-        const mimeType = blob.type || (finalFilename.endsWith('.png') ? 'image/png' : 'image/jpeg');
-
-        // Step 3: Supporto Web Share API per dispositivi Mobile (iOS Safari / Android Chrome)
-        if (typeof navigator !== 'undefined' && navigator.canShare && typeof File !== 'undefined') {
-            try {
-                const file = new File([blob], finalFilename, { type: mimeType });
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: title || 'Foto FloreMoria',
-                    });
-                    return { success: true };
-                }
-            } catch (shareError) {
-                // Se l'utente annulla la finestra di condivisione (AbortError), non mostrare errore
-                if (shareError instanceof Error && shareError.name === 'AbortError') {
-                    return { success: true };
-                }
-                // Altrimenti prosegui al fallback per il download browser
-            }
+        // 3. Creazione Object URL e click programmatico su <a> con attributo download
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return { success: true };
         }
 
-        // Step 4: Download programmatico per Desktop (e fallback mobile senza Web Share)
-        const objectUrl = URL.createObjectURL(blob);
+        const objectUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = objectUrl;
         link.download = finalFilename;
@@ -115,13 +152,20 @@ export async function downloadMedia(options: DownloadMediaOptions): Promise<Down
             if (document.body.contains(link)) {
                 document.body.removeChild(link);
             }
-            URL.revokeObjectURL(objectUrl);
-        }, 1000);
+            window.URL.revokeObjectURL(objectUrl);
+        }, 1500);
 
         return { success: true };
     } catch (err) {
-        console.error('[downloadMedia] Errore durante il download:', err);
+        console.error('[downloadImageDirectly] Errore durante il download:', err);
         const errorMsg = err instanceof Error ? err.message : 'Impossibile scaricare il file.';
         return { success: false, error: errorMsg };
     }
+}
+
+/**
+ * Alias per downloadMedia con firma compatibile.
+ */
+export async function downloadMedia(options: DownloadMediaOptions): Promise<DownloadMediaResult> {
+    return downloadImageDirectly(options.url, options.filename);
 }

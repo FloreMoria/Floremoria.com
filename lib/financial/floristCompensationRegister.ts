@@ -14,6 +14,7 @@ import {
 } from '@/lib/financial/floristDocStatus';
 import { buildFloristInvoiceMatchIndex } from '@/lib/financial/floristInvoiceAutoMatch';
 import { manualExpenseAttachmentUrl } from '@/lib/financial/manualExpenses';
+import { isPrepaidCarnetParentOrder } from '@/lib/financial/prepaidSubscriptionOrders';
 
 export type {
     FloristCompensationRow,
@@ -50,7 +51,7 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
     const year = now.getFullYear();
     const lookback = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
 
-    const orders = await prisma.order.findMany({
+    const ordersRaw = await prisma.order.findMany({
         where: {
             isTest: false,
             deletedAt: null,
@@ -64,10 +65,18 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
             status: true,
             createdAt: true,
             deliveryDate: true,
+            totalPriceCents: true,
             floristCompensationCents: true,
             floristSettlementStatus: true,
             financeNotes: true,
+            additionalInstructions: true,
             veraWorkflowFlags: true,
+            isRecurring: true,
+            stripeTransactionId: true,
+            grossAmount: true,
+            netAmount: true,
+            stripeFee: true,
+            paymentMethodLabel: true,
             partner: {
                 select: {
                     id: true,
@@ -82,6 +91,21 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
         },
         orderBy: { createdAt: 'desc' },
         take: 2000,
+    });
+
+    // Esclude padri carnet (incasso cliente, non consegna). Segnala compenso anomalo sul padre.
+    const orders = ordersRaw.filter((o) => {
+        if (!isPrepaidCarnetParentOrder(o)) return true;
+        console.warn('[floristCompensationRegister] excluded carnet parent', {
+            orderNumber: o.orderNumber,
+            totalPriceCents: o.totalPriceCents,
+            floristCompensationCents: o.floristCompensationCents,
+            note:
+                o.floristCompensationCents && o.floristCompensationCents > 0
+                    ? 'ATTENZIONE: floristCompensationCents sul padre — il compenso appartiene alle pose (non corretto in automatico)'
+                    : null,
+        });
+        return false;
     });
 
     const expenseIds = new Set<string>();

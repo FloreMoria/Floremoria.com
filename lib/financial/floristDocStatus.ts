@@ -67,15 +67,15 @@ export function isFloristDocStatus(value: unknown): value is FloristDocStatus {
 }
 
 /**
- * Data di riferimento: consegna se già avvenuta, altrimenti createdAt.
+ * Data di riferimento fiscale/operativa: sempre deliveryDate se valorizzata
+ * (anche se createdAt è successivo — tipico degli insert .eu in dashboard .com).
+ * createdAt è amministrativo; non va preferito quando esiste la consegna.
  */
 export function orderReferenceDate(
     order: { createdAt: Date; deliveryDate: Date | null },
-    now = new Date()
+    _now = new Date()
 ): Date {
-    if (order.deliveryDate && order.deliveryDate.getTime() <= now.getTime()) {
-        return order.deliveryDate;
-    }
+    if (order.deliveryDate) return order.deliveryDate;
     return order.createdAt;
 }
 

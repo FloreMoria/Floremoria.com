@@ -1,9 +1,21 @@
 /**
  * Incrocio automatico (sola lettura) tra ordini fiorista e fatture passive SDI/YouDOX.
  * Nessuna scrittura DB: la conferma resta un'azione esplicita dell'utente.
+ *
+ * Regole chiave:
+ * - Dedup fatture per identità P.IVA|numero (canale SDI_XML > XLSX > MANUAL)
+ * - VAT_AMOUNT / NAME_AMOUNT: 1 fattura → 1 ordine, assegnazione per distanza date
+ * - ORDER_REF / VAT_AGGREGATED restano le sole eccezioni multi-legittime
+ * - Non usare causali bonifico (scritte a mano, spesso errate)
  */
 
 import prisma from '@/lib/prisma';
+import {
+    buildPassiveIdentityKey,
+    dedupePassiveByChannelPriority,
+    resolvePassiveIngestChannel,
+    type PassiveIngestChannel,
+} from '@/lib/financial/passiveInvoiceIdentity';
 
 export type FloristInvoiceMatch = {
     expenseId: string;
@@ -13,6 +25,8 @@ export type FloristInvoiceMatch = {
     vendorName: string;
     vendorVat: string | null;
     confidence: 'ORDER_REF' | 'VAT_AMOUNT' | 'VAT_AGGREGATED' | 'NAME_AMOUNT';
+    /** Distanza assoluta ordine↔fattura in giorni (utile in UI/log). */
+    dateDistanceDays?: number;
 };
 
 export type FloristInvoiceMatchOrderInput = {
@@ -64,7 +78,6 @@ function daysBetween(from: Date, to: Date): number {
 
 function withinInvoiceWindow(referenceDate: Date, expenseDate: Date): boolean {
     const delta = daysBetween(referenceDate, expenseDate);
-    // Fattura tipicamente dopo il lavoro: −5 … +120 giorni dalla data di riferimento ordine.
     return delta >= -5 && delta <= 120;
 }
 
@@ -94,7 +107,6 @@ function expenseMentionsOrder(blob: string, orderNumber: string | null): boolean
     if (needle.length < 5) return false;
     const hay = normalizeOrderRef(blob);
     if (hay.includes(needle)) return true;
-    // Anche forma con trattini originali (case-insensitive)
     return blob.toUpperCase().includes(orderNumber.trim().toUpperCase());
 }
 
@@ -125,12 +137,19 @@ type ExpenseRow = {
     description: string;
     notes: string | null;
     metadataJson: unknown;
+    fileName: string | null;
     vendorVat: string | null;
     invoiceNumber: string | null;
+    identityKey: string | null;
+    channel: PassiveIngestChannel;
     blob: string;
 };
 
-function toMatch(exp: ExpenseRow, confidence: FloristInvoiceMatch['confidence']): FloristInvoiceMatch {
+function toMatch(
+    exp: ExpenseRow,
+    confidence: FloristInvoiceMatch['confidence'],
+    dateDistanceDays?: number
+): FloristInvoiceMatch {
     return {
         expenseId: exp.id,
         invoiceNumber: exp.invoiceNumber,
@@ -139,12 +158,98 @@ function toMatch(exp: ExpenseRow, confidence: FloristInvoiceMatch['confidence'])
         vendorName: exp.vendorName,
         vendorVat: exp.vendorVat,
         confidence,
+        dateDistanceDays,
     };
 }
 
+function logMatch(
+    order: FloristInvoiceMatchOrderInput,
+    match: FloristInvoiceMatch
+): void {
+    console.info('[floristInvoiceAutoMatch]', {
+        orderNumber: order.orderNumber,
+        invoiceNumber: match.invoiceNumber,
+        confidence: match.confidence,
+        dateDistanceDays: match.dateDistanceDays ?? null,
+        expenseId: match.expenseId,
+        invoiceDate: match.invoiceDate,
+    });
+}
+
+type ConsumeTracker = {
+    usedExpenseIds: Set<string>;
+    usedIdentityKeys: Set<string>;
+};
+
+function isConsumed(exp: ExpenseRow, tracker: ConsumeTracker): boolean {
+    if (tracker.usedExpenseIds.has(exp.id)) return true;
+    if (exp.identityKey && tracker.usedIdentityKeys.has(exp.identityKey)) return true;
+    return false;
+}
+
+function consume(exp: ExpenseRow, tracker: ConsumeTracker): void {
+    tracker.usedExpenseIds.add(exp.id);
+    if (exp.identityKey) tracker.usedIdentityKeys.add(exp.identityKey);
+}
+
+function vatCompatible(orderVat: string, invVat: string): boolean {
+    if (orderVat.length < 8 || invVat.length < 8) return false;
+    return invVat === orderVat || invVat.includes(orderVat) || orderVat.includes(invVat);
+}
+
 /**
- * Indice orderId → fattura passiva abbinata (priorità ORDER_REF > VAT_AMOUNT > VAT_AGGREGATED > NAME_AMOUNT).
- * Ogni expenseId viene consumato al massimo una volta.
+ * Assegna 1-a-1 le coppie compatibili, dalla distanza data più piccola alla più grande.
+ */
+function assignByNearestDate(params: {
+    orders: FloristInvoiceMatchOrderInput[];
+    expenses: ExpenseRow[];
+    uncovered: Set<string>;
+    tracker: ConsumeTracker;
+    confidence: 'VAT_AMOUNT' | 'NAME_AMOUNT';
+    result: Map<string, FloristInvoiceMatch>;
+    compatible: (
+        order: FloristInvoiceMatchOrderInput,
+        exp: ExpenseRow
+    ) => boolean;
+}): void {
+    type Pair = {
+        order: FloristInvoiceMatchOrderInput;
+        exp: ExpenseRow;
+        distance: number;
+    };
+    const pairs: Pair[] = [];
+    for (const order of params.orders) {
+        if (!params.uncovered.has(order.id)) continue;
+        for (const exp of params.expenses) {
+            if (isConsumed(exp, params.tracker)) continue;
+            if (!params.compatible(order, exp)) continue;
+            if (!withinInvoiceWindow(order.referenceDate, exp.expenseDate)) continue;
+            const distance = Math.abs(daysBetween(order.referenceDate, exp.expenseDate));
+            pairs.push({ order, exp, distance });
+        }
+    }
+    pairs.sort((a, b) => {
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        // Tie-break stabile: fattura più recente, poi orderNumber
+        const td = b.exp.expenseDate.getTime() - a.exp.expenseDate.getTime();
+        if (td !== 0) return td;
+        return String(a.order.orderNumber || '').localeCompare(String(b.order.orderNumber || ''));
+    });
+
+    for (const pair of pairs) {
+        if (!params.uncovered.has(pair.order.id)) continue;
+        if (isConsumed(pair.exp, params.tracker)) continue;
+        const match = toMatch(pair.exp, params.confidence, pair.distance);
+        params.result.set(pair.order.id, match);
+        consume(pair.exp, params.tracker);
+        params.uncovered.delete(pair.order.id);
+        logMatch(pair.order, match);
+    }
+}
+
+/**
+ * Indice orderId → fattura passiva abbinata.
+ * Priorità: ORDER_REF → VAT_AMOUNT (nearest date) → VAT_AGGREGATED → NAME_AMOUNT (nearest date).
  */
 export async function buildFloristInvoiceMatchIndex(params: {
     orders: FloristInvoiceMatchOrderInput[];
@@ -160,7 +265,6 @@ export async function buildFloristInvoiceMatchIndex(params: {
         where: {
             docType: { in: ['FATTURA'] },
             expenseDate: { gte: from },
-            // Esclude quarantena/rifiuti se valorizzati
             OR: [{ verificationStatus: null }, { verificationStatus: 'CERTIFIED' }],
         },
         select: {
@@ -171,12 +275,21 @@ export async function buildFloristInvoiceMatchIndex(params: {
             description: true,
             notes: true,
             metadataJson: true,
+            fileName: true,
         },
         take: 8000,
     });
 
-    const expenses: ExpenseRow[] = rawExpenses.map((e) => {
+    const mapped: ExpenseRow[] = rawExpenses.map((e) => {
         const meta = readMeta(e.metadataJson);
+        const vendorVat = extractVendorVat(meta);
+        const invoiceNumber = extractInvoiceNumber(meta);
+        const channel = resolvePassiveIngestChannel({
+            ingestChannel: meta.ingestChannel ?? meta.source ?? meta.passiveChannel,
+            source: meta.source,
+            notes: e.notes,
+            fileName: e.fileName,
+        });
         return {
             id: e.id,
             vendorName: e.vendorName,
@@ -185,50 +298,66 @@ export async function buildFloristInvoiceMatchIndex(params: {
             description: e.description,
             notes: e.notes,
             metadataJson: e.metadataJson,
-            vendorVat: extractVendorVat(meta),
-            invoiceNumber: extractInvoiceNumber(meta),
+            fileName: e.fileName,
+            vendorVat,
+            invoiceNumber,
+            identityKey: buildPassiveIdentityKey(vendorVat, invoiceNumber),
+            channel,
             blob: expenseSearchBlob(e),
         };
     });
 
-    const usedExpenseIds = new Set<string>();
+    // Una sola fattura per identità documento (canale più affidabile)
+    const { kept } = dedupePassiveByChannelPriority(mapped, (item) => ({
+        identityKey: item.identityKey,
+        channel: item.channel,
+        documentDate: toDateOnlyIso(item.expenseDate),
+        totalCents: item.totalCents,
+    }));
+    const expenses = kept;
+
+    const tracker: ConsumeTracker = {
+        usedExpenseIds: new Set(),
+        usedIdentityKeys: new Set(),
+    };
     const uncovered = new Set(params.orders.map((o) => o.id));
+    const byId = new Map(params.orders.map((o) => [o.id, o]));
 
-    // 1) ORDER_REF — certo: numero ordine nel testo fattura
+    // 1) ORDER_REF — numero ordine citato nella fattura (non nelle causali bonifico)
     for (const order of params.orders) {
         if (!uncovered.has(order.id)) continue;
+        let best: { exp: ExpenseRow; distance: number } | null = null;
         for (const exp of expenses) {
-            if (usedExpenseIds.has(exp.id)) continue;
+            if (isConsumed(exp, tracker)) continue;
             if (!expenseMentionsOrder(exp.blob, order.orderNumber)) continue;
-            result.set(order.id, toMatch(exp, 'ORDER_REF'));
-            usedExpenseIds.add(exp.id);
-            uncovered.delete(order.id);
-            break;
+            const distance = Math.abs(daysBetween(order.referenceDate, exp.expenseDate));
+            if (!best || distance < best.distance) best = { exp, distance };
         }
+        if (!best) continue;
+        const match = toMatch(best.exp, 'ORDER_REF', best.distance);
+        result.set(order.id, match);
+        consume(best.exp, tracker);
+        uncovered.delete(order.id);
+        logMatch(order, match);
     }
 
-    // 2) VAT_AMOUNT — P.IVA + importo ±1€ + finestra data
-    for (const order of params.orders) {
-        if (!uncovered.has(order.id)) continue;
-        const orderVat = normalizeVat(order.partnerVat);
-        if (orderVat.length < 8) continue;
-        for (const exp of expenses) {
-            if (usedExpenseIds.has(exp.id)) continue;
+    // 2) VAT_AMOUNT — 1:1, nearest date
+    assignByNearestDate({
+        orders: params.orders,
+        expenses,
+        uncovered,
+        tracker,
+        confidence: 'VAT_AMOUNT',
+        result,
+        compatible: (order, exp) => {
+            const orderVat = normalizeVat(order.partnerVat);
             const invVat = exp.vendorVat || '';
-            if (invVat.length < 8) continue;
-            if (!(invVat === orderVat || invVat.includes(orderVat) || orderVat.includes(invVat))) {
-                continue;
-            }
-            if (Math.abs(exp.totalCents - Math.abs(order.amountCents)) > 100) continue;
-            if (!withinInvoiceWindow(order.referenceDate, exp.expenseDate)) continue;
-            result.set(order.id, toMatch(exp, 'VAT_AMOUNT'));
-            usedExpenseIds.add(exp.id);
-            uncovered.delete(order.id);
-            break;
-        }
-    }
+            if (!vatCompatible(orderVat, invVat)) return false;
+            return Math.abs(exp.totalCents - Math.abs(order.amountCents)) <= 100;
+        },
+    });
 
-    // 3) VAT_AGGREGATED — stessa P.IVA, totale = somma di più ordini scoperti
+    // 3) VAT_AGGREGATED — stessa P.IVA, totale = somma di ≥2 ordini scoperti
     const byVat = new Map<string, FloristInvoiceMatchOrderInput[]>();
     for (const order of params.orders) {
         if (!uncovered.has(order.id)) continue;
@@ -241,15 +370,13 @@ export async function buildFloristInvoiceMatchIndex(params: {
 
     for (const [vat, group] of byVat) {
         if (group.length < 2) continue;
-        // Prova sottoinsiemi piccoli (2–6) ordinati per data: greedy best-fit
         const sorted = [...group].sort(
             (a, b) => a.referenceDate.getTime() - b.referenceDate.getTime()
         );
         for (const exp of expenses) {
-            if (usedExpenseIds.has(exp.id)) continue;
+            if (isConsumed(exp, tracker)) continue;
             const invVat = exp.vendorVat || '';
-            if (invVat.length < 8) continue;
-            if (!(invVat === vat || invVat.includes(vat) || vat.includes(invVat))) continue;
+            if (!vatCompatible(vat, invVat)) continue;
 
             const candidates = sorted.filter(
                 (o) => uncovered.has(o.id) && withinInvoiceWindow(o.referenceDate, exp.expenseDate)
@@ -257,7 +384,6 @@ export async function buildFloristInvoiceMatchIndex(params: {
             if (candidates.length < 2) continue;
 
             let bestSubset: FloristInvoiceMatchOrderInput[] | null = null;
-            // Greedy: accumula finché non supera il totale
             const tryGreedy = (start: number) => {
                 const subset: FloristInvoiceMatchOrderInput[] = [];
                 let sum = 0;
@@ -282,29 +408,41 @@ export async function buildFloristInvoiceMatchIndex(params: {
             }
             if (!bestSubset) continue;
 
-            const match = toMatch(exp, 'VAT_AGGREGATED');
-            usedExpenseIds.add(exp.id);
+            consume(exp, tracker);
             for (const o of bestSubset) {
+                const distance = Math.abs(daysBetween(o.referenceDate, exp.expenseDate));
+                const match = toMatch(exp, 'VAT_AGGREGATED', distance);
                 result.set(o.id, match);
                 uncovered.delete(o.id);
+                logMatch(o, match);
             }
         }
     }
 
-    // 4) NAME_AMOUNT — solo senza P.IVA partner
-    for (const order of params.orders) {
-        if (!uncovered.has(order.id)) continue;
-        if (normalizeVat(order.partnerVat).length >= 8) continue;
-        for (const exp of expenses) {
-            if (usedExpenseIds.has(exp.id)) continue;
-            if (!namesCompatible(order.partnerName, exp.vendorName)) continue;
-            if (Math.abs(exp.totalCents - Math.abs(order.amountCents)) > 100) continue;
-            if (!withinInvoiceWindow(order.referenceDate, exp.expenseDate)) continue;
-            result.set(order.id, toMatch(exp, 'NAME_AMOUNT'));
-            usedExpenseIds.add(exp.id);
-            uncovered.delete(order.id);
-            break;
-        }
+    // 4) NAME_AMOUNT — solo senza P.IVA partner, 1:1 nearest date
+    assignByNearestDate({
+        orders: params.orders,
+        expenses,
+        uncovered,
+        tracker,
+        confidence: 'NAME_AMOUNT',
+        result,
+        compatible: (order, exp) => {
+            if (normalizeVat(order.partnerVat).length >= 8) return false;
+            if (!namesCompatible(order.partnerName, exp.vendorName)) return false;
+            return Math.abs(exp.totalCents - Math.abs(order.amountCents)) <= 100;
+        },
+    });
+
+    // Ordini ancora scoperti restano WAITING (nessuna chiusura inventata)
+    for (const id of uncovered) {
+        const o = byId.get(id);
+        if (!o) continue;
+        console.info('[floristInvoiceAutoMatch] waiting', {
+            orderNumber: o.orderNumber,
+            amountCents: o.amountCents,
+            referenceDate: toDateOnlyIso(o.referenceDate),
+        });
     }
 
     return result;

@@ -15,6 +15,9 @@ export type PrepaidPoseOrderLike = {
     paymentMethodLabel?: string | null;
     additionalInstructions?: string | null;
     financeNotes?: string | null;
+    totalPriceCents?: number | null;
+    deliveryDate?: Date | string | null;
+    status?: string | null;
 };
 
 /** True se c'è evidenza di un pagamento gateway / importo catturato. */
@@ -50,5 +53,23 @@ export function isPrepaidSubscriptionPoseOrder(order: PrepaidPoseOrderLike): boo
     if (orderHasRealGatewayPayment(order)) return false;
     if (order.isRecurring) return true;
     if (orderLooksLikeDuplicatePose(order)) return true;
+    return false;
+}
+
+/**
+ * Ordine padre di carnet/abbonamento: porta l'incasso cliente, non è una consegna.
+ * Non entra nel registro passivo fiorista (il debito nasce sulle pose).
+ */
+export function isPrepaidCarnetParentOrder(order: PrepaidPoseOrderLike): boolean {
+    if (isPrepaidSubscriptionPoseOrder(order)) return false;
+    const hasOwnSale =
+        orderHasRealGatewayPayment(order) ||
+        (order.totalPriceCents != null && order.totalPriceCents > 0);
+    if (!hasOwnSale) return false;
+    const blob = notesBlob(order);
+    // Marker espliciti (es. FT-MC-26-007: CARNET_PREPAGATO / registrazione carnet)
+    if (/CARNET_PREPAGATO|registrazione\s+carnet|ordine\s+padre\s+carnet/i.test(blob)) {
+        return true;
+    }
     return false;
 }

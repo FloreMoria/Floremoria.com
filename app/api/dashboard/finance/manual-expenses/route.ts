@@ -3,6 +3,7 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import {
     createManualExpense,
     listManualExpenses,
+    searchManualExpensesForMatch,
     sumManualExpensesCents,
     type ManualDocType,
 } from '@/lib/financial/manualExpenses';
@@ -14,10 +15,35 @@ export const maxDuration = 60;
 const ALLOWED = /\.(pdf|png|jpe?g|webp|heic)$/i;
 const MAX_BYTES = 12 * 1024 * 1024;
 
-export async function GET() {
+export async function GET(request: Request) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
     try {
+        const { searchParams } = new URL(request.url);
+        const q = searchParams.get('q');
+        const amountRaw = searchParams.get('amountCents');
+        const searchMode =
+            searchParams.get('search') === '1' ||
+            Boolean(q) ||
+            (amountRaw != null && amountRaw !== '');
+
+        if (searchMode) {
+            const amountCents =
+                amountRaw != null && amountRaw !== '' && Number.isFinite(Number(amountRaw))
+                    ? Number(amountRaw)
+                    : null;
+            const limit = Math.min(
+                Math.max(Number(searchParams.get('limit') || 25) || 25, 1),
+                60
+            );
+            const expenses = await searchManualExpensesForMatch({
+                q,
+                amountCents,
+                limit,
+            });
+            return NextResponse.json({ ok: true, expenses, search: true });
+        }
+
         const [expenses, totalCents] = await Promise.all([
             listManualExpenses(150),
             sumManualExpensesCents(),

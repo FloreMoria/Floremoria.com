@@ -9,7 +9,13 @@ export const FINANCE_PASSIVO_TABLE_SCROLL =
 export const FINANCE_PASSIVO_CARD_CLASS =
     'bg-white border border-slate-200 rounded-xl p-5 shadow-sm h-full min-h-[560px] flex flex-col gap-3 overflow-hidden';
 
-export type FinanceMainTabId = 'bank' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
+export type FinanceMainTabId =
+    | 'bank'
+    | 'riconcilia'
+    | 'prima-nota'
+    | 'passivo'
+    | 'gateway'
+    | 'fisco';
 
 export const FINANCE_TAB_STYLES: Record<
     FinanceMainTabId,
@@ -19,6 +25,11 @@ export const FINANCE_TAB_STYLES: Record<
         active: 'bg-sky-50 border-sky-300 text-sky-900',
         inactive:
             'bg-sky-50/40 border-transparent text-sky-700/80 hover:bg-sky-50 hover:text-sky-900 hover:border-sky-200',
+    },
+    riconcilia: {
+        active: 'bg-amber-50 border-amber-400 text-amber-950',
+        inactive:
+            'bg-amber-50/40 border-transparent text-amber-800/80 hover:bg-amber-50 hover:text-amber-950 hover:border-amber-200',
     },
     'prima-nota': {
         active: 'bg-emerald-50 border-emerald-300 text-emerald-900',

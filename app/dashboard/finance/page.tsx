@@ -25,6 +25,7 @@ import type { FinanceQuadratura } from '@/lib/financial/financeQuadratura';
 import { getUpcomingDeadlines } from '@/lib/financial/compliance/deadlines';
 import TaxQuarterlyPanel from './TaxQuarterlyPanel';
 import BankStatementsPanel from '@/components/dashboard/BankStatementsPanel';
+import ManualReconciliationPanel from '@/components/dashboard/ManualReconciliationPanel';
 import SaasForeignExpensesPanel from '@/components/dashboard/SaasForeignExpensesPanel';
 import ManualExpenseModal, {
     type ManualExpensePrefill,
@@ -49,7 +50,7 @@ import { FLOREMORIA_FINECO_BANK, FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial
 import { readJsonResponse } from '@/lib/http/readJsonResponse';
 import { useDashboardLive } from '@/hooks/useDashboardLive';
 
-type FinanceTab = 'bank' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
+type FinanceTab = 'bank' | 'riconcilia' | 'prima-nota' | 'passivo' | 'gateway' | 'fisco';
 
 type FinanceLedgerPayload = {
     ok?: boolean;
@@ -121,6 +122,32 @@ export default function FinanceDashboardPage() {
     const [saasTotalCents, setSaasTotalCents] = useState(0);
     const [manualExpenseOpen, setManualExpenseOpen] = useState(false);
     const [manualExpensePrefill, setManualExpensePrefill] = useState<ManualExpensePrefill | null>(null);
+    const [pendingReconcileCount, setPendingReconcileCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        void (async () => {
+            try {
+                const year = new Date().getFullYear();
+                const res = await fetch(
+                    `/api/dashboard/finance/reconciliation/pending?year=${year}&limit=1&includeRecent=0`,
+                    { cache: 'no-store' }
+                );
+                const data = (await res.json()) as {
+                    ok?: boolean;
+                    summary?: { unmatchedCount?: number };
+                };
+                if (!cancelled && data.ok && typeof data.summary?.unmatchedCount === 'number') {
+                    setPendingReconcileCount(data.summary.unmatchedCount);
+                }
+            } catch {
+                /* badge best-effort */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const {
         data: financePayload,
@@ -855,12 +882,13 @@ export default function FinanceDashboardPage() {
                 onSaved={() => void loadLedger()}
             />
 
-            {/* 5 tab Contabilità */}
+            {/* Tab Contabilità */}
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
                 <div className="flex flex-wrap border-b border-slate-200 bg-slate-50/50">
                     {(
                         [
                             ['bank', 'Banca Fineco'],
+                            ['riconcilia', 'Da riconciliare'],
                             ['prima-nota', 'Prima Nota'],
                             ['passivo', 'Passivo / Documenti'],
                             ['gateway', 'Stripe & PayPal'],
@@ -870,6 +898,10 @@ export default function FinanceDashboardPage() {
                         const tabId = id as FinanceMainTabId;
                         const styles = FINANCE_TAB_STYLES[tabId];
                         const isActive = activeTab === id;
+                        const badge =
+                            id === 'riconcilia' && pendingReconcileCount != null
+                                ? pendingReconcileCount
+                                : null;
                         return (
                         <button
                             key={id}
@@ -881,7 +913,14 @@ export default function FinanceDashboardPage() {
                                     : `${styles.inactive} border-b-transparent hover:border-b-2`
                             }`}
                         >
-                            {label}
+                            <span className="inline-flex items-center justify-center gap-1.5 flex-wrap">
+                                {label}
+                                {badge != null ? (
+                                    <span className="inline-flex min-w-[1.25rem] justify-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-200 text-amber-950">
+                                        {badge}
+                                    </span>
+                                ) : null}
+                            </span>
                         </button>
                         );
                     })}
@@ -889,6 +928,20 @@ export default function FinanceDashboardPage() {
 
                 {activeTab === 'bank' && (
                     <div className="p-4 space-y-4">
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('riconcilia')}
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-xs font-bold hover:bg-amber-100"
+                            >
+                                Da riconciliare
+                                {pendingReconcileCount != null ? (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-200 text-[10px]">
+                                        {pendingReconcileCount}
+                                    </span>
+                                ) : null}
+                            </button>
+                        </div>
                         <BankStatementsPanel variant="tab1" />
                         <div className="border-t border-slate-100 pt-4 space-y-3">
                             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -906,6 +959,10 @@ export default function FinanceDashboardPage() {
                             <BankMovementsStatementTable searchTerm={searchTerm} />
                         </div>
                     </div>
+                )}
+
+                {activeTab === 'riconcilia' && (
+                    <ManualReconciliationPanel onCountChange={setPendingReconcileCount} />
                 )}
 
                 {activeTab === 'prima-nota' && (

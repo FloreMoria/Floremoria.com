@@ -1,5 +1,6 @@
 /**
  * Abbinamento manuale riga estratto conto → ordine / spesa / categoria / nota libera.
+ * Con `{ unmatch: true }` annulla l'abbinamento e storna BANK_LINE_MANUAL.
  */
 
 import { NextResponse } from 'next/server';
@@ -7,6 +8,7 @@ import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import prisma from '@/lib/prisma';
 import { appendLedgerEntries } from '@/lib/financial/historicalLedgerSync';
 import { markManualExpenseReconciled } from '@/lib/financial/manualExpenses';
+import { unmatchBankStatementLine } from '@/lib/financial/manualReconciliationQueue';
 import type { LedgerCategory } from '@/lib/financial/historicalLedgerTypes';
 
 type Ctx = { params: Promise<{ id: string; lineId: string }> };
@@ -54,6 +56,20 @@ export async function PATCH(request: Request, ctx: Ctx) {
     const { id: documentId, lineId } = await ctx.params;
     try {
         const body = await request.json().catch(() => ({}));
+
+        if (body.unmatch === true || body.action === 'unmatch') {
+            const result = await unmatchBankStatementLine({ documentId, lineId });
+            const line = await prisma.bankStatementLine.findUnique({ where: { id: lineId } });
+            return NextResponse.json({
+                ok: true,
+                unmatched: true,
+                line,
+                matchedCount: result.matchedCount,
+                unmatchedCount: result.unmatchedCount,
+                reversedLedger: result.reversedLedger,
+            });
+        }
+
         const matchType =
             typeof body.matchType === 'string' && body.matchType.trim()
                 ? body.matchType.trim().slice(0, 48)

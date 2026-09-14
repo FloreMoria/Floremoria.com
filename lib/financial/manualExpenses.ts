@@ -95,6 +95,143 @@ export async function listManualExpenses(limit = 100) {
     });
 }
 
+export type ManualExpenseSearchHit = {
+    id: string;
+    expenseDate: string;
+    docType: string;
+    vendorName: string;
+    description: string;
+    totalCents: number;
+    fileName: string | null;
+    reconciled: boolean;
+    matchedStatementLineId: string | null;
+    invoiceNumber: string | null;
+    ingestChannel: string | null;
+    suggestedMatchType: string;
+    fileUrl: string | null;
+};
+
+/**
+ * Cerca documenti già in Contabilità (YouDOX / upload / manuali) per abbinamento banca.
+ * Perché: Salvatore deve collegare un movimento a una fattura già sincronizzata, senza re-upload dal Mac.
+ */
+export async function searchManualExpensesForMatch(params: {
+    q?: string | null;
+    amountCents?: number | null;
+    limit?: number;
+}): Promise<ManualExpenseSearchHit[]> {
+    const limit = Math.min(Math.max(params.limit ?? 25, 1), 60);
+    const q = (params.q || '').trim();
+    const absAmount =
+        typeof params.amountCents === 'number' && Number.isFinite(params.amountCents)
+            ? Math.abs(params.amountCents)
+            : null;
+
+    const and: Prisma.ManualFinanceExpenseWhereInput[] = [
+        { verificationStatus: { not: 'QUARANTINE' } },
+    ];
+
+    if (q) {
+        and.push({
+            OR: [
+                { vendorName: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+                { fileName: { contains: q, mode: 'insensitive' } },
+                { notes: { contains: q, mode: 'insensitive' } },
+                {
+                    metadataJson: {
+                        path: ['invoiceNumber'],
+                        string_contains: q,
+                    },
+                },
+            ],
+        });
+    }
+
+    // Preferisci importi vicini (±2€) se il movimento ha un importo
+    if (absAmount != null && absAmount > 0) {
+        and.push({
+            totalCents: {
+                gte: Math.max(0, absAmount - 200),
+                lte: absAmount + 200,
+            },
+        });
+    }
+
+    const rows = await prisma.manualFinanceExpense.findMany({
+        where: { AND: and },
+        orderBy: [{ expenseDate: 'desc' }, { createdAt: 'desc' }],
+        take: absAmount != null && !q ? Math.min(limit * 3, 80) : limit,
+        select: {
+            id: true,
+            expenseDate: true,
+            docType: true,
+            vendorName: true,
+            description: true,
+            totalCents: true,
+            fileName: true,
+            blobUrl: true,
+            reconciled: true,
+            matchedStatementLineId: true,
+            metadataJson: true,
+            notes: true,
+        },
+    });
+
+    const scored = rows.map((r) => {
+        const meta = (r.metadataJson || {}) as Record<string, unknown>;
+        const invoiceNumber =
+            typeof meta.invoiceNumber === 'string'
+                ? meta.invoiceNumber
+                : typeof meta.documentNumber === 'string'
+                  ? meta.documentNumber
+                  : null;
+        const ingestChannel =
+            typeof meta.ingestChannel === 'string'
+                ? meta.ingestChannel
+                : typeof meta.source === 'string'
+                  ? meta.source
+                  : null;
+        const amountDelta =
+            absAmount != null ? Math.abs(Math.abs(r.totalCents) - absAmount) : 0;
+        let score = 0;
+        if (absAmount != null) score += Math.max(0, 100 - Math.floor(amountDelta / 10));
+        if (q) {
+            const hay = `${r.vendorName} ${r.description} ${r.fileName || ''} ${invoiceNumber || ''}`.toUpperCase();
+            if (hay.includes(q.toUpperCase())) score += 40;
+        }
+        if (!r.reconciled && !r.matchedStatementLineId) score += 15;
+        const doc = (r.docType || '').toUpperCase();
+        const suggestedMatchType =
+            doc === 'FATTURA' || doc === 'NOTA_CREDITO'
+                ? 'SDI_INVOICE'
+                : doc === 'SCONTRINO' || doc === 'RICEVUTA'
+                  ? 'CASH_EXPENSE'
+                  : 'SDI_INVOICE';
+        return {
+            score,
+            hit: {
+                id: r.id,
+                expenseDate: r.expenseDate.toISOString().slice(0, 10),
+                docType: r.docType,
+                vendorName: r.vendorName,
+                description: r.description,
+                totalCents: r.totalCents,
+                fileName: r.fileName,
+                reconciled: r.reconciled,
+                matchedStatementLineId: r.matchedStatementLineId,
+                invoiceNumber,
+                ingestChannel,
+                suggestedMatchType,
+                fileUrl: manualExpenseAttachmentUrl(r),
+            } satisfies ManualExpenseSearchHit,
+        };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, limit).map((s) => s.hit);
+}
+
 export async function sumManualExpensesCents(): Promise<number> {
     const rows = await prisma.manualFinanceExpense.findMany({
         select: { totalCents: true, verificationStatus: true },
@@ -454,6 +591,17 @@ export async function markManualExpenseReconciled(
         data: {
             reconciled: true,
             matchedStatementLineId: statementLineId,
+        },
+    });
+}
+
+/** Scollega spesa da riga Fineco dopo annullamento abbinamento. */
+export async function clearManualExpenseReconciled(id: string) {
+    await prisma.manualFinanceExpense.update({
+        where: { id },
+        data: {
+            reconciled: false,
+            matchedStatementLineId: null,
         },
     });
 }

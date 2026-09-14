@@ -7,6 +7,7 @@ export type VeraWorkflowStep =
     | 'puntoG_customer_wait'
     | 'hasSentReassuranceNudge'
     | 'puntoG_florist_reminder'
+    | 'puntoG_urgent_florist_reminder'
     | 'puntoH_review'
     | 'exception_tomb'
     | 'exception_cemetery'
@@ -21,6 +22,8 @@ export type VeraWorkflowFlags = Partial<Record<VeraWorkflowStep, string>> & {
     customer_email_sent?: string;
     /** Rassicurazione / aggiornamento attesa già inviato (one-shot tassativo). */
     hasSentReassuranceNudge?: string;
+    /** Sollecito urgente fiorista sotto 6h (one-shot tassativo). */
+    floristReminderSentAt?: string;
 };
 
 export function parseWorkflowFlags(raw: unknown): VeraWorkflowFlags {

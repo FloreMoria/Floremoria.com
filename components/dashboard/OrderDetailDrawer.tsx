@@ -7,6 +7,7 @@ import {
 import OrderDetailProofUpload from './OrderDetailProofUpload';
 import ShareableLinkPanel from './ShareableLinkPanel';
 import FloristScoutPanel from './FloristScoutPanel';
+import DeliveryCountdownBadge from './DeliveryCountdownBadge';
 import { getOrderProofPhotos } from '@/lib/deliveryProof/proofPhotoUrls';
 import { getOrderProductSummary } from '@/lib/orders/formatDeliveredProducts';
 import { isOrderCancelled } from '@/lib/dashboardOrdersFilter';
@@ -292,7 +293,13 @@ export default function OrderDetailDrawer({
                             <div className="flex items-start gap-2">
                                 <Clock size={15} className="text-gray-400 mt-0.5 shrink-0" />
                                 <div className="flex-1">
-                                    <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data di Consegna / Cerimonia</span>
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                        <span className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Data di Consegna / Cerimonia</span>
+                                        <DeliveryCountdownBadge
+                                            deliveryDate={localOrder.deliveryDate || localOrder.funeralDate}
+                                            status={localOrder.status}
+                                        />
+                                    </div>
                                     {canChangeStatus ? (
                                         <div className="flex gap-2 items-center">
                                             <input
@@ -311,16 +318,16 @@ export default function OrderDetailDrawer({
                                                 className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-fm-gold focus:border-fm-gold outline-none"
                                             />
                                             {localOrder.funeralDate && (
-                                                <span className="text-xs text-gray-400 font-mono">
-                                                    (Ora: {new Date(localOrder.funeralDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })})
-                                                </span>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <span className="font-medium text-gray-800 text-sm">
-                                            {localOrder.funeralDate ? new Date(localOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (localOrder.deliveryDate ? new Date(localOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
-                                        </span>
-                                    )}
+                                                 <span className="text-xs text-gray-400 font-mono">
+                                                     (Ora: {new Date(localOrder.funeralDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })})
+                                                 </span>
+                                             )}
+                                         </div>
+                                     ) : (
+                                         <span className="font-medium text-gray-800 text-sm">
+                                             {localOrder.funeralDate ? new Date(localOrder.funeralDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : (localOrder.deliveryDate ? new Date(localOrder.deliveryDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : 'Data non specificata')}
+                                         </span>
+                                     )}
                                 </div>
                             </div>
                             {displayInstructions && (

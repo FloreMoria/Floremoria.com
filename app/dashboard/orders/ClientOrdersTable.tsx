@@ -20,6 +20,7 @@ import {
 import OrderDetailDrawer from '@/components/dashboard/OrderDetailDrawer';
 import OrdersCalendar from '@/components/dashboard/OrdersCalendar';
 import UserTypeBadge from '@/components/dashboard/UserTypeBadge';
+import DeliveryCountdownBadge from '@/components/dashboard/DeliveryCountdownBadge';
 import type { ProfileUserType } from '@prisma/client';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName, compareBySurname } from '@/lib/utils/formatPersonName';
@@ -772,8 +773,14 @@ export default function ClientOrdersTable({ orders, abandonedOrders = [], floris
                                                     className="border border-gray-200 rounded px-2 py-1 text-xs"
                                                 />
                                             ) : (
-                                                <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px] whitespace-nowrap">
-                                                    {formatDeliveryDate(order)}
+                                                <div className="space-y-1">
+                                                    <div suppressHydrationWarning className="font-medium text-gray-800 text-[13px] whitespace-nowrap">
+                                                        {formatDeliveryDate(order)}
+                                                    </div>
+                                                    <DeliveryCountdownBadge
+                                                        deliveryDate={order.deliveryDate || order.funeralDate}
+                                                        status={order.status}
+                                                    />
                                                 </div>
                                             )}
                                         </td>

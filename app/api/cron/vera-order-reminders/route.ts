@@ -16,6 +16,7 @@ import { flushPendingPuntoAFloristNotifications } from '@/lib/vera/orderWorkflow
 import { flushPendingPuntoBCustomerConfirm } from '@/lib/vera/orderWorkflow/flushPendingPuntoB';
 import { resendCustomerWaitingUpdateForOrder, backfillCustomerWaitingUpdateChatLog } from '@/lib/vera/orderWorkflow/resendCustomerWaitingUpdate';
 import { runDeceasedAnniversaryReminders } from '@/lib/vera/deceasedAnniversaryReminders';
+import { checkAndNotifyUrgentFloristDeliveries } from '@/lib/services/floristDeliveryMonitor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,12 +43,34 @@ export async function GET(request: NextRequest) {
     if (orderNumber) {
         const force = request.nextUrl.searchParams.get('force') === '1';
         const backfillChat = request.nextUrl.searchParams.get('backfillChat') === '1';
+        const floristReminder = request.nextUrl.searchParams.get('floristReminder') === '1';
+
+        if (floristReminder) {
+            const result = await checkAndNotifyUrgentFloristDeliveries({
+                orderNumber,
+                force,
+                allowTest: true,
+            });
+            return NextResponse.json({ success: result.ok, mode: 'florist_urgent_single', ...result });
+        }
+
         if (backfillChat) {
             const result = await backfillCustomerWaitingUpdateChatLog(orderNumber);
             return NextResponse.json({ success: result.ok, mode: 'backfill_chat', ...result });
         }
         const result = await resendCustomerWaitingUpdateForOrder(orderNumber, { force });
         return NextResponse.json({ success: result.ok, mode: 'single_order', ...result });
+    }
+
+    // Solo monitor fioristi urgente (test/manual): ?floristMonitorOnly=1
+    if (request.nextUrl.searchParams.get('floristMonitorOnly') === '1') {
+        const force = request.nextUrl.searchParams.get('force') === '1';
+        const floristMonitor = await checkAndNotifyUrgentFloristDeliveries({ force, allowTest: true });
+        return NextResponse.json({
+            success: floristMonitor.ok,
+            mode: 'florist_monitor_only',
+            floristMonitor,
+        });
     }
 
     // Solo promemoria ricorrenze (test/manual): ?anniversaryOnly=1
@@ -63,6 +86,19 @@ export async function GET(request: NextRequest) {
     const puntoAFlush = await flushPendingPuntoAFloristNotifications();
     const puntoBFlush = await flushPendingPuntoBCustomerConfirm();
     const result = await runPuntoGOrderReminders();
+    
+    // Monitor consegne fioristi urgente (< 6h)
+    let floristUrgentMonitor;
+    try {
+        floristUrgentMonitor = await checkAndNotifyUrgentFloristDeliveries();
+    } catch (err) {
+        console.error('[cron/vera-order-reminders] florist delivery monitor failed:', err);
+        floristUrgentMonitor = {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+        };
+    }
+
     // Ricorrenze nascita/morte a -4 giorni (Europe/Rome), template Meta promemoria_anniversario_gdm.
     let anniversaryReminders;
     try {
@@ -80,6 +116,7 @@ export async function GET(request: NextRequest) {
         puntoAFlush,
         puntoBFlush,
         ...result,
+        floristUrgentMonitor,
         anniversaryReminders,
     });
 }

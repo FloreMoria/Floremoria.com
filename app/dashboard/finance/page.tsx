@@ -1065,77 +1065,100 @@ export default function FinanceDashboardPage() {
                                             Sincronizzato da API
                                         </span>
                                     </div>
-                                    <div className="flex flex-wrap gap-3">
-                                        <button
-                                            type="button"
-                                            disabled={syncingStripe || syncingPaypal || syncingAll}
-                                            onClick={() => void runStripeSync('incremental')}
-                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
-                                        >
-                                            {syncingStripe ? (
-                                                <RefreshCw size={14} className="animate-spin" />
-                                            ) : (
-                                                <RefreshCw size={14} />
-                                            )}
-                                            {syncingStripe
-                                                ? 'Sincronizzazione Stripe…'
-                                                : 'Sincronizza Stripe COM + EU'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={syncingStripe || syncingPaypal || syncingAll}
-                                            onClick={() => void runPaypalSync('incremental')}
-                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-bold disabled:opacity-50"
-                                        >
-                                            {syncingPaypal ? (
-                                                <RefreshCw size={14} className="animate-spin" />
-                                            ) : (
-                                                <RefreshCw size={14} />
-                                            )}
-                                            {syncingPaypal
-                                                ? 'Sincronizzazione PayPal…'
-                                                : 'Sincronizza PayPal'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={syncingStripe || syncingPaypal || syncingAll}
-                                            onClick={() => void runStripeSync('full')}
-                                            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-indigo-200 text-indigo-800 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
-                                            title="Scansione YTD dal 01/01/2026 — può richiedere fino a ~2 minuti"
-                                        >
-                                            Stripe YTD
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={syncingStripe || syncingPaypal || syncingAll}
-                                            onClick={() => void runPaypalSync('full')}
-                                            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
-                                            title="Scansione YTD a chunk ≤31gg — può richiedere fino a ~2 minuti"
-                                        >
-                                            PayPal YTD
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">
-                                        <p>
-                                            Stripe — ultimo sync:{' '}
-                                            <strong>
-                                                {stripeSyncMeta?.lastSyncAt
-                                                    ? formatDateTime(stripeSyncMeta.lastSyncAt)
-                                                    : 'mai'}
-                                            </strong>{' '}
-                                            · record:{' '}
-                                            <strong>{stripeSyncMeta?.recordCount ?? 0}</strong>
-                                        </p>
-                                        <p>
-                                            PayPal — ultimo sync:{' '}
-                                            <strong>
-                                                {paypalSyncMeta?.lastSyncAt
-                                                    ? formatDateTime(paypalSyncMeta.lastSyncAt)
-                                                    : 'mai'}
-                                            </strong>{' '}
-                                            · record:{' '}
-                                            <strong>{paypalSyncMeta?.recordCount ?? 0}</strong>
-                                        </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                        {/* Colonna Stripe: azioni + stato allineati */}
+                                        <div className="flex flex-col gap-3 min-w-0">
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        syncingStripe || syncingPaypal || syncingAll
+                                                    }
+                                                    onClick={() => void runStripeSync('incremental')}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
+                                                >
+                                                    {syncingStripe ? (
+                                                        <RefreshCw
+                                                            size={14}
+                                                            className="animate-spin"
+                                                        />
+                                                    ) : (
+                                                        <RefreshCw size={14} />
+                                                    )}
+                                                    {syncingStripe
+                                                        ? 'Sincronizzazione Stripe…'
+                                                        : 'Sincronizza Stripe COM + EU'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        syncingStripe || syncingPaypal || syncingAll
+                                                    }
+                                                    onClick={() => void runStripeSync('full')}
+                                                    className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-indigo-200 text-indigo-800 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
+                                                    title="Scansione YTD dal 01/01/2026 — può richiedere fino a ~2 minuti"
+                                                >
+                                                    Stripe YTD
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-slate-600">
+                                                Stripe — ultimo sync:{' '}
+                                                <strong>
+                                                    {stripeSyncMeta?.lastSyncAt
+                                                        ? formatDateTime(stripeSyncMeta.lastSyncAt)
+                                                        : 'mai'}
+                                                </strong>{' '}
+                                                · record:{' '}
+                                                <strong>{stripeSyncMeta?.recordCount ?? 0}</strong>
+                                            </p>
+                                        </div>
+
+                                        {/* Colonna PayPal: azioni a destra sopra lo stato */}
+                                        <div className="flex flex-col gap-3 min-w-0">
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        syncingStripe || syncingPaypal || syncingAll
+                                                    }
+                                                    onClick={() => void runPaypalSync('incremental')}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-bold disabled:opacity-50"
+                                                >
+                                                    {syncingPaypal ? (
+                                                        <RefreshCw
+                                                            size={14}
+                                                            className="animate-spin"
+                                                        />
+                                                    ) : (
+                                                        <RefreshCw size={14} />
+                                                    )}
+                                                    {syncingPaypal
+                                                        ? 'Sincronizzazione PayPal…'
+                                                        : 'Sincronizza PayPal'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        syncingStripe || syncingPaypal || syncingAll
+                                                    }
+                                                    onClick={() => void runPaypalSync('full')}
+                                                    className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
+                                                    title="Scansione YTD a chunk ≤31gg — può richiedere fino a ~2 minuti"
+                                                >
+                                                    PayPal YTD
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-slate-600">
+                                                PayPal — ultimo sync:{' '}
+                                                <strong>
+                                                    {paypalSyncMeta?.lastSyncAt
+                                                        ? formatDateTime(paypalSyncMeta.lastSyncAt)
+                                                        : 'mai'}
+                                                </strong>{' '}
+                                                · record:{' '}
+                                                <strong>{paypalSyncMeta?.recordCount ?? 0}</strong>
+                                            </p>
+                                        </div>
                                     </div>
                                     {gatewaySyncMsg && (
                                         <p className="text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">

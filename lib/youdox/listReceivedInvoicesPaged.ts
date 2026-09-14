@@ -3,7 +3,7 @@ import type { YoudoxConfig, YoudoxInvoice, YoudoxInvoicesFilter } from '@/lib/yo
 
 /** YouDOX restituisce ~50 righe per chiamata: sotto soglia non serve subdividere. */
 const PAGE_SIZE_HINT = Number(process.env.YOUDOX_SYNC_PAGE_HINT || 50);
-const DEFAULT_CHUNK_DAYS = Number(process.env.YOUDOX_SYNC_CHUNK_DAYS || 14);
+const DEFAULT_CHUNK_DAYS = Number(process.env.YOUDOX_SYNC_CHUNK_DAYS || 30);
 const DEFAULT_LOOKBACK_DAYS = Number(process.env.YOUDOX_SYNC_LOOKBACK_DAYS || 120);
 
 export type SyncReceivedWindowOptions = {
@@ -85,12 +85,15 @@ async function fetchReceivedChunk(
     });
 
     const spanMs = to.getTime() - from.getTime();
-    if (spanMs <= 24 * 60 * 60 * 1000 || depth >= 8) {
+    if (spanMs <= 24 * 60 * 60 * 1000 || depth >= 4) {
         return batch;
     }
 
-    // Subdivide se pieno (≥50) o se vuoto: l'API può troncare/omettere su finestre larghe.
-    if (batch.length < PAGE_SIZE_HINT && batch.length > 0) {
+    // Subdivide SOLO quando la risposta è piena (≥50): è l'unico caso in cui
+    // YouDOX può aver troncato l'elenco. Suddividere anche sulle finestre vuote
+    // faceva esplodere il numero di chiamate SOAP (centinaia) e mandava la
+    // sincronizzazione in timeout.
+    if (batch.length < PAGE_SIZE_HINT) {
         return batch;
     }
 

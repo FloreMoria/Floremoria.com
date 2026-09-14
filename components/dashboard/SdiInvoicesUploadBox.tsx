@@ -84,12 +84,30 @@ export default function SdiInvoicesUploadBox({ onImported }: Props) {
         try {
             const qs = forceFromMonthStart ? '?forceFromMonthStart=1' : '';
             const res = await fetch(`/api/v1/finance/youdox/sync${qs}`, { method: 'POST' });
-            const data = await res.json();
-            if (!res.ok || !data.ok) {
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                code?: string;
+                error?: string;
+                message?: string;
+                polled?: number;
+                imported?: number;
+                updated?: number;
+                remaining?: number;
+                partial?: boolean;
+            }>(res);
+            const data = parsed.data;
+
+            if (res.status === 504 || res.status === 408) {
+                throw new Error(
+                    'La sincronizzazione ha superato il tempo massimo del server. Riprova: il sync riprende da dove si era fermato.'
+                );
+            }
+            if (!parsed.ok || !data?.ok) {
+                const rawError = data?.error || parsed.error || '';
                 const msg =
-                    data.code === 'ER05' || String(data.error || '').includes('Credenziali API')
+                    data?.code === 'ER05' || rawError.includes('Credenziali API')
                         ? YOUDOX_ER05_USER_MESSAGE
-                        : data.error || 'Impossibile sincronizzare con YouDOX SDI';
+                        : rawError || 'Impossibile sincronizzare con YouDOX SDI';
                 throw new Error(msg);
             }
             setMessage(

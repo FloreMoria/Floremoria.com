@@ -109,9 +109,15 @@ function envTemplateName(key: string, fallback: string): string {
 }
 
 export function getProactiveWhatsAppTemplate(): WhatsAppTemplateDefinition {
+    const fromEnv = process.env.WHATSAPP_TEMPLATE_PROACTIVE?.trim();
+    const resolvedMetaName =
+        fromEnv && fromEnv !== PROACTIVE_CONVERSATION_META_TEMPLATE_NAME_LEGACY
+            ? fromEnv
+            : PROACTIVE_CONVERSATION_META_TEMPLATE_NAME;
+
     return {
         id: PROACTIVE_CONVERSATION_TEMPLATE_ID,
-        metaName: envTemplateName('WHATSAPP_TEMPLATE_PROACTIVE', PROACTIVE_CONVERSATION_META_TEMPLATE_NAME),
+        metaName: resolvedMetaName,
         label: 'Messaggio personalizzato fiorista (staff)',
         description: 'Meta FT body-only: {{1}} nome, {{2}} codice ordine, {{3}} note staff.',
         language: process.env.WHATSAPP_TEMPLATE_PROACTIVE_LANGUAGE?.trim() || 'it',

@@ -59,10 +59,12 @@ export const VERA_TEMPLATES: Record<VeraTemplateId, VeraTemplateSpec> = {
         id: 'proactive_staff',
         // Meta live Scenario A: body-only FT ({{1}} nome, {{2}} ordine, {{3}} note).
         // Evita #132000 sul vecchio template con HEADER {{1}}.
-        metaName: envTemplateName(
-            'WHATSAPP_TEMPLATE_PROACTIVE',
-            'floremoria_messaggio_personalizzato_fiorista_ft'
-        ),
+        metaName: (() => {
+            const fromEnv = process.env.WHATSAPP_TEMPLATE_PROACTIVE?.trim();
+            return fromEnv && fromEnv !== 'floremoria_messaggio_personalizzato_fiorista'
+                ? fromEnv
+                : 'floremoria_messaggio_personalizzato_fiorista_ft';
+        })(),
         language: process.env.WHATSAPP_TEMPLATE_PROACTIVE_LANGUAGE?.trim() || 'it',
         bodyParamCount: 3,
         bodySlots: ['floristFirstName', 'orderCode', 'staffNotes'],

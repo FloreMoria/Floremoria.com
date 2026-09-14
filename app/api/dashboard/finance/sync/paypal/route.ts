@@ -9,15 +9,24 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const SYNC_FROM = new Date('2026-01-01T00:00:00.000Z');
-
-/** POST: sync transazioni & commissioni PayPal dal 01/01/2026. */
-export async function POST() {
+/** POST: sync PayPal (default: incrementale ultimi ≤31 giorni). */
+export async function POST(request: Request) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
 
     try {
-        const result = await runPaypalFinanceSync({ createdGte: SYNC_FROM });
+        const url = new URL(request.url);
+        let mode = (url.searchParams.get('mode') || 'incremental') as 'incremental' | 'full';
+        try {
+            const body = (await request.json().catch(() => null)) as { mode?: string } | null;
+            if (body?.mode === 'full' || body?.mode === 'incremental') {
+                mode = body.mode;
+            }
+        } catch {
+            /* no body */
+        }
+
+        const result = await runPaypalFinanceSync({ mode });
         const status = await getPaypalSyncStatus();
 
         if (result.apiForbidden) {
@@ -25,24 +34,32 @@ export async function POST() {
                 ok: false,
                 apiForbidden: true,
                 error:
-                    'La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l\'upload del file CSV.',
-                from: '2026-01-01T00:00:00.000Z',
+                    "La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l'upload del file CSV.",
+                mode: result.mode,
+                from: result.syncedFrom,
+                to: result.syncedTo,
                 transactionsUpserted: 0,
                 feesUpserted: 0,
+                found: 0,
                 recordCount: status.count,
                 lastSyncAt: status.lastSyncAt,
+                durationMs: result.durationMs,
                 errors: result.errors,
                 badge: 'Webhook attivo',
             });
         }
 
         return NextResponse.json({
-            ok: result.ok,
-            from: '2026-01-01T00:00:00.000Z',
+            ok: result.ok || result.transactionsUpserted > 0,
+            mode: result.mode,
+            from: result.syncedFrom,
+            to: result.syncedTo,
+            found: result.found,
             transactionsUpserted: result.transactionsUpserted,
             feesUpserted: result.feesUpserted,
             recordCount: status.count,
             lastSyncAt: result.lastSyncAt,
+            durationMs: result.durationMs,
             errors: result.errors,
             badge: 'Sincronizzato da API',
         });

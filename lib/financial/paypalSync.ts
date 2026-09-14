@@ -86,27 +86,54 @@ async function fetchPaypalTransactions(params: {
     startDate: Date;
     endDate: Date;
     accessToken: string;
-}): Promise<{ txs: PaypalTx[]; errors: string[]; apiForbidden?: boolean }> {
+}): Promise<{ txs: PaypalTx[]; errors: string[]; apiForbidden?: boolean; rateLimited?: boolean }> {
     const errors: string[] = [];
     const txs: PaypalTx[] = [];
     let apiForbidden = false;
+    let rateLimited = false;
     let page = 1;
-    const maxPages = 40;
+    const maxPages = 20;
 
     while (page <= maxPages) {
         const url = new URL(`${paypalBaseUrl()}/v1/reporting/transactions`);
         url.searchParams.set('start_date', params.startDate.toISOString());
         url.searchParams.set('end_date', params.endDate.toISOString());
-        url.searchParams.set('fields', 'all');
+        // fields=all è più pesante; transaction_info + payer_info bastano
+        url.searchParams.set('fields', 'transaction_info,payer_info');
         url.searchParams.set('page_size', '100');
         url.searchParams.set('page', String(page));
 
-        const res = await fetch(url.toString(), {
-            headers: {
-                Authorization: `Bearer ${params.accessToken}`,
-                'Content-Type': 'application/json',
-            },
-        });
+        let res: Response;
+        try {
+            res = await fetch(url.toString(), {
+                headers: {
+                    Authorization: `Bearer ${params.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+        } catch (err) {
+            errors.push(
+                `PayPal network page ${page}: ${err instanceof Error ? err.message : String(err)}`
+            );
+            break;
+        }
+
+        if (res.status === 429) {
+            rateLimited = true;
+            const retryAfter = Number(res.headers.get('retry-after') || '2');
+            await new Promise((r) => setTimeout(r, Math.min(Math.max(retryAfter, 1), 10) * 1000));
+            // un retry
+            res = await fetch(url.toString(), {
+                headers: {
+                    Authorization: `Bearer ${params.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (res.status === 429) {
+                errors.push(`PayPal rate limit (429) page ${page} — chunk interrotto`);
+                break;
+            }
+        }
 
         if (!res.ok) {
             const body = await res.text().catch(() => '');
@@ -148,7 +175,6 @@ async function fetchPaypalTransactions(params: {
             if (currency.toUpperCase() !== 'EUR') continue;
             const grossCents = parseAmount(info.transaction_amount?.value);
             const feeCents = Math.abs(parseAmount(info.fee_amount?.value));
-            // Solo lordo: mai registrare il netto come seconda scrittura
             const netCents = grossCents - (grossCents >= 0 ? feeCents : -feeCents);
             txs.push({
                 id: info.transaction_id,
@@ -175,40 +201,116 @@ async function fetchPaypalTransactions(params: {
         page += 1;
     }
 
-    return { txs, errors, apiForbidden: apiForbidden || undefined };
+    return {
+        txs,
+        errors,
+        apiForbidden: apiForbidden || undefined,
+        rateLimited: rateLimited || undefined,
+    };
+}
+
+export type PaypalSyncMode = 'incremental' | 'full';
+
+export async function resolvePaypalSyncWindow(params?: {
+    mode?: PaypalSyncMode;
+    createdGte?: Date;
+}): Promise<{ start: Date; end: Date; mode: PaypalSyncMode }> {
+    const end = new Date();
+    const yearStart = new Date('2026-01-01T00:00:00.000Z');
+    if (params?.createdGte) {
+        return {
+            start: params.createdGte < yearStart ? yearStart : params.createdGte,
+            end,
+            mode: params.mode || 'full',
+        };
+    }
+    const mode = params?.mode || 'incremental';
+    if (mode === 'full') {
+        return { start: yearStart, end, mode: 'full' };
+    }
+    // Incremental: ultimi 31 giorni (limite API) oppure da last_sync − 1g
+    const meta = await prisma.systemState.findUnique({ where: { key: SYNC_META_KEY } });
+    const last31 = new Date(end.getTime() - 31 * 24 * 60 * 60 * 1000);
+    let start = last31;
+    if (meta?.value) {
+        const last = new Date(meta.value);
+        if (!Number.isNaN(last.getTime())) {
+            const withOverlap = new Date(last.getTime() - 24 * 60 * 60 * 1000);
+            // Non tornare indietro oltre 31 giorni in modalità incrementale
+            start = withOverlap > last31 ? withOverlap : last31;
+        }
+    }
+    if (start < yearStart) start = yearStart;
+    return { start, end, mode: 'incremental' };
 }
 
 export async function runPaypalFinanceSync(params?: {
     createdGte?: Date;
-}): Promise<PaypalSyncResult> {
-    const createdGte = params?.createdGte || new Date('2026-01-01T00:00:00.000Z');
-    const endDate = new Date();
+    mode?: PaypalSyncMode;
+}): Promise<PaypalSyncResult & {
+    syncedFrom: string;
+    syncedTo: string;
+    mode: PaypalSyncMode;
+    durationMs: number;
+    found: number;
+}> {
+    const t0 = Date.now();
+    const window = await resolvePaypalSyncWindow({
+        mode: params?.mode,
+        createdGte: params?.createdGte,
+    });
+    const createdGte = window.start;
+    const endDate = window.end;
+    const mode = window.mode;
     const errors: string[] = [];
     let transactionsUpserted = 0;
     let feesUpserted = 0;
     let apiForbidden = false;
+    let found = 0;
 
     try {
         const accessToken = await getPaypalAccessToken();
-        // PayPal richiede finestre ≤ 31 giorni: spezza per mesi
+        // PayPal richiede finestre ≤ 31 giorni
+        const chunks: Array<{ start: Date; end: Date }> = [];
         const cursor = new Date(createdGte);
-        const allTxs: PaypalTx[] = [];
         while (cursor < endDate) {
             const chunkEnd = new Date(cursor);
             chunkEnd.setUTCDate(chunkEnd.getUTCDate() + 30);
             if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
-            const { txs, errors: chunkErr, apiForbidden: chunkForbidden } =
-                await fetchPaypalTransactions({
-                    startDate: new Date(cursor),
-                    endDate: chunkEnd,
-                    accessToken,
-                });
-            allTxs.push(...txs);
-            errors.push(...chunkErr);
-            if (chunkForbidden) apiForbidden = true;
+            chunks.push({ start: new Date(cursor), end: new Date(chunkEnd) });
             cursor.setTime(chunkEnd.getTime() + 1000);
-            if (chunkErr.length) break;
         }
+
+        const allTxs: PaypalTx[] = [];
+        // Concorrenza 2: evita rate limit, riduce wall-clock vs sequenziale
+        const CONCURRENCY = 2;
+        for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+            const batch = chunks.slice(i, i + CONCURRENCY);
+            const settled = await Promise.allSettled(
+                batch.map((c) =>
+                    fetchPaypalTransactions({
+                        startDate: c.start,
+                        endDate: c.end,
+                        accessToken,
+                    })
+                )
+            );
+            for (const s of settled) {
+                if (s.status === 'rejected') {
+                    errors.push(
+                        s.reason instanceof Error ? s.reason.message : String(s.reason)
+                    );
+                    continue;
+                }
+                allTxs.push(...s.value.txs);
+                errors.push(...s.value.errors.filter((e) => e !== 'PAYPAL_API_FORBIDDEN'));
+                if (s.value.apiForbidden) apiForbidden = true;
+                // Non fermare gli altri chunk per 429: accumula e continua
+            }
+            if (apiForbidden) break;
+        }
+
+        found = allTxs.length;
 
         if (apiForbidden) {
             return {
@@ -218,6 +320,11 @@ export async function runPaypalFinanceSync(params?: {
                 errors,
                 lastSyncAt: new Date().toISOString(),
                 apiForbidden: true,
+                syncedFrom: createdGte.toISOString(),
+                syncedTo: endDate.toISOString(),
+                mode,
+                durationMs: Date.now() - t0,
+                found: 0,
             };
         }
 
@@ -297,7 +404,6 @@ export async function runPaypalFinanceSync(params?: {
                 transactionsUpserted += 1;
             }
 
-            // Fee solo su incassi commerciali (mai su SaaS / rimborsi merchant)
             if (
                 tx.feeCents > 0 &&
                 classified.direction === 'ENTRATA' &&
@@ -334,7 +440,10 @@ export async function runPaypalFinanceSync(params?: {
             await appendLedgerEntries(ledger);
         }
 
-        await sanitizeLedgerDoubleEntryAnomalies();
+        // Sanitize pesante solo su sync full
+        if (mode === 'full') {
+            await sanitizeLedgerDoubleEntryAnomalies();
+        }
 
         const lastSyncAt = new Date().toISOString();
         await prisma.systemState.upsert({
@@ -358,6 +467,11 @@ export async function runPaypalFinanceSync(params?: {
             errors,
             lastSyncAt,
             apiForbidden: false,
+            syncedFrom: createdGte.toISOString(),
+            syncedTo: endDate.toISOString(),
+            mode,
+            durationMs: Date.now() - t0,
+            found,
         };
     } catch (err) {
         errors.push(err instanceof Error ? err.message : String(err));
@@ -368,6 +482,11 @@ export async function runPaypalFinanceSync(params?: {
             errors,
             lastSyncAt: new Date().toISOString(),
             apiForbidden,
+            syncedFrom: createdGte.toISOString(),
+            syncedTo: endDate.toISOString(),
+            mode,
+            durationMs: Date.now() - t0,
+            found,
         };
     }
 }

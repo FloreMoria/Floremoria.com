@@ -185,27 +185,35 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    const runStripeSync = async () => {
+    const runStripeSync = async (mode: 'incremental' | 'full' = 'incremental') => {
         setSyncingStripe(true);
         setGatewaySyncMsg(null);
         try {
-            const res = await fetch('/api/dashboard/finance/sync/stripe', { method: 'POST' });
+            const res = await fetch('/api/dashboard/finance/sync/stripe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode }),
+            });
             const data = await res.json();
             if (!data.ok && !data.movementsUpserted) {
                 throw new Error(data.error || data.errors?.[0] || 'Sync Stripe fallita');
             }
-                                            setGatewaySyncMsg(
-                                                `Stripe: ${data.movementsUpserted ?? 0} movimenti · ${data.payoutsUpserted ?? 0} payout` +
-                                                    (Array.isArray(data.accountsSynced)
-                                                        ? ` · account: ${data.accountsSynced
-                                                              .map(
-                                                                  (a: { label: string; movementsUpserted: number }) =>
-                                                                      `${a.label} (${a.movementsUpserted})`
-                                                              )
-                                                              .join(', ')}`
-                                                        : '') +
-                                                    ` · ${data.recordCount ?? 0} record dal 01/01/2026`
-                                            );
+            const secs = data.durationMs != null ? ` · ${(data.durationMs / 1000).toFixed(1)}s` : '';
+            setGatewaySyncMsg(
+                `Stripe (${data.mode || mode}): ${data.movementsUpserted ?? 0} mov` +
+                    ` (${data.movementsCreated ?? 0} nuovi · ${data.movementsUpdated ?? 0} aggiornati)` +
+                    ` · ${data.payoutsUpserted ?? 0} payout` +
+                    (Array.isArray(data.accountsSynced)
+                        ? ` · ${data.accountsSynced
+                              .map(
+                                  (a: { label: string; movementsUpserted: number }) =>
+                                      `${a.label} (${a.movementsUpserted})`
+                              )
+                              .join(', ')}`
+                        : '') +
+                    ` · cache YTD ${data.recordCount ?? 0}` +
+                    secs
+            );
             await loadGateways();
             setGatewayTableRefresh((n) => n + 1);
         } catch (e) {
@@ -215,24 +223,32 @@ export default function FinanceDashboardPage() {
         }
     };
 
-    const runPaypalSync = async () => {
+    const runPaypalSync = async (mode: 'incremental' | 'full' = 'incremental') => {
         setSyncingPaypal(true);
         setGatewaySyncMsg(null);
         try {
-            const res = await fetch('/api/dashboard/finance/sync/paypal', { method: 'POST' });
+            const res = await fetch('/api/dashboard/finance/sync/paypal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode }),
+            });
             const data = await res.json();
             if (data.apiForbidden) {
                 setGatewaySyncMsg(
                     data.error ||
-                        'La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l\'upload del file CSV.'
+                        "La sincronizzazione in tempo reale è attiva tramite Webhook. Per caricare lo storico pregresso utilizza l'upload del file CSV."
                 );
                 return;
             }
             if (!data.ok && !(data.transactionsUpserted > 0)) {
                 throw new Error(data.error || data.errors?.[0] || 'Sync PayPal fallita');
             }
+            const secs = data.durationMs != null ? ` · ${(data.durationMs / 1000).toFixed(1)}s` : '';
             setGatewaySyncMsg(
-                `PayPal: ${data.transactionsUpserted ?? 0} tx · ${data.feesUpserted ?? 0} fee · ${data.recordCount ?? 0} in cache`
+                `PayPal (${data.mode || mode}): trovate ${data.found ?? 0}` +
+                    ` · scritte ${data.transactionsUpserted ?? 0} tx · ${data.feesUpserted ?? 0} fee` +
+                    ` · cache ${data.recordCount ?? 0}` +
+                    secs
             );
             await loadGateways();
             await loadLedger();
@@ -252,8 +268,16 @@ export default function FinanceDashboardPage() {
         setSyncBanner(null);
         try {
             const [stripeRes, paypalRes] = await Promise.allSettled([
-                fetch('/api/dashboard/finance/sync/stripe', { method: 'POST' }).then((r) => r.json()),
-                fetch('/api/dashboard/finance/sync/paypal', { method: 'POST' }).then((r) => r.json()),
+                fetch('/api/dashboard/finance/sync/stripe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'incremental' }),
+                }).then((r) => r.json()),
+                fetch('/api/dashboard/finance/sync/paypal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'incremental' }),
+                }).then((r) => r.json()),
             ]);
 
             await Promise.all([loadGateways(), loadLedger()]);
@@ -1030,11 +1054,11 @@ export default function FinanceDashboardPage() {
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
                                         <div>
                                             <h4 className="text-lg font-bold text-slate-900">
-                                                Sincronizzazione API Gateway (dal 01/01/2026)
+                                                Sincronizzazione API Gateway
                                             </h4>
                                             <p className="text-xs text-slate-500 mt-0.5">
-                                                Stripe COM/EU + PayPal — vista per ordine (lordo, fee totale,
-                                                netto) con log grezzo opzionale
+                                                Default incrementale (Stripe ~35gg / PayPal ≤31gg) per evitare
+                                                timeout. COM+EU in parallelo.
                                             </p>
                                         </div>
                                         <span className="inline-flex self-start px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-indigo-50 border border-indigo-200 text-indigo-700">
@@ -1044,8 +1068,8 @@ export default function FinanceDashboardPage() {
                                     <div className="flex flex-wrap gap-3">
                                         <button
                                             type="button"
-                                            disabled={syncingStripe}
-                                            onClick={() => void runStripeSync()}
+                                            disabled={syncingStripe || syncingPaypal || syncingAll}
+                                            onClick={() => void runStripeSync('incremental')}
                                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
                                         >
                                             {syncingStripe ? (
@@ -1053,12 +1077,14 @@ export default function FinanceDashboardPage() {
                                             ) : (
                                                 <RefreshCw size={14} />
                                             )}
-                                            Sincronizza Stripe COM + EU (dal 01/01/2026)
+                                            {syncingStripe
+                                                ? 'Sincronizzazione Stripe…'
+                                                : 'Sincronizza Stripe COM + EU'}
                                         </button>
                                         <button
                                             type="button"
-                                            disabled={syncingPaypal}
-                                            onClick={() => void runPaypalSync()}
+                                            disabled={syncingStripe || syncingPaypal || syncingAll}
+                                            onClick={() => void runPaypalSync('incremental')}
                                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 text-white text-xs font-bold disabled:opacity-50"
                                         >
                                             {syncingPaypal ? (
@@ -1066,7 +1092,27 @@ export default function FinanceDashboardPage() {
                                             ) : (
                                                 <RefreshCw size={14} />
                                             )}
-                                            Sincronizza PayPal (dal 01/01/2026)
+                                            {syncingPaypal
+                                                ? 'Sincronizzazione PayPal…'
+                                                : 'Sincronizza PayPal'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={syncingStripe || syncingPaypal || syncingAll}
+                                            onClick={() => void runStripeSync('full')}
+                                            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-indigo-200 text-indigo-800 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
+                                            title="Scansione YTD dal 01/01/2026 — può richiedere fino a ~2 minuti"
+                                        >
+                                            Stripe YTD
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={syncingStripe || syncingPaypal || syncingAll}
+                                            onClick={() => void runPaypalSync('full')}
+                                            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wide disabled:opacity-50"
+                                            title="Scansione YTD a chunk ≤31gg — può richiedere fino a ~2 minuti"
+                                        >
+                                            PayPal YTD
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600">

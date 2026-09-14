@@ -11,28 +11,47 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-const SYNC_FROM = new Date('2026-01-01T00:00:00.000Z');
+const YEAR_FROM = new Date('2026-01-01T00:00:00.000Z');
 
-/** POST: sync Stripe COM + EU (se configurato) dal 01/01/2026. */
-export async function POST() {
+/** POST: sync Stripe COM + EU in parallelo (default: incrementale ~35gg). */
+export async function POST(request: Request) {
     const auth = await requireDashboardAdmin();
     if (!auth.ok) return auth.response;
 
     try {
+        const url = new URL(request.url);
+        let mode = (url.searchParams.get('mode') || 'incremental') as 'incremental' | 'full';
+        try {
+            const body = (await request.json().catch(() => null)) as {
+                mode?: string;
+            } | null;
+            if (body?.mode === 'full' || body?.mode === 'incremental') {
+                mode = body.mode;
+            }
+        } catch {
+            /* no body */
+        }
+
         const result = await runStripeFinanceSync({
-            createdGte: SYNC_FROM,
-            limitPages: 60,
+            mode,
+            limitPages: mode === 'full' ? 40 : 15,
+            enrichFromCharge: false,
+            syncLedger: false,
         });
         const meta = await prisma.systemState.findUnique({
             where: { key: 'finance.stripe.last_sync' },
         });
         const count = await prisma.stripeFinanceMovement.count({
-            where: { createdAtStripe: { gte: SYNC_FROM } },
+            where: { createdAtStripe: { gte: YEAR_FROM } },
         });
         return NextResponse.json({
-            ok: result.ok,
-            from: '2026-01-01T00:00:00.000Z',
+            ok: result.ok || result.movementsUpserted > 0,
+            mode: result.mode,
+            from: result.syncedFrom,
+            yearFrom: '2026-01-01T00:00:00.000Z',
             movementsUpserted: result.movementsUpserted,
+            movementsCreated: result.movementsCreated,
+            movementsUpdated: result.movementsUpdated,
             payoutsUpserted: result.payoutsUpserted,
             invoicesUpserted: result.invoicesUpserted,
             accountsSynced: result.accountsSynced,
@@ -42,6 +61,7 @@ export async function POST() {
             })),
             recordCount: count,
             lastSyncAt: meta?.value || new Date().toISOString(),
+            durationMs: result.durationMs,
             errors: result.errors,
             badge: 'Sincronizzato da API',
         });
@@ -61,10 +81,10 @@ export async function GET() {
         const [meta, count, movements] = await Promise.all([
             prisma.systemState.findUnique({ where: { key: 'finance.stripe.last_sync' } }),
             prisma.stripeFinanceMovement.count({
-                where: { createdAtStripe: { gte: SYNC_FROM } },
+                where: { createdAtStripe: { gte: YEAR_FROM } },
             }),
             prisma.stripeFinanceMovement.findMany({
-                where: { createdAtStripe: { gte: SYNC_FROM } },
+                where: { createdAtStripe: { gte: YEAR_FROM } },
                 orderBy: { createdAtStripe: 'desc' },
                 take: 200,
             }),

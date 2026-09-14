@@ -21,6 +21,17 @@ export const FLORIST_DOC_STATUS_LABELS: Record<FloristDocStatus, string> = {
     CANCELLED: 'Annullato',
 };
 
+/** Mirror tipizzato di FloristInvoiceMatch — evita import server-only nel client. */
+export type FloristAutoMatchedInvoice = {
+    expenseId: string;
+    invoiceNumber: string | null;
+    invoiceDate: string;
+    totalCents: number;
+    vendorName: string;
+    vendorVat: string | null;
+    confidence: 'ORDER_REF' | 'VAT_AMOUNT' | 'VAT_AGGREGATED' | 'NAME_AMOUNT';
+};
+
 export type FloristCompensationRow = {
     id: string;
     orderId: string;
@@ -43,6 +54,9 @@ export type FloristCompensationRow = {
     bankLineId: string | null;
     documentId: string | null;
     floristSettlementStatus: string;
+    /** Match calcolato in lettura (YouDOX/SDI) — non persistito finché non confermato. */
+    autoMatchedInvoice: FloristAutoMatchedInvoice | null;
+    matchSource: 'manual' | 'auto' | null;
 };
 
 export function isFloristDocStatus(value: unknown): value is FloristDocStatus {
@@ -70,17 +84,25 @@ export function resolveFloristDocStatus(input: {
     floristSettlementStatus: string;
     linkedExpenseDocType: string | null;
     orderStatus: string;
+    /** Match automatico passivo (sola lettura) — non sovrascrive decisioni manuali. */
+    autoMatchedInvoice?: FloristAutoMatchedInvoice | null;
 }): FloristDocStatus {
+    // 1) Forzatura manuale vince sempre
     if (isFloristDocStatus(input.flags.floristDocStatus)) {
         return input.flags.floristDocStatus;
     }
+    // 2) Annullato / non dovuto
     if (input.orderStatus === 'CANCELLED') return 'CANCELLED';
     if (input.flags.floristMissingDismissedAt) return 'NOT_DUE';
 
+    // 3) Associazione manuale a ManualFinanceExpense
     const docType = (input.linkedExpenseDocType || '').toUpperCase();
     if (docType === 'SCONTRINO' || docType === 'RICEVUTA') return 'RECEIPT_ASSOCIATED';
     if (docType === 'FATTURA') return 'INVOICE_ASSOCIATED';
     if (input.floristSettlementStatus === 'RICEVUTA') return 'INVOICE_ASSOCIATED';
+
+    // 4) Incrocio automatico con fattura passiva SDI/YouDOX
+    if (input.autoMatchedInvoice) return 'INVOICE_ASSOCIATED';
 
     return 'WAITING_INVOICE';
 }

@@ -12,6 +12,7 @@ import {
     type FloristCompensationRow,
     type FloristDocStatus,
 } from '@/lib/financial/floristDocStatus';
+import { buildFloristInvoiceMatchIndex } from '@/lib/financial/floristInvoiceAutoMatch';
 import { manualExpenseAttachmentUrl } from '@/lib/financial/manualExpenses';
 
 export type {
@@ -91,6 +92,27 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
         }
     }
 
+    const matchIndex = await buildFloristInvoiceMatchIndex({
+        year,
+        orders: orders
+            .filter((o) => o.partner)
+            .map((o) => {
+                const partner = o.partner!;
+                return {
+                    id: o.id,
+                    orderNumber: o.orderNumber,
+                    partnerId: partner.id,
+                    partnerVat: partner.vatNumber || partner.taxCode || null,
+                    partnerName: partner.shopName || partner.ownerName || 'Fiorista',
+                    amountCents: o.floristCompensationCents || 0,
+                    referenceDate: orderReferenceDate(o, now),
+                };
+            }),
+    });
+    for (const m of matchIndex.values()) {
+        expenseIds.add(m.expenseId);
+    }
+
     const expenses = expenseIds.size
         ? await prisma.manualFinanceExpense.findMany({
               where: { id: { in: [...expenseIds] } },
@@ -125,14 +147,25 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
                 ? flags.floristLinkedExpenseId
                 : null;
         const expense = linkedExpenseId ? expenseById.get(linkedExpenseId) : null;
+        const autoMatchedInvoice = matchIndex.get(order.id) || null;
         const docStatus = resolveFloristDocStatus({
             flags,
             floristSettlementStatus: order.floristSettlementStatus,
             linkedExpenseDocType: expense?.docType || null,
             orderStatus: order.status,
+            autoMatchedInvoice,
         });
+        const matchSource: 'manual' | 'auto' | null = linkedExpenseId
+            ? 'manual'
+            : autoMatchedInvoice && docStatus === 'INVOICE_ASSOCIATED'
+              ? 'auto'
+              : null;
         const refDate = orderReferenceDate(order, now);
         const bank = bankByOrder.get(order.id) || null;
+        const displayExpense =
+            expense ||
+            (autoMatchedInvoice ? expenseById.get(autoMatchedInvoice.expenseId) : null) ||
+            null;
 
         rows.push({
             id: `order-${order.id}`,
@@ -148,16 +181,21 @@ export async function listFloristCompensationRegister(): Promise<FloristCompensa
             daysSinceOrder: daysBetween(refDate, now),
             docStatus,
             statusLabel: FLORIST_DOC_STATUS_LABELS[docStatus],
-            receiptUrl: expense
-                ? manualExpenseAttachmentUrl({ id: expense.id, blobUrl: expense.blobUrl })
+            receiptUrl: displayExpense
+                ? manualExpenseAttachmentUrl({
+                      id: displayExpense.id,
+                      blobUrl: displayExpense.blobUrl,
+                  })
                 : null,
-            receiptPath: expense?.blobPath || null,
+            receiptPath: displayExpense?.blobPath || null,
             linkedExpenseId,
-            linkedExpenseDocType: expense?.docType || null,
+            linkedExpenseDocType: expense?.docType || displayExpense?.docType || null,
             notes: order.financeNotes || null,
             bankLineId: bank?.id || null,
             documentId: bank?.documentId || null,
             floristSettlementStatus: order.floristSettlementStatus,
+            autoMatchedInvoice,
+            matchSource,
         });
     }
 

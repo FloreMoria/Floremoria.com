@@ -93,6 +93,7 @@ function toDateOnlyIso(d: Date): string {
  */
 export { orderReferenceDate } from '@/lib/financial/floristDocStatus';
 import { orderReferenceDate } from '@/lib/financial/floristDocStatus';
+import { buildFloristInvoiceMatchIndex } from '@/lib/financial/floristInvoiceAutoMatch';
 
 export function readFloristAlertMeta(raw: unknown): FloristAlertMeta {
     if (!raw || typeof raw !== 'object') return {};
@@ -112,13 +113,6 @@ export function mergeFloristAlertMeta(
     root.floristAlert = { ...prev, ...patch };
     return root;
 }
-
-type InvoiceCandidate = {
-    vendorName: string;
-    totalCents: number;
-    expenseDate: Date;
-    vendorVat: string | null;
-};
 
 type OrderMatchCandidate = {
     id: string;
@@ -192,36 +186,6 @@ function scoreOrderAgainstBankLine(
     return score;
 }
 
-function hasMatchingInvoice(
-    invoices: InvoiceCandidate[],
-    opts: {
-        partnerName: string;
-        partnerVat: string | null;
-        amountCents: number;
-        paymentDate: Date;
-    }
-): boolean {
-    const from = new Date(opts.paymentDate.getTime() - 5 * 24 * 60 * 60 * 1000);
-    const to = new Date(opts.paymentDate.getTime() + 15 * 24 * 60 * 60 * 1000);
-    const abs = Math.abs(opts.amountCents);
-    const vatDigits = (opts.partnerVat || '').replace(/\D/g, '');
-
-    return invoices.some((inv) => {
-        if (inv.expenseDate < from || inv.expenseDate > to) return false;
-        if (Math.abs(inv.totalCents - abs) > 100) return false;
-        const invVat = (inv.vendorVat || '').replace(/\D/g, '');
-        if (
-            vatDigits.length >= 8 &&
-            invVat &&
-            (invVat.includes(vatDigits) || vatDigits.includes(invVat))
-        ) {
-            return true;
-        }
-        if (namesCompatible(opts.partnerName, inv.vendorName)) return true;
-        return false;
-    });
-}
-
 function isLikelyNonFloristBankDescription(description: string): boolean {
     const d = description.toUpperCase();
     return (
@@ -287,11 +251,10 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
     const now = new Date();
     const year = now.getFullYear();
     const lookback = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
-    const invoiceLookback = lookback;
     const rows: FloristMissingInvoiceRow[] = [];
     const seen = new Set<string>();
 
-    const [partners, invoiceRows, candidateOrders, primaryFloristByDeceased] = await Promise.all([
+    const [partners, candidateOrders, primaryFloristByDeceased] = await Promise.all([
         prisma.partner.findMany({
             where: { deletedAt: null, isActive: true },
             select: {
@@ -305,19 +268,6 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
                 coverageArea: true,
             },
             take: 500,
-        }),
-        prisma.manualFinanceExpense.findMany({
-            where: {
-                docType: 'FATTURA',
-                expenseDate: { gte: invoiceLookback },
-            },
-            select: {
-                vendorName: true,
-                totalCents: true,
-                expenseDate: true,
-                metadataJson: true,
-            },
-            take: 5000,
         }),
         prisma.order.findMany({
             where: {
@@ -375,6 +325,30 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
 
     await repairStaleOrderLinks(orderPool);
 
+    const partnerById = new Map(partners.map((p) => [p.id, p]));
+    const autoMatchIndex = await buildFloristInvoiceMatchIndex({
+        year,
+        orders: orderPool
+            .filter((o) => (o.floristCompensationCents || 0) > 0)
+            .map((o) => {
+                const p = o.partnerId ? partnerById.get(o.partnerId) : null;
+                return {
+                    id: o.id,
+                    orderNumber: o.orderNumber,
+                    partnerId: o.partnerId,
+                    partnerVat: p?.vatNumber || p?.taxCode || null,
+                    partnerName:
+                        o.partnerShopName ||
+                        o.partnerOwnerName ||
+                        p?.shopName ||
+                        p?.ownerName ||
+                        'Fiorista',
+                    amountCents: o.floristCompensationCents || 0,
+                    referenceDate: orderReferenceDate(o, now),
+                };
+            }),
+    });
+
     const anagraficaFloristByNorm = new Map<
         string,
         { partnerId: string; shopName: string; ownerName: string | null }
@@ -401,16 +375,6 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
             }) || null
         );
     }
-
-    const invoices: InvoiceCandidate[] = invoiceRows.map((inv) => {
-        const meta = inv.metadataJson as { vendorVat?: string | null } | null;
-        return {
-            vendorName: inv.vendorName,
-            totalCents: inv.totalCents,
-            expenseDate: inv.expenseDate,
-            vendorVat: meta?.vendorVat || null,
-        };
-    });
 
     const bankLines = await prisma.bankStatementLine.findMany({
         where: {
@@ -577,14 +541,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
 
         const days = Math.max(0, daysBetween(refDate, now));
 
-        if (
-            hasMatchingInvoice(invoices, {
-                partnerName,
-                partnerVat,
-                amountCents,
-                paymentDate: refDate,
-            })
-        ) {
+        if (orderId && autoMatchIndex.has(orderId)) {
             continue;
         }
 
@@ -677,14 +634,7 @@ export async function listFloristMissingInvoices(): Promise<FloristMissingInvoic
         const refDate = orderReferenceDate(order, now);
         const days = Math.max(0, daysBetween(refDate, now));
 
-        if (
-            hasMatchingInvoice(invoices, {
-                partnerName: partner.shopName,
-                partnerVat: partner.vatNumber || partner.taxCode,
-                amountCents,
-                paymentDate: refDate,
-            })
-        ) {
+        if (autoMatchIndex.has(order.id)) {
             continue;
         }
 

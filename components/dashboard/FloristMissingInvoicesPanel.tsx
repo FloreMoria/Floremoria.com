@@ -365,6 +365,43 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
         await setStatusInline(row, 'NOT_DUE');
     };
 
+    const confirmAutoMatch = async (row: FloristCompensationRow) => {
+        const expenseId = row.autoMatchedInvoice?.expenseId;
+        if (!expenseId) {
+            showFlash('err', 'Nessuna fattura automatica da confermare.');
+            return;
+        }
+        setBusyId(`${row.id}-confirm`);
+        setFlash(null);
+        try {
+            const res = await fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'link_expense',
+                    rowId: row.id,
+                    expenseId,
+                }),
+            });
+            const parsed = await readJsonResponse<{
+                ok?: boolean;
+                message?: string;
+                error?: string;
+            }>(res);
+            if (!parsed.ok) throw new Error(parsed.error || 'Conferma fallita');
+            showFlash(
+                'ok',
+                parsed.data?.message ||
+                    `Associazione confermata (fatt. ${row.autoMatchedInvoice?.invoiceNumber || expenseId}).`
+            );
+            await load();
+        } catch (e) {
+            showFlash('err', e instanceof Error ? e.message : 'Conferma fallita');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
     const uploadReceipt = async (row: FloristCompensationRow, file: File) => {
         setUploading(true);
         setFlash(null);
@@ -649,6 +686,25 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                                     ? 'Fattura'
                                                     : 'Scontrino'}
                                             </a>
+                                        ) : row.autoMatchedInvoice ? (
+                                            <div className="space-y-1">
+                                                <p
+                                                    className="text-[11px] font-medium text-emerald-800"
+                                                    title={`Match automatico (${row.autoMatchedInvoice.confidence})`}
+                                                >
+                                                    Fatt.
+                                                    {row.autoMatchedInvoice.invoiceNumber
+                                                        ? ` ${row.autoMatchedInvoice.invoiceNumber}`
+                                                        : ''}{' '}
+                                                    del{' '}
+                                                    {formatFinanceDate(
+                                                        row.autoMatchedInvoice.invoiceDate
+                                                    )}
+                                                </p>
+                                                <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-800">
+                                                    Auto · {row.autoMatchedInvoice.confidence}
+                                                </span>
+                                            </div>
                                         ) : (
                                             <span className="text-[11px] text-slate-400 italic">
                                                 Nessun allegato
@@ -656,24 +712,52 @@ export default function FloristMissingInvoicesPanel({ onLinkInvoice }: Props) {
                                         )}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <select
-                                            value={row.docStatus}
-                                            disabled={busyId === `${row.id}-status`}
-                                            onChange={(e) =>
-                                                void setStatusInline(
-                                                    row,
-                                                    e.target.value as FloristDocStatus
-                                                )
-                                            }
-                                            className={`max-w-[11rem] rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide outline-none cursor-pointer disabled:opacity-50 ${statusBadgeClass(row.docStatus)}`}
-                                            title="Modifica stato (salvato subito)"
-                                        >
-                                            {FLORIST_DOC_STATUSES.map((s) => (
-                                                <option key={s} value={s}>
-                                                    {FLORIST_DOC_STATUS_LABELS[s]}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="space-y-1.5">
+                                            <select
+                                                value={row.docStatus}
+                                                disabled={busyId === `${row.id}-status`}
+                                                onChange={(e) =>
+                                                    void setStatusInline(
+                                                        row,
+                                                        e.target.value as FloristDocStatus
+                                                    )
+                                                }
+                                                className={`max-w-[11rem] rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide outline-none cursor-pointer disabled:opacity-50 ${statusBadgeClass(row.docStatus)}`}
+                                                title="Modifica stato (salvato subito)"
+                                            >
+                                                {FLORIST_DOC_STATUSES.map((s) => (
+                                                    <option key={s} value={s}>
+                                                        {FLORIST_DOC_STATUS_LABELS[s]}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {row.matchSource === 'auto' &&
+                                                row.autoMatchedInvoice &&
+                                                !row.linkedExpenseId && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={!!busyId}
+                                                        onClick={() => void confirmAutoMatch(row)}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-900 hover:bg-emerald-100 disabled:opacity-40"
+                                                        title="Scrive floristLinkedExpenseId e rende l'aggancio definitivo"
+                                                    >
+                                                        {busyId === `${row.id}-confirm` ? (
+                                                            <Loader2
+                                                                size={10}
+                                                                className="animate-spin"
+                                                            />
+                                                        ) : (
+                                                            <Link2 size={10} />
+                                                        )}
+                                                        Conferma associazione
+                                                    </button>
+                                                )}
+                                            {row.matchSource === 'manual' && (
+                                                <span className="block text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                                                    Manuale
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap justify-end gap-1.5">

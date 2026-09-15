@@ -10,6 +10,12 @@ import {
   enrichTikTokCampaignMetrics,
 } from '@/lib/marketing/socialMetrics/otherChannels';
 import {
+  getSocialInsightsConnection,
+  isSimulatedSocialId,
+  zeroedUnavailableMetrics,
+  type SocialInsightsConnection,
+} from '@/lib/marketing/socialMetrics/connectionStatus';
+import {
   emptyMetrics,
   parseStoredMetrics,
   summarizeMetrics,
@@ -51,14 +57,50 @@ async function persistEnrichments(
 }
 
 /**
+ * Completa le campagne non toccate dalla sync piattaforme con zeri reali + messaggio,
+ * così non restano in dashboard KPI vecchi/inventati.
+ */
+function fillMissingEnrichments(
+  stubs: Array<{ id: string; externalId: string | null }>,
+  enrichments: Array<{
+    campaignId: string;
+    externalId: string;
+    metrics: ReturnType<typeof emptyMetrics>;
+  }>
+) {
+  const enrichedIds = new Set(enrichments.map((e) => e.campaignId));
+  for (const s of stubs) {
+    if (enrichedIds.has(s.id)) continue;
+    const error = isSimulatedSocialId(s.externalId)
+      ? 'Pubblicazione simulata — insight non disponibili'
+      : s.externalId
+        ? 'Post non trovato nella sync piattaforme (metriche = 0)'
+        : 'ID post non salvato — impossibile recuperare insight (metriche = 0)';
+    enrichments.push({
+      campaignId: s.id,
+      externalId: s.externalId && !isSimulatedSocialId(s.externalId) ? s.externalId : '',
+      metrics: emptyMetrics(zeroedUnavailableMetrics(error)),
+    });
+  }
+}
+
+/**
  * Sincronizza metriche live per un canale e restituisce righe tabella + summary.
+ * Mai numeri inventati: o insight/API reali, o 0 con avviso.
  */
 export async function syncAndListChannelMetrics(
   channel: MarketingChannel,
   options?: { refresh?: boolean; limit?: number }
-): Promise<{ rows: CampaignMetricsRow[]; summary: ChannelMetricsSummary; refreshed: boolean }> {
+): Promise<{
+  rows: CampaignMetricsRow[];
+  summary: ChannelMetricsSummary;
+  refreshed: boolean;
+  connection: SocialInsightsConnection;
+  lastSyncedAt: string | null;
+}> {
   const limit = options?.limit ?? 40;
   const refresh = options?.refresh !== false;
+  const connection = getSocialInsightsConnection(channel);
 
   const campaigns = await prisma.marketingCampaign.findMany({
     where: {
@@ -104,27 +146,39 @@ export async function syncAndListChannelMetrics(
           enrichments = await enrichPinterestCampaignMetrics(stubs);
           break;
         case MarketingChannel.YOUTUBE_SHORTS:
-          // YouTube richiede videoId salvato + API key/OAuth — ancora non collegato in env.
-          enrichments = stubs
-            .filter((s) => s.externalId)
-            .map((s) => ({
-              campaignId: s.id,
-              externalId: s.externalId!,
-              metrics: emptyMetrics({
-                source: 'unavailable',
-                error: 'YouTube Analytics non configurato (manca OAuth/API key).',
-              }),
-            }));
+          enrichments = stubs.map((s) => ({
+            campaignId: s.id,
+            externalId: s.externalId && !isSimulatedSocialId(s.externalId) ? s.externalId : '',
+            metrics: emptyMetrics(
+              zeroedUnavailableMetrics(
+                'YouTube Analytics non configurato (manca OAuth/API key).'
+              )
+            ),
+          }));
           break;
         default:
           break;
       }
+
+      fillMissingEnrichments(stubs, enrichments);
 
       if (enrichments.length > 0) {
         await persistEnrichments(enrichments);
       }
     } catch (err) {
       console.error('[socialMetrics] sync failed', channel, err);
+      // In caso di errore hard: azzera con messaggio (niente KPI fantasma)
+      await persistEnrichments(
+        campaigns.map((c) => ({
+          campaignId: c.id,
+          externalId: c.externalId && !isSimulatedSocialId(c.externalId) ? c.externalId : '',
+          metrics: emptyMetrics(
+            zeroedUnavailableMetrics(
+              err instanceof Error ? err.message : 'Sync insight fallita'
+            )
+          ),
+        }))
+      );
     }
   }
 
@@ -141,14 +195,14 @@ export async function syncAndListChannelMetrics(
   const rows: CampaignMetricsRow[] = fresh.map((c) => {
     const stored = parseStoredMetrics(c.metricsJson);
     const missingIdHint =
-      c.contentFormat === 'STORY'
-        ? 'Story scaduta o senza ID: le Story IG restano recuperabili solo entro ~24h. Le prossime salvano l’ID in automatico.'
-        : 'ID post social non salvato — ripubblica o attendi sync Meta per match automatico';
+      'ID post social non salvato — ripubblica o attendi sync Meta (metriche = 0)';
     const metrics =
       stored ||
-      emptyMetrics({
-        error: c.externalId ? 'Metriche non ancora sincronizzate' : missingIdHint,
-      });
+      emptyMetrics(
+        zeroedUnavailableMetrics(
+          c.externalId ? 'Metriche non ancora sincronizzate (premi Aggiorna Metriche)' : missingIdHint
+        )
+      );
 
     return {
       id: c.id,
@@ -167,9 +221,18 @@ export async function syncAndListChannelMetrics(
     };
   });
 
+  const lastSyncedAt =
+    rows
+      .map((r) => r.metricsSyncedAt)
+      .filter((v): v is string => Boolean(v))
+      .sort()
+      .at(-1) ?? null;
+
   return {
     rows,
     summary: summarizeMetrics(rows),
     refreshed: refresh,
+    connection,
+    lastSyncedAt,
   };
 }

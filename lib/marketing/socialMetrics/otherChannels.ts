@@ -14,11 +14,46 @@ export async function enrichLinkedInCampaignMetrics(
   campaigns: Array<{ id: string; externalId: string | null }>
 ): Promise<SimpleEnrichment[]> {
   const token = process.env.LINKEDIN_ACCESS_TOKEN?.trim();
-  if (!token) return [];
+  if (!token) {
+    return campaigns.map((c) => ({
+      campaignId: c.id,
+      externalId: c.externalId || '',
+      metrics: emptyMetrics({
+        views: 0,
+        reach: 0,
+        impressions: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+        clicks: 0,
+        engagement: 0,
+        source: 'unavailable',
+        error: 'Insight LinkedIn non disponibili — LINKEDIN_ACCESS_TOKEN assente.',
+      }),
+    }));
+  }
 
   const out: SimpleEnrichment[] = [];
   for (const c of campaigns) {
     if (!c.externalId || c.externalId.startsWith('simulated-')) {
+      out.push({
+        campaignId: c.id,
+        externalId: '',
+        metrics: emptyMetrics({
+          views: 0,
+          reach: 0,
+          impressions: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          saves: 0,
+          clicks: 0,
+          engagement: 0,
+          source: 'unavailable',
+          error: 'Pubblicazione simulata o senza ID — insight = 0',
+        }),
+      });
       continue;
     }
     try {
@@ -86,7 +121,25 @@ export async function enrichTikTokCampaignMetrics(
   } catch {
     accessToken = process.env.TIKTOK_ACCESS_TOKEN?.trim() || null;
   }
-  if (!accessToken) return [];
+  if (!accessToken) {
+    return campaigns.map((c) => ({
+      campaignId: c.id,
+      externalId: c.externalId || '',
+      metrics: emptyMetrics({
+        views: 0,
+        reach: 0,
+        impressions: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+        clicks: 0,
+        engagement: 0,
+        source: 'unavailable',
+        error: 'Insight TikTok non disponibili — token assente o scaduto.',
+      }),
+    }));
+  }
 
   const res = await fetch('https://open.tiktokapis.com/v2/video/list/?fields=id,title,like_count,comment_count,share_count,view_count,share_url', {
     method: 'POST',
@@ -164,7 +217,25 @@ export async function enrichPinterestCampaignMetrics(
   campaigns: Array<{ id: string; externalId: string | null }>
 ): Promise<SimpleEnrichment[]> {
   const token = await getValidPinterestAccessToken();
-  if (!token) return [];
+  if (!token) {
+    return campaigns.map((c) => ({
+      campaignId: c.id,
+      externalId: c.externalId || '',
+      metrics: emptyMetrics({
+        views: 0,
+        reach: 0,
+        impressions: 0,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+        clicks: 0,
+        engagement: 0,
+        source: 'unavailable',
+        error: 'Insight Pinterest non disponibili — Connetti account Pinterest.',
+      }),
+    }));
+  }
 
   const out: SimpleEnrichment[] = [];
   const end = new Date();

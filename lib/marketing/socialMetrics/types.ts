@@ -80,7 +80,10 @@ export function parseStoredMetrics(raw: unknown): CampaignSocialMetrics | null {
     engagement: num(m.engagement),
     permalink: typeof m.permalink === 'string' ? m.permalink : null,
     thumbnailUrl: typeof m.thumbnailUrl === 'string' ? m.thumbnailUrl : null,
-    source: m.source === 'live' || m.source === 'cached' ? m.source : 'cached',
+    source:
+      m.source === 'live' || m.source === 'cached' || m.source === 'unavailable'
+        ? m.source
+        : 'cached',
     error: typeof m.error === 'string' ? m.error : null,
   });
 }

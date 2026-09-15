@@ -57,6 +57,9 @@ type Props = {
   summary: ChannelMetricsSummary | null;
   rows: CampaignMetricsRow[];
   onRefresh: () => void;
+  connectionOk?: boolean | null;
+  connectionMessage?: string | null;
+  lastSyncedAt?: string | null;
 };
 
 export default function CampaignMetricsPanel({
@@ -66,6 +69,9 @@ export default function CampaignMetricsPanel({
   summary,
   rows,
   onRefresh,
+  connectionOk,
+  connectionMessage,
+  lastSyncedAt,
 }: Props) {
   // Filtra la lista escludendo Storie (mostra solo contenuti permanenti: Reel, Feed, Foto, Caroselli)
   const activeRows = React.useMemo(() => {
@@ -78,25 +84,39 @@ export default function CampaignMetricsPanel({
     return summarizeMetrics(activeRows);
   }, [activeRows]);
 
+  const syncLabel = lastSyncedAt
+    ? `Ultimo aggiornamento: ${fmtDate(lastSyncedAt)}`
+    : 'Nessuna sync ancora — premi Aggiorna Metriche';
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden mb-6">
       <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <BarChart3 size={16} className="text-slate-500" />
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
-            Metriche pubblicazioni permanenti (Feed, Reel, Caroselli)
-          </h3>
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={16} className="text-slate-500" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
+              Metriche pubblicazioni permanenti (Feed, Reel, Caroselli)
+            </h3>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium pl-6">{syncLabel}</p>
         </div>
         <button
           type="button"
           onClick={onRefresh}
           disabled={refreshing || loading}
-          className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-50 transition-all shadow-2xs"
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white border border-slate-800 disabled:opacity-50 transition-all shadow-2xs"
         >
-          <RefreshCw size={12} className={refreshing ? 'animate-spin text-slate-600' : ''} />
-          {refreshing ? 'Aggiornamento…' : 'Aggiorna da social'}
+          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? 'Aggiornamento…' : 'Aggiorna Metriche'}
         </button>
       </div>
+
+      {connectionOk === false && connectionMessage ? (
+        <div className="px-4 py-3 text-sm text-amber-900 bg-amber-50 border-b border-amber-100">
+          <strong>Insight non disponibili / Connetti account.</strong> {connectionMessage}
+          {' '}I valori mostrati sono 0 finché la piattaforma non è collegata.
+        </div>
+      ) : null}
 
       {activeSummary ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 px-4 py-3 bg-slate-50/80 border-b border-slate-100">
@@ -119,7 +139,7 @@ export default function CampaignMetricsPanel({
       ) : null}
 
       <div className="px-4 py-2 text-[11px] text-slate-500 border-b border-slate-100 bg-white">
-        Instagram & Facebook: metriche live dei post permanenti (views, reach, like, commenti, condivisioni). Storie escluse.
+        Solo dati reali da Graph API / database. Post senza interazioni = 0. Nessuna stima simulata.
       </div>
 
       {error ? (
@@ -254,6 +274,11 @@ export default function CampaignMetricsPanel({
                           {m.source === 'live' ? 'Live' : m.source === 'cached' ? 'Cache' : 'N/D'}
                         </span>
                       )}
+                      {typeof m.clicks === 'number' && m.clicks > 0 ? (
+                        <div className="text-[10px] text-slate-500 mt-1 tabular-nums">
+                          Click: {fmt(m.clicks)}
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 );

@@ -1,12 +1,12 @@
-/**
- * Metriche Meta (Instagram + Facebook Page) via Graph API.
- * Feed/Reel: match per externalId o caption. Story attive: endpoint /stories + match temporale.
- */
 import type { CampaignSocialMetrics } from '@/lib/marketing/socialMetrics/types';
 import {
   captionsLikelyMatch,
   emptyMetrics,
 } from '@/lib/marketing/socialMetrics/types';
+import {
+  isSimulatedSocialId,
+  zeroedUnavailableMetrics,
+} from '@/lib/marketing/socialMetrics/connectionStatus';
 
 const META_GRAPH_VERSION = 'v21.0';
 const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
@@ -37,6 +37,17 @@ type IgRemoteMedia = {
   thumbnail_url?: string;
   media_type?: string;
 };
+
+function unavailableForAll(
+  campaigns: MetaCampaignStub[],
+  error: string
+): MetaMetricsEnrichment[] {
+  return campaigns.map((c) => ({
+    campaignId: c.id,
+    externalId: isSimulatedSocialId(c.externalId) ? '' : c.externalId || '',
+    metrics: emptyMetrics(zeroedUnavailableMetrics(error)),
+  }));
+}
 
 function insightValue(data: Array<{ name?: string; values?: Array<{ value?: unknown }> }>, name: string): number | null {
   const row = data.find((d) => d.name === name);
@@ -105,28 +116,31 @@ async function fetchIgMediaInsights(
     await queryMetrics(['views', 'reach', 'saved', 'shares', 'total_interactions']);
   }
 
-  const views = dataMap.get('views') ?? dataMap.get('plays') ?? dataMap.get('impressions') ?? base.views ?? null;
-  const impressions = views ?? dataMap.get('impressions');
-  const reach = dataMap.get('reach') ?? base.reach;
-  const saves = dataMap.get('saved') ?? base.saves;
-  const shares = dataMap.get('shares') ?? base.shares;
+  const views = dataMap.get('views') ?? dataMap.get('plays') ?? dataMap.get('impressions') ?? null;
+  const impressions = views ?? dataMap.get('impressions') ?? null;
+  const reach = dataMap.get('reach') ?? null;
+  const saves = dataMap.get('saved') ?? null;
+  const shares = dataMap.get('shares') ?? null;
   const replies = dataMap.get('replies');
 
-  const engagement =
-    dataMap.get('total_interactions') ??
-    dataMap.get('engagement') ??
-    ((base.likes ?? 0) + (base.comments ?? replies ?? 0) + (saves ?? 0) + (shares ?? 0));
+  const likes = base.likes ?? 0;
+  const comments = base.comments ?? replies ?? 0;
+  const savesN = saves ?? 0;
+  const sharesN = shares ?? 0;
+  const engagementFromApi = dataMap.get('total_interactions') ?? dataMap.get('engagement');
+  const engagement = engagementFromApi ?? likes + comments + savesN + sharesN;
 
   return emptyMetrics({
     ...base,
     views: views ?? 0,
     impressions: impressions ?? 0,
     reach: reach ?? 0,
-    comments: base.comments ?? replies ?? 0,
-    saves: saves ?? 0,
-    shares: shares ?? 0,
-    likes: base.likes ?? 0,
-    engagement: engagement ?? 0,
+    comments,
+    saves: savesN,
+    shares: sharesN,
+    likes,
+    clicks: base.clicks ?? 0,
+    engagement,
     source: 'live',
     error: null,
   });
@@ -169,24 +183,26 @@ async function fetchFbPostInsights(
     'post_reactions_by_type_total',
   ]);
 
-  const rawViews = dataMap.get('post_video_views') ?? base.views ?? 0;
-  const reach = dataMap.get('post_impressions_unique') ?? (rawViews > 0 ? rawViews : (base.reach ?? 0));
+  const rawViews = dataMap.get('post_video_views') ?? null;
+  const reach = dataMap.get('post_impressions_unique') ?? null;
   const clicks = dataMap.get('post_clicks') ?? 0;
   const totalReactions = dataMap.get('post_reactions_by_type_total') ?? 0;
 
   const likes = base.likes ?? totalReactions;
   const comments = base.comments ?? 0;
   const shares = base.shares ?? 0;
-  const engagement = dataMap.get('post_engaged_users') ?? ((likes || 0) + (comments || 0) + (shares || 0) + (clicks || 0));
+  const views = rawViews ?? base.views ?? 0;
+  const engagement =
+    dataMap.get('post_engaged_users') ?? likes + comments + shares + clicks;
 
   return emptyMetrics({
     ...base,
     likes,
     comments,
     shares,
-    views: rawViews,
-    impressions: rawViews,
-    reach,
+    views,
+    impressions: views,
+    reach: reach ?? 0,
     clicks,
     engagement,
     source: 'live',
@@ -255,14 +271,21 @@ export async function enrichInstagramCampaignMetrics(
   const token = process.env.META_ACCESS_TOKEN?.trim() || process.env.FACEBOOK_PAGE_ACCESS_TOKEN?.trim();
   const igUserId = process.env.IG_BUSINESS_ACCOUNT_ID?.trim() || process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim();
   if (!token || !igUserId) {
-    return campaigns
-      .map((c) => ({
-        campaignId: c.id,
-        externalId: c.externalId || '',
-        metrics: emptyMetrics({ error: 'META_ACCESS_TOKEN / IG_BUSINESS_ACCOUNT_ID mancanti' }),
-      }))
-      .filter((r) => r.externalId);
+    return unavailableForAll(
+      campaigns,
+      'Insight non disponibili / Connetti account Meta (META_ACCESS_TOKEN + IG_BUSINESS_ACCOUNT_ID)'
+    );
   }
+
+  const workable = campaigns.filter((c) => !isSimulatedSocialId(c.externalId));
+  const simulated = campaigns.filter((c) => isSimulatedSocialId(c.externalId));
+  const simulatedOut = simulated.map((c) => ({
+    campaignId: c.id,
+    externalId: '',
+    metrics: emptyMetrics(
+      zeroedUnavailableMetrics('Pubblicazione simulata — insight piattaforma non applicabili')
+    ),
+  }));
 
   const list = await metaGet<{ data?: IgRemoteMedia[] }>(
     `/${igUserId}/media?fields=id,caption,timestamp,like_count,comments_count,permalink,media_url,thumbnail_url,media_type&limit=100`,
@@ -282,10 +305,10 @@ export async function enrichInstagramCampaignMetrics(
 
   const remotes = list.data || [];
   const used = new Set<string>();
-  const out: MetaMetricsEnrichment[] = [];
+  const out: MetaMetricsEnrichment[] = [...simulatedOut];
 
   // Prima: campagne già collegate (feed/reel/story con ID)
-  for (const c of campaigns) {
+  for (const c of workable) {
     if (!c.externalId) continue;
     const remote =
       remotes.find((r) => r.id === c.externalId) || stories.find((r) => r.id === c.externalId);
@@ -307,7 +330,7 @@ export async function enrichInstagramCampaignMetrics(
   // Match caption su feed/reel
   for (const remote of remotes) {
     const match = pickMatch(
-      campaigns.filter((c) => !used.has(c.id) && c.contentFormat !== 'STORY'),
+      workable.filter((c) => !used.has(c.id) && c.contentFormat !== 'STORY'),
       { id: remote.id, caption: remote.caption, createdTime: remote.timestamp },
       used
     );
@@ -326,15 +349,15 @@ export async function enrichInstagramCampaignMetrics(
   }
 
   // Story ancora attive (<24h): match temporale + insights
-  const claimedStoryIds = new Set(out.map((e) => e.externalId));
+  const claimedStoryIds = new Set(out.map((e) => e.externalId).filter(Boolean));
   for (const remote of stories) {
     if (claimedStoryIds.has(remote.id)) continue;
 
-    const alreadyLinked = campaigns.find((c) => c.externalId === remote.id && !used.has(c.id));
+    const alreadyLinked = workable.find((c) => c.externalId === remote.id && !used.has(c.id));
     const match =
       alreadyLinked ||
       pickStoryByTime(
-        campaigns.filter((c) => !used.has(c.id)),
+        workable.filter((c) => !used.has(c.id)),
         remote.timestamp,
         used
       );
@@ -363,8 +386,22 @@ export async function enrichFacebookCampaignMetrics(
     process.env.FB_PAGE_ACCESS_TOKEN?.trim();
   const pageId = process.env.FB_PAGE_ID?.trim() || process.env.FACEBOOK_PAGE_ID?.trim();
   if (!userToken || !pageId) {
-    return [];
+    return unavailableForAll(
+      campaigns,
+      'Insight non disponibili / Connetti account Meta (META_ACCESS_TOKEN + FB_PAGE_ID)'
+    );
   }
+
+  const workable = campaigns.filter((c) => !isSimulatedSocialId(c.externalId));
+  const simulatedOut = campaigns
+    .filter((c) => isSimulatedSocialId(c.externalId))
+    .map((c) => ({
+      campaignId: c.id,
+      externalId: '',
+      metrics: emptyMetrics(
+        zeroedUnavailableMetrics('Pubblicazione simulata — insight piattaforma non applicabili')
+      ),
+    }));
 
   let pageToken = userToken;
   try {
@@ -429,7 +466,7 @@ export async function enrichFacebookCampaignMetrics(
   }
 
   const used = new Set<string>();
-  const out: MetaMetricsEnrichment[] = [];
+  const out: MetaMetricsEnrichment[] = [...simulatedOut];
 
   const baseFromRemote = (remote?: (typeof remotes)[number]) => ({
     likes: remote?.likes?.summary?.total_count ?? null,
@@ -444,9 +481,11 @@ export async function enrichFacebookCampaignMetrics(
     thumbnailUrl: remote?.full_picture ?? null,
   });
 
-  for (const c of campaigns) {
+  for (const c of workable) {
     if (!c.externalId) continue;
-    const remote = remotes.find((r) => r.id === c.externalId || r.id.endsWith(c.externalId!) || c.externalId!.endsWith(r.id));
+    const remote = remotes.find(
+      (r) => r.id === c.externalId || r.id.endsWith(c.externalId!) || c.externalId!.endsWith(r.id)
+    );
     const base = baseFromRemote(remote);
     const metrics = await fetchFbPostInsights(c.externalId, pageToken, base);
     used.add(c.id);
@@ -455,7 +494,7 @@ export async function enrichFacebookCampaignMetrics(
 
   for (const remote of remotes) {
     const match = pickMatch(
-      campaigns.filter((c) => !used.has(c.id)),
+      workable.filter((c) => !used.has(c.id)),
       { id: remote.id, caption: remote.message, createdTime: remote.created_time },
       used
     );

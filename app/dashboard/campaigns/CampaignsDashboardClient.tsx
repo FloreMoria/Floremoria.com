@@ -126,6 +126,9 @@ export default function CampaignsDashboardClient() {
   const [metricsRefreshing, setMetricsRefreshing] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [metricsOpen, setMetricsOpen] = useState(false);
+  const [metricsConnectionOk, setMetricsConnectionOk] = useState<boolean | null>(null);
+  const [metricsConnectionMessage, setMetricsConnectionMessage] = useState<string | null>(null);
+  const [metricsLastSyncedAt, setMetricsLastSyncedAt] = useState<string | null>(null);
 
   // Stati per la modifica dei post esistenti
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -192,7 +195,7 @@ export default function CampaignsDashboardClient() {
         setTiktokPublishReady(data.tiktokPublishReady || false);
         setTiktokGrantedScopes(data.tiktokGrantedScopes || '');
         
-        // Popola subito le metriche salvate a DB per evitare visualizzazioni a 0
+        // Metriche da DB: solo snapshot reali già sincronizzati (mai inventati). Zeri se assenti.
         const initialRows: CampaignMetricsRow[] = (data.campaigns || [])
           .filter((c: any) => c.status === 'PUBLISHED')
           .map((c: any) => {
@@ -210,7 +213,19 @@ export default function CampaignsDashboardClient() {
               publishedAt: c.publishedAt || c.updatedAt,
               updatedAt: c.updatedAt,
               metricsSyncedAt: c.metricsSyncedAt || null,
-              metrics: stored || emptyMetrics(),
+              metrics: stored || emptyMetrics({
+                views: 0,
+                reach: 0,
+                impressions: 0,
+                likes: 0,
+                comments: 0,
+                shares: 0,
+                saves: 0,
+                clicks: 0,
+                engagement: 0,
+                source: 'unavailable',
+                error: 'Premi Aggiorna Metriche per sync live',
+              }),
             };
           });
         if (initialRows.length > 0) {
@@ -263,6 +278,20 @@ export default function CampaignsDashboardClient() {
         });
       }
       setMetricsSummary(data.summary || null);
+      if (data.connection) {
+        setMetricsConnectionOk(Boolean(data.connection.ok));
+        setMetricsConnectionMessage(data.connection.message || null);
+      }
+      if (data.lastSyncedAt) {
+        setMetricsLastSyncedAt(data.lastSyncedAt);
+      } else if (Array.isArray(data.rows)) {
+        const latest = data.rows
+          .map((r: CampaignMetricsRow) => r.metricsSyncedAt)
+          .filter(Boolean)
+          .sort()
+          .at(-1);
+        if (latest) setMetricsLastSyncedAt(latest);
+      }
       if (refresh) {
         void fetchData();
       }
@@ -1401,7 +1430,7 @@ export default function CampaignsDashboardClient() {
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 disabled:opacity-50 transition-all shadow-2xs"
             >
               <RefreshCw size={14} className={metricsRefreshing ? 'animate-spin text-slate-600' : ''} />
-              {metricsRefreshing ? 'Aggiornamento…' : 'Aggiorna da social'}
+              {metricsRefreshing ? 'Aggiornamento…' : 'Aggiorna Metriche'}
             </button>
           </div>
         </div>
@@ -1419,8 +1448,11 @@ export default function CampaignsDashboardClient() {
             refreshing={metricsRefreshing}
             error={metricsError}
             summary={metricsSummary}
-            rows={metricsRows}
+            rows={metricsRows.filter((r) => r.targetChannel === activeTab)}
             onRefresh={() => void fetchMetrics(activeTab, true)}
+            connectionOk={metricsConnectionOk}
+            connectionMessage={metricsConnectionMessage}
+            lastSyncedAt={metricsLastSyncedAt}
           />
         </div>
       ) : null}
@@ -1701,10 +1733,18 @@ export default function CampaignsDashboardClient() {
                         const comments = m?.comments ?? 0;
                         const shares = m?.shares ?? 0;
                         const saves = m?.saves ?? 0;
-                        const engagement = m?.engagement ?? (likes + comments + shares + saves);
+                        const clicks = m?.clicks ?? 0;
+                        const engagement = m?.engagement ?? likes + comments + shares + saves;
+                        const err = m?.error;
 
                         return (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px] font-semibold text-slate-600">
+                          <>
+                            {err ? (
+                              <p className="text-[10px] text-amber-700 font-semibold leading-snug">
+                                {err}
+                              </p>
+                            ) : null}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px] font-semibold text-slate-600">
                             <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
                               <span className="text-[10px] text-slate-400 font-bold uppercase">Views</span>
                               <span className="text-slate-900 font-black">{views}</span>
@@ -1725,13 +1765,18 @@ export default function CampaignsDashboardClient() {
                               <span className="text-[10px] text-slate-400 font-bold uppercase">Commenti</span>
                               <span className="text-slate-900 font-black">{comments}</span>
                             </div>
+                            <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Click</span>
+                              <span className="text-slate-900 font-black">{clicks}</span>
+                            </div>
                             {shares > 0 || saves > 0 ? (
-                              <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between">
+                              <div className="bg-white border border-slate-200/60 px-2 py-1 rounded-xl flex items-center justify-between col-span-2 sm:col-span-1">
                                 <span className="text-[10px] text-slate-400 font-bold uppercase">Condivisioni</span>
                                 <span className="text-slate-900 font-black">{shares + saves}</span>
                               </div>
                             ) : null}
                           </div>
+                          </>
                         );
                       })()}
                     </div>

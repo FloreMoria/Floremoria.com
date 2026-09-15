@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { MarketingChannel } from '@prisma/client';
 import { syncAndListChannelMetrics } from '@/lib/marketing/socialMetrics/syncChannelMetrics';
 import type { CampaignMetricsRow } from '@/lib/marketing/socialMetrics/types';
+import { getSocialInsightsConnection } from '@/lib/marketing/socialMetrics/connectionStatus';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -13,12 +14,20 @@ async function handleRefresh(request: Request) {
   try {
     const url = new URL(request.url);
     let channelParam = url.searchParams.get('channel')?.trim() || '';
+    const refreshParam = url.searchParams.get('refresh');
+    let refresh = refreshParam !== '0';
 
     if (request.method === 'POST') {
       try {
-        const body = (await request.json().catch(() => ({}))) as { channel?: string };
+        const body = (await request.json().catch(() => ({}))) as {
+          channel?: string;
+          refresh?: boolean;
+        };
         if (body?.channel) {
           channelParam = String(body.channel).trim();
+        }
+        if (typeof body?.refresh === 'boolean') {
+          refresh = body.refresh;
         }
       } catch {
         // Usa fallback da searchParams
@@ -27,20 +36,21 @@ async function handleRefresh(request: Request) {
 
     if (channelParam && channelParam.toUpperCase() !== 'ALL' && VALID_CHANNELS.has(channelParam)) {
       const result = await syncAndListChannelMetrics(channelParam as MarketingChannel, {
-        refresh: true,
+        refresh,
         limit: 50,
       });
 
       return NextResponse.json({
         success: true,
         channel: channelParam,
-        refreshed: true,
+        refreshed: result.refreshed,
         summary: result.summary,
         rows: result.rows,
+        connection: result.connection,
+        lastSyncedAt: result.lastSyncedAt,
       });
     }
 
-    // Se nessun canale specifico o channel=ALL, sincronizziamo tutti i principali canali Meta / Social
     const channelsToSync: MarketingChannel[] = [
       MarketingChannel.META_INSTAGRAM,
       MarketingChannel.META_FACEBOOK,
@@ -59,10 +69,12 @@ async function handleRefresh(request: Request) {
       comments: 0,
       engagement: 0,
     };
+    const connectionWarnings: string[] = [];
+    let lastSyncedAt: string | null = null;
 
     for (const ch of channelsToSync) {
       try {
-        const res = await syncAndListChannelMetrics(ch, { refresh: true, limit: 50 });
+        const res = await syncAndListChannelMetrics(ch, { refresh, limit: 50 });
         allRows = allRows.concat(res.rows);
         summaryAgg.posts += res.summary.posts;
         summaryAgg.withLiveMetrics += res.summary.withLiveMetrics;
@@ -71,17 +83,30 @@ async function handleRefresh(request: Request) {
         summaryAgg.likes += res.summary.likes;
         summaryAgg.comments += res.summary.comments;
         summaryAgg.engagement += res.summary.engagement;
+        if (!res.connection.ok) connectionWarnings.push(res.connection.message);
+        if (res.lastSyncedAt && (!lastSyncedAt || res.lastSyncedAt > lastSyncedAt)) {
+          lastSyncedAt = res.lastSyncedAt;
+        }
       } catch (err) {
         console.error(`[refresh-metrics] sync error for ${ch}:`, err);
+        const conn = getSocialInsightsConnection(ch);
+        if (!conn.ok) connectionWarnings.push(conn.message);
       }
     }
 
     return NextResponse.json({
       success: true,
       channel: 'ALL',
-      refreshed: true,
+      refreshed: refresh,
       summary: summaryAgg,
       rows: allRows,
+      connection: {
+        ok: connectionWarnings.length === 0,
+        message:
+          connectionWarnings[0] ||
+          'Insight multi-canale aggiornati (solo dati reali o zero).',
+      },
+      lastSyncedAt,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

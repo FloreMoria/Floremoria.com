@@ -11,9 +11,9 @@ import { notifyFloristDeliveryLinkForOrder } from '@/lib/orders/notifyFloristDel
 import { resolveOrderBuyerEmail } from '@/lib/orders/resolveOrderBuyerContact';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
+import { staffOrdersEmail } from '@/lib/mail/staffMailRecipients';
 
 const DEFAULT_AGGREGATOR_EMAIL = 'assistenza@floremoria.com';
-const DEFAULT_OPS_EMAIL = 'ordini@floremoria.com';
 
 export type PartnerOrderNotificationChannel =
     | 'whatsapp_florist'
@@ -159,7 +159,7 @@ export async function sendPartnerOrderNotifications(
         order.partner?.email?.trim() ||
         order.partner?.pecAddress?.trim() ||
         null;
-    const opsTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || DEFAULT_OPS_EMAIL;
+    const opsTo = staffOrdersEmail();
     const aggregatorTo =
         agency?.aggregatorNotificationEmail?.trim() ||
         referral?.aggregatorNotificationEmail?.trim() ||
@@ -274,6 +274,8 @@ export async function sendPartnerOrderNotifications(
                         to: opsTo,
                         subject: `[B2B${sandbox ? ' TEST' : ''}] Nuovo ordine ${order.orderNumber} — ${order.agencyName || agency?.shopName || 'Partner'}`,
                         html,
+                        emailType: 'partner_ops',
+                        orderNumber: order.orderNumber,
                     });
                     console.log('[Partner Order Email] Staff:', {
                         to: opsTo,

@@ -1,5 +1,6 @@
 /**
- * Persistenza scout su Order.veraWorkflowFlags + email operatore.
+ * Persistenza scout su Order.veraWorkflowFlags + email onboarding fioristi.
+ * Destinatario: fioristi@floremoria.com (mai ordini@ — zona scoperta ≠ logistica).
  */
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
@@ -10,16 +11,9 @@ import {
 } from '@/lib/ai/floristScoutTypes';
 import { buildFloristScoutStaffHtml } from '@/lib/orderEmails';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
+import { staffFloristsEmail } from '@/lib/mail/staffMailRecipients';
 
 const SCOUT_STALE_MS = 7 * 24 * 60 * 60 * 1000;
-
-function staffOrdersEmail(): string {
-  return (
-    process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() ||
-    process.env.FLOREM_MAIL_REPLY_TO?.trim() ||
-    'ordini@floremoria.com'
-  );
-}
 
 function mergeFlags(
   existing: unknown,
@@ -38,8 +32,7 @@ async function sendFloristScoutStaffEmail(input: {
   deceasedName: string;
   scout: FloristScoutOrderPayload;
 }): Promise<void> {
-  if (!input.scout.recommendations.length) return;
-
+  const to = staffFloristsEmail();
   const subject = `[FloreMoria - Nuovo Fiorista Richiesto] Ordine ${input.orderNumber} - ${input.scout.cemetery}`;
   const html = buildFloristScoutStaffHtml({
     orderNumber: input.orderNumber,
@@ -48,15 +41,20 @@ async function sendFloristScoutStaffEmail(input: {
     scout: input.scout,
   });
 
+  const top = input.scout.recommendations[0];
   const result = await sendFloremTransactionalMail({
-    to: staffOrdersEmail(),
+    to,
     subject,
     html,
-    text: `Ordine ${input.orderNumber}: contattare per primo ${input.scout.recommendations[0]?.name} — ${input.scout.recommendations[0]?.phone}`,
+    text: top
+      ? `Ordine ${input.orderNumber}: contattare per primo ${top.name} — ${top.phone}`
+      : `Ordine ${input.orderNumber}: zona non coperta — nessun candidato scout. Cimitero ${input.scout.cemetery}.`,
+    emailType: 'florist_partner_search',
+    orderNumber: input.orderNumber,
   });
 
   if (!result.ok) {
-    console.error('[FloristScout] Email operatore fallita:', result.error);
+    console.error('[FloristScout] Email fioristi@ fallita:', result.error);
   }
 }
 
@@ -140,18 +138,22 @@ export async function runFloristScoutForOrder(
     },
   });
 
-  if (payload.recommendations.length > 0) {
-    await sendFloristScoutStaffEmail({
-      orderNumber: order.orderNumber || order.id.slice(-8).toUpperCase(),
-      orderId: order.id,
-      deceasedName: order.deceasedName,
-      scout: payload,
-    }).catch((err) => {
-      console.error('[FloristScout] Email non bloccante fallita:', err);
-    });
-  }
+  // Sempre notifica fioristi@ su zona scoperta (anche senza candidati Maps)
+  await sendFloristScoutStaffEmail({
+    orderNumber: order.orderNumber || order.id.slice(-8).toUpperCase(),
+    orderId: order.id,
+    deceasedName: order.deceasedName,
+    scout: payload,
+  }).catch((err) => {
+    console.error('[FloristScout] Email non bloccante fallita:', err);
+  });
 
-  return { ran: true, recommendations: payload.recommendations.length, scout: payload, reason: scoutResult.failureReason || undefined };
+  return {
+    ran: true,
+    recommendations: payload.recommendations.length,
+    scout: payload,
+    reason: scoutResult.failureReason || undefined,
+  };
 }
 
 /** @deprecated Usare runFloristScoutForOrder — alias per checkout/sync automatici. */

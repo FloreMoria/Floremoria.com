@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { sendFloremTransactionalMail } from '@/lib/serverMail';
 import { buildOrderStaffHtml } from '@/lib/orderEmails';
+import { staffAccountingEmail, staffOrdersEmail } from '@/lib/mail/staffMailRecipients';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
@@ -308,18 +309,22 @@ export async function POST(request: Request) {
         }
     }
 
-    const staffTo = process.env.FLOREM_STAFF_ORDERS_EMAIL?.trim() || 'ordini@floremoria.com';
-    const staffBcc = process.env.FLOREM_STAFF_ACCOUNTING_EMAIL?.trim() || 'contabile@floremoria.com';
+    const orderNumber = order.orderNumber || order.id;
+    const staffOpsTo = staffOrdersEmail();
+    const staffAccountingTo = staffAccountingEmail();
 
     const staffHtml = buildOrderStaffHtml({ order, stripeSessionId: session.id });
+
+    // 1) Logistica / ops — solo ordini@ (niente BCC che collassa su altri ruoli)
     const staffResult = await sendFloremTransactionalMail({
-        to: staffTo,
-        bcc: staffBcc,
-        subject: `Nuovo ordine pagato ${order.orderNumber || order.id}`,
+        to: staffOpsTo,
+        subject: `Nuovo ordine pagato ${orderNumber}`,
         html: staffHtml,
+        emailType: 'order_ops',
+        orderNumber,
     });
     if (!staffResult.ok) {
-        console.error('[stripe-webhook] Invio email staff fallito:', {
+        console.error('[stripe-webhook] Invio email staff (ops) fallito:', {
             orderId: order.id,
             orderNumber: order.orderNumber,
             stripeSessionId: session.id,
@@ -328,6 +333,22 @@ export async function POST(request: Request) {
         });
         // Rispondiamo 500 per far ritentare Stripe: evita perdita definitiva della notifica operativa.
         return NextResponse.json({ error: 'staff_mail_failed' }, { status: 500 });
+    }
+
+    // 2) Amministrazione / contabile — TO esplicito contabilita@ (invio separato, no fallback su ordini@)
+    const accountingResult = await sendFloremTransactionalMail({
+        to: staffAccountingTo,
+        subject: `[Contabilità] Nuovo ordine pagato ${orderNumber}`,
+        html: staffHtml,
+        emailType: 'order_accounting',
+        orderNumber,
+    });
+    if (!accountingResult.ok) {
+        console.error('[stripe-webhook] Invio email contabilità fallito (non bloccante):', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            error: accountingResult.error,
+        });
     }
 
     // Email cliente: schedulata a +60s dal pagamento (non immediata).

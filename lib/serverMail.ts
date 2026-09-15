@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import type { StaffMailEmailType } from '@/lib/mail/staffMailRecipients';
 
 export type SendFloremMailParams = {
     to: string | string[];
@@ -7,11 +8,24 @@ export type SendFloremMailParams = {
     subject: string;
     html: string;
     text?: string;
+    /** Etichetta per log diagnostico Resend. */
+    emailType?: StaffMailEmailType | string;
+    /** Riferimento ordine per log (numero o id). */
+    orderNumber?: string | null;
 };
 
 function asList(v: string | string[] | undefined): string[] | undefined {
     if (!v) return undefined;
     return Array.isArray(v) ? v : [v];
+}
+
+function logResendDispatch(params: SendFloremMailParams): void {
+    const to = asList(params.to)?.join(', ') || '(none)';
+    const emailType = params.emailType || 'other';
+    const orderNumber = params.orderNumber?.trim() || 'n/a';
+    console.log(
+        `[Resend Dispatch] Tipo: ${emailType} | Destinatario: ${to} | Ordine: ${orderNumber}`
+    );
 }
 
 async function sendViaResend(
@@ -106,6 +120,8 @@ export async function sendFloremTransactionalMail(
         console.error('[mail] FLOREM_MAIL_FROM mancante: impossibile inviare.');
         return { ok: false, error: 'missing_from' };
     }
+
+    logResendDispatch(params);
 
     try {
         if (process.env.RESEND_API_KEY?.trim()) {

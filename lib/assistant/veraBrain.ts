@@ -12,6 +12,7 @@ import { GoogleGenAI } from '@google/genai';
 import { FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT, VERA_TONE_OF_VOICE_DIRECTIVE } from '../floremDigitalAssistant';
 import { buildWhatsAppAiReply, loadWhatsAppCoreKb } from '../whatsappKnowledge';
 import { buildHistoricalToneContext, resolveHistoricalAudience } from '../whatsapp/historicalToneKb';
+import { getRelevantHumanExamplesPromptBlock } from '../ai/veraHumanKnowledge';
 
 export interface VeraHistoryMessage {
     direction: 'INBOUND' | 'OUTBOUND';
@@ -45,14 +46,23 @@ function getGeminiApiKey(): string | null {
  * System prompt: anima ufficiale di VERA + orchestra dei 16 Agent + regole ferree del brand.
  * I link reali vengono iniettati dal core KB per evitare URL inventati.
  */
-export function buildVeraSystemPrompt(kb: CoreKb, userType: VeraReplyInput['userType'] = 'UNKNOWN'): string {
+export function buildVeraSystemPrompt(
+    kb: CoreKb,
+    userType: VeraReplyInput['userType'] = 'UNKNOWN',
+    humanGroundTruthBlock?: string | null
+): string {
     const audience = resolveHistoricalAudience(userType);
+    const humanFewShot = humanGroundTruthBlock && humanGroundTruthBlock.trim()
+        ? ['', humanGroundTruthBlock.trim(), '']
+        : [];
+
     return [
         FLOREM_DIGITAL_ASSISTANT_SYSTEM_PROMPT,
         '',
         '=== ARCHIVIO STORICO CHAT REALI (standard assoluto di tono) ===',
         'Fonte: docs/whatsapp/knowledge_base_whatsapp.txt — imita fedelmente saluti, garbo ed empatia degli estratti sotto.',
         buildHistoricalToneContext(audience),
+        ...humanFewShot,
         '',
         '=== REGISTRO LINGUISTICO PER TIPO CONTATTO ===',
         audience === 'FLORIST'
@@ -139,12 +149,21 @@ export async function generateVeraReply(input: VeraReplyInput): Promise<string> 
     const model = process.env.VERA_GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
     try {
+        const humanGroundTruthBlock = await getRelevantHumanExamplesPromptBlock({
+            message: input.message,
+            userType: input.userType,
+            limit: 4,
+        }).catch((err) => {
+            console.warn('[VERA] Caricamento human few-shot fallito:', err);
+            return '';
+        });
+
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
             model,
             contents: buildContents(input),
             config: {
-                systemInstruction: buildVeraSystemPrompt(kb, input.userType),
+                systemInstruction: buildVeraSystemPrompt(kb, input.userType, humanGroundTruthBlock),
                 temperature: 0.5,
                 maxOutputTokens: 400,
             },

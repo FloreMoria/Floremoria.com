@@ -242,7 +242,8 @@ export function buildVeraWhatsAppSystemInstruction(
     callerContext: VeraCallerContext,
     userType: ChatSession['userType'],
     knowledgeContext: string,
-    profileName?: string | null
+    profileName?: string | null,
+    humanGroundTruthBlock?: string | null
 ): string {
     const compensationRules =
         userType === 'FLORIST'
@@ -254,12 +255,17 @@ export function buildVeraWhatsAppSystemInstruction(
               ]
             : [];
 
+    const humanFewShotBlock = humanGroundTruthBlock && humanGroundTruthBlock.trim()
+        ? ['', humanGroundTruthBlock.trim(), '']
+        : [];
+
     return [
         VERA_CORE_IDENTITY,
         '',
         buildVeraGreetingPromptRule(),
         '',
         VERA_FEW_SHOT_EXAMPLES,
+        ...humanFewShotBlock,
         '',
         CONTEXT_ISOLATION_RULES,
         '',

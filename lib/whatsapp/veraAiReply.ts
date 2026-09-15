@@ -59,6 +59,7 @@ import {
     buildVeraWhatsAppSystemInstruction,
     resolveVeraCallerContext,
 } from '@/lib/vera';
+import { getRelevantHumanExamplesPromptBlock } from '@/lib/ai/veraHumanKnowledge';
 import {
     buildGenericAssistanceOpenReply,
     buildPreAcquisitionLucianoReply,
@@ -264,11 +265,22 @@ async function callGeminiVera(
     const model = process.env.POSTMAN_GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
     const knowledgeContext = buildVeraKnowledgeContext(session.userType);
 
+    const humanGroundTruthBlock = await getRelevantHumanExamplesPromptBlock({
+        message: userMessage,
+        userType: session.userType,
+        callerContext,
+        limit: 4,
+    }).catch((err) => {
+        console.warn('[vera-ai] Caricamento human few-shot fallito:', err);
+        return '';
+    });
+
     const systemInstruction = `${buildVeraWhatsAppSystemInstruction(
         callerContext,
         session.userType,
         knowledgeContext,
-        session.name
+        session.name,
+        humanGroundTruthBlock
     )}
 
 Rispondi SOLO al messaggio dell'utente alla fine della conversazione, tenendo conto dello storico messaggi fornito.`;

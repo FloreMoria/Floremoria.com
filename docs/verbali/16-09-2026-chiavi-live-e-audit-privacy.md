@@ -44,4 +44,4 @@ termine riesame **19/09/2026**.
 
 ## Hash
 
-Da compilare dopo push.
+`ae68a0e8e58a93a6e3dc23a6cd04e95ea67e63cd` (main, push 16/09/2026)

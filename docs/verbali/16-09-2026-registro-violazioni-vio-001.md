@@ -36,4 +36,4 @@ il dettaglio ops sia arrivato a tutti i fioristi.
 
 ## Hash
 
-Da compilare dopo push.
+`9636b4d7e4ebf8e1950cbbfcbc0a4f5306b905cf` (main, push 16/09/2026)

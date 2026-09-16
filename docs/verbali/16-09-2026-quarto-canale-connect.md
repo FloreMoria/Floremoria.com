@@ -41,4 +41,4 @@ Aggiornata a C1–C14, conto di transito, quarto canale, Florem B2B Hub, definiz
 
 ## Hash
 
-Da compilare dopo push.
+`d3b4ff4766ee5c560ff1081defe8b328ece5a494` (main, push 16/09/2026)

@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 15 Settembre 2026"
 sync_source: docs/verbali/15-09-2026.md
-synced_at: 2026-09-16T03:02:34.872Z
+synced_at: 2026-09-16T21:50:06.087Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/15-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -30,9 +30,7 @@ synced_at: 2026-09-16T03:02:34.872Z
 ## Sezione 3 — Sviluppo
 
 - `5d6ee16f` feat(ai): pipeline di apprendimento few-shot per Vera basata sui messaggi reali inviati dall'operatore umano _(FloreMoria)_
-- [2026-09-15 15:25] fix(social): metriche reali Meta/DB, zero se assenti, banner Connetti account, Aggiorna Metriche + lastSyncedAt.
 
 ## Sezione 4 — Logistica
 
 - `71fee20d` fix(email): corretto instradamento email Resend su ordini, contabilita e fioristi@floremoria.com per zone scoperte _(FloreMoria)_
-- [2026-09-15 12:31] fix(email): instradamento Resend — ordini@ / contabilita@ / fioristi@ per zone scoperte; log [Resend Dispatch].

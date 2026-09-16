@@ -2,12 +2,31 @@
 date: 28-04-2026
 tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
-sommario: "Pivot Progetto Istituzionale."
+sommario: "Definizione Modello Commerciale PA."
 sync_source: docs/verbali/28-04-2026.md
-synced_at: 2026-09-15T11:33:29.895Z
+synced_at: 2026-09-16T08:24:56.787Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/28-04-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
+
+# PROTOCOLLO 108 - Definizione Modello Commerciale PA
+
+**Riassunto (BARBARA):** Definizione Modello Commerciale PA.
+
+STATO: Definizione Modello Commerciale PA.
+DISPOSIZIONI: Ratifica listino a 4 fasce (Silver €749, Gold €1499, Platinum €2499, Elite). Introduzione del pagamento dilazionato in 10 rate per i Comuni.
+
+## Dettagli operativi
+
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 108
+- **Punti Discussi:** N/A
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** N/A
+- **Risultati Raggiunti:** N/A
+
+---
+
+## Sviluppo tecnico (repo DEVIN)
 
 # PROTOCOLLO 106 - Pivot Progetto Istituzionale
 
@@ -19,6 +38,25 @@ DISPOSIZIONI: Conversione progetto "Manutenzione" in "Servizi Civici FloreMoria"
 ## Dettagli operativi
 
 - **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 106
+- **Punti Discussi:** N/A
+- **Allarmi Critici:** N/A
+- **Task in Sospeso:** N/A
+- **Risultati Raggiunti:** N/A
+
+---
+
+## Sviluppo tecnico (repo DEVIN)
+
+# PROTOCOLLO 107 - Trust Identity "Made in Italy"
+
+**Riassunto (BARBARA):** Trust Identity "Made in Italy".
+
+STATO: Trust Identity "Made in Italy".
+DISPOSIZIONI: Approvazione del logo "Made in Italy" come sigillo di garanzia per residenti all'estero. Posizionamento: Footer, Checkout e sezione Identità.
+
+## Dettagli operativi
+
+- **Prompt Chiave:** RACCOLTA VERBALI ESECUTIVI - PROTOCOLLO 107
 - **Punti Discussi:** N/A
 - **Allarmi Critici:** N/A
 - **Task in Sospeso:** N/A

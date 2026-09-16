@@ -52,6 +52,12 @@ con email fiorista poteva ripeterlo.
 | Mini-app `/fiorista/consegna` | OK — select senza buyerEmail/customerPhone/totalPriceCents |
 | PDF fiorista | Nessun PDF outbound fiorista trovato su questo path |
 
+## Verifica
+
+- `npx tsc --noEmit` — OK
+- `npm run test:florist-privacy` — OK
+- `npm run build` (prebuild include privacy test) — OK
+
 ## Hash
 
-Da compilare dopo push.
+`419270a9d4391550dea25c7bf1a832fa23a734c0` (main, push 16/09/2026)

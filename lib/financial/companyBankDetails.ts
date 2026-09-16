@@ -39,6 +39,12 @@ export const LEDGER_FINECO_ACCOUNT = '10100 - Banca Fineco' as const;
 export const LEDGER_PAYPAL_ACCOUNT = '10200 - Banca c/o PayPal' as const;
 /** Wallet Stripe — Banca c/o Stripe (transito patrimonio). */
 export const LEDGER_STRIPE_ACCOUNT = '10300 - Banca c/o Stripe' as const;
+/** Account connesso FloreMoria in piattaforma partner (AF) — quarto canale. */
+export const LEDGER_CONNECT_PARTNER_ACCOUNT =
+    '10500 - Transito Stripe Connect partner' as const;
+/** Provvigioni master partner (fee aggregatore, IVA 22%). */
+export const LEDGER_COMMISSIONI_PARTNER =
+    '70300 - Commissioni partner / aggregatori' as const;
 
 /**
  * Legacy alias: punti ancora a Fineco. Preferire LEDGER_FINECO_ACCOUNT / gateway.

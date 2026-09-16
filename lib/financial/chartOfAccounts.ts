@@ -15,6 +15,15 @@ export const ACCOUNT_CREDITI_CLIENTI = '11000 - Crediti v/clienti' as const;
  */
 export const ACCOUNT_INCASSI_FUORI_GATEWAY =
     '10400 - Incassi fuori gateway (non Stripe)' as const;
+/**
+ * Transito vendite sull’account connesso FloreMoria nella piattaforma partner (AF).
+ * Quarto canale di incasso: distinto da Stripe COM/EU e da PayPal.
+ */
+export const ACCOUNT_BANCA_CO_CONNECT_PARTNER =
+    '10500 - Transito Stripe Connect partner' as const;
+/** Provvigioni master partner (fee aggregatore) — IVA 22% detraibile. */
+export const ACCOUNT_COMMISSIONI_PARTNER =
+    '70300 - Commissioni partner / aggregatori' as const;
 export const ACCOUNT_RICAVI_VENDITE = '60100 - Ricavi da Vendite' as const;
 export const ACCOUNT_CONTRIBUTI_ESERCIZIO = '65000 - Contributi in conto esercizio' as const;
 export const ACCOUNT_COMMISSIONI_INCASSI = '70200 - Commissioni su incassi' as const;

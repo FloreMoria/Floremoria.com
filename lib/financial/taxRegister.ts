@@ -30,6 +30,8 @@ export type TaxRegisterRow = {
     ivaDebitoCents: number;
     gatewayLabel: string;
     gatewayFeeCents: number;
+    /** Fee master partner (IVA 22% inclusa) — distinta dalla fee Stripe. */
+    partnerFeeCents: number;
     floristName: string;
     floristCompensationCents: number;
     floristVatRate: number | null;
@@ -47,6 +49,7 @@ export type TaxRegisterReport = {
         accessoryImponibileCents: number;
         ivaDebitoCents: number;
         gatewayFeeCents: number;
+        partnerFeeCents: number;
         floristCompensationCents: number;
         floristBonificatoCents: number;
         netMarginCents: number;
@@ -117,6 +120,7 @@ export async function buildTaxRegisterReport(params: {
             OR: [
                 { grossAmount: { not: null } },
                 { stripeTransactionId: { not: null } },
+                { masterPartnerId: { not: null } },
                 { status: { in: [...REVENUE_ACTIVE_ORDER_STATUSES] } },
             ],
         },
@@ -177,8 +181,15 @@ export async function buildTaxRegisterReport(params: {
         const ivaDebitoCents = receipt?.ivaDebitoCents ?? vat.ivaCents;
         const feeCents =
             order.stripeFee != null ? Math.round(order.stripeFee * 100) : 0;
+        const partnerFeeCents = order.partnerCommissionCents ?? 0;
         const floristCompensationCents = resolveOrderFloristCompensationCents(order);
-        const netMarginCents = grossCents - feeCents - floristCompensationCents;
+        // Margine = lordo − fee Stripe − fee partner − compenso fiorista
+        const netMarginCents =
+            grossCents - feeCents - partnerFeeCents - floristCompensationCents;
+
+        const paymentLabel =
+            order.paymentMethodLabel ||
+            (order.masterPartnerId ? 'Stripe Connect – partner' : 'Stripe');
 
         rows.push({
             orderId: order.id,
@@ -191,10 +202,11 @@ export async function buildTaxRegisterReport(params: {
             accessoryGrossCents,
             ivaDebitoCents,
             gatewayLabel: formatGatewayFeeLabel({
-                paymentMethodLabel: order.paymentMethodLabel,
+                paymentMethodLabel: paymentLabel,
                 feeCents,
             }),
             gatewayFeeCents: feeCents,
+            partnerFeeCents,
             floristName:
                 order.partner?.shopName ||
                 order.partner?.ownerName ||
@@ -214,6 +226,7 @@ export async function buildTaxRegisterReport(params: {
         accessoryImponibileCents: rows.reduce((s, r) => s + r.accessoryImponibileCents, 0),
         ivaDebitoCents: rows.reduce((s, r) => s + r.ivaDebitoCents, 0),
         gatewayFeeCents: rows.reduce((s, r) => s + r.gatewayFeeCents, 0),
+        partnerFeeCents: rows.reduce((s, r) => s + r.partnerFeeCents, 0),
         floristCompensationCents: rows.reduce((s, r) => s + r.floristCompensationCents, 0),
         floristBonificatoCents: rows
             .filter((r) => r.settlementStatus === 'BONIFICATO' || r.settlementStatus === 'RICEVUTA')
@@ -355,7 +368,11 @@ export async function patchTaxRegisterRow(
         accessoryCents: accessoryGrossCents,
     });
     const feeCents = order.stripeFee != null ? Math.round(order.stripeFee * 100) : 0;
+    const partnerFeeCents = order.partnerCommissionCents ?? 0;
     const floristCompensationCents = resolveOrderFloristCompensationCents(order);
+    const paymentLabel =
+        order.paymentMethodLabel ||
+        (order.masterPartnerId ? 'Stripe Connect – partner' : 'Stripe');
 
     return {
         orderId: order.id,
@@ -369,10 +386,11 @@ export async function patchTaxRegisterRow(
         accessoryGrossCents,
         ivaDebitoCents: receipt?.ivaDebitoCents ?? vat.ivaCents,
         gatewayLabel: formatGatewayFeeLabel({
-            paymentMethodLabel: order.paymentMethodLabel,
+            paymentMethodLabel: paymentLabel,
             feeCents,
         }),
         gatewayFeeCents: feeCents,
+        partnerFeeCents,
         floristName:
             order.partner?.shopName ||
             order.partner?.ownerName ||
@@ -380,7 +398,7 @@ export async function patchTaxRegisterRow(
         floristCompensationCents,
         floristVatRate: order.floristVatRate,
         settlementStatus: order.floristSettlementStatus,
-        netMarginCents: grossCents - feeCents - floristCompensationCents,
+        netMarginCents: grossCents - feeCents - partnerFeeCents - floristCompensationCents,
         financeNotes: order.financeNotes,
         hasReceipt: Boolean(receipt),
     };

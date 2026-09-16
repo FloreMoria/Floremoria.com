@@ -11,6 +11,7 @@ import {
     Archive,
     FileSpreadsheet,
 } from 'lucide-react';
+import PartnerFeeInvoicesPanel from '@/components/dashboard/PartnerFeeInvoicesPanel';
 
 type PeriodMode = 'quarter' | 'month' | 'quadrimester';
 type SettlementStatus = 'PENDING' | 'BONIFICATO' | 'RICEVUTA';
@@ -27,6 +28,7 @@ type TaxRegisterRow = {
     ivaDebitoCents: number;
     gatewayLabel: string;
     gatewayFeeCents: number;
+    partnerFeeCents?: number;
     floristName: string;
     floristCompensationCents: number;
     floristVatRate: number | null;
@@ -507,7 +509,7 @@ export default function TaxQuarterlyPanel() {
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                             <Landmark size={16} className="text-[#c5a880]" />
                             <h4 className="text-sm font-semibold text-slate-800">
-                                Fatture Mensili Stripe (commissioni)
+                                Fatture commissioni Stripe / fee PayPal
                             </h4>
                         </div>
                         <div className="dashboard-table-scroll overflow-x-auto">
@@ -656,6 +658,8 @@ export default function TaxQuarterlyPanel() {
                         </div>
                     </section>
                     </div>
+
+                    <PartnerFeeInvoicesPanel />
                 </>
             ) : null}
 

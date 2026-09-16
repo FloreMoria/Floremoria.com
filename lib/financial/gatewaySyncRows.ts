@@ -10,7 +10,7 @@ import {
 } from '@/lib/financial/paypalClassify';
 import { normalizePaypalTransactionId, parsePaypalSourceKey } from '@/lib/financial/paypalSourceKeys';
 
-export type GatewayKind = 'stripe' | 'paypal';
+export type GatewayKind = 'stripe' | 'paypal' | 'connect';
 
 export type MovementKind =
     | 'incasso'
@@ -25,7 +25,9 @@ export type GatewaySourceLabel =
     | 'Webhook PayPal'
     | 'API PayPal'
     | 'CSV Import'
-    | 'PayPal';
+    | 'PayPal'
+    | 'Connect manuale'
+    | 'Connect API';
 
 export type GatewaySyncRow = {
     id: string;

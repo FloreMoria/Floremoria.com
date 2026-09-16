@@ -35,6 +35,7 @@ import ReceivedInvoicesXlsxUploadBox from '@/components/dashboard/ReceivedInvoic
 import ForeignAutofattureUploadBox from '@/components/dashboard/ForeignAutofattureUploadBox';
 import PaypalCsvUploadBox from '@/components/dashboard/PaypalCsvUploadBox';
 import GatewaySyncTable from '@/components/dashboard/GatewaySyncTable';
+import ConnectPartnerChannelPanel from '@/components/dashboard/ConnectPartnerChannelPanel';
 import FloristMissingInvoicesPanel from '@/components/dashboard/FloristMissingInvoicesPanel';
 import HistoricalFiscalArchivePanel from '@/components/dashboard/HistoricalFiscalArchivePanel';
 import BankMovementsStatementTable from '@/components/dashboard/BankMovementsStatementTable';
@@ -891,7 +892,7 @@ export default function FinanceDashboardPage() {
                             ['riconcilia', 'Da riconciliare'],
                             ['prima-nota', 'Prima Nota'],
                             ['passivo', 'Passivo / Documenti'],
-                            ['gateway', 'Stripe & PayPal'],
+                            ['gateway', 'Gateway (4 canali)'],
                             ['fisco', 'Fisco & Scadenze'],
                         ] as const
                     ).map(([id, label]) => {
@@ -1222,6 +1223,8 @@ export default function FinanceDashboardPage() {
                                             {gatewaySyncMsg}
                                         </p>
                                     )}
+
+                                    <ConnectPartnerChannelPanel />
 
                                     <GatewaySyncTable refreshToken={gatewayTableRefresh} />
                                 </div>

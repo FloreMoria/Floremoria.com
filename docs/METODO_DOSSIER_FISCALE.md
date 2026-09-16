@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.23 — 16 settembre 2026.
+Versione 1.24 — 16 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -560,6 +560,25 @@ Accordo tipico Annunci Funebri: **percentuale configurabile sul Partner master**
 - La trattenuta Stripe Connect è il pagamento di quel debito, non un secondo costo.
 - La fattura mensile del master chiude il debito: non genera costo aggiuntivo.
 
+### 8.2.0 Quarto canale — Stripe Connect partner (account connesso in AF)
+
+Gli ordini acquisiti dai partner **non** passano da Stripe COM, Stripe EU o PayPal.
+Passano dall’**account connesso FloreMoria** nella piattaforma del master (Annunci Funebri
+è la piattaforma; FloreMoria è l’account connesso).
+
+Per ogni ordine partner il sistema registra quattro movimenti sul conto
+`10500 - Transito Stripe Connect partner`:
+
+1. **Corrispettivo** = lordo pagato dal cliente (ricavo). Mai il netto.
+2. **Fee partner** = costo con IVA 22% (imponibile + imposta); trattenuta all’origine =
+   pagamento del debito maturato.
+3. **Commissione Stripe** = costo distinto (trattamento IVA diverso dalla fee partner).
+4. **Bonifico → Fineco** = `TRASFERIMENTO_INTERNO` atteso (non ricavo). Quando arriva
+   l’accredito bancario si aggancia a questo movimento, non finisce fra gli orfani.
+
+Finché non c’è lettura API sull’account connesso, il canale si alimenta a **mano** con gli
+stessi campi previsti dalla sync automatica futura (`ConnectPartnerCharge`).
+
 ### 8.2.2 Tre categorie partner e numerazione ordini
 
 | Ruolo | `PartnerType` | Ruolo sull’ordine |
@@ -780,6 +799,10 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.24 — 16 settembre 2026**
+- §8.2.0 — quarto canale Stripe Connect partner (tre gambe + trasferimento Fineco atteso);
+  inserimento manuale `ConnectPartnerCharge`; guida Contabilità allineata a C1–C14 / Hub B2B.
 
 **1.23 — 16 settembre 2026**
 - §14 — rimando a `docs/REGISTRO_VIOLAZIONI_DATI.md`; regola: aprire la voce di violazione

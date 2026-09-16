@@ -276,6 +276,7 @@ model Order {
   offerRedemptions       OfferRedemption[]
   deliveryProof          DeliveryProof?
   memoryGardenOpens      MemoryGardenOpen[]
+  connectPartnerCharges  ConnectPartnerCharge[]
   grossAmount            Float?            @map("gross_amount")
   stripeFee              Float?            @map("stripe_fee")
   netAmount              Float?            @map("net_amount")
@@ -528,6 +529,7 @@ model Partner {
   apiCredentials  PartnerApiCredential[]
   deceasedAssignments PartnerDeceasedAssignment[]
   feeMonthCloses  PartnerFeeMonthClose[]
+  connectCharges  ConnectPartnerCharge[]
 
   userId          String?                 @unique @map("user_id")
   user            User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -618,6 +620,55 @@ model PartnerFeeMonthClose {
   @@unique([masterPartnerId, yearMonth])
   @@index([yearMonth, status])
   @@map("partner_fee_month_closes")
+}
+
+enum ConnectPartnerChargeSource {
+  MANUAL
+  API
+}
+
+enum ConnectPartnerPayoutStatus {
+  PENDING
+  EXPECTED
+  MATCHED
+  CANCELLED
+}
+
+/**
+ * Quarto canale: incasso sull’account connesso FloreMoria in piattaforma partner (AF).
+ * Campi allineati alla futura sync automatica — oggi alimentato a mano.
+ */
+model ConnectPartnerCharge {
+  id                      String                     @id @default(cuid())
+  orderId                 String?                    @map("order_id")
+  order                   Order?                     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderNumber             String                     @map("order_number") @db.VarChar(64)
+  masterPartnerId         String                     @map("master_partner_id")
+  masterPartner           Partner                    @relation(fields: [masterPartnerId], references: [id], onDelete: Cascade)
+  /** Id charge/payment lato piattaforma partner (quando disponibile). */
+  externalChargeId        String?                    @map("external_charge_id") @db.VarChar(128)
+  accountingDate          DateTime                   @map("accounting_date")
+  /** Lordo pagato dal cliente — corrispettivo. */
+  grossCents              Int                        @map("gross_cents")
+  partnerFeeCents         Int                        @map("partner_fee_cents")
+  partnerFeeTaxableCents  Int                        @map("partner_fee_taxable_cents")
+  partnerFeeVatCents      Int                        @map("partner_fee_vat_cents")
+  /** Commissione Stripe distinta dalla fee partner. */
+  stripeFeeCents          Int                        @map("stripe_fee_cents")
+  /** Netto atteso sul bonifico Fineco = gross − partnerFee − stripeFee. */
+  netCents                Int                        @map("net_cents")
+  externalPayoutId        String?                    @map("external_payout_id") @db.VarChar(128)
+  payoutStatus            ConnectPartnerPayoutStatus @default(EXPECTED) @map("payout_status")
+  source                  ConnectPartnerChargeSource @default(MANUAL)
+  notes                   String?                    @db.Text
+  createdAt               DateTime                   @default(now()) @map("created_at")
+  updatedAt               DateTime                   @updatedAt @map("updated_at")
+
+  @@unique([orderNumber])
+  @@index([masterPartnerId, accountingDate])
+  @@index([payoutStatus])
+  @@index([orderId])
+  @@map("connect_partner_charges")
 }
 
 model Supplier {

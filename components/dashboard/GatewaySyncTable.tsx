@@ -19,7 +19,7 @@ import {
     type GatewayWalletQuadratura,
 } from '@/lib/financial/gatewayQuadratura';
 
-type GatewayFilter = 'all' | 'stripe' | 'paypal';
+type GatewayFilter = 'all' | 'stripe' | 'paypal' | 'connect';
 type TypeFilter = 'all' | 'incasso' | 'commissione' | 'payout' | 'rimborso' | 'altro';
 
 type Props = {
@@ -40,6 +40,7 @@ function gatewayBadgeClass(code: string): string {
     if (code === 'EU') return 'bg-amber-50 text-amber-800 border-amber-200';
     if (code === 'COM') return 'bg-indigo-50 text-indigo-800 border-indigo-200';
     if (code === 'PAYPAL') return 'bg-sky-50 text-sky-800 border-sky-200';
+    if (code === 'CONNECT') return 'bg-violet-50 text-violet-800 border-violet-200';
     return 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
@@ -239,8 +240,11 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/dashboard/finance/sync/gateways');
-            const data = (await res.json()) as {
+            const [gwRes, connectRes] = await Promise.all([
+                fetch('/api/dashboard/finance/sync/gateways'),
+                fetch('/api/dashboard/finance/connect-partner'),
+            ]);
+            const data = (await gwRes.json()) as {
                 ok?: boolean;
                 rows?: GatewaySyncRow[];
                 groupedRows?: GatewaySyncGroupedRow[];
@@ -248,8 +252,47 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                 error?: string;
             };
             if (!data.ok) throw new Error(data.error || 'Caricamento fallito');
+            const connectData = await connectRes.json().catch(() => null);
+            const connectGrouped: GatewaySyncGroupedRow[] = Array.isArray(connectData?.charges)
+                ? connectData.charges.map(
+                      (c: {
+                          id: string;
+                          orderNumber: string;
+                          accountingDate: string;
+                          grossCents: number;
+                          partnerFeeCents: number;
+                          stripeFeeCents: number;
+                          netCents: number;
+                          source: string;
+                          payoutStatus: string;
+                      }) => ({
+                          id: `connect-${c.id}`,
+                          groupKey: `CONNECT:${c.orderNumber}`,
+                          eventKind: 'order' as const,
+                          occurredAt: `${c.accountingDate}T12:00:00.000Z`,
+                          gateway: 'connect' as const,
+                          accountCode: 'CONNECT',
+                          accountLabel: 'Stripe Connect – partner',
+                          movementKind: 'incasso' as const,
+                          movementLabel: 'Incasso Connect',
+                          description: `Connect ${c.orderNumber} · fee partner €${(c.partnerFeeCents / 100).toFixed(2)} · Stripe €${(c.stripeFeeCents / 100).toFixed(2)} · payout ${c.payoutStatus}`,
+                          orderId: null,
+                          orderNumber: c.orderNumber,
+                          customerName: null,
+                          customerEmail: null,
+                          grossCents: c.grossCents,
+                          feeCents: c.partnerFeeCents + c.stripeFeeCents,
+                          netCents: c.netCents,
+                          currency: 'EUR',
+                          statusLabel: c.payoutStatus,
+                          sourceLabel: (c.source === 'API' ? 'Connect API' : 'Connect manuale') as GatewaySyncGroupedRow['sourceLabel'],
+                          transactionIds: [c.orderNumber],
+                          rawRowCount: 1,
+                      })
+                  )
+                : [];
             setRows(data.rows || []);
-            setGroupedRows(data.groupedRows || []);
+            setGroupedRows([...(data.groupedRows || []), ...connectGrouped]);
             setQuadratura(data.quadratura || null);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Errore');
@@ -271,6 +314,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
             if (simplifiedView && r.eventKind === 'technical') return false;
             if (gatewayFilter === 'stripe' && r.gateway !== 'stripe') return false;
             if (gatewayFilter === 'paypal' && r.gateway !== 'paypal') return false;
+            if (gatewayFilter === 'connect' && r.gateway !== 'connect') return false;
             if (typeFilter !== 'all' && r.movementKind !== typeFilter) return false;
             if (!q) return true;
             const hay = [
@@ -295,6 +339,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
         return rows.filter((r) => {
             if (gatewayFilter === 'stripe' && r.gateway !== 'stripe') return false;
             if (gatewayFilter === 'paypal' && r.gateway !== 'paypal') return false;
+            if (gatewayFilter === 'connect' && r.gateway !== 'connect') return false;
             if (typeFilter !== 'all' && r.movementKind !== typeFilter) return false;
             if (!q) return true;
             const hay = [
@@ -338,6 +383,7 @@ export default function GatewaySyncTable({ refreshToken = 0 }: Props) {
                             ['all', 'Tutti'],
                             ['stripe', 'Stripe'],
                             ['paypal', 'PayPal'],
+                            ['connect', 'Connect'],
                         ] as const
                     ).map(([k, label]) => (
                         <button

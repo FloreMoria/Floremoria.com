@@ -20,6 +20,8 @@ export const LEDGER_CATEGORIES = [
     'CONSULENZE',
     'IMPOSTE',
     'ALTRI_COSTI',
+    /** Provvigione master partner (fee aggregatore) — distinta dalle fee Stripe. */
+    'COMMISSIONI_PARTNER',
 ] as const;
 
 export type LedgerCategory = (typeof LEDGER_CATEGORIES)[number];
@@ -32,6 +34,7 @@ export type LedgerSourceType =
     | 'SAAS_INVOICE'
     | 'STRIPE_MOVEMENT'
     | 'PAYPAL_MOVEMENT'
+    | 'CONNECT_MOVEMENT'
     | 'CUSTOMER_RECEIPT'
     | 'JSON_ENTRY'
     | 'REVERSAL';
@@ -216,6 +219,7 @@ export const CATEGORY_LABELS: Record<LedgerCategory, string> = {
     SPESE_SAAS: 'Spese server / SaaS',
     SPESE_OPERATIVE: 'Spese operative',
     ONERI_BANCARI: 'Oneri bancari',
+    COMMISSIONI_PARTNER: 'Commissioni partner / aggregatori',
     CONSULENZE: 'Consulenze',
     IMPOSTE: 'Imposte / F24',
     ALTRI_COSTI: 'Altri costi',

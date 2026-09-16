@@ -99,8 +99,8 @@ export default async function B2BPartnersPage() {
                     Florem B2B Hub (Gestione Partner)
                 </h1>
                 <p className="text-gray-500 font-medium">
-                    Tre categorie distinte: Master (aggregatore), Agenzia, Fiorista. Credenziali live solo dopo
-                    Connect verificato; segreti one-shot, mai in chiaro a database.
+                    Tre categorie distinte: Master (aggregatore), Agenzia, Fiorista. Credenziali API
+                    indipendenti da Stripe Connect; segreti one-shot in Hub, mai in chiaro a database.
                 </p>
             </div>
 

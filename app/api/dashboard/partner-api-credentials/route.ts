@@ -6,7 +6,6 @@ import {
     hashPartnerApiSecret,
     inferEnvironmentFromPublicId,
 } from '@/lib/partnerApiSecret';
-import { verifyPartnerStripeConnect } from '@/lib/partners/stripeConnectGate';
 import type { PartnerApiCredentialEnvironment } from '@prisma/client';
 
 export async function GET() {
@@ -51,7 +50,10 @@ type CreateBody = {
     environment?: 'TEST' | 'LIVE';
 };
 
-/** Crea credenziale; il **segreto** è restituito una sola volta nella risposta. Mai loggato. */
+/**
+ * Crea credenziale; il **segreto** è restituito una sola volta nella risposta (Hub one-shot).
+ * Mai loggato. Chiavi API indipendenti da Stripe Connect (il denaro è un altro flusso).
+ */
 export async function POST(request: Request) {
     try {
         const body = (await request.json()) as CreateBody;
@@ -80,34 +82,6 @@ export async function POST(request: Request) {
                 { error: 'Il partner non ha uniqueCode. Impostalo prima di creare credenziali.' },
                 { status: 400 }
             );
-        }
-
-        if (environment === 'LIVE') {
-            const gateTarget =
-                partner.partnerType === 'FUNERAL_AGENCY' && partner.masterPartnerId
-                    ? partner.masterPartnerId
-                    : partner.id;
-            const connect = await verifyPartnerStripeConnect(gateTarget);
-            if (partner.partnerType === 'AGGREGATOR' && !connect.ok) {
-                return NextResponse.json(
-                    {
-                        error: `Chiavi live bloccate: Stripe Connect non verificato. ${connect.detail}`,
-                        code: 'STRIPE_CONNECT_NOT_READY',
-                        connect,
-                    },
-                    { status: 409 }
-                );
-            }
-            if (partner.partnerType === 'FUNERAL_AGENCY' && partner.masterPartnerId && !connect.ok) {
-                return NextResponse.json(
-                    {
-                        error: `Chiavi live agenzia bloccate: Connect del master non verificato. ${connect.detail}`,
-                        code: 'STRIPE_CONNECT_NOT_READY',
-                        connect,
-                    },
-                    { status: 409 }
-                );
-            }
         }
 
         let publicId = generatePartnerApiPublicId(environment, partner.uniqueCode);

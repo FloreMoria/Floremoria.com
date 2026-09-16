@@ -5,13 +5,13 @@ import {
     generatePartnerApiSecretPlain,
     hashPartnerApiSecret,
 } from '@/lib/partnerApiSecret';
-import { verifyPartnerStripeConnect } from '@/lib/partners/stripeConnectGate';
 
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
  * PATCH: revoke | regenerate.
  * regenerate invalida immediatamente la precedente e restituisce il nuovo segreto one-shot.
+ * Nessun vincolo Stripe Connect: le chiavi autenticano le API, indipendenti dal denaro.
  */
 export async function PATCH(request: Request, context: Ctx) {
     try {
@@ -48,26 +48,6 @@ export async function PATCH(request: Request, context: Ctx) {
 
         if (action === 'regenerate') {
             const environment = row.environment;
-            if (environment === 'LIVE') {
-                const partner = row.partner;
-                const gateTarget =
-                    partner.partnerType === 'FUNERAL_AGENCY' && partner.masterPartnerId
-                        ? partner.masterPartnerId
-                        : partner.id;
-                if (partner.partnerType === 'AGGREGATOR' || partner.masterPartnerId) {
-                    const connect = await verifyPartnerStripeConnect(gateTarget);
-                    if (!connect.ok && partner.partnerType === 'AGGREGATOR') {
-                        return NextResponse.json(
-                            {
-                                error: `Rigenerazione live bloccata: Connect non verificato. ${connect.detail}`,
-                                code: 'STRIPE_CONNECT_NOT_READY',
-                            },
-                            { status: 409 }
-                        );
-                    }
-                }
-            }
-
             const now = new Date();
             await prisma.partnerApiCredential.update({
                 where: { id },

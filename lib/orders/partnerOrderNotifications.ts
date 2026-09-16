@@ -3,7 +3,7 @@
  * Orchestrazione unica post-creazione: WhatsApp fiorista/cliente + email operative.
  *
  * INCIDENTE 16/09/2026: email_florist usava buildOrderStaffHtml (dati cliente + prezzo vendita).
- * Kill switch attivo di default; riattivare solo con FloristOrderBrief + FLOREM_FLORIST_EMAIL_KILL_SWITCH=0.
+ * Kill switch emergenza: FLOREM_FLORIST_EMAIL_KILL_SWITCH=1. Default: email ON con FloristOrderBrief.
  */
 
 import prisma from '@/lib/prisma';
@@ -22,9 +22,9 @@ import {
 
 const DEFAULT_AGGREGATOR_EMAIL = 'assistenza@floremoria.com';
 
-/** Kill switch: email fiorista disattivate finché !== '0'. */
+/** Kill switch emergenza: attivo solo se FLOREM_FLORIST_EMAIL_KILL_SWITCH=1. */
 export function isFloristEmailKillSwitchActive(): boolean {
-    return process.env.FLOREM_FLORIST_EMAIL_KILL_SWITCH !== '0';
+    return process.env.FLOREM_FLORIST_EMAIL_KILL_SWITCH === '1';
 }
 
 export type PartnerOrderNotificationChannel =

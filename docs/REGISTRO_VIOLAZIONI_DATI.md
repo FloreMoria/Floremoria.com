@@ -19,7 +19,7 @@ correggere il codice, così la cronologia resta onesta.
 
 | ID | Data evento | Stato | Sintesi |
 |---|---|---|---|
-| VIO-2026-001 | 2026-09-16 | Aperta — valutazione notifica entro **2026-09-19** | Email fiorista con contatti cliente + prezzo vendita (FF-PN-26-005) |
+| VIO-2026-001 | 2026-09-16 | Aperta — misure OK; valutazione notifica **entro 2026-09-19** | Email fiorista con contatti + prezzo (FF-PN-26-005); audit contenuto: 1 consegnata esterna |
 
 ---
 
@@ -51,11 +51,11 @@ ha inviato al fiorista, con etichetta spurio «ID Sessione Stripe» = testo «Nu
 | Campo | Valore |
 |---|---|
 | Categorie | Clienti finali (acquirenti di omaggi floreali) |
-| Numero approssimativo | **Aperto** — dipende dall’audit sulle email storiche 2026 verso fioristi. Caso certo consegnato: almeno l’interessato di FF-PN-26-005. Chiudere questo campo al termine dell’audit. |
+| Numero approssimativo | **1** (caso consegnato a destinatario esterno non interno: FF-PN-26-005). Audit Resend 2026 sul **contenuto** del body (non sul path subject): 1 sola email a destinatario esterno con segnali di leak (Cliente / email / telefono / Totale Ordine / riuso staff). Separata: 1 email **suppressed** del 28/08 a `salvatoremarsigliore@gmail.com` (anomalia — vedi sotto; non conteggiata come interessato esterno perché destinatario = casella del titolare / Partner «Fioreria Salvatore Test», non fiorista commerciale terzo). |
 
 ### Dati coinvolti
 
-| Categoria | Volume (caso certo consegnato) |
+| Categoria | Volume (caso certo consegnato a esterno) |
 |---|---|
 | Identità (nome cliente / buyer) | 1 |
 | Contatto email | 1 |
@@ -67,16 +67,17 @@ ha inviato al fiorista, con etichetta spurio «ID Sessione Stripe» = testo «Nu
 
 | Destinatario | Tipo | Note |
 |---|---|---|
-| Fioreria Battistella s.r.l. (`info@fioreriabattistella.it`) | Fornitore / partner commerciale (1 soggetto) | Unico destinatario del caso consegnato |
+| Fioreria Battistella s.r.l. (`info@fioreriabattistella.it`) | Fornitore / partner commerciale (1 soggetto) | Unico destinatario **delivered** con leak |
 
-**Verifica correlata — `fioristi@floremoria.com` (audit PT-VE-26-002):**  
-non è una lista di distribuzione verso fioristi partner. È una **casella Aruba interna**
-(display name «Fioristi-FloreMoria»), usata solo per lo scout «Nuovo Fiorista Richiesto»
-(zone scoperte). Le email ops con dettaglio ordine completo vanno a `ordini@floremoria.com`
-(`staffOrdersEmail`), non a `fioristi@`.  
-**Componenti / destinatari effettivi dell’indirizzo:** solo `fioristi@floremoria.com`
-(casella monoutente; non espande a email di fioristi esterni). Fonti: header `Delivered-To`
-in Apple Mail, account Mail dedicato, Resend TO unico, codice `staffFloristsEmail()`.
+**Anomalia 28/08 — FF-CO-26-003 (suppressed):** destinatario `salvatoremarsigliore@gmail.com`. Causa: in anagrafica esiste il Partner fiorista **«Fioreria Salvatore Test»** con `Partner.email` = quello stesso Gmail (creato 27/08). La notifica fiorista usa `partner.email`: non è un “cliente scelto a caso”, è l’indirizzo configurato sul partner di test. Lo stesso nominativo compare come acquirente su FF-CO-26-001. **Meccanismo ripetibile** se si mette un’email di un cliente (o personale) nel campo email del fiorista. Ordine FF-CO-26-003 non più presente in DB (probabile cancellazione); Resend conferma subject/body con marker staff.
+
+**Verifica — `fioristi@floremoria.com`:**  
+**Alias/casella interno, non lista verso fioristi partner.**  
+Elenco indirizzi che compongono l’indirizzo (destinatari effettivi):
+
+1. `fioristi@floremoria.com` — unico (casella Aruba monoutente, display name «Fioristi-FloreMoria»)
+
+Le email ops con dettaglio completo (`buildOrderStaffHtml`) vanno a `ordini@floremoria.com`, non a `fioristi@`. Quindi l’ampiezza dell’incidente **non** si moltiplica su tutti i fioristi via questo indirizzo.
 
 ### Conseguenze probabili
 
@@ -84,38 +85,37 @@ in Apple Mail, account Mail dedicato, Resend TO unico, codice `staffFloristsEmai
   operativo (cimitero, defunto, biglietto, consegna, prodotto, budget fiorista, riferimento).
 - Rischio reputazionale e di fiducia verso il cliente; rischio di uso improprio dei contatti
   da parte del fornitore (contatto non richiesto, trattativa fuori piattaforma).
-- Per il caso isolato consegnato a un solo partner commerciale identificato, probabilità di
-  danno grave agli interessati valutata **bassa**, salvo esiti diversi dell’audit storico.
+- Con audit contenuto 2026 chiuso a **1** consegna esterna, probabilità di danno grave
+  valutata **bassa**.
 
 ### Misure adottate
 
 **Contenimento immediato**
 
-- Kill switch `FLOREM_FLORIST_EMAIL_KILL_SWITCH` attivo di default (`!== '0'`): nessuna email
-  al fiorista parte da `sendPartnerOrderNotifications`.
-- Canale `email_florist` in skip `privacy_kill_switch_florist_email_2026_09_16`.
+- Kill switch di emergenza `FLOREM_FLORIST_EMAIL_KILL_SWITCH=1` (poi disattivato dopo verifica
+  `FloristOrderBrief`; default operativo: email fiorista ON salvo kill esplicito).
 
 **Correzione tecnica**
 
 - Introdotto `FloristOrderBrief` (payload dedicato senza contatti/prezzo vendita).
 - Test build-breaker `npm run test:florist-privacy` in `prebuild`.
 - METODO §14 privacy outbound + rimando a questo registro.
-- Commit fix: `419270a9d4391550dea25c7bf1a832fa23a734c0`.
+- Commit fix privacy: `419270a9…`.
 
 **Comunicazioni fatte**
 
-- Verbale tecnico incidente 16/09/2026.
+- Verbali tecnici 16/09/2026.
 - Apertura di questa voce di registro (VIO-2026-001).
-- Comunicazione all’interessato / al Garante: **non ancora** (in valutazione — vedi sotto).
+- Comunicazione all’interessato / al Garante: vedi valutazione sotto.
 
 ### Valutazione sulla notifica
 
 | Campo | Valore |
 |---|---|
 | **Termine 72 ore** | **2026-09-19** (Europe/Rome) — entro 72 ore dalla scoperta del 16/09/2026. **Non slittabile.** |
-| Notifica al Garante (art. 33) | **In corso di valutazione** — da completare entro il termine sopra. Ipotesi preliminare (solo caso consegnato noto): rischio per i diritti e le libertà degli interessati probabilmente **non elevato** (1 fornitore partner, 1 interessato certo, dati di contatto + prezzo, non categorie particolari). **La valutazione cambia se l’audit storico mostra decine di email con dati cliente.** |
-| Informativa agli interessati (art. 34) | **In corso di valutazione** — stessa scadenza; dipende da ampienza e rischio residuo. |
-| Motivazione (aggiornare alla chiusura della valutazione) | _Da compilare entro il 19/09/2026 con decisione sì/no e motivo, dopo chiusura del campo Interessati._ |
+| Notifica al Garante (art. 33) | **No** (decisione motivata al 16/09, confermata dall’audit contenuto). |
+| Informativa agli interessati (art. 34) | **No** (stessa motivazione; riesame se emergessero altri casi entro il termine). |
+| Motivazione | L’audit 2026 sul **contenuto** delle email verso destinatari non interni ha trovato **una sola** consegna con dati cliente/prezzo (FF-PN-26-005 → un partner commerciale). Dati coinvolti: identità, contatti, prezzo — non categorie particolari art. 9. Destinatario unico, rapporto contrattuale di fornitura, contenimento e correzione già in atto (`FloristOrderBrief` + test). Rischio per i diritti e le libertà degli interessati valutato **non elevato** ai sensi art. 33: non scatta l’obbligo di notifica al Garante né, in assenza di rischio elevato, l’informativa individuale art. 34. La decisione resta riesaminabile fino al **19/09/2026** se emergessero nuovi fatti. |
 
 ### Responsabile e data di chiusura
 
@@ -123,8 +123,8 @@ in Apple Mail, account Mail dedicato, Resend TO unico, codice `staffFloristsEmai
 |---|---|
 | Responsabile | Titolare del trattamento — Salvatore Marsiglione (FloreMoria S.r.l.) |
 | Supporto tecnico / registro | Cursor / team DEVIN–VITO–BARBARA |
-| Stato | **Aperta** |
-| Data di chiusura | _Da impostare alla chiusura della valutazione notifica e del conteggio interessati_ |
+| Stato | **Aperta** fino al termine 19/09 (monitoraggio); misure tecniche chiuse |
+| Data di chiusura | _Prevista 19/09/2026 se nessun nuovo fatto_ |
 
 ---
 

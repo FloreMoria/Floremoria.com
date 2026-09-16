@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.22 — 16 settembre 2026.
+Versione 1.23 — 16 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -769,9 +769,21 @@ per lo staff interno.
 
 Canali coperti dalla stessa regola: email, WhatsApp, PDF, portale mini-app fiorista.
 
+**Registro delle violazioni.** Ogni uscita di dati verso un destinatario che non doveva
+riceverli si registra in `docs/REGISTRO_VIOLAZIONI_DATI.md` (documento organizzativo
+versionato, indipendente dal software).
+
+**Regola operativa — cronologia onesta.** Quando si scopre che un dato è uscito verso un
+destinatario che non doveva riceverlo, si apre una voce nel registro **prima** di
+correggere il codice. La correzione tecnica non sostituisce la traccia dell’incidente.
+
 ---
 
 ## Registro delle modifiche
+
+**1.23 — 16 settembre 2026**
+- §14 — rimando a `docs/REGISTRO_VIOLAZIONI_DATI.md`; regola: aprire la voce di violazione
+  prima del fix. Voce VIO-2026-001 (FF-PN-26-005); termine notifica 19/09/2026.
 
 **1.22 — 16 settembre 2026**
 - §14 — **Privacy outbound fornitori**: ogni destinatario esterno riceve un oggetto

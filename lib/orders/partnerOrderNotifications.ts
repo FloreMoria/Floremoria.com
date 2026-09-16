@@ -1,6 +1,9 @@
 /**
  * Dispatcher notifiche multi-canale per ordini Partner B2B (AF / Agenzia diretta).
  * Orchestrazione unica post-creazione: WhatsApp fiorista/cliente + email operative.
+ *
+ * INCIDENTE 16/09/2026: email_florist usava buildOrderStaffHtml (dati cliente + prezzo vendita).
+ * Kill switch attivo di default; riattivare solo con FloristOrderBrief + FLOREM_FLORIST_EMAIL_KILL_SWITCH=0.
  */
 
 import prisma from '@/lib/prisma';
@@ -12,8 +15,17 @@ import { resolveOrderBuyerEmail } from '@/lib/orders/resolveOrderBuyerContact';
 import { runPuntoBCustomerOrderConfirm } from '@/lib/vera/orderWorkflow/puntoBCustomerConfirm';
 import { onOrderStatusChanged } from '@/lib/orders/orderStatusFilter';
 import { staffOrdersEmail } from '@/lib/mail/staffMailRecipients';
+import {
+    buildFloristOrderBriefFromOrder,
+    renderFloristOrderBriefEmailHtml,
+} from '@/lib/orders/floristOrderBrief';
 
 const DEFAULT_AGGREGATOR_EMAIL = 'assistenza@floremoria.com';
+
+/** Kill switch: email fiorista disattivate finché !== '0'. */
+export function isFloristEmailKillSwitchActive(): boolean {
+    return process.env.FLOREM_FLORIST_EMAIL_KILL_SWITCH !== '0';
+}
 
 export type PartnerOrderNotificationChannel =
     | 'whatsapp_florist'
@@ -87,9 +99,6 @@ function buildAgencyTransparencyHtml(params: {
 </html>`.trim();
 }
 
-/**
- * Assicura IN_PROGRESS quando c'è un fiorista, così Punto A/B possono partire.
- */
 async function ensureInProgressForNotifications(orderId: string, partnerId: string | null): Promise<void> {
     if (!partnerId) return;
     const order = await prisma.order.findFirst({
@@ -141,8 +150,6 @@ export async function sendPartnerOrderNotifications(
     const sandbox = options?.sandboxOrder || order.isTest;
     const notifyOpts = {
         emailsOnly: options?.emailsOnly,
-        // Requisito: per ordini test via API partner devono partire SEMPRE email staff/partner/buyer.
-        // Quindi skipCustomer non viene forzato dal flag sandbox/isTest.
         skipCustomer: options?.skipCustomer,
         skipOps: options?.skipOps,
     };
@@ -171,11 +178,13 @@ export async function sendPartnerOrderNotifications(
     const tasks: Array<Promise<PartnerOrderNotificationResult>> = [];
 
     if (!notifyOpts.emailsOnly && !sandbox) {
-        // 1) WhatsApp fiorista (Punto A / mini-app)
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
                 try {
-                    const res = await notifyFloristDeliveryLinkForOrder(order.id, { force: true, bypassWindow: true });
+                    const res = await notifyFloristDeliveryLinkForOrder(order.id, {
+                        force: true,
+                        bypassWindow: true,
+                    });
                     return {
                         channel: 'whatsapp_florist',
                         ok: res.ok,
@@ -192,7 +201,6 @@ export async function sendPartnerOrderNotifications(
             })()
         );
 
-        // 2) WhatsApp utente (Punto B)
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
                 try {
@@ -227,7 +235,6 @@ export async function sendPartnerOrderNotifications(
         );
     }
 
-    // 3) Email utente (ricevuta)
     if (!notifyOpts.skipCustomer) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
@@ -243,13 +250,12 @@ export async function sendPartnerOrderNotifications(
                         subject: `Conferma ordine ${order.orderNumber || ''} — FloreMoria`.trim(),
                         html,
                     });
-                    console.log('[Partner Order Email] Buyer:', {
-                        to: buyer,
+                    return {
+                        channel: 'email_customer',
                         ok: r.ok,
-                        resendId: (r as any)?.resendId,
                         error: r.error,
-                    });
-                    return { channel: 'email_customer', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
+                        resendId: (r as { resendId?: string }).resendId,
+                    };
                 } catch (e) {
                     return {
                         channel: 'email_customer',
@@ -261,7 +267,6 @@ export async function sendPartnerOrderNotifications(
         );
     }
 
-    // 4) Email operativa FloreMoria
     if (!notifyOpts.skipOps) {
         tasks.push(
             (async (): Promise<PartnerOrderNotificationResult> => {
@@ -277,13 +282,12 @@ export async function sendPartnerOrderNotifications(
                         emailType: 'partner_ops',
                         orderNumber: order.orderNumber,
                     });
-                    console.log('[Partner Order Email] Staff:', {
-                        to: opsTo,
+                    return {
+                        channel: 'email_ops',
                         ok: r.ok,
-                        resendId: (r as any)?.resendId,
                         error: r.error,
-                    });
-                    return { channel: 'email_ops', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
+                        resendId: (r as { resendId?: string }).resendId,
+                    };
                 } catch (e) {
                     return {
                         channel: 'email_ops',
@@ -295,9 +299,20 @@ export async function sendPartnerOrderNotifications(
         );
     }
 
-    // 4b) Email fiorista assegnato
+    // Email fiorista: solo FloristOrderBrief. Kill switch ON di default post-incidente.
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
+            if (isFloristEmailKillSwitchActive()) {
+                console.warn(
+                    '[partner-order-notifications] email_florist BLOCCATA (privacy kill switch 2026-09-16)',
+                    { orderId: order.id, orderNumber: order.orderNumber }
+                );
+                return {
+                    channel: 'email_florist',
+                    ok: true,
+                    skipped: 'privacy_kill_switch_florist_email_2026_09_16',
+                };
+            }
             if (sandbox) {
                 return { channel: 'email_florist', ok: true, skipped: 'sandbox_order' };
             }
@@ -305,14 +320,14 @@ export async function sendPartnerOrderNotifications(
                 return { channel: 'email_florist', ok: true, skipped: 'no_florist_email' };
             }
             try {
-                const html = buildOrderStaffHtml({
-                    order,
-                    stripeSessionId: 'Nuovo ordine assegnato',
-                });
+                const brief = buildFloristOrderBriefFromOrder(order);
+                const html = renderFloristOrderBriefEmailHtml(brief);
                 const r = await sendFloremTransactionalMail({
                     to: floristEmail,
-                    subject: `Nuovo ordine FloreMoria ${order.orderNumber} — consegna da effettuare`,
+                    subject: `Nuovo ordine FloreMoria ${brief.orderNumber} — consegna da effettuare`,
                     html,
+                    emailType: 'florist_order_brief',
+                    orderNumber: brief.orderNumber,
                 });
                 return { channel: 'email_florist', ok: r.ok, error: r.error };
             } catch (e) {
@@ -325,14 +340,9 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    // 5) Email trasparenza aggregatore (AF) — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
             if (!hasB2b) {
-                console.info('[partner-order-notifications] skip email B2B trasparenza: ordine B2C', {
-                    orderId: order.id,
-                    orderNumber: order.orderNumber,
-                });
                 return { channel: 'email_aggregator', ok: true, skipped: 'no_b2b_partnership' };
             }
             if (!aggregatorTo) {
@@ -356,13 +366,12 @@ export async function sendPartnerOrderNotifications(
                     subject: `[AF/Provider] Ordine ${order.orderNumber} — trasparenza B2B`,
                     html,
                 });
-                console.log('[Partner Order Email] Partner:', {
-                    to: aggregatorTo,
+                return {
+                    channel: 'email_aggregator',
                     ok: r.ok,
-                    resendId: (r as any)?.resendId,
                     error: r.error,
-                });
-                return { channel: 'email_aggregator', ok: r.ok, error: r.error, resendId: (r as any)?.resendId };
+                    resendId: (r as { resendId?: string }).resendId,
+                };
             } catch (e) {
                 return {
                     channel: 'email_aggregator',
@@ -373,7 +382,6 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    // 6) Email agenzia funebre — solo partnership B2B attiva
     tasks.push(
         (async (): Promise<PartnerOrderNotificationResult> => {
             if (sandbox) {
@@ -414,7 +422,6 @@ export async function sendPartnerOrderNotifications(
         })()
     );
 
-    // Non cancellare altri invii in caso di errore: tutte le email vengono tentate in parallelo.
     const settled = await Promise.allSettled(tasks);
     const results: PartnerOrderNotificationResult[] = settled.map((s) => {
         if (s.status === 'fulfilled') return s.value;
@@ -425,22 +432,10 @@ export async function sendPartnerOrderNotifications(
         };
     });
 
-    const staffRes = results.find((r) => r.channel === 'email_ops');
-    const partnerRes = results.find((r) => r.channel === 'email_aggregator');
-    const buyerRes = results.find((r) => r.channel === 'email_customer');
-    console.log(
-        `[Partner Order Email] Staff: ${staffRes?.ok ? 'OK' : 'FAIL'}${
-            (staffRes as any)?.resendId ? ` (${(staffRes as any).resendId})` : ''
-        }, Partner: ${partnerRes?.ok ? 'OK' : 'FAIL'}${
-            (partnerRes as any)?.resendId ? ` (${(partnerRes as any).resendId})` : ''
-        }, Buyer: ${buyerRes?.ok ? 'OK' : 'FAIL'}${
-            (buyerRes as any)?.resendId ? ` (${(buyerRes as any).resendId})` : ''
-        }`,
-    );
-
     console.info('[partner-order-notifications]', {
         orderId: order.id,
         orderNumber: order.orderNumber,
+        floristEmailKillSwitch: isFloristEmailKillSwitchActive(),
         results: results.map((r) => ({
             channel: r.channel,
             ok: r.ok,

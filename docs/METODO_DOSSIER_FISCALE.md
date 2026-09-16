@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.21 — 16 settembre 2026.
+Versione 1.22 — 16 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -755,7 +755,29 @@ senza cancellare le righe di esecuzione.
 
 ---
 
+## 14. Privacy outbound verso fornitori (fioristi)
+
+**Regola.** Ogni destinatario esterno riceve un **oggetto costruito per lui**, non un
+modello interno riusato. Il prezzo di vendita al cliente finale e i contatti del cliente
+(email, telefono, nome acquirente) **non escono mai** verso un fiorista o altro fornitore
+esecutivo.
+
+Conseguenza tecnica: il payload ammissibile verso il fiorista (`FloristOrderBrief`) non
+contiene quei campi. Se il dato non entra nell’oggetto, non può uscire per errore di
+rendering. Vietato inviare al fiorista `buildOrderStaffHtml` o qualsiasi template pensato
+per lo staff interno.
+
+Canali coperti dalla stessa regola: email, WhatsApp, PDF, portale mini-app fiorista.
+
+---
+
 ## Registro delle modifiche
+
+**1.22 — 16 settembre 2026**
+- §14 — **Privacy outbound fornitori**: ogni destinatario esterno riceve un oggetto
+  costruito per lui; prezzo vendita e contatti cliente non escono mai verso un fiorista.
+  Incidente FF-PN-26-005 (modello staff riusato) → `FloristOrderBrief` + kill switch +
+  test build-breaker.
 
 **1.21 — 16 settembre 2026**
 - §5 — **C14** coerenza fee partner (maturato = fattura = Connect; senza fattura → non

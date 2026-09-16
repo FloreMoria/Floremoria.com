@@ -15,7 +15,7 @@ import {
 } from '@/lib/orders/orderNumber';
 import { normalizePhoneE164 } from '@/lib/whatsapp/metaCloudApiClient';
 import { resolveCheckoutPartnerAssociations } from '@/lib/orders/resolveCheckoutPartners';
-import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
+import { calculatePartnerCommissionBreakdown } from '@/lib/pricing/calculatePartnerCommission';
 import { formatDeceasedName } from '@/lib/utils/formatDeceasedName';
 import { formatPersonName } from '@/lib/utils/formatPersonName';
 
@@ -344,9 +344,13 @@ export async function POST(request: Request) {
             }
         }
 
-        const partnerCommissionCents = partnerAssoc.referralPartnerId
-            ? calculatePartnerCommissionCents(finalTotalCents)
-            : null;
+        const feeBreakdown =
+            partnerAssoc.masterPartnerId && partnerAssoc.commissionPercentInclusive
+                ? calculatePartnerCommissionBreakdown(
+                      finalTotalCents,
+                      partnerAssoc.commissionPercentInclusive
+                  )
+                : null;
 
         let order: Awaited<ReturnType<typeof prisma.order.create>> | undefined;
         for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -376,8 +380,10 @@ export async function POST(request: Request) {
                             agencyCode: partnerAssoc.agencyCode,
                             agencyName: partnerAssoc.agencyName,
                             partnershipChannel: partnerAssoc.partnershipChannel,
-                            referralPartnerId: partnerAssoc.referralPartnerId,
-                            partnerCommissionCents,
+                            masterPartnerId: partnerAssoc.masterPartnerId,
+                            partnerCommissionCents: feeBreakdown?.grossCents ?? null,
+                            partnerCommissionTaxableCents: feeBreakdown?.taxableCents ?? null,
+                            partnerCommissionVatCents: feeBreakdown?.vatCents ?? null,
                             ...(notifyEmail ? { partnerNotifyEmail: notifyEmail } : {}),
                             status: 'PENDING',
                             items: {
@@ -475,10 +481,9 @@ export async function POST(request: Request) {
                         itemMargin = baseTotal - costFioristaCents;
                     }
 
-                    // Scaliamo 10% fee se Annuncifunebri su FF e NON è un accessorio
-                    if (!isAccessory && prefix === 'FF' && referralRef === 'f067beff-e351-4484-81b2-5b16bdf27801') {
-                        // arrotondamento all'euro superiore (es. 6,99 -> 7)
-                        const feeEuros = Math.ceil((baseTotal / 100) * 0.10);
+                    // Scaliamo fee master AF su FF (non accessorio) — % da Partner.commissionPercentInclusive a regime; qui margine item.
+                    if (!isAccessory && prefix === 'FF' && (referralRef === 'cmpcosjdo00008oncx62bgs5e' || referralRef === 'annunci_funebri' || referralRef === 'ANNUNCI_FUNEBRI')) {
+                        const feeEuros = Math.round((baseTotal / 100) * 0.1);
                         const referralFeeCents = feeEuros * 100;
                         itemMargin -= referralFeeCents;
                     }

@@ -14,6 +14,7 @@ export type ResolvedAgency = {
     defaultFloristId: string | null;
     agencyNotificationEmail: string | null;
     aggregatorNotificationEmail: string | null;
+    masterPartnerId: string | null;
 };
 
 function normalizeCity(s: string): string {
@@ -33,6 +34,7 @@ const AGENCY_SELECT = {
     defaultFloristId: true,
     agencyNotificationEmail: true,
     aggregatorNotificationEmail: true,
+    masterPartnerId: true,
     partnerType: true,
     isActive: true,
     deletedAt: true,
@@ -46,6 +48,7 @@ function toResolved(agency: {
     defaultFloristId: string | null;
     agencyNotificationEmail: string | null;
     aggregatorNotificationEmail: string | null;
+    masterPartnerId: string | null;
 }): ResolvedAgency {
     return {
         agencyId: agency.id,
@@ -55,6 +58,7 @@ function toResolved(agency: {
         defaultFloristId: agency.defaultFloristId,
         agencyNotificationEmail: agency.agencyNotificationEmail,
         aggregatorNotificationEmail: agency.aggregatorNotificationEmail,
+        masterPartnerId: agency.masterPartnerId,
     };
 }
 

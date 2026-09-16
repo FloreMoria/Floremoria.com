@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { assertOrderNumberMatchesTestFlag } from '@/lib/orders/orderNumberEnvironment';
 
 export type OrderCategoryCode = 'FT' | 'FF' | 'FA' | 'FP';
 
@@ -95,9 +96,24 @@ export async function allocateOrderNumberInTransaction(
     tx: Prisma.TransactionClient,
     orderCategory: string,
     deliveryProvince: string,
-    refDate = new Date()
+    refDate = new Date(),
+    opts?: { isTest?: boolean }
 ): Promise<string> {
-    const basePattern = buildOrderNumberBasePattern(orderCategory, deliveryProvince, refDate);
+    const isTest = opts?.isTest === true;
+    if (isTest) {
+        const prov = normalizeDeliveryProvince(deliveryProvince);
+        const year = refDate.getFullYear().toString().slice(-2);
+        const basePattern = `PT-${prov}-${year}-`;
+        const progressive = await computeNextProgressive(basePattern, tx);
+        const orderNumber = formatOrderNumber(basePattern, progressive);
+        assertOrderNumberMatchesTestFlag(orderNumber, true);
+        return orderNumber;
+    }
+
+    const category = normalizeOrderCategory(orderCategory);
+    const basePattern = buildOrderNumberBasePattern(category, deliveryProvince, refDate);
     const progressive = await computeNextProgressive(basePattern, tx);
-    return formatOrderNumber(basePattern, progressive);
+    const orderNumber = formatOrderNumber(basePattern, progressive);
+    assertOrderNumberMatchesTestFlag(orderNumber, false);
+    return orderNumber;
 }

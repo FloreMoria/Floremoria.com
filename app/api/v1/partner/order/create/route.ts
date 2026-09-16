@@ -1,9 +1,16 @@
 import { NextResponse, after } from 'next/server';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { authenticatePartnerV1, touchPartnerCredentialLastUsed } from '@/lib/partnerV1Auth';
+import {
+    authenticatePartnerV1,
+    touchPartnerCredentialLastUsed,
+    PartnerTestCredentialOnLiveError,
+} from '@/lib/partnerV1Auth';
 import { partnerV1CorsHeaders } from '@/lib/partnerV1Cors';
-import { generatePartnerTunnelOrderNumber } from '@/lib/partnerV1OrderNumber';
+import {
+    generatePartnerTunnelOrderNumber,
+    orderCategoryFromProductSlug,
+} from '@/lib/partnerV1OrderNumber';
 import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrder';
 import {
     findFuneralAgency,
@@ -26,7 +33,10 @@ import { formatPersonName } from '@/lib/utils/formatPersonName';
 import {
     buildPartnerTestFinanceNote,
     resolvePartnerApiPaymentKind,
+    TEST_CREDENTIAL_ON_LIVE_ERROR,
 } from '@/lib/partnerTestCredential';
+import { recomputePartnerFeeMonthClose } from '@/lib/partners/partnerFeeMonthClose';
+import { connectSplitFailurePolicy } from '@/lib/partners/stripeConnectGate';
 
 export const runtime = 'nodejs';
 
@@ -79,7 +89,21 @@ function isNonEmptyString(v: unknown): v is string {
 
 export async function POST(request: Request) {
     try {
-        const auth = await authenticatePartnerV1(request);
+        let auth;
+        try {
+            auth = await authenticatePartnerV1(request);
+        } catch (e) {
+            if (e instanceof PartnerTestCredentialOnLiveError) {
+                return NextResponse.json(
+                    {
+                        error: TEST_CREDENTIAL_ON_LIVE_ERROR.error,
+                        code: TEST_CREDENTIAL_ON_LIVE_ERROR.code,
+                    },
+                    { status: 403, headers: jsonHeaders(request) }
+                );
+            }
+            throw e;
+        }
         if (!auth) return unauthorized(request);
 
         let body: unknown;
@@ -110,6 +134,8 @@ export async function POST(request: Request) {
                 partnerType: true,
                 partnershipChannel: true,
                 uniqueCode: true,
+                masterPartnerId: true,
+                commissionPercentInclusive: true,
             },
         });
         if (!partner) {
@@ -123,6 +149,21 @@ export async function POST(request: Request) {
                 { error: 'La credenziale API è associata a un partner non B2B.' },
                 { status: 403, headers: jsonHeaders(request) }
             );
+        }
+
+        // % fee dal master (se agenzia sotto aggregatore) o dal partner autenticato.
+        let commissionPercentInclusive: number | null =
+            partner.commissionPercentInclusive != null
+                ? Number(partner.commissionPercentInclusive)
+                : null;
+        if (partner.masterPartnerId) {
+            const master = await prisma.partner.findFirst({
+                where: { id: partner.masterPartnerId, deletedAt: null },
+                select: { commissionPercentInclusive: true },
+            });
+            if (master?.commissionPercentInclusive != null) {
+                commissionPercentInclusive = Number(master.commissionPercentInclusive);
+            }
         }
 
         const deceasedNameRaw = b.deceasedName;
@@ -300,7 +341,12 @@ export async function POST(request: Request) {
             });
         }
 
-        const resolved: { productId: string; quantity: number; priceCents: number }[] = [];
+        const resolved: {
+            productId: string;
+            quantity: number;
+            priceCents: number;
+            categorySlug: string | null;
+        }[] = [];
         for (const item of lineItems) {
             const pid = typeof item.productId === 'string' ? item.productId.trim() : '';
             const qty = Math.max(1, Math.min(99, Number(item.quantity) || 1));
@@ -312,6 +358,7 @@ export async function POST(request: Request) {
             }
             const product = await prisma.product.findFirst({
                 where: { id: pid, isActive: true, deletedAt: null },
+                include: { category: { select: { slug: true } } },
             });
             if (!product) {
                 return NextResponse.json(
@@ -319,11 +366,17 @@ export async function POST(request: Request) {
                     { status: 400, headers: jsonHeaders(request) }
                 );
             }
-            resolved.push({ productId: product.id, quantity: qty, priceCents: product.basePriceCents });
+            resolved.push({
+                productId: product.id,
+                quantity: qty,
+                priceCents: product.basePriceCents,
+                categorySlug: product.category?.slug ?? null,
+            });
         }
 
         const subtotalCents = resolved.reduce((acc, r) => acc + r.priceCents * r.quantity, 0);
         const isTestOrder = auth.isTestCredential;
+        const orderCategory = orderCategoryFromProductSlug(resolved[0]?.categorySlug);
         const partnerAlreadyPaid =
             Boolean(stripeCheckoutSessionId || stripePaymentIntentId) || partner.isB2B || isTestOrder;
         const partnerPaymentKind = resolvePartnerApiPaymentKind(isTestOrder);
@@ -342,8 +395,10 @@ export async function POST(request: Request) {
             authPartner: partner,
             resolvedAgency,
             totalPriceCents: subtotalCents,
+            commissionPercentInclusive,
             partnershipChannelOverride: partnershipChannelBody,
             agencyNameOverride: agencyNameBody,
+            apiCredentialId: auth.credentialId,
         });
 
         let order;
@@ -357,7 +412,10 @@ export async function POST(request: Request) {
                     }
                 }
 
-                const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince);
+                const orderNumber = await generatePartnerTunnelOrderNumber(tx, deliveryProvince, {
+                    isTest: isTestOrder,
+                    orderCategory,
+                });
                 const b2bFields = buildB2bOrderCreateData(association, effectiveFloristPartnerId);
                 const created = await tx.order.create({
                     data: {
@@ -408,6 +466,8 @@ export async function POST(request: Request) {
             });
         } catch (createErr) {
             // Concorrenza: unique su stripeTransactionId → restituisci l'ordine già creato.
+            // Policy Connect split (runtime futuro): ordine resta, fee PENDING, no doppio costo.
+            void connectSplitFailurePolicy;
             if (
                 createErr instanceof Prisma.PrismaClientKnownRequestError &&
                 createErr.code === 'P2002' &&
@@ -461,10 +521,20 @@ export async function POST(request: Request) {
             });
 
             revalidatePartnerOrderDashboardCaches({
-                referralPartnerId: association.referralPartnerId,
+                masterPartnerId: association.masterPartnerId,
                 agencyId: association.agencyId,
                 floristPartnerId: effectiveFloristPartnerId,
             });
+
+            if (!isTestOrder && association.masterPartnerId && association.partnerCommissionCents) {
+                const ym = `${createdOrder.createdAt.getUTCFullYear()}-${String(createdOrder.createdAt.getUTCMonth() + 1).padStart(2, '0')}`;
+                await recomputePartnerFeeMonthClose({
+                    masterPartnerId: association.masterPartnerId,
+                    yearMonth: ym,
+                }).catch((feeErr) => {
+                    console.error('[B2B Partner API] PartnerFeeMonthClose recompute failed:', feeErr);
+                });
+            }
 
             try {
                 const results = await sendPartnerOrderNotifications(createdOrder.id, {
@@ -503,9 +573,12 @@ export async function POST(request: Request) {
                     currency: createdOrder.currency,
                     agencyId: createdOrder.agencyId,
                     partnerId: createdOrder.partnerId,
-                    referralPartnerId: createdOrder.referralPartnerId,
+                    masterPartnerId: createdOrder.masterPartnerId,
+                    apiCredentialId: createdOrder.apiCredentialId,
                     partnershipChannel: createdOrder.partnershipChannel,
                     partnerCommissionCents: createdOrder.partnerCommissionCents,
+                    partnerCommissionTaxableCents: createdOrder.partnerCommissionTaxableCents,
+                    partnerCommissionVatCents: createdOrder.partnerCommissionVatCents,
                     partnerCommissionSettlementStatus: createdOrder.partnerCommissionSettlementStatus,
                     isTest: createdOrder.isTest,
                     partnerPaymentStatus: createdOrder.partnerPaymentStatus,

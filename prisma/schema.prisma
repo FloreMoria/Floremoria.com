@@ -245,12 +245,30 @@ model Order {
   partner                Partner?          @relation("OrderFloristPartner", fields: [partnerId], references: [id])
   agency                 Partner?          @relation("OrderFuneralAgency", fields: [agencyId], references: [id], onDelete: SetNull)
   /**
-   * Partner commerciale che matura la fee (aggregatore o agenzia diretta).
+   * @deprecated Legacy: creditore fee. Nuove scritture usano masterPartnerId (aggregatore)
+   * o agencyId (agenzia diretta). Mantenuto in sola lettura per backfill storico.
    */
   referralPartnerId      String?           @map("referral_partner_id")
   referralPartner        Partner?          @relation("OrderReferralPartner", fields: [referralPartnerId], references: [id], onDelete: SetNull)
-  /** Quota spettante al partner/agenzia (10% lordo ordine, IVA compresa). */
+  /**
+   * Aggregatore master (es. Annunci Funebri). Distinto da partnerId (fiorista) e agencyId.
+   */
+  masterPartnerId        String?           @map("master_partner_id")
+  masterPartner          Partner?          @relation("OrderMasterPartner", fields: [masterPartnerId], references: [id], onDelete: SetNull)
+  /** Credenziale API usata in ingresso (attribuzione verificabile a posteriori). */
+  apiCredentialId        String?           @map("api_credential_id")
+  apiCredential          PartnerApiCredential? @relation(fields: [apiCredentialId], references: [id], onDelete: SetNull)
+  /**
+   * Numero ordine precedente dopo rinumerazione (es. PT-VE-26-002 → FF-VE-26-001).
+   * Ricercabile: chi cerca il legacy trova l'ordine.
+   */
+  legacyOrderNumber      String?           @map("legacy_order_number") @db.VarChar(32)
+  /** Fee partner lorda IVA inclusa (centesimi) — numero autorevole per-ordine. */
   partnerCommissionCents Int?              @map("partner_commission_cents")
+  /** Imponibile fee (centesimi) — provvigione al 22%: lordo/1,22. */
+  partnerCommissionTaxableCents Int?       @map("partner_commission_taxable_cents")
+  /** IVA 22% sulla fee (centesimi) = lordo − imponibile. */
+  partnerCommissionVatCents Int?           @map("partner_commission_vat_cents")
   /** Stato liquidazione mensile fee partner/agenzia. */
   partnerCommissionSettlementStatus PartnerCommissionSettlementStatus @default(PENDING) @map("partner_commission_settlement_status")
   user                   User?             @relation(fields: [userId], references: [id])
@@ -287,6 +305,9 @@ model Order {
   customerReceipts       CustomerOrderReceipt[]
 
   @@index([externalAnnouncementId])
+  @@index([legacyOrderNumber])
+  @@index([masterPartnerId])
+  @@index([apiCredentialId])
 }
 
 model OrderItem {
@@ -481,19 +502,39 @@ model Partner {
   agencyNotificationEmail String?         @map("agency_notification_email") @db.VarChar(255)
   /** Email provider/aggregatore (default operativa: assistenza@floremoria.com). */
   aggregatorNotificationEmail String?     @map("aggregator_notification_email") @db.VarChar(255)
+  /**
+   * Master aggregatore di appartenenza (solo FUNERAL_AGENCY → AGGREGATOR).
+   * Es. IOF San Marco → Annunci Funebri.
+   */
+  masterPartnerId String?                 @map("master_partner_id")
+  masterPartner   Partner?                @relation("AgencyMasterPartner", fields: [masterPartnerId], references: [id], onDelete: SetNull)
+  childAgencies   Partner[]               @relation("AgencyMasterPartner")
+  /**
+   * Percentuale fee IVA inclusa sul lordo cliente (solo AGGREGATOR). Es. 10.00 = 10%.
+   * Configurabile per partner — mai hardcodata nel codice di calcolo.
+   */
+  commissionPercentInclusive Decimal?     @map("commission_percent_inclusive") @db.Decimal(5, 2)
+  /** Account Stripe Connect del master (acct_…). */
+  stripeConnectAccountId String?          @map("stripe_connect_account_id") @db.VarChar(64)
+  stripeConnectChargesEnabled Boolean?    @map("stripe_connect_charges_enabled")
+  stripeConnectPayoutsEnabled Boolean?    @map("stripe_connect_payouts_enabled")
+  stripeConnectVerifiedAt DateTime?       @map("stripe_connect_verified_at")
   orders          Order[]                 @relation("OrderFloristPartner")
   agencyOrders    Order[]                 @relation("OrderFuneralAgency")
   referralOrders  Order[]                 @relation("OrderReferralPartner")
+  masterOrders    Order[]                 @relation("OrderMasterPartner")
   deliveryProofs  DeliveryProof[]
   handoffSessions PartnerHandoffSession[]
   apiCredentials  PartnerApiCredential[]
   deceasedAssignments PartnerDeceasedAssignment[]
+  feeMonthCloses  PartnerFeeMonthClose[]
 
   userId          String?                 @unique @map("user_id")
   user            User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([partnerType, deletedAt])
   @@index([defaultFloristId])
+  @@index([masterPartnerId])
 }
 
 /**
@@ -512,23 +553,71 @@ model PartnerHandoffSession {
   @@map("partner_handoff_sessions")
 }
 
+enum PartnerApiCredentialEnvironment {
+  TEST
+  LIVE
+}
+
 /**
- * Credenziali API per `POST /api/external/order-data` senza variabili Vercel (chiave pubblica + segreto).
+ * Credenziali API partner (master o agenzia). Segreto solo in hash; plain one-shot in Hub.
+ * Formato: fmp_test_<slug> / fmp_live_<slug> + fms_test_* / fms_live_*.
  */
 model PartnerApiCredential {
-  id         String    @id @default(cuid())
-  partnerId  String    @map("partner_id")
-  partner    Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  label      String
-  publicId   String    @unique @map("public_id") @db.VarChar(80)
-  secretHash String    @map("secret_hash") @db.Text
-  isActive   Boolean   @default(true) @map("is_active")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  revokedAt  DateTime? @map("revoked_at")
-  lastUsedAt DateTime? @map("last_used_at")
+  id           String                           @id @default(cuid())
+  partnerId    String                           @map("partner_id")
+  partner      Partner                          @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  label        String
+  publicId     String                           @unique @map("public_id") @db.VarChar(80)
+  secretHash   String                           @map("secret_hash") @db.Text
+  environment  PartnerApiCredentialEnvironment  @default(TEST) @map("environment")
+  isActive     Boolean                          @default(true) @map("is_active")
+  createdAt    DateTime                         @default(now()) @map("created_at")
+  revokedAt    DateTime?                        @map("revoked_at")
+  regeneratedAt DateTime?                       @map("regenerated_at")
+  lastUsedAt   DateTime?                        @map("last_used_at")
+  orders       Order[]
 
   @@index([partnerId])
+  @@index([environment, isActive])
   @@map("partner_api_credentials")
+}
+
+enum PartnerFeeMonthCloseStatus {
+  ATTESA
+  RICEVUTA
+  QUADRATA
+  NON_VERIFICABILE
+  ECCEZIONE
+}
+
+/**
+ * Chiusura mensile fee master partner (C14).
+ * maturedCents = somma fee arrotondate per singolo ordine (numero autorevole).
+ * Fattura e trattenute Connect si confrontano con matured, non con % sul fatturato.
+ */
+model PartnerFeeMonthClose {
+  id                   String                     @id @default(cuid())
+  masterPartnerId      String                     @map("master_partner_id")
+  masterPartner        Partner                    @relation(fields: [masterPartnerId], references: [id], onDelete: Cascade)
+  /** YYYY-MM */
+  yearMonth            String                     @map("year_month") @db.VarChar(7)
+  maturedCents         Int                        @default(0) @map("matured_cents")
+  maturedTaxableCents  Int                        @default(0) @map("matured_taxable_cents")
+  maturedVatCents      Int                        @default(0) @map("matured_vat_cents")
+  invoiceCents         Int?                       @map("invoice_cents")
+  connectCents         Int?                       @map("connect_cents")
+  /** Tolleranza dichiarata su scostamenti di arrotondamento (default 1 cent). */
+  toleranceCents       Int                        @default(1) @map("tolerance_cents")
+  status               PartnerFeeMonthCloseStatus @default(ATTESA)
+  exceptionNote        String?                    @map("exception_note") @db.Text
+  invoiceReceivedAt    DateTime?                  @map("invoice_received_at")
+  closedAt             DateTime?                  @map("closed_at")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+
+  @@unique([masterPartnerId, yearMonth])
+  @@index([yearMonth, status])
+  @@map("partner_fee_month_closes")
 }
 
 model Supplier {

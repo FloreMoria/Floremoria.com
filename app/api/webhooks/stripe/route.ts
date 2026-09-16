@@ -9,7 +9,7 @@ import { autoAssignKnownTombOrder } from '@/lib/deceased/autoAssignKnownTombOrde
 import { ensurePaidOrderEntities } from '@/lib/orders/ensurePaidOrderEntities';
 import { runVeraPostPaymentWorkflow } from '@/lib/vera/orderWorkflow';
 import { sendPartnerOrderNotifications } from '@/lib/orders/partnerOrderNotifications';
-import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
+import { calculatePartnerCommissionBreakdown } from '@/lib/pricing/calculatePartnerCommission';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -169,10 +169,16 @@ export async function POST(request: Request) {
     // Prima transizione a pagato: allinea DB locale, benvenuto WhatsApp VERA.
     if (isFirstPaidTransition) {
         const commissionUpdate =
-            order.referralPartnerId && !order.partnerCommissionCents
-                ? {
-                      partnerCommissionCents: calculatePartnerCommissionCents(order.totalPriceCents),
-                  }
+            order.masterPartnerId && !order.partnerCommissionCents
+                ? (() => {
+                      // Fallback 10% solo se manca % sul master (legacy webhook path).
+                      const b = calculatePartnerCommissionBreakdown(order.totalPriceCents, 10);
+                      return {
+                          partnerCommissionCents: b.grossCents,
+                          partnerCommissionTaxableCents: b.taxableCents,
+                          partnerCommissionVatCents: b.vatCents,
+                      };
+                  })()
                 : {};
 
         if (Object.keys(commissionUpdate).length > 0) {

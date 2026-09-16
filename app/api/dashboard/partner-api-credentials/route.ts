@@ -4,14 +4,25 @@ import {
     generatePartnerApiPublicId,
     generatePartnerApiSecretPlain,
     hashPartnerApiSecret,
+    inferEnvironmentFromPublicId,
 } from '@/lib/partnerApiSecret';
+import { verifyPartnerStripeConnect } from '@/lib/partners/stripeConnectGate';
+import type { PartnerApiCredentialEnvironment } from '@prisma/client';
 
 export async function GET() {
     try {
         const rows = await prisma.partnerApiCredential.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
-                partner: { select: { id: true, shopName: true, uniqueCode: true } },
+                partner: {
+                    select: {
+                        id: true,
+                        shopName: true,
+                        uniqueCode: true,
+                        partnerType: true,
+                        masterPartnerId: true,
+                    },
+                },
             },
         });
         return NextResponse.json(
@@ -19,9 +30,11 @@ export async function GET() {
                 id: r.id,
                 label: r.label,
                 publicId: r.publicId,
+                environment: r.environment,
                 isActive: r.isActive,
                 createdAt: r.createdAt.toISOString(),
                 revokedAt: r.revokedAt?.toISOString() ?? null,
+                regeneratedAt: r.regeneratedAt?.toISOString() ?? null,
                 lastUsedAt: r.lastUsedAt?.toISOString() ?? null,
                 partner: r.partner,
             }))
@@ -32,14 +45,20 @@ export async function GET() {
     }
 }
 
-type CreateBody = { partnerId?: string; label?: string };
+type CreateBody = {
+    partnerId?: string;
+    label?: string;
+    environment?: 'TEST' | 'LIVE';
+};
 
-/** Crea credenziale; il **segreto** è restituito una sola volta nella risposta. */
+/** Crea credenziale; il **segreto** è restituito una sola volta nella risposta. Mai loggato. */
 export async function POST(request: Request) {
     try {
         const body = (await request.json()) as CreateBody;
         const partnerId = body.partnerId?.trim();
         const label = body.label?.trim() || 'Credenziale API';
+        const environment: PartnerApiCredentialEnvironment =
+            body.environment === 'LIVE' ? 'LIVE' : 'TEST';
         if (!partnerId) {
             return NextResponse.json({ error: 'partnerId obbligatorio.' }, { status: 400 });
         }
@@ -50,24 +69,55 @@ export async function POST(request: Request) {
         if (!partner) {
             return NextResponse.json({ error: 'Partner non trovato.' }, { status: 404 });
         }
+        if (partner.partnerType === 'FLORIST') {
+            return NextResponse.json(
+                { error: 'I fioristi non hanno credenziali API di acquisizione ordini.' },
+                { status: 400 }
+            );
+        }
         if (!partner.uniqueCode?.trim()) {
             return NextResponse.json(
-                {
-                    error:
-                        'Il partner non ha un codice referral (uniqueCode). Impostalo in Fioristi prima di creare credenziali API.',
-                },
+                { error: 'Il partner non ha uniqueCode. Impostalo prima di creare credenziali.' },
                 { status: 400 }
             );
         }
 
-        let publicId = generatePartnerApiPublicId();
+        if (environment === 'LIVE') {
+            const gateTarget =
+                partner.partnerType === 'FUNERAL_AGENCY' && partner.masterPartnerId
+                    ? partner.masterPartnerId
+                    : partner.id;
+            const connect = await verifyPartnerStripeConnect(gateTarget);
+            if (partner.partnerType === 'AGGREGATOR' && !connect.ok) {
+                return NextResponse.json(
+                    {
+                        error: `Chiavi live bloccate: Stripe Connect non verificato. ${connect.detail}`,
+                        code: 'STRIPE_CONNECT_NOT_READY',
+                        connect,
+                    },
+                    { status: 409 }
+                );
+            }
+            if (partner.partnerType === 'FUNERAL_AGENCY' && partner.masterPartnerId && !connect.ok) {
+                return NextResponse.json(
+                    {
+                        error: `Chiavi live agenzia bloccate: Connect del master non verificato. ${connect.detail}`,
+                        code: 'STRIPE_CONNECT_NOT_READY',
+                        connect,
+                    },
+                    { status: 409 }
+                );
+            }
+        }
+
+        let publicId = generatePartnerApiPublicId(environment, partner.uniqueCode);
         for (let i = 0; i < 5; i++) {
             const clash = await prisma.partnerApiCredential.findUnique({ where: { publicId } });
             if (!clash) break;
-            publicId = generatePartnerApiPublicId();
+            publicId = generatePartnerApiPublicId(environment, partner.uniqueCode);
         }
 
-        const secretPlain = generatePartnerApiSecretPlain();
+        const secretPlain = generatePartnerApiSecretPlain(environment);
         const secretHash = hashPartnerApiSecret(secretPlain);
 
         const row = await prisma.partnerApiCredential.create({
@@ -76,24 +126,29 @@ export async function POST(request: Request) {
                 label: label.slice(0, 120),
                 publicId,
                 secretHash,
+                environment,
                 isActive: true,
             },
             include: {
-                partner: { select: { id: true, shopName: true, uniqueCode: true } },
+                partner: { select: { id: true, shopName: true, uniqueCode: true, partnerType: true } },
             },
         });
 
+        // Non loggare secretPlain.
         return NextResponse.json({
             id: row.id,
             publicId: row.publicId,
             secret: secretPlain,
+            environment: row.environment,
             label: row.label,
             partner: row.partner,
             message:
-                'Salva subito il segreto: non sarà più mostrato. Autenticazione: header X-Florem-Api-Key + Authorization Bearer.',
+                'Copia subito il segreto: non sarà più mostrato. Autenticazione: X-Partner-Key + Bearer.',
         });
     } catch (e) {
-        console.error(e);
+        console.error('[partner-api-credentials] create failed', e instanceof Error ? e.message : e);
         return NextResponse.json({ error: 'Creazione credenziale fallita.' }, { status: 500 });
     }
 }
+
+void inferEnvironmentFromPublicId;

@@ -1,37 +1,45 @@
 /**
- * Ingestion ordini B2B via API REST — associazioni partner/agenzia, fee 10%, cache dashboard.
+ * Ingestion ordini B2B via API REST — tre ruoli (master / agenzia / fiorista), fee % su master.
+ * Stop scrittura su referralPartnerId (legacy sola lettura).
  */
 import type { Partner, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import type { ResolvedAgency } from '@/lib/orders/resolveAgencyFlorist';
-import { calculatePartnerCommissionCents } from '@/lib/pricing/calculatePartnerCommission';
+import { calculatePartnerCommissionBreakdown } from '@/lib/pricing/calculatePartnerCommission';
 
 export type PartnerAuthSnapshot = Pick<
     Partner,
-    'id' | 'shopName' | 'partnerType' | 'partnershipChannel' | 'uniqueCode'
+    'id' | 'shopName' | 'partnerType' | 'partnershipChannel' | 'uniqueCode' | 'masterPartnerId'
 >;
 
 export type B2bOrderAssociationInput = {
     authPartner: PartnerAuthSnapshot;
     resolvedAgency: ResolvedAgency | null;
     totalPriceCents: number;
+    /** % fee IVA inclusa dal master (o agenzia diretta). */
+    commissionPercentInclusive: number | null;
     partnershipChannelOverride?: string | null;
     agencyNameOverride?: string | null;
+    apiCredentialId?: string | null;
 };
 
 export type B2bOrderAssociationResult = {
+    /** Fiorista esecutore — valorizzato dal chiamante via buildB2bOrderCreateData. */
     partnerId: string | null;
     agencyId: string | null;
     agencyCode: string | null;
     agencyName: string | null;
-    referralPartnerId: string | null;
+    masterPartnerId: string | null;
+    apiCredentialId: string | null;
     partnershipChannel: string | null;
     partnerCommissionCents: number | null;
+    partnerCommissionTaxableCents: number | null;
+    partnerCommissionVatCents: number | null;
     partnerCommissionSettlementStatus: 'PENDING';
 };
 
 /**
- * Risolve fiorista esecutore, agenzia, partner fee e canale commerciale per ordini API REST.
+ * Risolve fiorista esecutore, agenzia, master e fee per ordini API REST.
  */
 export function resolveB2bOrderAssociations(input: B2bOrderAssociationInput): B2bOrderAssociationResult {
     const { authPartner, resolvedAgency, totalPriceCents } = input;
@@ -40,20 +48,32 @@ export function resolveB2bOrderAssociations(input: B2bOrderAssociationInput): B2
     let agencyCode = resolvedAgency?.agencyCode ?? null;
     let agencyName = input.agencyNameOverride?.trim() || resolvedAgency?.agencyName || null;
 
-    // Agenzia funebre autenticata direttamente senza agencyId nel payload.
     if (!agencyId && authPartner.partnerType === 'FUNERAL_AGENCY') {
         agencyId = authPartner.id;
         agencyCode = agencyCode ?? authPartner.uniqueCode;
         agencyName = agencyName ?? authPartner.shopName;
     }
 
-    let referralPartnerId: string | null = null;
+    let masterPartnerId: string | null = null;
     if (authPartner.partnerType === 'AGGREGATOR') {
-        referralPartnerId = authPartner.id;
+        masterPartnerId = authPartner.id;
     } else if (authPartner.partnerType === 'FUNERAL_AGENCY') {
-        referralPartnerId = agencyId ?? authPartner.id;
-    } else if (resolvedAgency) {
-        referralPartnerId = authPartner.id;
+        masterPartnerId = authPartner.masterPartnerId ?? null;
+    } else if (resolvedAgency?.masterPartnerId) {
+        masterPartnerId = resolvedAgency.masterPartnerId;
+    }
+
+    const feeCreditorId = masterPartnerId ?? (authPartner.partnerType === 'FUNERAL_AGENCY' ? agencyId : null);
+    const percent = input.commissionPercentInclusive;
+
+    let partnerCommissionCents: number | null = null;
+    let partnerCommissionTaxableCents: number | null = null;
+    let partnerCommissionVatCents: number | null = null;
+    if (feeCreditorId && percent != null && percent > 0) {
+        const b = calculatePartnerCommissionBreakdown(totalPriceCents, percent);
+        partnerCommissionCents = b.grossCents;
+        partnerCommissionTaxableCents = b.taxableCents;
+        partnerCommissionVatCents = b.vatCents;
     }
 
     const partnershipChannel =
@@ -62,25 +82,24 @@ export function resolveB2bOrderAssociations(input: B2bOrderAssociationInput): B2
         authPartner.partnershipChannel?.trim() ||
         defaultPartnershipChannel(authPartner);
 
-    const partnerCommissionCents = referralPartnerId
-        ? calculatePartnerCommissionCents(totalPriceCents)
-        : null;
-
     return {
         partnerId: null,
         agencyId,
         agencyCode,
         agencyName,
-        referralPartnerId,
+        masterPartnerId,
+        apiCredentialId: input.apiCredentialId ?? null,
         partnershipChannel,
         partnerCommissionCents,
+        partnerCommissionTaxableCents,
+        partnerCommissionVatCents,
         partnerCommissionSettlementStatus: 'PENDING',
     };
 }
 
 function defaultPartnershipChannel(partner: PartnerAuthSnapshot): string {
     if (partner.partnerType === 'FUNERAL_AGENCY') {
-        return 'AGENCY_DIRECT';
+        return partner.masterPartnerId ? 'ANNUNCI_FUNEBRI' : 'AGENCY_DIRECT';
     }
     if (partner.partnerType === 'AGGREGATOR') {
         if (/annunci\s*funebr/i.test(partner.shopName) || partner.uniqueCode?.toUpperCase().startsWith('AF')) {
@@ -101,7 +120,6 @@ export type PartnerOrderIngestionLogContext = {
     totalPriceCents: number;
 };
 
-/** Log strutturato per diagnostica ordini B2B (tag partner mittente). */
 export function logPartnerOrderIngestion(ctx: PartnerOrderIngestionLogContext): void {
     console.info('[partner-order-ingestion]', {
         tag: `partner:${ctx.authPartner.id}`,
@@ -114,16 +132,18 @@ export function logPartnerOrderIngestion(ctx: PartnerOrderIngestionLogContext): 
         totalPriceCents: ctx.totalPriceCents,
         floristPartnerId: ctx.floristPartnerId,
         agencyId: ctx.association.agencyId,
-        referralPartnerId: ctx.association.referralPartnerId,
+        masterPartnerId: ctx.association.masterPartnerId,
+        apiCredentialId: ctx.association.apiCredentialId,
         partnershipChannel: ctx.association.partnershipChannel,
         partnerCommissionCents: ctx.association.partnerCommissionCents,
+        partnerCommissionTaxableCents: ctx.association.partnerCommissionTaxableCents,
+        partnerCommissionVatCents: ctx.association.partnerCommissionVatCents,
         settlementStatus: ctx.association.partnerCommissionSettlementStatus,
     });
 }
 
-/** Invalida cache Next.js delle pagine dashboard che mostrano metriche partner/agenzia. */
 export function revalidatePartnerOrderDashboardCaches(input: {
-    referralPartnerId?: string | null;
+    masterPartnerId?: string | null;
     agencyId?: string | null;
     floristPartnerId?: string | null;
 }): void {
@@ -135,8 +155,8 @@ export function revalidatePartnerOrderDashboardCaches(input: {
         revalidatePath('/api/dashboard/metrics');
         revalidatePath('/api/dashboard/finance');
 
-        if (input.referralPartnerId) {
-            revalidatePath(`/dashboard/partners/${input.referralPartnerId}`);
+        if (input.masterPartnerId) {
+            revalidatePath(`/dashboard/partners/${input.masterPartnerId}`);
         }
         if (input.agencyId) {
             revalidatePath(`/dashboard/agenzie/${input.agencyId}`);
@@ -145,7 +165,7 @@ export function revalidatePartnerOrderDashboardCaches(input: {
             revalidatePath(`/dashboard/fioristi/${input.floristPartnerId}`);
         }
     } catch {
-        // Safe fallback in test or execution environments where static store is absent
+        // Safe fallback when static store absent
     }
 }
 
@@ -158,9 +178,12 @@ export function buildB2bOrderCreateData(
     | 'agencyId'
     | 'agencyCode'
     | 'agencyName'
-    | 'referralPartnerId'
+    | 'masterPartnerId'
+    | 'apiCredentialId'
     | 'partnershipChannel'
     | 'partnerCommissionCents'
+    | 'partnerCommissionTaxableCents'
+    | 'partnerCommissionVatCents'
     | 'partnerCommissionSettlementStatus'
 > {
     return {
@@ -168,9 +191,12 @@ export function buildB2bOrderCreateData(
         agencyId: association.agencyId,
         agencyCode: association.agencyCode,
         agencyName: association.agencyName,
-        referralPartnerId: association.referralPartnerId,
+        masterPartnerId: association.masterPartnerId,
+        apiCredentialId: association.apiCredentialId,
         partnershipChannel: association.partnershipChannel,
         partnerCommissionCents: association.partnerCommissionCents,
+        partnerCommissionTaxableCents: association.partnerCommissionTaxableCents,
+        partnerCommissionVatCents: association.partnerCommissionVatCents,
         partnerCommissionSettlementStatus: association.partnerCommissionCents
             ? association.partnerCommissionSettlementStatus
             : undefined,

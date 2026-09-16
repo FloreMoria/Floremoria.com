@@ -149,8 +149,10 @@ export async function resolveOrderByPublicRef<S extends Prisma.OrderSelect>(
     for (const cand of candidates) {
         orConditions.push({ id: cand });
         orConditions.push({ orderNumber: cand });
+        orConditions.push({ legacyOrderNumber: cand });
         orConditions.push({ proofFotoCode: cand });
         orConditions.push({ orderNumber: { equals: cand, mode: 'insensitive' } });
+        orConditions.push({ legacyOrderNumber: { equals: cand, mode: 'insensitive' } });
         orConditions.push({ proofFotoCode: { equals: cand, mode: 'insensitive' } });
     }
 
@@ -174,6 +176,7 @@ export async function resolveOrderByPublicRef<S extends Prisma.OrderSelect>(
                     deletedAt: null,
                     OR: [
                         { orderNumber: { contains: cand, mode: 'insensitive' } },
+                        { legacyOrderNumber: { contains: cand, mode: 'insensitive' } },
                         { id: { contains: cand, mode: 'insensitive' } },
                     ],
                 },

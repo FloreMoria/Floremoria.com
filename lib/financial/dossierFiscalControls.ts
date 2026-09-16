@@ -19,6 +19,7 @@ import {
     resolveQuarterBounds,
     type TaxQuarter,
 } from '@/lib/financial/taxQuarterly';
+import { controlC14 as runPartnerFeeC14 } from '@/lib/partners/partnerFeeMonthClose';
 
 export type DossierControlId =
     | 'C1'
@@ -33,7 +34,8 @@ export type DossierControlId =
     | 'C10'
     | 'C11'
     | 'C12'
-    | 'C13';
+    | 'C13'
+    | 'C14';
 
 export type DossierControlResult = {
     id: DossierControlId;
@@ -990,6 +992,52 @@ export async function controlC13(year: number, _quarter: TaxQuarter): Promise<Do
     };
 }
 
+/**
+ * C14 — Coerenza fee partner (maturato = fattura = Connect).
+ * Senza fattura del mese → non verificabile (non fallito). Verde raggiungibile a riposo.
+ */
+export async function controlC14(year: number, quarter: TaxQuarter): Promise<DossierControlResult> {
+    const { start, end } = resolveQuarterBounds(year, quarter);
+    const months: string[] = [];
+    const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+    while (cursor < end) {
+        months.push(
+            `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`
+        );
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+
+    const snapshots = [];
+    let anyVerifiable = false;
+    let anyFailed = false;
+    let maxAbs = 0;
+    for (const ym of months) {
+        const [y, m] = ym.split('-').map(Number);
+        const r = await runPartnerFeeC14(y!, m!);
+        snapshots.push(...r.snapshots);
+        if (r.verifiable) anyVerifiable = true;
+        if (r.verifiable && !r.passed) anyFailed = true;
+        if (r.delta > maxAbs) maxAbs = r.delta;
+    }
+
+    return {
+        id: 'C14',
+        name: 'Coerenza fee partner (maturato = fattura = Connect)',
+        formula: 'SUM(fee arrotondate per ordine) − fattura − trattenute Connect = 0 (±tolleranza 1¢)',
+        measured: maxAbs,
+        expected: 0,
+        delta: maxAbs,
+        unit: 'cents',
+        passed: !anyFailed,
+        verifiable: anyVerifiable,
+        detail: !anyVerifiable
+            ? `C14 non verificabile su T${quarter} ${year}: manca fattura mensile (non fallito).`
+            : anyFailed
+              ? `C14 ECCEZIONE su T${quarter} ${year} (Δ max ${maxAbs}¢).`
+              : `C14 OK su T${quarter} ${year}.`,
+    };
+}
+
 export async function runAllDossierControls(
     year: number,
     quarter: TaxQuarter
@@ -1008,10 +1056,11 @@ export async function runAllDossierControls(
         await controlC11(year, quarter),
         await controlC12(year, quarter),
         await controlC13(year, quarter),
+        await controlC14(year, quarter),
     ];
 }
 
-/** Esegue C1–C13 e persiste lo snapshot per il badge Contabilità. */
+/** Esegue C1–C14 e persiste lo snapshot per il badge Contabilità. */
 export async function runAndPersistDossierControls(
     year: number,
     quarter: TaxQuarter

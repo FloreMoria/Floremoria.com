@@ -1,6 +1,10 @@
 import prisma from '@/lib/prisma';
 import { verifyPartnerApiSecret } from '@/lib/partnerApiSecret';
-import { isPartnerTestCredential } from '@/lib/partnerTestCredential';
+import {
+    isPartnerTestCredential,
+    isPartnerApiLiveRuntime,
+    TEST_CREDENTIAL_ON_LIVE_ERROR,
+} from '@/lib/partnerTestCredential';
 
 export type PartnerV1AuthContext = {
     partnerId: string;
@@ -10,10 +14,17 @@ export type PartnerV1AuthContext = {
     isTestCredential: boolean;
 };
 
+export class PartnerTestCredentialOnLiveError extends Error {
+    readonly code = typeof TEST_CREDENTIAL_ON_LIVE_ERROR.code;
+    constructor() {
+        super(TEST_CREDENTIAL_ON_LIVE_ERROR.error);
+        this.name = 'PartnerTestCredentialOnLiveError';
+    }
+}
+
 /**
  * Partner API v1: autenticazione allineata alle credenziali dashboard (`PartnerApiCredential`).
- * `X-Partner-Key` può contenere solo il publicId (`fmp_…`) oppure `publicId:secretPlain` in un unico header;
- * in alternativa publicId in header e segreto in `Authorization: Bearer …`.
+ * Chiave test su runtime live → errore esplicito (mai 200).
  */
 export async function authenticatePartnerV1(request: Request): Promise<PartnerV1AuthContext | null> {
     const rawHeader = request.headers.get('x-partner-key')?.trim() ?? '';
@@ -41,11 +52,16 @@ export async function authenticatePartnerV1(request: Request): Promise<PartnerV1
         return null;
     }
 
+    const isTestCredential = isPartnerTestCredential(cred.publicId);
+    if (isTestCredential && isPartnerApiLiveRuntime(request)) {
+        throw new PartnerTestCredentialOnLiveError();
+    }
+
     return {
         partnerId: cred.partnerId,
         credentialId: cred.id,
         publicId: cred.publicId,
-        isTestCredential: isPartnerTestCredential(cred.publicId),
+        isTestCredential,
     };
 }
 

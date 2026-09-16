@@ -5,10 +5,12 @@
 export function orderHasB2bPartnership(order: {
     agencyId?: string | null;
     referralPartnerId?: string | null;
+    masterPartnerId?: string | null;
     partnershipChannel?: string | null;
     agencyName?: string | null;
 }): boolean {
     if (order.agencyId?.trim()) return true;
+    if (order.masterPartnerId?.trim()) return true;
     if (order.referralPartnerId?.trim()) return true;
     if (order.partnershipChannel?.trim()) return true;
     if (order.agencyName?.trim()) return true;

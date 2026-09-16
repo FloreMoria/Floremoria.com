@@ -1,5 +1,5 @@
 /**
- * Risolve associazioni ordine checkout B2C: fiorista esecutore, agenzia, partner fee.
+ * Risolve associazioni ordine checkout B2C: fiorista esecutore, agenzia, master fee.
  */
 import prisma from '@/lib/prisma';
 import type { Partner } from '@prisma/client';
@@ -12,12 +12,15 @@ import {
 export type CheckoutPartnerAssociations = {
     partnerId: string | null;
     agencyId: string | null;
+    /** @deprecated Preferire masterPartnerId. */
     referralPartnerId: string | null;
+    masterPartnerId: string | null;
     agencyCode: string | null;
     agencyName: string | null;
     partnershipChannel: string | null;
     partnerNotifyEmail: string | null;
     referralInstructions: string | null;
+    commissionPercentInclusive: number | null;
 };
 
 function toResolvedAgency(partner: Partner): ResolvedAgency {
@@ -29,6 +32,7 @@ function toResolvedAgency(partner: Partner): ResolvedAgency {
         defaultFloristId: partner.defaultFloristId,
         agencyNotificationEmail: partner.agencyNotificationEmail,
         aggregatorNotificationEmail: partner.aggregatorNotificationEmail,
+        masterPartnerId: partner.masterPartnerId,
     };
 }
 
@@ -80,12 +84,13 @@ export async function resolveCheckoutPartnerAssociations(input: {
 
     let partnerId: string | null = null;
     let agencyId: string | null = null;
-    let referralPartnerId: string | null = null;
+    let masterPartnerId: string | null = null;
     let agencyCode: string | null = null;
     let agencyName: string | null = null;
     let partnershipChannel: string | null = null;
     let partnerNotifyEmail = notify;
     let referralInstructions: string | null = null;
+    let commissionPercentInclusive: number | null = null;
 
     if (referralPartner) {
         partnershipChannel = referralPartner.partnershipChannel;
@@ -100,11 +105,10 @@ export async function resolveCheckoutPartnerAssociations(input: {
         }
 
         if (referralPartner.partnerType === 'FLORIST') {
-            // Referral esplicito a fiorista: consentito anche su FF.
             partnerId = referralPartner.id;
         } else if (referralPartner.partnerType === 'FUNERAL_AGENCY') {
             agencyId = referralPartner.id;
-            referralPartnerId = referralPartner.id;
+            masterPartnerId = referralPartner.masterPartnerId;
             agencyCode = referralPartner.uniqueCode;
             agencyName = referralPartner.shopName;
             if (!skipFlorist) {
@@ -113,8 +117,24 @@ export async function resolveCheckoutPartnerAssociations(input: {
                     cemeteryCity,
                 });
             }
+            if (masterPartnerId) {
+                const master = await prisma.partner.findFirst({
+                    where: { id: masterPartnerId },
+                    select: { commissionPercentInclusive: true },
+                });
+                commissionPercentInclusive =
+                    master?.commissionPercentInclusive != null
+                        ? Number(master.commissionPercentInclusive)
+                        : null;
+            } else if (referralPartner.commissionPercentInclusive != null) {
+                commissionPercentInclusive = Number(referralPartner.commissionPercentInclusive);
+            }
         } else if (referralPartner.partnerType === 'AGGREGATOR') {
-            referralPartnerId = referralPartner.id;
+            masterPartnerId = referralPartner.id;
+            commissionPercentInclusive =
+                referralPartner.commissionPercentInclusive != null
+                    ? Number(referralPartner.commissionPercentInclusive)
+                    : null;
             if (!skipFlorist) {
                 partnerId =
                     (await findFloristByCemeteryCoverage(cemeteryCity)) ||
@@ -132,11 +152,13 @@ export async function resolveCheckoutPartnerAssociations(input: {
     return {
         partnerId,
         agencyId,
-        referralPartnerId,
+        referralPartnerId: null,
+        masterPartnerId,
         agencyCode,
         agencyName,
         partnershipChannel,
         partnerNotifyEmail,
         referralInstructions,
+        commissionPercentInclusive,
     };
 }

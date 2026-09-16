@@ -11,10 +11,15 @@ export async function PUT(request: Request, context: any) {
         const body = await request.json();
 
         // Remove structural properties that Prisma doesn't need for updates
-        const { id: _, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, ...updateData } = body;
+        const { id: _, createdAt, updatedAt, deletedAt, orders, deliveryProofs, handoffSessions, apiCredentials, agencyOrders, feeMonthCloses, masterPartner, childAgencies, linkedAgencies, defaultFlorist, deceasedAssignments, referralOrders, masterOrders, user, _count, credentials, feeMonth, ...updateData } = body;
 
         if (updateData.ownerName) {
             updateData.ownerName = formatPersonName(updateData.ownerName);
+        }
+
+        if (updateData.commissionPercentInclusive != null) {
+            const n = Number(updateData.commissionPercentInclusive);
+            updateData.commissionPercentInclusive = Number.isFinite(n) ? n : null;
         }
 
         let uniqueCode = typeof updateData.uniqueCode === 'string' ? updateData.uniqueCode.trim() : '';

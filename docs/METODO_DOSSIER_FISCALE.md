@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.20 — 11 settembre 2026.
+Versione 1.21 — 16 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -211,6 +211,7 @@ Quadratura in coda e persistito per la UI.
 | C11 | Coerenza di perimetro | sugli **insiemi di orderId** dell’anno solare (corrispettivi, ledger ricavi, taxRegister, taxQuarterly, cfoTools; pose escluse): gli insiemi devono coincidere; misura = n° ordini presenti in un canale e assenti in un altro | 0 |
 | C12 | Data ordine = data incasso | per ogni ordine abbinato a un movimento gateway: \|data ordine − data incasso\|; tolleranza dichiarata ≤ 24h (fuso) non conta come errore | 0 |
 | C13 | Saldo transito / conto pagamento | Stripe: saldo transito vendite − dichiarato; PayPal: riconciliazione **conto di pagamento** (non ciclo vendite) − dichiarato | 0 |
+| C14 | Coerenza fee partner | SUM(fee arrotondate per ordine) − fattura mensile − trattenute Connect = 0 (±tolleranza dichiarata, default 1¢). Senza fattura → **non verificabile**, non fallito | 0 |
 
 **C6 si misura sull'imponibile, mai sul totale documento.** È la precisazione che mancava
 alla versione 1.1 e che ha fatto misurare zero coppie dove ce n'erano sei. In una coppia
@@ -249,6 +250,15 @@ dal cruscotto Stripe. PayPal non è più nel ciclo vendite: C13 vi misura solo l
 atteso: nullo su ciascun pezzo verificabile. **Senza saldo dichiarato, quel pezzo è non
 verificabile, non fallito.** C10 resta il controllo di struttura sul solo Stripe; C13 è il
 controllo di **saldo**.
+
+**C14 — coerenza fee partner.** Tre numeri che devono coincidere per master e mese:
+`maturato` (somma delle fee arrotondate **per singolo ordine**, numero autorevole) =
+`importo fattura mensile ricevuta` = `somma trattenute Stripe Connect`. Non si confronta
+la fattura con il 10% del fatturato aggregato. Differenze di arrotondamento → foglio
+Eccezioni, entro tolleranza dichiarata (default 1 centesimo). **Manca la fattura del mese →
+stato non verificabile, non fallito.** Verde di riposo raggiungibile quando i tre numeri
+quadrano. La trattenuta Connect è il **pagamento del debito** maturato all’ordine, non un
+secondo costo; la fattura mensile **chiude** il debito senza generare costo aggiuntivo.
 
 ### 5.1 Controllo, lista di lavoro, risultato
 
@@ -532,6 +542,43 @@ ordini che sul `.com` sono già registrati.
 
 ### 8.2 Il corrispettivo è il lordo pagato dal cliente
 
+Il ricavo da corrispettivo è sempre il **lordo pagato dal cliente**, non il netto accreditato
+dopo fee gateway o fee partner. Su un ordine da €100 il ricavo è €100, non €90.
+
+### 8.2.1 Fee partner / aggregatore (provvigione passiva)
+
+Accordo tipico Annunci Funebri: **percentuale configurabile sul Partner master**
+(`commissionPercentInclusive`, es. 10%), IVA inclusa sul lordo cliente.
+
+- Alla ricezione dell’ordine si matura un **debito** verso il master per l’importo della fee.
+- Scomposizione IVA **22%** (provvigione di servizio, non aliquota fiori 10%):
+  su €100 di ordine con fee 10% → fee lorda €10,00 · imponibile €8,20 · IVA €1,80.
+- Arrotondamento: half-up al centesimo sul lordo fee per ordine; imponibile =
+  `round(lordo / 1,22)`; IVA = lordo − imponibile. Il **maturato mensile** è la somma di
+  queste fee per-ordine (numero autorevole per C14).
+- Storni e rimborsi stornano la fee con la stessa scomposizione.
+- La trattenuta Stripe Connect è il pagamento di quel debito, non un secondo costo.
+- La fattura mensile del master chiude il debito: non genera costo aggiuntivo.
+
+### 8.2.2 Tre categorie partner e numerazione ordini
+
+| Ruolo | `PartnerType` | Ruolo sull’ordine |
+|---|---|---|
+| Master / aggregatore | `AGGREGATOR` | `Order.masterPartnerId` — accordo fee e fatturazione |
+| Agenzia onoranze | `FUNERAL_AGENCY` | `Order.agencyId` — chi ha portato l’ordine; legame `Partner.masterPartnerId` |
+| Fiorista | `FLORIST` | `Order.partnerId` — chi esegue la consegna |
+
+`referralPartnerId` è legacy in sola lettura. Ogni ordine API registra anche
+`apiCredentialId` (chiave usata in ingresso).
+
+**Numerazione.** Prefisso `PT-` **solo** se `isTest = true` (vietato su live). Ordini live:
+stesso contatore di checkout — `basePattern = {CAT}-{PROV}-{YY}-` dove `CAT` ∈
+{FF, FT, FA, FP}; il progressivo è `max(suffisso numerico già presente per quel
+basePattern) + 1`, padded a 3 cifre. Contatori **indipendenti** per categoria e provincia
+(es. dopo `FF-VE-26-001` il prossimo funerale Venezia è `FF-VE-26-002`; `FT-VE-26` parte
+da `001` se assente). Dopo rinumerazione, il vecchio codice resta in `legacyOrderNumber`
+e resta ricercabile.
+
 L'importo che entra nel registro è quello che il **cliente ha pagato**, non quello che il
 gateway ci accredita al netto della sua commissione.
 
@@ -709,6 +756,13 @@ senza cancellare le righe di esecuzione.
 ---
 
 ## Registro delle modifiche
+
+**1.21 — 16 settembre 2026**
+- §5 — **C14** coerenza fee partner (maturato = fattura = Connect; senza fattura → non
+  verificabile).
+- §8.2.1 — fee % configurabile sul master, IVA 22% provvigione, arrotondamento per ordine.
+- §8.2.2 — tre categorie partner; `PT-` solo test; contatore FF/FT indipendente; legacy
+  order number ricercabile.
 
 **1.19 — 11 settembre 2026**
 - §6.2.1 — **architettura**: un solo transito vendite (**Stripe**); PayPal = conto di

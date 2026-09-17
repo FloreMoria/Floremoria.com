@@ -32,4 +32,4 @@ Emergenza (non piano B): blindate `connect-partner` e `partner-fee-invoices` con
 ## Prossimo
 Attesa conferma Salvatore per piano **B** (ruoli titolare/operativo/sola lettura, admin separato, 2FA, access log).
 
-**Commit:** `e16bb3ea`
+**Commit:** `d22215d8`

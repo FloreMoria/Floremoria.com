@@ -919,7 +919,10 @@ function buildRegistroCorrispettiviSheet(wb: ExcelJS.Workbook, report: TaxQuarte
 /**
  * Genera il buffer .xlsx del Dossier Fiscale (METODO v1.10).
  */
-export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): Promise<Buffer> {
+export async function buildTaxQuarterlyXlsxBuffer(
+    report: TaxQuarterlyReport,
+    opts?: { allowIncompleteVat?: boolean }
+): Promise<Buffer> {
     const wb = new ExcelJS.Workbook();
     wb.creator = 'FloreMoria';
     wb.created = new Date();
@@ -939,7 +942,7 @@ export async function buildTaxQuarterlyXlsxBuffer(report: TaxQuarterlyReport): P
         .filter((r) => /autofattura/i.test(r.tipoDocumento))
         .reduce((s, r) => s + Math.max(0, r.ivaCents), 0);
 
-    const controls = await runAndPersistDossierControls(year, quarter);
+    const controls = await runAndPersistDossierControls(year, quarter, opts);
 
     const {
         getProvisionalBankStats,

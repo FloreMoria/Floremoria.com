@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import { recomputePartnerFeeMonthClose } from '@/lib/partners/partnerFeeMonthClose';
 
 export const dynamic = 'force-dynamic';
 
 /** GET: chiusure mensili fee master (C14) + masters. */
 export async function GET(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
     try {
         const url = new URL(request.url);
         const yearMonth = url.searchParams.get('yearMonth')?.trim();
@@ -53,6 +57,9 @@ type PostBody = {
 
 /** POST: registra / aggiorna fattura mensile master → ricalcolo C14. */
 export async function POST(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
     try {
         const body = (await request.json()) as PostBody;
         const masterPartnerId = body.masterPartnerId?.trim();

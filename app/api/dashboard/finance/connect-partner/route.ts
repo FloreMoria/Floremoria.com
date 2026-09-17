@@ -4,12 +4,16 @@ import {
     recordConnectPartnerCharge,
     summarizeConnectPartnerChannel,
 } from '@/lib/financial/connectPartnerChannel';
+import { requireDashboardAdmin } from '@/lib/dashboard/requireDashboardAdmin';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
 /** GET: elenco + summary canale Connect partner. */
 export async function GET(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
     try {
         const url = new URL(request.url);
         const masterPartnerId = url.searchParams.get('masterPartnerId')?.trim() || undefined;
@@ -71,6 +75,9 @@ type PostBody = {
  * Corrispettivo = lordo; fee partner IVA 22%; fee Stripe distinta; netto = trasferimento atteso.
  */
 export async function POST(request: Request) {
+    const auth = await requireDashboardAdmin();
+    if (!auth.ok) return auth.response;
+
     try {
         const body = (await request.json()) as PostBody;
         const orderNumber = body.orderNumber?.trim();

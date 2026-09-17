@@ -358,7 +358,15 @@ async function loadAutofatturaRefByForeignInvoice(
 export async function buildTaxQuarterlyReport(
     year: number,
     quarter: TaxQuarter,
-    opts?: { month?: number | null; fullYear?: boolean }
+    opts?: {
+        month?: number | null;
+        fullYear?: boolean;
+        /**
+         * Solo archivio chiusura / fotografia: non blocca se MANCANTE > 30%.
+         * L’export Contabilità resta fail-closed.
+         */
+        allowIncompleteVat?: boolean;
+    }
 ): Promise<TaxQuarterlyReport> {
     const month = opts?.month != null && opts.month >= 1 && opts.month <= 12 ? opts.month : null;
     const bounds = month
@@ -587,7 +595,7 @@ export async function buildTaxQuarterlyReport(
         end: bounds.end,
     });
 
-    if (builtCorrispettivi.totals.mancanteShare > 0.3) {
+    if (builtCorrispettivi.totals.mancanteShare > 0.3 && !opts?.allowIncompleteVat) {
         throw new Error(
             `STOP dossier: aliquota MANCANTE su ${(builtCorrispettivi.totals.mancanteShare * 100).toFixed(1)}% del lordo gateway (soglia 30%). Completare Product.vatRatePercent / collegamenti ordine prima dell’export.`
         );

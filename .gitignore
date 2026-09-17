@@ -40,12 +40,23 @@ docs/verbali/.today_log.txt
 
 # Variabili d'ambiente (segreti) — non versionare. Il template `.env.example` resta tracciato.
 .env
+.env.*
 .env.local
 .env.production
 .env.production.local
 .env.development.local
 .env.test.local
 .env.evolution
+.env.vercel.check
+.env.vercel.production
+.env.vercel.production.local
+.env.vercel.prod.tmp
+.env.prod.dbcheck
+
+# Archivi fiscali locali (fotografie trimestre — restano sul Mac, non in git)
+/archives/fiscal-closures/**
+!/archives/fiscal-closures/.gitkeep
+!/archives/fiscal-closures/README.md
 
 # vercel
 .vercel
@@ -102,4 +113,3 @@ floremoria-*-*.json
 /volantino-b2b-floremoria.pdf
 /volantino-b2b-fronte.pdf
 /volantino-b2b-retro.pdf
-.env*

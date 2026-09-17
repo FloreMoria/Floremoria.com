@@ -56,7 +56,9 @@
     "postman:setup-inbound": "tsx scripts/setup-resend-inbound-subdomain.ts",
     "push:generate-vapid": "tsx scripts/generate-vapid-keys.ts",
     "merchant:feed": "tsx scripts/generate-merchant-feed.ts",
-    "audit:ai-visibility": "tsx scripts/ai-audit-benchmark.ts"
+    "audit:ai-visibility": "tsx scripts/ai-audit-benchmark.ts",
+    "finance:quarter-closure": "tsx scripts/fiscal-quarter-closure-archive.ts",
+    "db:backup:verify-restore": "bash scripts/verify-neon-backup-restore.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

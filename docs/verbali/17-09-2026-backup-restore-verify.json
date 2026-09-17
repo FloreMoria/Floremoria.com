@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-09-17T16:57:57+02:00",
+  "method": "pg_dump custom from Neon direct endpoint \u2192 pg_restore into local PostgreSQL 17 database floremoria_restore_test",
+  "production": {
+    "orders_active": 83,
+    "revenue_2026_cents": 439864,
+    "bank_docs": 10,
+    "bank_lines": 193,
+    "ledger_entries": 1495
+  },
+  "restored": {
+    "orders_active": 83,
+    "revenue_2026_cents": 439864,
+    "bank_docs": 10,
+    "bank_lines": 193,
+    "ledger_entries": 1495
+  },
+  "match": true,
+  "revenue_2026_eur_prod": 4398.64,
+  "revenue_2026_eur_restored": 4398.64
+}

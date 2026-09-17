@@ -318,9 +318,15 @@ export async function controlC3(year: number, quarter: TaxQuarter): Promise<Doss
  * C4 — Incassi e corrispettivi
  * Formula: Σ incassi clienti gateway − totale registro corrispettivi → 0
  */
-export async function controlC4(year: number, quarter: TaxQuarter): Promise<DossierControlResult> {
+export async function controlC4(
+    year: number,
+    quarter: TaxQuarter,
+    opts?: { allowIncompleteVat?: boolean }
+): Promise<DossierControlResult> {
     const bounds = resolveQuarterBounds(year, quarter);
-    const report = await buildTaxQuarterlyReport(year, quarter);
+    const report = await buildTaxQuarterlyReport(year, quarter, {
+        allowIncompleteVat: opts?.allowIncompleteVat,
+    });
 
     // Incassi clienti dai gateway (stessa logica Quadratura agosto: charge/payment Stripe + vendite PayPal)
     const stripe = await prisma.stripeFinanceMovement.findMany({
@@ -1040,13 +1046,14 @@ export async function controlC14(year: number, quarter: TaxQuarter): Promise<Dos
 
 export async function runAllDossierControls(
     year: number,
-    quarter: TaxQuarter
+    quarter: TaxQuarter,
+    opts?: { allowIncompleteVat?: boolean }
 ): Promise<DossierControlResult[]> {
     return [
         await controlC1(year, quarter),
         await controlC2(year, quarter),
         await controlC3(year, quarter),
-        await controlC4(year, quarter),
+        await controlC4(year, quarter, opts),
         await controlC5(year, quarter),
         await controlC6(year, quarter),
         await controlC7(year, quarter),
@@ -1063,13 +1070,14 @@ export async function runAllDossierControls(
 /** Esegue C1–C14 e persiste lo snapshot per il badge Contabilità. */
 export async function runAndPersistDossierControls(
     year: number,
-    quarter: TaxQuarter
+    quarter: TaxQuarter,
+    opts?: { allowIncompleteVat?: boolean }
 ): Promise<DossierControlResult[]> {
     const {
         saveDossierControlsSnapshot,
         summarizeControls,
     } = await import('@/lib/financial/dossierControlsStore');
-    const controls = await runAllDossierControls(year, quarter);
+    const controls = await runAllDossierControls(year, quarter, opts);
     const summary = summarizeControls(controls);
     await saveDossierControlsSnapshot({
         year,

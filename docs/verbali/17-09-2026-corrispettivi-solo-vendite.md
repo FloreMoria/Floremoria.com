@@ -24,3 +24,5 @@ reali ancora senza aliquota/ordine, non più rumore cashback).
 - 18 micro-PayPal T2 (€108,22) esclusi come non-vendita
 - Gemelle PayPal/Stripe rimosse (vince report)
 - `re_` + charge rimborsata (FF-RM-26-001) esclusi dal registro ricavi
+
+**Commit:** `9edfa9f2`

@@ -25,4 +25,4 @@ reali ancora senza aliquota/ordine, non più rumore cashback).
 - Gemelle PayPal/Stripe rimosse (vince report)
 - `re_` + charge rimborsata (FF-RM-26-001) esclusi dal registro ricavi
 
-**Commit:** `9edfa9f2`
+**Commit:** `dc2abff0`

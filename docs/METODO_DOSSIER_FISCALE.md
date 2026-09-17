@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.24 — 16 settembre 2026.
+Versione 1.25 — 17 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -524,6 +524,34 @@ puntano allo stesso incasso sono lo stesso ordine.
 ordine. Se accade, entrambe le registrazioni vanno nel foglio Eccezioni con la dicitura
 "ordine registrato su due canali".
 
+### 8.4 Solo le vendite entrano nei corrispettivi
+
+Un movimento su un canale di incasso (Stripe, PayPal, Connect) **non** è automaticamente
+un corrispettivo. Nel registro entrano **solo le vendite**:
+
+1. **Ordini** (agganciati all’incasso), e/o
+2. **Pagamenti** su Stripe / PayPal / Connect **confermati come vendita** dal gestore.
+
+| Entra nei corrispettivi | Resta fuori (altra gamba contabile) |
+|---|---|
+| Vendita confermata dal **report vendite PayPal** HAYUM (`docs/verbali/paypal-sales-reports/`) | Cashback, micro-accrediti, movimenti di conto PayPal |
+| Incasso Stripe/PayPal/Connect **agganciato a un ordine** | Giroconti, fee, payout, contributi Climate |
+| | **Rimborsi** (`re_`): storno, mai un secondo ricavo positivo |
+| | Addebito **interamente rimborsato** lo stesso giorno (ordine annullato) |
+
+**PayPal — fonte autorevole.** Il report vendite del conto `HAYUMYJTWLRTE` dichiara cosa
+è vendita sul canale (T1 €382,39 · T2 €321,85 · T3 provvisorio €647,74 al 10/09). Ogni
+movimento PayPal assente da quel report e non agganciato a un ordine **non** è
+corrispettivo: va classificato con la sua natura (cashback, rettifica, conto), non
+cancellato dal ledger.
+
+**Gemelle PayPal / Stripe.** Stesso giorno e stesso importo su due canali, mentre il
+report vendite ne dichiara uno solo → resta il canale confermato dal report (di regola
+PayPal). La `py_` / `ch_` gemella è copia dello stesso incasso, non un secondo ricavo.
+
+Implementazione: `lib/financial/paypalSalesReport.ts` +
+`lib/financial/corrispettiviSalesFilter.ts` (applicato in `buildGatewayCorrispettivi`).
+
 **Perimetro `.eu` 2026 — verificato l'8 settembre 2026.** 43 ordini, € 2.559,81 in totale:
 
 | Finestra | Ordini | Importo | Stato |
@@ -799,6 +827,13 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.25 — 17 settembre 2026**
+- §8.4 — **Solo le vendite** nel registro corrispettivi. Report vendite PayPal HAYUM =
+  fonte autorevole sul canale; cashback/micro-movimenti esclusi (altra gamba). Gemelle
+  PayPal/Stripe stesso giorno/importo → vince il report. Rimborsi `re_` e addebiti
+  interamente rimborsati esclusi come ricavo. Implementazione in
+  `paypalSalesReport.ts` + `corrispettiviSalesFilter.ts`.
 
 **1.24 — 16 settembre 2026**
 - §8.2.0 — quarto canale Stripe Connect partner (tre gambe + trasferimento Fineco atteso);

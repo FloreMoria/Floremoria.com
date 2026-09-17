@@ -13,6 +13,7 @@ import {
     matchGatewaysToEuOrders,
     type EuGatewayMatch,
 } from '@/lib/financial/euOrders2026Match';
+import { filterGatewayIncassiForCorrispettivi } from '@/lib/financial/corrispettiviSalesFilter';
 
 export type CorrispettivoVatCertainty = 'DETERMINATA' | 'PRESUNTA' | 'MANCANTE';
 
@@ -276,9 +277,19 @@ export async function buildGatewayCorrispettivi(params: {
             byTx.set(key, g);
         }
     }
-    const incassi = [...byTx.values()].sort(
+    const rawIncassi = [...byTx.values()].sort(
         (a, b) => a.paymentDate.getTime() - b.paymentDate.getTime()
     );
+
+    // METODO §8.4 — solo vendite (report PayPal / ordine / senza gemelle / senza re_ positivi)
+    const filtered = filterGatewayIncassiForCorrispettivi(rawIncassi);
+    const incassi = filtered.kept.sort(
+        (a, b) => a.paymentDate.getTime() - b.paymentDate.getTime()
+    );
+    const exceptions: DossierExceptionRow[] = [...filtered.exceptions];
+    if (filtered.stats.paypalExcludedNonSale || filtered.stats.stripeExcludedTwin) {
+        console.info('[dossierCorrispettivi] filtro vendite', filtered.stats);
+    }
 
     const orderIds = [...new Set(incassi.map((i) => i.orderId).filter(Boolean))] as string[];
     const orders =
@@ -355,7 +366,7 @@ export async function buildGatewayCorrispettivi(params: {
     }
 
     const rows: DossierCorrispettivoRow[] = [];
-    const exceptions: DossierExceptionRow[] = [];
+    // `exceptions` già popolato dal filtro §8.4
 
     // Match soft verso dataset .eu verificato (nessuna scrittura DB) — abbassa MANCANTE
     let euMatchByGwKey = new Map<string, EuGatewayMatch>();

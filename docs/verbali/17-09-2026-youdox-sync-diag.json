@@ -1,0 +1,477 @@
+{
+  "generatedAt": "2026-09-17T15:30:26.358Z",
+  "tokenProbe": {
+    "httpStatus": 200,
+    "ok": true,
+    "expires_in": 3600,
+    "token_type": null,
+    "error": null,
+    "error_message": null,
+    "hasAccessToken": true,
+    "cacheCodeFallbackSeconds": 3600,
+    "note": "Cache in-memory usa expires_in dalla risposta, fallback 3600 se assente; rinnovo con margine 60s."
+  },
+  "markAsReadOrder": {
+    "codePath": "app/api/v1/finance/youdox/sync/route.ts",
+    "order": "downloadInvoiceXml → ingestSdiInvoiceUpload → markInvoiceAsRead",
+    "hypothesisMarkBeforeDb": false,
+    "note": "markInvoiceAsRead è DOPO ingest riuscito (try). Se ingest throw, non marca. Se ingest ok con imported=0, marca comunque.",
+    "unreadOnlyBurnRisk": "Rischio residuo solo se un vecchio flusso usava OnlyUnread=true e marcava senza salvare; il sync dashboard attuale usa listAllReceivedForSync(onlyUnread:false)."
+  },
+  "listUnread": {
+    "error": null,
+    "count": 13,
+    "sample": [
+      {
+        "key": "H8mJhPDoqZetDaGvMxK45Q==",
+        "numero": "90",
+        "data": "2026-06-15T00:00:00+02:00",
+        "fornitore": "Glofu srl unipersonale"
+      },
+      {
+        "key": "SmWVFP-EzREQC18NQY2-7Q==",
+        "numero": "253",
+        "data": "2026-05-31T00:00:00+02:00",
+        "fornitore": "FLORAGARDEN di Stinga Baldassarre"
+      },
+      {
+        "key": "m1jiWH6-UM9x9a5Hqtg3iQ==",
+        "numero": "183",
+        "data": "2026-05-30T00:00:00+02:00",
+        "fornitore": "Battistella Fioreria srl"
+      },
+      {
+        "key": "M4m4MaEwaI8PbJmFfp-chg==",
+        "numero": "000006-2026-EST",
+        "data": "2026-02-28T00:00:00+01:00",
+        "fornitore": "STRIPE PAYMENTS EUROPE LIMITED"
+      },
+      {
+        "key": "PuxyHO-bICLkxw4hwhDHYg==",
+        "numero": "000008-2026-EST",
+        "data": "2026-04-30T00:00:00+02:00",
+        "fornitore": "STRIPE PAYMENTS EUROPE LIMITED"
+      },
+      {
+        "key": "y0CPenPKX_MhA095XeRFpQ==",
+        "numero": "000007-2026-EST",
+        "data": "2026-03-31T00:00:00+02:00",
+        "fornitore": "STRIPE PAYMENTS EUROPE LIMITED"
+      },
+      {
+        "key": "GM-zZhCnN6JrOOy606CIpg==",
+        "numero": "000005-2026-EST",
+        "data": "2026-02-28T00:00:00+01:00",
+        "fornitore": "OpenAI Ireland Limited"
+      },
+      {
+        "key": "nKztoy4vTwh9r09ljBVN1w==",
+        "numero": "000004-2026-EST",
+        "data": "2026-02-28T00:00:00+01:00",
+        "fornitore": "OpenAI Ireland Limited"
+      },
+      {
+        "key": "DT1Bmuu9ByRmKOewoXEh1g==",
+        "numero": "000003-2026-EST",
+        "data": "2026-01-31T00:00:00+01:00",
+        "fornitore": "STRIPE PAYMENTS EUROPE LIMITED"
+      },
+      {
+        "key": "Uf-GVivDLAcHXQoqdPNz-g==",
+        "numero": "27",
+        "data": "2026-05-26T00:00:00+02:00",
+        "fornitore": "CINGOLANI ANTONELLA"
+      }
+    ]
+  },
+  "listAll120d": {
+    "windowFrom": "2026-05-20T15:30:11.502Z",
+    "windowTo": "2026-09-17T15:30:11.502Z",
+    "onlyUnread": false,
+    "error": null,
+    "count": 37,
+    "sample": [
+      {
+        "key": "9VmB_2-S1FuB7CiVpsL83g==",
+        "numero": "352",
+        "data": "2026-09-16T00:00:00+02:00",
+        "fornitore": "LA ROSA ROSSA S.R.L."
+      },
+      {
+        "key": "Gz_NpN-bdEdg6OTzzlrMPQ==",
+        "numero": "FPR 3/26",
+        "data": "2026-09-16T00:00:00+02:00",
+        "fornitore": "Lory's Garden di Usai Enrico"
+      },
+      {
+        "key": "_ebKgzkC_kKaAyPPO7UXfQ==",
+        "numero": "61",
+        "data": "2026-09-13T00:00:00+02:00",
+        "fornitore": "LA BAITA DEL FIORE S.N.C."
+      },
+      {
+        "key": "I4yNElUD5rV_llEzKKZ3_w==",
+        "numero": "38",
+        "data": "2026-09-10T00:00:00+02:00",
+        "fornitore": "CINGOLANI ANTONELLA"
+      },
+      {
+        "key": "k_otgVRMjS37wP5ZWc5tOQ==",
+        "numero": "24",
+        "data": "2026-09-07T00:00:00+02:00",
+        "fornitore": "CICILIANI CARLA"
+      },
+      {
+        "key": "ot56ItA-xVh10utkViEB2Q==",
+        "numero": "81/2026",
+        "data": "2026-09-04T00:00:00+02:00",
+        "fornitore": "L'ORCHIDEA SNC di GOBBI ANTONELLA & SIMONA"
+      },
+      {
+        "key": "TD0JsLk8450mLErnCsUZKw==",
+        "numero": "20/2026",
+        "data": "2026-09-03T00:00:00+02:00",
+        "fornitore": "SHOPPINGARDEN DI ANNA BRUNO"
+      },
+      {
+        "key": "0Be2Wnd64ro8AapZ_DYKtQ==",
+        "numero": "253",
+        "data": "2026-08-31T00:00:00+02:00",
+        "fornitore": "Battistella Fioreria srl"
+      },
+      {
+        "key": "lMoTyhJMujQtNrgjyCPMGw==",
+        "numero": "78/001",
+        "data": "2026-08-26T00:00:00+02:00",
+        "fornitore": "FLORAPIU SNC"
+      },
+      {
+        "key": "4pZgcCFCqRk49tp8XYC6eA==",
+        "numero": "19/2026",
+        "data": "2026-08-19T00:00:00+02:00",
+        "fornitore": "SHOPPINGARDEN DI ANNA BRUNO"
+      }
+    ]
+  },
+  "listAllWide400d": {
+    "windowFrom": "2025-08-13T15:30:11.502Z",
+    "windowTo": "2026-09-17T15:30:11.502Z",
+    "onlyUnread": false,
+    "error": null,
+    "count": 102
+  },
+  "syncState": {
+    "lastSyncAt": "2026-09-17T15:03:44.633Z",
+    "processedKeysCount": 37
+  },
+  "lastInvoicePerVendor": [
+    {
+      "vendorName": "Lory's Garden di Usai Enrico",
+      "invoiceNumber": "FPR 3/26",
+      "expenseDate": "2026-09-16",
+      "totalEuro": 20,
+      "createdAt": "2026-09-16T14:32:50.999Z"
+    },
+    {
+      "vendorName": "LA ROSA ROSSA S.R.L",
+      "invoiceNumber": "352",
+      "expenseDate": "2026-09-16",
+      "totalEuro": 50,
+      "createdAt": "2026-09-17T15:03:42.792Z"
+    },
+    {
+      "vendorName": "LA BAITA DEL FIORE S.N.C.",
+      "invoiceNumber": "61",
+      "expenseDate": "2026-09-13",
+      "totalEuro": 35,
+      "createdAt": "2026-09-14T08:39:42.952Z"
+    },
+    {
+      "vendorName": "CINGOLANI ANTONELLA",
+      "invoiceNumber": "38",
+      "expenseDate": "2026-09-10",
+      "totalEuro": 20,
+      "createdAt": "2026-09-14T08:39:52.034Z"
+    },
+    {
+      "vendorName": "CICILIANI CARLA",
+      "invoiceNumber": "24",
+      "expenseDate": "2026-09-07",
+      "totalEuro": 160,
+      "createdAt": "2026-09-08T16:18:05.788Z"
+    },
+    {
+      "vendorName": "Vercel Inc.",
+      "invoiceNumber": null,
+      "expenseDate": "2026-09-06",
+      "totalEuro": -2.15,
+      "createdAt": "2026-09-06T17:07:20.041Z"
+    },
+    {
+      "vendorName": "Anthropic, PBC",
+      "invoiceNumber": null,
+      "expenseDate": "2026-09-06",
+      "totalEuro": -18,
+      "createdAt": "2026-09-06T16:59:40.885Z"
+    },
+    {
+      "vendorName": "L'ORCHIDEA SNC di GOBBI ANTONELLA & SIMONA",
+      "invoiceNumber": "81/2026",
+      "expenseDate": "2026-09-04",
+      "totalEuro": 45,
+      "createdAt": "2026-09-16T14:33:01.434Z"
+    },
+    {
+      "vendorName": "SHOPPINGARDEN di Anna Bruno",
+      "invoiceNumber": "20/2026",
+      "expenseDate": "2026-09-03",
+      "totalEuro": 20,
+      "createdAt": "2026-09-07T13:01:42.712Z"
+    },
+    {
+      "vendorName": "SHOPPINGARDEN DI ANNA BRUNO",
+      "invoiceNumber": "20/2026",
+      "expenseDate": "2026-09-03",
+      "totalEuro": 20,
+      "createdAt": "2026-09-03T21:32:41.733Z"
+    },
+    {
+      "vendorName": "Cursor",
+      "invoiceNumber": null,
+      "expenseDate": "2026-09-02",
+      "totalEuro": -17.75,
+      "createdAt": "2026-09-05T13:53:49.382Z"
+    },
+    {
+      "vendorName": "Meta Platforms",
+      "invoiceNumber": null,
+      "expenseDate": "2026-09-01",
+      "totalEuro": -1.24,
+      "createdAt": "2026-09-05T15:37:59.425Z"
+    },
+    {
+      "vendorName": "Stripe Payments Europe",
+      "invoiceNumber": null,
+      "expenseDate": "2026-08-31",
+      "totalEuro": -8.17,
+      "createdAt": "2026-09-05T15:04:55.695Z"
+    },
+    {
+      "vendorName": "Battistella Fioreria srl",
+      "invoiceNumber": "253",
+      "expenseDate": "2026-08-31",
+      "totalEuro": 138,
+      "createdAt": "2026-09-07T13:01:53.403Z"
+    },
+    {
+      "vendorName": "FLORAPIU SNC",
+      "invoiceNumber": "78/001",
+      "expenseDate": "2026-08-26",
+      "totalEuro": 30,
+      "createdAt": "2026-09-10T10:25:13.882Z"
+    },
+    {
+      "vendorName": "Apple",
+      "invoiceNumber": null,
+      "expenseDate": "2026-08-16",
+      "totalEuro": -0.81,
+      "createdAt": "2026-09-05T16:23:32.957Z"
+    },
+    {
+      "vendorName": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+      "invoiceNumber": "00426000153",
+      "expenseDate": "2026-07-26",
+      "totalEuro": 133,
+      "createdAt": "2026-08-21T07:14:29.974Z"
+    },
+    {
+      "vendorName": "Margherita Flower Studio di Lo Monaco Martina",
+      "invoiceNumber": "11",
+      "expenseDate": "2026-07-22",
+      "totalEuro": 30,
+      "createdAt": "2026-08-21T07:14:29.213Z"
+    },
+    {
+      "vendorName": "SOLANO VINCENZO",
+      "invoiceNumber": "FPR 1/26",
+      "expenseDate": "2026-07-09",
+      "totalEuro": 38.01,
+      "createdAt": "2026-08-21T07:14:31.102Z"
+    },
+    {
+      "vendorName": "VINCENZO SOLANO",
+      "invoiceNumber": "FPR 1/26",
+      "expenseDate": "2026-07-09",
+      "totalEuro": 38.01,
+      "createdAt": "2026-09-07T13:03:18.942Z"
+    },
+    {
+      "vendorName": "BONFANTE CLAUDIA",
+      "invoiceNumber": "16",
+      "expenseDate": "2026-06-23",
+      "totalEuro": 40,
+      "createdAt": "2026-08-20T19:20:32.371Z"
+    },
+    {
+      "vendorName": "TORRE DOMENICA",
+      "invoiceNumber": "1",
+      "expenseDate": "2026-06-19",
+      "totalEuro": 62,
+      "createdAt": "2026-08-20T19:20:26.534Z"
+    },
+    {
+      "vendorName": "LA PRIMAVERA S.n.c. di Calamunci Daniel & C.",
+      "invoiceNumber": "2026/7",
+      "expenseDate": "2026-06-16",
+      "totalEuro": 30,
+      "createdAt": "2026-08-20T19:20:33.134Z"
+    },
+    {
+      "vendorName": "Glofu srl unipersonale",
+      "invoiceNumber": "90",
+      "expenseDate": "2026-06-15",
+      "totalEuro": 25.92,
+      "createdAt": "2026-08-20T19:20:35.411Z"
+    },
+    {
+      "vendorName": "FLORAGARDEN di Stinga Baldassarre",
+      "invoiceNumber": "253",
+      "expenseDate": "2026-05-31",
+      "totalEuro": 25,
+      "createdAt": "2026-08-20T19:20:34.266Z"
+    },
+    {
+      "vendorName": "Stripe Payments Europe Limited",
+      "invoiceNumber": null,
+      "expenseDate": "2026-05-31",
+      "totalEuro": 3.83,
+      "createdAt": "2026-08-21T09:10:10.035Z"
+    },
+    {
+      "vendorName": "DI PAOLA MARIA ANTONIETTA",
+      "invoiceNumber": "16",
+      "expenseDate": "2026-05-26",
+      "totalEuro": 40,
+      "createdAt": "2026-08-20T19:20:27.303Z"
+    },
+    {
+      "vendorName": "L'ORCHIDEA DI MANCINI FRANCESCA",
+      "invoiceNumber": "21",
+      "expenseDate": "2026-05-25",
+      "totalEuro": 30,
+      "createdAt": "2026-08-20T19:20:28.094Z"
+    },
+    {
+      "vendorName": "CALAMUNCI TINDARO",
+      "invoiceNumber": "2026/9",
+      "expenseDate": "2026-05-06",
+      "totalEuro": 25,
+      "createdAt": "2026-08-20T19:20:27.712Z"
+    },
+    {
+      "vendorName": "BALLARATE PIERO SRL",
+      "invoiceNumber": "570",
+      "expenseDate": "2026-05-05",
+      "totalEuro": 57.95,
+      "createdAt": "2026-08-20T19:20:36.935Z"
+    },
+    {
+      "vendorName": "ARUBA SPA",
+      "invoiceNumber": "1000263004039573",
+      "expenseDate": "2026-05-03",
+      "totalEuro": 6.09,
+      "createdAt": "2026-08-20T19:20:37.699Z"
+    },
+    {
+      "vendorName": "STRIPE PAYMENTS EUROPE LIMITED",
+      "invoiceNumber": "000008-2026-EST",
+      "expenseDate": "2026-04-30",
+      "totalEuro": 6.87,
+      "createdAt": "2026-08-20T18:40:19.675Z"
+    },
+    {
+      "vendorName": "EREDI DI BENDA SERGIO SOCIETA' AGRICOLA",
+      "invoiceNumber": "32",
+      "expenseDate": "2026-04-28",
+      "totalEuro": 33,
+      "createdAt": "2026-08-20T19:20:26.915Z"
+    },
+    {
+      "vendorName": "CANNONE LUCREZIA",
+      "invoiceNumber": "4",
+      "expenseDate": "2026-04-22",
+      "totalEuro": 20,
+      "createdAt": "2026-08-20T19:20:31.226Z"
+    },
+    {
+      "vendorName": "PROVINI F.LLI DI PROVINI ANTONIO & C. S.A.S.",
+      "invoiceNumber": "2026/0/29",
+      "expenseDate": "2026-04-20",
+      "totalEuro": 25,
+      "createdAt": "2026-08-20T19:20:30.658Z"
+    },
+    {
+      "vendorName": "VIDOZ ALESSIA",
+      "invoiceNumber": "19",
+      "expenseDate": "2026-04-01",
+      "totalEuro": 20,
+      "createdAt": "2026-08-20T19:20:37.317Z"
+    },
+    {
+      "vendorName": "FIORERIA ROSE E TULIPANI DI CECCOTTI DANTE",
+      "invoiceNumber": "5",
+      "expenseDate": "2026-03-24",
+      "totalEuro": 22,
+      "createdAt": "2026-08-21T09:05:03.959Z"
+    },
+    {
+      "vendorName": "FLORIS DI BORDOLI LORIS",
+      "invoiceNumber": "4",
+      "expenseDate": "2026-03-12",
+      "totalEuro": 85,
+      "createdAt": "2026-08-21T09:05:04.344Z"
+    },
+    {
+      "vendorName": "DC STUDIO STP SRL",
+      "invoiceNumber": "66",
+      "expenseDate": "2026-03-02",
+      "totalEuro": 3774.3,
+      "createdAt": "2026-08-21T09:05:04.823Z"
+    },
+    {
+      "vendorName": "OpenAI Ireland Limited",
+      "invoiceNumber": "000004-2026-EST",
+      "expenseDate": "2026-02-28",
+      "totalEuro": 23,
+      "createdAt": "2026-08-21T09:04:57.455Z"
+    },
+    {
+      "vendorName": "FLOWERS DI FERRANTE IGNAZIO",
+      "invoiceNumber": "28",
+      "expenseDate": "2026-02-23",
+      "totalEuro": 20,
+      "createdAt": "2026-08-21T09:05:05.688Z"
+    },
+    {
+      "vendorName": "Google Ireland Ltd",
+      "invoiceNumber": null,
+      "expenseDate": "2026-02-18",
+      "totalEuro": -25.42,
+      "createdAt": "2026-09-05T15:20:51.342Z"
+    },
+    {
+      "vendorName": "IRIN S.R.L.",
+      "invoiceNumber": "265",
+      "expenseDate": "2026-02-18",
+      "totalEuro": 681.49,
+      "createdAt": "2026-08-21T09:05:06.460Z"
+    },
+    {
+      "vendorName": "COTUGNO DI PIERO COTUGNO",
+      "invoiceNumber": "FPR 3/26",
+      "expenseDate": "2026-01-17",
+      "totalEuro": 25,
+      "createdAt": "2026-08-21T09:05:10.191Z"
+    }
+  ]
+}

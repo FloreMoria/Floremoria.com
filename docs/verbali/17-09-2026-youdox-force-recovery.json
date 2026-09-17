@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-09-17T15:33:34.162Z",
+  "lookbackDays": 400,
+  "polled": 102,
+  "imported": 8,
+  "updated": 0,
+  "skippedAlreadyInLedger": 72,
+  "failed": 0,
+  "markedAfterIngest": 8,
+  "budgetExhausted": true,
+  "failureSample": [],
+  "importedSample": [
+    {
+      "numero": "2025/30",
+      "vendor": "TINDARO CALAMUNCI",
+      "totalCents": 9500
+    },
+    {
+      "numero": "359",
+      "vendor": "Battistella Fioreria srl",
+      "totalCents": 7500
+    },
+    {
+      "numero": "000014-2025-EST",
+      "vendor": "STRIPE PAYMENTS EUROPE LIMITED",
+      "totalCents": 1331
+    },
+    {
+      "numero": "000015-2025-EST",
+      "vendor": "OpenAI Ireland Limited",
+      "totalCents": 2300
+    },
+    {
+      "numero": "2",
+      "vendor": "FERRARA ANTONINO",
+      "totalCents": 4000
+    },
+    {
+      "numero": "48",
+      "vendor": "CINGOLANI ANTONELLA",
+      "totalCents": 12000
+    },
+    {
+      "numero": "572",
+      "vendor": "FLORAGARDEN di Stinga Baldassarre",
+      "totalCents": 2000
+    },
+    {
+      "numero": "20",
+      "vendor": "\" GERMANA' DI GERMANA' LUDOVICO & C. S.N.C\"",
+      "totalCents": 2000
+    }
+  ]
+}

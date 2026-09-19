@@ -4,7 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Subentro de Il Prof come Master Agent e setup infrastrutturale."
 sync_source: docs/verbali/25-03-2026.md
-synced_at: 2026-09-19T07:55:26.962Z
+synced_at: 2026-09-19T10:44:45.082Z
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/25-03-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.

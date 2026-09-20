@@ -1,11 +1,13 @@
 # ARCHITETTURA REPARTO CONTABILITÀ & AI CFO INNOVATION (ALBERTO)
 
 > **Documento strategico FloreMoria — Master Skill**  
-> Percorso: `docs/architecture/ai_cfo_team_specification.md`  
-> Agenti di riferimento: **ALBERTO** (CFO), **BARBARA** (Legal & Compliance), **DEVIN** (implementazione tecnica)  
-> Aggiornamento Master Skill: **2026-08-18**  
+> Percorso canonico documentazione agenti: `Agent_formato_md/general_docs/AI_CFO_TEAM_SPECIFICATION.md`  
+> Mirror repo codice: `docs/architecture/ai_cfo_team_specification.md`  
+> Master Hub & Spoke: `agents/ALBERTO_master.md` (§ Virtual CFO Team & Specialised Modules)  
+> Agenti di riferimento: **ALBERTO** (CFO — unico centro decisionale Finance nei 23 agenti), **BARBARA** (Legal & Compliance), **DEVIN** (implementazione tecnica)  
+> Aggiornamento Master Skill: **2026-08-18** · Consolidamento Hub & Spoke: **2026-09-20**  
 > Riferimenti normativi chiave: **L. 193/2024**, **DL 179/2012 art. 25**  
-> Stato: specifica architetturale vigente (versione Master Skill)
+> Stato: specifica architetturale vigente (versione Master Skill; 8 moduli = Virtual CFO Team, non agenti FLOREM_NET aggiuntivi)
 
 ---
 

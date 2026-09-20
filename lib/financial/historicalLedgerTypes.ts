@@ -158,7 +158,13 @@ export function categorizeManualExpense(opts: {
         return 'SPESE_SAAS';
     }
     if (/FINECO|COMMISSION|CANONE|BOLLO|BANC/.test(blob)) return 'ONERI_BANCARI';
-    if (/CONSULEN|COMMERCIALISTA|LEGALE|NOTAIO/.test(blob)) return 'CONSULENZE';
+    // Parcelle / studi professionali (es. DC Studio STP — commercialista)
+    if (
+        /CONSULEN|COMMERCIALISTA|LEGALE|NOTAIO|PARCELLA|TD06|STUDIO\s+STP|STP\s+SRL/.test(blob) ||
+        /\bDC\s+STUDIO\b/.test(blob)
+    ) {
+        return 'CONSULENZE';
+    }
     if (/F24|IRES|IRAP|IVA|INPS|IMPOSTA|TRIBUT/.test(blob)) return 'IMPOSTE';
     return 'SPESE_OPERATIVE';
 }
@@ -195,6 +201,10 @@ export function categorizeBankLine(description: string, matchType: string | null
         return 'ONERI_BANCARI';
     }
     if (/F24|ADE |AGENZIA|INPS|TRIBUT/.test(u)) return 'IMPOSTE';
+    // Consulenza professionale / parcella (commercialista, STP) — prima di SPESE_OPERATIVE
+    if (/CONSULEN|COMMERCIALISTA|PARCELLA|PROFORMA|STUDIO\s+STP|\bDC\s+STUDIO\b/.test(u)) {
+        return 'CONSULENZE';
+    }
     return 'SPESE_OPERATIVE';
 }
 

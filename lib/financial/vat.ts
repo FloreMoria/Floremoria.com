@@ -1,15 +1,17 @@
 /**
- * Scorporo IVA FloreMoria — aliquote in punti percentuali interi (10 / 22).
+ * Scorporo IVA FloreMoria — aliquote in punti percentuali interi.
  * Perché: evitare Float non deterministici nei totali di periodo e nei registri.
  *
- * Matrice fiscale:
- * - 10%: omaggi floreali, bouquet, composizioni, compensi fioristi
- * - 22%: accessori, servizi, struttura, SaaS/esteri (reverse charge)
+ * Matrice fiscale (METODO §8.3 aggiornato 2026-09-20, conferma commercialista):
+ * - **10% su tutto il corrispettivo vendita** (fiori + accessori per accessorietà;
+ *   accessori non acquistabili separatamente; consegna gratuita).
+ * - 22%: resta solo fuori dal registro corrispettivi (es. fee partner Connect,
+ *   reverse charge SaaS/esteri).
  */
 
-/** Aliquota ridotta fiori/omaggi (DPR 633/72) — punti percentuali. */
+/** Aliquota unica corrispettivi vendita (DPR 633/72 + accessorietà). */
 export const VAT_PCT_FLORAL = 10;
-/** Aliquota ordinaria — punti percentuali. */
+/** Aliquota ordinaria — solo costi/servizi strutturali fuori corrispettivi vendita. */
 export const VAT_PCT_ORDINARY = 22;
 
 /** @deprecated Preferire VAT_PCT_FLORAL (intero). Mantenuto per call-site legacy. */
@@ -53,45 +55,26 @@ export function scorporaIva(grossCents: number, ratePercent: number): VatBreakdo
     };
 }
 
-/** Aliquota 10% sui prodotti floreali (default categoria FloreMoria). */
+/** Aliquota 10% — unico scorporo corrispettivi vendita. */
 export function scorporaIvaFloreale(grossCents: number): VatBreakdown {
     return scorporaIva(grossCents, VAT_PCT_FLORAL);
 }
 
-/** Aliquota ordinaria 22% (accessori / servizi / struttura). */
+/** Aliquota ordinaria 22% (solo fuori registro corrispettivi vendita). */
 export function scorporaIvaOrdinaria(grossCents: number): VatBreakdown {
     return scorporaIva(grossCents, VAT_PCT_ORDINARY);
 }
 
 /**
- * Scorpora un totale vendita: se `accessoryCents` > 0 applica 22% su quella quota
- * e 10% sul resto; altrimenti tutto al 10% di categoria.
+ * Scorpora un totale vendita: **tutto al 10%** (accessorietà — METODO §8.3).
+ * `accessoryCents` è ignorato ai fini aliquota (retrocompat signature).
  */
 export function scorporaVenditaFloreale(params: {
     grossCents: number;
     accessoryCents?: number;
 }): VatBreakdown & { floral: VatBreakdown; accessory: VatBreakdown | null } {
-    const gross = Math.round(params.grossCents);
-    const accessoryRaw = Math.round(params.accessoryCents ?? 0);
-    const accessoryCents = Math.min(Math.max(accessoryRaw, 0), Math.abs(gross));
-
-    if (accessoryCents <= 0) {
-        const floral = scorporaIvaFloreale(gross);
-        return { ...floral, floral, accessory: null };
-    }
-
-    const floralGross = gross - accessoryCents;
-    const floral = scorporaIvaFloreale(floralGross);
-    const accessory = scorporaIvaOrdinaria(accessoryCents);
-
-    return {
-        grossCents: floral.grossCents + accessory.grossCents,
-        imponibileCents: floral.imponibileCents + accessory.imponibileCents,
-        ivaCents: floral.ivaCents + accessory.ivaCents,
-        rate: VAT_PCT_FLORAL,
-        floral,
-        accessory,
-    };
+    const floral = scorporaIvaFloreale(Math.round(params.grossCents));
+    return { ...floral, floral, accessory: null };
 }
 
 /** True se slug/nome categoria suggerisce accessorio/servizio (non fiore). */

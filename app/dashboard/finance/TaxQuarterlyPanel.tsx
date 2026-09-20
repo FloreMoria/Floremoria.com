@@ -105,6 +105,7 @@ export default function TaxQuarterlyPanel() {
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [downloadingCommercialista, setDownloadingCommercialista] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [editRow, setEditRow] = useState<TaxRegisterRow | null>(null);
     const [saving, setSaving] = useState(false);
@@ -221,11 +222,64 @@ export default function TaxQuarterlyPanel() {
             link.click();
             link.remove();
             URL.revokeObjectURL(url);
-            setMessage('Dossier Fiscale Completo scaricato.');
+            setMessage('Dossier Fiscale Completo scaricato (uso interno).');
         } catch (err) {
             setMessage(err instanceof Error ? err.message : 'Errore download dossier');
         } finally {
             setDownloading(false);
+        }
+    };
+
+    const commercialistaQuery = () => {
+        if (mode === 'month') {
+            const q = Math.floor((month - 1) / 3) + 1;
+            return `year=${year}&quarter=${q}&format=xlsx`;
+        }
+        const q = mode === 'quarter' ? quarter : Math.min(4, Math.ceil(quadrimester * 1.34));
+        return `year=${year}&quarter=${q}&format=xlsx`;
+    };
+
+    const handleDownloadCommercialista = async () => {
+        setDownloadingCommercialista(true);
+        setMessage(null);
+        try {
+            const res = await fetch(
+                `/api/dashboard/finance/commercialista-corrispettivi?${commercialistaQuery()}`
+            );
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(
+                    (err as { error?: string }).error || 'Download Registro Corrispettivi fallito'
+                );
+            }
+            const blob = await res.blob();
+            const cd = res.headers.get('Content-Disposition') || '';
+            const match = cd.match(/filename="([^"]+)"/);
+            const qLabel =
+                mode === 'month'
+                    ? `T${Math.floor((month - 1) / 3) + 1}`
+                    : mode === 'quarter'
+                      ? `T${quarter}`
+                      : `T${Math.min(4, Math.ceil(quadrimester * 1.34))}`;
+            const filename =
+                match?.[1] || `FloreMoria_${year}_${qLabel}_Corrispettivi.xlsx`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            setMessage(
+                `Registro Corrispettivi (commercialista) scaricato: ${filename}. Solo F1+F2; F3 sospeso. Verifica che l’estratto conto Fineco del periodo sia caricato.`
+            );
+        } catch (err) {
+            setMessage(
+                err instanceof Error ? err.message : 'Errore download Registro Corrispettivi'
+            );
+        } finally {
+            setDownloadingCommercialista(false);
         }
     };
 
@@ -276,8 +330,9 @@ export default function TaxQuarterlyPanel() {
                         Chiusura Trimestrale &amp; Fisco
                     </h3>
                     <p className="text-sm text-slate-500 mt-1">
-                        Registro unificato corrispettivi/liquidazioni, ricevute di cortesia (consegna
-                        gratuita) e fatture Stripe.
+                        Registro Corrispettivi per il commercialista (F1+F2). Prima di chiudere il
+                        trimestre carica l&apos;estratto conto Fineco aggiornato. Il dossier fiscale
+                        completo resta disponibile come export interno.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -373,12 +428,26 @@ export default function TaxQuarterlyPanel() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => void handleDownloadXlsx()}
-                        disabled={downloading}
+                        onClick={() => void handleDownloadCommercialista()}
+                        disabled={downloadingCommercialista}
                         className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1D6F42] text-white text-xs font-bold tracking-wide hover:bg-[#165a35] shadow-sm disabled:opacity-60"
                     >
-                        <FileSpreadsheet size={15} className={downloading ? 'animate-pulse' : ''} />
-                        {downloading ? 'Preparazione…' : 'Scarica Dossier Fiscale Completo (.xlsx)'}
+                        <FileSpreadsheet
+                            size={15}
+                            className={downloadingCommercialista ? 'animate-pulse' : ''}
+                        />
+                        {downloadingCommercialista
+                            ? 'Preparazione…'
+                            : 'Registro Corrispettivi (commercialista)'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void handleDownloadXlsx()}
+                        disabled={downloading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                        <FileText size={14} className={downloading ? 'animate-pulse' : ''} />
+                        {downloading ? 'Preparazione…' : 'Dossier fiscale completo (interno)'}
                     </button>
                 </div>
             </div>

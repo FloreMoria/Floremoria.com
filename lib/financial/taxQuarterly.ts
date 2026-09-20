@@ -595,11 +595,7 @@ export async function buildTaxQuarterlyReport(
         end: bounds.end,
     });
 
-    if (builtCorrispettivi.totals.mancanteShare > 0.3 && !opts?.allowIncompleteVat) {
-        throw new Error(
-            `STOP dossier: aliquota MANCANTE su ${(builtCorrispettivi.totals.mancanteShare * 100).toFixed(1)}% del lordo gateway (soglia 30%). Completare Product.vatRatePercent / collegamenti ordine prima dell’export.`
-        );
-    }
+    // Gate 30% MANCANTE dismesso (2026-09-20): aliquota unica 10% su tutti i corrispettivi.
 
     const feeByOrderId = new Map<string, number>();
     for (const order of orders) {

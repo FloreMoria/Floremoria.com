@@ -45,6 +45,18 @@ export function orderLooksLikeDuplicatePose(order: PrepaidPoseOrderLike): boolea
     return /duplicato\s+da\s+[a-z]{2}-[a-z]{2}-\d{2}-\d+/i.test(notesBlob(order));
 }
 
+/** Riferimento ordine padre da note «duplicato da FT-XX-…» o marker carnet. */
+export function extractPrepaidParentOrderRef(order: PrepaidPoseOrderLike): string | null {
+    const blob = notesBlob(order);
+    const dup = blob.match(/duplicato\s+da\s+([a-z]{2}-[a-z]{2}-\d{2}-\d+)/i);
+    if (dup?.[1]) return dup[1].toUpperCase();
+    const parent = blob.match(/ordine\s+padre\s+carnet[:\s]+([a-z]{2}-[a-z]{2}-\d{2}-\d+)/i);
+    if (parent?.[1]) return parent[1].toUpperCase();
+    const carnet = blob.match(/(FT-[A-Z]{2}-\d{2}-\d+)/i);
+    if (/CARNET_PREPAGATO/i.test(blob) && carnet?.[1]) return carnet[1].toUpperCase();
+    return null;
+}
+
 /**
  * Posa di piano prepagato: ricorrenza o duplicato senza cattura gateway.
  * Resta nel passivo fiorista; esclusa da Registro Corrispettivi e ricavi Prima Nota.

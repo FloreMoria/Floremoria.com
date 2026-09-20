@@ -1,21 +1,27 @@
 /**
- * Export commercialista — 3 fogli soli (Registro Corrispettivi).
+ * Export commercialista — F1 Riepilogo + F2 Registro Corrispettivi (F3 sospeso).
  * Fonte corrispettivi = stesso motore del dossier fiscale (buildTaxQuarterlyReport).
  * Zero PII cliente/defunto/destinatario.
  */
 import ExcelJS from 'exceljs';
+import prisma from '@/lib/prisma';
 import { FLOREMORIA_LEGAL_ENTITY } from '@/lib/financial/companyBankDetails';
 import {
     buildTaxQuarterlyReport,
-    resolveQuarterBounds,
-    resolveYearBounds,
     type TaxQuarter,
     type TaxQuarterlyReport,
 } from '@/lib/financial/taxQuarterly';
 import { listFloristMissingInvoices } from '@/lib/financial/floristMissingInvoices';
+import {
+    extractPrepaidParentOrderRef,
+    isPrepaidSubscriptionPoseOrder,
+} from '@/lib/financial/prepaidSubscriptionOrders';
+import { VAT_PCT_FLORAL } from '@/lib/financial/vat';
 
 const EUR_FORMAT = '€ #,##0.00';
 const DATE_FORMAT = 'DD/MM/YYYY';
+const DA_COLLEGARE = 'DA_COLLEGARE';
+const LORDO_TOLERANCE_CENTS = 1;
 
 const HEADER_FILL: ExcelJS.Fill = {
     type: 'pattern',
@@ -82,6 +88,10 @@ export type CommercialistaCostiSenzaDocRow = {
     floristName: string;
     amountCents: number;
     deliveryDate: string;
+    /** S = posa di ordine prepagato; N = vendita ordinaria. */
+    prepaidFlag: 'S' | 'N';
+    /** Riferimento ordine padre (carnet / abbonamento), se prepagato. */
+    prepaidParentOrderRef: string;
 };
 
 export type CommercialistaCorrispettiviPreview = {
@@ -91,8 +101,10 @@ export type CommercialistaCorrispettiviPreview = {
     f1: CommercialistaCorrispettiviTotals;
     f2RowCount: number;
     f2: CommercialistaCorrispettiviTotals;
+    /** F3 sospeso finché l'attribuzione bonifici→fiorista non è corretta. */
     f3RowCount: number;
     f3TotalCents: number;
+    f3Included: false;
     consistencyOk: true;
 };
 
@@ -113,6 +125,23 @@ export class CommercialistaConsistencyError extends Error {
         );
         this.name = 'CommercialistaConsistencyError';
         this.diffs = diffs;
+    }
+}
+
+/** Controlli indipendenti sul file (non solo confronto dossier↔file). */
+export class CommercialistaSelfCheckError extends Error {
+    readonly check: string;
+    readonly failingRows: number;
+    readonly amountCents: number;
+
+    constructor(check: string, failingRows: number, amountCents: number, detail: string) {
+        super(
+            `Controllo file fallito: ${check}. Righe: ${failingRows}. Importo: €${(amountCents / 100).toFixed(2)}. ${detail}`
+        );
+        this.name = 'CommercialistaSelfCheckError';
+        this.check = check;
+        this.failingRows = failingRows;
+        this.amountCents = amountCents;
     }
 }
 
@@ -169,6 +198,11 @@ export function commercialistaCorrispettiviFilename(period: CommercialistaPeriod
     return `FloreMoria_${period.year}_${p}_Corrispettivi.xlsx`;
 }
 
+function orderRefForExport(orderNumber: string | null | undefined): string {
+    const n = (orderNumber || '').trim();
+    return n || DA_COLLEGARE;
+}
+
 function sumCorrispettiviFromReport(report: TaxQuarterlyReport): CommercialistaCorrispettiviTotals {
     const byRateMap = new Map<string, CommercialistaCorrispettiviTotals['byRate'][number]>();
     let imponibileCents = 0;
@@ -177,13 +211,10 @@ function sumCorrispettiviFromReport(report: TaxQuarterlyReport): CommercialistaC
 
     for (const r of report.corrispettivi) {
         lordoCents += r.grossCents;
-        const eligible = r.vatCertainty !== 'MANCANTE';
-        if (eligible) {
-            imponibileCents += r.imponibileCents;
-            ivaDebitoCents += r.ivaDebitoCents;
-        }
-        const key = eligible ? String(r.vatRate) : 'MANCANTE';
-        const rate = eligible ? r.vatRate : null;
+        imponibileCents += r.imponibileCents;
+        ivaDebitoCents += r.ivaDebitoCents;
+        const rate = r.vatRate || VAT_PCT_FLORAL;
+        const key = String(rate);
         const cur = byRateMap.get(key) || {
             vatRate: rate,
             salesCount: 0,
@@ -193,10 +224,8 @@ function sumCorrispettiviFromReport(report: TaxQuarterlyReport): CommercialistaC
         };
         cur.salesCount += 1;
         cur.lordoCents += r.grossCents;
-        if (eligible) {
-            cur.imponibileCents += r.imponibileCents;
-            cur.ivaDebitoCents += r.ivaDebitoCents;
-        }
+        cur.imponibileCents += r.imponibileCents;
+        cur.ivaDebitoCents += r.ivaDebitoCents;
         byRateMap.set(key, cur);
     }
 
@@ -250,6 +279,81 @@ function assertConsistencyWithDossier(
 }
 
 /**
+ * Tre verifiche indipendenti sul contenuto F2/F1 (non sul dossier).
+ * Se una fallisce, il file non si genera.
+ */
+function assertIndependentFileChecks(
+    f2Rows: Array<{
+        imponibileCents: number;
+        ivaCents: number;
+        lordoCents: number;
+        vatRate: number | null;
+    }>,
+    f1: CommercialistaCorrispettiviTotals,
+    f2: CommercialistaCorrispettiviTotals
+): void {
+    // 1) ogni riga ha aliquota e IVA valorizzate
+    const missingVat = f2Rows.filter(
+        (r) =>
+            r.vatRate == null ||
+            !Number.isFinite(r.vatRate) ||
+            r.vatRate <= 0 ||
+            r.ivaCents == null ||
+            !Number.isFinite(r.ivaCents)
+    );
+    if (missingVat.length) {
+        const amount = missingVat.reduce((s, r) => s + Math.abs(r.lordoCents), 0);
+        throw new CommercialistaSelfCheckError(
+            'F2: aliquota e IVA valorizzate su ogni riga',
+            missingVat.length,
+            amount,
+            'Una o più righe senza aliquota o senza IVA.'
+        );
+    }
+
+    // 2) imponibile + IVA = lordo (± €0,01)
+    const unbalanced = f2Rows.filter(
+        (r) => Math.abs(r.imponibileCents + r.ivaCents - r.lordoCents) > LORDO_TOLERANCE_CENTS
+    );
+    if (unbalanced.length) {
+        const amount = unbalanced.reduce(
+            (s, r) => s + Math.abs(r.imponibileCents + r.ivaCents - r.lordoCents),
+            0
+        );
+        throw new CommercialistaSelfCheckError(
+            'F2: imponibile + IVA = lordo (tolleranza €0,01)',
+            unbalanced.length,
+            amount,
+            'Scorporo incoerente su una o più righe.'
+        );
+    }
+
+    // 3) somma F2 = totale F1
+    const sumDiffs: Array<{ voice: string; delta: number }> = [];
+    if (f2.salesCount !== f1.salesCount) {
+        sumDiffs.push({ voice: 'n. vendite', delta: f2.salesCount - f1.salesCount });
+    }
+    if (f2.imponibileCents !== f1.imponibileCents) {
+        sumDiffs.push({ voice: 'imponibile', delta: f2.imponibileCents - f1.imponibileCents });
+    }
+    if (f2.ivaDebitoCents !== f1.ivaDebitoCents) {
+        sumDiffs.push({ voice: 'IVA', delta: f2.ivaDebitoCents - f1.ivaDebitoCents });
+    }
+    if (f2.lordoCents !== f1.lordoCents) {
+        sumDiffs.push({ voice: 'lordo', delta: f2.lordoCents - f1.lordoCents });
+    }
+    if (sumDiffs.length) {
+        const amount = Math.max(...sumDiffs.map((d) => Math.abs(d.delta)));
+        throw new CommercialistaSelfCheckError(
+            'Somma righe F2 = totale F1',
+            sumDiffs.length,
+            amount,
+            sumDiffs.map((d) => `${d.voice} Δ €${(d.delta / 100).toFixed(2)}`).join('; ')
+        );
+    }
+}
+
+/**
  * Consegne fiorista nel periodo senza fattura né scontrino.
  * Perché: spiega al commercialista il gap costi deducibili vs movimentato.
  */
@@ -258,6 +362,32 @@ export async function loadCostiSenzaDocumento(
     end: Date
 ): Promise<CommercialistaCostiSenzaDocRow[]> {
     const missing = await listFloristMissingInvoices();
+    const candidateOrderIds = [
+        ...new Set(missing.map((r) => r.orderId).filter(Boolean) as string[]),
+    ];
+    const orders =
+        candidateOrderIds.length > 0
+            ? await prisma.order.findMany({
+                  where: { id: { in: candidateOrderIds }, deletedAt: null },
+                  select: {
+                      id: true,
+                      orderNumber: true,
+                      isRecurring: true,
+                      stripeTransactionId: true,
+                      grossAmount: true,
+                      netAmount: true,
+                      stripeFee: true,
+                      paymentMethodLabel: true,
+                      additionalInstructions: true,
+                      financeNotes: true,
+                      totalPriceCents: true,
+                      deliveryDate: true,
+                      status: true,
+                  },
+              })
+            : [];
+    const orderById = new Map(orders.map((o) => [o.id, o]));
+
     const rows: CommercialistaCostiSenzaDocRow[] = [];
 
     for (const r of missing) {
@@ -268,11 +398,17 @@ export async function loadCostiSenzaDocumento(
         const d = parseYmd(deliveryIso);
         if (!d || d < start || d > end) continue;
 
+        const order = r.orderId ? orderById.get(r.orderId) : undefined;
+        const prepaid = order ? isPrepaidSubscriptionPoseOrder(order) : false;
+        const parentRef = order ? extractPrepaidParentOrderRef(order) : null;
+
         rows.push({
             orderNumber: r.orderNumber || (r.orderId ? r.orderId.slice(0, 10) : '—'),
             floristName: r.partnerName,
             amountCents: r.amountCents,
             deliveryDate: deliveryIso,
+            prepaidFlag: prepaid ? 'S' : 'N',
+            prepaidParentOrderRef: prepaid ? parentRef || DA_COLLEGARE : '',
         });
     }
 
@@ -315,10 +451,10 @@ function buildF1(
 
     for (const b of totals.byRate) {
         const row = ws.addRow([
-            b.vatRate == null ? 'Aliquota mancante' : `Vendite IVA ${b.vatRate}%`,
+            `Vendite IVA ${b.vatRate ?? VAT_PCT_FLORAL}%`,
             b.salesCount,
             euroNum(b.imponibileCents),
-            b.vatRate == null ? '' : b.vatRate,
+            b.vatRate ?? VAT_PCT_FLORAL,
             euroNum(b.ivaDebitoCents),
             euroNum(b.lordoCents),
         ]);
@@ -349,14 +485,33 @@ function buildF1(
     ]);
     ws.addRow([
         'Nota 2',
-        'Per i costi fiorista senza fattura/scontrino nel periodo vedere il foglio «F3 — Costi senza documento».',
+        'Aliquota unica 10% su tutto il corrispettivo (accessorietà — METODO §8.3).',
+    ]);
+    ws.addRow([
+        'Nota 3',
+        'Foglio F3 (costi fiorista senza documento) sospeso: rientrerà quando l’abbinamento bonifici→consegne sarà corretto. Non usare i movimenti bancari come proxy del costo per consegna.',
+    ]);
+    ws.addRow([
+        'Nota 4',
+        'Prima di chiudere il trimestre caricare l’estratto conto Fineco aggiornato in Contabilità → Movimenti bancari.',
     ]);
 
     autofitColumns(ws, 14, 72);
     ws.views = [{ state: 'frozen', ySplit: 6 }];
 }
 
-function buildF2(wb: ExcelJS.Workbook, report: TaxQuarterlyReport): CommercialistaCorrispettiviTotals {
+function buildF2(
+    wb: ExcelJS.Workbook,
+    report: TaxQuarterlyReport
+): {
+    totals: CommercialistaCorrispettiviTotals;
+    probeRows: Array<{
+        imponibileCents: number;
+        ivaCents: number;
+        lordoCents: number;
+        vatRate: number | null;
+    }>;
+} {
     const ws = wb.addWorksheet('F2 — Registro corrispettivi');
     const headers = [
         'Data ordine',
@@ -379,11 +534,14 @@ function buildF2(wb: ExcelJS.Workbook, report: TaxQuarterlyReport): Commercialis
         autofitColumns(ws);
         ws.views = [{ state: 'frozen', ySplit: 1 }];
         return {
-            salesCount: 0,
-            imponibileCents: 0,
-            ivaDebitoCents: 0,
-            lordoCents: 0,
-            byRate: [],
+            totals: {
+                salesCount: 0,
+                imponibileCents: 0,
+                ivaDebitoCents: 0,
+                lordoCents: 0,
+                byRate: [],
+            },
+            probeRows: [],
         };
     }
 
@@ -391,33 +549,44 @@ function buildF2(wb: ExcelJS.Workbook, report: TaxQuarterlyReport): Commercialis
     let ivaDebitoCents = 0;
     let lordoCents = 0;
     const byRateMap = new Map<string, CommercialistaCorrispettiviTotals['byRate'][number]>();
+    const probeRows: Array<{
+        imponibileCents: number;
+        ivaCents: number;
+        lordoCents: number;
+        vatRate: number | null;
+    }> = [];
 
     for (const r of sorted) {
-        const eligible = r.vatCertainty !== 'MANCANTE';
+        const rate = r.vatRate || VAT_PCT_FLORAL;
         const dateVal = parseYmd(r.paymentDate || r.date);
         const row = ws.addRow([
             dateVal || r.paymentDate || r.date,
-            r.orderNumber || '',
+            orderRefForExport(r.orderNumber),
             r.gateway || '',
-            eligible ? euroNum(r.imponibileCents) : '',
-            eligible ? r.vatRate || '' : '',
-            eligible ? euroNum(r.ivaDebitoCents) : '',
+            euroNum(r.imponibileCents),
+            rate,
+            euroNum(r.ivaDebitoCents),
             euroNum(r.grossCents),
         ]);
         applyBorders(row);
         if (dateVal) row.getCell(1).numFmt = DATE_FORMAT;
         for (const col of [4, 6, 7]) {
-            if (row.getCell(col).value !== '') row.getCell(col).numFmt = EUR_FORMAT;
+            row.getCell(col).numFmt = EUR_FORMAT;
         }
 
         lordoCents += r.grossCents;
-        if (eligible) {
-            imponibileCents += r.imponibileCents;
-            ivaDebitoCents += r.ivaDebitoCents;
-        }
-        const key = eligible ? String(r.vatRate) : 'MANCANTE';
+        imponibileCents += r.imponibileCents;
+        ivaDebitoCents += r.ivaDebitoCents;
+        probeRows.push({
+            imponibileCents: r.imponibileCents,
+            ivaCents: r.ivaDebitoCents,
+            lordoCents: r.grossCents,
+            vatRate: rate,
+        });
+
+        const key = String(rate);
         const cur = byRateMap.get(key) || {
-            vatRate: eligible ? r.vatRate : null,
+            vatRate: rate,
             salesCount: 0,
             imponibileCents: 0,
             ivaDebitoCents: 0,
@@ -425,10 +594,8 @@ function buildF2(wb: ExcelJS.Workbook, report: TaxQuarterlyReport): Commercialis
         };
         cur.salesCount += 1;
         cur.lordoCents += r.grossCents;
-        if (eligible) {
-            cur.imponibileCents += r.imponibileCents;
-            cur.ivaDebitoCents += r.ivaDebitoCents;
-        }
+        cur.imponibileCents += r.imponibileCents;
+        cur.ivaDebitoCents += r.ivaDebitoCents;
         byRateMap.set(key, cur);
     }
 
@@ -451,22 +618,32 @@ function buildF2(wb: ExcelJS.Workbook, report: TaxQuarterlyReport): Commercialis
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
     return {
-        salesCount: sorted.length,
-        imponibileCents,
-        ivaDebitoCents,
-        lordoCents,
-        byRate: [...byRateMap.values()].sort((a, b) => (a.vatRate ?? 999) - (b.vatRate ?? 999)),
+        totals: {
+            salesCount: sorted.length,
+            imponibileCents,
+            ivaDebitoCents,
+            lordoCents,
+            byRate: [...byRateMap.values()].sort((a, b) => (a.vatRate ?? 999) - (b.vatRate ?? 999)),
+        },
+        probeRows,
     };
 }
 
 function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): number {
     const ws = wb.addWorksheet('F3 — Costi senza documento');
     styleHeaderRow(
-        ws.addRow(['Riferimento ordine', 'Fiorista', 'Importo EUR', 'Data consegna'])
+        ws.addRow([
+            'Riferimento ordine',
+            'Fiorista',
+            'Importo EUR',
+            'Data consegna',
+            'Ordine prepagato (S/N)',
+            'Riferimento ordine originale',
+        ])
     );
 
     if (!rows.length) {
-        const empty = ws.addRow(['nessun movimento nel periodo', '', '', '']);
+        const empty = ws.addRow(['nessun movimento nel periodo', '', '', '', '', '']);
         applyBorders(empty);
         autofitColumns(ws);
         ws.views = [{ state: 'frozen', ySplit: 1 }];
@@ -481,6 +658,8 @@ function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): 
             r.floristName,
             euroNum(r.amountCents),
             d || r.deliveryDate,
+            r.prepaidFlag,
+            r.prepaidParentOrderRef,
         ]);
         applyBorders(row);
         row.getCell(3).numFmt = EUR_FORMAT;
@@ -488,7 +667,7 @@ function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): 
         total += r.amountCents;
     }
 
-    const tot = ws.addRow(['TOTALE', '', euroNum(total), '']);
+    const tot = ws.addRow(['TOTALE', '', euroNum(total), '', '', '']);
     applyBorders(tot);
     tot.font = { bold: true, name: 'Calibri', size: 10 };
     tot.getCell(3).numFmt = EUR_FORMAT;
@@ -499,21 +678,17 @@ function buildF3(wb: ExcelJS.Workbook, rows: CommercialistaCostiSenzaDocRow[]): 
 }
 
 /**
- * Genera il workbook commercialista (3 fogli F1→F2→F3).
- * Lancia CommercialistaConsistencyError se F1/F2 ≠ dossier fiscale stesso periodo.
+ * Genera il workbook commercialista (F1 Riepilogo + F2 Registro).
+ * F3 sospeso: rientrerà quando l'attribuzione bonifici→consegne sarà corretta.
+ * Lancia CommercialistaConsistencyError / CommercialistaSelfCheckError se i controlli falliscono.
  */
 export async function buildCommercialistaCorrispettiviXlsxOrdered(
     period: CommercialistaPeriod
 ): Promise<{ buffer: Buffer; preview: CommercialistaCorrispettiviPreview }> {
     const report = await loadReport(period);
-    const bounds =
-        period.kind === 'year'
-            ? resolveYearBounds(period.year)
-            : resolveQuarterBounds(period.year, period.quarter);
-    const costi = await loadCostiSenzaDocumento(bounds.start, bounds.end);
     const dossierTotals = sumCorrispettiviFromReport(report);
 
-    // Pre-check: F2 totals must match dossier before writing bytes
+    // Pre-check dossier ↔ totali attesi
     const f2Probe = sumCorrispettiviFromReport(report);
     assertConsistencyWithDossier(f2Probe, report);
 
@@ -524,9 +699,10 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
 
     const generatedAt = new Date();
     buildF1(wb, period, dossierTotals, generatedAt);
-    const f2Totals = buildF2(wb, report);
+    const { totals: f2Totals, probeRows } = buildF2(wb, report);
     assertConsistencyWithDossier(f2Totals, report);
-    const f3Total = buildF3(wb, costi);
+    assertIndependentFileChecks(probeRows, dossierTotals, f2Totals);
+    // F3 non generato (sospeso) — vedi METODO / handoff commercialista
 
     const buffer = Buffer.from(await wb.xlsx.writeBuffer());
     return {
@@ -538,8 +714,9 @@ export async function buildCommercialistaCorrispettiviXlsxOrdered(
             f1: dossierTotals,
             f2RowCount: f2Totals.salesCount,
             f2: f2Totals,
-            f3RowCount: costi.length,
-            f3TotalCents: f3Total,
+            f3RowCount: 0,
+            f3TotalCents: 0,
+            f3Included: false,
             consistencyOk: true,
         },
     };
@@ -584,23 +761,9 @@ export async function assertCommercialistaCorrispettiviPrivacy(buffer: Buffer): 
 
     const f2 = wb.getWorksheet('F2 — Registro corrispettivi');
     if (f2) {
-        const allowed = new Set([
-            'dataordine',
-            'riferimentoordine',
-            'canalediincasso',
-            'imponibileeur',
-            'aliquota%',
-            'ivaeur',
-            'totalelordoeur',
-            'nessunmovimentonelperiodo',
-            'totale',
-        ]);
         const headerRow = f2.getRow(1);
         headerRow.eachCell((cell) => {
             const h = normalize(cell.value);
-            if (h && !allowed.has(h) && ![...forbidden].some((f) => h.includes(f))) {
-                // header extra non in whitelist: segnala solo se sospetto PII
-            }
             for (const f of forbidden) {
                 if (h.includes(f)) hits.push(`F2 header vietato: ${String(cell.value)}`);
             }

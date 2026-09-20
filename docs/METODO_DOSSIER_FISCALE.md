@@ -1,7 +1,7 @@
 # Metodo — Dossier Fiscale FloreMoria
 
 Specifica funzionale del documento che il sistema produce per il commercialista.
-Versione 1.25 — 17 settembre 2026.
+Versione 1.26 — 20 settembre 2026.
 
 Questo file è la specifica. Chi implementa segue queste regole; se una regola non è
 implementabile come scritta, si ferma e lo segnala, non la reinterpreta.
@@ -492,9 +492,9 @@ righe di natura diversa, non ha un totale unico: ha un totale per natura.
 È il foglio che nel dossier di agosto mancava del tutto, ed è quello senza il quale il
 commercialista non può liquidare l'IVA.
 
-**Una riga per ogni combinazione ordine + aliquota.** Non una riga per ordine: un ordine che
-contiene fiori al 10% e un biglietto al 22% produce **due righe**, con lo stesso numero
-d'ordine e lo stesso riferimento di transazione, e importi che sommati danno l'incassato.
+**Una riga per ogni incasso gateway**, scorporata al **10%** (METODO §8.3). Non si
+producono più due righe per split aliquota sullo stesso ordine: l'intero lordo cliente
+è una sola riga.
 
 Colonne:
 
@@ -649,51 +649,29 @@ il compenso al fiorista è un costo operativo separato, non una riduzione del co
 
 ### 8.3 Da dove viene l'aliquota
 
-In FloreMoria esistono **due sole aliquote**:
+**Aliquota unica 10% su tutto il corrispettivo di vendita** (conferma commercialista,
+2026-09-20).
 
-| Bene | Aliquota |
+Fondamento: **accessorietà**. Accessori (biglietto, nastro, lumino, ceri, fotografia,
+messaggio e simili) non sono acquistabili separatamente; la consegna è gratuita. L'intero
+importo pagato dal cliente in checkout è quindi scorporato al **10%**, senza split per
+riga prodotto e senza distinzione 10%/22% sul registro corrispettivi.
+
+| Bene / servizio nel corrispettivo vendita | Aliquota |
 |---|---|
-| Fiori recisi, piante, composizioni floreali | **10%** |
-| Accessori (biglietto, nastro commemorativo, lumino, ceri, fotografia, messaggio e simili) | **22%** |
+| Fiori, piante, composizioni, accessori inclusi, consegna | **10%** |
 
-Non ce ne sono altre. L'aliquota si determina **per riga prodotto**, non per ordine: un
-ordine può contenere un bouquet al 10% e un nastro al 22%. Assegnare un'unica aliquota di
-testata all'intero ordine è un errore.
+Fuori dal registro corrispettivi restano aliquote diverse dove la norma lo richiede
+(es. fee partner Connect / reverse charge SaaS esteri al 22%) — non sono vendite al
+cliente finale.
 
-**Ordine di lettura (nessuna stima per divisione imposta/imponibile):**
+**Una riga per ogni incasso gateway**, con imponibile e IVA al 10%. Non esistono più stati
+*presunta* / *mancante* sull'aliquota: con un'unica aliquota non ci sono righe senza
+aliquota. Il gate export «MANCANTE > 30%» è **dismesso**.
 
-| Priorità | Caso | Stato | Azione |
-|---|---|---|---|
-| 1 | Riga collegata a un prodotto in anagrafica | **determinata** | aliquota dal campo della pagina Prodotti (`Product.vatRatePercent`) |
-| 2 | Ordine storico `.eu` senza prodotto in anagrafica sulla riga | **presunta** | default **10%** floreale, con motivazione registrata |
-| 3 | Nessuno dei due | **mancante** | riga in Eccezioni, esclusa dai totali IVA |
-
-Ogni prodotto a catalogo porta la propria aliquota come **attributo del prodotto**. Non si
-calcola dividendo imposta per imponibile e non si inventa un'aliquota di testata.
-
-Una regola di presunzione è ammessa solo se **scritta in questo metodo**. Oltre al default
-floreale sullo storico `.eu` senza anagrafica:
-
-> **FF-PD-26-002** — contiene un accessorio: non applicare il default 10% sull'intero
-> incasso se manca lo split per riga; resta in Eccezioni finché le aliquote di riga non sono
-> determinate.
-
-Il foglio 0 riporta sempre quanto vale ciascuno dei tre stati in euro, così che il
-commercialista veda su quale parte del fatturato l'aliquota è certa e su quale è presunta.
-Un valore presunto non è un valore inventato solo perché è dichiarato tale e la sua regola è
-verificabile.
-
-**La fonte è la riga d'ordine nel database, non l'email di conferma.** L'email è un documento
-generato *a partire* dall'ordine: sta più in basso nella gerarchia del §2 e leggerla come
-fonte significherebbe ricostruire un dato che il sistema possiede già. Se l'email contiene un
-dettaglio che l'ordine non ha, il problema non è che vada letta l'email — è che il database
-degli ordini è incompleto, e va completato.
-
-**Recupero dello storico.** Solo per gli ordini già chiusi in cui le righe non sono
-recuperabili dal database, si ammette una lettura una-tantum delle ricevute inviate al
-cliente, a condizione che ogni riga così ricostruita sia marcata con l'origine
-"ricostruita da ricevuta" e compaia nel foglio Eccezioni. È un recupero storico, mai il
-metodo a regime.
+Se l'incasso non ha un ordine univoco collegato, la vendita resta nel registro (scorporo
+10% sul lordo gateway) e in export commercialista il campo *Riferimento ordine* vale
+**`DA_COLLEGARE`** — un valore singolo, mai un elenco di candidati.
 
 Regole:
 - i rimborsi sono righe negative, mai righe cancellate, e devono riportare il **numero
@@ -706,8 +684,8 @@ Regole:
   quale norma applicare;
 - `Incassato lordo` deve coincidere con l'importo che il gateway dichiara: è la chiave
   con cui il commercialista ritrova il movimento;
-- se un incasso del gateway non trova l'ordine corrispondente, non si esclude e non si
-  inventa: va nel foglio Eccezioni.
+- se un incasso del gateway non trova l'ordine corrispondente, non si esclude: scorporo al
+  10% e riferimento `DA_COLLEGARE` (annotazione in Eccezioni per il collegamento).
 
 ---
 
@@ -787,9 +765,13 @@ dati storici.
 
 | Momento | Trattamento fiscale operativo | Cosa non fare |
 |---|---|---|
-| Pagamento anticipato del pacchetto | **Ricavo ai fini IVA per l'intero importo** alla data dell'incasso gateway | Spalmare l'IVA sulle consegne successive |
-| Consegne successive (pose / esecuzioni) | Esecuzione operativa a **€ 0**: non generano né ricavo né nuovo incasso | Creare corrispettivi o righe di registro fiscale sulle pose |
+| Pagamento anticipato del pacchetto | **Ricavo (lordo + IVA a debito) interamente nel trimestre dell'incasso gateway** | Spalmare ricavo/IVA sulle consegne successive |
+| Consegne successive (pose / esecuzioni) | Nessun nuovo corrispettivo; **costo fiorista** nel trimestre della singola consegna | Creare corrispettivi o righe di registro fiscale sulle pose |
 | Fine esercizio | La ripartizione per competenza (risconto passivo sulla quota non ancora consegnata) è una **scrittura del commercialista**, non una registrazione operativa del gestionale | Inventare un modello dati «consegne residue» nel prodotto dismesso |
+
+Nel foglio commercialista **F3 — Costi senza documento**, ogni riga di costo fiorista su
+posa prepagata espone `ordine prepagato (S/N)` e, se S, il riferimento dell'ordine padre
+(es. carnet Cesaroni).
 
 **Perimetro software.** Il filtro `isPrepaidSubscriptionPoseOrder` esclude le pose senza
 pagamento gateway da: Registro corrispettivi (già gateway-only), Prima Nota ricavi, e
@@ -827,6 +809,13 @@ correggere il codice. La correzione tecnica non sostituisce la traccia dell’in
 ---
 
 ## Registro delle modifiche
+
+**1.26 — 20 settembre 2026**
+- §8.3 — **aliquota unica 10%** su tutto il corrispettivo vendita (accessorietà; conferma
+  commercialista). Eliminati split 10%/22%, stati PRESUNTA/MANCANTE e gate export 30%.
+  Incassi senza ordine univoco → scorporo 10% + `DA_COLLEGARE`.
+- §13 — ricavo intero nel trimestre pagamento; costi fiorista nel trimestre consegna;
+  F3 espone colonna ordine prepagato (S/N) + riferimento padre.
 
 **1.25 — 17 settembre 2026**
 - §8.4 — **Solo le vendite** nel registro corrispettivi. Report vendite PayPal HAYUM =

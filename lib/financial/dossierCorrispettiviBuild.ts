@@ -1,6 +1,6 @@
 /**
  * Registro corrispettivi — METODO §8: costruito dagli **incassi gateway** (fonte §2).
- * Stati aliquota: determinata | presunta | mancante (§8.3). Nessuno stato «mista».
+ * Aliquota unica 10% su ogni vendita (§8.3 accessorietà, conferma commercialista 2026-09-20).
  * Importo: sempre lordo cliente (§8.2).
  */
 import prisma from '@/lib/prisma';
@@ -15,6 +15,7 @@ import {
 } from '@/lib/financial/euOrders2026Match';
 import { filterGatewayIncassiForCorrispettivi } from '@/lib/financial/corrispettiviSalesFilter';
 
+/** Retrocompat: PRESUNTA/MANCANTE non più emessi (sempre DETERMINATA al 10%). */
 export type CorrispettivoVatCertainty = 'DETERMINATA' | 'PRESUNTA' | 'MANCANTE';
 
 export type DossierCorrispettivoRow = {
@@ -33,51 +34,9 @@ export type DossierCorrispettivoRow = {
 
 const EU_PRESUNTA_CUTOFF = new Date('2026-07-02T00:00:00.000Z');
 
-function productVatRate(vatRatePercent: number | null | undefined): number | null {
-    if (vatRatePercent === 10 || vatRatePercent === 22) return vatRatePercent;
-    if (vatRatePercent == null || !Number.isFinite(vatRatePercent)) return null;
-    const n = Math.round(vatRatePercent > 0 && vatRatePercent <= 1 ? vatRatePercent * 100 : vatRatePercent);
-    return n === 10 || n === 22 ? n : null;
-}
-
 function isEuChannel(blob: string, paymentDate: Date): boolean {
     if (paymentDate >= EU_PRESUNTA_CUTOFF) return false;
     return /floremoria\.eu|stripe_eu|\.eu\b|psa|san\s*marco/i.test(blob);
-}
-
-type OrderWithItems = {
-    id: string;
-    orderNumber: string | null;
-    totalPriceCents: number;
-    paymentMethodLabel: string | null;
-    stripeTransactionId: string | null;
-    items: Array<{
-        quantity: number;
-        priceCents: number;
-        product: { vatRatePercent: number | null; name: string | null } | null;
-    }>;
-};
-
-function splitByProductVat(
-    order: OrderWithItems,
-    grossCents: number
-): Array<{ rate: number; grossCents: number }> | null {
-    const byRate = new Map<number, number>();
-    for (const it of order.items) {
-        const line = it.priceCents * it.quantity;
-        if (line <= 0) continue;
-        const rate = productVatRate(it.product?.vatRatePercent ?? null);
-        if (rate == null) return null;
-        byRate.set(rate, (byRate.get(rate) || 0) + line);
-    }
-    if (byRate.size === 0) return null;
-    const listino = [...byRate.values()].reduce((a, b) => a + b, 0) || 1;
-    const sign = grossCents < 0 ? -1 : 1;
-    const abs = Math.abs(grossCents);
-    return [...byRate.entries()].map(([rate, share]) => ({
-        rate,
-        grossCents: sign * Math.round((abs * share) / listino),
-    }));
 }
 
 type GatewayIncasso = {
@@ -302,13 +261,6 @@ export async function buildGatewayCorrispettivi(params: {
                       totalPriceCents: true,
                       paymentMethodLabel: true,
                       stripeTransactionId: true,
-                      items: {
-                          select: {
-                              quantity: true,
-                              priceCents: true,
-                              product: { select: { vatRatePercent: true, name: true } },
-                          },
-                      },
                   },
               })
             : [];
@@ -318,7 +270,7 @@ export async function buildGatewayCorrispettivi(params: {
     const orphans = incassi.filter((i) => !i.orderId || !orderById.has(i.orderId));
     if (orphans.length > 0) {
         const txIds = [
-            ...new Set(orphans.flatMap((o) => o.linkIds.length ? o.linkIds : [o.transactionId])),
+            ...new Set(orphans.flatMap((o) => (o.linkIds.length ? o.linkIds : [o.transactionId]))),
         ].filter(Boolean);
         const extra = await prisma.order.findMany({
             where: {
@@ -342,13 +294,6 @@ export async function buildGatewayCorrispettivi(params: {
                 totalPriceCents: true,
                 paymentMethodLabel: true,
                 stripeTransactionId: true,
-                items: {
-                    select: {
-                        quantity: true,
-                        priceCents: true,
-                        product: { select: { vatRatePercent: true, name: true } },
-                    },
-                },
             },
             take: 500,
         });
@@ -368,7 +313,7 @@ export async function buildGatewayCorrispettivi(params: {
     const rows: DossierCorrispettivoRow[] = [];
     // `exceptions` già popolato dal filtro §8.4
 
-    // Match soft verso dataset .eu verificato (nessuna scrittura DB) — abbassa MANCANTE
+    // Match soft verso dataset .eu: solo identificazione ordine (nessuna scrittura DB)
     let euMatchByGwKey = new Map<string, EuGatewayMatch>();
     try {
         const euDs = loadEuOrders2026Dataset();
@@ -390,61 +335,16 @@ export async function buildGatewayCorrispettivi(params: {
 
     for (const g of incassi) {
         const order = g.orderId ? orderById.get(g.orderId) : undefined;
-        const orderNumber = order?.orderNumber || '';
+        let orderNumber = order?.orderNumber || '';
+        let orderId: string | null = order?.id ?? null;
         const date = g.paymentDate.toISOString().slice(0, 10);
         const gwKey = `${g.gateway}:${g.transactionId}`.toLowerCase();
         const euHit = euMatchByGwKey.get(gwKey);
 
-        // FF-PD-26-002: eccezione alla presunzione .eu (accessorio) — se non c'è ordine con aliquote, mancante
-        const isFfPdAccessory =
-            /FF-PD-26-002/i.test(orderNumber) || /FF-PD-26-002/i.test(g.channelBlob);
-
-        if (order) {
-            const splits = splitByProductVat(order, g.grossCents);
-            if (splits) {
-                for (const s of splits) {
-                    const vat = scorporaIva(s.grossCents, s.rate);
-                    rows.push({
-                        date,
-                        canaleIncasso: g.gateway,
-                        transactionId: g.transactionId,
-                        orderNumber,
-                        orderId: order.id,
-                        grossCents: vat.grossCents,
-                        vatRate: s.rate,
-                        vatCertainty: 'DETERMINATA',
-                        vatRuleNote: 'Aliquota da Product.vatRatePercent sulla riga ordine',
-                        imponibileCents: vat.imponibileCents,
-                        ivaCents: vat.ivaCents,
-                    });
-                }
-                continue;
-            }
-        }
-
-        if (g.isEu && !isFfPdAccessory) {
-            const vat = scorporaIva(g.grossCents, VAT_PCT_FLORAL);
-            rows.push({
-                date,
-                canaleIncasso: g.gateway,
-                transactionId: g.transactionId,
-                orderNumber: orderNumber || '',
-                orderId: order?.id ?? null,
-                grossCents: vat.grossCents,
-                vatRate: VAT_PCT_FLORAL,
-                vatCertainty: 'PRESUNTA',
-                vatRuleNote:
-                    'METODO §8.3 — storico .eu senza riga prodotto in anagrafica: default 10% floreale (PRESUNTA)',
-                imponibileCents: vat.imponibileCents,
-                ivaCents: vat.ivaCents,
-            });
-            continue;
-        }
-
-        // Dataset .eu verificato: identifica l'ordine; valorizzazione = lordo gateway (§8.2)
-        if (euHit && !isFfPdAccessory && g.grossCents > 0) {
-            const vat = scorporaIva(g.grossCents, VAT_PCT_FLORAL);
+        // Dataset .eu: identifica ordine se ancora orfano; lordo resta gateway (§8.2)
+        if (!orderId && euHit && g.grossCents > 0) {
             const o = euHit.order;
+            orderNumber = orderNumber || o.id;
             if (euHit.listMinusGatewayCents !== 0) {
                 exceptions.push({
                     cosa: `${o.customerName || o.email || o.id} · lista €${(o.incassatoRealeCents / 100).toFixed(2)} vs gateway €${(Math.abs(g.grossCents) / 100).toFixed(2)}`,
@@ -454,46 +354,35 @@ export async function buildGatewayCorrispettivi(params: {
                         'documento/lista .eu diverge dal gateway: vince il lordo gateway (§8.2)',
                 });
             }
-            const isabellaNote =
-                o.customerName.toLowerCase().includes('cesaroni') && o.scontoCents > 0
-                    ? ` Listino €${o.listinoEuro.toFixed(2)} | Sconto €${o.scontoEuro.toFixed(2)} | Incassato lordo gateway €${(Math.abs(g.grossCents) / 100).toFixed(2)}.`
-                    : '';
-            rows.push({
-                date,
-                canaleIncasso: g.gateway,
-                transactionId: g.transactionId,
-                orderNumber: orderNumber || o.id,
-                orderId: order?.id ?? null,
-                grossCents: vat.grossCents,
-                vatRate: VAT_PCT_FLORAL,
-                vatCertainty: 'PRESUNTA',
-                vatRuleNote: `METODO §8.3 — storico .eu senza aliquota riga prodotto: default 10% floreale (${euHit.score}) · ${o.customerName || o.email || o.id} · ${o.canale}.${isabellaNote}`,
-                imponibileCents: vat.imponibileCents,
-                ivaCents: vat.ivaCents,
-            });
-            continue;
         }
 
-        exceptions.push({
-            cosa: `Incasso senza aliquota determinabile — ${g.gateway} ${g.transactionId}`,
-            dove: 'Corrispettivi',
-            importoCents: Math.abs(g.grossCents),
-            perche: order
-                ? 'Ordine collegato ma prodotti senza vatRatePercent compilato: escluso dai totali IVA.'
-                : 'Incasso gateway senza ordine collegato e senza regola di presunzione applicabile.',
-        });
+        if (!orderId) {
+            exceptions.push({
+                cosa: `Incasso senza ordine univoco — ${g.gateway} ${g.transactionId}`,
+                dove: 'Corrispettivi',
+                importoCents: Math.abs(g.grossCents),
+                perche:
+                    'Incasso gateway senza collegamento ordine: scorporo al 10% comunque; riferimento ordine = DA_COLLEGARE in export commercialista.',
+            });
+        }
+
+        const vat = scorporaIva(g.grossCents, VAT_PCT_FLORAL);
+        const euNote =
+            euHit && !order
+                ? ` · match .eu ${euHit.score} (${euHit.order.customerName || euHit.order.email || euHit.order.id})`
+                : '';
         rows.push({
             date,
             canaleIncasso: g.gateway,
             transactionId: g.transactionId,
-            orderNumber: orderNumber || '',
-            orderId: order?.id ?? null,
-            grossCents: g.grossCents,
-            vatRate: 0,
-            vatCertainty: 'MANCANTE',
-            vatRuleNote: 'Escluso dai totali IVA — vedi foglio Da chiarire',
-            imponibileCents: 0,
-            ivaCents: 0,
+            orderNumber,
+            orderId,
+            grossCents: vat.grossCents,
+            vatRate: VAT_PCT_FLORAL,
+            vatCertainty: 'DETERMINATA',
+            vatRuleNote: `METODO §8.3 — aliquota unica 10% (accessorietà)${euNote}`,
+            imponibileCents: vat.imponibileCents,
+            ivaCents: vat.ivaCents,
         });
     }
 
@@ -509,16 +398,12 @@ export async function buildGatewayCorrispettivi(params: {
     for (const r of rows) {
         const g = Math.abs(r.grossCents);
         totals.grossAllCents += g;
-        if (r.vatCertainty === 'DETERMINATA') totals.determinataGrossCents += g;
-        else if (r.vatCertainty === 'PRESUNTA') totals.presuntaGrossCents += g;
-        else totals.mancanteGrossCents += g;
-        if (r.vatCertainty !== 'MANCANTE') {
-            totals.imponibileCents += r.imponibileCents;
-            totals.ivaDebitoCents += r.ivaCents;
-        }
+        totals.determinataGrossCents += g;
+        totals.imponibileCents += r.imponibileCents;
+        totals.ivaDebitoCents += r.ivaCents;
     }
-    totals.mancanteShare =
-        totals.grossAllCents > 0 ? totals.mancanteGrossCents / totals.grossAllCents : 0;
+    // Gate 30% dismesso: con aliquota unica non esistono più righe senza aliquota
+    totals.mancanteShare = 0;
 
     return { rows, exceptions, totals };
 }

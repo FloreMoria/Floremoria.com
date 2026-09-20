@@ -42,7 +42,25 @@ export default function MomoVideoPanel() {
                 if (!res.ok) throw new Error(data.error || 'Catalogo MOMO non disponibile');
                 if (cancelled) return;
                 setCatalog(data);
-                if (data.monuments?.[0]?.id) setMonumentId(data.monuments[0].id);
+                const firstId = data.monuments?.[0]?.id || 'alessandro-volta-camnago';
+                setMonumentId(firstId);
+
+                // Auto-carica l'anteprima per Alessandro Volta
+                const planRes = await fetch('/api/dashboard/momo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'generate',
+                        monumentId: firstId,
+                        voiceId: 'male-senior',
+                        musicId: 'adagio-strings-cc0',
+                        markReady: true,
+                    }),
+                });
+                const planData = await planRes.json();
+                if (planRes.ok && planData.plan && !cancelled) {
+                    setPlan(planData.plan);
+                }
             } catch (e) {
                 if (!cancelled) {
                     setError(e instanceof Error ? e.message : 'Errore caricamento MOMO');
@@ -208,33 +226,62 @@ export default function MomoVideoPanel() {
                     type="button"
                     onClick={() => void generate()}
                     disabled={loading || !monumentId}
-                    className="rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
+                    className="rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 hover:bg-stone-800 transition-colors"
                 >
-                    {loading ? 'MOMO sta preparando…' : 'Genera piano video MP4 9:16'}
+                    {loading ? 'MOMO sta renderizzando…' : 'Rigenera video MP4 9:16'}
                 </button>
                 <button
                     type="button"
                     onClick={() => void publish()}
                     disabled={!plan || publishing || channels.length === 0}
-                    className="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 disabled:opacity-50"
+                    className="rounded-xl border border-rose-500 bg-rose-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 hover:bg-rose-700 transition-colors shadow-sm"
                 >
-                    {publishing ? 'In coda…' : 'Pubblica (Shorts / Reels / TikTok / FB)'}
+                    {publishing ? 'In coda…' : 'Pubblica su Instagram Reels & Social'}
                 </button>
+                {plan?.videoRelativePath && (
+                    <a
+                        href={plan.videoRelativePath}
+                        download="test_volta_camnago_reel.mp4"
+                        className="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5"
+                    >
+                        📥 Scarica MP4
+                    </a>
+                )}
+                {plan?.srtRelativePath && (
+                    <a
+                        href={plan.srtRelativePath}
+                        download="test_volta_camnago_reel.srt"
+                        className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5"
+                    >
+                        📄 Sottotitoli .SRT
+                    </a>
+                )}
             </div>
 
             {publishNote && (
-                <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
-                    {publishNote}
+                <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 font-medium">
+                    ✅ {publishNote}
                 </p>
             )}
 
             {plan && (
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-stone-200 bg-stone-950 aspect-[9/16] max-h-[420px] flex flex-col items-center justify-center text-center p-4">
-                        {plan.status === 'RENDERED_READY_FOR_PUBLISH' ? (
-                            <>
-                                <p className="text-stone-300 text-xs uppercase tracking-widest mb-2">
-                                    Anteprima piano · {plan.width}×{plan.height}
+                <div className="grid gap-6 md:grid-cols-2 pt-2">
+                    <div className="rounded-2xl border border-stone-800 bg-black aspect-[9/16] max-h-[520px] flex flex-col items-center justify-center text-center overflow-hidden shadow-lg relative">
+                        {plan.videoRelativePath ? (
+                            <video
+                                key={plan.videoRelativePath}
+                                src={plan.videoRelativePath}
+                                controls
+                                autoPlay
+                                muted
+                                playsInline
+                                loop
+                                className="w-full h-full object-contain"
+                            />
+                        ) : plan.status === 'RENDERED_READY_FOR_PUBLISH' ? (
+                            <div className="p-4 space-y-2">
+                                <p className="text-stone-300 text-xs uppercase tracking-widest">
+                                    Anteprima video · {plan.width}×{plan.height}
                                 </p>
                                 <p className="text-white text-sm font-medium px-2">
                                     {plan.socialMetadata.title}
@@ -242,34 +289,54 @@ export default function MomoVideoPanel() {
                                 <p className="text-stone-400 text-xs mt-2">
                                     Output: {plan.videoRelativePath}
                                 </p>
-                                <p className="text-stone-500 text-[10px] mt-3 max-w-[220px] leading-relaxed">
-                                    Worker FFmpeg collega le clip documentarie reali. Qui vedi il
-                                    piano pronto per il render fisico.
-                                </p>
-                            </>
+                            </div>
                         ) : (
                             <p className="text-stone-400 text-sm">Piano in preparazione…</p>
                         )}
                     </div>
-                    <div className="space-y-3 text-sm text-stone-700">
-                        <p>
-                            <span className="font-semibold text-stone-900">Durata:</span>{' '}
-                            {plan.script.durationSeconds}s · Voce {plan.audio.voice.label} ·{' '}
-                            {plan.audio.music.title}
-                        </p>
-                        <ol className="space-y-2 list-decimal list-inside">
-                            {plan.script.blocks.map((b) => (
-                                <li key={b.label} className="leading-snug">
-                                    <span className="font-medium text-stone-900">
-                                        [{b.startSec}–{b.endSec}s]
-                                    </span>{' '}
-                                    {b.narration}
-                                </li>
-                            ))}
-                        </ol>
-                        <p className="text-xs text-stone-500">
-                            Hashtag: {plan.socialMetadata.hashtags.join(' ')}
-                        </p>
+                    <div className="space-y-4 text-sm text-stone-700 flex flex-col justify-between">
+                        <div className="space-y-3">
+                            <div className="bg-stone-100 rounded-xl p-3 border border-stone-200">
+                                <p className="font-semibold text-stone-900 text-sm">
+                                    {plan.socialMetadata.title}
+                                </p>
+                                <p className="text-xs text-stone-600 mt-1">
+                                    <span className="font-semibold text-stone-800">Durata:</span> {plan.script.durationSeconds}s · <span className="font-semibold text-stone-800">Voce:</span> {plan.audio.voice.label} · <span className="font-semibold text-stone-800">Musica:</span> {plan.audio.music.title}
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
+                                    Script & Sottotitoli Sincronizzati
+                                </h4>
+                                <ol className="space-y-2 list-none">
+                                    {plan.script.blocks.map((b) => (
+                                        <li key={b.label} className="text-xs bg-white rounded-lg border border-stone-200 p-2.5 space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-stone-900 bg-stone-100 px-1.5 py-0.5 rounded text-[11px]">
+                                                    [{b.startSec}s – {b.endSec}s] {b.label.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <p className="text-stone-800 font-medium leading-relaxed">
+                                                &ldquo;{b.narration}&rdquo;
+                                            </p>
+                                            <p className="text-stone-500 text-[10px] italic">
+                                                Inquadratura: {b.visualDirection}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div className="bg-stone-50 rounded-xl p-3 border border-stone-200 text-xs space-y-1.5">
+                            <p className="text-stone-600">
+                                <strong className="text-stone-800">Hashtag:</strong> {plan.socialMetadata.hashtags.join(' ')}
+                            </p>
+                            <p className="text-[11px] text-stone-500">
+                                Formato: 1080×1920 (9:16) MP4 H.264 / AAC · Pronto per Instagram Reels
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

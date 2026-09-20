@@ -34,41 +34,83 @@ export function buildMomoScript(monumentId: string): MomoScript {
 }
 
 function composeScript(m: MonumentRecord): MomoScript {
-    const blocks: MomoScriptBlock[] = [
-        {
-            startSec: 0,
-            endSec: 3,
-            label: 'hook',
-            narration: `${m.historicalFigure}. Un luogo reale della memoria.`,
-            visualDirection:
-                'Dettaglio epigrafe / pietra / scultura esistente — nessun soggetto umano a figura intera.',
-        },
-        {
-            startSec: 4,
-            endSec: 20,
-            label: 'monument',
-            narration: `Siamo al ${m.cemetery}, ${m.city}. ${m.sculpturalNotes}`,
-            visualDirection:
-                'Panning lento sul monumento documentato; close-up su bassorilievi e iscrizioni reali.',
-        },
-        {
-            startSec: 21,
-            endSec: 45,
-            label: 'legacy',
-            narration: `La memoria di ${m.historicalFigure} resta legata a questo spazio sacro, non a un’immagine inventata. Fonti: ${m.sources[0]}.`,
-            visualDirection:
-                'Mani che depongono un omaggio floreale alla base del monumento (solo braccia/mani).',
-        },
-        {
-            startSec: 46,
-            endSec: 58,
-            label: 'closing',
-            narration:
-                'Presenza testimoniata. Cura. Ricordo. FloreMoria — luoghi della memoria.',
-            visualDirection:
-                'Ultimo dettaglio floreale e firma tipografica sobria su fondale pietra.',
-        },
-    ];
+    let blocks: MomoScriptBlock[];
+
+    if (m.id === 'alessandro-volta-camnago') {
+        blocks = [
+            {
+                startSec: 0,
+                endSec: 3,
+                label: 'hook',
+                narration: "Qui riposa l'uomo che ha dato la scintilla al mondo moderno.",
+                visualDirection:
+                    'Vista solenne del tempietto neoclassico circolare di Camnago Volta — nessun soggetto umano a figura intera.',
+            },
+            {
+                startSec: 4,
+                endSec: 20,
+                label: 'monument',
+                narration:
+                    'Siamo a Camnago Volta, Como. Il mausoleo neoclassico circolare custodisce il busto in marmo di Comolli e il rilievo della celebre pila.',
+                visualDirection:
+                    'Dettaglio scultoreo del busto in marmo di Giovanni Battista Comolli e dei bassorilievi della pila voltaica.',
+            },
+            {
+                startSec: 21,
+                endSec: 40,
+                label: 'legacy',
+                narration:
+                    "L'invenzione della pila e l'eredità silenziosa custodita tra le colline di Como testimoniano come la scintilla del genio continui a vivere.",
+                visualDirection:
+                    'Luce tra le colonne neoclassiche del tempietto e inquadratura lenta sull’architettura sacra.',
+            },
+            {
+                startSec: 41,
+                endSec: 45,
+                label: 'closing',
+                narration:
+                    'Un gesto di cura e rispetto per chi ha illuminato la storia. FloreMoria: la memoria eterna.',
+                visualDirection:
+                    'Inquadratura close-up esclusiva sulle mani che depongono una composizione floreale sobria alla base.',
+            },
+        ];
+    } else {
+        blocks = [
+            {
+                startSec: 0,
+                endSec: 3,
+                label: 'hook',
+                narration: `${m.historicalFigure}. Un luogo autentico della memoria.`,
+                visualDirection:
+                    'Dettaglio epigrafe e scultura esistente — nessun soggetto umano a figura intera.',
+            },
+            {
+                startSec: 4,
+                endSec: 20,
+                label: 'monument',
+                narration: `Siamo al ${m.cemetery}, ${m.city}. ${m.sculpturalNotes}`,
+                visualDirection:
+                    'Panning lento sul monumento documentato; close-up su bassorilievi e iscrizioni reali.',
+            },
+            {
+                startSec: 21,
+                endSec: 40,
+                label: 'legacy',
+                narration: `La memoria di ${m.historicalFigure} vive in questo spazio sacro tra storia e silenzio. Fonti certificate: ${m.sources[0]}.`,
+                visualDirection:
+                    'Luce e dettagli architettonici del luogo sacro.',
+            },
+            {
+                startSec: 41,
+                endSec: 45,
+                label: 'closing',
+                narration:
+                    'Presenza, cura e ricordo testimoniano la memoria. FloreMoria.',
+                visualDirection:
+                    'Mani che depongono un omaggio floreale sobrio alla base (solo mani/dettaglio).',
+            },
+        ];
+    }
 
     const fullNarration = blocks.map((b) => b.narration).join(' ');
     const title = `La tomba di ${m.historicalFigure} | Luoghi della Memoria`;
@@ -79,13 +121,14 @@ function composeScript(m: MonumentRecord): MomoScript {
         '#LuoghiDellaMemoria',
         `#${m.historicalFigure.replace(/\s+/g, '')}`,
         '#StoriaItaliana',
+        '#InstagramReels',
     ];
 
     return {
         monumentId: m.id,
         historicalFigure: m.historicalFigure,
         cemetery: m.cemetery,
-        durationSeconds: 58,
+        durationSeconds: 45,
         blocks,
         fullNarration,
         hashtags,

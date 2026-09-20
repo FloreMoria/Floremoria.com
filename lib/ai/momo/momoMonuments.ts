@@ -31,7 +31,7 @@ export const CERTIFIED_MONUMENTS: MonumentRecord[] = [
             'Comune di Como — Camnago Volta',
         ],
         sculpturalNotes:
-            'Tomba neogotica con busto e stele commemorativa nel cimitero di Camnago Volta.',
+            'Tempio neoclassico circolare a cupola, busto scultoreo in marmo di Giovanni Battista Comolli, rilievo raffigurante la pila voltaica.',
         coordinatesHint: 'Camnago Volta, Como',
         verified: true,
     },

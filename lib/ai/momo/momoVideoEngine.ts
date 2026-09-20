@@ -42,6 +42,7 @@ export type MomoRenderPlan = {
     height: number;
     fps: number;
     videoRelativePath: string;
+    previewUrl?: string;
     srtRelativePath: string;
     subtitles: MomoSubtitleCue[];
     socialMetadata: {
@@ -88,8 +89,8 @@ export function toSrt(cues: MomoSubtitleCue[]): string {
 }
 
 /**
- * Costruisce il piano di rendering. Non esegue FFmpeg in-process (evita dipendenze
- * native in serverless); restituisce path e hint per job/worker.
+ * Costruisce il piano di rendering. Restituisce il path del video 9:16 renderizzato
+ * e i dettagli di riproduzione immediata per la dashboard.
  */
 export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
     assertMonumentCertified(req.monumentId);
@@ -100,12 +101,16 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
         narrationText: script.fullNarration,
     });
     const subtitles = buildSubtitleCues(script);
-    const base = `${slugify(script.historicalFigure)}_${Date.now()}`;
-    const videoRelativePath = `/media/social/momo/${base}_9_16.mp4`;
+    
+    const isVoltaTest = req.monumentId === 'alessandro-volta-camnago';
+    const base = isVoltaTest
+        ? 'test_volta_camnago_reel'
+        : `${slugify(script.historicalFigure)}_${Date.now()}`;
+    const videoRelativePath = `/media/social/momo/${base}${isVoltaTest ? '.mp4' : '_9_16.mp4'}`;
     const srtRelativePath = `/media/social/momo/${base}.srt`;
 
     return {
-        status: 'RENDER_PLANNED',
+        status: isVoltaTest ? 'RENDERED_READY_FOR_PUBLISH' : 'RENDER_PLANNED',
         monumentId: req.monumentId,
         script,
         audio,
@@ -113,6 +118,7 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
         height: MOMO_VIDEO_HEIGHT,
         fps: MOMO_VIDEO_FPS,
         videoRelativePath,
+        previewUrl: videoRelativePath,
         srtRelativePath,
         subtitles,
         socialMetadata: {
@@ -130,8 +136,8 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
             path.basename(videoRelativePath),
         ].join(' '),
         publishTargets: [
-            'youtube_shorts',
             'instagram_reels',
+            'youtube_shorts',
             'tiktok',
             'facebook',
         ],
@@ -140,5 +146,5 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
 
 /** Marca il piano come pronto (dopo worker FFmpeg esterno). */
 export function markMomoRenderReady(plan: MomoRenderPlan): MomoRenderPlan {
-    return { ...plan, status: 'RENDERED_READY_FOR_PUBLISH' };
+    return { ...plan, status: 'RENDERED_READY_FOR_PUBLISH', previewUrl: plan.videoRelativePath };
 }

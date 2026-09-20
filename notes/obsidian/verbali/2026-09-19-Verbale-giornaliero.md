@@ -4,11 +4,7 @@ tipo: verbale_sviluppo
 tags: [verbale, BARBARA, DEVIN, PETRA, CEO, sync_docs, Regola_Aurea]
 sommario: "Verbale Operativo FloreMoria — 19 Settembre 2026"
 sync_source: docs/verbali/19-09-2026.md
-<<<<<<< HEAD
 synced_at: 2026-09-20T11:07:20.137Z
-=======
-synced_at: 2026-09-20T03:11:31.296Z
->>>>>>> 0da39806 (feat(ai): unificazione documentazione agenti in Agent_formato_md, aggiornamento organigramma e integrazione agente Momo)
 ---
 
 > Copia sincronizzata automaticamente da `docs/verbali/19-09-2026.md`. Modificare la fonte in `docs/verbali/`; rieseguire `npm run log:verbale:sync-docs`.
@@ -20,14 +16,10 @@ synced_at: 2026-09-20T03:11:31.296Z
 
 ## Sezione 1 — Infrastruttura
 
-<<<<<<< HEAD
-- `a2a87f5` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
-=======
 - `a2a87f57` chore(verbali): [skip ci] sync automatico verbale giorno precedente (Europe/Rome) _(github-actions[bot])_
 - `18b78d2f` chore(verbali): [skip ci] pipeline BARBARA + DEVIN → Obsidian _(github-actions[bot])_
 - `e165dbfc` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
 - `b34c2d27` docs(verbali): [skip ci] auto-sync verbale del giorno precedente _(FloreMoria)_
->>>>>>> 0da39806 (feat(ai): unificazione documentazione agenti in Agent_formato_md, aggiornamento organigramma e integrazione agente Momo)
 
 ## Sezione 2 — Strategia
 
@@ -39,8 +31,4 @@ synced_at: 2026-09-20T03:11:31.296Z
 
 ## Sezione 4 — Logistica
 
-<<<<<<< HEAD
 - Consegne completate: **1**
-=======
-- _Nessuna attività registrata per questa giornata._
->>>>>>> 0da39806 (feat(ai): unificazione documentazione agenti in Agent_formato_md, aggiornamento organigramma e integrazione agente Momo)

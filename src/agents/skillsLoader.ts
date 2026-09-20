@@ -1,9 +1,9 @@
 /**
  * Carica le skill Markdown da agents/skills/ e le inietta nei System Prompt.
- * Non modifica i master dei 22 Agent: è un layer opzionale e additivo.
+ * Non modifica i master dei 23 Agent: è un layer opzionale e additivo.
  *
- * Assumption: le skill vivono in `agents/skills/` (equivalente operativo di
- * Agent_formato_md/agents/skills nel monorepo FloreMoria).
+ * Assumption: le skill vivono in `agents/skills/` (equivalente operativo nel repo
+ * del master hub `Agent_formato_md/agents_master/`).
  */
 import { promises as fs } from 'fs';
 import path from 'path';

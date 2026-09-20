@@ -56,13 +56,12 @@ Cursor deve invocare la competenza specifica in base al task richiesto:
 - Non eseguire azioni che violino l'etica di SOFIA o l'empatia di ALMA.
 # FLOREM_NET — Sintesi compatta dei 23 agenti
 
-Indice operativo dei profili master. Ogni agente è descritto in 4 righe: **chi è**, **cosa fa**, **cosa NON fa**, **con chi si interfaccia**. Per il dettaglio si rimanda al file `.md` originale dell'agente in `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`.
+Indice operativo dei profili master. Ogni agente è descritto in 4 righe: **chi è**, **cosa fa**, **cosa NON fa**, **con chi si interfaccia**. Per il dettaglio si rimanda al file master dell'agente in `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/agents_master/`.
 
 ---
 
 ## Stato dei file
-- **Master completi (19):** sofia, alma, mark, devin, petra, vince, ziggy, alberto, martina, dante, nina, vera, axel, arlo, barbara, oscar, link, postman, prof.
-- **Mancanti (3):** **HYDRA** (Lead Generation), **VITO** (Cybersecurity), **CLEO** (Content Strategist). Da redigere.
+- **Master completi (23/23):** tutti i 23 agenti hanno il master definitivo in `Agent_formato_md/agents_master/`.
 
 ---
 
@@ -228,6 +227,6 @@ Indice operativo dei profili master. Ogni agente è descritto in 4 righe: **chi 
 ---
 
 ## Stato master al 2026-09-20
-- **Completi (23/23):** tutti gli agent hanno il file master, incluso **MOMO**
-- **Fonte unica:** `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`
+- **Completi (23/23):** tutti gli agent hanno il file master definitivo in `agents_master/`
+- **Fonte unica:** `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/` (`agents_master/` + `general_docs/`)
 - **Mancanti:** nessuno

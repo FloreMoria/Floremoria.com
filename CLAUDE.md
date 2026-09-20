@@ -42,7 +42,7 @@ Claude opera con tre ruoli simultanei:
 
 ## 👥 FLOREM_NET — Organigramma completo 23 Agent
 
-> Fonte unica documentazione: `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`
+> Fonte unica documentazione: `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/` (`agents_master/` + `general_docs/`)
 > Mirror operativo nel repo: `agents/FLOREM_NET_organigramma.md` + `agents/NOMEAGENTE_master.md`
 
 ### Custodi dell'Anima (filtro etico sempre attivo)

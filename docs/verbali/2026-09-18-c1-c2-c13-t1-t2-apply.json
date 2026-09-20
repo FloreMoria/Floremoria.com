@@ -1,0 +1,622 @@
+{
+  "generatedAt": "2026-09-18T10:20:14.808Z",
+  "mode": "apply",
+  "batch": "C1_C2_C13_T1T2_20260918",
+  "c1c2Fix": "Vista Fineco master: ripristino BANK_LINE collassate + divieto merge tra bankLineId distinti in consolidateAuthorityOutflows. Nessuna scrittura forfettaria.",
+  "duplicateBankLedgerReversed": [
+    {
+      "keepId": "cmt3zx44g00cmky04bjjmoels",
+      "removeId": "cmt5iudlh0008l404gx6efety",
+      "bankId": "cmt1vc6uj000sky04wsqt2cza",
+      "euro": 53.64
+    },
+    {
+      "keepId": "cmt3zx44d00bbky049uibvydw",
+      "removeId": "cmt5gyz8r0000l204zjeooap9",
+      "bankId": "cmt3dsdfx0014h1043fmznuir",
+      "euro": -62
+    },
+    {
+      "keepId": "cmt3zx44b00ajky041ocps8w2",
+      "removeId": "cmt5gudmt0000l3047f4t2bti",
+      "bankId": "cmt3dsdfw000ch104rsh5k510",
+      "euro": 38.84
+    },
+    {
+      "keepId": "cmt3zx44b00ahky04pzo2st4j",
+      "removeId": "cmt5gsuwb0001ie041qnhm926",
+      "bankId": "cmt3dsdfw0009h104k4f23kq4",
+      "euro": -20
+    },
+    {
+      "keepId": "cmt3zx44b00afky04e78b5tei",
+      "removeId": "cmt5gtbm80003ie04boon4eea",
+      "bankId": "cmt3dsdfw0007h104b2i3kkqo",
+      "euro": 0.09
+    },
+    {
+      "keepId": "cmt3zx44c00b2ky04s0wm8yhm",
+      "removeId": "cmt5gxnvc0009l3044y85iy1z",
+      "bankId": "cmt3dsdfx000uh104m65yklls",
+      "euro": 38.84
+    },
+    {
+      "keepId": "cmt3zx44c00axky04i6lpemmj",
+      "removeId": "cmt5gwqo00005l304f30bg971",
+      "bankId": "cmt3dsdfx000ph104cwocju2d",
+      "euro": 36.89
+    },
+    {
+      "keepId": "cmt3zx44c00b3ky04fzkt9or9",
+      "removeId": "cmt5gxqgv000al304229nnsox",
+      "bankId": "cmt3dsdfx000wh104e5ckbv0f",
+      "euro": 1.26
+    },
+    {
+      "keepId": "cmt3zx44d00b6ky04sfol571x",
+      "removeId": "cmt5gy1ac000dl304ss6sgvty",
+      "bankId": "cmt3dsdfx000zh104dexj7qdq",
+      "euro": 102.21
+    },
+    {
+      "keepId": "cmt3zx44d00b7ky04kok8qolu",
+      "removeId": "cmt5iuzq60000js04x7rpc0bc",
+      "bankId": "cmt3dsdfx0010h10443i3mh1y",
+      "euro": 2.25
+    },
+    {
+      "keepId": "cmt3zx44b00aaky04cxo41lb8",
+      "removeId": "cmt5fzwwv0001i504ckn5ueyr",
+      "bankId": "cmt3dsdfw0003h1049bmm5kov",
+      "euro": 37.86
+    },
+    {
+      "keepId": "cmt3zx44c00ayky047yq210hw",
+      "removeId": "cmt5gx4930006l304pnhr399s",
+      "bankId": "cmt3dsdfx000sh1043lf7y1pk",
+      "euro": 62.4
+    },
+    {
+      "keepId": "cmt3zx44b00amky045foywsgp",
+      "removeId": "cmt5gveom0002jo041lz99gsl",
+      "bankId": "cmt3dsdfw000fh104j553mhrd",
+      "euro": 29.07
+    },
+    {
+      "keepId": "cmt3zx44c00azky04iypyiwr5",
+      "removeId": "cmt5gx9r70007l3048ca8bs1g",
+      "bankId": "cmt3dsdfx000rh10429i4sbq7",
+      "euro": 47.74
+    },
+    {
+      "keepId": "cmt3zx44d00beky04l4x9a1fo",
+      "removeId": "cmt5h0jg70001l1045d3na9ko",
+      "bankId": "cmt1vc6ul0020ky04dybn6m8h",
+      "euro": 63.76
+    },
+    {
+      "keepId": "cmt3zx44d00b5ky04i83srpcc",
+      "removeId": "cmt5gxwwv000cl304a65e55e3",
+      "bankId": "cmt3dsdfx000yh1049ptas4yo",
+      "euro": 68.06
+    },
+    {
+      "keepId": "cmt3zx44d00b4ky04c1j9nis4",
+      "removeId": "cmt5gxu82000bl3049k6k68q5",
+      "bankId": "cmt3dsdfx000xh1049l4qhmkt",
+      "euro": 199.11
+    },
+    {
+      "keepId": "cmt3zx44c00aqky04whkx2cfa",
+      "removeId": "cmt5gvuvb0005jo04r84g52wd",
+      "bankId": "cmt3dsdfx000jh1049onhuaza",
+      "euro": 1.88
+    },
+    {
+      "keepId": "cmt3zx44c00apky04yfhhsgjv",
+      "removeId": "cmt5gvqj40004jo046wp6zu69",
+      "bankId": "cmt3dsdfx000ih1048paugbw8",
+      "euro": 59.8
+    },
+    {
+      "keepId": "cmt3zx44b00alky04pitx3scx",
+      "removeId": "cmt5gvbjm0001jo04ozdbfnw2",
+      "bankId": "cmt3dsdfw000eh104eb3v1nmi",
+      "euro": 46.5
+    },
+    {
+      "keepId": "cmt3zx44d00bfky04c0ubi3ct",
+      "removeId": "cmt5h0ccf0000l104czhnzv6b",
+      "bankId": "cmt1vc6ul001zky04onk2kj7n",
+      "euro": -21.99
+    },
+    {
+      "keepId": "cmt3zx44b00aiky04cyhd4e8a",
+      "removeId": "cmt5gu3xc0000l7049kbwcp7m",
+      "bankId": "cmt3dsdfw000bh104unus5q3d",
+      "euro": 66.95
+    },
+    {
+      "keepId": "cmt3zx44b00aeky04my43z8ll",
+      "removeId": "cmt5gt5q50002ie04khfanqx0",
+      "bankId": "cmt3dsdfw0008h104js7u761h",
+      "euro": 51.44
+    },
+    {
+      "keepId": "cmt3zx44b00akky0460j22n4z",
+      "removeId": "cmt5gunk00001l304lu6edtn8",
+      "bankId": "cmt3dsdfw000dh104rwuy2kqx",
+      "euro": 2.1
+    },
+    {
+      "keepId": "cmt3zx44b00abky04h6fhubwx",
+      "removeId": "cmt5fzlsv0000i5046dcbdhzg",
+      "bankId": "cmt3dsdfw0004h104la60rpaq",
+      "euro": 59.8
+    },
+    {
+      "keepId": "cmt3zx44b00acky04p9j4kvrl",
+      "removeId": "cmte3852j0001l704vdby5c8f",
+      "bankId": "cmt3dsdfw0005h1040astw2cg",
+      "euro": -27
+    },
+    {
+      "keepId": "cmt3zx44c00auky04jfz9liox",
+      "removeId": "cmt5gwk9g0004l304iz47ojkb",
+      "bankId": "cmt3dsdfx000nh104ezed1hv1",
+      "euro": 2
+    },
+    {
+      "keepId": "cmt3zx44c00asky049xgu0sky",
+      "removeId": "cmt5gw2fn0006jo044xxv7gt9",
+      "bankId": "cmt3dsdfx000kh104js94wl6r",
+      "euro": -140
+    },
+    {
+      "keepId": "cmt3zx44c00aoky04y4hmc481",
+      "removeId": "cmt5gvlqj0003jo0486bs0tua",
+      "bankId": "cmt3dsdfx000gh104ztqpqlj6",
+      "euro": -27
+    },
+    {
+      "keepId": "cmt3zx44d00bdky04direh7p1",
+      "removeId": "cmt5gz8mq0001l20432uvy5ha",
+      "bankId": "cmt3dsdfx0016h1047oqorznz",
+      "euro": -50
+    },
+    {
+      "keepId": "cmt3zx44d00baky0485314e6n",
+      "removeId": "cmt5gyfmw000el3041os8gp5l",
+      "bankId": "cmt3dsdfx0012h104wmmt5o88",
+      "euro": -20
+    },
+    {
+      "keepId": "cmt3zx44c00b1ky04dd7cdtmp",
+      "removeId": "cmt5gxgf60008l304dstbgtmw",
+      "bankId": "cmt3dsdfx000vh1044c7opi4l",
+      "euro": -38.01
+    },
+    {
+      "keepId": "cmt3zx44e00bjky04361tylzm",
+      "removeId": "cmt5h13qe0002l104qp8ax0nx",
+      "bankId": "cmt1vc6ul001xky04oan8y49b",
+      "euro": -40
+    },
+    {
+      "keepId": "cmte1n28300b9l804tkvn0x4x",
+      "removeId": "cmte37edv0000l704sbf4lc19",
+      "bankId": "cmta7prjb0001lb045zie5ih4",
+      "euro": -17
+    },
+    {
+      "keepId": "cmte1n28500cal804ewh9ks3s",
+      "removeId": "cmtkduiz90004i304anbq6hv0",
+      "bankId": "cmta7prjc000clb041fi2wh8l",
+      "euro": -10
+    },
+    {
+      "keepId": "cmte1n28500ccl804bt8w92sp",
+      "removeId": "cmtkducue0003i3041tkttro0",
+      "bankId": "cmta7prjc000blb0433tgg08q",
+      "euro": -0.99
+    },
+    {
+      "keepId": "cmte1n28300bbl8044m7bpiq9",
+      "removeId": "cmtkdrgua0000i3041vnqc3j4",
+      "bankId": "cmta7prjb0003lb04xm2plthj",
+      "euro": -25
+    },
+    {
+      "keepId": "cmte1n28500cfl804boxwl2mb",
+      "removeId": "cmtkduzy50000l704c5nrxbjj",
+      "bankId": "cmta7prjc000dlb04h8fkmmeu",
+      "euro": -25
+    },
+    {
+      "keepId": "cmte1n28400brl804iejus5lf",
+      "removeId": "cmtkdtdmq0002i304klp34b74",
+      "bankId": "cmta7prjc0006lb04jamp5hif",
+      "euro": -20
+    },
+    {
+      "keepId": "cmte1n28400bnl8043eq7fy6b",
+      "removeId": "cmthahsee0000l604mxflydzv",
+      "bankId": "cmta7prjc0005lb04urvg49c0",
+      "euro": -0.99
+    },
+    {
+      "keepId": "cmthnw9ga00e3l80418wehp5i",
+      "removeId": "cmtkdpd0l0002jp04a5gejgik",
+      "bankId": "cmthd3vo90002jp04kpoicmqh",
+      "euro": 0.11
+    },
+    {
+      "keepId": "cmtjw4dvj00c0l804vuh23ohk",
+      "removeId": "cmtkdouvm0001jp04rwb5zqev",
+      "bankId": "cmtjv4a300005l804g1fga9tt",
+      "euro": -138
+    },
+    {
+      "keepId": "cmtjw4dvj00bxl804chn2cww6",
+      "removeId": "cmtkdomj40000jp04kofgfyri",
+      "bankId": "cmtjv4a2z0001l804awwtirpf",
+      "euro": -5
+    }
+  ],
+  "paypalSddFunding": {
+    "beforeEuro": -1812.87,
+    "afterEuro": -252.75,
+    "declaredEuro": 0,
+    "creditedEuro": 1561.98,
+    "sddCount": 40,
+    "actions": [
+      {
+        "bankId": "cmu1d8qt40007l504cj37mdq3",
+        "ledgerId": "cmu6rcnnr0000le04ad19wwn8",
+        "euro": 15,
+        "date": "2026-09-07",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uj000dky04a31gml8q",
+        "ledgerId": "cmt3zx44h00d1ky04gzqkwlc9",
+        "euro": 10,
+        "date": "2026-04-14",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uj000nky048yamz17g",
+        "ledgerId": "cmt3zx44g00cpky04dw32uu50",
+        "euro": 6.09,
+        "date": "2026-04-29",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk0010ky0429mqlt15",
+        "ledgerId": "cmt3zx44g00ceky04wlrlmhwe",
+        "euro": 20,
+        "date": "2026-05-08",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk0012ky04dx6xub4v",
+        "ledgerId": "cmt3zx44g00ccky04vpsc6o2x",
+        "euro": 30,
+        "date": "2026-05-13",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmtq83vdw0002ld04nxe008g3",
+        "ledgerId": "cmtx16lxg002i6de3poaxnrke",
+        "euro": 20,
+        "date": "2026-09-04",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk0019ky046lof9dc2",
+        "ledgerId": "cmt3zx44f00c4ky04nicp7yef",
+        "euro": 30,
+        "date": "2026-05-26",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk0018ky04xjjcuxw8",
+        "ledgerId": "cmt3zx44f00c3ky04pvrzykom",
+        "euro": 21.99,
+        "date": "2026-05-26",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000clb041fi2wh8l",
+        "ledgerId": "cmte1n28500cal804ewh9ks3s",
+        "euro": 10,
+        "date": "2026-07-20",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6ul001sky04dpfu23oe",
+        "ledgerId": "cmt3zx44e00bkky04kfjr4r5c",
+        "euro": 0.99,
+        "date": "2026-06-19",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6ul001kky0483onqu5g",
+        "ledgerId": "cmt3zx44e00buky04vuljvpt5",
+        "euro": 20,
+        "date": "2026-06-09",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6ul001pky04u5leiiju",
+        "ledgerId": "cmt3zx44e00bpky04jfw2kzkz",
+        "euro": 25,
+        "date": "2026-06-16",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt3dsdfw0006h10481f6krwc",
+        "ledgerId": "cmt3zx44b00adky04c7ulaant",
+        "euro": 5,
+        "date": "2026-08-19",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt311c5g0018l4040h05ea50",
+        "ledgerId": "cmt3zx44i00dhky04vmh7xczs",
+        "euro": 21.99,
+        "date": "2026-03-25",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000dlb04h8fkmmeu",
+        "ledgerId": "cmte1n28500cfl804boxwl2mb",
+        "euro": 25,
+        "date": "2026-07-14",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt311c5f0007l404s810zjbj",
+        "ledgerId": "cmt3zx44l00eiky04s67mhgv3",
+        "euro": 20,
+        "date": "2026-01-14",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6ul001zky04onk2kj7n",
+        "ledgerId": "cmt3zx44d00bfky04c0ubi3ct",
+        "euro": 21.99,
+        "date": "2026-06-25",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjb0003lb04xm2plthj",
+        "ledgerId": "cmte1n28300bbl8044m7bpiq9",
+        "euro": 25,
+        "date": "2026-08-25",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt311c5f000ll404dxctkr4a",
+        "ledgerId": "cmt3zx44k00e4ky04c2dsthls",
+        "euro": 652.78,
+        "date": "2026-02-20",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uj000bky04i6mbu6i7",
+        "ledgerId": "cmt3zx44h00d2ky04hajbexsl",
+        "euro": 10,
+        "date": "2026-04-13",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uj000oky04ma0jzy3p",
+        "ledgerId": "cmt3zx44g00cqky04y62zwv00",
+        "euro": 61,
+        "date": "2026-04-29",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk000wky0482el0nla",
+        "ledgerId": "cmt3zx44g00ciky04eg9bekrm",
+        "euro": 20,
+        "date": "2026-05-05",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk000yky04qc8gtk1b",
+        "ledgerId": "cmt3zx44g00cgky04io4gftp4",
+        "euro": 50,
+        "date": "2026-05-06",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk001eky046tp01csd",
+        "ledgerId": "cmt3zx446008kky04jqrw669a",
+        "euro": 5,
+        "date": "2026-05-29",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uk001hky04hegpfm5u",
+        "ledgerId": "cmt3zx44f00bxky04tftcvafb",
+        "euro": 20,
+        "date": "2026-06-04",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6ul001lky04q14qad02",
+        "ledgerId": "cmt3zx44e00bsky04p6l3yblr",
+        "euro": 20,
+        "date": "2026-06-10",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000elb04qpw6d01u",
+        "ledgerId": "cmte1n28600ckl804mwvttll1",
+        "euro": 20,
+        "date": "2026-07-08",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000alb045takmd1n",
+        "ledgerId": "cmte1n28500c4l80467z21ewv",
+        "euro": 21.99,
+        "date": "2026-07-27",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt1vc6uj000pky042nx5kyoh",
+        "ledgerId": "cmt3zx44h00crky04a0c6vq0t",
+        "euro": 73.19,
+        "date": "2026-04-29",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt311c5f000kl404u5s6iwif",
+        "ledgerId": "cmt3zx44k00e5ky04kh60sv27",
+        "euro": 30,
+        "date": "2026-02-20",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmt311c5g0010l404s14rypcz",
+        "ledgerId": "cmt3zx44j00dpky044pqj11rg",
+        "euro": 27.99,
+        "date": "2026-03-13",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000blb0433tgg08q",
+        "ledgerId": "cmte1n28500ccl804bt8w92sp",
+        "euro": 0.99,
+        "date": "2026-07-20",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc0009lb041594qhxt",
+        "ledgerId": "cmte1n28500c3l804kpi832dj",
+        "euro": 135,
+        "date": "2026-07-28",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc0006lb04jamp5hif",
+        "ledgerId": "cmte1n28400brl804iejus5lf",
+        "euro": 20,
+        "date": "2026-08-10",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc0005lb04urvg49c0",
+        "ledgerId": "cmte1n28400bnl8043eq7fy6b",
+        "euro": 0.99,
+        "date": "2026-08-18",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc000flb04kgjsj65w",
+        "ledgerId": "cmte1n28600col804ibg1sdza",
+        "euro": 20,
+        "date": "2026-07-06",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc0007lb04c2cprg59",
+        "ledgerId": "cmte1n28400bwl8043b6qgz23",
+        "euro": 5,
+        "date": "2026-08-04",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmta7prjc0008lb04kp945ecq",
+        "ledgerId": "cmte1n28500byl804iiaczf0h",
+        "euro": 15,
+        "date": "2026-08-04",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmtjv4a2z0001l804awwtirpf",
+        "ledgerId": "cmtjw4dvj00bxl804chn2cww6",
+        "euro": 5,
+        "date": "2026-09-02",
+        "action": "RECLASS_17100_TO_10200"
+      },
+      {
+        "bankId": "cmtq83vdw0004ld04k8vyufr5",
+        "ledgerId": "cmtx16lxg002k6de3xzk3gmqq",
+        "euro": 20,
+        "date": "2026-09-03",
+        "action": "RECLASS_17100_TO_10200"
+      }
+    ]
+  },
+  "stripe": {
+    "beforeEuro": 61.85,
+    "afterEuro": 61.85,
+    "declaredEuro": 100,
+    "investigation": {
+      "ledgerEuro": 61.85,
+      "declaredEuro": 100,
+      "gapEuro": 38.15,
+      "stripeMovementCandidates": [],
+      "exactLedgerHits": [],
+      "note": "Nessun movimento Stripe/ledger con importo = gap €38,15 — non si genera scrittura forfettaria. Residuo da allineare su saldo dichiarato o sync API."
+    }
+  },
+  "controls": {
+    "T1": {
+      "summary": {
+        "passed": 2,
+        "total": 14,
+        "failedCount": 11,
+        "notVerifiableCount": 1
+      },
+      "C1": {
+        "passed": true,
+        "detail": "estratto=41 · PN banca=41",
+        "delta": 0
+      },
+      "C2": {
+        "passed": true,
+        "detail": "Σ PN=361.76 · net estratto=361.76 (E 5388.92 − U 5027.16)",
+        "deltaEuro": 0
+      },
+      "C13": {
+        "passed": false,
+        "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-252.75 · dich.=0.00 · Δ=-252.75",
+        "deltaEuro": 290.9
+      },
+      "passed": 2,
+      "failed": 11,
+      "nv": 1
+    },
+    "T2": {
+      "summary": {
+        "passed": 3,
+        "total": 14,
+        "failedCount": 10,
+        "notVerifiableCount": 1
+      },
+      "C1": {
+        "passed": true,
+        "detail": "estratto=72 · PN banca=72",
+        "delta": 0
+      },
+      "C2": {
+        "passed": true,
+        "detail": "Σ PN=-24.26 · net estratto=-24.26 (E 1291.54 − U 1315.80)",
+        "deltaEuro": 0
+      },
+      "C13": {
+        "passed": false,
+        "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-252.75 · dich.=0.00 · Δ=-252.75",
+        "deltaEuro": 290.9
+      },
+      "passed": 3,
+      "failed": 10,
+      "nv": 1
+    }
+  }
+}

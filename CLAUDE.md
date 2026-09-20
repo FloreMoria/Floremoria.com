@@ -40,10 +40,10 @@ Claude opera con tre ruoli simultanei:
 
 ---
 
-## 👥 FLOREM_NET — Organigramma completo 22 Agent
+## 👥 FLOREM_NET — Organigramma completo 23 Agent
 
-> File di riferimento: `agents/FLOREM_NET_organigramma.md`
-> File master individuali: `agents/NOMEAGENTE_master.md`
+> Fonte unica documentazione: `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`
+> Mirror operativo nel repo: `agents/FLOREM_NET_organigramma.md` + `agents/NOMEAGENTE_master.md`
 
 ### Custodi dell'Anima (filtro etico sempre attivo)
 | Agent | Ruolo | File |
@@ -95,6 +95,11 @@ Claude opera con tre ruoli simultanei:
 | **BARBARA** | Legal & Compliance — contratti e GDPR | BARBARA_master.md |
 | **PROF** | Guardiano del Sapere — verità scientifica | PROF_master.md |
 
+### Contenuti / Social & Monumental Memory
+| Agent | Ruolo | File |
+|-------|-------|------|
+| **MOMO** | Monumental Documentarist & Video Engine — video 9:16 su monumenti reali | MOMO_master.md |
+
 ---
 
 ## 🔗 Relazioni chiave tra agent
@@ -105,6 +110,7 @@ Claude opera con tre ruoli simultanei:
 | HYDRA → VINCE | Trova lead B2B qualificati → VINCE li chiude |
 | CLEO → AXEL | Decide cosa scrivere → AXEL ottimizza per i motori |
 | CLEO → ZIGGY | Brief editoriale → ZIGGY esegue visual e video |
+| MOMO → CLEO / ZIGGY | Documentari monumentali 9:16; pubblicazione solo con ok Amministratore |
 | VITO → DEVIN | Definisce requisiti sicurezza → DEVIN implementa |
 | VITO → BARBARA | Rischio tecnico → BARBARA valuta obbligo normativo |
 | SOFIA + ALMA | Filtro etico doppio su ogni output verso l'utente finale |
@@ -142,6 +148,7 @@ Claude opera con tre ruoli simultanei:
 | 2026-05-11 | Adottato protocollo CTO/Operatore/Sistemista | Autonomia e qualità output |
 | 2026-05-11 | Importati 19 protocolli agent da file ufficiali | Coerenza con sistema FloreMoria esistente |
 | 2026-05-11 | Redatti VITO, HYDRA, CLEO — organigramma completo a 22 agent | Copertura completa FLOREM_NET |
+| 2026-09-20 | Integrato MOMO; fonte unica `Agent_formato_md/` (23 agent) | Documentari monumentali 9:16 + dismessa cartella Staff |
 | 2026-05-11 | Stack confermato: Next.js + TS + Prisma + PostgreSQL + Docker | Standard DEVIN 2026 |
 | 2026-05-11 | Documento `docs/FLOREM_AI_ORCHESTRAZIONE.md` — ruoli strumenti AI | Ridurre costo di coordinamento team/repo |
 
@@ -149,6 +156,7 @@ Claude opera con tre ruoli simultanei:
 
 ## 📌 Ultimo stato sessione
 
-- **Completato:** Setup protocollo operativo + 22 agent master completi
+- **Completato:** Setup protocollo operativo + 23 agent master (incluso MOMO)
+- **Fonte unica doc:** `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`
 - **Agent mancanti:** nessuno — organigramma completo
 - **Prossimo task:** _da definire con Salvatore_

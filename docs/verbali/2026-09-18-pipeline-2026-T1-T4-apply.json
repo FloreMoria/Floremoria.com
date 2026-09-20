@@ -1,0 +1,681 @@
+{
+  "generatedAt": "2026-09-18T10:07:47.623Z",
+  "mode": "apply",
+  "year": 2026,
+  "quarters": [
+    {
+      "quarter": 1,
+      "label": "T1 2026",
+      "duplicatesDeleted": 0,
+      "deletedIds": [],
+      "reconciliationsApplied": 21,
+      "byKind": {
+        "algebraic_partial": 3,
+        "payout_1to1": 16,
+        "sdd_1to1": 2
+      },
+      "preservedManualAssociations": 18,
+      "residualExactEuro": 737.08,
+      "controls": {
+        "passed": 0,
+        "failed": 13,
+        "notVerifiable": 1,
+        "total": 14,
+        "c1": {
+          "passed": false,
+          "detail": "estratto=41 · PN banca=37",
+          "delta": 4
+        },
+        "c2": {
+          "passed": false,
+          "detail": "Σ PN=438.66 · net estratto=361.76 (E 5388.92 − U 5027.16)",
+          "deltaEuro": 76.9
+        },
+        "c3": {
+          "passed": false,
+          "verifiable": true,
+          "detail": "doc=1° trimestre Fineco.pdf · open=32120.48 · Σ=361.76 · close=32442.24 · nLinee=41"
+        },
+        "c4": {
+          "passed": false,
+          "detail": "gateway=675.00 (Stripe charges/payments 655.84 + PayPal) · corrispettivi report=1038.23 · nCorrispettivi=25",
+          "deltaEuro": -363.23
+        },
+        "c13": {
+          "passed": false,
+          "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+          "deltaEuro": 1851.02
+        },
+        "all": [
+          {
+            "id": "C1",
+            "passed": false,
+            "detail": "estratto=41 · PN banca=37",
+            "delta": 4
+          },
+          {
+            "id": "C2",
+            "passed": false,
+            "detail": "Σ PN=438.66 · net estratto=361.76 (E 5388.92 − U 5027.16)",
+            "delta": 7690
+          },
+          {
+            "id": "C3",
+            "passed": false,
+            "verifiable": true,
+            "detail": "doc=1° trimestre Fineco.pdf · open=32120.48 · Σ=361.76 · close=32442.24 · nLinee=41",
+            "delta": 4000
+          },
+          {
+            "id": "C4",
+            "passed": false,
+            "detail": "gateway=675.00 (Stripe charges/payments 655.84 + PayPal) · corrispettivi report=1038.23 · nCorrispettivi=25",
+            "delta": -36323
+          },
+          {
+            "id": "C5",
+            "passed": false,
+            "detail": "manual=24 · saas=1 · parti=5158.23 · totali=5138.39",
+            "delta": 1984
+          },
+          {
+            "id": "C6",
+            "passed": false,
+            "detail": "coppie=1 · invoice-n2ujnhg9-0001.pdf imponibile ±25.42 (manual↔saas) · negativi sistema senza coppia=0 · manual=24 · saas=1",
+            "delta": 1
+          },
+          {
+            "id": "C7",
+            "passed": false,
+            "detail": "esempi: Google Ireland Ltd; Google Ireland Ltd",
+            "delta": 2
+          },
+          {
+            "id": "C8",
+            "passed": false,
+            "detail": "esempi: Contributi pubblici (altri ricavi — non vendite)→Contributi pubblici (altri ricavi — non vendite)",
+            "delta": 1
+          },
+          {
+            "id": "C9",
+            "passed": false,
+            "detail": "righe ledger T2 ispezionate=156",
+            "delta": 11
+          },
+          {
+            "id": "C10",
+            "passed": false,
+            "detail": "STRIPE:KO · PAYPAL:OK",
+            "delta": 1
+          },
+          {
+            "id": "C11",
+            "passed": false,
+            "detail": "n canali: Corrispettivi=48 · Ledger ricavi=26 · taxRegister=78 · taxQuarterly=78 · cfoTools=78 · divergenti=55 · FT-SA-26-001[+ledger/taxRegister/taxQuarterly/cfoTools/−corrispettivi]; FT-PA-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CO-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-RC-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-VR-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PA-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-005[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]",
+            "delta": 55
+          },
+          {
+            "id": "C12",
+            "passed": false,
+            "detail": "universo corrispettivi=48 · verificati=45 · esclusi_non_risolvibili=3 (FF-VE-26-001, FT-CA-26-001, FF-PN-26-005) · tolleranza fuso=24h · divergenze=2 · cmtvn3fp ordine=2026-03-22 incasso=2026-03-24 (Δ48h); cmtvn3fy ordine=2026-03-24 incasso=2026-03-22 (Δ48h)",
+            "delta": 2
+          },
+          {
+            "id": "C13",
+            "passed": false,
+            "verifiable": true,
+            "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+            "delta": 185102
+          },
+          {
+            "id": "C14",
+            "passed": true,
+            "verifiable": false,
+            "detail": "C14 non verificabile su T1 2026: manca fattura mensile (non fallito).",
+            "delta": 0
+          }
+        ]
+      }
+    },
+    {
+      "quarter": 2,
+      "label": "T2 2026",
+      "duplicatesDeleted": 0,
+      "deletedIds": [],
+      "reconciliationsApplied": 44,
+      "byKind": {
+        "payout_1to1": 26,
+        "algebraic_partial": 12,
+        "sdd_1to1": 6
+      },
+      "preservedManualAssociations": 26,
+      "residualExactEuro": 746.11,
+      "controls": {
+        "passed": 1,
+        "failed": 12,
+        "notVerifiable": 1,
+        "total": 14,
+        "c1": {
+          "passed": false,
+          "detail": "estratto=72 · PN banca=53",
+          "delta": 19
+        },
+        "c2": {
+          "passed": false,
+          "detail": "Σ PN=363.64 · net estratto=-24.26 (E 1291.54 − U 1315.80)",
+          "deltaEuro": 387.9
+        },
+        "c3": {
+          "passed": true,
+          "verifiable": true,
+          "detail": "doc=2 Trimestre Fineco 2026.pdf · open=32442.24 · Σ=-24.26 · close=32417.98 · nLinee=72"
+        },
+        "c4": {
+          "passed": false,
+          "detail": "gateway=1633.08 (Stripe charges/payments 1524.86 + PayPal) · corrispettivi report=1246.02 · nCorrispettivi=27",
+          "deltaEuro": 387.06
+        },
+        "c13": {
+          "passed": false,
+          "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+          "deltaEuro": 1851.02
+        },
+        "all": [
+          {
+            "id": "C1",
+            "passed": false,
+            "detail": "estratto=72 · PN banca=53",
+            "delta": 19
+          },
+          {
+            "id": "C2",
+            "passed": false,
+            "detail": "Σ PN=363.64 · net estratto=-24.26 (E 1291.54 − U 1315.80)",
+            "delta": 38790
+          },
+          {
+            "id": "C3",
+            "passed": true,
+            "verifiable": true,
+            "detail": "doc=2 Trimestre Fineco 2026.pdf · open=32442.24 · Σ=-24.26 · close=32417.98 · nLinee=72",
+            "delta": 0
+          },
+          {
+            "id": "C4",
+            "passed": false,
+            "detail": "gateway=1633.08 (Stripe charges/payments 1524.86 + PayPal) · corrispettivi report=1246.02 · nCorrispettivi=27",
+            "delta": 38706
+          },
+          {
+            "id": "C5",
+            "passed": false,
+            "detail": "manual=33 · saas=6 · parti=843.99 · totali=825.59",
+            "delta": 1840
+          },
+          {
+            "id": "C6",
+            "passed": false,
+            "detail": "coppie=6 · cursor-invoice-2026-05-02-in_1tsamub4tzwxsigupiu imponibile ±17.75 (manual↔saas); cursor-invoice-2026-06-02-in_1tdp9yb4tzwxsigum4a imponibile ±17.75 (manual↔saas); stripe tax invoice 4pzwhsus-2026-05.pdf imponibile ±3.14 (manual↔saas); i tuoi acquisti apple3.pdf imponibile ±0.81 (manual↔saas); invoice-efh5u5af-0001.pdf imponibile ±18.00 (manual↔saas); invoice-efh5u5af-0002.pdf imponibile ±18.00 (manual↔saas) · negativi sistema senza coppia=0 · manual=33 · saas=6",
+            "delta": 6
+          },
+          {
+            "id": "C7",
+            "passed": false,
+            "detail": "esempi: Cursor; Cursor; Stripe Payments Europe; Apple; Anthropic, PBC…",
+            "delta": 12
+          },
+          {
+            "id": "C8",
+            "passed": false,
+            "detail": "esempi: Altri ricavi e proventi→Altri ricavi e proventi",
+            "delta": 1
+          },
+          {
+            "id": "C9",
+            "passed": false,
+            "detail": "righe ledger T2 ispezionate=278",
+            "delta": 22
+          },
+          {
+            "id": "C10",
+            "passed": false,
+            "detail": "STRIPE:KO · PAYPAL:OK",
+            "delta": 1
+          },
+          {
+            "id": "C11",
+            "passed": false,
+            "detail": "n canali: Corrispettivi=48 · Ledger ricavi=26 · taxRegister=78 · taxQuarterly=78 · cfoTools=78 · divergenti=55 · FT-SA-26-001[+ledger/taxRegister/taxQuarterly/cfoTools/−corrispettivi]; FT-PA-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CO-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-RC-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-VR-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PA-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-005[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]",
+            "delta": 55
+          },
+          {
+            "id": "C12",
+            "passed": false,
+            "detail": "universo corrispettivi=48 · verificati=45 · esclusi_non_risolvibili=3 (FF-VE-26-001, FT-CA-26-001, FF-PN-26-005) · tolleranza fuso=24h · divergenze=2 · cmtvn3fp ordine=2026-03-22 incasso=2026-03-24 (Δ48h); cmtvn3fy ordine=2026-03-24 incasso=2026-03-22 (Δ48h)",
+            "delta": 2
+          },
+          {
+            "id": "C13",
+            "passed": false,
+            "verifiable": true,
+            "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+            "delta": 185102
+          },
+          {
+            "id": "C14",
+            "passed": true,
+            "verifiable": false,
+            "detail": "C14 non verificabile su T2 2026: manca fattura mensile (non fallito).",
+            "delta": 0
+          }
+        ]
+      }
+    },
+    {
+      "quarter": 3,
+      "label": "T3 2026",
+      "duplicatesDeleted": 15,
+      "deletedIds": [
+        {
+          "id": "cmt2m63oj0000jt04bfjfr3g0",
+          "channel": "manual",
+          "vendor": "SHOPPINGARDEN DI ANNA BRUNO",
+          "amountEuro": 20,
+          "date": "2026-08-19",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtr92mee0002lc048j0jz2y9"
+        },
+        {
+          "id": "cmtr92vgr0003lc04l3zqyy74",
+          "channel": "manual",
+          "vendor": "SHOPPINGARDEN di Anna Bruno",
+          "amountEuro": 20,
+          "date": "2026-08-03",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m644k0001jt04u67710tj"
+        },
+        {
+          "id": "cmtr933460004lc04a305oe1i",
+          "channel": "manual",
+          "vendor": "Battistella Fioreria srl",
+          "amountEuro": 140,
+          "date": "2026-07-31",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m65800004jt04oz8ucks1"
+        },
+        {
+          "id": "cmtr93tbd0007lc049tn2sb69",
+          "channel": "manual",
+          "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+          "amountEuro": 30,
+          "date": "2026-07-22",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m65st0006jt041gem9qw4"
+        },
+        {
+          "id": "cmtr93csd0005lc0417z98loi",
+          "channel": "manual",
+          "vendor": "CINGOLANI ANTONELLA",
+          "amountEuro": 20,
+          "date": "2026-07-30",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m663d0008jt041ed2s8ah"
+        },
+        {
+          "id": "cmtr93mk20006lc04ywtoi297",
+          "channel": "manual",
+          "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+          "amountEuro": 133,
+          "date": "2026-07-26",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m66dy000ajt04q6k3o67j"
+        },
+        {
+          "id": "cmtr942q50008lc046go2j9hq",
+          "channel": "manual",
+          "vendor": "LA BAITA DEL FIORE S.N.C.",
+          "amountEuro": 20,
+          "date": "2026-07-22",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m66w4000cjt04bwh6ruas"
+        },
+        {
+          "id": "cmtr94gkj000alc04ipcz0913",
+          "channel": "manual",
+          "vendor": "SHOPPINGARDEN di Anna Bruno",
+          "amountEuro": 20,
+          "date": "2026-07-07",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m67ju000gjt04jrukbvdu"
+        },
+        {
+          "id": "cmtve2aze0000i604p5siaen7",
+          "channel": "manual",
+          "vendor": "CINGOLANI ANTONELLA",
+          "amountEuro": 20,
+          "date": "2026-07-01",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmt2m67uf000ijt04jznzu1tc"
+        },
+        {
+          "id": "cmtaa7v980002i804fx4yvv86",
+          "channel": "manual",
+          "vendor": "Fioreria Rossella",
+          "amountEuro": 17,
+          "date": "2026-08-04",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtaa5u7l0000i804nra2seoa"
+        },
+        {
+          "id": "cmtabi0bu0002l804r6ni51no",
+          "channel": "manual",
+          "vendor": "Fioreria Rossella",
+          "amountEuro": 17,
+          "date": "2026-08-26",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtabgxus0000l8040f8ki60n"
+        },
+        {
+          "id": "cmthejl510002l404n8sl48aa",
+          "channel": "manual",
+          "vendor": "Fioreria Rossella",
+          "amountEuro": 17,
+          "date": "2026-08-28",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtheioa40000l4040kpent27"
+        },
+        {
+          "id": "cmthekww70004l404itu8uc1f",
+          "channel": "manual",
+          "vendor": "Fioreria Rossella",
+          "amountEuro": 17,
+          "date": "2026-08-28",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtheioa40000l4040kpent27"
+        },
+        {
+          "id": "cmtr92em20001lc048iteix7w",
+          "channel": "manual",
+          "vendor": "Battistella Fioreria srl",
+          "amountEuro": 138,
+          "date": "2026-08-31",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtjxel1a0000jv04lta819f8"
+        },
+        {
+          "id": "cmtr926d40000lc04aeeda5zg",
+          "channel": "manual",
+          "vendor": "SHOPPINGARDEN di Anna Bruno",
+          "amountEuro": 20,
+          "date": "2026-09-03",
+          "reason": "stesso fornitore+importo+data",
+          "keepId": "cmtm1jwck0000l504w3tzrdhy"
+        }
+      ],
+      "reconciliationsApplied": 50,
+      "byKind": {
+        "algebraic_partial": 15,
+        "payout_1to1": 30,
+        "sdd_1to1": 5
+      },
+      "preservedManualAssociations": 39,
+      "residualExactEuro": 309.15,
+      "controls": {
+        "passed": 1,
+        "failed": 11,
+        "notVerifiable": 2,
+        "total": 14,
+        "c1": {
+          "passed": false,
+          "detail": "estratto=83 · PN banca=61",
+          "delta": 22
+        },
+        "c2": {
+          "passed": false,
+          "detail": "Σ PN=-47.38 · net estratto=-450.27 (E 1742.96 − U 2193.23)",
+          "deltaEuro": 402.89
+        },
+        "c3": {
+          "passed": true,
+          "verifiable": false,
+          "detail": "non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)"
+        },
+        "c4": {
+          "passed": false,
+          "detail": "gateway=2535.55 (Stripe charges/payments 2420.20 + PayPal) · corrispettivi report=1982.93 · nCorrispettivi=42",
+          "deltaEuro": 552.62
+        },
+        "c13": {
+          "passed": false,
+          "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+          "deltaEuro": 1851.02
+        },
+        "all": [
+          {
+            "id": "C1",
+            "passed": false,
+            "detail": "estratto=83 · PN banca=61",
+            "delta": 22
+          },
+          {
+            "id": "C2",
+            "passed": false,
+            "detail": "Σ PN=-47.38 · net estratto=-450.27 (E 1742.96 − U 2193.23)",
+            "delta": 40289
+          },
+          {
+            "id": "C3",
+            "passed": true,
+            "verifiable": false,
+            "detail": "non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)",
+            "delta": null
+          },
+          {
+            "id": "C4",
+            "passed": false,
+            "detail": "gateway=2535.55 (Stripe charges/payments 2420.20 + PayPal) · corrispettivi report=1982.93 · nCorrispettivi=42",
+            "delta": 55262
+          },
+          {
+            "id": "C5",
+            "passed": false,
+            "detail": "manual=37 · saas=14 · parti=1108.26 · totali=1101.04",
+            "delta": 722
+          },
+          {
+            "id": "C6",
+            "passed": false,
+            "detail": "coppie=14 · invoice-hh4vmwho-0001.pdf imponibile ±17.27 (manual↔saas); invoice-jupl1vc3-0005.pdf imponibile ±17.75 (manual↔saas); cursor-invoice-2026-07-02-in_1tohrhb4tzwxsiguqka imponibile ±17.75 (manual↔saas); cursor-invoice-2026-08-02-in_1tzwdob4tzwxsiguexm imponibile ±17.75 (manual↔saas); stripe tax invoice kwwcywep-2026-08.pdf imponibile ±8.17 (manual↔saas); stripe tax invoice kwwcywep-2026-07.pdf imponibile ±5.70 (manual↔saas) · negativi sistema senza coppia=0 · manual=37 · saas=14",
+            "delta": 14
+          },
+          {
+            "id": "C7",
+            "passed": false,
+            "detail": "esempi: Vercel Inc.; Fioreria Rossella; Cursor; Fioreria Rossella; Fioreria Rossella…",
+            "delta": 31
+          },
+          {
+            "id": "C8",
+            "passed": true,
+            "detail": "tutte le 61 righe PN in elenco chiuso (dopo normalizzazione legacy)",
+            "delta": 0
+          },
+          {
+            "id": "C9",
+            "passed": false,
+            "detail": "righe ledger T2 ispezionate=412",
+            "delta": 27
+          },
+          {
+            "id": "C10",
+            "passed": false,
+            "detail": "STRIPE:KO · PAYPAL:OK",
+            "delta": 1
+          },
+          {
+            "id": "C11",
+            "passed": false,
+            "detail": "n canali: Corrispettivi=48 · Ledger ricavi=26 · taxRegister=78 · taxQuarterly=78 · cfoTools=78 · divergenti=55 · FT-SA-26-001[+ledger/taxRegister/taxQuarterly/cfoTools/−corrispettivi]; FT-PA-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CO-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-RC-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-VR-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PA-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-005[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]",
+            "delta": 55
+          },
+          {
+            "id": "C12",
+            "passed": false,
+            "detail": "universo corrispettivi=48 · verificati=45 · esclusi_non_risolvibili=3 (FF-VE-26-001, FT-CA-26-001, FF-PN-26-005) · tolleranza fuso=24h · divergenze=2 · cmtvn3fp ordine=2026-03-22 incasso=2026-03-24 (Δ48h); cmtvn3fy ordine=2026-03-24 incasso=2026-03-22 (Δ48h)",
+            "delta": 2
+          },
+          {
+            "id": "C13",
+            "passed": false,
+            "verifiable": true,
+            "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+            "delta": 185102
+          },
+          {
+            "id": "C14",
+            "passed": true,
+            "verifiable": false,
+            "detail": "C14 non verificabile su T3 2026: manca fattura mensile (non fallito).",
+            "delta": 0
+          }
+        ]
+      }
+    },
+    {
+      "quarter": 4,
+      "label": "T4 2026",
+      "duplicatesDeleted": 0,
+      "deletedIds": [],
+      "reconciliationsApplied": 0,
+      "byKind": {},
+      "preservedManualAssociations": 0,
+      "residualExactEuro": null,
+      "controls": {
+        "passed": 8,
+        "failed": 4,
+        "notVerifiable": 2,
+        "total": 14,
+        "c1": {
+          "passed": true,
+          "detail": "estratto=0 · PN banca=0",
+          "delta": 0
+        },
+        "c2": {
+          "passed": true,
+          "detail": "Σ PN=0.00 · net estratto=0.00 (E 0.00 − U 0.00)",
+          "deltaEuro": 0
+        },
+        "c3": {
+          "passed": true,
+          "verifiable": false,
+          "detail": "non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)"
+        },
+        "c4": {
+          "passed": true,
+          "detail": "gateway=0.00 (Stripe charges/payments 0.00 + PayPal) · corrispettivi report=0.00 · nCorrispettivi=0",
+          "deltaEuro": 0
+        },
+        "c13": {
+          "passed": false,
+          "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+          "deltaEuro": 1851.02
+        },
+        "all": [
+          {
+            "id": "C1",
+            "passed": true,
+            "detail": "estratto=0 · PN banca=0",
+            "delta": 0
+          },
+          {
+            "id": "C2",
+            "passed": true,
+            "detail": "Σ PN=0.00 · net estratto=0.00 (E 0.00 − U 0.00)",
+            "delta": 0
+          },
+          {
+            "id": "C3",
+            "passed": true,
+            "verifiable": false,
+            "detail": "non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)",
+            "delta": null
+          },
+          {
+            "id": "C4",
+            "passed": true,
+            "detail": "gateway=0.00 (Stripe charges/payments 0.00 + PayPal) · corrispettivi report=0.00 · nCorrispettivi=0",
+            "delta": 0
+          },
+          {
+            "id": "C5",
+            "passed": true,
+            "detail": "manual=0 · saas=0 · parti=0.00 · totali=0.00",
+            "delta": 0
+          },
+          {
+            "id": "C6",
+            "passed": true,
+            "detail": "coppie=0 · negativi sistema senza coppia=0 · manual=0 · saas=0",
+            "delta": 0
+          },
+          {
+            "id": "C7",
+            "passed": true,
+            "detail": "tutti i documenti hanno P.IVA/CF",
+            "delta": 0
+          },
+          {
+            "id": "C8",
+            "passed": true,
+            "detail": "tutte le 0 righe PN in elenco chiuso (dopo normalizzazione legacy)",
+            "delta": 0
+          },
+          {
+            "id": "C9",
+            "passed": true,
+            "detail": "righe ledger T2 ispezionate=0",
+            "delta": 0
+          },
+          {
+            "id": "C10",
+            "passed": false,
+            "detail": "STRIPE:KO · PAYPAL:OK",
+            "delta": 1
+          },
+          {
+            "id": "C11",
+            "passed": false,
+            "detail": "n canali: Corrispettivi=48 · Ledger ricavi=26 · taxRegister=78 · taxQuarterly=78 · cfoTools=78 · divergenti=55 · FT-SA-26-001[+ledger/taxRegister/taxQuarterly/cfoTools/−corrispettivi]; FT-PA-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CO-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-RC-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-CS-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-004[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-VR-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-002[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PD-26-003[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FF-PA-26-001[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]; FT-PA-26-005[+taxRegister/taxQuarterly/cfoTools/−corrispettivi/ledger]",
+            "delta": 55
+          },
+          {
+            "id": "C12",
+            "passed": false,
+            "detail": "universo corrispettivi=48 · verificati=45 · esclusi_non_risolvibili=3 (FF-VE-26-001, FT-CA-26-001, FF-PN-26-005) · tolleranza fuso=24h · divergenze=2 · cmtvn3fp ordine=2026-03-22 incasso=2026-03-24 (Δ48h); cmtvn3fy ordine=2026-03-24 incasso=2026-03-22 (Δ48h)",
+            "delta": 2
+          },
+          {
+            "id": "C13",
+            "passed": false,
+            "verifiable": true,
+            "detail": "STRIPE(transito vendite): ledger=61.85 · dich.=100.00 · Δ=-38.15 · PAYPAL(conto pagamento): ledger=-1812.87 · dich.=0.00 · Δ=-1812.87",
+            "delta": 185102
+          },
+          {
+            "id": "C14",
+            "passed": true,
+            "verifiable": false,
+            "detail": "C14 non verificabile su T4 2026: manca fattura mensile (non fallito).",
+            "delta": 0
+          }
+        ]
+      }
+    }
+  ],
+  "totals": {
+    "duplicatesDeleted": 15,
+    "reconciliationsApplied": 115,
+    "controlsPassed": 10,
+    "controlsFailed": 40
+  }
+}

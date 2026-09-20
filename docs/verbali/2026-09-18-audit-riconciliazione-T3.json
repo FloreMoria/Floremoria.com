@@ -1,0 +1,734 @@
+{
+  "generatedAt": "2026-09-18T09:44:30.482Z",
+  "period": {
+    "year": 2026,
+    "quarter": 3,
+    "label": "T3 2026",
+    "start": "2026-06-30T22:00:00.000Z",
+    "end": "2026-09-30T21:59:59.999Z"
+  },
+  "counts": {
+    "bankLines": 83,
+    "gatewayRelatedBank": 50,
+    "stripeMovements": 166,
+    "paypalLedger": 79,
+    "gatewaySyncRows": 141,
+    "manualExpenses": 52,
+    "saasInvoices": 21
+  },
+  "c1c3": {
+    "C1": {
+      "passed": false,
+      "detail": "estratto=83 · PN banca=55",
+      "measured": 28,
+      "unit": "rows"
+    },
+    "C2": {
+      "passed": false,
+      "detail": "Σ PN=-179.91 · net estratto=-450.27 (E 1742.96 − U 2193.23)",
+      "measured": 27036,
+      "deltaEuro": 270.36
+    },
+    "C3": {
+      "passed": true,
+      "verifiable": false,
+      "detail": "non verificabile — nessun estratto ufficiale del periodo con saldo iniziale e finale dichiarati (METODO §2 v1.10: lista movimenti = dato provvisorio, C3 non si misura fino al passaggio a definitivo)",
+      "measured": null,
+      "deltaEuro": null
+    }
+  },
+  "gatewayQuadratura": {
+    "stripe": {
+      "isQuadrato": false,
+      "entrateLordoEuro": 1888.95,
+      "commissioniEuro": 61.47,
+      "speseEuro": 6.24,
+      "payoutEuro": 1665.67,
+      "residuoStripeEuro": 161.81
+    },
+    "paypal": {
+      "isQuadrato": false,
+      "entrateLordoEuro": 698.9,
+      "commissioniEuro": 28.96,
+      "speseEuro": 504.47,
+      "payoutEuro": 71.98
+    }
+  },
+  "payoutMatch": {
+    "stripe": {
+      "matchCount": 23,
+      "unmatchedPayoutCount": 0,
+      "unmatchedBankCount": 1
+    },
+    "paypal": {
+      "matchCount": 7,
+      "unmatchedPayoutCount": 0,
+      "unmatchedBankCount": 2
+    },
+    "sddOneToOne": 5
+  },
+  "tables": {
+    "reconciledCorrectly": [
+      {
+        "bankId": "cmt3dsdfx0010h10443i3mh1y",
+        "date": "2026-07-06",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 06/07/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 2.25,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000zh104dexj7qdq",
+        "date": "2026-07-07",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 07/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 102.21,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000yh1049ptas4yo",
+        "date": "2026-07-08",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 08/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 68.06,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000xh1049l4qhmkt",
+        "date": "2026-07-09",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 09/07/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 199.11,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000wh104e5ckbv0f",
+        "date": "2026-07-13",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 13/07/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 1.26,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000uh104m65yklls",
+        "date": "2026-07-14",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 14/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 38.84,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000sh1043lf7y1pk",
+        "date": "2026-07-20",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 20/07/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 62.4,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000rh10429i4sbq7",
+        "date": "2026-07-20",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 20/07/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 47.74,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmta7prjc000blb0433tgg08q",
+        "date": "2026-07-20",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -0.99,
+        "gateway": "paypal",
+        "matchType": "sdd_1to1"
+      },
+      {
+        "bankId": "cmta7prjc000clb041fi2wh8l",
+        "date": "2026-07-20",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -10,
+        "gateway": "paypal",
+        "matchType": "sdd_1to1"
+      },
+      {
+        "bankId": "cmt3dsdfx000ph104cwocju2d",
+        "date": "2026-07-21",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 21/07/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 36.89,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmta7prjc000alb045takmd1n",
+        "date": "2026-07-27",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -21.99,
+        "gateway": "paypal",
+        "matchType": "sdd_1to1"
+      },
+      {
+        "bankId": "cmt3dsdfx000nh104ezed1hv1",
+        "date": "2026-07-27",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 27/07/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 2,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000jh1049onhuaza",
+        "date": "2026-08-03",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 03/08/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 1.88,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfx000ih1048paugbw8",
+        "date": "2026-08-04",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 04/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 59.8,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw000fh104j553mhrd",
+        "date": "2026-08-06",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 06/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 29.07,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw000eh104eb3v1nmi",
+        "date": "2026-08-07",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 07/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 46.5,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw000dh104rwuy2kqx",
+        "date": "2026-08-10",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 10/08/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 2.1,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw000ch104rsh5k510",
+        "date": "2026-08-11",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 11/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 38.84,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw000bh104unus5q3d",
+        "date": "2026-08-13",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 13/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 66.95,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmta7prjc0005lb04urvg49c0",
+        "date": "2026-08-18",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -0.99,
+        "gateway": "paypal",
+        "matchType": "sdd_1to1"
+      },
+      {
+        "bankId": "cmt3dsdfw0008h104js7u761h",
+        "date": "2026-08-18",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 18/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 51.44,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw0007h104b2i3kkqo",
+        "date": "2026-08-18",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 18/08/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 0.09,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw0006h10481f6krwc",
+        "date": "2026-08-19",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -5,
+        "gateway": "paypal",
+        "matchType": "sdd_1to1"
+      },
+      {
+        "bankId": "cmt3dsdfw0003h1049bmm5kov",
+        "date": "2026-08-20",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 20/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 37.86,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt3dsdfw0004h104la60rpaq",
+        "date": "2026-08-20",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 20/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 59.8,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmt7oev7u0002l204h0eop45l",
+        "date": "2026-08-24",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 24/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 46.5,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmta7prjb0002lb04p6blvnoy",
+        "date": "2026-08-26",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 26/08/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: STRIPE · Bonifico SE",
+        "amountEuro": 87.72,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmthd3vo90004jp04c1ubb595",
+        "date": "2026-08-27",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 27/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 51.58,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmthd3vo90001jp04aie0aum2",
+        "date": "2026-08-31",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 31/08/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 50.62,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmtkien840003l204awgsukrq",
+        "date": "2026-09-02",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 02/09/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 58.28,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmtq83vdw0004ld04k8vyufr5",
+        "date": "2026-09-03",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -20,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmtq83vdw0005ld04cqukf90b",
+        "date": "2026-09-03",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 03/09/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 83.04,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmtq83vdw0003ld0434qp381a",
+        "date": "2026-09-04",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 04/09/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 59.48,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmtq83vdw0002ld04nxe008g3",
+        "date": "2026-09-04",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -20,
+        "gateway": "paypal",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmu1d8qt40004l504jwu2855g",
+        "date": "2026-09-10",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 10/09/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 297.85,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      },
+      {
+        "bankId": "cmu5nwv5j0002k3046rto2cc4",
+        "date": "2026-09-17",
+        "description": "Ord: Stripe Technology Europe Ltd Ben: F LOREMORIA S R L Dt-ord: 17/09/2026 Banca Ord: BANKING CIRCLE DENMARK Info-Cli: ",
+        "amountEuro": 47.49,
+        "gateway": "stripe",
+        "matchType": "status_matched"
+      }
+    ],
+    "uncertainOrResidual": [
+      {
+        "bankId": "cmta7prjc000flb04kgjsj65w",
+        "date": "2026-07-06",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -20,
+        "gateway": "paypal",
+        "windowFrom": "2026-06-29",
+        "windowTo": "2026-07-08",
+        "sumIncassiEuro": 208.12,
+        "sumSpeseEuro": 35.75,
+        "sumCommissioniEuro": 8.12,
+        "algebraicNetEuro": 164.25,
+        "residualVsBankEuro": 23.87,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=43.87 · residual=23.87"
+      },
+      {
+        "bankId": "cmta7prjc000elb04qpw6d01u",
+        "date": "2026-07-08",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -20,
+        "gateway": "paypal",
+        "windowFrom": "2026-07-01",
+        "windowTo": "2026-07-10",
+        "sumIncassiEuro": 208.12,
+        "sumSpeseEuro": 35.75,
+        "sumCommissioniEuro": 8.12,
+        "algebraicNetEuro": 164.25,
+        "residualVsBankEuro": 23.87,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=43.87 · residual=23.87"
+      },
+      {
+        "bankId": "cmta7prjc000dlb04h8fkmmeu",
+        "date": "2026-07-14",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -25,
+        "gateway": "paypal",
+        "windowFrom": "2026-07-07",
+        "windowTo": "2026-07-16",
+        "sumIncassiEuro": 50.3,
+        "sumSpeseEuro": 36.91,
+        "sumCommissioniEuro": 2.05,
+        "algebraicNetEuro": 11.34,
+        "residualVsBankEuro": 13.96,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=38.96 · residual=13.96"
+      },
+      {
+        "bankId": "cmta7prjc0009lb041594qhxt",
+        "date": "2026-07-28",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -135,
+        "gateway": "paypal",
+        "windowFrom": "2026-07-21",
+        "windowTo": "2026-07-30",
+        "sumIncassiEuro": 63.63,
+        "sumSpeseEuro": 287.99,
+        "sumCommissioniEuro": 2.84,
+        "algebraicNetEuro": -227.2,
+        "residualVsBankEuro": 155.83,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=290.83 · residual=155.83"
+      },
+      {
+        "bankId": "cmta7prjc0007lb04c2cprg59",
+        "date": "2026-08-04",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -5,
+        "gateway": "paypal",
+        "windowFrom": "2026-07-28",
+        "windowTo": "2026-08-06",
+        "sumIncassiEuro": 63.73,
+        "sumSpeseEuro": 37.16,
+        "sumCommissioniEuro": 2.84,
+        "algebraicNetEuro": 23.73,
+        "residualVsBankEuro": 35,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=40.00 · residual=35.00"
+      },
+      {
+        "bankId": "cmta7prjc0008lb04kp945ecq",
+        "date": "2026-08-04",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -15,
+        "gateway": "paypal",
+        "windowFrom": "2026-07-28",
+        "windowTo": "2026-08-06",
+        "sumIncassiEuro": 63.73,
+        "sumSpeseEuro": 37.16,
+        "sumCommissioniEuro": 2.84,
+        "algebraicNetEuro": 23.73,
+        "residualVsBankEuro": 25,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=40.00 · residual=25.00"
+      },
+      {
+        "bankId": "cmta7prjc0006lb04jamp5hif",
+        "date": "2026-08-10",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -20,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-03",
+        "windowTo": "2026-08-12",
+        "sumIncassiEuro": 0.19,
+        "sumSpeseEuro": 18,
+        "sumCommissioniEuro": 0,
+        "algebraicNetEuro": -17.81,
+        "residualVsBankEuro": -2,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=18.00 · residual=-2.00"
+      },
+      {
+        "bankId": "cmt7oev7u0003l204i4fngcb9",
+        "date": "2026-08-24",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 24/08/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 3.01,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-17",
+        "windowTo": "2026-08-26",
+        "sumIncassiEuro": 169.91,
+        "sumSpeseEuro": 26.99,
+        "sumCommissioniEuro": 7.17,
+        "algebraicNetEuro": 135.75,
+        "residualVsBankEuro": -132.74,
+        "note": "Accredito senza 1:1 · Σincassi−spese−fee=135.75 · residual=-132.74"
+      },
+      {
+        "bankId": "cmta7prjb0003lb04xm2plthj",
+        "date": "2026-08-25",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -25,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-18",
+        "windowTo": "2026-08-27",
+        "sumIncassiEuro": 106.95,
+        "sumSpeseEuro": 21.99,
+        "sumCommissioniEuro": 4.33,
+        "algebraicNetEuro": 80.63,
+        "residualVsBankEuro": 1.32,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=26.32 · residual=1.32"
+      },
+      {
+        "bankId": "cmthd3vo90002jp04kpoicmqh",
+        "date": "2026-08-31",
+        "description": "Ord: PayPal Europe S.a.r.l. et Cie S.C.A Ben: FLOREMORIA S.R.L. Dt-ord: 31/08/20 26 Banca Ord: PayPal (Europe) S.a r.l. ",
+        "amountEuro": 0.11,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-24",
+        "windowTo": "2026-09-02",
+        "sumIncassiEuro": 169.91,
+        "sumSpeseEuro": 23.51,
+        "sumCommissioniEuro": 7.17,
+        "algebraicNetEuro": 139.23,
+        "residualVsBankEuro": -139.12,
+        "note": "Accredito senza 1:1 · Σincassi−spese−fee=139.23 · residual=-139.12"
+      },
+      {
+        "bankId": "cmtjv4a2z0001l804awwtirpf",
+        "date": "2026-09-02",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -5,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-26",
+        "windowTo": "2026-09-04",
+        "sumIncassiEuro": 62.96,
+        "sumSpeseEuro": 58.53,
+        "sumCommissioniEuro": 2.84,
+        "algebraicNetEuro": 1.59,
+        "residualVsBankEuro": 56.37,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=61.37 · residual=56.37"
+      },
+      {
+        "bankId": "cmu1d8qt40007l504cj37mdq3",
+        "date": "2026-09-07",
+        "description": "PayPal Europe S.a.r.l. et Cie S.C.A Adde bito SDD fattura a Vs carico da LU96ZZZ0000000000000000058 Mand 4DA22 25A55J8C ",
+        "amountEuro": -15,
+        "gateway": "paypal",
+        "windowFrom": "2026-08-31",
+        "windowTo": "2026-09-09",
+        "sumIncassiEuro": 118.95,
+        "sumSpeseEuro": 78.68,
+        "sumCommissioniEuro": 5.09,
+        "algebraicNetEuro": 35.18,
+        "residualVsBankEuro": 68.77,
+        "note": "SDD senza outflow 1:1 · Σspese+fee=83.77 · residual=68.77"
+      },
+      {
+        "bankId": "cmu5nwv5j0001k304bkk38ccw",
+        "date": "2026-09-17",
+        "description": "Ord: STRIPE Ben: FLOREMORIA S R L Dt-ord : 17/09/2026 Banca Ord: CITIBANK EUROPE PLC AMST Info-Cli: PAGAMENTI STRIPE DA ",
+        "amountEuro": 2.19,
+        "gateway": "stripe",
+        "windowFrom": "2026-09-10",
+        "windowTo": "2026-09-19",
+        "sumIncassiEuro": 209.97,
+        "sumSpeseEuro": 1.05,
+        "sumCommissioniEuro": 7.42,
+        "algebraicNetEuro": 201.5,
+        "residualVsBankEuro": -199.31,
+        "note": "Accredito senza 1:1 · Σincassi−spese−fee=201.50 · residual=-199.31"
+      }
+    ],
+    "duplicatesToRemove": [
+      {
+        "keepId": "cmtaa5u7l0000i804nra2seoa",
+        "removeId": "cmtaa7v980002i804fx4yvv86",
+        "reason": "Identity duplicata *|NOVAT|SCONTRINO|NONUM|2026-08-04",
+        "vendor": "Fioreria Rossella",
+        "amountEuro": 17,
+        "dateKeep": "2026-08-04",
+        "dateRemove": "2026-08-04",
+        "channelKeep": "manual:SCONTRINO/none",
+        "channelRemove": "manual:SCONTRINO/none"
+      },
+      {
+        "keepId": "cmtabgxus0000l8040f8ki60n",
+        "removeId": "cmtabi0bu0002l804r6ni51no",
+        "reason": "Identity duplicata *|NOVAT|SCONTRINO|NONUM|2026-08-26",
+        "vendor": "Fioreria Rossella",
+        "amountEuro": 17,
+        "dateKeep": "2026-08-26",
+        "dateRemove": "2026-08-26",
+        "channelKeep": "manual:SCONTRINO/blob",
+        "channelRemove": "manual:SCONTRINO/blob"
+      },
+      {
+        "keepId": "cmtheioa40000l4040kpent27",
+        "removeId": "cmthejl510002l404n8sl48aa",
+        "reason": "Identity duplicata *|NOVAT|SCONTRINO|NONUM|2026-08-28",
+        "vendor": "Fioreria Rossella",
+        "amountEuro": 17,
+        "dateKeep": "2026-08-28",
+        "dateRemove": "2026-08-28",
+        "channelKeep": "manual:SCONTRINO/blob",
+        "channelRemove": "manual:SCONTRINO/blob"
+      },
+      {
+        "keepId": "cmtheioa40000l4040kpent27",
+        "removeId": "cmthekww70004l404itu8uc1f",
+        "reason": "Identity duplicata *|NOVAT|SCONTRINO|NONUM|2026-08-28",
+        "vendor": "Fioreria Rossella",
+        "amountEuro": 17,
+        "dateKeep": "2026-08-28",
+        "dateRemove": "2026-08-28",
+        "channelKeep": "manual:SCONTRINO/blob",
+        "channelRemove": "manual:SCONTRINO/blob"
+      },
+      {
+        "keepId": "cmt2m63oj0000jt04bfjfr3g0",
+        "removeId": "cmtr92mee0002lc048j0jz2y9",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "SHOPPINGARDEN di Anna Bruno",
+        "amountEuro": 20,
+        "dateKeep": "2026-08-19",
+        "dateRemove": "2026-08-19",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m644k0001jt04u67710tj",
+        "removeId": "cmtr92vgr0003lc04l3zqyy74",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "SHOPPINGARDEN di Anna Bruno",
+        "amountEuro": 20,
+        "dateKeep": "2026-08-03",
+        "dateRemove": "2026-08-03",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m65800004jt04oz8ucks1",
+        "removeId": "cmtr933460004lc04a305oe1i",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "Battistella Fioreria srl",
+        "amountEuro": 140,
+        "dateKeep": "2026-07-31",
+        "dateRemove": "2026-07-31",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m65st0006jt041gem9qw4",
+        "removeId": "cmtr93tbd0007lc049tn2sb69",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "Margherita Flower Studio di Lo Monaco Martina",
+        "amountEuro": 30,
+        "dateKeep": "2026-07-22",
+        "dateRemove": "2026-07-22",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m663d0008jt041ed2s8ah",
+        "removeId": "cmtr93csd0005lc0417z98loi",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "CINGOLANI ANTONELLA",
+        "amountEuro": 20,
+        "dateKeep": "2026-07-30",
+        "dateRemove": "2026-07-30",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m66dy000ajt04q6k3o67j",
+        "removeId": "cmtr93mk20006lc04ywtoi297",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "MASPES PIANTE E FIORI DI MASPES & C. SNC",
+        "amountEuro": 133,
+        "dateKeep": "2026-07-26",
+        "dateRemove": "2026-07-26",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m66w4000cjt04bwh6ruas",
+        "removeId": "cmtr942q50008lc046go2j9hq",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "LA BAITA DEL FIORE S.N.C.",
+        "amountEuro": 20,
+        "dateKeep": "2026-07-22",
+        "dateRemove": "2026-07-22",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m67ju000gjt04jrukbvdu",
+        "removeId": "cmtr94gkj000alc04ipcz0913",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "SHOPPINGARDEN di Anna Bruno",
+        "amountEuro": 20,
+        "dateKeep": "2026-07-07",
+        "dateRemove": "2026-07-07",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmt2m67uf000ijt04jznzu1tc",
+        "removeId": "cmtve2aze0000i604p5siaen7",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "CINGOLANI ANTONELLA",
+        "amountEuro": 20,
+        "dateKeep": "2026-07-01",
+        "dateRemove": "2026-07-01",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmtjxel1a0000jv04lta819f8",
+        "removeId": "cmtr92em20001lc048iteix7w",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "Battistella Fioreria srl",
+        "amountEuro": 138,
+        "dateKeep": "2026-08-31",
+        "dateRemove": "2026-08-31",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      },
+      {
+        "keepId": "cmtm1jwck0000l504w3tzrdhy",
+        "removeId": "cmtr926d40000lc04aeeda5zg",
+        "reason": "Stesso fornitore+importo+data (manuale)",
+        "vendor": "SHOPPINGARDEN di Anna Bruno",
+        "amountEuro": 20,
+        "dateKeep": "2026-09-03",
+        "dateRemove": "2026-09-03",
+        "channelKeep": "FATTURA",
+        "channelRemove": "FATTURA"
+      }
+    ]
+  }
+}

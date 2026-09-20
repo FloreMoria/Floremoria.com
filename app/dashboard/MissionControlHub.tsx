@@ -35,7 +35,7 @@ const ROW2_BASE: HubButton[] = [
 
 const ROW3: HubButton[] = [
     { id: 'github', label: 'GitHub', icon: '💻', url: process.env.NEXT_PUBLIC_SOCIAL_GITHUB_URL || 'https://github.com' },
-    { id: 'social', label: 'Social Media', icon: '📱', url: '/dashboard/campaigns' },
+    { id: 'social', label: 'Social Media', icon: '📱', url: '/dashboard/social' },
     {
         id: 'ai-audit',
         label: 'Audit AI',

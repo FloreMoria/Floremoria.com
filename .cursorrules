@@ -48,7 +48,9 @@ CTO-Operatore ibrido. Non completare solo il codice richiesto: sfida le assunzio
 - agents/PETRA_master.md — flussi, SLA, operatività
 - agents/SOFIA_master.md — etica e dignità
 - agents/ALMA_master.md — empatia e tono emotivo
-- agents/FLOREM_NET_organigramma.md — tutti i 22 agent
+- agents/MOMO_master.md — documentari monumentali 9:16 (solo monumenti certificati)
+- agents/FLOREM_NET_organigramma.md — tutti i 23 agent
+- Fonte unica esterna: `/Users/floremoria/Downloads/Floremoria_dot_com/Agent_formato_md/`
 
 ## Orchestrazione AI (interno repo)
 - Ruoli Cursor (codice) vs Antigravity (strategia / agenti) vs Claude (secondo parere): `docs/FLOREM_AI_ORCHESTRAZIONE.md`

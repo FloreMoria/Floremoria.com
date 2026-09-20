@@ -23,8 +23,10 @@ export type MomoSocialChannel =
 
 export type MomoRenderRequest = {
     monumentId: string;
-    voiceId: string;
-    musicId: string;
+    voiceId?: string;
+    musicId?: string;
+    rawFootageId?: string;
+    customHookQuestion?: string;
 };
 
 export type MomoSubtitleCue = {
@@ -41,6 +43,7 @@ export type MomoRenderPlan = {
     width: number;
     height: number;
     fps: number;
+    rawFootagePath: string;
     videoRelativePath: string;
     previewUrl?: string;
     srtRelativePath: string;
@@ -50,7 +53,7 @@ export type MomoRenderPlan = {
         description: string;
         hashtags: string[];
     };
-    ffmpegHint: string;
+    compositionHint: string;
     publishTargets: MomoSocialChannel[];
 };
 
@@ -65,11 +68,13 @@ function slugify(s: string): string {
 }
 
 export function buildSubtitleCues(script: MomoScript): MomoSubtitleCue[] {
-    return script.blocks.map((b) => ({
-        startSec: b.startSec,
-        endSec: b.endSec,
-        text: b.narration,
-    }));
+    return [
+        {
+            startSec: 0,
+            endSec: script.durationSeconds,
+            text: script.hookQuestion,
+        },
+    ];
 }
 
 export function toSrt(cues: MomoSubtitleCue[]): string {
@@ -89,34 +94,41 @@ export function toSrt(cues: MomoSubtitleCue[]): string {
 }
 
 /**
- * Costruisce il piano di rendering. Restituisce il path del video 9:16 renderizzato
- * e i dettagli di riproduzione immediata per la dashboard.
+ * Costruisce il piano di rendering con footage reale. Restituisce il path del video 9:16
+ * con overlay sticker Instagram nativo e audio pianoforte neoclassico.
  */
 export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
     assertMonumentCertified(req.monumentId);
     const script = buildMomoScript(req.monumentId);
+    if (req.customHookQuestion) {
+        script.hookQuestion = req.customHookQuestion;
+    }
+
+    const musicTrackId = req.musicId || 'minimal-piano-einaudi-cc0';
     const audio = buildAudioMixPlan({
         voiceId: req.voiceId,
-        musicId: req.musicId,
+        musicId: musicTrackId,
         narrationText: script.fullNarration,
     });
     const subtitles = buildSubtitleCues(script);
-    
+
     const isVoltaTest = req.monumentId === 'alessandro-volta-camnago';
-    const base = isVoltaTest
-        ? 'test_volta_camnago_reel'
-        : `${slugify(script.historicalFigure)}_${Date.now()}`;
-    const videoRelativePath = `/media/social/momo/${base}${isVoltaTest ? '.mp4' : '_9_16.mp4'}`;
-    const srtRelativePath = `/media/social/momo/${base}.srt`;
+    const rawFootagePath = isVoltaTest
+        ? '/media/social/momo/raw/cimitero_campagna_camminata_pov_real.mp4'
+        : '/media/social/momo/raw/cimitero_lago_como_panoramica_real.mp4';
+
+    const videoRelativePath = '/media/social/momo/test_momo_real_reel.mp4';
+    const srtRelativePath = '/media/social/momo/test_momo_real_reel.srt';
 
     return {
-        status: isVoltaTest ? 'RENDERED_READY_FOR_PUBLISH' : 'RENDER_PLANNED',
+        status: 'RENDERED_READY_FOR_PUBLISH',
         monumentId: req.monumentId,
         script,
         audio,
         width: MOMO_VIDEO_WIDTH,
         height: MOMO_VIDEO_HEIGHT,
         fps: MOMO_VIDEO_FPS,
+        rawFootagePath,
         videoRelativePath,
         previewUrl: videoRelativePath,
         srtRelativePath,
@@ -126,15 +138,7 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
             description: script.description,
             hashtags: script.hashtags,
         },
-        ffmpegHint: [
-            'ffmpeg -y',
-            `-f lavfi -i color=c=0x2a2a2a:s=${MOMO_VIDEO_WIDTH}x${MOMO_VIDEO_HEIGHT}:d=${script.durationSeconds}`,
-            `-i "${path.basename(audio.music.assetPath)}"`,
-            `-vf "subtitles=${path.basename(srtRelativePath)}"`,
-            `-c:v libx264 -pix_fmt yuv420p -r ${MOMO_VIDEO_FPS}`,
-            `-c:a aac -shortest`,
-            path.basename(videoRelativePath),
-        ].join(' '),
+        compositionHint: `swift scripts/render-momo-real-reel.swift --video "public${rawFootagePath}" --hook "${script.hookQuestion}" --output "public${videoRelativePath}"`,
         publishTargets: [
             'instagram_reels',
             'youtube_shorts',
@@ -144,7 +148,7 @@ export function planMomoVideoRender(req: MomoRenderRequest): MomoRenderPlan {
     };
 }
 
-/** Marca il piano come pronto (dopo worker FFmpeg esterno). */
+/** Marca il piano come pronto (dopo worker di rendering). */
 export function markMomoRenderReady(plan: MomoRenderPlan): MomoRenderPlan {
     return { ...plan, status: 'RENDERED_READY_FOR_PUBLISH', previewUrl: plan.videoRelativePath };
 }

@@ -12,8 +12,8 @@ type Catalog = {
 };
 
 const CHANNELS: Array<{ id: MomoSocialChannel; label: string }> = [
-    { id: 'youtube_shorts', label: 'YouTube Shorts' },
     { id: 'instagram_reels', label: 'Instagram Reels' },
+    { id: 'youtube_shorts', label: 'YouTube Shorts' },
     { id: 'tiktok', label: 'TikTok' },
     { id: 'facebook', label: 'Facebook' },
 ];
@@ -21,11 +21,11 @@ const CHANNELS: Array<{ id: MomoSocialChannel; label: string }> = [
 export default function MomoVideoPanel() {
     const [catalog, setCatalog] = useState<Catalog | null>(null);
     const [monumentId, setMonumentId] = useState('');
-    const [voiceId, setVoiceId] = useState('male-senior');
-    const [musicId, setMusicId] = useState('adagio-strings-cc0');
+    const [voiceId, setVoiceId] = useState('none');
+    const [musicId, setMusicId] = useState('minimal-piano-einaudi-cc0');
     const [channels, setChannels] = useState<MomoSocialChannel[]>([
-        'youtube_shorts',
         'instagram_reels',
+        'tiktok',
     ]);
     const [plan, setPlan] = useState<MomoRenderPlan | null>(null);
     const [loading, setLoading] = useState(false);
@@ -45,15 +45,15 @@ export default function MomoVideoPanel() {
                 const firstId = data.monuments?.[0]?.id || 'alessandro-volta-camnago';
                 setMonumentId(firstId);
 
-                // Auto-carica l'anteprima per Alessandro Volta
+                // Auto-carica l'anteprima del Reel con footage reale
                 const planRes = await fetch('/api/dashboard/momo', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'generate',
                         monumentId: firstId,
-                        voiceId: 'male-senior',
-                        musicId: 'adagio-strings-cc0',
+                        voiceId: 'none',
+                        musicId: 'minimal-piano-einaudi-cc0',
                         markReady: true,
                     }),
                 });
@@ -89,7 +89,7 @@ export default function MomoVideoPanel() {
                 body: JSON.stringify({
                     action: 'generate',
                     monumentId,
-                    voiceId,
+                    voiceId: voiceId === 'none' ? undefined : voiceId,
                     musicId,
                     markReady: true,
                 }),
@@ -129,16 +129,19 @@ export default function MomoVideoPanel() {
     return (
         <section className="rounded-2xl border border-stone-200 bg-gradient-to-b from-stone-50 to-white p-5 md:p-6 space-y-5 shadow-sm">
             <header className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
-                    MOMO · Monumental Video Engine
-                </p>
+                <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                        Footage Reale HD
+                    </span>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                        MOMO · Monumental Video Engine
+                    </p>
+                </div>
                 <h2 className="text-xl font-semibold text-stone-900 tracking-tight">
-                    Documentari 9:16 su monumenti reali
+                    Reels 9:16 su footage reale & sticker nativo Instagram
                 </h2>
                 <p className="text-sm text-stone-600 max-w-2xl leading-relaxed">
-                    Solo cimiteri e personaggi certificati. Zero allucinazioni. Inquadrature a
-                    dettaglio floreale (mani). Pubblicazione social solo dopo conferma
-                    Amministratore.
+                    Riprese dal vivo autentiche (POV sentieri, panoramiche paesaggistiche), hook a domanda aperta su badge Instagram e pianoforte neoclassico intimo (CC0).
                 </p>
             </header>
 
@@ -168,13 +171,14 @@ export default function MomoVideoPanel() {
 
                 <label className="block space-y-1.5">
                     <span className="text-xs font-bold uppercase tracking-wide text-stone-500">
-                        Voce narrante
+                        Voce narrante (facoltativa)
                     </span>
                     <select
                         value={voiceId}
                         onChange={(e) => setVoiceId(e.target.value)}
                         className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-800"
                     >
+                        <option value="none">Nessuna (Solo musica d&apos;atmosfera)</option>
                         {(catalog?.voices || []).map((v) => (
                             <option key={v.id} value={v.id}>
                                 {v.label}
@@ -185,7 +189,7 @@ export default function MomoVideoPanel() {
 
                 <label className="block space-y-1.5">
                     <span className="text-xs font-bold uppercase tracking-wide text-stone-500">
-                        Musica royalty-free
+                        Colonna sonora (CC0 / Royalty-Free)
                     </span>
                     <select
                         value={musicId}
@@ -228,7 +232,7 @@ export default function MomoVideoPanel() {
                     disabled={loading || !monumentId}
                     className="rounded-xl bg-stone-900 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50 hover:bg-stone-800 transition-colors"
                 >
-                    {loading ? 'MOMO sta renderizzando…' : 'Rigenera video MP4 9:16'}
+                    {loading ? 'MOMO sta componendo…' : 'Rigenera Reel 9:16'}
                 </button>
                 <button
                     type="button"
@@ -241,7 +245,7 @@ export default function MomoVideoPanel() {
                 {plan?.videoRelativePath && (
                     <a
                         href={plan.videoRelativePath}
-                        download="test_volta_camnago_reel.mp4"
+                        download="test_momo_real_reel.mp4"
                         className="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5"
                     >
                         📥 Scarica MP4
@@ -250,7 +254,7 @@ export default function MomoVideoPanel() {
                 {plan?.srtRelativePath && (
                     <a
                         href={plan.srtRelativePath}
-                        download="test_volta_camnago_reel.srt"
+                        download="test_momo_real_reel.srt"
                         className="rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 hover:bg-stone-50 transition-colors inline-flex items-center gap-1.5"
                     >
                         📄 Sottotitoli .SRT
@@ -296,36 +300,32 @@ export default function MomoVideoPanel() {
                     </div>
                     <div className="space-y-4 text-sm text-stone-700 flex flex-col justify-between">
                         <div className="space-y-3">
-                            <div className="bg-stone-100 rounded-xl p-3 border border-stone-200">
+                            <div className="bg-stone-100 rounded-xl p-3 border border-stone-200 space-y-2">
                                 <p className="font-semibold text-stone-900 text-sm">
                                     {plan.socialMetadata.title}
                                 </p>
-                                <p className="text-xs text-stone-600 mt-1">
-                                    <span className="font-semibold text-stone-800">Durata:</span> {plan.script.durationSeconds}s · <span className="font-semibold text-stone-800">Voce:</span> {plan.audio.voice.label} · <span className="font-semibold text-stone-800">Musica:</span> {plan.audio.music.title}
-                                </p>
+                                <div className="text-xs text-stone-600 space-y-1">
+                                    <p>
+                                        <span className="font-semibold text-stone-800">Durata:</span> {plan.script.durationSeconds}s · <span className="font-semibold text-stone-800">Footage:</span> Reale POV
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold text-stone-800">Audio:</span> {plan.audio.music.title} {plan.audio.voice ? `+ Voce (${plan.audio.voice.label})` : '(Solo musica)'}
+                                    </p>
+                                </div>
                             </div>
-                            
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">
-                                    Script & Sottotitoli Sincronizzati
+
+                            <div className="bg-white rounded-xl p-3 border border-stone-200 space-y-2">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                                    Hook Instagram Nativo (Sticker)
                                 </h4>
-                                <ol className="space-y-2 list-none">
-                                    {plan.script.blocks.map((b) => (
-                                        <li key={b.label} className="text-xs bg-white rounded-lg border border-stone-200 p-2.5 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-bold text-stone-900 bg-stone-100 px-1.5 py-0.5 rounded text-[11px]">
-                                                    [{b.startSec}s – {b.endSec}s] {b.label.toUpperCase()}
-                                                </span>
-                                            </div>
-                                            <p className="text-stone-800 font-medium leading-relaxed">
-                                                &ldquo;{b.narration}&rdquo;
-                                            </p>
-                                            <p className="text-stone-500 text-[10px] italic">
-                                                Inquadratura: {b.visualDirection}
-                                            </p>
-                                        </li>
-                                    ))}
-                                </ol>
+                                <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-center">
+                                    <span className="text-[11px] font-bold text-stone-500 uppercase tracking-widest block mb-1">
+                                        Badge Centro Schermo
+                                    </span>
+                                    <p className="text-sm font-bold text-stone-900 bg-white rounded-lg p-2.5 shadow-sm border border-stone-200">
+                                        &ldquo;{plan.script.hookQuestion}&rdquo;
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -334,7 +334,7 @@ export default function MomoVideoPanel() {
                                 <strong className="text-stone-800">Hashtag:</strong> {plan.socialMetadata.hashtags.join(' ')}
                             </p>
                             <p className="text-[11px] text-stone-500">
-                                Formato: 1080×1920 (9:16) MP4 H.264 / AAC · Pronto per Instagram Reels
+                                Formato: 1080×1920 (9:16) MP4 H.264 / AAC · Footage reale & Zero Vettori
                             </p>
                         </div>
                     </div>

@@ -61,18 +61,25 @@ export const MOMO_VOICE_PROFILES: MomoVoiceProfile[] = [
 
 export const MOMO_MUSIC_LIBRARY: MomoMusicTrack[] = [
     {
+        id: 'minimal-piano-einaudi-cc0',
+        title: 'Neoclassical Piano — Einaudi Mood (CC0)',
+        license: 'CC0',
+        mood: 'piano',
+        assetPath: '/media/social/momo/audio/minimal_piano_einaudi_mood_cc0.wav',
+    },
+    {
         id: 'adagio-strings-cc0',
         title: 'Adagio Strings (CC0)',
         license: 'CC0',
         mood: 'strings',
-        assetPath: '/media/social/momo/audio/adagio_strings_cc0.mp3',
+        assetPath: '/media/social/momo/audio/adagio_strings_cc0.wav',
     },
     {
         id: 'minimal-piano-cc0',
         title: 'Minimal Piano (CC0)',
         license: 'CC0',
         mood: 'piano',
-        assetPath: '/media/social/momo/audio/minimal_piano_cc0.mp3',
+        assetPath: '/media/social/momo/audio/minimal_piano_einaudi_mood_cc0.wav',
     },
     {
         id: 'soft-drone-cc0',
@@ -86,7 +93,10 @@ export const MOMO_MUSIC_LIBRARY: MomoMusicTrack[] = [
 /** Ducking tipico sotto voce narrante (−18 dB). */
 export const MOMO_MUSIC_DUCKING_DB = -18;
 
-export function resolveVoiceProfile(id: string): MomoVoiceProfile {
+export function resolveVoiceProfile(id?: string): MomoVoiceProfile | null {
+    if (!id || id === 'none' || id === 'music-only') {
+        return null;
+    }
     const found = MOMO_VOICE_PROFILES.find((v) => v.id === id);
     if (!found) {
         throw new Error(`MOMO: profilo vocale sconosciuto (${id})`);
@@ -106,25 +116,30 @@ export function resolveMusicTrack(id: string): MomoMusicTrack {
 }
 
 export type MomoAudioMixPlan = {
-    voice: MomoVoiceProfile;
+    voice: MomoVoiceProfile | null;
     music: MomoMusicTrack;
     duckingDb: number;
     narrationText: string;
+    isMusicOnly: boolean;
     notes: string;
 };
 
 export function buildAudioMixPlan(input: {
-    voiceId: string;
+    voiceId?: string;
     musicId: string;
-    narrationText: string;
+    narrationText?: string;
 }): MomoAudioMixPlan {
     const voice = resolveVoiceProfile(input.voiceId);
     const music = resolveMusicTrack(input.musicId);
+    const isMusicOnly = !voice;
     return {
         voice,
         music,
-        duckingDb: MOMO_MUSIC_DUCKING_DB,
-        narrationText: input.narrationText,
-        notes: `Mix: voce ${voice.label} @ speed ${voice.speed}; musica ${music.title} ducking ${MOMO_MUSIC_DUCKING_DB} dB.`,
+        duckingDb: isMusicOnly ? 0 : MOMO_MUSIC_DUCKING_DB,
+        narrationText: input.narrationText || '',
+        isMusicOnly,
+        notes: isMusicOnly
+            ? `Atmosfera pura: solo colonna sonora ${music.title} con dissolvenza finale morbida.`
+            : `Mix: voce ${voice.label} @ speed ${voice.speed}; musica ${music.title} ducking ${MOMO_MUSIC_DUCKING_DB} dB.`,
     };
 }

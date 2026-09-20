@@ -1,0 +1,151 @@
+{
+    "transactions": [],
+    "accountingEntries": [
+        {
+            "id": "entry_sdi_cmu5ota6u00006dgtut5rwzgw",
+            "date": "2025-12-31",
+            "description": "Autofattura estera autofattura estera STRIPE PAYMENTS EUROPE LIMITED n. 000016-2025-EST",
+            "dareAccount": "70300 - Software / SaaS Esteri (Reverse Charge)",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 878,
+            "vatAmountCents": 0,
+            "isForeignService": true,
+            "invoiceReference": "000016-2025-EST",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5otmd300016dgtmuoszxfv",
+            "date": "2025-12-31",
+            "description": "Autofattura estera autofattura estera OpenAI Ireland Limited n. 000017-2025-EST",
+            "dareAccount": "70300 - Software / SaaS Esteri (Reverse Charge)",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 2300,
+            "vatAmountCents": 0,
+            "isForeignService": true,
+            "invoiceReference": "000017-2025-EST",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5otrqz00026dgt7wezvxc9",
+            "date": "2025-12-20",
+            "description": "Fattura SDI Funky Flowers SNC di Vaghi C. e Mannarino G. n. 22",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 3500,
+            "vatAmountCents": 318,
+            "isForeignService": false,
+            "invoiceReference": "22",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ou2vt00036dgt3aw8njhr",
+            "date": "2025-12-11",
+            "description": "Fattura SDI FLOWERS DI FERRANTE IGNAZIO n. 290",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 2000,
+            "vatAmountCents": 182,
+            "isForeignService": false,
+            "invoiceReference": "290",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ov68000006dmq7fb7zt7f",
+            "date": "2025-12-10",
+            "description": "Fattura SDI TINDARO CALAMUNCI n. 2025/30",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 9500,
+            "vatAmountCents": 1043,
+            "isForeignService": false,
+            "invoiceReference": "2025/30",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovflb00016dmqnr8ckx1v",
+            "date": "2025-11-30",
+            "description": "Fattura SDI Battistella Fioreria srl n. 359",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 7500,
+            "vatAmountCents": 682,
+            "isForeignService": false,
+            "invoiceReference": "359",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovji300026dmq6j5sqsgf",
+            "date": "2025-11-30",
+            "description": "Autofattura estera autofattura estera STRIPE PAYMENTS EUROPE LIMITED n. 000014-2025-EST",
+            "dareAccount": "70300 - Software / SaaS Esteri (Reverse Charge)",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 1331,
+            "vatAmountCents": 0,
+            "isForeignService": true,
+            "invoiceReference": "000014-2025-EST",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovmwo00036dmq5l4f5fc3",
+            "date": "2025-11-30",
+            "description": "Autofattura estera autofattura estera OpenAI Ireland Limited n. 000015-2025-EST",
+            "dareAccount": "70300 - Software / SaaS Esteri (Reverse Charge)",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 2300,
+            "vatAmountCents": 0,
+            "isForeignService": true,
+            "invoiceReference": "000015-2025-EST",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovq0g00046dmqrh9mglvo",
+            "date": "2025-11-07",
+            "description": "Fattura SDI FERRARA ANTONINO n. 2",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 4000,
+            "vatAmountCents": 364,
+            "isForeignService": false,
+            "invoiceReference": "2",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovszr00056dmqurpltp7g",
+            "date": "2025-11-06",
+            "description": "Fattura SDI CINGOLANI ANTONELLA n. 48",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 12000,
+            "vatAmountCents": 0,
+            "isForeignService": false,
+            "invoiceReference": "48",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovvtv00066dmqgglcck6m",
+            "date": "2025-10-31",
+            "description": "Fattura SDI FLORAGARDEN di Stinga Baldassarre n. 572",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 2000,
+            "vatAmountCents": 182,
+            "isForeignService": false,
+            "invoiceReference": "572",
+            "status": "CONFIRMED"
+        },
+        {
+            "id": "entry_sdi_cmu5ovz2500076dmqdkojvxjp",
+            "date": "2025-10-31",
+            "description": "Fattura SDI \" GERMANA' DI GERMANA' LUDOVICO & C. S.N.C\" n. 20",
+            "dareAccount": "70900 - Spese Generali / Fatture Passive",
+            "avereAccount": "10100 - Banca Fineco",
+            "amountCents": 2000,
+            "vatAmountCents": 182,
+            "isForeignService": false,
+            "invoiceReference": "20",
+            "status": "CONFIRMED"
+        }
+    ],
+    "completedDeadlineIds": [],
+    "deadlineStatusById": {}
+}

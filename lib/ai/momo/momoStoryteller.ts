@@ -1,6 +1,6 @@
 /**
- * MOMO storyteller — script 9:16 (45–60s) solo su dati monumentali certificati.
- * Vincoli: zero tombe inventate; solo gesti mani/dettaglio per composizioni floreali.
+ * MOMO storyteller — script 9:16 (12–25s) con hook misterioso stile sticker Instagram nativo.
+ * Vincoli: footage reale, domanda aperta su sticker bianco rounded, pianoforte evocativo.
  */
 import {
     assertMonumentCertified,
@@ -10,9 +10,9 @@ import {
 export type MomoScriptBlock = {
     startSec: number;
     endSec: number;
-    label: 'hook' | 'monument' | 'legacy' | 'closing';
-    narration: string;
-    /** Direzione inquadratura: mai corpo intero. */
+    label: 'hook' | 'footage' | 'reveal' | 'closing';
+    narration?: string;
+    /** Direzione inquadratura footage reale. */
     visualDirection: string;
 };
 
@@ -21,6 +21,8 @@ export type MomoScript = {
     historicalFigure: string;
     cemetery: string;
     durationSeconds: number;
+    hookQuestion: string;
+    instagramTag: string;
     blocks: MomoScriptBlock[];
     fullNarration: string;
     hashtags: string[];
@@ -28,109 +30,65 @@ export type MomoScript = {
     description: string;
 };
 
-export function buildMomoScript(monumentId: string): MomoScript {
+export function buildMomoScript(monumentId: string, customDuration = 15): MomoScript {
     const m = assertMonumentCertified(monumentId);
-    return composeScript(m);
+    return composeScript(m, customDuration);
 }
 
-function composeScript(m: MonumentRecord): MomoScript {
+function composeScript(m: MonumentRecord, durationSeconds = 15): MomoScript {
+    let hookQuestion: string;
+    let title: string;
+    let description: string;
     let blocks: MomoScriptBlock[];
 
     if (m.id === 'alessandro-volta-camnago') {
+        hookQuestion =
+            'Sapete chi è il personaggio molto importante che giace nella cappella di questo piccolo cimitero di campagna?';
+        title = 'Chi riposa in questo cimitero di campagna? | FloreMoria';
+        description =
+            'Camminata tra i sentieri di Camnago Volta (Como), verso il mausoleo neoclassico circolare. Indovina chi riposa qui.';
         blocks = [
             {
                 startSec: 0,
-                endSec: 3,
-                label: 'hook',
-                narration: "Qui riposa l'uomo che ha dato la scintilla al mondo moderno.",
+                endSec: durationSeconds,
+                label: 'footage',
                 visualDirection:
-                    'Vista solenne del tempietto neoclassico circolare di Camnago Volta — nessun soggetto umano a figura intera.',
-            },
-            {
-                startSec: 4,
-                endSec: 20,
-                label: 'monument',
-                narration:
-                    'Siamo a Camnago Volta, Como. Il mausoleo neoclassico circolare custodisce il busto in marmo di Comolli e il rilievo della celebre pila.',
-                visualDirection:
-                    'Dettaglio scultoreo del busto in marmo di Giovanni Battista Comolli e dei bassorilievi della pila voltaica.',
-            },
-            {
-                startSec: 21,
-                endSec: 40,
-                label: 'legacy',
-                narration:
-                    "L'invenzione della pila e l'eredità silenziosa custodita tra le colline di Como testimoniano come la scintilla del genio continui a vivere.",
-                visualDirection:
-                    'Luce tra le colonne neoclassiche del tempietto e inquadratura lenta sull’architettura sacra.',
-            },
-            {
-                startSec: 41,
-                endSec: 45,
-                label: 'closing',
-                narration:
-                    'Un gesto di cura e rispetto per chi ha illuminato la storia. FloreMoria: la memoria eterna.',
-                visualDirection:
-                    'Inquadratura close-up esclusiva sulle mani che depongono una composizione floreale sobria alla base.',
+                    'Footage reale POV dal vivo: camminata su sentiero di ghiaia e cipressi verso la cappella di campagna.',
             },
         ];
     } else {
+        hookQuestion = `Sapete chi giaceva in questo bel cimitero ${m.city.toLowerCase().includes('como') ? 'sul Lago di Como' : 'di ' + m.city}?`;
+        title = `Chi riposa al cimitero di ${m.city}? | FloreMoria`;
+        description = `Panoramica reale dal vivo del cimitero di ${m.cemetery} a ${m.city}.`;
         blocks = [
             {
                 startSec: 0,
-                endSec: 3,
-                label: 'hook',
-                narration: `${m.historicalFigure}. Un luogo autentico della memoria.`,
+                endSec: durationSeconds,
+                label: 'footage',
                 visualDirection:
-                    'Dettaglio epigrafe e scultura esistente — nessun soggetto umano a figura intera.',
-            },
-            {
-                startSec: 4,
-                endSec: 20,
-                label: 'monument',
-                narration: `Siamo al ${m.cemetery}, ${m.city}. ${m.sculpturalNotes}`,
-                visualDirection:
-                    'Panning lento sul monumento documentato; close-up su bassorilievi e iscrizioni reali.',
-            },
-            {
-                startSec: 21,
-                endSec: 40,
-                label: 'legacy',
-                narration: `La memoria di ${m.historicalFigure} vive in questo spazio sacro tra storia e silenzio. Fonti certificate: ${m.sources[0]}.`,
-                visualDirection:
-                    'Luce e dettagli architettonici del luogo sacro.',
-            },
-            {
-                startSec: 41,
-                endSec: 45,
-                label: 'closing',
-                narration:
-                    'Presenza, cura e ricordo testimoniano la memoria. FloreMoria.',
-                visualDirection:
-                    'Mani che depongono un omaggio floreale sobrio alla base (solo mani/dettaglio).',
+                    'Footage reale dal vivo: panoramica paesaggistica e luce naturale sul luogo sacro.',
             },
         ];
     }
 
-    const fullNarration = blocks.map((b) => b.narration).join(' ');
-    const title = `La tomba di ${m.historicalFigure} | Luoghi della Memoria`;
-    const description = `${m.historicalFigure} — ${m.cemetery}, ${m.city}. Documentario verticale FloreMoria su monumento reale.`;
     const hashtags = [
         '#FloreMoria',
-        '#Monumental',
+        '#ReelsItalia',
         '#LuoghiDellaMemoria',
-        `#${m.historicalFigure.replace(/\s+/g, '')}`,
-        '#StoriaItaliana',
-        '#InstagramReels',
+        '#LagoDiComo',
+        '#Storia',
+        '#MisteriItaliani',
     ];
 
     return {
         monumentId: m.id,
         historicalFigure: m.historicalFigure,
         cemetery: m.cemetery,
-        durationSeconds: 45,
+        durationSeconds,
+        hookQuestion,
+        instagramTag: '@APP_FLOREMORIA',
         blocks,
-        fullNarration,
+        fullNarration: '',
         hashtags,
         title,
         description,

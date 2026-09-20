@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generate') {
         const monumentId = String(body.monumentId || '');
-        const voiceId = String(body.voiceId || 'male-senior');
-        const musicId = String(body.musicId || 'adagio-strings-cc0');
+        const voiceId = body.voiceId && body.voiceId !== 'none' ? String(body.voiceId) : undefined;
+        const musicId = String(body.musicId || 'minimal-piano-einaudi-cc0');
         try {
             const plan = planMomoVideoRender({ monumentId, voiceId, musicId });
-            // In assenza di worker FFmpeg: piano pronto per review (status planned).
+            // In assenza di worker esterno: piano pronto per review (status planned).
             // markReady solo se esplicitamente richiesto (preview dashboard).
             const ready =
                 body.markReady === true ? markMomoRenderReady(plan) : plan;
